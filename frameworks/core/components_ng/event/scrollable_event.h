@@ -20,20 +20,17 @@
 #include <unordered_map>
 
 #include "base/geometry/axis.h"
-#include "base/geometry/ng/point_t.h"
 #include "base/memory/referenced.h"
 #include "core/components_ng/event/target_component.h"
+#include "core/components_ng/pattern/scrollable/scrollable.h"
 #include "core/components_ng/event/gesture_event_actuator.h"
-#include "core/gestures/gesture_event.h"
+#include "core/components_ng/pattern/scroll/scroll_edge_effect.h"
 
 namespace OHOS::Ace::NG {
 namespace {
 constexpr float HTMBLOCK_VELOCITY = 200;
 }
 
-class Scrollable;
-class ScrollEdgeEffect;
-class ClickRecognizer;
 class GestureEventHub;
 
 using BarCollectTouchTargetCallback = std::function<void(const OffsetF&, const GetEventTargetImpl&, TouchTestResult&,
@@ -43,21 +40,33 @@ using GetAnimateVelocityCallback = std::function<double()>;
 using ClickJudgeCallback = std::function<bool(const PointF&)>;
 
 class ScrollableEvent : public AceType {
-    DECLARE_ACE_TYPE(ScrollableEvent, AceType);
+    DECLARE_ACE_TYPE(ScrollableEvent, AceType)
 public:
-    explicit ScrollableEvent(Axis axis);
-    ~ScrollableEvent() override;
+    explicit ScrollableEvent(Axis axis) : axis_(axis) {};
+    ~ScrollableEvent() override = default;
 
     Axis GetAxis() const
     {
         return axis_;
     }
 
-    void SetAxis(Axis axis);
+    void SetAxis(Axis axis)
+    {
+        axis_ = axis;
+        if (scrollable_) {
+            scrollable_->SetAxis(axis);
+        }
+    }
 
-    void SetScrollable(const RefPtr<Scrollable>& scrollable);
+    void SetScrollable(const RefPtr<Scrollable>& scrollable)
+    {
+        scrollable_ = scrollable;
+    }
 
-    const RefPtr<Scrollable>& GetScrollable() const;
+    const RefPtr<Scrollable>& GetScrollable() const
+    {
+        return scrollable_;
+    }
 
     void SetEnabled(bool enabled)
     {
@@ -69,9 +78,28 @@ public:
         return enabled_;
     }
 
-    bool Idle() const;
+    bool Idle() const
+    {
+        if (scrollable_) {
+            return scrollable_->Idle();
+        }
+        return true;
+    }
 
-    bool IsHitTestBlock(const PointF& localPoint, SourceType source) const;
+    bool IsHitTestBlock(const PointF& localPoint, SourceType source) const
+    {
+        if (source == SourceType::MOUSE && InBarRectRegion(localPoint, source)) {
+            return false;
+        }
+        if (scrollable_ && !scrollable_->Idle() &&
+            std::abs(scrollable_->GetCurrentVelocity()) > PipelineBase::Vp2PxWithCurrentDensity(HTMBLOCK_VELOCITY)) {
+            return true;
+        }
+        if (getAnimateVelocityCallback_) {
+            return std::abs(getAnimateVelocityCallback_()) > PipelineBase::Vp2PxWithCurrentDensity(HTMBLOCK_VELOCITY);
+        }
+        return false;
+    }
 
     void SetBarCollectTouchTargetCallback(const BarCollectTouchTargetCallback&& barCollectTouchTarget)
     {
@@ -98,27 +126,17 @@ public:
         }
     }
 
-    void SetBarRectCollectTouchTargetCallback(const BarCollectTouchTargetCallback&& barRectCollectTouchTarget)
-    {
-        barRectCollectTouchTarget_ = std::move(barRectCollectTouchTarget);
-    }
-
-    void BarRectCollectTouchTarget(const OffsetF& coordinateOffset, const GetEventTargetImpl& getEventTargetImpl,
-        TouchTestResult& result, const RefPtr<FrameNode>& frameNode, const RefPtr<TargetComponent>& targetComponent,
-        ResponseLinkResult& responseLinkResult)
-    {
-        if (barRectCollectTouchTarget_) {
-            barRectCollectTouchTarget_(
-                coordinateOffset, getEventTargetImpl, result, frameNode, targetComponent, responseLinkResult);
-        }
-    }
-
     void SetAnimateVelocityCallback(const GetAnimateVelocityCallback&& getAnimateVelocityCallback)
     {
         getAnimateVelocityCallback_ = std::move(getAnimateVelocityCallback);
     }
 
-    void AddPreviewMenuHandleDragEnd(GestureEventFunc&& actionEnd);
+    void AddPreviewMenuHandleDragEnd(GestureEventFunc&& actionEnd)
+    {
+        if (scrollable_) {
+            scrollable_->AddPreviewMenuHandleDragEnd(std::move(actionEnd));
+        }
+    }
 
     void SetBarCollectClickAndLongPressTargetCallback(const BarCollectTouchTargetCallback&& barCollectLongPressTarget)
     {
@@ -158,14 +176,13 @@ public:
 
     void CollectScrollableTouchTarget(const OffsetF& coordinateOffset, const GetEventTargetImpl& getEventTargetImpl,
         TouchTestResult& result, const RefPtr<FrameNode>& frameNode, const RefPtr<TargetComponent>& targetComponent,
-        ResponseLinkResult& responseLinkResult, int32_t touchId);
+        ResponseLinkResult& responseLinkResult);
 
 private:
     Axis axis_ = Axis::VERTICAL;
     bool enabled_ = true;
     RefPtr<Scrollable> scrollable_;
     BarCollectTouchTargetCallback barCollectTouchTarget_;
-    BarCollectTouchTargetCallback barRectCollectTouchTarget_;
     BarCollectTouchTargetCallback barCollectLongPressTarget_;
     InBarRegionCallback inBarRegionCallback_;
     InBarRegionCallback inBarRectRegionCallback_;
@@ -174,7 +191,7 @@ private:
 };
 
 class ScrollableActuator : public GestureEventActuator {
-    DECLARE_ACE_TYPE(ScrollableActuator, GestureEventActuator);
+    DECLARE_ACE_TYPE(ScrollableActuator, GestureEventActuator)
 public:
     explicit ScrollableActuator(const WeakPtr<GestureEventHub>& gestureEventHub);
     ~ScrollableActuator() override = default;
@@ -207,7 +224,7 @@ public:
     void CollectTouchTarget(const OffsetF& coordinateOffset, const TouchRestrict& touchRestrict,
         const GetEventTargetImpl& getEventTargetImpl, TouchTestResult& result, const PointF& localPoint,
         const RefPtr<FrameNode>& frameNode, const RefPtr<TargetComponent>& targetComponent,
-        ResponseLinkResult& responseLinkResult, int32_t touchId);
+        ResponseLinkResult& responseLinkResult);
 
     void InitClickRecognizer(const OffsetF& coordinateOffset, const GetEventTargetImpl& getEventTargetImpl,
         const RefPtr<FrameNode>& frameNode, const RefPtr<TargetComponent>& targetComponent,

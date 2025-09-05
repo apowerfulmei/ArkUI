@@ -15,6 +15,7 @@
 
 #include "core/components_ng/gestures/swipe_gesture.h"
 
+#include "base/geometry/dimension.h"
 #include "core/components_ng/gestures/recognizers/swipe_recognizer.h"
 #include "core/pipeline_ng/pipeline_context.h"
 
@@ -35,9 +36,6 @@ RefPtr<NGGestureRecognizer> SwipeGesture::CreateRecognizer()
     swipeRecognizer->SetPriority(priority_);
     swipeRecognizer->SetPriorityMask(gestureMask_);
     swipeRecognizer->SetGestureInfo(gestureInfo_);
-    if (gestureInfo_) {
-        gestureInfo_->SetDisposeTag(false);
-    }
     swipeRecognizer->SetUserData(userData_);
     return swipeRecognizer;
 }

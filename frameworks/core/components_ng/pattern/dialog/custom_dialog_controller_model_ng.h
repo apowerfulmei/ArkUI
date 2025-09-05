@@ -19,14 +19,14 @@
 #include "core/components_ng/pattern/dialog/custom_dialog_controller_model.h"
 #include "core/pipeline_ng/pipeline_context.h"
 #include "base/memory/ace_type.h"
-
+#include "base/subwindow/subwindow_manager.h"
 namespace OHOS::Ace::NG {
 class ACE_EXPORT CustomDialogControllerModelNG : public OHOS::Ace::CustomDialogControllerModel {
 public:
     void SetOpenDialog(DialogProperties& dialogProperties, const WeakPtr<AceType>& controller,
         std::vector<WeakPtr<AceType>>& dialogs, bool& pending, bool& isShown, std::function<void()>&& cancelTask,
         std::function<void()>&& buildFunc, RefPtr<AceType>& dialogComponent, RefPtr<AceType>& customDialog,
-        std::list<DialogOperation>& dialogOperation, bool& hasBind) override;
+        std::list<DialogOperation>& dialogOperation) override;
     static RefPtr<UINode> SetOpenDialogWithNode(DialogProperties& dialogProperties,
         const RefPtr<UINode>& customNode);
     void SetCloseDialog(DialogProperties& dialogProperties, const WeakPtr<AceType>& controller,
@@ -34,18 +34,6 @@ public:
         RefPtr<AceType>& dialogComponent, RefPtr<AceType>& customDialog,
         std::list<DialogOperation>& dialogOperation) override;
     static void SetCloseDialogForNDK(FrameNode* dialogNode);
-    PromptActionCommonState GetState(std::vector<WeakPtr<AceType>>& dialogs, bool& hasBind) override;
-    static PromptActionCommonState GetStateWithNode(FrameNode* dialogNode);
-
-private:
-    TaskExecutor::Task ParseOpenDialogTask(int32_t currentId, const WeakPtr<AceType>& controller,
-        DialogProperties& dialogProperties, std::vector<WeakPtr<AceType>>& dialogs, std::function<void()>&& buildFunc,
-        bool& hasBind, bool& isShown);
-    static void SetOpenDialogInTask(const RefPtr<OverlayManager>& overlayManager, const RefPtr<Container>& container,
-        const WeakPtr<AceType>& controller, RefPtr<NG::FrameNode>& dialog, DialogProperties& dialogProperties,
-        std::function<void()>&& func, bool& isShown);
-    TaskExecutor::Task ParseCloseDialogTask(const WeakPtr<AceType>& controller, DialogProperties& dialogProperties,
-        std::vector<WeakPtr<AceType>>& dialogs, const RefPtr<OverlayManager>& overlayManager);
 };
 } // namespace OHOS::Ace::NG
 #endif // FRAMEWORKS_BRIDGE_DECLARATIVE_FRONTEND_JS_VIEW_DIALOG_JS_CUSTOM_DIALOG_CONTROLLER_H

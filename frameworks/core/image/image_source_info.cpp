@@ -22,7 +22,7 @@ namespace OHOS::Ace {
 namespace {
 
 constexpr uint32_t FILE_SUFFIX_LEN = 4;
-constexpr uint32_t MAX_BASE64_LENGTH = 50; // prevent the Base64 image format from too long.
+constexpr uint32_t APNG_FILE_SUFFIX_LEN = 5;
 
 bool CheckSvgExtension(const std::string& src)
 {
@@ -50,6 +50,24 @@ bool ImageSourceInfo::IsSVGSource(const std::string& src, SrcType srcType, Inter
     }
     return (src.empty() && resourceId > InternalResource::ResourceId::SVG_START &&
             resourceId < InternalResource::ResourceId::SVG_END);
+}
+
+bool ImageSourceInfo::IsPngSource(const std::string& src, InternalResource::ResourceId resourceId)
+{
+    // 4 is the length of ".png" or is .apng
+    if (!src.empty()) {
+        std::string head = src.size() > APNG_FILE_SUFFIX_LEN
+                               ? src.substr(src.size() - APNG_FILE_SUFFIX_LEN, APNG_FILE_SUFFIX_LEN)
+                           : src.size() == 4 ? src.substr(src.size() - FILE_SUFFIX_LEN, FILE_SUFFIX_LEN)
+                                             : "";
+        std::transform(head.begin(), head.end(), head.begin(), [](unsigned char c) { return std::tolower(c); });
+
+        return (head.size() > FILE_SUFFIX_LEN && head.substr(head.size() - FILE_SUFFIX_LEN) == ".png") ||
+               (head.size() > APNG_FILE_SUFFIX_LEN && head.substr(head.size() - APNG_FILE_SUFFIX_LEN) == ".apng");
+    } else if (resourceId < InternalResource::ResourceId::SVG_START) {
+        return true;
+    }
+    return false;
 }
 
 bool ImageSourceInfo::IsValidBase64Head(const std::string& uri, const std::string& pattern)
@@ -121,7 +139,8 @@ SrcType ImageSourceInfo::ResolveURIType(const std::string& uri)
 ImageSourceInfo::ImageSourceInfo(std::string imageSrc, std::string bundleName, std::string moduleName, Dimension width,
     Dimension height, InternalResource::ResourceId resourceId, const RefPtr<PixelMap>& pixmap)
     : src_(std::move(imageSrc)), bundleName_(std::move(bundleName)), moduleName_(std::move(moduleName)),
-      sourceWidth_(width), sourceHeight_(height), resourceId_(resourceId), pixmap_(pixmap), srcType_(ResolveSrcType())
+      sourceWidth_(width), sourceHeight_(height), resourceId_(resourceId), pixmap_(pixmap),
+      isPng_(IsPngSource(src_, resourceId_)), srcType_(ResolveSrcType())
 {
     isSvg_ = IsSVGSource(src_, srcType_, resourceId_);
     // count how many source set.
@@ -152,7 +171,8 @@ ImageSourceInfo::ImageSourceInfo(const std::shared_ptr<std::string>& imageSrc, s
     std::string moduleName, Dimension width, Dimension height, InternalResource::ResourceId resourceId,
     const RefPtr<PixelMap>& pixmap)
     : srcRef_(imageSrc), bundleName_(std::move(bundleName)), moduleName_(std::move(moduleName)), sourceWidth_(width),
-      sourceHeight_(height), resourceId_(resourceId), pixmap_(pixmap), srcType_(ResolveSrcType())
+      sourceHeight_(height), resourceId_(resourceId), pixmap_(pixmap), isPng_(IsPngSource(*srcRef_, resourceId_)),
+      srcType_(ResolveSrcType())
 {
     // count how many source set.
     int32_t count = 0;
@@ -198,12 +218,12 @@ SrcType ImageSourceInfo::ResolveSrcType() const
 
 void ImageSourceInfo::GenerateCacheKey()
 {
-    auto name = ToString(false);
+    auto name = ToString();
     name.append(AceApplicationInfo::GetInstance().GetAbilityName())
         .append(bundleName_)
         .append(moduleName_)
         .append(std::to_string(static_cast<int32_t>(resourceId_)))
-        .append(std::to_string(static_cast<int32_t>(Container::CurrentColorMode())))
+        .append(std::to_string(static_cast<int32_t>(SystemProperties::GetColorMode())))
         .append(std::to_string(static_cast<int32_t>(localColorMode_)));
     if (srcType_ == SrcType::BASE64) {
         name.append("SrcType:BASE64");
@@ -225,8 +245,8 @@ bool ImageSourceInfo::operator==(const ImageSourceInfo& info) const
     if (isSvg_ && fillColor_ != info.fillColor_) {
         return false;
     }
-    return ((!pixmap_ && !info.pixmap_) || (pixmap_ && info.pixmap_ && pixmapBuffer_ == info.pixmap_->GetPixels() &&
-                                               pixmap_->GetRawPixelMapPtr() == info.pixmap_->GetRawPixelMapPtr())) &&
+    return ((!pixmap_ && !info.pixmap_) ||
+               (pixmap_ && info.pixmap_ && pixmapBuffer_ == info.pixmap_->GetPixels())) &&
            GetSrc() == info.GetSrc() && resourceId_ == info.resourceId_;
 }
 
@@ -303,6 +323,11 @@ bool ImageSourceInfo::IsValid() const
            (!src.empty() && resourceId_ == InternalResource::ResourceId::NO_ID) || pixmap_;
 }
 
+bool ImageSourceInfo::IsPng() const
+{
+    return isPng_;
+}
+
 bool ImageSourceInfo::IsSvg() const
 {
     return isSvg_ && !IsPixmap();
@@ -328,15 +353,10 @@ SrcType ImageSourceInfo::GetSrcType() const
     return srcType_;
 }
 
-std::string ImageSourceInfo::ToString(bool isNeedTruncated) const
+std::string ImageSourceInfo::ToString() const
 {
     auto& src = GetSrc();
     if (!src.empty()) {
-        // Check if the src is a base64 image
-        if (srcType_ == SrcType::BASE64 && isNeedTruncated) {
-            // Return the first 50 characters of the base64 image string
-            return src.substr(0, MAX_BASE64_LENGTH) + "...(truncated)";
-        }
         return src;
     }
     if (resourceId_ != InternalResource::ResourceId::NO_ID) {
@@ -411,35 +431,6 @@ std::string ImageSourceInfo::GetKey() const
         return cacheKey_ + fillColor_.value().ColorToString();
     }
     return cacheKey_;
-}
-
-void ImageSourceInfo::SetContainerId(int32_t containerId)
-{
-    containerId_ = containerId;
-}
-
-int32_t ImageSourceInfo::GetContainerId() const
-{
-    return containerId_;
-}
-
-void ImageSourceInfo::SetImageHdr(bool isHdr)
-{
-    isHdr_ = isHdr;
-}
-
-bool ImageSourceInfo::IsImageHdr() const
-{
-    return isHdr_;
-}
-
-std::string ImageSourceInfo::GetTaskKey() const
-{
-    // only svg sets fillColor
-    if (isSvg_ && fillColor_.has_value()) {
-        return cacheKey_ + fillColor_.value().ColorToString() + std::to_string(containerId_);
-    }
-    return cacheKey_ + std::to_string(containerId_) + std::to_string(isHdr_);
 }
 
 ImageSourceInfo ImageSourceInfo::CreateImageSourceInfoWithHost(const RefPtr<NG::FrameNode>& host)

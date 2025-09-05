@@ -32,13 +32,7 @@ public:
 
     void Clear() const {}
 
-    void SetIsCustomTextType(bool isCustomTextType)
-    {
-        isCustomTextType_ = isCustomTextType;
-    }
-
-private:
-    bool isCustomTextType_ = false;
+    void SetIsCustomTextType(bool isCustomTextType) {}
 };
 } // namespace OHOS::Ace::Testing
 #endif // FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_MOCK_ROSEN_TEST_TESTING_RECORDING_CANVAS_H

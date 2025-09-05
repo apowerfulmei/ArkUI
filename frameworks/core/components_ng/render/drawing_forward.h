@@ -39,7 +39,6 @@ class Picture;
 struct BitmapFormat;
 class ImageFilter;
 class PointF;
-class Surface;
 } // namespace Drawing
 } // namespace OHOS::Rosen
 namespace OHOS::Ace {
@@ -64,7 +63,6 @@ using RSPicture = Rosen::Drawing::Picture;
 using RSBitmapFormat = Rosen::Drawing::BitmapFormat;
 using RSImageFilter = Rosen::Drawing::ImageFilter;
 using RSRecordingPath = Rosen::Drawing::Path;
-using RSSurface = Rosen::Drawing::Surface;
 } // namespace OHOS::Ace
 #else
 #include "core/components_ng/render/drawing_mock.h"

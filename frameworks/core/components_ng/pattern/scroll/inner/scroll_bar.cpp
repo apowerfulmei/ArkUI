@@ -15,8 +15,14 @@
 
 #include "core/components_ng/pattern/scroll/inner/scroll_bar.h"
 
+#include <cmath>
+
 #include "base/log/dump_log.h"
-#include "core/common/vibrator/vibrator_utils.h"
+#include "base/utils/utils.h"
+#include "core/animation/curve_animation.h"
+#include "core/animation/curves.h"
+#include "core/common/container.h"
+#include "core/pipeline_ng/pipeline_context.h"
 
 namespace OHOS::Ace::NG {
 namespace {
@@ -25,10 +31,6 @@ constexpr double BAR_ADAPT_EPSLION = 1.0;
 constexpr int32_t SCROLL_BAR_LAYOUT_INFO_COUNT = 30;
 constexpr int32_t LONG_PRESS_PAGE_INTERVAL_MS = 100;
 constexpr int32_t LONG_PRESS_TIME_THRESHOLD_MS = 500;
-constexpr int32_t OGN_FIGNERID = -1;
-#ifdef ARKUI_WEARABLE
-constexpr char SCROLL_BAR_VIBRATOR_WEAK[] = "watchhaptic.feedback.crown.strength3";
-#endif
 } // namespace
 
 ScrollBar::ScrollBar()
@@ -45,33 +47,21 @@ ScrollBar::ScrollBar(DisplayMode displayMode, ShapeMode shapeMode, PositionMode 
 
 void ScrollBar::InitTheme()
 {
-    auto pipelineContext = PipelineContext::GetCurrentContextSafelyWithCheck();
+    auto pipelineContext = PipelineContext::GetCurrentContextSafely();
     CHECK_NULL_VOID(pipelineContext);
     auto theme = pipelineContext->GetTheme<ScrollBarTheme>();
     CHECK_NULL_VOID(theme);
     themeNormalWidth_ = theme->GetNormalWidth();
     SetInactiveWidth(themeNormalWidth_);
-    SetNormalWidth(themeNormalWidth_, pipelineContext);
+    SetNormalWidth(themeNormalWidth_);
     SetActiveWidth(theme->GetActiveWidth());
     SetTouchWidth(theme->GetTouchWidth());
     SetMinHeight(theme->GetMinHeight());
     SetMinDynamicHeight(theme->GetMinDynamicHeight());
     SetBackgroundColor(theme->GetBackgroundColor());
     SetForegroundColor(theme->GetForegroundColor());
-    SetForegroundHoverBlendColor(theme->GetForegroundHoverBlendColor());
-    SetForegroundPressedBlendColor(theme->GetForegroundPressedBlendColor());
     SetPadding(theme->GetPadding());
     SetHoverWidth(theme);
-    SetArcNormalBackgroundWidth(theme->GetArcNormalBackgroundWidth());
-    SetArcActiveBackgroundWidth(theme->GetArcActiveBackgroundWidth());
-    SetArcNormalStartAngle(theme->GetArcNormalStartAngle());
-    SetArcActiveStartAngle(theme->GetArcActiveStartAngle());
-    SetArcNormalMaxOffsetAngle(theme->GetArcNormalMaxOffsetAngle());
-    SetArcActiveMaxOffsetAngle(theme->GetArcActiveMaxOffsetAngle());
-    SetArcNormalScrollBarWidth(theme->GetArcNormalScrollBarWidth());
-    SetArcActiveScrollBarWidth(theme->GetArcActiveScrollBarWidth());
-    SetArcForegroundColor(theme->GetArcForegroundColor());
-    SetArcBackgroundColor(theme->GetArcBackgroundColor());
 }
 
 bool ScrollBar::InBarTouchRegion(const Point& point) const
@@ -117,37 +107,23 @@ BarDirection ScrollBar::CheckBarDirection(const Point& point)
     }
 }
 
-void ScrollBar::FlushBarWidth(const RefPtr<PipelineContext>& context)
+void ScrollBar::FlushBarWidth()
 {
     if (shapeMode_ == ShapeMode::RECT) {
-        SetRectTrickRegion(paintOffset_, viewPortSize_, lastOffset_, estimatedHeight_, SCROLL_FROM_NONE, context);
+        SetRectTrickRegion(paintOffset_, viewPortSize_, lastOffset_, estimatedHeight_);
     } else {
         SetRoundTrickRegion(paintOffset_, viewPortSize_, lastOffset_, estimatedHeight_);
     }
-    SetBarRegion(paintOffset_, viewPortSize_, context);
+    SetBarRegion(paintOffset_, viewPortSize_);
 }
 
 void ScrollBar::UpdateScrollBarRegion(
-    const Offset& offset, const Size& size, const Offset& lastOffset, double estimatedHeight, int32_t scrollSource)
+    const Offset& offset, const Size& size, const Offset& lastOffset, double estimatedHeight)
 {
     // return if nothing changes to avoid changing opacity
     if (!positionModeUpdate_ && !normalWidthUpdate_ && paintOffset_ == offset && viewPortSize_ == size &&
-        lastOffset_ == lastOffset && NearEqual(estimatedHeight_, estimatedHeight, 0.000001f) && !isReverseUpdate_ &&
-        !isScrollBarMarginUpdate_) {
+        lastOffset_ == lastOffset && NearEqual(estimatedHeight_, estimatedHeight, 0.000001f) && !isReverseUpdate_) {
         return;
-    }
-    // When the scroll jumps without animation and is at the top or bottom before and after the jump,
-    // the scrollbar is not displayed.
-    auto checkAtEdge = (scrollSource == SCROLL_FROM_JUMP || scrollSource == SCROLL_FROM_FOCUS_JUMP) &&
-        displayMode_ == DisplayMode::AUTO && isScrollable_;
-    if (checkAtEdge) {
-        auto atTop = NearZero(GetMainOffset(lastOffset_)) && NearZero(GetMainOffset(lastOffset));
-        auto atBottom = NearEqual(GetMainOffset(lastOffset_), estimatedHeight_ - GetMainSize(viewPortSize_)) &&
-                        NearEqual(GetMainOffset(lastOffset), estimatedHeight - GetMainSize(size));
-        if (!atTop && !atBottom) {
-            opacityAnimationType_  = OpacityAnimationType::APPEAR_WITHOUT_ANIMATION;
-            ScheduleDisappearDelayTask();
-        }
     }
     if (!NearEqual(estimatedHeight_, estimatedHeight, 0.000001f) || viewPortSize_ != size) {
         needAddLayoutInfo = true;
@@ -158,7 +134,7 @@ void ScrollBar::UpdateScrollBarRegion(
         lastOffset_ = lastOffset;
         estimatedHeight_ = estimatedHeight;
         if (shapeMode_ == ShapeMode::RECT) {
-            SetRectTrickRegion(offset, size, lastOffset, estimatedHeight, scrollSource);
+            SetRectTrickRegion(offset, size, lastOffset, estimatedHeight);
         } else {
             SetRoundTrickRegion(offset, size, lastOffset, estimatedHeight);
         }
@@ -166,7 +142,6 @@ void ScrollBar::UpdateScrollBarRegion(
         positionModeUpdate_ = false;
         normalWidthUpdate_ = false;
         isReverseUpdate_ = false;
-        isScrollBarMarginUpdate_ = false;
     }
     needAddLayoutInfo =false;
 }
@@ -199,68 +174,51 @@ void ScrollBar::UpdateActiveRectOffset(double activeMainOffset)
     }
 }
 
-void ScrollBar::SetBarRegion(const Offset& offset, const Size& size, const RefPtr<PipelineContext>& context)
+void ScrollBar::SetBarRegion(const Offset& offset, const Size& size)
 {
     if (shapeMode_ == ShapeMode::RECT) {
-        double mainSize = (positionMode_ == PositionMode::BOTTOM ? size.Width() : size.Height());
-        auto scrollBarMarginStart =
-            scrollBarMargin_.has_value() ? scrollBarMargin_.value().start_.ConvertToPxWithSize(mainSize) : 0.0;
-        auto scrollBarMarginEnd =
-            scrollBarMargin_.has_value() ? scrollBarMargin_.value().end_.ConvertToPxWithSize(mainSize) : 0.0;
-        double reserved = NormalizeToPx(startReservedHeight_, context) + NormalizeToPx(endReservedHeight_, context) +
-            scrollBarMarginStart + scrollBarMarginEnd;
-        double height = std::max(size.Height() - reserved, 0.0);
-        auto hoverWidth = isUserNormalWidth_ ? barWidth_ : NormalizeToPx(hoverWidth_, context);
+        double height =
+            std::max(size.Height() - NormalizeToPx(startReservedHeight_) - NormalizeToPx(endReservedHeight_), 0.0);
         if (positionMode_ == PositionMode::LEFT) {
-            auto padding = isUserNormalWidth_ ? NormalizeToPx(padding_.Left(), context) : 0.0;
-            barRect_ = Rect(padding, 0.0, hoverWidth, height) + offset;
+            barRect_ = Rect(NormalizeToPx(padding_.Left()), 0.0, barWidth_, height) + offset;
         } else if (positionMode_ == PositionMode::RIGHT) {
-            auto padding = isUserNormalWidth_ ? NormalizeToPx(padding_.Right(), context) : 0.0;
-            barRect_ = Rect(size.Width() - hoverWidth - padding, 0.0, hoverWidth, height) + offset;
+            barRect_ =
+                Rect(size.Width() - barWidth_ - NormalizeToPx(padding_.Right()), 0.0, barWidth_, height) + offset;
         } else if (positionMode_ == PositionMode::BOTTOM) {
-            auto trackWidth = std::max(size.Width() - reserved, 0.0);
-            auto padding = isUserNormalWidth_ ? NormalizeToPx(padding_.Bottom(), context) : 0.0;
-            barRect_ = Rect(0.0, size.Height() - hoverWidth - padding, trackWidth, hoverWidth) + offset;
+            auto trackWidth =
+                std::max(size.Width() - NormalizeToPx(startReservedHeight_) - NormalizeToPx(endReservedHeight_), 0.0);
+            barRect_ =
+                Rect(0.0, size.Height() - barWidth_ - NormalizeToPx(padding_.Bottom()), trackWidth, barWidth_) +
+                offset;
         }
     }
 }
 
-void ScrollBar::SetRectTrickRegion(const Offset& offset, const Size& size, const Offset& lastOffset,
-    double estimatedHeight, int32_t scrollSource, const RefPtr<PipelineContext>& context)
+void ScrollBar::SetRectTrickRegion(
+    const Offset& offset, const Size& size, const Offset& lastOffset, double estimatedHeight)
 {
     double mainSize = (positionMode_ == PositionMode::BOTTOM ? size.Width() : size.Height());
-    auto scrollBarMarginStart =
-        scrollBarMargin_.has_value() ? scrollBarMargin_.value().start_.ConvertToPxWithSize(mainSize) : 0.0;
-    auto scrollBarMarginEnd =
-        scrollBarMargin_.has_value() ? scrollBarMargin_.value().end_.ConvertToPxWithSize(mainSize) : 0.0;
-    barRegionSize_ = std::max(mainSize - NormalizeToPx(endReservedHeight_, context) -
-        NormalizeToPx(startReservedHeight_, context) - scrollBarMarginStart - scrollBarMarginEnd, 0.0);
+    barRegionSize_ = std::max(mainSize - NormalizeToPx(endReservedHeight_) - NormalizeToPx(startReservedHeight_), 0.0);
     if (LessOrEqual(estimatedHeight, 0.0)) {
         return;
     }
-    double activeBarSize = barRegionSize_ * mainSize / estimatedHeight;
-    double activeSize = activeBarSize - outBoundary_;
-    bool hideBarForSmallRegionWithMargin =
-        LessNotEqual(barRegionSize_, NormalizeToPx(minHeight_, context)) && scrollBarMargin_.has_value();
-    if (hideBarForSmallRegionWithMargin) {
-        activeSize = 0.0;
+    double activeSize = barRegionSize_ * mainSize / estimatedHeight - outBoundary_;
+    
+    if (!NearZero(outBoundary_)) {
+        activeSize = std::max(
+            std::max(activeSize, NormalizeToPx(minHeight_) - outBoundary_), NormalizeToPx(minDynamicHeight_));
     } else {
-        if (!NearZero(outBoundary_)) {
-            activeSize = std::max(std::max(activeSize, NormalizeToPx(minHeight_, context) - outBoundary_),
-                NormalizeToPx(minDynamicHeight_, context));
+        activeSize = std::max(activeSize, NormalizeToPx(minHeight_));
+    }
+    barWidth_  = NormalizeToPx(normalWidth_);
+    double normalWidth = NormalizeToPx(normalWidth_);
+    if (LessOrEqual(activeSize, normalWidth)) {
+        if (GreatNotEqual(normalWidth, mainSize)) {
+            normalWidth = NormalizeToPx(themeNormalWidth_);
         } else {
-            activeSize = std::max(activeSize, NormalizeToPx(minHeight_, context));
-        }
-        barWidth_ = NormalizeToPx(normalWidth_, context);
-        if (LessOrEqual(activeSize, barWidth_)) {
-            if (GreatNotEqual(barWidth_, mainSize)) {
-                barWidth_ = NormalizeToPx(themeNormalWidth_, context);
-            } else {
-                activeSize = barWidth_;
-            }
+            activeSize = normalWidth;
         }
     }
-
     double lastMainOffset =
         std::max(positionMode_ == PositionMode::BOTTOM ? lastOffset.GetX() : lastOffset.GetY(), 0.0);
     if (NearEqual(mainSize, estimatedHeight)) {
@@ -268,36 +226,19 @@ void ScrollBar::SetRectTrickRegion(const Offset& offset, const Size& size, const
     } else {
         offsetScale_ = (barRegionSize_ - activeSize) / (estimatedHeight - mainSize);
     }
-    // Calculate relative offset first
-    double relativeOffset = std::min(offsetScale_ * lastMainOffset, barRegionSize_ - activeSize);
-    if (isReverse_) {
-        relativeOffset = barRegionSize_ - activeSize - relativeOffset;
-    }
-    // Convert to absolute position
-    double activeMainOffset = relativeOffset + NormalizeToPx(startReservedHeight_) + scrollBarMarginStart;
-    bool canUseAnimation = NearZero(outBoundary_) && !positionModeUpdate_ && scrollSource != SCROLL_FROM_JUMP;
+    // Avoid crossing the top or bottom boundary.
+    double activeMainOffset = std::min(offsetScale_ * lastMainOffset, barRegionSize_ - activeSize)
+                                + NormalizeToPx(startReservedHeight_);
+    activeMainOffset = !isReverse_ ? activeMainOffset : barRegionSize_ - activeSize - activeMainOffset;
+    bool canUseAnimation = !isOutOfBoundary_ && !positionModeUpdate_;
     double inactiveSize = 0.0;
     double inactiveMainOffset = 0.0;
     scrollableOffset_ = activeMainOffset;
-    CalcScrollBarRegion(activeMainOffset, activeSize, offset, size, inactiveMainOffset, inactiveSize);
-    AddScrollBarLayoutInfo();
-    // If the scrollBar length changes, start the adaptation animation
-    if (!NearZero(inactiveSize) && !NearEqual(activeSize, inactiveSize, BAR_ADAPT_EPSLION) && canUseAnimation &&
-        !Negative(inactiveMainOffset) && !normalWidthUpdate_ && !hideBarForSmallRegionWithMargin) {
-        PlayScrollBarAdaptAnimation();
-    } else {
-        needAdaptAnimation_ = false;
-    }
-}
-
-void ScrollBar::CalcScrollBarRegion(double activeMainOffset, double activeSize, const Offset& offset, const Size& size,
-    double& inactiveMainOffset, double& inactiveSize)
-{
     if (positionMode_ == PositionMode::LEFT) {
         inactiveSize = activeRect_.Height();
         inactiveMainOffset = activeRect_.Top();
         activeRect_ = Rect(-NormalizeToPx(position_) + NormalizeToPx(padding_.Left()),
-            activeMainOffset, barWidth_, activeSize) + offset;
+            activeMainOffset, normalWidth, activeSize) + offset;
         if (isUserNormalWidth_) {
             touchRegion_ = activeRect_;
             hoverRegion_ = activeRect_;
@@ -308,8 +249,8 @@ void ScrollBar::CalcScrollBarRegion(double activeMainOffset, double activeSize, 
     } else if (positionMode_ == PositionMode::RIGHT) {
         inactiveSize = activeRect_.Height();
         inactiveMainOffset = activeRect_.Top();
-        double x = size.Width() - barWidth_ - NormalizeToPx(padding_.Right()) + NormalizeToPx(position_);
-        activeRect_ = Rect(x, activeMainOffset, barWidth_, activeSize) + offset;
+        double x = size.Width() - normalWidth - NormalizeToPx(padding_.Right()) + NormalizeToPx(position_);
+        activeRect_ = Rect(x, activeMainOffset, normalWidth, activeSize) + offset;
         // Update the hot region
         if (isUserNormalWidth_) {
             touchRegion_ = activeRect_;
@@ -325,8 +266,8 @@ void ScrollBar::CalcScrollBarRegion(double activeMainOffset, double activeSize, 
     } else if (positionMode_ == PositionMode::BOTTOM) {
         inactiveSize = activeRect_.Width();
         inactiveMainOffset = activeRect_.Left();
-        auto positionY = size.Height() - barWidth_ - NormalizeToPx(padding_.Bottom()) + NormalizeToPx(position_);
-        activeRect_ = Rect(activeMainOffset, positionY, activeSize, barWidth_) + offset;
+        auto positionY = size.Height() - normalWidth - NormalizeToPx(padding_.Bottom()) + NormalizeToPx(position_);
+        activeRect_ = Rect(activeMainOffset, positionY, activeSize, normalWidth) + offset;
         if (isUserNormalWidth_) {
             touchRegion_ = activeRect_;
             hoverRegion_ = activeRect_;
@@ -337,10 +278,18 @@ void ScrollBar::CalcScrollBarRegion(double activeMainOffset, double activeSize, 
             touchRegion_ = activeRect_ - hotRegionOffset + hotRegionSize;
 
             auto hoverRegionOffset = Offset(
-                0.0, NormalizeToPx(hoverWidth_) - barWidth_ - NormalizeToPx(padding_.Bottom()));
-            auto hoverRegionSize = Size(0, NormalizeToPx(hoverWidth_) - barWidth_);
+                0.0, NormalizeToPx(hoverWidth_) - NormalizeToPx(normalWidth_) - NormalizeToPx(padding_.Bottom()));
+            auto hoverRegionSize = Size(0, NormalizeToPx(hoverWidth_) - NormalizeToPx(normalWidth_));
             hoverRegion_ = activeRect_ - hoverRegionOffset + hoverRegionSize;
         }
+    }
+    AddScrollBarLayoutInfo();
+    // If the scrollBar length changes, start the adaptation animation
+    if (!NearZero(inactiveSize) && !NearEqual(activeSize, inactiveSize, BAR_ADAPT_EPSLION) && canUseAnimation &&
+        !Negative(inactiveMainOffset) && !normalWidthUpdate_) {
+        PlayScrollBarAdaptAnimation();
+    } else {
+        needAdaptAnimation_ = false;
     }
 }
 
@@ -392,9 +341,9 @@ float ScrollBar::CalcPatternOffset(float scrollBarOffset) const
     return -scrollBarOffset * (estimatedHeight_ - mainSize) / (barRegionSize_ - activeRectLength);
 }
 
-double ScrollBar::NormalizeToPx(const Dimension& dimension, const RefPtr<PipelineContext>& context) const
+double ScrollBar::NormalizeToPx(const Dimension& dimension) const
 {
-    auto pipelineContext = context ? context : PipelineContext::GetCurrentContextSafelyWithCheck();
+    auto pipelineContext = PipelineContext::GetCurrentContext();
     CHECK_NULL_RETURN(pipelineContext, 0.0);
     return pipelineContext->NormalizeToPx(dimension);
 }
@@ -420,9 +369,6 @@ void ScrollBar::SetGestureEvent()
                     inRegion = scrollBar->InBarHoverRegion(point);
                     scrollBar->MarkNeedRender();
                 }
-                if (inRegion) {
-                    scrollBar->fingerId_ = touch.GetFingerId();
-                }
                 if (!scrollBar->IsPressed()) {
                     scrollBar->SetPressed(inRegion);
                 }
@@ -432,13 +378,12 @@ void ScrollBar::SetGestureEvent()
             }
             if ((info.GetTouches().front().GetTouchType() == TouchType::UP ||
                     info.GetTouches().front().GetTouchType() == TouchType::CANCEL) &&
-                    (scrollBar->fingerId_ == info.GetTouches().front().GetFingerId())) {
+                    (info.GetTouches().size() <= 1)) {
                 if (scrollBar->IsPressed() && !scrollBar->IsHover()) {
                     scrollBar->PlayScrollBarShrinkAnimation();
                     scrollBar->ScheduleDisappearDelayTask();
                 }
                 scrollBar->SetPressed(false);
-                scrollBar->fingerId_ = OGN_FIGNERID;
                 scrollBar->MarkNeedRender();
             }
         });
@@ -461,29 +406,25 @@ void ScrollBar::SetMouseEvent()
         bool inHoverRegion = scrollBar->InBarHoverRegion(point);
         if (inBarRegion) {
             scrollBar->PlayScrollBarAppearAnimation();
-            scrollBar->isShowScrollBar_ = true;
             if (info.GetButton() == MouseButton::LEFT_BUTTON && info.GetAction() == MouseAction::PRESS) {
                 scrollBar->isMousePressed_ = true;
             } else {
                 scrollBar->isMousePressed_ = false;
             }
+        } else if (!scrollBar->IsPressed()) {
+            scrollBar->ScheduleDisappearDelayTask();
         }
-        if (inBarRegion && !scrollBar->IsHover()) {
+        if (inHoverRegion && !scrollBar->IsHover()) {
             if (!scrollBar->IsPressed()) {
                 scrollBar->PlayScrollBarGrowAnimation();
             }
             scrollBar->SetHover(true);
         }
-        if (scrollBar->IsHover() && !inBarRegion) {
+        if (scrollBar->IsHover() && !inHoverRegion) {
             scrollBar->SetHover(false);
             if (!scrollBar->IsPressed()) {
                 scrollBar->PlayScrollBarShrinkAnimation();
             }
-        }
-        scrollBar->SetHoverSlider(inHoverRegion);
-        if (!inBarRegion && !inHoverRegion && !scrollBar->IsPressed() && scrollBar->isShowScrollBar_) {
-            scrollBar->ScheduleDisappearDelayTask();
-            scrollBar->isShowScrollBar_ = false;
         }
         scrollBar->locationInfo_ = info.GetLocalLocation();
     });
@@ -500,7 +441,6 @@ void ScrollBar::SetHoverEvent()
         CHECK_NULL_VOID(scrollBar && scrollBar->IsScrollable());
         if (scrollBar->IsHover() && !isHover) {
             scrollBar->SetHover(false);
-            scrollBar->SetHoverSlider(false);
             if (!scrollBar->IsPressed()) {
                 scrollBar->PlayScrollBarShrinkAnimation();
                 scrollBar->ScheduleDisappearDelayTask();
@@ -572,7 +512,7 @@ bool ScrollBar::AnalysisUpOrDown(Point point, bool& reverse)
 
 void ScrollBar::ScheduleCaretLongPress()
 {
-    auto context = PipelineContext::GetCurrentContextSafelyWithCheck();
+    auto context = OHOS::Ace::PipelineContext::GetCurrentContext();
     CHECK_NULL_VOID(context);
     if (!context->GetTaskExecutor()) {
         return;
@@ -585,14 +525,14 @@ void ScrollBar::ScheduleCaretLongPress()
             CHECK_NULL_VOID(pattern);
             pattern->HandleLongPress(true);
         },
-        TaskExecutor::TaskType::UI, LONG_PRESS_PAGE_INTERVAL_MS, "ArkUIScrollBarInnerHandleLongPress");
+        TaskExecutor::TaskType::UI, LONG_PRESS_PAGE_INTERVAL_MS, "ArkUIScrollBarHandleLongPress");
 }
 
-void ScrollBar::CalcReservedHeight(const RefPtr<PipelineContext>& context)
+void ScrollBar::CalcReservedHeight()
 {
-    auto pipelineContext = context ? context : PipelineContext::GetCurrentContextSafelyWithCheck();
+    auto pipelineContext = PipelineContext::GetCurrentContext();
     CHECK_NULL_VOID(pipelineContext);
-    if (pipelineContext->GetMinPlatformVersion() < static_cast<int32_t>(PlatformVersion::VERSION_TEN)) {
+    if (Container::LessThanAPIVersion(PlatformVersion::VERSION_TEN)) {
         auto theme = pipelineContext->GetTheme<ScrollBarTheme>();
         CHECK_NULL_VOID(theme);
         startReservedHeight_ = Dimension(0.0, DimensionUnit::PX);
@@ -600,21 +540,38 @@ void ScrollBar::CalcReservedHeight(const RefPtr<PipelineContext>& context)
         FlushBarWidth();
         return;
     }
-    float startRadius = 0.f;
-    float endRadius = 0.f;
-    float barMargin = 0.f;
-    float padding = 0.f;
-    float startRadiusHeight = 0.f;
-    float endRadiusHeight = 0.f;
-    GetRadiusAndPadding(startRadius, endRadius, padding, pipelineContext);
+    float startRadius = 0.0;
+    float endRadius = 0.0;
+    float barMargin = 0.0;
+    float padding = 0.0;
+    float startRadiusHeight = 0.0;
+    float endRadiusHeight = 0.0;
+    switch (positionMode_) {
+        case PositionMode::LEFT:
+            startRadius = hostBorderRadius_.radiusTopLeft.value_or(Dimension()).ConvertToPx();
+            endRadius = hostBorderRadius_.radiusBottomLeft.value_or(Dimension()).ConvertToPx();
+            padding = NormalizeToPx(padding_.Left());
+            break;
+        case PositionMode::RIGHT:
+            startRadius = hostBorderRadius_.radiusTopRight.value_or(Dimension()).ConvertToPx();
+            endRadius = hostBorderRadius_.radiusBottomRight.value_or(Dimension()).ConvertToPx();
+            padding = NormalizeToPx(padding_.Right());
+            break;
+        case PositionMode::BOTTOM:
+            startRadius = hostBorderRadius_.radiusBottomLeft.value_or(Dimension()).ConvertToPx();
+            endRadius = hostBorderRadius_.radiusBottomRight.value_or(Dimension()).ConvertToPx();
+            padding = NormalizeToPx(padding_.Bottom());
+            break;
+        default:
+            break;
+    }
     if (std::isnan(startRadius)) {
-        startRadius = 0.f;
+        startRadius = 0.0f;
     }
     if (std::isnan(endRadius)) {
-        endRadius = 0.f;
+        endRadius = 0.0f;
     }
-    // 2 means start margin and end margin
-    barMargin = padding + NormalizeToPx(normalWidth_, pipelineContext) / 2;
+    barMargin = padding + NormalizeToPx(normalWidth_) / 2;
     if (LessOrEqual(startRadius, barMargin)) {
         startReservedHeight_ = Dimension(0.0, DimensionUnit::PX);
     } else {
@@ -628,43 +585,15 @@ void ScrollBar::CalcReservedHeight(const RefPtr<PipelineContext>& context)
         endRadiusHeight = endRadius - std::sqrt(2 * padding * endRadius - padding * padding);
         endReservedHeight_ = Dimension(endRadiusHeight + (endRadius / barMargin), DimensionUnit::PX);
     }
-    FlushBarWidth(pipelineContext);
-}
-
-void ScrollBar::GetRadiusAndPadding(
-    float& startRadius, float& endRadius, float& padding, const RefPtr<PipelineContext>& context)
-{
-    switch (positionMode_) {
-        case PositionMode::LEFT:
-            startRadius = hostBorderRadius_.radiusTopLeft.value_or(Dimension()).ConvertToPx();
-            endRadius = hostBorderRadius_.radiusBottomLeft.value_or(Dimension()).ConvertToPx();
-            padding = NormalizeToPx(padding_.Left(), context);
-            break;
-        case PositionMode::RIGHT:
-            startRadius = hostBorderRadius_.radiusTopRight.value_or(Dimension()).ConvertToPx();
-            endRadius = hostBorderRadius_.radiusBottomRight.value_or(Dimension()).ConvertToPx();
-            padding = NormalizeToPx(padding_.Right(), context);
-            break;
-        case PositionMode::BOTTOM:
-            startRadius = hostBorderRadius_.radiusBottomLeft.value_or(Dimension()).ConvertToPx();
-            endRadius = hostBorderRadius_.radiusBottomRight.value_or(Dimension()).ConvertToPx();
-            padding = NormalizeToPx(padding_.Bottom(), context);
-            break;
-        default:
-            break;
-    }
+    FlushBarWidth();
 }
 
 void ScrollBar::InitPanRecognizer()
 {
     PanDirection panDirection;
     panDirection.type = positionMode_ == PositionMode::BOTTOM ? PanDirection::HORIZONTAL : PanDirection::VERTICAL;
-    auto pipelineContext = PipelineContext::GetCurrentContextSafelyWithCheck();
-    double dipScale = pipelineContext ? pipelineContext->GetDipScale() : 0.0;
-    PanDistanceMap distanceMap = { { SourceTool::UNKNOWN, DEFAULT_PAN_DISTANCE.Value() * dipScale },
-        { SourceTool::PEN, DEFAULT_PEN_PAN_DISTANCE.Value() * dipScale } };
-    panRecognizer_ = MakeRefPtr<PanRecognizer>(1, panDirection, distanceMap);
-    panRecognizer_->SetMouseDistance(DRAG_PAN_DISTANCE_MOUSE.Value() * dipScale);
+    panRecognizer_ = MakeRefPtr<PanRecognizer>(1, panDirection, DEFAULT_PAN_DISTANCE.ConvertToPx());
+    panRecognizer_->SetMouseDistance(DRAG_PAN_DISTANCE_MOUSE.ConvertToPx());
     panRecognizer_->SetOnActionUpdate([weakBar = AceType::WeakClaim(this)](const GestureEvent& info) {
         auto scrollBar = weakBar.Upgrade();
         if (scrollBar) {
@@ -683,7 +612,7 @@ void ScrollBar::InitPanRecognizer()
             scrollBar->HandleDragStart(info);
         }
     });
-    panRecognizer_->SetOnActionCancel([weakBar = AceType::WeakClaim(this)](const GestureEvent& info) {
+    panRecognizer_->SetOnActionCancel([weakBar = AceType::WeakClaim(this)]() {
         auto scrollBar = weakBar.Upgrade();
         if (scrollBar) {
             GestureEvent info;
@@ -705,7 +634,7 @@ void ScrollBar::HandleDragStart(const GestureEvent& info)
     TAG_LOGI(AceLogTag::ACE_SCROLL_BAR, "inner scrollBar drag start");
     ACE_SCOPED_TRACE("inner scrollBar HandleDragStart");
     if (scrollPositionCallback_) {
-        scrollPositionCallback_(0, SCROLL_FROM_START, false);
+        scrollPositionCallback_(0, SCROLL_FROM_START);
         if (dragFRCSceneCallback_) {
             dragFRCSceneCallback_(0, NG::SceneStatus::START);
         }
@@ -734,9 +663,7 @@ void ScrollBar::HandleDragUpdate(const GestureEvent& info)
             offset = -offset;
         }
         ACE_SCOPED_TRACE("inner scrollBar HandleDragUpdate offset:%f", offset);
-        auto isMouseWheelScroll =
-            info.GetInputEventType() == InputEventType::AXIS && info.GetSourceTool() != SourceTool::TOUCHPAD;
-        scrollPositionCallback_(offset, SCROLL_FROM_BAR, isMouseWheelScroll);
+        scrollPositionCallback_(offset, SCROLL_FROM_BAR);
         if (dragFRCSceneCallback_) {
             dragFRCSceneCallback_(NearZero(info.GetMainDelta()) ? info.GetMainVelocity()
                                                                 : info.GetMainVelocity() / info.GetMainDelta() * offset,
@@ -772,22 +699,18 @@ void ScrollBar::HandleDragEnd(const GestureEvent& info)
             scrollBar->ProcessFrictionMotion(value);
         });
     }
-    SnapAnimationOptions snapAnimationOptions = {
-        .snapDelta = CalcPatternOffset(frictionMotion_->GetFinalPosition()),
-        .animationVelocity = -velocity,
-        .dragDistance = CalcPatternOffset(GetDragOffset()),
-        .snapDirection = SnapDirection::NONE,
-        .fromScrollBar = true,
-    };
-    if (startSnapAnimationCallback_ && startSnapAnimationCallback_(snapAnimationOptions)) {
-        isDriving_ = false;
-        return;
+    if (calePredictSnapOffsetCallback_ && startScrollSnapMotionCallback_) {
+        auto predictSnapOffset = calePredictSnapOffsetCallback_(CalcPatternOffset(frictionMotion_->GetFinalPosition()),
+                                                                CalcPatternOffset(GetDragOffset()), -velocity);
+        // If snap scrolling, predictSnapOffset will has a value.
+        if (predictSnapOffset.has_value() && !NearZero(predictSnapOffset.value())) {
+            startScrollSnapMotionCallback_(predictSnapOffset.value(), velocity);
+            return;
+        }
     }
 
     if (!frictionController_) {
-        auto context = PipelineContext::GetCurrentContextSafelyWithCheck();
-        CHECK_NULL_VOID(context);
-        frictionController_ = CREATE_ANIMATOR(context);
+        frictionController_ = CREATE_ANIMATOR(PipelineContext::GetCurrentContext());
         frictionController_->AddStopListener([weakBar = AceType::WeakClaim(this)]() {
             auto scrollBar = weakBar.Upgrade();
             CHECK_NULL_VOID(scrollBar);
@@ -801,7 +724,7 @@ void ScrollBar::ProcessFrictionMotion(double value)
 {
     if (scrollPositionCallback_) {
         auto offset = CalcPatternOffset(value - frictionPosition_);
-        if (!scrollPositionCallback_(offset, SCROLL_FROM_BAR_FLING, false)) {
+        if (!scrollPositionCallback_(offset, SCROLL_FROM_BAR_FLING)) {
             if (frictionController_ && frictionController_->IsRunning()) {
                 frictionController_->Stop();
             }
@@ -820,7 +743,7 @@ void ScrollBar::ProcessFrictionMotionStop()
 
 void ScrollBar::OnCollectTouchTarget(const OffsetF& coordinateOffset, const GetEventTargetImpl& getEventTargetImpl,
     TouchTestResult& result, const RefPtr<FrameNode>& frameNode, const RefPtr<TargetComponent>& targetComponent,
-    ResponseLinkResult& responseLinkResult, bool inBarRect)
+    ResponseLinkResult& responseLinkResult)
 {
     if (panRecognizer_ && isScrollable_) {
         panRecognizer_->SetCoordinateOffset(Offset(coordinateOffset.GetX(), coordinateOffset.GetY()));
@@ -830,16 +753,6 @@ void ScrollBar::OnCollectTouchTarget(const OffsetF& coordinateOffset, const GetE
         panRecognizer_->SetTargetComponent(targetComponent);
         panRecognizer_->SetIsSystemGesture(true);
         panRecognizer_->SetRecognizerType(GestureTypeName::PAN_GESTURE);
-        GestureJudgeFunc sysJudge = nullptr;
-        if (inBarRect) {
-            sysJudge = [](const RefPtr<GestureInfo>& gestureInfo,
-                          const std::shared_ptr<BaseGestureEvent>&) -> GestureJudgeResult {
-                auto inputEventType = gestureInfo->GetInputEventType();
-                return inputEventType == InputEventType::AXIS ? GestureJudgeResult::CONTINUE
-                                                              : GestureJudgeResult::REJECT;
-            };
-        }
-        panRecognizer_->SetSysGestureJudge(sysJudge);
         result.emplace_front(panRecognizer_);
         responseLinkResult.emplace_back(panRecognizer_);
     }
@@ -994,8 +907,6 @@ void ScrollBar::DumpAdvanceInfo()
     DumpLog::GetInstance().AddDesc(std::string("hostBorderRadius: ").append(hostBorderRadius_.ToString()));
     DumpLog::GetInstance().AddDesc(std::string("startReservedHeight: ").append(startReservedHeight_.ToString()));
     DumpLog::GetInstance().AddDesc(std::string("endReservedHeight: ").append(endReservedHeight_.ToString()));
-    DumpLog::GetInstance().AddDesc(
-        std::string("scrollBarMargin").append(scrollBarMargin_.value_or(ScrollBarMargin()).ToString()));
     DumpLog::GetInstance().AddDesc(std::string("isScrollable: ").append(std::to_string(isScrollable_)));
     DumpLog::GetInstance().AddDesc(std::string("isReverse: ").append(std::to_string(isReverse_)));
     DumpLog::GetInstance().AddDesc("==========================innerScrollBarLayoutInfos==========================");
@@ -1007,13 +918,7 @@ void ScrollBar::DumpAdvanceInfo()
 
 Color ScrollBar::GetForegroundColor() const
 {
-    if (IsPressed()) {
-        return foregroundColor_.BlendColor(foregroundPressedBlendColor_);
-    }
-    if (IsHoverSlider()) {
-        return foregroundColor_.BlendColor(foregroundHoverBlendColor_);
-    }
-    return foregroundColor_;
+    return IsPressed() ? foregroundColor_.BlendColor(PRESSED_BLEND_COLOR) : foregroundColor_;
 }
 
 void ScrollBar::SetHoverWidth(const RefPtr<ScrollBarTheme>& theme)
@@ -1021,12 +926,12 @@ void ScrollBar::SetHoverWidth(const RefPtr<ScrollBarTheme>& theme)
     hoverWidth_ = theme->GetActiveWidth() + theme->GetScrollBarMargin() * 2;
 }
 
-void ScrollBar::SetNormalWidth(const Dimension& normalWidth, const RefPtr<PipelineContext>& context)
+void ScrollBar::SetNormalWidth(const Dimension& normalWidth)
 {
     if (normalWidth_ != normalWidth) {
         normalWidthUpdate_ = true;
         normalWidth_ = normalWidth;
-        CalcReservedHeight(context);
+        CalcReservedHeight();
         MarkNeedRender();
     }
 }
@@ -1076,9 +981,6 @@ void ScrollBar::PlayScrollBarAppearAnimation()
 
 void ScrollBar::PlayScrollBarGrowAnimation()
 {
-#ifdef ARKUI_WEARABLE
-    VibratorUtils::StartVibraFeedback(SCROLL_BAR_VIBRATOR_WEAK);
-#endif
     PlayScrollBarAppearAnimation();
     normalWidth_ = activeWidth_;
     FlushBarWidth();
@@ -1088,9 +990,6 @@ void ScrollBar::PlayScrollBarGrowAnimation()
 
 void ScrollBar::PlayScrollBarShrinkAnimation()
 {
-#ifdef ARKUI_WEARABLE
-    VibratorUtils::StartVibraFeedback(SCROLL_BAR_VIBRATOR_WEAK);
-#endif
     normalWidth_ = inactiveWidth_;
     FlushBarWidth();
     hoverAnimationType_ = HoverAnimationType::SHRINK;
@@ -1115,11 +1014,6 @@ float ScrollBar::GetMainOffset(const Offset& offset) const
     return positionMode_ == PositionMode::BOTTOM ? offset.GetX() : offset.GetY();
 }
 
-float ScrollBar::GetMainSize(const Size& size) const
-{
-    return positionMode_ == PositionMode::BOTTOM ? size.Width() : size.Height();
-}
-
 void ScrollBar::SetReverse(bool reverse)
 {
     if (isReverse_ != reverse) {
@@ -1132,128 +1026,5 @@ Axis ScrollBar::GetPanDirection() const
 {
     CHECK_NULL_RETURN(panRecognizer_, Axis::NONE);
     return panRecognizer_->GetAxisDirection();
-}
-
-void ScrollBar::GetShapeModeDumpInfo(std::unique_ptr<JsonValue>& json)
-{
-    switch (shapeMode_) {
-        case ShapeMode::RECT: {
-            json->Put("shapeMode", "RECT");
-            break;
-        }
-        case ShapeMode::ROUND: {
-            json->Put("shapeMode", "ROUND");
-            break;
-        }
-        case ShapeMode::DEFAULT: {
-            json->Put("shapeMode", "DEFAULT");
-            break;
-        }
-        default: {
-            break;
-        }
-    }
-}
-
-void ScrollBar::GetPositionModeDumpInfo(std::unique_ptr<JsonValue>& json)
-{
-    switch (positionMode_) {
-        case PositionMode::RIGHT: {
-            json->Put("padding.right", padding_.Right().ToString().c_str());
-            break;
-        }
-        case PositionMode::LEFT: {
-            json->Put("padding.left", padding_.Left().ToString().c_str());
-            break;
-        }
-        case PositionMode::BOTTOM: {
-            json->Put("padding.bottom", padding_.Bottom().ToString().c_str());
-            break;
-        }
-        default: {
-            break;
-        }
-    }
-}
-
-void ScrollBar::GetAxisDumpInfo(std::unique_ptr<JsonValue>& json)
-{
-    switch (axis_) {
-        case Axis::NONE: {
-            json->Put("axis", "NONE");
-            break;
-        }
-        case Axis::VERTICAL: {
-            json->Put("axis", "VERTICAL");
-            break;
-        }
-        case Axis::HORIZONTAL: {
-            json->Put("axis", "HORIZONTAL");
-            break;
-        }
-        case Axis::FREE: {
-            json->Put("axis", "FREE");
-            break;
-        }
-        default: {
-            break;
-        }
-    }
-}
-
-void ScrollBar::GetPanDirectionDumpInfo(std::unique_ptr<JsonValue>& json)
-{
-    if (panRecognizer_) {
-        switch (panRecognizer_->GetAxisDirection()) {
-            case Axis::NONE: {
-                json->Put("panDirection", "NONE");
-                break;
-            }
-            case Axis::VERTICAL: {
-                json->Put("panDirection", "VERTICAL");
-                break;
-            }
-            case Axis::HORIZONTAL: {
-                json->Put("panDirection", "HORIZONTAL");
-                break;
-            }
-            case Axis::FREE: {
-                json->Put("panDirection", "FREE");
-                break;
-            }
-            default: {
-                break;
-            }
-        }
-    }
-}
-
-void ScrollBar::DumpAdvanceInfo(std::unique_ptr<JsonValue>& json)
-{
-    json->Put("activeRect", activeRect_.ToString().c_str());
-    json->Put("touchRegion", touchRegion_.ToString().c_str());
-    json->Put("hoverRegion", hoverRegion_.ToString().c_str());
-    json->Put("normalWidth", normalWidth_.ToString().c_str());
-    json->Put("activeWidth", activeWidth_.ToString().c_str());
-    json->Put("touchWidth", touchWidth_.ToString().c_str());
-    json->Put("hoverWidth", hoverWidth_.ToString().c_str());
-    GetShapeModeDumpInfo(json);
-    GetPositionModeDumpInfo(json);
-    GetAxisDumpInfo(json);
-    GetPanDirectionDumpInfo(json);
-    json->Put("hostBorderRadius", hostBorderRadius_.ToString().c_str());
-    json->Put("startReservedHeight", startReservedHeight_.ToString().c_str());
-    json->Put("endReservedHeight", endReservedHeight_.ToString().c_str());
-    json->Put("scrollBarMargin", scrollBarMargin_.value_or(ScrollBarMargin()).ToString().c_str());
-    json->Put("isScrollable", std::to_string(isScrollable_).c_str());
-    json->Put("isReverse", std::to_string(isReverse_).c_str());
-
-    std::unique_ptr<JsonValue> children = JsonUtil::CreateArray(true);
-    for (const auto& info : innerScrollBarLayoutInfos_) {
-        std::unique_ptr<JsonValue> child = JsonUtil::Create(true);
-        info.ToJson(child);
-        children->Put(child);
-    }
-    json->Put("innerScrollBarLayoutInfos", children);
 }
 } // namespace OHOS::Ace::NG

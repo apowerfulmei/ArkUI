@@ -69,21 +69,14 @@ ArkUINativeModuleValue ListBridge::SetListLanes(ArkUIRuntimeCallInfo* runtimeCal
         maxLengthType.value = maxLength.Value();
         maxLengthType.units = static_cast<int32_t>(maxLength.Unit());
     }
-    RefPtr<ResourceObject> resObjMinLengthValue;
-    RefPtr<ResourceObject> resObjMaxLengthValue;
     if (!minLengthArg->IsUndefined() && !maxLengthArg->IsUndefined() &&
-        ArkTSUtils::ParseJsDimensionVp(vm, minLengthArg, minLength, resObjMinLengthValue) &&
-        ArkTSUtils::ParseJsDimensionVp(vm, maxLengthArg, maxLength, resObjMaxLengthValue)) {
+        ArkTSUtils::ParseJsDimensionVp(vm, minLengthArg, minLength) &&
+        ArkTSUtils::ParseJsDimensionVp(vm, maxLengthArg, maxLength)) {
         laneNum = -1;
         minLengthType.value = minLength.Value();
         minLengthType.units = static_cast<int32_t>(minLength.Unit());
         maxLengthType.value = maxLength.Value();
         maxLengthType.units = static_cast<int32_t>(maxLength.Unit());
-    }
-    if (SystemProperties::ConfigChangePerform()) {
-        GetArkUINodeModifiers()->getListModifier()->createWithResourceObjLaneConstrain(nativeNode,
-            reinterpret_cast<void*>(AceType::RawPtr(resObjMinLengthValue)),
-            reinterpret_cast<void*>(AceType::RawPtr(resObjMaxLengthValue)));
     }
     GetArkUINodeModifiers()->getListModifier()->setListLanes(
         nativeNode, laneNum, &minLengthType, &maxLengthType, &gutterType);
@@ -97,9 +90,6 @@ ArkUINativeModuleValue ListBridge::ResetListLanes(ArkUIRuntimeCallInfo* runtimeC
     Local<JSValueRef> firstArg = runtimeCallInfo->GetCallArgRef(LIST_ARG_INDEX_0);
     auto nativeNode = nodePtr(firstArg->ToNativePointer(vm)->Value());
     GetArkUINodeModifiers()->getListModifier()->resetListLanes(nativeNode);
-    if (SystemProperties::ConfigChangePerform()) {
-        GetArkUINodeModifiers()->getListModifier()->createWithResourceObjLaneConstrain(nativeNode, nullptr, nullptr);
-    }
 
     return panda::JSValueRef::Undefined(vm);
 }
@@ -128,38 +118,6 @@ ArkUINativeModuleValue ListBridge::ResetEditMode(ArkUIRuntimeCallInfo* runtimeCa
     auto nativeNode = nodePtr(firstArg->ToNativePointer(vm)->Value());
     GetArkUINodeModifiers()->getListModifier()->resetEditMode(nativeNode);
 
-    return panda::JSValueRef::Undefined(vm);
-}
-
-ArkUINativeModuleValue ListBridge::SetFocusWrapMode(ArkUIRuntimeCallInfo* runtimeCallInfo)
-{
-    EcmaVM* vm = runtimeCallInfo->GetVM();
-    CHECK_NULL_RETURN(vm, panda::NativePointerRef::New(vm, nullptr));
-    Local<JSValueRef> node = runtimeCallInfo->GetCallArgRef(0);
-    Local<JSValueRef> arg_focusWrapMode = runtimeCallInfo->GetCallArgRef(1);
-    CHECK_NULL_RETURN(node->IsNativePointer(vm), panda::JSValueRef::Undefined(vm));
-    auto nativeNode = nodePtr(node->ToNativePointer(vm)->Value());
-    if (!arg_focusWrapMode->IsNull() && arg_focusWrapMode->IsNumber()) {
-        int32_t focusWrapMode = arg_focusWrapMode->Int32Value(vm);
-        if (focusWrapMode < 0 || focusWrapMode > 1) {
-            GetArkUINodeModifiers()->getListModifier()->resetListFocusWrapMode(nativeNode);
-        } else {
-            GetArkUINodeModifiers()->getListModifier()->setListFocusWrapMode(nativeNode, focusWrapMode);
-        }
-    } else {
-        GetArkUINodeModifiers()->getListModifier()->resetListFocusWrapMode(nativeNode);
-    }
-    return panda::JSValueRef::Undefined(vm);
-}
-
-ArkUINativeModuleValue ListBridge::ResetFocusWrapMode(ArkUIRuntimeCallInfo* runtimeCallInfo)
-{
-    EcmaVM* vm = runtimeCallInfo->GetVM();
-    CHECK_NULL_RETURN(vm, panda::NativePointerRef::New(vm, nullptr));
-    Local<JSValueRef> node = runtimeCallInfo->GetCallArgRef(0);
-    CHECK_NULL_RETURN(node->IsNativePointer(vm), panda::JSValueRef::Undefined(vm));
-    auto nativeNode = nodePtr(node->ToNativePointer(vm)->Value());
-    GetArkUINodeModifiers()->getListModifier()->resetListFocusWrapMode(nativeNode);
     return panda::JSValueRef::Undefined(vm);
 }
 
@@ -252,38 +210,6 @@ ArkUINativeModuleValue ListBridge::ResetCachedCount(ArkUIRuntimeCallInfo* runtim
     return panda::JSValueRef::Undefined(vm);
 }
 
-ArkUINativeModuleValue ListBridge::SetCacheRange(ArkUIRuntimeCallInfo* runtimeCallInfo)
-{
-    EcmaVM* vm = runtimeCallInfo->GetVM();
-    CHECK_NULL_RETURN(vm, panda::NativePointerRef::New(vm, nullptr));
-    Local<JSValueRef> nodeArg = runtimeCallInfo->GetCallArgRef(LIST_ARG_INDEX_0);
-    Local<JSValueRef> cacheCountArg = runtimeCallInfo->GetCallArgRef(LIST_ARG_INDEX_1);
-
-    auto nativeNode = nodePtr(nodeArg->ToNativePointer(vm)->Value());
-
-    std::optional<int32_t> minOpt;
-    std::optional<int32_t> maxOpt;
-    if (cacheCountArg->IsObject(vm)) {
-        auto jsObj = cacheCountArg->ToObject(vm);
-        panda::Local<panda::JSValueRef> min = jsObj->Get(vm, panda::StringRef::NewFromUtf8(vm, "minCacheCount"));
-        panda::Local<panda::JSValueRef> max = jsObj->Get(vm, panda::StringRef::NewFromUtf8(vm, "maxCacheCount"));
-        if (min->IsNumber()) {
-            int32_t num = min->ToNumber(vm)->Value();
-            minOpt = num;
-        }
-        if (max->IsNumber()) {
-            int32_t num = max->ToNumber(vm)->Value();
-            maxOpt = num;
-        }
-    }
-    if (minOpt.has_value() && maxOpt.has_value()) {
-        GetArkUINodeModifiers()->getListModifier()->setCacheRange(nativeNode, minOpt.value(), maxOpt.value());
-    } else {
-        GetArkUINodeModifiers()->getListModifier()->resetCacheRange(nativeNode);
-    }
-    return panda::JSValueRef::Undefined(vm);
-}
-
 ArkUINativeModuleValue ListBridge::SetEnableScrollInteraction(ArkUIRuntimeCallInfo* runtimeCallInfo)
 {
     EcmaVM* vm = runtimeCallInfo->GetVM();
@@ -340,6 +266,80 @@ ArkUINativeModuleValue ListBridge::ResetSticky(ArkUIRuntimeCallInfo* runtimeCall
     return panda::JSValueRef::Undefined(vm);
 }
 
+ArkUINativeModuleValue ListBridge::SetListEdgeEffect(ArkUIRuntimeCallInfo* runtimeCallInfo)
+{
+    EcmaVM* vm = runtimeCallInfo->GetVM();
+    CHECK_NULL_RETURN(vm, panda::NativePointerRef::New(vm, nullptr));
+    Local<JSValueRef> firstArg = runtimeCallInfo->GetCallArgRef(LIST_ARG_INDEX_0);
+    Local<JSValueRef> secondArg = runtimeCallInfo->GetCallArgRef(LIST_ARG_INDEX_1);
+    Local<JSValueRef> thirdArg = runtimeCallInfo->GetCallArgRef(LIST_ARG_INDEX_2);
+
+    auto nativeNode = nodePtr(firstArg->ToNativePointer(vm)->Value());
+    int32_t effect = static_cast<int32_t>(EdgeEffect::SPRING);
+
+    if (secondArg->IsUndefined() || secondArg->IsNull()) {
+        effect = static_cast<int32_t>(EdgeEffect::SPRING);
+    } else {
+        effect = secondArg->Int32Value(vm);
+    }
+    if (effect < static_cast<int32_t>(EdgeEffect::SPRING) || effect > static_cast<int32_t>(EdgeEffect::NONE)) {
+        effect = static_cast<int32_t>(EdgeEffect::SPRING);
+    }
+    if (thirdArg->IsUndefined() || thirdArg->IsNull()) {
+        GetArkUINodeModifiers()->getListModifier()->setListEdgeEffect(nativeNode, effect, false);
+    } else {
+        GetArkUINodeModifiers()->getListModifier()->setListEdgeEffect(
+            nativeNode, effect, thirdArg->ToBoolean(vm)->Value());
+    }
+    return panda::JSValueRef::Undefined(vm);
+}
+
+ArkUINativeModuleValue ListBridge::ResetListEdgeEffect(ArkUIRuntimeCallInfo* runtimeCallInfo)
+{
+    EcmaVM* vm = runtimeCallInfo->GetVM();
+    CHECK_NULL_RETURN(vm, panda::NativePointerRef::New(vm, nullptr));
+    Local<JSValueRef> firstArg = runtimeCallInfo->GetCallArgRef(LIST_ARG_INDEX_0);
+    auto nativeNode = nodePtr(firstArg->ToNativePointer(vm)->Value());
+    GetArkUINodeModifiers()->getListModifier()->resetListEdgeEffect(nativeNode);
+    return panda::JSValueRef::Undefined(vm);
+}
+
+ArkUINativeModuleValue ListBridge::SetFadingEdge(ArkUIRuntimeCallInfo* runtimeCallInfo)
+{
+    EcmaVM* vm = runtimeCallInfo->GetVM();
+    CHECK_NULL_RETURN(vm, panda::NativePointerRef::New(vm, nullptr));
+    Local<JSValueRef> frameNodeArg = runtimeCallInfo->GetCallArgRef(LIST_ARG_INDEX_0);
+    Local<JSValueRef> fadingEdgeArg = runtimeCallInfo->GetCallArgRef(LIST_ARG_INDEX_1);
+    Local<JSValueRef> fadingEdgeLengthArg = runtimeCallInfo->GetCallArgRef(LIST_ARG_INDEX_2);
+
+    auto nativeNode = nodePtr(frameNodeArg->ToNativePointer(vm)->Value());
+    CalcDimension fadingEdgeLength = Dimension(32.0f, DimensionUnit::VP); // default value
+
+    if (fadingEdgeArg->IsUndefined() || fadingEdgeArg->IsNull()) {
+        GetArkUINodeModifiers()->getListModifier()->resetListFadingEdge(nativeNode);
+    } else {
+        bool fadingEdge = fadingEdgeArg->ToBoolean(vm)->Value();
+        if (!fadingEdgeLengthArg->IsUndefined() && !fadingEdgeLengthArg->IsNull() &&
+            fadingEdgeLengthArg->IsObject(vm)) {
+            ArkTSUtils::ParseJsLengthMetrics(vm, fadingEdgeLengthArg, fadingEdgeLength);
+        }
+        GetArkUINodeModifiers()->getListModifier()->setListFadingEdge(
+            nativeNode, fadingEdge, fadingEdgeLength.Value(), static_cast<int32_t>(fadingEdgeLength.Unit()));
+    }
+    return panda::JSValueRef::Undefined(vm);
+}
+
+ArkUINativeModuleValue ListBridge::ResetFadingEdge(ArkUIRuntimeCallInfo* runtimeCallInfo)
+{
+    EcmaVM* vm = runtimeCallInfo->GetVM();
+    CHECK_NULL_RETURN(vm, panda::NativePointerRef::New(vm, nullptr));
+    Local<JSValueRef> firstArg = runtimeCallInfo->GetCallArgRef(0);
+    auto nativeNode = nodePtr(firstArg->ToNativePointer(vm)->Value());
+    GetArkUINodeModifiers()->getListModifier()->resetListFadingEdge(nativeNode);
+
+    return panda::JSValueRef::Undefined(vm);
+}
+
 ArkUINativeModuleValue ListBridge::SetListDirection(ArkUIRuntimeCallInfo* runtimeCallInfo)
 {
     EcmaVM* vm = runtimeCallInfo->GetVM();
@@ -374,18 +374,12 @@ ArkUINativeModuleValue ListBridge::SetListFriction(ArkUIRuntimeCallInfo* runtime
     Local<JSValueRef> firstArg = runtimeCallInfo->GetCallArgRef(LIST_ARG_INDEX_0);
     Local<JSValueRef> secondArg = runtimeCallInfo->GetCallArgRef(LIST_ARG_INDEX_1);
 
-    RefPtr<ResourceObject> resObj;
     double friction = -1.0;
     auto nativeNode = nodePtr(firstArg->ToNativePointer(vm)->Value());
-    if (secondArg->IsUndefined() || secondArg->IsNull() ||
-        !ArkTSUtils::ParseJsDouble(vm, secondArg, friction, resObj)) {
+    if (secondArg->IsUndefined() || secondArg->IsNull() || !ArkTSUtils::ParseJsDouble(vm, secondArg, friction)) {
         friction = -1.0;
     }
     GetArkUINodeModifiers()->getListModifier()->setListFriction(nativeNode, friction);
-    if (SystemProperties::ConfigChangePerform()) {
-        GetArkUINodeModifiers()->getListModifier()->createWithResourceObjFriction(
-            nativeNode, reinterpret_cast<void*>(AceType::RawPtr(resObj)));
-    }
     return panda::JSValueRef::Undefined(vm);
 }
 
@@ -424,62 +418,6 @@ ArkUINativeModuleValue ListBridge::ResetListMaintainVisibleContentPosition(ArkUI
     Local<JSValueRef> firstArg = runtimeCallInfo->GetCallArgRef(LIST_ARG_INDEX_0);
     auto nativeNode = nodePtr(firstArg->ToNativePointer(vm)->Value());
     GetArkUINodeModifiers()->getListModifier()->resetListMaintainVisibleContentPosition(nativeNode);
-    return panda::JSValueRef::Undefined(vm);
-}
-
-ArkUINativeModuleValue ListBridge::SetListStackFromEnd(ArkUIRuntimeCallInfo* runtimeCallInfo)
-{
-    EcmaVM* vm = runtimeCallInfo->GetVM();
-    CHECK_NULL_RETURN(vm, panda::NativePointerRef::New(vm, nullptr));
-    Local<JSValueRef> firstArg = runtimeCallInfo->GetCallArgRef(LIST_ARG_INDEX_0);
-    Local<JSValueRef> secondArg = runtimeCallInfo->GetCallArgRef(LIST_ARG_INDEX_1);
-    auto nativeNode = nodePtr(firstArg->ToNativePointer(vm)->Value());
-
-    if (secondArg->IsBoolean()) {
-        bool enabled = secondArg->ToBoolean(vm)->Value();
-        GetArkUINodeModifiers()->getListModifier()->setListStackFromEnd(nativeNode, enabled);
-    } else {
-        GetArkUINodeModifiers()->getListModifier()->resetListStackFromEnd(nativeNode);
-    }
-
-    return panda::JSValueRef::Undefined(vm);
-}
-
-ArkUINativeModuleValue ListBridge::ResetListStackFromEnd(ArkUIRuntimeCallInfo* runtimeCallInfo)
-{
-    EcmaVM* vm = runtimeCallInfo->GetVM();
-    CHECK_NULL_RETURN(vm, panda::NativePointerRef::New(vm, nullptr));
-    Local<JSValueRef> firstArg = runtimeCallInfo->GetCallArgRef(LIST_ARG_INDEX_0);
-    auto nativeNode = nodePtr(firstArg->ToNativePointer(vm)->Value());
-    GetArkUINodeModifiers()->getListModifier()->resetListStackFromEnd(nativeNode);
-    return panda::JSValueRef::Undefined(vm);
-}
-
-ArkUINativeModuleValue ListBridge::SetListSyncLoad(ArkUIRuntimeCallInfo* runtimeCallInfo)
-{
-    EcmaVM* vm = runtimeCallInfo->GetVM();
-    CHECK_NULL_RETURN(vm, panda::NativePointerRef::New(vm, nullptr));
-    Local<JSValueRef> firstArg = runtimeCallInfo->GetCallArgRef(LIST_ARG_INDEX_0);
-    Local<JSValueRef> secondArg = runtimeCallInfo->GetCallArgRef(LIST_ARG_INDEX_1);
-    auto nativeNode = nodePtr(firstArg->ToNativePointer(vm)->Value());
-
-    if (secondArg->IsBoolean()) {
-        bool enabled = secondArg->ToBoolean(vm)->Value();
-        GetArkUINodeModifiers()->getListModifier()->setListSyncLoad(nativeNode, enabled);
-    } else {
-        GetArkUINodeModifiers()->getListModifier()->resetListSyncLoad(nativeNode);
-    }
-
-    return panda::JSValueRef::Undefined(vm);
-}
-
-ArkUINativeModuleValue ListBridge::ResetListSyncLoad(ArkUIRuntimeCallInfo* runtimeCallInfo)
-{
-    EcmaVM* vm = runtimeCallInfo->GetVM();
-    CHECK_NULL_RETURN(vm, panda::NativePointerRef::New(vm, nullptr));
-    Local<JSValueRef> firstArg = runtimeCallInfo->GetCallArgRef(LIST_ARG_INDEX_0);
-    auto nativeNode = nodePtr(firstArg->ToNativePointer(vm)->Value());
-    GetArkUINodeModifiers()->getListModifier()->resetListSyncLoad(nativeNode);
     return panda::JSValueRef::Undefined(vm);
 }
 
@@ -592,19 +530,6 @@ ArkUINativeModuleValue ListBridge::SetListScrollBarColor(ArkUIRuntimeCallInfo* r
     Local<JSValueRef> argColor = runtimeCallInfo->GetCallArgRef(LIST_ARG_INDEX_1);
     auto nativeNode = nodePtr(argNode->ToNativePointer(vm)->Value());
     std::string color = "";
-    if (SystemProperties::ConfigChangePerform()) {
-        RefPtr<ResourceObject> resObj;
-        auto nodeInfo = ArkTSUtils::MakeNativeNodeInfo(nativeNode);
-        if (!ArkTSUtils::ParseJsString(vm, argColor, color, resObj, nodeInfo) || argColor->IsUndefined() ||
-            color.empty()) {
-            GetArkUINodeModifiers()->getListModifier()->resetListScrollBarColor(nativeNode);
-        } else {
-            GetArkUINodeModifiers()->getListModifier()->setListScrollBarColor(nativeNode, color.c_str());
-            GetArkUINodeModifiers()->getListModifier()->createWithResourceObjScrollBarColor(nativeNode,
-                AceType::RawPtr(resObj));
-        }
-        return panda::JSValueRef::Undefined(vm);
-    }
     if (!ArkTSUtils::ParseJsString(vm, argColor, color) || argColor->IsUndefined() || color.empty()) {
         GetArkUINodeModifiers()->getListModifier()->resetListScrollBarColor(nativeNode);
     } else {
@@ -620,6 +545,33 @@ ArkUINativeModuleValue ListBridge::ResetListScrollBarColor(ArkUIRuntimeCallInfo*
     Local<JSValueRef> argNode = runtimeCallInfo->GetCallArgRef(LIST_ARG_INDEX_0);
     auto nativeNode = nodePtr(argNode->ToNativePointer(vm)->Value());
     GetArkUINodeModifiers()->getListModifier()->resetListScrollBarColor(nativeNode);
+    return panda::JSValueRef::Undefined(vm);
+}
+
+ArkUINativeModuleValue ListBridge::SetFlingSpeedLimit(ArkUIRuntimeCallInfo* runtimeCallInfo)
+{
+    EcmaVM* vm = runtimeCallInfo->GetVM();
+    CHECK_NULL_RETURN(vm, panda::NativePointerRef::New(vm, nullptr));
+    Local<JSValueRef> argNode = runtimeCallInfo->GetCallArgRef(LIST_ARG_INDEX_0);
+    Local<JSValueRef> argSpeed = runtimeCallInfo->GetCallArgRef(LIST_ARG_INDEX_1);
+    auto nativeNode = nodePtr(argNode->ToNativePointer(vm)->Value());
+    double limitSpeed = -1.0;
+    if (!ArkTSUtils::ParseJsDouble(vm, argSpeed, limitSpeed)) {
+        GetArkUINodeModifiers()->getListModifier()->resetListFlingSpeedLimit(nativeNode);
+    } else {
+        GetArkUINodeModifiers()->getListModifier()->setListFlingSpeedLimit(
+            nativeNode, static_cast<ArkUI_Float32>(limitSpeed));
+    }
+    return panda::JSValueRef::Undefined(vm);
+}
+
+ArkUINativeModuleValue ListBridge::ResetFlingSpeedLimit(ArkUIRuntimeCallInfo* runtimeCallInfo)
+{
+    EcmaVM* vm = runtimeCallInfo->GetVM();
+    CHECK_NULL_RETURN(vm, panda::NativePointerRef::New(vm, nullptr));
+    Local<JSValueRef> argNode = runtimeCallInfo->GetCallArgRef(LIST_ARG_INDEX_0);
+    auto nativeNode = nodePtr(argNode->ToNativePointer(vm)->Value());
+    GetArkUINodeModifiers()->getListModifier()->resetListFlingSpeedLimit(nativeNode);
     return panda::JSValueRef::Undefined(vm);
 }
 
@@ -754,29 +706,21 @@ ArkUINativeModuleValue ListBridge::SetDivider(ArkUIRuntimeCallInfo* runtimeCallI
     auto listTheme = themeManager->GetTheme<ListTheme>();
     CHECK_NULL_RETURN(listTheme, panda::NativePointerRef::New(vm, nullptr));
 
-    RefPtr<ResourceObject> resObjStrokeWidth;
-    if (!ArkTSUtils::ParseJsDimensionVpNG(vm, dividerStrokeWidthArgs, dividerStrokeWidth, resObjStrokeWidth) ||
+    if (!ArkTSUtils::ParseJsDimensionVpNG(vm, dividerStrokeWidthArgs, dividerStrokeWidth) ||
         LessNotEqual(dividerStrokeWidth.Value(), 0.0f) || dividerStrokeWidth.Unit() == DimensionUnit::PERCENT) {
         dividerStrokeWidth.Reset();
     }
     Color colorObj;
-    RefPtr<ResourceObject> resObjColor;
-    bool setByUser = false;
-    auto nodeInfo = ArkTSUtils::MakeNativeNodeInfo(nativeNode);
-    if (!ArkTSUtils::ParseJsColorAlpha(vm, colorArg, colorObj, resObjColor, nodeInfo)) {
+    if (!ArkTSUtils::ParseJsColorAlpha(vm, colorArg, colorObj)) {
         color = listTheme->GetDividerColor().GetValue();
-        setByUser = false;
     } else {
         color = colorObj.GetValue();
-        setByUser = true;
     }
-    RefPtr<ResourceObject> resObjStartMargin;
-    if (!ArkTSUtils::ParseJsDimensionVp(vm, dividerStartMarginArgs, dividerStartMargin, resObjStartMargin) ||
+    if (!ArkTSUtils::ParseJsDimensionVp(vm, dividerStartMarginArgs, dividerStartMargin) ||
         LessNotEqual(dividerStartMargin.Value(), 0.0f) || dividerStartMargin.Unit() == DimensionUnit::PERCENT) {
         dividerStartMargin.Reset();
     }
-    RefPtr<ResourceObject> resObjEndMargin;
-    if (!ArkTSUtils::ParseJsDimensionVp(vm, dividerEndMarginArgs, dividerEndMargin, resObjEndMargin) ||
+    if (!ArkTSUtils::ParseJsDimensionVp(vm, dividerEndMarginArgs, dividerEndMargin) ||
         LessNotEqual(dividerEndMargin.Value(), 0.0f) || dividerEndMargin.Unit() == DimensionUnit::PERCENT) {
         dividerEndMargin.Reset();
     }
@@ -790,16 +734,7 @@ ArkUINativeModuleValue ListBridge::SetDivider(ArkUIRuntimeCallInfo* runtimeCallI
     units[LIST_ARG_INDEX_1] = static_cast<int32_t>(dividerStartMargin.Unit());
     units[LIST_ARG_INDEX_2] = static_cast<int32_t>(dividerEndMargin.Unit());
     GetArkUINodeModifiers()->getListModifier()->listSetDivider(nativeNode, color, values, units, size);
-    if (SystemProperties::ConfigChangePerform()) {
-        GetArkUINodeModifiers()->getListModifier()->parseResObjDividerStrokeWidth(
-            nativeNode, reinterpret_cast<void*>(AceType::RawPtr(resObjStrokeWidth)));
-        GetArkUINodeModifiers()->getListModifier()->parseResObjDividerColor(
-            nativeNode, reinterpret_cast<void*>(AceType::RawPtr(resObjColor)));
-        GetArkUINodeModifiers()->getListModifier()->parseResObjDividerStartMargin(
-            nativeNode, reinterpret_cast<void*>(AceType::RawPtr(resObjStartMargin)));
-        ListModel::GetInstance()->ParseResObjDividerEndMargin(resObjEndMargin);
-        ListModel::GetInstance()->SetDividerColorByUser(setByUser);
-    }
+
     return panda::JSValueRef::Undefined(vm);
 }
 
@@ -973,7 +908,7 @@ ArkUINativeModuleValue ListBridge::SetInitialScroller(ArkUIRuntimeCallInfo* runt
         Framework::JSScroller* scroller =
             Framework::JSRef<Framework::JSObject>::Cast(args)->Unwrap<Framework::JSScroller>();
         RefPtr<Framework::JSScroller> jsScroller = Referenced::Claim(scroller);
-        jsScroller->SetInstanceId(Container::CurrentIdSafely());
+        jsScroller->SetInstanceId(Container::CurrentId());
         SetScroller(runtimeCallInfo, jsScroller);
     }
     return panda::JSValueRef::Undefined(vm);
@@ -1024,8 +959,8 @@ ArkUINativeModuleValue ListBridge::SetOnScrollIndex(ArkUIRuntimeCallInfo* runtim
     panda::Local<panda::FunctionRef> func = callbackArg->ToObject(vm);
 
     std::function<void(int32_t, int32_t, int32_t)> callback = [vm, frameNode, func = panda::CopyableGlobal(vm, func)](
-                                                           const int32_t start, const int32_t end,
-                                                           const int32_t center) {
+                                                                  const int32_t start, const int32_t end,
+                                                                  const int32_t center) {
         panda::LocalScope pandaScope(vm);
         panda::TryCatch trycatch(vm);
         PipelineContext::SetCallBackNode(AceType::WeakClaim(frameNode));
@@ -1042,7 +977,7 @@ ArkUINativeModuleValue ListBridge::SetOnScrollIndex(ArkUIRuntimeCallInfo* runtim
     return panda::JSValueRef::Undefined(vm);
 }
 
-Local<panda::ObjectRef> ListBridge::SetListItemIndex(const EcmaVM* vm, const ListItemIndex indexInfo)
+Local<panda::ObjectRef> SetListItemIndex(const EcmaVM* vm, const ListItemIndex indexInfo)
 {
     const char* keys[] = { "index", "itemIndexInGroup", "itemGroupArea" };
     auto indexInGroup = panda::NumberRef::Undefined(vm);
@@ -1074,7 +1009,8 @@ ArkUINativeModuleValue ListBridge::SetOnScrollVisibleContentChange(ArkUIRuntimeC
     panda::Local<panda::FunctionRef> func = callbackArg->ToObject(vm);
 
     std::function<void(ListItemIndex, ListItemIndex)> callback =
-        [vm, frameNode, func = panda::CopyableGlobal(vm, func)](const ListItemIndex start, const ListItemIndex end) {
+        [vm, frameNode, func = panda::CopyableGlobal(vm, func)](
+            const ListItemIndex start, const ListItemIndex end) {
         panda::LocalScope pandaScope(vm);
         panda::TryCatch trycatch(vm);
         PipelineContext::SetCallBackNode(AceType::WeakClaim(frameNode));
@@ -1399,8 +1335,8 @@ ArkUINativeModuleValue ListBridge::SetOnListWillScroll(ArkUIRuntimeCallInfo* run
     CHECK_NULL_RETURN(frameNode, panda::JSValueRef::Undefined(vm));
     panda::Local<panda::FunctionRef> func = callbackArg->ToObject(vm);
     std::function<ScrollFrameResult(CalcDimension, ScrollState, ScrollSource)> callback =
-        [vm, frameNode, func = panda::CopyableGlobal(vm, func)](
-            const CalcDimension& scrollOffset, const ScrollState& scrollState, ScrollSource scrollSource) {
+    [vm, frameNode, func = panda::CopyableGlobal(vm, func)](const CalcDimension& scrollOffset,
+                                const ScrollState& scrollState, ScrollSource scrollSource) {
         panda::LocalScope pandaScope(vm);
         panda::TryCatch trycatch(vm);
         PipelineContext::SetCallBackNode(AceType::WeakClaim(frameNode));
@@ -1417,7 +1353,7 @@ ArkUINativeModuleValue ListBridge::SetOnListWillScroll(ArkUIRuntimeCallInfo* run
         if (result->IsObject(vm)) {
             auto resultObj = result->ToObject(vm);
             panda::Local<panda::JSValueRef> dxRemainValue =
-                    resultObj->Get(vm, panda::StringRef::NewFromUtf8(vm, "offsetRemain"));
+                resultObj->Get(vm, panda::StringRef::NewFromUtf8(vm, "offsetRemain"));
             if (dxRemainValue->IsNumber()) {
                 scrollRes.offset = Dimension(dxRemainValue->ToNumber(vm)->Value(), DimensionUnit::VP);
             }

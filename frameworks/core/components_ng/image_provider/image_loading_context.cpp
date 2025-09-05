@@ -16,27 +16,61 @@
 #include "core/components_ng/image_provider/image_loading_context.h"
 
 #include "base/utils/utils.h"
-#include "core/common/container.h"
 #include "core/components/common/layout/constants.h"
-#include "core/components_ng/image_provider/drawing_image_data.h"
 #include "core/components_ng/image_provider/image_utils.h"
 #include "core/components_ng/image_provider/pixel_map_image_object.h"
 #include "core/components_ng/image_provider/static_image_object.h"
-#include "core/components_ng/pattern/image/image_dfx.h"
 #include "core/components_ng/render/image_painter.h"
 #include "core/image/image_file_cache.h"
 #include "core/image/image_loader.h"
 #include "core/pipeline_ng/pipeline_context.h"
+#ifdef USE_ROSEN_DRAWING
+#include "core/components_ng/image_provider/adapter/rosen/drawing_image_data.h"
+#endif
 
 namespace OHOS::Ace::NG {
 
-ImageLoadingContext::ImageLoadingContext(const ImageSourceInfo& src, LoadNotifier&& loadNotifier, bool syncLoad,
-    bool isSceneBoardWindow, const ImageDfxConfig& imageDfxConfig)
-    : src_(src), notifiers_(std::move(loadNotifier)), containerId_(Container::CurrentId()), syncLoad_(syncLoad),
-      isSceneBoardWindow_(isSceneBoardWindow), imageDfxConfig_(imageDfxConfig)
+namespace {
+RefPtr<ImageData> QueryDataFromCache(const ImageSourceInfo& src, bool& dataHit)
+{
+    ACE_FUNCTION_TRACE();
+#ifndef USE_ROSEN_DRAWING
+    auto cachedData = ImageLoader::QueryImageDataFromImageCache(src);
+    if (cachedData) {
+        dataHit = true;
+        return NG::ImageData::MakeFromDataWrapper(&cachedData);
+    }
+    auto skData = ImageLoader::LoadDataFromCachedFile(src.GetSrc());
+    if (skData) {
+        sk_sp<SkData> data = SkData::MakeWithCopy(skData->data(), skData->size());
+
+        return NG::ImageData::MakeFromDataWrapper(&data);
+    }
+#else
+    std::shared_ptr<RSData> rsData = nullptr;
+    rsData = ImageLoader::QueryImageDataFromImageCache(src);
+    if (rsData) {
+        TAG_LOGD(AceLogTag::ACE_IMAGE, "%{private}s hit the memory Cache.", src.GetSrc().c_str());
+        dataHit = true;
+        return AceType::MakeRefPtr<NG::DrawingImageData>(rsData);
+    }
+    auto drawingData = ImageLoader::LoadDataFromCachedFile(src.GetSrc());
+    if (drawingData) {
+        TAG_LOGD(AceLogTag::ACE_IMAGE, "%{private}s hit the disk Cache, and the data size is %{public}d.",
+            src.GetSrc().c_str(), static_cast<int32_t>(drawingData->GetSize()));
+        auto data = std::make_shared<RSData>();
+        data->BuildWithCopy(drawingData->GetData(), drawingData->GetSize());
+        return AceType::MakeRefPtr<NG::DrawingImageData>(data);
+    }
+#endif
+    return nullptr;
+}
+} // namespace
+
+ImageLoadingContext::ImageLoadingContext(const ImageSourceInfo& src, LoadNotifier&& loadNotifier, bool syncLoad)
+    : src_(src), notifiers_(std::move(loadNotifier)), containerId_(Container::CurrentId()), syncLoad_(syncLoad)
 {
     stateManager_ = MakeRefPtr<ImageStateManager>(WeakClaim(this));
-    src_.SetImageDfxConfig(imageDfxConfig_);
 
     if (!AceApplicationInfo::GetInstance().GreatOrEqualTargetAPIVersion(PlatformVersion::VERSION_TWELVE) &&
         src_.GetSrcType() == SrcType::PIXMAP) {
@@ -50,17 +84,15 @@ ImageLoadingContext::~ImageLoadingContext()
         auto state = stateManager_->GetCurrentState();
         if (state == ImageLoadingState::DATA_LOADING) {
             // cancel CreateImgObj task
-            if (!Downloadable()) {
-                ImageProvider::CancelTask(src_.GetTaskKey(), WeakClaim(this));
-                return;
+            ImageProvider::CancelTask(src_.GetKey(), WeakClaim(this));
+            if (Downloadable()) {
+                DownloadManager::GetInstance()->RemoveDownloadTask(src_.GetSrc(), nodeId_);
             }
-            std::string taskKey = src_.GetTaskKey() + (GetOnProgressCallback() ? "1" : "0");
-            if (ImageProvider::CancelTask(taskKey, WeakClaim(this))) {
-                DownloadManager::GetInstance()->RemoveDownloadTaskWithPreload(src_.GetSrc());
-            }
-        } else if (state == ImageLoadingState::MAKE_CANVAS_IMAGE && InstanceOf<StaticImageObject>(imageObj_)) {
+        } else if (state == ImageLoadingState::MAKE_CANVAS_IMAGE) {
             // cancel MakeCanvasImage task
-            ImageProvider::CancelTask(canvasKey_, WeakClaim(this));
+            if (InstanceOf<StaticImageObject>(imageObj_)) {
+                ImageProvider::CancelTask(canvasKey_, WeakClaim(this));
+            }
         }
     }
 }
@@ -105,7 +137,7 @@ void ImageLoadingContext::OnLoadSuccess()
 void ImageLoadingContext::OnLoadFail()
 {
     if (notifiers_.onLoadFail_) {
-        notifiers_.onLoadFail_(src_, errorMsg_, errorInfo_);
+        notifiers_.onLoadFail_(src_, errorMsg_);
     }
 }
 
@@ -133,18 +165,141 @@ void ImageLoadingContext::OnDataLoading()
 {
     auto obj = ImageProvider::QueryImageObjectFromCache(src_);
     if (obj) {
-        TAG_LOGD(AceLogTag::ACE_IMAGE, "%{private}s obj hit cache", src_.GetSrc().c_str());
+        TAG_LOGD(AceLogTag::ACE_IMAGE, "%{private}s hit cache, not need create object", src_.GetSrc().c_str());
         DataReadyCallback(obj);
         return;
     }
-    src_.SetContainerId(containerId_);
-    src_.SetImageDfxConfig(GetImageDfxConfig());
-    ImageProvider::CreateImageObject(src_, WeakClaim(this), syncLoad_, isSceneBoardWindow_);
+    if (Downloadable()) {
+        if (syncLoad_) {
+            DownloadImage();
+        } else {
+            auto task = [weak = AceType::WeakClaim(this)]() {
+                auto ctx = weak.Upgrade();
+                CHECK_NULL_VOID(ctx);
+                ctx->DownloadImage();
+            };
+            NG::ImageUtils::PostToBg(task, "ArkUIImageDownload");
+        }
+        return;
+    }
+    ImageProvider::CreateImageObject(src_, WeakClaim(this), syncLoad_);
+}
+
+bool ImageLoadingContext::NotifyReadyIfCacheHit()
+{
+    bool dataHit = false;
+    auto cachedImageData = QueryDataFromCache(src_, dataHit);
+    CHECK_NULL_RETURN(cachedImageData, false);
+    auto notifyDataReadyTask = [weak = AceType::WeakClaim(this), data = std::move(cachedImageData), dataHit] {
+        auto ctx = weak.Upgrade();
+        CHECK_NULL_VOID(ctx);
+        auto src = ctx->GetSourceInfo();
+        // if find data or file cache only, build and cache object, cache data if file cache hit
+        RefPtr<ImageObject> imageObj = ImageProvider::BuildImageObject(src, data);
+        ImageProvider::CacheImageObject(imageObj);
+        if (!dataHit) {
+            ImageLoader::CacheImageData(ctx->GetSourceInfo().GetKey(), data);
+        }
+        ctx->DataReadyCallback(imageObj);
+    };
+    if (syncLoad_) {
+        notifyDataReadyTask();
+    } else {
+        ImageUtils::PostToUI(std::move(notifyDataReadyTask), "ArkUIImageNotifyDataReady");
+    }
+    return true;
 }
 
 bool ImageLoadingContext::Downloadable()
 {
     return src_.GetSrcType() == SrcType::NETWORK && SystemProperties::GetDownloadByNetworkEnabled();
+}
+
+void ImageLoadingContext::DownloadImage()
+{
+    if (NotifyReadyIfCacheHit()) {
+        TAG_LOGD(AceLogTag::ACE_IMAGE, "%{private}s hit the Cache, not need DownLoad.", src_.GetSrc().c_str());
+        return;
+    }
+    PerformDownload();
+}
+
+void ImageLoadingContext::PerformDownload()
+{
+    ACE_SCOPED_TRACE("PerformDownload %s", src_.GetSrc().c_str());
+    DownloadCallback downloadCallback;
+    downloadCallback.successCallback = [weak = AceType::WeakClaim(this)](
+                                           const std::string&& imageData, bool async, int32_t instanceId) {
+        ContainerScope scope(instanceId);
+        auto callback = [weak = weak, data = std::move(imageData)]() {
+            auto ctx = weak.Upgrade();
+            CHECK_NULL_VOID(ctx);
+            ctx->DownloadImageSuccess(data);
+        };
+        async ? NG::ImageUtils::PostToUI(callback, "ArkUIImageDownloadSuccess") : callback();
+    };
+    downloadCallback.failCallback = [weak = AceType::WeakClaim(this)](
+                                        std::string errorMessage, bool async, int32_t instanceId) {
+        ContainerScope scope(instanceId);
+        auto callback = [weak = weak, errorMessage = errorMessage]() {
+            auto ctx = weak.Upgrade();
+            CHECK_NULL_VOID(ctx);
+            ctx->DownloadImageFailed(errorMessage);
+        };
+        async ? NG::ImageUtils::PostToUI(callback, "ArkUIImageDownloadFailed") : callback();
+    };
+    downloadCallback.cancelCallback = downloadCallback.failCallback;
+    if (onProgressCallback_) {
+        downloadCallback.onProgressCallback = [weak = AceType::WeakClaim(this)](
+                                                  uint32_t dlTotal, uint32_t dlNow, bool async, int32_t instanceId) {
+            ContainerScope scope(instanceId);
+            auto callback = [weak = weak, dlTotal = dlTotal, dlNow = dlNow]() {
+                auto ctx = weak.Upgrade();
+                CHECK_NULL_VOID(ctx);
+                ctx->DownloadOnProgress(dlNow, dlTotal);
+            };
+            async ? NG::ImageUtils::PostToUI(callback, "ArkUIImageDownloadOnProcess") : callback();
+        };
+    }
+    NetworkImageLoader::DownloadImage(std::move(downloadCallback), src_.GetSrc(), syncLoad_, nodeId_);
+}
+
+void ImageLoadingContext::CacheDownloadedImage()
+{
+    CHECK_NULL_VOID(Downloadable());
+    ImageProvider::CacheImageObject(imageObj_);
+    if (imageObj_->GetData()) {
+        ImageLoader::CacheImageData(GetSourceInfo().GetKey(), imageObj_->GetData());
+    }
+    if (!downloadedUrlData_.empty()) {
+        ImageLoader::WriteCacheToFile(GetSourceInfo().GetSrc(), downloadedUrlData_);
+    }
+}
+
+void ImageLoadingContext::DownloadImageSuccess(const std::string& imageData)
+{
+    TAG_LOGI(AceLogTag::ACE_IMAGE, "Download image successfully, srcInfo = %{private}s, ImageData length=%{public}zu",
+        GetSrc().ToString().c_str(), imageData.size());
+    ACE_LAYOUT_SCOPED_TRACE("DownloadImageSuccess[src:%s]", GetSrc().ToString().c_str());
+    if (!Positive(imageData.size())) {
+        FailCallback("The length of imageData from netStack is not positive");
+        return;
+    }
+    auto data = ImageData::MakeFromDataWithCopy(imageData.data(), imageData.size());
+    // if downloading is necessary, cache object, data to file
+    RefPtr<ImageObject> imageObj = ImageProvider::BuildImageObject(GetSourceInfo(), data);
+    if (!imageObj) {
+        FailCallback("After download successful, imageObject Create fail");
+        return;
+    }
+    downloadedUrlData_ = imageData;
+    DataReadyCallback(imageObj);
+}
+
+void ImageLoadingContext::DownloadImageFailed(const std::string& errorMessage)
+{
+    TAG_LOGI(AceLogTag::ACE_IMAGE, "Download image failed, the error message is %{private}s", errorMessage.c_str());
+    FailCallback(errorMessage);
 }
 
 void ImageLoadingContext::DownloadOnProgress(const uint32_t& dlNow, const uint32_t& dlTotal)
@@ -187,11 +342,8 @@ void ImageLoadingContext::OnMakeCanvasImage()
     }
 
     // step4: [MakeCanvasImage] according to [targetSize]
-    src_.SetImageHdr(GetIsHdrDecoderNeed());
     canvasKey_ = ImageUtils::GenerateImageKey(src_, targetSize);
-    imageObj_->SetImageSourceInfoHdr(GetIsHdrDecoderNeed());
-    imageObj_->SetImageDfxConfig(imageDfxConfig_);
-    imageObj_->MakeCanvasImage(WeakClaim(this), targetSize, userDefinedSize.has_value(), syncLoad_);
+    imageObj_->MakeCanvasImage(Claim(this), targetSize, userDefinedSize.has_value(), syncLoad_, GetLoadInVipChannel());
 }
 
 void ImageLoadingContext::ResizableCalcDstSize()
@@ -228,17 +380,20 @@ void ImageLoadingContext::DataReadyCallback(const RefPtr<ImageObject>& imageObj)
 void ImageLoadingContext::SuccessCallback(const RefPtr<CanvasImage>& canvasImage)
 {
     canvasImage_ = canvasImage;
+    CacheDownloadedImage();
     stateManager_->HandleCommand(ImageLoadingCommand::MAKE_CANVAS_IMAGE_SUCCESS);
 }
 
-void ImageLoadingContext::FailCallback(const std::string& errorMsg, const ImageErrorInfo& errorInfo)
+void ImageLoadingContext::FailCallback(const std::string& errorMsg)
 {
-    errorInfo_ = errorInfo;
     errorMsg_ = errorMsg;
     needErrorCallBack_ = true;
-    TAG_LOGD(AceLogTag::ACE_IMAGE, "fail-%{private}s-%{public}s-%{public}s", src_.ToString().c_str(),
-        errorMsg.c_str(), imageDfxConfig_.ToStringWithoutSrc().c_str());
     CHECK_NULL_VOID(measureFinish_);
+    TAG_LOGW(AceLogTag::ACE_IMAGE, "Image LoadFail, source = %{private}s, reason: %{public}s", src_.ToString().c_str(),
+        errorMsg.c_str());
+    if (Downloadable()) {
+        ImageFileCache::GetInstance().EraseCacheFile(GetSourceInfo().GetSrc());
+    }
     stateManager_->HandleCommand(ImageLoadingCommand::LOAD_FAIL);
     needErrorCallBack_ = false;
 }
@@ -348,9 +503,8 @@ SizeF ImageLoadingContext::GetImageSize() const
     CHECK_NULL_RETURN(imageObj_, SizeF(-1.0, -1.0));
     auto imageSize = imageObj_->GetImageSize();
     auto orientation = imageObj_->GetOrientation();
-    if (orientation == ImageRotateOrientation::LEFT || orientation == ImageRotateOrientation::RIGHT ||
-        orientation == ImageRotateOrientation::LEFT_MIRRORED || orientation == ImageRotateOrientation::RIGHT_MIRRORED) {
-        return { imageSize.Height(), imageSize.Width() };
+    if (orientation == ImageRotateOrientation::LEFT || orientation == ImageRotateOrientation::RIGHT) {
+        return {imageSize.Height(), imageSize.Width()};
     }
     return imageSize;
 }
@@ -401,7 +555,8 @@ std::optional<SizeF> ImageLoadingContext::GetSourceSize() const
 {
     CHECK_NULL_RETURN(sourceSizePtr_, std::nullopt);
     if (sourceSizePtr_->Width() <= 0.0 || sourceSizePtr_->Height() <= 0.0) {
-        TAG_LOGW(AceLogTag::ACE_IMAGE, "Invalid SourceSize, using image size.");
+        TAG_LOGW(AceLogTag::ACE_IMAGE,
+            "Property SourceSize is at least One invalid! Use the Image Size to calculate resize target");
         return std::nullopt;
     }
     return { *sourceSizePtr_ };
@@ -411,6 +566,11 @@ bool ImageLoadingContext::NeedAlt() const
 {
     auto state = stateManager_->GetCurrentState();
     return state != ImageLoadingState::LOAD_SUCCESS;
+}
+
+const std::optional<Color>& ImageLoadingContext::GetSvgFillColor() const
+{
+    return src_.GetFillColor();
 }
 
 void ImageLoadingContext::ResetLoading()
@@ -451,15 +611,4 @@ int32_t ImageLoadingContext::GetFrameCount() const
     return imageObj_ ? imageObj_->GetFrameCount() : 0;
 }
 
-std::string ImageLoadingContext::GetImageSizeInfo() const
-{
-    if (!imageObj_) {
-        return "[imageObj=null]";
-    }
-
-    std::ostringstream oss;
-    oss << "[fileSize=" << imageObj_->GetImageFileSize()
-        << ", dataSize=" << imageObj_->GetImageDataSize() << "]";
-    return oss.str();
-}
 } // namespace OHOS::Ace::NG

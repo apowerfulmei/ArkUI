@@ -21,20 +21,17 @@
 #include <memory>
 #include <refbase.h>
 #include <string>
-#include <unordered_set>
 #include <vector>
 #include <list>
 
 #include "arkui_rect.h"
-#include "constants.h"
 #include "macros.h"
 #include "modal_ui_extension_config.h"
 #include "popup_ui_extension_config.h"
-#include "serializeable_object.h"
 #include "serialized_gesture.h"
-#include "ui_content_config.h"
+#include "serializeable_object.h"
 #include "viewport_config.h"
-
+#include "constants.h"
 namespace OHOS {
 
 namespace AbilityRuntime {
@@ -57,15 +54,12 @@ enum class WindowSizeChangeReason : uint32_t;
 enum class WindowMode : uint32_t;
 enum class MaximizeMode : uint32_t;
 class RSNode;
-class RSCanvasNode;
 class RSSurfaceNode;
 class RSTransaction;
 class Transform;
 enum class AvoidAreaType : uint32_t;
 class AvoidArea;
-struct DecorButtonStyle;
 struct SingleHandTransform;
-class OccupiedAreaChangeInfo;
 } // namespace Rosen
 
 namespace AAFwk {
@@ -87,12 +81,6 @@ struct ViewData;
 enum class AutoFillType;
 } // namespace AbilityBase
 
-namespace Global {
-namespace Resource {
-class ResourceManager;
-}
-} // namespace Global
-
 class RefBase;
 class Parcelable;
 class IRemoteObject;
@@ -103,19 +91,8 @@ namespace OHOS::Ace {
 struct AccessibilityParentRectInfo;
 } // namespace OHOS::Ace
 
-namespace OHOS::Ace::Platform {
-struct SystemParams;
-} //namespace OHOS::Ace::Platform
-
 class NativeEngine;
 typedef struct napi_value__* napi_value;
-typedef class __ani_object* ani_object;
-
-#ifdef __cplusplus
-typedef struct __ani_env ani_env;
-#else
-typedef const struct __ani_interaction_api* ani_env;
-#endif
 
 namespace OHOS::Ace {
 class ACE_FORCE_EXPORT UIContent {
@@ -123,15 +100,10 @@ public:
     static std::unique_ptr<UIContent> Create(
         OHOS::AbilityRuntime::Context* context, NativeEngine* runtime, bool isFormRender);
     static std::unique_ptr<UIContent> Create(OHOS::AbilityRuntime::Context* context, NativeEngine* runtime);
-    /**
-     * @param runtime any VM runtime (distinguished in implementation based on information in @c context)
-     */
-    static std::unique_ptr<UIContent> CreateWithAnyRuntime(OHOS::AbilityRuntime::Context* context, void* runtime);
     static std::unique_ptr<UIContent> Create(OHOS::AppExecFwk::Ability* ability);
     static void ShowDumpHelp(std::vector<std::string>& info);
     static UIContent* GetUIContent(int32_t instanceId);
     static std::string GetCurrentUIStackInfo();
-    static std::unique_ptr<UIContent> CreateWithAniEnv(OHOS::AbilityRuntime::Context* context, ani_env* env);
 
     virtual ~UIContent() = default;
 
@@ -146,9 +118,8 @@ public:
     }
     virtual UIContentErrorCode InitializeByName(OHOS::Rosen::Window *window, const std::string &name,
                                                 napi_value storage) = 0;
-    virtual void InitializeByName(OHOS::Rosen::Window *window,
-        const std::string &name, napi_value storage, uint32_t focusWindowId) {};
-    virtual void InitializeDynamic(const DynamicInitialConfig& config) {};
+    virtual void InitializeDynamic(const std::string& hapPath, const std::string& abcPath,
+        const std::string& entryPoint, const std::vector<std::string>& registerComponents) {};
 
     // UIExtensionAbility initialize for focusWindow ID
     virtual void Initialize(
@@ -164,25 +135,8 @@ public:
     virtual UIContentErrorCode Restore(
         OHOS::Rosen::Window* window, const std::string& contentInfo, napi_value storage,
         ContentInfoType type = ContentInfoType::CONTINUATION) = 0;
-    virtual UIContentErrorCode Restore(OHOS::Rosen::Window* window, const std::string& contentInfo, ani_object storage,
-        ContentInfoType type = ContentInfoType::CONTINUATION)
-    {
-        return UIContentErrorCode::NO_ERRORS;
-    }
     virtual std::string GetContentInfo(ContentInfoType type = ContentInfoType::CONTINUATION) const = 0;
     virtual void DestroyUIDirector() = 0;
-
-    //for previewer
-    virtual void LoadDocument(const std::string& url, const std::string& componentName,
-        Platform::SystemParams& systemParams) {};
-    virtual std::string GetJSONTree()
-    {
-        return "";
-    }
-    virtual bool OperateComponent(const std::string& attrsJson)
-    {
-        return false;
-    }
 
     // UI content event process
     virtual bool ProcessBackPressed() = 0;
@@ -192,14 +146,10 @@ public:
     virtual bool ProcessVsyncEvent(uint64_t timeStampNanos) = 0;
     virtual void SetIsFocusActive(bool isFocusActive) = 0;
     virtual void UpdateConfiguration(const std::shared_ptr<OHOS::AppExecFwk::Configuration>& config) = 0;
-    virtual void UpdateConfiguration(const std::shared_ptr<OHOS::AppExecFwk::Configuration>& config,
-        const std::shared_ptr<Global::Resource::ResourceManager>& resourceManager) = 0;
     virtual void UpdateViewportConfig(const ViewportConfig& config, OHOS::Rosen::WindowSizeChangeReason reason,
         const std::shared_ptr<OHOS::Rosen::RSTransaction>& rsTransaction = nullptr,
-        const std::map<OHOS::Rosen::AvoidAreaType, OHOS::Rosen::AvoidArea>& avoidAreas = {},
-        const sptr<OHOS::Rosen::OccupiedAreaChangeInfo>& info = nullptr) {};
+        const std::map<OHOS::Rosen::AvoidAreaType, OHOS::Rosen::AvoidArea>& avoidAreas = {}) {};
     virtual void UpdateWindowMode(OHOS::Rosen::WindowMode mode, bool hasDeco = true) = 0;
-    virtual void NotifyWindowMode(OHOS::Rosen::WindowMode mode) {};
     virtual void HideWindowTitleButton(bool hideSplit, bool hideMaximize, bool hideMinimize, bool hideClose) = 0;
     virtual void SetIgnoreViewSafeArea(bool ignoreViewSafeArea) = 0;
     virtual void UpdateMaximizeMode(OHOS::Rosen::MaximizeMode mode) {};
@@ -213,8 +163,6 @@ public:
     virtual uint32_t GetBackgroundColor() = 0;
     virtual void SetBackgroundColor(uint32_t color) = 0;
     virtual void SetUIContentType(UIContentType uIContentType) {};
-    virtual void SetHostParams(const OHOS::AAFwk::WantParams& params) {};
-    virtual void SetWindowContainerColor(uint32_t activeColor, uint32_t inactiveColor) = 0;
 
     // Judge whether window need soft keyboard or not
     virtual bool NeedSoftKeyboard()
@@ -239,7 +187,6 @@ public:
 
     // ArkTS Form
     virtual void PreInitializeForm(OHOS::Rosen::Window* window, const std::string& url, napi_value storage) = 0;
-    virtual void PreInitializeFormAni(OHOS::Rosen::Window* window, const std::string& url, ani_object storage) {};
     virtual void RunFormPage() = 0;
     virtual std::shared_ptr<Rosen::RSSurfaceNode> GetFormRootNode() = 0;
 
@@ -258,7 +205,6 @@ public:
     virtual void SetFormBackgroundColor(const std::string& color) {};
     virtual void SetFontScaleFollowSystem(const bool fontScaleFollowSystem) {};
     virtual void SetFormRenderingMode(int8_t renderMode) {};
-    virtual void SetFormEnableBlurBackground(bool enableBlurBackground) {};
 
     virtual void SetActionEventHandler(std::function<void(const std::string&)>&& actionCallback) {};
     virtual void SetErrorEventHandler(std::function<void(const std::string&, const std::string&)>&& errorCallback) {};
@@ -294,12 +240,6 @@ public:
     virtual napi_value GetUINapiContext()
     {
         napi_value result = nullptr;
-        return result;
-    }
-
-    virtual ani_object GetUIAniContext()
-    {
-        ani_object result = nullptr;
         return result;
     }
 
@@ -367,8 +307,6 @@ public:
     virtual void RecoverForm(const std::string &statusData) {}
 
     virtual void SetContainerModalTitleVisible(bool customTitleSettedShow, bool floatingTitleSettedShow) {}
-
-    virtual bool GetContainerModalTitleVisible(bool isImmersive) { return false; }
 
     virtual void SetContainerModalTitleHeight(int height) {}
 
@@ -496,21 +434,20 @@ public:
 
     virtual void SetContentNodeGrayScale(float grayscale) {};
 
+    virtual void SetStatusBarItemColor(uint32_t color) {};
+
+    virtual void PreLayout() {};
+
+    virtual void SetForceSplitEnable(bool isForceSplit, const std::string& homePage) {};
+
     virtual sptr<IRemoteObject> GetRemoteObj()
     {
         return {};
     }
 
-    virtual void PreLayout() {};
-
-    virtual void SetStatusBarItemColor(uint32_t color) {};
-
-    virtual void SetForceSplitEnable(bool isForceSplit, const std::string& homePage,
-        bool isRouter = true, bool ignoreOrientation = false) {}
-
-    virtual void SetForceSplitConfig(const std::string& configJsonStr) {}
-
     virtual void EnableContainerModalGesture(bool isEnable) {};
+
+    virtual void UpdateSingleHandTransform(const OHOS::Rosen::SingleHandTransform& transform) {};
 
     virtual bool GetContainerFloatingTitleVisible()
     {
@@ -527,99 +464,14 @@ public:
         return false;
     }
 
-    virtual void OnContainerModalEvent(const std::string& name, const std::string& value) {}
     virtual void UpdateConfigurationSyncForAll(const std::shared_ptr<OHOS::AppExecFwk::Configuration>& config) {}
-
-    virtual void SetContainerButtonStyle(const Rosen::DecorButtonStyle& decorButtonStyle) {}
-
-    virtual int32_t AddFocusActiveChangeCallback(const std::function<void(bool isFocusAvtive)>& callback)
-    {
-        return 0;
-    }
-
-    virtual void RemoveFocusActiveChangeCallback(int32_t handler) {};
-
-    virtual bool ProcessPointerEvent(
-        const std::shared_ptr<OHOS::MMI::PointerEvent>& pointerEvent, const std::function<void(bool)>& callback)
-    {
-        return false;
-    }
-
-    virtual bool ConfigCustomWindowMask(bool enable)
-    {
-        return false;
-    }
-
-    virtual void UpdateSingleHandTransform(const OHOS::Rosen::SingleHandTransform& transform) {};
 
     virtual std::shared_ptr<Rosen::RSNode> GetRSNodeByStringID(const std::string& stringId)
     {
         return nullptr;
     }
 
-    virtual void ActiveWindow() {};
-
-    virtual void UnActiveWindow() {};
-
     virtual void SetTopWindowBoundaryByID(const std::string& stringId) {};
-
-    virtual bool SendUIExtProprty(uint32_t code, const AAFwk::Want& data, uint8_t subSystemId)
-    {
-        return false;
-    }
-
-    virtual bool SendUIExtProprtyByPersistentId(uint32_t code, const AAFwk::Want& data,
-        const std::unordered_set<int32_t>& persistentIds, uint8_t subSystemId)
-    {
-        return false;
-    }
-
-    virtual void EnableContainerModalCustomGesture(bool enable) {};
-
-    virtual void AddKeyFrameAnimateEndCallback(const std::function<void()> &callback) {};
-    virtual void AddKeyFrameCanvasNodeCallback(const std::function<
-        void(std::shared_ptr<Rosen::RSCanvasNode>& canvasNode,
-            std::shared_ptr<OHOS::Rosen::RSTransaction>& rsTransaction)>& callback) {};
-    virtual void LinkKeyFrameCanvasNode(std::shared_ptr<OHOS::Rosen::RSCanvasNode>&) {};
-
-    // intent framework
-    virtual void SetIntentParam(const std::string& intentInfoSerialized,
-        const std::function<void()>&& loadPageCallback, bool isColdStart) {}
-
-    virtual std::string GetTopNavDestinationInfo(bool onlyFullScreen = false, bool needParam = true)
-    {
-        return "";
-    }
-    virtual void RestoreNavDestinationInfo(const std::string& navDestinationInfo, bool isColdStart) {}
-    virtual UIContentErrorCode InitializeWithAniStorage(
-        OHOS::Rosen::Window* window, const std::string& url, ani_object storage)
-    {
-        return UIContentErrorCode::NO_ERRORS;
-    }
-
-    virtual UIContentErrorCode InitializeWithAniStorage(
-        OHOS::Rosen::Window* window, const std::string& url, ani_object storage, uint32_t focusWindowID)
-    {
-        return UIContentErrorCode::NO_ERRORS;
-    }
-
-    virtual UIContentErrorCode InitializeWithAniStorage(
-        OHOS::Rosen::Window* window, const std::shared_ptr<std::vector<uint8_t>>& content, ani_object storage)
-    {
-        return UIContentErrorCode::NO_ERRORS;
-    }
-
-    virtual UIContentErrorCode InitializeWithAniStorage(OHOS::Rosen::Window* window,
-        const std::shared_ptr<std::vector<uint8_t>>& content, ani_object storage, const std::string& contentName)
-    {
-        return UIContentErrorCode::NO_ERRORS;
-    }
-
-    virtual UIContentErrorCode InitializeByNameWithAniStorage(
-        OHOS::Rosen::Window* window, const std::string& name, ani_object storage)
-    {
-        return UIContentErrorCode::NO_ERRORS;
-    }
 };
 
 } // namespace OHOS::Ace

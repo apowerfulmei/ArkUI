@@ -31,6 +31,9 @@
 #include "core/components_ng/pattern/text/text_pattern.h"
 #include "core/components_ng/pattern/text_picker/textpicker_column_pattern.h"
 #include "core/components_ng/pattern/text_picker/textpicker_event_hub.h"
+#include "core/components_ng/pattern/text_picker/textpicker_pattern.h"
+#include "core/components_v2/inspector/inspector_constants.h"
+#include "core/pipeline_ng/pipeline_context.h"
 
 namespace OHOS::Ace::NG {
 namespace {
@@ -49,9 +52,9 @@ constexpr size_t FORWAED_BUTTON_INDEX = 3;
 WeakPtr<FrameNode> TextPickerDialogView::dialogNode_ = nullptr;
 uint32_t dialogNodePage = 0;
 uint32_t totalPageNum_ = 0;
-Dimension TextPickerDialogView::selectedTextStyleFont_ = 40.0_fp;
-Dimension TextPickerDialogView::normalTextStyleFont_ = 32.0_fp;
-Dimension TextPickerDialogView::disappearTextStyleFont_ = 28.0_fp;
+Dimension TextPickerDialogView::selectedTextStyleFont_ = 40.0_vp;
+Dimension TextPickerDialogView::normalTextStyleFont_ = 32.0_vp;
+Dimension TextPickerDialogView::disappearTextStyleFont_ = 28.0_vp;
 
 RefPtr<FrameNode> TextPickerDialogView::Show(const DialogProperties& dialogProperties,
     const TextPickerSettingData& settingData, const std::vector<ButtonInfo>& buttonInfos,
@@ -86,10 +89,6 @@ RefPtr<FrameNode> TextPickerDialogView::RangeShow(const DialogProperties& dialog
     textPickerPattern->SetIsShowInDialog(true);
     textPickerPattern->SetPickerTag(false);
     textPickerPattern->SetTextProperties(settingData.properties);
-    if (textPickerNode->GreatOrEqualAPITargetVersion(PlatformVersion::VERSION_EIGHTEEN)) {
-        textPickerPattern->SetIsEnableHaptic(settingData.isEnableHapticFeedback);
-        textPickerPattern->ColumnPatternInitHapticController();
-    }
     auto context = textPickerNode->GetContext();
     CHECK_NULL_RETURN(context, nullptr);
     auto themeManager = context->GetThemeManager();
@@ -109,13 +108,10 @@ RefPtr<FrameNode> TextPickerDialogView::RangeShow(const DialogProperties& dialog
     OptionsCreateNode(textPickerPattern, settingData, textPickerNode, showCount, 1, pickerTheme);
     SetDefaultPickerItemHeight(settingData.height);
     SetTextProperties(pickerTheme, settingData.properties);
-    SetSelectedBackgroundStyle(pickerTheme, settingData.pickerBgStyle);
     auto changeEvent = dialogEvent["changeId"];
     SetDialogChange(textPickerNode, std::move(changeEvent));
     auto scrollStopEvent = dialogEvent["scrollStopId"];
     SetDialogScrollStop(textPickerNode, std::move(scrollStopEvent));
-    auto enterSelectedAreaEvent = dialogEvent["enterSelectedAreaId"];
-    SetDialogEnterSelectedArea(textPickerNode, std::move(enterSelectedAreaEvent));
     ViewStackProcessor::GetInstance()->Finish();
     textPickerNode->MountToParent(contentColumn);
     auto dialogNode = DialogView::CreateDialogNode(dialogProperties, contentColumn);
@@ -186,14 +182,8 @@ void TextPickerDialogView::OptionsCreateNode(const RefPtr<TextPickerPattern>& te
             columnNode->MarkDirtyNode(PROPERTY_UPDATE_MEASURE);
             auto layoutProperty = stackNode->GetLayoutProperty<LayoutProperty>();
             layoutProperty->UpdateAlignment(Alignment::CENTER);
-            if (settingData.columnWidths.empty()) {
-                layoutProperty->UpdateLayoutWeight(1);
-            }
+            layoutProperty->UpdateLayoutWeight(1);
             stackNode->MountToParent(textPickerNode);
-        }
-
-        if (!settingData.columnWidths.empty()) {
-            textPickerPattern->SetColumnWidths(settingData.columnWidths);
         }
     }
     if (settingData.options.size() > 0) {
@@ -275,13 +265,10 @@ RefPtr<FrameNode> TextPickerDialogView::OptionsShow(const DialogProperties& dial
     OptionsShowInternal(textPickerPattern, settingData, textPickerNode, showCount, pickerTheme);
     SetDefaultPickerItemHeight(settingData.height);
     SetTextProperties(pickerTheme, settingData.properties);
-    SetSelectedBackgroundStyle(pickerTheme, settingData.pickerBgStyle);
     auto changeEvent = dialogEvent["changeId"];
     SetDialogChange(textPickerNode, std::move(changeEvent));
     auto scrollStopEvent = dialogEvent["scrollStopId"];
     SetDialogScrollStop(textPickerNode, std::move(scrollStopEvent));
-    auto enterSelectedAreaEvent = dialogEvent["enterSelectedAreaId"];
-    SetDialogEnterSelectedArea(textPickerNode, std::move(enterSelectedAreaEvent));
 
     ViewStackProcessor::GetInstance()->Finish();
     textPickerNode->MountToParent(contentColumn);
@@ -513,13 +500,9 @@ void TextPickerDialogView::UpdateButtonConfirmLayoutProperty(const RefPtr<FrameN
 {
     auto buttonConfirmLayoutProperty = buttonConfirmNode->GetLayoutProperty<ButtonLayoutProperty>();
     CHECK_NULL_VOID(buttonConfirmLayoutProperty);
-    buttonConfirmLayoutProperty->UpdateLabel(GetDialogNormalButtonText(true));
+    buttonConfirmLayoutProperty->UpdateLabel(Localization::GetInstance()->GetEntryLetters("common.ok"));
     buttonConfirmLayoutProperty->UpdateMeasureType(MeasureType::MATCH_PARENT_MAIN_AXIS);
-    if (buttonConfirmNode->GreatOrEqualAPITargetVersion(PlatformVersion::VERSION_EIGHTEEN)) {
-        buttonConfirmLayoutProperty->UpdateType(ButtonType::ROUNDED_RECTANGLE);
-    } else {
-        buttonConfirmLayoutProperty->UpdateType(ButtonType::CAPSULE);
-    }
+    buttonConfirmLayoutProperty->UpdateType(ButtonType::CAPSULE);
     buttonConfirmLayoutProperty->UpdateFlexShrink(1.0);
     auto pipeline = PipelineBase::GetCurrentContext();
     CHECK_NULL_VOID(pipeline);
@@ -594,7 +577,7 @@ void TextPickerDialogView::UpdateConfirmButtonTextLayoutProperty(
 {
     auto textLayoutProperty = textConfirmNode->GetLayoutProperty<TextLayoutProperty>();
     CHECK_NULL_VOID(textLayoutProperty);
-    textLayoutProperty->UpdateContent(GetDialogNormalButtonText(true));
+    textLayoutProperty->UpdateContent(Localization::GetInstance()->GetEntryLetters("common.ok"));
     textLayoutProperty->UpdateTextColor(pickerTheme->GetOptionStyle(true, false).GetTextColor());
     if (!NeedAdaptForAging()) {
         textLayoutProperty->UpdateMaxFontScale(pickerTheme->GetNormalFontScale());
@@ -609,7 +592,7 @@ void TextPickerDialogView::UpdateCancelButtonTextLayoutProperty(
 {
     auto textCancelLayoutProperty = textCancelNode->GetLayoutProperty<TextLayoutProperty>();
     CHECK_NULL_VOID(textCancelLayoutProperty);
-    textCancelLayoutProperty->UpdateContent(GetDialogNormalButtonText(false));
+    textCancelLayoutProperty->UpdateContent(Localization::GetInstance()->GetEntryLetters("common.cancel"));
     textCancelLayoutProperty->UpdateTextColor(pickerTheme->GetOptionStyle(true, false).GetTextColor());
     if (!NeedAdaptForAging()) {
         textCancelLayoutProperty->UpdateMaxFontScale(pickerTheme->GetNormalFontScale());
@@ -625,7 +608,7 @@ void TextPickerDialogView::UpdateForwardButtonTextLayoutProperty(
     auto textForwardLayoutProperty = textForwardNode->GetLayoutProperty<TextLayoutProperty>();
     CHECK_NULL_VOID(textForwardLayoutProperty);
     auto pickerThemeOptionStyle = pickerTheme->GetOptionStyle(true, false);
-    textForwardLayoutProperty->UpdateContent(GetDialogAgingButtonText(true));
+    textForwardLayoutProperty->UpdateContent(Localization::GetInstance()->GetEntryLetters("common.next"));
     textForwardLayoutProperty->UpdateTextColor(pickerThemeOptionStyle.GetTextColor());
     textForwardLayoutProperty->UpdateFontSize(
         ConvertFontScaleValue(pickerTheme->GetOptionStyle(false, false).GetFontSize()));
@@ -638,7 +621,7 @@ void TextPickerDialogView::UpdateBackwardButtonTextLayoutProperty(
     auto textBackwardLayoutProperty = textBackwardNode->GetLayoutProperty<TextLayoutProperty>();
     CHECK_NULL_VOID(textBackwardLayoutProperty);
     auto pickerThemeOptionStyle = pickerTheme->GetOptionStyle(true, false);
-    textBackwardLayoutProperty->UpdateContent(GetDialogAgingButtonText(false));
+    textBackwardLayoutProperty->UpdateContent(Localization::GetInstance()->GetEntryLetters("common.prev"));
     textBackwardLayoutProperty->UpdateTextColor(pickerThemeOptionStyle.GetTextColor());
     textBackwardLayoutProperty->UpdateFontSize(
         ConvertFontScaleValue(pickerTheme->GetOptionStyle(false, false).GetFontSize()));
@@ -847,7 +830,7 @@ RefPtr<FrameNode> TextPickerDialogView::CreateCancelNode(NG::DialogGestureEvent&
     buttonCancelEventHub->SetStateEffect(true);
 
     UpdateButtonCancelLayoutProperty(buttonCancelNode, pipeline);
-
+    
     auto buttonCancelRenderContext = buttonCancelNode->GetRenderContext();
     buttonCancelRenderContext->UpdateBackgroundColor(Color::TRANSPARENT);
     auto buttonCancelLayoutProperty = buttonCancelNode->GetLayoutProperty<ButtonLayoutProperty>();
@@ -867,13 +850,9 @@ void TextPickerDialogView::UpdateButtonCancelLayoutProperty(
     auto pickerTheme = pipeline->GetTheme<PickerTheme>();
     UpdateCancelButtonMargin(buttonCancelNode, dialogTheme);
     auto buttonCancelLayoutProperty = buttonCancelNode->GetLayoutProperty<ButtonLayoutProperty>();
-    buttonCancelLayoutProperty->UpdateLabel(GetDialogNormalButtonText(false));
+    buttonCancelLayoutProperty->UpdateLabel(Localization::GetInstance()->GetEntryLetters("common.cancel"));
     buttonCancelLayoutProperty->UpdateMeasureType(MeasureType::MATCH_PARENT_MAIN_AXIS);
-    if (buttonCancelNode->GreatOrEqualAPITargetVersion(PlatformVersion::VERSION_EIGHTEEN)) {
-        buttonCancelLayoutProperty->UpdateType(ButtonType::ROUNDED_RECTANGLE);
-    } else {
-        buttonCancelLayoutProperty->UpdateType(ButtonType::CAPSULE);
-    }
+    buttonCancelLayoutProperty->UpdateType(ButtonType::CAPSULE);
     buttonCancelLayoutProperty->UpdateFlexShrink(1.0);
     if (Container::LessThanAPITargetVersion(PlatformVersion::VERSION_TWELVE)) {
         buttonCancelLayoutProperty->UpdateUserDefinedIdealSize(
@@ -894,13 +873,9 @@ void TextPickerDialogView::UpdateButtonForwardLayoutProperty(
     CHECK_NULL_VOID(pickerTheme);
     UpdateForwardButtonMargin(buttonForwardNode, dialogTheme);
     auto buttonForwardLayoutProperty = buttonForwardNode->GetLayoutProperty<ButtonLayoutProperty>();
-    buttonForwardLayoutProperty->UpdateLabel(GetDialogAgingButtonText(true));
+    buttonForwardLayoutProperty->UpdateLabel(Localization::GetInstance()->GetEntryLetters("common.next"));
     buttonForwardLayoutProperty->UpdateMeasureType(MeasureType::MATCH_PARENT_MAIN_AXIS);
-    if (buttonForwardNode->GreatOrEqualAPITargetVersion(PlatformVersion::VERSION_EIGHTEEN)) {
-        buttonForwardLayoutProperty->UpdateType(ButtonType::ROUNDED_RECTANGLE);
-    } else {
-        buttonForwardLayoutProperty->UpdateType(ButtonType::CAPSULE);
-    }
+    buttonForwardLayoutProperty->UpdateType(ButtonType::CAPSULE);
     buttonForwardLayoutProperty->UpdateFlexShrink(1.0);
     if (Container::LessThanAPITargetVersion(PlatformVersion::VERSION_TWELVE)) {
         buttonForwardLayoutProperty->UpdateUserDefinedIdealSize(
@@ -922,13 +897,9 @@ void TextPickerDialogView::UpdateButtonBackwardLayoutProperty(
     CHECK_NULL_VOID(pickerTheme);
     UpdateBackwardButtonMargin(buttonBackwardNode, dialogTheme);
     auto buttonBackwardLayoutProperty = buttonBackwardNode->GetLayoutProperty<ButtonLayoutProperty>();
-    buttonBackwardLayoutProperty->UpdateLabel(GetDialogAgingButtonText(false));
+    buttonBackwardLayoutProperty->UpdateLabel(Localization::GetInstance()->GetEntryLetters("common.prev"));
     buttonBackwardLayoutProperty->UpdateMeasureType(MeasureType::MATCH_PARENT_MAIN_AXIS);
-    if (buttonBackwardNode->GreatOrEqualAPITargetVersion(PlatformVersion::VERSION_EIGHTEEN)) {
-        buttonBackwardLayoutProperty->UpdateType(ButtonType::ROUNDED_RECTANGLE);
-    } else {
-        buttonBackwardLayoutProperty->UpdateType(ButtonType::CAPSULE);
-    }
+    buttonBackwardLayoutProperty->UpdateType(ButtonType::CAPSULE);
     buttonBackwardLayoutProperty->UpdateFlexShrink(1.0);
     if (Container::LessThanAPITargetVersion(PlatformVersion::VERSION_TWELVE)) {
         buttonBackwardLayoutProperty->UpdateUserDefinedIdealSize(
@@ -965,16 +936,6 @@ void TextPickerDialogView::SetRange(
     textPickerPattern->SetRange(value);
 }
 
-void TextPickerDialogView::SetSelectedBackgroundStyle(const RefPtr<PickerTheme>& pickerTheme,
-    const PickerBackgroundStyle& pickerBgStyle)
-{
-    CHECK_NULL_VOID(pickerTheme);
-    ACE_UPDATE_LAYOUT_PROPERTY(TextPickerLayoutProperty, SelectedBackgroundColor,
-        pickerBgStyle.color.value_or(pickerTheme->GetSelectedBackgroundColor()));
-    ACE_UPDATE_LAYOUT_PROPERTY(TextPickerLayoutProperty, SelectedBorderRadius,
-        pickerBgStyle.borderRadius.value_or(pickerTheme->GetSelectedBorderRadius()));
-}
-
 void TextPickerDialogView::SetTextProperties(
     const RefPtr<PickerTheme>& pickerTheme, const PickerTextProperties& properties)
 {
@@ -982,47 +943,9 @@ void TextPickerDialogView::SetTextProperties(
 
     CHECK_NULL_VOID(pickerTheme);
     auto selectedStyle = pickerTheme->GetOptionStyle(true, false);
+    auto normalStyle = pickerTheme->GetOptionStyle(false, false);
 
     SetTextDisappearProperties(pickerTheme, properties);
-    SetTextNormalProperties(pickerTheme, properties);
-
-    if (properties.selectedTextStyle_.fontSize.has_value() && properties.selectedTextStyle_.fontSize->IsValid()) {
-        ACE_UPDATE_LAYOUT_PROPERTY(TextPickerLayoutProperty, SelectedFontSize,
-            ConvertFontScaleValue(properties.selectedTextStyle_.fontSize.value(), selectedTextStyleFont_, true));
-    } else {
-        ACE_UPDATE_LAYOUT_PROPERTY(TextPickerLayoutProperty, SelectedFontSize,
-            ConvertFontScaleValue(selectedStyle.GetFontSize()));
-    }
-    ACE_UPDATE_LAYOUT_PROPERTY(TextPickerLayoutProperty, SelectedColor,
-        properties.selectedTextStyle_.textColor.value_or(selectedStyle.GetTextColor()));
-    ACE_UPDATE_LAYOUT_PROPERTY(TextPickerLayoutProperty, SelectedWeight,
-        properties.selectedTextStyle_.fontWeight.value_or(selectedStyle.GetFontWeight()));
-    ACE_UPDATE_LAYOUT_PROPERTY(TextPickerLayoutProperty, SelectedFontFamily,
-        properties.selectedTextStyle_.fontFamily.value_or(selectedStyle.GetFontFamilies()));
-    ACE_UPDATE_LAYOUT_PROPERTY(TextPickerLayoutProperty, SelectedFontStyle,
-        properties.selectedTextStyle_.fontStyle.value_or(selectedStyle.GetFontStyle()));
-
-    if (properties.selectedTextStyle_.minFontSize.has_value() && properties.selectedTextStyle_.minFontSize->IsValid()) {
-        ACE_UPDATE_LAYOUT_PROPERTY(TextPickerLayoutProperty, SelectedMinFontSize,
-            ConvertFontScaleValue(properties.selectedTextStyle_.minFontSize.value()));
-    } else {
-        ACE_UPDATE_LAYOUT_PROPERTY(TextPickerLayoutProperty, SelectedMinFontSize, Dimension());
-    }
-    if (properties.selectedTextStyle_.maxFontSize.has_value() && properties.selectedTextStyle_.maxFontSize->IsValid()) {
-        ACE_UPDATE_LAYOUT_PROPERTY(TextPickerLayoutProperty, SelectedMaxFontSize,
-            ConvertFontScaleValue(properties.selectedTextStyle_.maxFontSize.value()));
-    } else {
-        ACE_UPDATE_LAYOUT_PROPERTY(TextPickerLayoutProperty, SelectedMaxFontSize, Dimension());
-    }
-    ACE_UPDATE_LAYOUT_PROPERTY(TextPickerLayoutProperty, SelectedTextOverflow,
-        properties.selectedTextStyle_.textOverflow.value_or(TextOverflow::CLIP));
-}
-
-void TextPickerDialogView::SetTextNormalProperties(
-    const RefPtr<PickerTheme>& pickerTheme, const PickerTextProperties& properties)
-{
-    CHECK_NULL_VOID(pickerTheme);
-    auto normalStyle = pickerTheme->GetOptionStyle(false, false);
 
     if (properties.normalTextStyle_.fontSize.has_value() && properties.normalTextStyle_.fontSize->IsValid()) {
         ACE_UPDATE_LAYOUT_PROPERTY(TextPickerLayoutProperty, FontSize,
@@ -1040,24 +963,27 @@ void TextPickerDialogView::SetTextNormalProperties(
     ACE_UPDATE_LAYOUT_PROPERTY(TextPickerLayoutProperty, FontStyle,
         properties.normalTextStyle_.fontStyle.value_or(normalStyle.GetFontStyle()));
 
-    if (properties.normalTextStyle_.minFontSize.has_value() && properties.normalTextStyle_.minFontSize->IsValid()) {
-        ACE_UPDATE_LAYOUT_PROPERTY(TextPickerLayoutProperty, MinFontSize,
-            ConvertFontScaleValue(properties.normalTextStyle_.minFontSize.value()));
+    if (properties.selectedTextStyle_.fontSize.has_value() && properties.selectedTextStyle_.fontSize->IsValid()) {
+        ACE_UPDATE_LAYOUT_PROPERTY(
+            TextPickerLayoutProperty, SelectedFontSize,
+            ConvertFontScaleValue(properties.selectedTextStyle_.fontSize.value(), selectedTextStyleFont_, true));
     } else {
-        ACE_UPDATE_LAYOUT_PROPERTY(TextPickerLayoutProperty, MinFontSize, Dimension());
+        ACE_UPDATE_LAYOUT_PROPERTY(TextPickerLayoutProperty, SelectedFontSize,
+            ConvertFontScaleValue(selectedStyle.GetFontSize()));
     }
-    if (properties.normalTextStyle_.maxFontSize.has_value() && properties.normalTextStyle_.maxFontSize->IsValid()) {
-        ACE_UPDATE_LAYOUT_PROPERTY(TextPickerLayoutProperty, MaxFontSize,
-            ConvertFontScaleValue(properties.normalTextStyle_.maxFontSize.value()));
-    } else {
-        ACE_UPDATE_LAYOUT_PROPERTY(TextPickerLayoutProperty, MaxFontSize, Dimension());
-    }
-    ACE_UPDATE_LAYOUT_PROPERTY(TextPickerLayoutProperty, TextOverflow,
-        properties.normalTextStyle_.textOverflow.value_or(TextOverflow::CLIP));
+    ACE_UPDATE_LAYOUT_PROPERTY(TextPickerLayoutProperty, SelectedColor,
+        properties.selectedTextStyle_.textColor.value_or(selectedStyle.GetTextColor()));
+    ACE_UPDATE_LAYOUT_PROPERTY(TextPickerLayoutProperty, SelectedWeight,
+        properties.selectedTextStyle_.fontWeight.value_or(selectedStyle.GetFontWeight()));
+    ACE_UPDATE_LAYOUT_PROPERTY(TextPickerLayoutProperty, SelectedFontFamily,
+        properties.selectedTextStyle_.fontFamily.value_or(selectedStyle.GetFontFamilies()));
+    ACE_UPDATE_LAYOUT_PROPERTY(TextPickerLayoutProperty, SelectedFontStyle,
+        properties.selectedTextStyle_.fontStyle.value_or(selectedStyle.GetFontStyle()));
 }
 
 void TextPickerDialogView::SetTextDisappearProperties(
     const RefPtr<PickerTheme>& pickerTheme, const PickerTextProperties& properties)
+
 {
     CHECK_NULL_VOID(pickerTheme);
     auto disappearStyle = pickerTheme->GetDisappearOptionStyle();
@@ -1077,23 +1003,6 @@ void TextPickerDialogView::SetTextDisappearProperties(
         properties.disappearTextStyle_.fontFamily.value_or(disappearStyle.GetFontFamilies()));
     ACE_UPDATE_LAYOUT_PROPERTY(TextPickerLayoutProperty, DisappearFontStyle,
         properties.disappearTextStyle_.fontStyle.value_or(disappearStyle.GetFontStyle()));
-
-    if (properties.disappearTextStyle_.minFontSize.has_value() &&
-        properties.disappearTextStyle_.minFontSize->IsValid()) {
-        ACE_UPDATE_LAYOUT_PROPERTY(TextPickerLayoutProperty, DisappearMinFontSize,
-            ConvertFontScaleValue(properties.disappearTextStyle_.minFontSize.value()));
-    } else {
-        ACE_UPDATE_LAYOUT_PROPERTY(TextPickerLayoutProperty, DisappearMinFontSize, Dimension());
-    }
-    if (properties.disappearTextStyle_.maxFontSize.has_value() &&
-        properties.disappearTextStyle_.maxFontSize->IsValid()) {
-        ACE_UPDATE_LAYOUT_PROPERTY(TextPickerLayoutProperty, DisappearMaxFontSize,
-            ConvertFontScaleValue(properties.disappearTextStyle_.maxFontSize.value()));
-    } else {
-        ACE_UPDATE_LAYOUT_PROPERTY(TextPickerLayoutProperty, DisappearMaxFontSize, Dimension());
-    }
-    ACE_UPDATE_LAYOUT_PROPERTY(TextPickerLayoutProperty, DisappearTextOverflow,
-        properties.disappearTextStyle_.textOverflow.value_or(TextOverflow::CLIP));
 }
 
 void TextPickerDialogView::SetDefaultTextStyle(const NG::PickerTextStyle& value)
@@ -1145,15 +1054,6 @@ void TextPickerDialogView::SetDialogScrollStop(const RefPtr<FrameNode>& frameNod
     auto eventHub = frameNode->GetEventHub<TextPickerEventHub>();
     CHECK_NULL_VOID(eventHub);
     eventHub->SetDialogScrollStop(std::move(onScrollStop));
-}
-
-void TextPickerDialogView::SetDialogEnterSelectedArea(
-    const RefPtr<FrameNode>& frameNode, DialogTextEvent&& onEnterSelectedArea)
-{
-    CHECK_NULL_VOID(frameNode);
-    auto eventHub = frameNode->GetEventHub<TextPickerEventHub>();
-    CHECK_NULL_VOID(eventHub);
-    eventHub->SetDialogEnterSelectedArea(std::move(onEnterSelectedArea));
 }
 
 void TextPickerDialogView::SetDefaultPickerItemHeight(const Dimension& value)
@@ -1236,9 +1136,8 @@ RefPtr<FrameNode> TextPickerDialogView::CreateForwardNode(NG::DialogGestureEvent
         V2::TEXT_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(), AceType::MakeRefPtr<TextPattern>());
     CHECK_NULL_RETURN(textForwardNode, nullptr);
     UpdateForwardButtonTextLayoutProperty(textForwardNode, pickerTheme);
-    auto textPickerPattern = textPickerNode->GetPattern<TextPickerPattern>();
-    CHECK_NULL_RETURN(textPickerPattern, nullptr);
-    textPickerPattern->SetForwardNode(buttonForwardNode);
+    auto textPattern = textPickerNode->GetPattern<TextPickerPattern>();
+    textPattern->SetForwardNode(buttonForwardNode);
     textForwardNode->MountToParent(buttonForwardNode);
     auto eventForwardHub = buttonForwardNode->GetOrCreateGestureEventHub();
     CHECK_NULL_RETURN(eventForwardHub, nullptr);
@@ -1258,7 +1157,7 @@ RefPtr<FrameNode> TextPickerDialogView::CreateForwardNode(NG::DialogGestureEvent
     buttonForwardEventHub->SetStateEffect(true);
 
     UpdateButtonForwardLayoutProperty(buttonForwardNode, pipeline);
-
+    
     const auto& buttonForwardRenderContext = buttonForwardNode->GetRenderContext();
     buttonForwardRenderContext->UpdateBackgroundColor(Color::TRANSPARENT);
     auto buttonForwardLayoutProperty = buttonForwardNode->GetLayoutProperty<ButtonLayoutProperty>();
@@ -1284,9 +1183,8 @@ RefPtr<FrameNode> TextPickerDialogView::CreateBackwardNode(NG::DialogGestureEven
         V2::TEXT_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(), AceType::MakeRefPtr<TextPattern>());
     CHECK_NULL_RETURN(textBackwardNode, nullptr);
     UpdateBackwardButtonTextLayoutProperty(textBackwardNode, pickerTheme);
-    auto textPickerPattern = textPickerNode->GetPattern<TextPickerPattern>();
-    CHECK_NULL_RETURN(textPickerPattern, nullptr);
-    textPickerPattern->SetBackwardNode(buttonBackwardNode);
+    auto textPattern = textPickerNode->GetPattern<TextPickerPattern>();
+    textPattern->SetBackwardNode(buttonBackwardNode);
     textBackwardNode->MountToParent(buttonBackwardNode);
     auto eventBackwardHub = buttonBackwardNode->GetOrCreateGestureEventHub();
     CHECK_NULL_RETURN(eventBackwardHub, nullptr);
@@ -1306,7 +1204,7 @@ RefPtr<FrameNode> TextPickerDialogView::CreateBackwardNode(NG::DialogGestureEven
     buttonBackwardEventHub->SetStateEffect(true);
 
     UpdateButtonBackwardLayoutProperty(buttonBackwardNode, pipeline);
-
+    
     const auto& buttonBackwardRenderContext = buttonBackwardNode->GetRenderContext();
     buttonBackwardRenderContext->UpdateBackgroundColor(Color::TRANSPARENT);
     auto buttonBackwardLayoutProperty = buttonBackwardNode->GetLayoutProperty<ButtonLayoutProperty>();
@@ -1649,36 +1547,33 @@ const Dimension TextPickerDialogView::ConvertFontScaleValue(
     CHECK_NULL_RETURN(pickerTheme, fontSizeValue);
     float fontSizeScale = pipeline->GetFontScale();
     Dimension fontSizeValueResult = fontSizeValue;
-    Dimension fontSizeValueResultVp(fontSizeLimit.Value(), DimensionUnit::VP);
     auto maxAppFontScale = pipeline->GetMaxAppFontScale();
-
-    if (fontSizeValue.Unit() == DimensionUnit::VP) {
-        return isUserSetFont ? std::min(fontSizeValueResultVp, fontSizeValue) : fontSizeValue;
-    }
-
     if (pipeline->IsFollowSystem() && (!NearZero(maxAppFontScale))) {
         fontSizeScale = std::min(fontSizeScale, maxAppFontScale);
     }
     if (NeedAdaptForAging()) {
-        if (isUserSetFont) {
-            if (GreatOrEqualCustomPrecision(fontSizeValue.ConvertToPx() * fontSizeScale,
-                fontSizeLimit.ConvertToPx()) && (fontSizeScale != 0.0f)) {
-                fontSizeValueResult = fontSizeLimit / fontSizeScale;
-            } else {
-                fontSizeValueResult = fontSizeValue;
+        if (fontSizeValue.Unit() == DimensionUnit::VP) {
+            if (isUserSetFont) {
+                fontSizeValueResult = ConvertFontSizeLimit(fontSizeValue, fontSizeLimit, isUserSetFont);
             }
+            fontSizeValueResult = AdjustFontSizeScale(fontSizeValueResult, fontSizeScale);
         } else {
             if (GreatOrEqualCustomPrecision(fontSizeScale, pickerTheme->GetMaxThirdFontScale())) {
                 fontSizeScale = pickerTheme->GetMaxTwoFontScale() / pickerTheme->GetMaxThirdFontScale();
                 fontSizeValueResult = fontSizeValue * fontSizeScale;
             }
+            if (isUserSetFont) {
+                fontSizeValueResult = ConvertFontSizeLimit(fontSizeValueResult, fontSizeLimit, isUserSetFont);
+            }
         }
     } else {
         if (isUserSetFont) {
-            fontSizeValueResult = ConvertFontSizeLimit(fontSizeValueResult, fontSizeLimit, isUserSetFont);
-        } else {
-            if (GreatOrEqualCustomPrecision(fontSizeScale, pickerTheme->GetMaxOneFontScale()) &&
-                 (!NearZero(fontSizeScale))) {
+            fontSizeValueResult = ConvertFontSizeLimit(fontSizeValue, fontSizeLimit, isUserSetFont);
+        }
+
+        if (GreatOrEqualCustomPrecision(fontSizeScale, pickerTheme->GetMaxOneFontScale()) &&
+            fontSizeValueResult.Unit() != DimensionUnit::VP) {
+            if (!NearZero(fontSizeScale)) {
                 fontSizeValueResult = fontSizeValueResult / fontSizeScale;
             }
         }
@@ -1696,14 +1591,24 @@ const Dimension TextPickerDialogView::ConvertFontSizeLimit(
     CHECK_NULL_RETURN(pipeline, fontSizeValue);
     auto fontScale = pipeline->GetFontScale();
     auto maxAppFontScale = pipeline->GetMaxAppFontScale();
-    fontScale = std::clamp(fontScale, 0.0f, maxAppFontScale);
-
+    fontScale = std::min(fontScale, maxAppFontScale);
+    fontScale = std::min(2.0f, fontScale);
     Dimension fontSizeValueResult = fontSizeValue;
-    if (GreatOrEqualCustomPrecision(fontSizeValue.ConvertToPx() * fontScale, fontSizeLimit.ConvertToPx())) {
-        if (!NearZero(fontScale)) {
+    if (fontSizeValue.Unit() == DimensionUnit::VP) {
+        if (!NearZero(fontScale) &&
+            GreatOrEqualCustomPrecision(fontSizeValue.ConvertToPx(), fontSizeLimit.ConvertToPx() / fontScale)) {
             fontSizeValueResult = fontSizeLimit / fontScale;
+        } else {
+            fontSizeValueResult = fontSizeValue;
+        }
+    } else {
+        if (GreatOrEqualCustomPrecision(fontSizeValue.ConvertToPx(), fontSizeLimit.ConvertToPx())) {
+            fontSizeValueResult = fontSizeLimit;
+        } else {
+            fontSizeValueResult = fontSizeValue;
         }
     }
+
     return fontSizeValueResult;
 }
 
@@ -1718,23 +1623,4 @@ void TextPickerDialogView::GetUserSettingLimit()
     disappearTextStyleFont_ = pickerTheme->GetUserSetDisappearTextStyle();
 }
 
-std::string TextPickerDialogView::GetDialogAgingButtonText(bool isNext)
-{
-    auto pipeline = PipelineContext::GetCurrentContextSafely();
-    CHECK_NULL_RETURN(pipeline, "");
-    auto pickerTheme = pipeline->GetTheme<PickerTheme>();
-    CHECK_NULL_RETURN(pickerTheme, "");
-    auto buttonText = isNext ? pickerTheme->GetNextText() : pickerTheme->GetPrevText();
-    return buttonText;
-}
-
-std::string TextPickerDialogView::GetDialogNormalButtonText(bool isConfirm)
-{
-    auto pipeline = PipelineContext::GetCurrentContextSafely();
-    CHECK_NULL_RETURN(pipeline, "");
-    auto dialogTheme = pipeline->GetTheme<DialogTheme>();
-    CHECK_NULL_RETURN(dialogTheme, "");
-    auto buttonText = isConfirm ? dialogTheme->GetConfirmText() : dialogTheme->GetCancelText();
-    return buttonText;
-}
 } // namespace OHOS::Ace::NG

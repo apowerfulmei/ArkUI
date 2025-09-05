@@ -15,6 +15,8 @@
 
 #include "core/components_ng/pattern/navrouter/navrouter_pattern.h"
 
+#include "core/components_ng/pattern/navrouter/navrouter_event_hub.h"
+
 namespace OHOS::Ace::NG {
 
 void NavRouterPattern::OnModifyDone()

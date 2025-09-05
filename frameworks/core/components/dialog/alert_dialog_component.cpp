@@ -44,7 +44,7 @@ void AlertDialogComponent::BuildChild(const RefPtr<ThemeManager>& themeManager)
     Border border;
     border.SetBorderRadius(Radius(dialogTheme_->GetRadius()));
     backDecoration->SetBorder(border);
-    if (deviceType_ == DeviceType::WATCH || deviceType_ == DeviceType::WEARABLE) {
+    if (deviceType_ == DeviceType::WATCH) {
         box->SetFlex(BoxFlex::FLEX_XY);
     } else {
         box->SetFlex(BoxFlex::FLEX_X);
@@ -82,7 +82,7 @@ void AlertDialogComponent::BuildChild(const RefPtr<ThemeManager>& themeManager)
         // build custom child
         BuildFocusChild(customComponent_, focusCollaboration);
     }
-    if (deviceType_ == DeviceType::WATCH || deviceType_ == DeviceType::WEARABLE) {
+    if (deviceType_ == DeviceType::WATCH) {
         auto scroll = AceType::MakeRefPtr<ScrollComponent>(focusCollaboration);
         box->SetChild(scroll);
     } else {

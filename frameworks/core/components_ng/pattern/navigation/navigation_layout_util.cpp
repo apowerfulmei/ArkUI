@@ -24,23 +24,6 @@
 #include "core/components_ng/pattern/navigation/navigation_title_util.h"
 
 namespace OHOS::Ace::NG {
-namespace {
-double GetRootWidth(const RefPtr<NavDestinationNodeBase>& nodeBase)
-{
-    double fallbackWidth = ScreenSystemManager::GetInstance().GetScreenWidth();
-    CHECK_NULL_RETURN(nodeBase, fallbackWidth);
-    auto context = nodeBase->GetContextRefPtr();
-    CHECK_NULL_RETURN(context, fallbackWidth);
-    auto rotateAngle = nodeBase->GetPageRotateAngle();
-    auto config = nodeBase->GetPageViewportConfig();
-    if (!config || !rotateAngle.has_value() ||
-        rotateAngle.value() == ROTATION_0 || rotateAngle.value() == ROTATION_180) {
-        return GridSystemManager::GetInstance().GetScreenWidth(context);
-    }
-    return config->GetWidth();
-}
-}
-
 bool NavigationLayoutUtil::CheckWhetherNeedToHideToolbar(
     const RefPtr<NavDestinationNodeBase>& nodeBase, const SizeF& navigationSize)
 {
@@ -51,12 +34,6 @@ bool NavigationLayoutUtil::CheckWhetherNeedToHideToolbar(
 
     auto toolbarNode = AceType::DynamicCast<NavToolbarNode>(nodeBase->GetToolBarNode());
     CHECK_NULL_RETURN(toolbarNode, false);
-
-    if (!EnableToolBarAdaptation(nodeBase)) {
-        TAG_LOGI(AceLogTag::ACE_NAVIGATION, "The toolbar adaptation has been closed");
-        return false;
-    }
-
     if (!toolbarNode->HasValidContent()) {
         return true;
     }
@@ -67,14 +44,11 @@ bool NavigationLayoutUtil::CheckWhetherNeedToHideToolbar(
 
     RefPtr<GridColumnInfo> columnInfo;
     columnInfo = GridSystemManager::GetInstance().GetInfoByType(GridColumnType::NAVIGATION_TOOLBAR);
-    CHECK_NULL_RETURN(columnInfo, false);
-    auto columnInfoParent = columnInfo->GetParent();
-    CHECK_NULL_RETURN(columnInfoParent, false);
-    columnInfoParent->BuildColumnWidth(GetRootWidth(nodeBase));
+    columnInfo->GetParent()->BuildColumnWidth();
 
-    auto currentColumns = columnInfoParent->GetColumns();
+    auto currentColumns = columnInfo->GetParent()->GetColumns();
     float gridWidth = static_cast<float>(columnInfo->GetWidth(rotationLimitCount));
-    float gutterWidth = columnInfoParent->GetGutterWidth().ConvertToPx();
+    float gutterWidth = columnInfo->GetParent()->GetGutterWidth().ConvertToPx();
     float hideLimitWidth = gridWidth + gutterWidth * 2;
     if (SystemProperties::GetDeviceType() == DeviceType::PHONE) {
         if (currentColumns >= static_cast<int32_t>(rotationLimitCount) &&
@@ -88,18 +62,6 @@ bool NavigationLayoutUtil::CheckWhetherNeedToHideToolbar(
         }
     }
     return false;
-}
-
-bool NavigationLayoutUtil::EnableToolBarAdaptation(const RefPtr<NavDestinationNodeBase>& nodeBase)
-{
-    auto navigationNode = AceType::DynamicCast<NavigationGroupNode>(nodeBase->GetNavigationNode());
-    if (navigationNode) {
-        auto navigatonLayoutProperty = navigationNode->GetLayoutProperty<NavigationLayoutProperty>();
-        if (navigatonLayoutProperty) {
-            return navigatonLayoutProperty->GetEnableToolBarAdaptationValue(true);
-        }
-    }
-    return true;
 }
 
 void NavigationLayoutUtil::UpdateTitleBarMenuNode(
@@ -127,6 +89,7 @@ void NavigationLayoutUtil::UpdateTitleBarMenuNode(
     bool needHide = CheckWhetherNeedToHideToolbar(nodeBase, navigationSize);
     bool isNeedLandscapeMenu = needHide && !isHideToolbar;
     pattern->SetIsNeedHideToolBarForNavWidth(needHide);
+    RefPtr<UINode> newMenuNode = isNeedLandscapeMenu ? nodeBase->GetLandscapeMenu() : nodeBase->GetMenu();
     if (isNeedLandscapeMenu) {
         toolBarLayoutProperty->UpdateVisibility(VisibleType::GONE);
         if (toolBarDividerProperty) {
@@ -138,7 +101,6 @@ void NavigationLayoutUtil::UpdateTitleBarMenuNode(
             toolBarDividerProperty->UpdateVisibility(VisibleType::VISIBLE);
         }
     }
-    RefPtr<UINode> newMenuNode = isNeedLandscapeMenu ? nodeBase->GetLandscapeMenu() : nodeBase->GetMenu();
     if (preMenuNode == newMenuNode) {
         return;
     }
@@ -182,7 +144,7 @@ float NavigationLayoutUtil::MeasureToolBar(LayoutWrapper* layoutWrapper, const R
 
     auto theme = NavigationGetTheme();
     CHECK_NULL_RETURN(theme, 0.0f);
-    auto toolbarHeight = theme->GetToolbarHeigth();
+    auto toolbarHeight = theme->GetHeight();
     constraint.selfIdealSize = OptionalSizeF(navigationSize.Width(), static_cast<float>(toolbarHeight.ConvertToPx()));
     toolBarWrapper->Measure(constraint);
     auto toolbarHeightAfterMeasure = toolBarWrapper->GetGeometryNode()->GetFrameSize().Height();
@@ -328,7 +290,7 @@ void NavigationLayoutUtil::UpdateContentSafeAreaPadding(
         toolBarNode && toolBarNode->IsVisible()) {
         auto theme = NavigationGetTheme();
         if (theme) {
-            paddingBottom = theme->GetToolbarHeigth();
+            paddingBottom = theme->GetHeight();
         }
     }
     PaddingProperty paddingProperty;
@@ -338,56 +300,5 @@ void NavigationLayoutUtil::UpdateContentSafeAreaPadding(
     paddingProperty.bottom = CalcLength(paddingBottom);
 
     contentLayoutProperty->UpdateSafeAreaPadding(paddingProperty);
-}
-
-void NavigationLayoutUtil::UpdateConstraintWhenFixOrWrap(
-    const RefPtr<LayoutProperty>& layoutProperty, LayoutConstraintF& constraint, SizeF size)
-{
-    auto layoutPolicy = layoutProperty->GetLayoutPolicyProperty();
-    bool isWidthWrapOrFix =
-        layoutPolicy.has_value() ? layoutPolicy->IsWidthWrap() || layoutPolicy->IsWidthFix() : false;
-    bool isHeightWrapOrFix =
-        layoutPolicy.has_value() ? layoutPolicy->IsHeightWrap() || layoutPolicy->IsHeightFix() : false;
-    constraint.selfIdealSize = OptionalSizeF();
-    bool isAutoHeight = NavigationLayoutAlgorithm::IsAutoHeight(layoutProperty);
-    if (!isWidthWrapOrFix) {
-        constraint.selfIdealSize.SetWidth(size.Width());
-    }
-
-    if (!isHeightWrapOrFix && !isAutoHeight) {
-        constraint.selfIdealSize.SetHeight(size.Height());
-    }
-}
-std::pair<bool, bool> NavigationLayoutUtil::CheckVerticalExtend(
-    const RefPtr<NavDestinationLayoutPropertyBase>& layoutProperty, const RefPtr<NavDestinationNodeBase>& hostNode,
-    const NG::IgnoreLayoutSafeAreaOpts& opts)
-{
-    auto defaultValue = std::make_pair(false, false);
-    if (!layoutProperty || !hostNode) {
-        return defaultValue;
-    }
-    const auto& padding = layoutProperty->CreatePaddingAndBorder();
-    float topPadding = padding.top.value_or(0.0f);
-    if (!NearEqual(topPadding, 0.0f)) {
-        return defaultValue;
-    }
-
-    bool isCanTopExtend = true;
-    isCanTopExtend &= ((opts.edges & LAYOUT_SAFE_AREA_EDGE_TOP) && (opts.type & LAYOUT_SAFE_AREA_TYPE_SYSTEM));
-    auto navBasePattern = hostNode->GetPattern<NavDestinationPatternBase>();
-    CHECK_NULL_RETURN(navBasePattern, defaultValue);
-    auto barStyle = navBasePattern->GetTitleBarStyle().value_or(BarStyle::STANDARD);
-    if (!(layoutProperty->GetHideTitleBar().value_or(false) || barStyle == BarStyle::STACK ||
-            (barStyle == BarStyle::SAFE_AREA_PADDING && !NearZero(navBasePattern->GetTitleBarOffsetY())))) {
-        isCanTopExtend = false;
-    }
-
-    bool isCanBottomExtend = true;
-    isCanBottomExtend &= ((opts.edges & LAYOUT_SAFE_AREA_EDGE_BOTTOM) && (opts.type & LAYOUT_SAFE_AREA_TYPE_SYSTEM));
-    auto toolBarStyle = navBasePattern->GetToolBarStyle().value_or(BarStyle::STANDARD);
-    if (hostNode->IsToolBarVisible() && toolBarStyle != BarStyle::STACK) {
-        isCanBottomExtend = false;
-    }
-    return std::make_pair(isCanTopExtend, isCanBottomExtend);
 }
 } // namespace OHOS::Ace::NG

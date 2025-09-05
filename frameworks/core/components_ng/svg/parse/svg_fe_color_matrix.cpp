@@ -15,8 +15,9 @@
 
 #include "core/components_ng/svg/parse/svg_fe_color_matrix.h"
 
-#include "core/components_ng/svg/parse/svg_constants.h"
-#include "core/pipeline/base/constants.h"
+#include "base/utils/utils.h"
+#include "core/components/declaration/svg/svg_declaration.h"
+#include "core/components/declaration/svg/svg_fe_colormatrix_declaration.h"
 
 namespace OHOS::Ace::NG {
 
@@ -28,30 +29,9 @@ static constexpr float LUM_COEFF_R = 0.2126f;
 static constexpr float LUM_COEFF_G = 0.7152f;
 static constexpr float LUM_COEFF_B = 0.0722f;
 
-bool ConvertStringToFloat(const std::string& str, float& result)
-{
-    char* endPtr = nullptr;
-    errno = 0; // Reset errno before calling strtof
-
-    // Check for overflow or underflow
-    result = std::strtof(str.c_str(), &endPtr);
-    if (errno == ERANGE || result == HUGE_VALF || result == -HUGE_VALF) {
-        TAG_LOGW(AceLogTag::ACE_IMAGE, "Out of range: string value is too large or too small for float");
-        return false;
-    }
-
-    // Check if no conversion was performed or if there are invalid characters
-    if (endPtr == str.c_str() || *endPtr != '\0') {
-        TAG_LOGW(AceLogTag::ACE_IMAGE, "Invalid argument: unable to convert string to float");
-        return false;
-    }
-
-    return true;
-}
-
 inline float DegreesToRadians(float degrees)
 {
-    return (degrees) * (ACE_PI / 180.0f);
+    return (degrees) * (M_PI / 180.0f);
 }
 
 const std::vector<float> luminanceMatrix_ = {
@@ -90,11 +70,7 @@ void SvgFeColorMatrix::MakeMatrix(const std::string& value)
 
 void SvgFeColorMatrix::MakeHueRotate(const std::string& value)
 {
-    float theta = 0.0;
-    float result = 0.0;
-    if (ConvertStringToFloat(value, result)) {
-        theta = DegreesToRadians(result);
-    }
+    float theta = DegreesToRadians(std::stof(value));
     const float cosValue = cos(theta);
     const float sinValue = sin(theta);
 
@@ -124,11 +100,7 @@ void SvgFeColorMatrix::MakeHueRotate(const std::string& value)
 
 void SvgFeColorMatrix::MakeSaturate(const std::string& value)
 {
-    float satValue = 1.0;
-    float result = 0.0;
-    if (ConvertStringToFloat(value, result)) {
-        satValue = result;
-    }
+    float satValue = std::stof(value);
 
     const float RValue = HUE_R * (1 - satValue);
     const float GValue = HUE_G * (1 - satValue);
@@ -165,7 +137,7 @@ void SvgFeColorMatrix::OnInitStyle()
 
 void SvgFeColorMatrix::OnAsImageFilter(std::shared_ptr<RSImageFilter>& imageFilter,
     const SvgColorInterpolationType& srcColor, SvgColorInterpolationType& currentColor,
-    std::unordered_map<std::string, std::shared_ptr<RSImageFilter>>& resultHash, bool cropRect) const
+    std::unordered_map<std::string, std::shared_ptr<RSImageFilter>>& resultHash) const
 {
     imageFilter = MakeImageFilter(feAttr_.in, imageFilter, resultHash);
 
@@ -173,14 +145,8 @@ void SvgFeColorMatrix::OnAsImageFilter(std::shared_ptr<RSImageFilter>& imageFilt
     colorMatrix.SetArray(matrix_.data());
     auto colorFilter = RSRecordingColorFilter::CreateMatrixColorFilter(colorMatrix);
     CHECK_NULL_VOID(colorFilter);
-    RSRect filterRect(effectFilterArea_.Left(), effectFilterArea_.Top(),
-        effectFilterArea_.Right(), effectFilterArea_.Bottom());
-    if (cropRect) {
-        imageFilter = RSRecordingImageFilter::CreateColorFilterImageFilter(*colorFilter,
-            imageFilter, filterRect);
-    } else {
-        imageFilter = RSRecordingImageFilter::CreateColorFilterImageFilter(*colorFilter, imageFilter);
-    }
+
+    imageFilter = RSRecordingImageFilter::CreateColorFilterImageFilter(*colorFilter, imageFilter);
     ConverImageFilterColor(imageFilter, srcColor, currentColor);
     RegisterResult(feAttr_.result, imageFilter, resultHash);
 }
@@ -188,7 +154,7 @@ void SvgFeColorMatrix::OnAsImageFilter(std::shared_ptr<RSImageFilter>& imageFilt
 bool SvgFeColorMatrix::ParseAndSetSpecializedAttr(const std::string& name, const std::string& value)
 {
     static const LinearMapNode<void (*)(const std::string&, SvgFeColorMatrixAttribute&)> attrs[] = {
-        { SVG_FE_TYPE,
+        { DOM_SVG_FE_TYPE,
             [](const std::string& type, SvgFeColorMatrixAttribute& attr) {
                 if (type == "saturate") {
                     attr.type = SvgFeColorMatrixType::SATURATE;
@@ -198,7 +164,7 @@ bool SvgFeColorMatrix::ParseAndSetSpecializedAttr(const std::string& name, const
                     attr.type = SvgFeColorMatrixType::LUMINACE_TO_ALPHA;
                 }
             } },
-        { SVG_FE_VALUES,
+        { DOM_SVG_FE_VALUES,
             [](const std::string& val, SvgFeColorMatrixAttribute& attr) {
                 attr.values = val;
             } },

@@ -123,8 +123,6 @@ void JSRenderingContext::JSBind(BindingTarget globalObj)
         "imageSmoothingEnabled", &JSCanvasRenderer::JSGetEmpty, &JSCanvasRenderer::JsSetImageSmoothingEnabled);
     JSClass<JSRenderingContext>::CustomProperty(
         "imageSmoothingQuality", &JSCanvasRenderer::JSGetEmpty, &JSCanvasRenderer::JsSetImageSmoothingQuality);
-    JSClass<JSRenderingContext>::CustomProperty(
-        "letterSpacing", &JSCanvasRenderer::JSGetEmpty, &JSCanvasRenderer::JsSetLetterSpacing);
 
     // Define all methods of the "CanvasRenderingContext2D"
     JSClass<JSRenderingContext>::CustomMethod("toDataURL", &JSCanvasRenderer::JsToDataUrl);
@@ -147,7 +145,6 @@ void JSRenderingContext::JSBind(BindingTarget globalObj)
     JSClass<JSRenderingContext>::CustomMethod("stroke", &JSCanvasRenderer::JsStroke);
     JSClass<JSRenderingContext>::CustomMethod("clip", &JSCanvasRenderer::JsClip);
     JSClass<JSRenderingContext>::CustomMethod("rect", &JSCanvasRenderer::JsRect);
-    JSClass<JSRenderingContext>::CustomMethod("roundRect", &JSRenderingContext::JsRoundRect);
     JSClass<JSRenderingContext>::CustomMethod("beginPath", &JSCanvasRenderer::JsBeginPath);
     JSClass<JSRenderingContext>::CustomMethod("closePath", &JSCanvasRenderer::JsClosePath);
     JSClass<JSRenderingContext>::CustomMethod("restore", &JSCanvasRenderer::JsRestore);
@@ -313,7 +310,10 @@ void JSRenderingContext::JsTransferFromImageBitmap(const JSCallbackInfo& info)
     JSValueWrapper valueWrapper = value;
     napi_value napiValue = nativeEngine->ValueToNapiValue(valueWrapper);
     void* nativeObj = nullptr;
-    NAPI_CALL_RETURN_VOID(env, napi_unwrap(env, napiValue, &nativeObj));
+    auto status = napi_unwrap(env, napiValue, &nativeObj);
+    if (status != napi_ok) {
+        return;
+    }
     auto jsImage = (JSRenderImage*)nativeObj;
     CHECK_NULL_VOID(jsImage);
     auto canvasRenderingContext2DModel = AceType::DynamicCast<CanvasRenderingContext2DModel>(renderingContext2DModel_);
@@ -349,7 +349,10 @@ void HandleDeferred(const shared_ptr<CanvasAsyncCxt>& asyncCtx, ImageAnalyzerSta
     CHECK_NULL_VOID(deferred);
 
     napi_handle_scope scope = nullptr;
-    NAPI_CALL_RETURN_VOID(env, napi_open_handle_scope(env, &scope));
+    auto status = napi_open_handle_scope(env, &scope);
+    if (status != napi_ok) {
+        return;
+    }
 
     napi_value result = nullptr;
     switch (state) {
@@ -392,6 +395,7 @@ void JSRenderingContext::JsStartImageAnalyzer(const JSCallbackInfo& info)
     CHECK_NULL_VOID(engine);
     NativeEngine* nativeEngine = engine->GetNativeEngine();
     auto env = reinterpret_cast<napi_env>(nativeEngine);
+
     auto asyncCtx = std::make_shared<CanvasAsyncCxt>();
     asyncCtx->env = env;
     napi_value promise = nullptr;
@@ -405,7 +409,6 @@ void JSRenderingContext::JsStartImageAnalyzer(const JSCallbackInfo& info)
     panda::Local<JsiValue> value = info[0].Get().GetLocalHandle();
     JSValueWrapper valueWrapper = value;
     napi_value configNativeValue = nativeEngine->ValueToNapiValue(valueWrapper);
-
     if (isImageAnalyzing_) {
         napi_value result = CreateErrorValue(env, ERROR_CODE_AI_ANALYSIS_IS_ONGOING);
         napi_reject_deferred(env, asyncCtx->deferred, result);
@@ -467,7 +470,7 @@ void JSRenderingContext::AddCallbackToList(
     }
 }
 
-void JSRenderingContext::DeleteCallbackFromList(uint32_t argc, napi_env env, napi_value cb, CanvasCallbackType type)
+void JSRenderingContext::DeleteCallbackFromList(int argc, napi_env env, napi_value cb, CanvasCallbackType type)
 {
     if (argc == 1) {
         if (type == CanvasCallbackType::ON_ATTACH) {

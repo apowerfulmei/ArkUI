@@ -16,10 +16,8 @@
 #ifndef FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_BASE_PROPERTIES_SHADOW_H
 #define FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_BASE_PROPERTIES_SHADOW_H
 
-#include <functional>
 #include "base/geometry/offset.h"
 #include "core/components/common/properties/color.h"
-#include "core/common/resource/resource_object.h"
 
 namespace OHOS::Ace {
 
@@ -49,7 +47,7 @@ enum class ShadowColorStrategy : char {
     PRIMARY,
 };
 // A style class indicates the way to render shadow effect
-class ACE_FORCE_EXPORT Shadow final {
+class Shadow final {
 public:
     static Shadow Blend(const Shadow& to, const Shadow& from, float progress);
 
@@ -78,10 +76,6 @@ public:
     };
 
     static Shadow CreateShadow(ShadowStyle style);
-
-    static void RegisterShadowResourceObj(Shadow& shadow,
-        RefPtr<ResourceObject>& radiusObj, RefPtr<ResourceObject>& colorObj,
-        RefPtr<ResourceObject>& offsetXObj, RefPtr<ResourceObject>& offsetYObj);
 
     bool operator==(const Shadow& rhs) const
     {
@@ -248,24 +242,6 @@ public:
         color_.UpdateColorByResourceId();
     }
 
-    void AddResource(
-        const std::string& key,
-        const RefPtr<ResourceObject>& resObj,
-        std::function<void(const RefPtr<ResourceObject>&, Shadow&)>&& updateFunc)
-    {
-        if (resObj == nullptr || !updateFunc) {
-            return;
-        }
-        resMap_[key] = {resObj, std::move(updateFunc)};
-    }
-
-    void ReloadResources()
-    {
-        for (const auto& [key, resourceUpdater] : resMap_) {
-            resourceUpdater.updateFunc(resourceUpdater.resObj, *this);
-        }
-    }
-
 private:
     float lightHeight_ = LIGHT_HEIGHT;
     float lightRadius_ = LIGHT_RADIUS;
@@ -276,12 +252,6 @@ private:
     Color color_ = Color::BLACK;
     bool isHardwareAcceleration_ = false;
     bool isFilled_ = false;
-    struct resourceUpdater {
-        RefPtr<ResourceObject> resObj;
-        std::function<void(const RefPtr<ResourceObject>&, Shadow&)> updateFunc;
-    };
-
-    std::unordered_map<std::string, resourceUpdater> resMap_;
     ShadowStyle style_ = ShadowStyle::None;
     ShadowType type_ = ShadowType::COLOR;
     ShadowColorStrategy colorStrategy_ = ShadowColorStrategy::NONE;

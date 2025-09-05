@@ -15,11 +15,19 @@
 
 #include "core/common/ai/image_analyzer_manager.h"
 
+#include "interfaces/inner_api/ace/ai/image_analyzer.h"
+#include "js_native_api_types.h"
+
+#include "base/geometry/offset.h"
+#include "base/image/pixel_map.h"
+#include "base/utils/utils.h"
 #include "core/common/ai/image_analyzer_adapter.h"
 #include "core/common/ai/image_analyzer_mgr.h"
 #include "core/components_ng/base/view_stack_processor.h"
 #include "core/components_ng/pattern/image/image_pattern.h"
+#include "core/components_ng/pattern/image/image_render_property.h"
 #include "core/components_ng/pattern/video/video_layout_property.h"
+#include "core/components_ng/property/measure_property.h"
 
 namespace OHOS::Ace {
 
@@ -47,7 +55,7 @@ void ImageAnalyzerManager::CreateAnalyzerOverlay(const RefPtr<OHOS::Ace::PixelMa
     if (holder_ == ImageAnalyzerHolder::VIDEO_CUSTOM) {
         analyzerUIConfig_.pixelMapWidth = pixelMap->GetWidth();
         analyzerUIConfig_.pixelMapHeight = pixelMap->GetHeight();
-        analyzerUIConfig_.overlayOffset = { offset.GetX(), offset.GetY() };
+        analyzerUIConfig_.overlayOffset = offset;
     }
 
     RefPtr<NG::UINode> customNode;
@@ -81,48 +89,6 @@ void ImageAnalyzerManager::CreateAnalyzerOverlay(const RefPtr<OHOS::Ace::PixelMa
     analyzerUIConfig_.onAnalyzed = std::nullopt;
 }
 
-void ImageAnalyzerManager::CreateMovingPhotoAnalyzerOverlay(const RefPtr<OHOS::Ace::PixelMap>& pixelMap,
-    MovingPhotoAnalyzerInfo info)
-{
-    CHECK_NULL_VOID(imageAnalyzerAdapter_);
-    void* pixelmapNapiVal = nullptr;
-
-    CHECK_NULL_VOID(pixelMap);
-    pixelmapNapiVal = imageAnalyzerAdapter_->ConvertPixmapNapi(pixelMap);
-    analyzerUIConfig_.holder = holder_;
-    analyzerUIConfig_.contentWidth = info.contentWidth;
-    analyzerUIConfig_.contentHeight = info.contentHeight;
-    analyzerUIConfig_.pixelMapWidth = pixelMap->GetWidth();
-    analyzerUIConfig_.pixelMapHeight = pixelMap->GetHeight();
-
-    RefPtr<NG::UINode> customNode;
-    {
-        NG::ScopedViewStackProcessor builderViewStackProcessor;
-        auto analyzerConfig = imageAnalyzerAdapter_->GetImageAnalyzerConfig();
-        ImageAnalyzerMgr::GetInstance().BuildNodeFunc(info.uri, pixelmapNapiVal,
-            info.frameTimestamp, analyzerConfig, &analyzerUIConfig_, &overlayData_);
-        customNode = NG::ViewStackProcessor::GetInstance()->Finish();
-    }
-    auto overlayNode = AceType::DynamicCast<NG::FrameNode>(customNode);
-    CHECK_NULL_VOID(overlayNode);
-    auto node = frameNode_.Upgrade();
-    CHECK_NULL_VOID(node);
-    node->SetOverlayNode(overlayNode);
-    overlayNode->SetParent(AceType::WeakClaim(AceType::RawPtr(node)));
-    overlayNode->SetActive(true);
-    UpdateAnalyzerOverlayLayout();
-
-    auto renderContext = overlayNode->GetRenderContext();
-    CHECK_NULL_VOID(renderContext);
-    renderContext->UpdateZIndex(INT32_MAX);
-    overlayNode->MarkDirtyNode(NG::PROPERTY_UPDATE_MEASURE_SELF);
-
-    isAnalyzerOverlayBuild_ = true;
-    CHECK_NULL_VOID(analyzerUIConfig_.onAnalyzed);
-    (analyzerUIConfig_.onAnalyzed.value())(ImageAnalyzerState::FINISHED);
-    analyzerUIConfig_.onAnalyzed = std::nullopt;
-}
-
 void ImageAnalyzerManager::UpdateAnalyzerOverlay(const RefPtr<OHOS::Ace::PixelMap>& pixelMap,
     const NG::OffsetF& offset)
 {
@@ -144,7 +110,7 @@ void ImageAnalyzerManager::UpdateAnalyzerOverlay(const RefPtr<OHOS::Ace::PixelMa
     if (holder_ == ImageAnalyzerHolder::VIDEO_CUSTOM) {
         analyzerUIConfig_.pixelMapWidth = pixelMap->GetWidth();
         analyzerUIConfig_.pixelMapHeight = pixelMap->GetHeight();
-        analyzerUIConfig_.overlayOffset = { offset.GetX(), offset.GetY() };
+        analyzerUIConfig_.overlayOffset = offset;
     }
 
     if (holder_ != ImageAnalyzerHolder::IMAGE) {
@@ -158,40 +124,6 @@ void ImageAnalyzerManager::UpdateAnalyzerOverlay(const RefPtr<OHOS::Ace::PixelMa
     CHECK_NULL_VOID(overlayNode);
     auto analyzerConfig = imageAnalyzerAdapter_->GetImageAnalyzerConfig();
     ImageAnalyzerMgr::GetInstance().UpdateImage(&overlayData_, pixelmapNapiVal, analyzerConfig, &analyzerUIConfig_);
-    overlayNode->MarkDirtyNode(NG::PROPERTY_UPDATE_MEASURE_SELF);
-}
-
-void ImageAnalyzerManager::UpdateMovingPhotoAnalyzerOverlay(const RefPtr<OHOS::Ace::PixelMap>& pixelMap,
-    MovingPhotoAnalyzerInfo info)
-{
-    if (!isAnalyzerOverlayBuild_) {
-        return;
-    }
-
-    auto node = frameNode_.Upgrade();
-    CHECK_NULL_VOID(node);
-    if (holder_ == ImageAnalyzerHolder::IMAGE) {
-        auto imagePattern = AceType::DynamicCast<NG::ImagePattern>(node->GetPattern());
-        CHECK_NULL_VOID(imagePattern);
-        if (!imagePattern->hasSceneChanged()) {
-            return;
-        }
-    }
-
-    CHECK_NULL_VOID(pixelMap);
-    analyzerUIConfig_.holder = holder_;
-    analyzerUIConfig_.contentWidth = info.contentWidth;
-    analyzerUIConfig_.contentHeight = info.contentHeight;
-    analyzerUIConfig_.pixelMapWidth = pixelMap->GetWidth();
-    analyzerUIConfig_.pixelMapHeight = pixelMap->GetHeight();
-
-    CHECK_NULL_VOID(imageAnalyzerAdapter_);
-    auto pixelmapNapiVal = imageAnalyzerAdapter_->ConvertPixmapNapi(pixelMap);
-    auto overlayNode = node->GetOverlayNode();
-    CHECK_NULL_VOID(overlayNode);
-    auto analyzerConfig = imageAnalyzerAdapter_->GetImageAnalyzerConfig();
-    ImageAnalyzerMgr::GetInstance().UpdateImage(&overlayData_, info.uri, pixelmapNapiVal,
-        info.frameTimestamp, analyzerConfig, &analyzerUIConfig_);
     overlayNode->MarkDirtyNode(NG::PROPERTY_UPDATE_MEASURE_SELF);
 }
 
@@ -268,7 +200,7 @@ void ImageAnalyzerManager::UpdateAnalyzerOverlayLayout()
     CHECK_NULL_VOID(overlayLayoutProperty);
     overlayLayoutProperty->UpdateMeasureType(NG::MeasureType::MATCH_PARENT);
     overlayLayoutProperty->UpdateAlignment(Alignment::TOP_LEFT);
-    if (NeedUpdateOverlayOffset()) {
+    if (holder_ == ImageAnalyzerHolder::IMAGE || holder_ == ImageAnalyzerHolder::VIDEO_CUSTOM) {
         overlayLayoutProperty->SetOverlayOffset(Dimension(padding.Offset().GetX()),
                                                 Dimension(padding.Offset().GetY()));
         if (holder_ == ImageAnalyzerHolder::IMAGE) {
@@ -292,8 +224,8 @@ void ImageAnalyzerManager::UpdateAnalyzerUIConfig(const RefPtr<NG::GeometryNode>
     if (holder_ == ImageAnalyzerHolder::IMAGE) {
         auto props = DynamicCast<NG::ImageLayoutProperty>(layoutProps);
         CHECK_NULL_VOID(props);
-        if (analyzerUIConfig_.imageFit != static_cast<int32_t>(props->GetImageFit().value_or(ImageFit::COVER))) {
-            analyzerUIConfig_.imageFit = static_cast<int32_t>(props->GetImageFit().value_or(ImageFit::COVER));
+        if (analyzerUIConfig_.imageFit != props->GetImageFit().value_or(ImageFit::COVER)) {
+            analyzerUIConfig_.imageFit = props->GetImageFit().value_or(ImageFit::COVER);
             isUIConfigUpdate = true;
         }
     }
@@ -302,12 +234,10 @@ void ImageAnalyzerManager::UpdateAnalyzerUIConfig(const RefPtr<NG::GeometryNode>
         isUIConfigUpdate = UpdateVideoConfig(info);
     } else {
         auto padding = layoutProps->CreatePaddingAndBorder();
-        float paddingWidth = 0.0f;
-        float paddingHeight = 0.0f;
-        if (holder_ == ImageAnalyzerHolder::IMAGE || holder_ == ImageAnalyzerHolder::XCOMPONENT) {
-            paddingWidth = padding.left.value_or(0) + padding.right.value_or(0);
-            paddingHeight = padding.top.value_or(0) + padding.bottom.value_or(0);
-        }
+        float paddingWidth = holder_ == ImageAnalyzerHolder::IMAGE ? padding.left.value_or(0) +
+                                                                     padding.right.value_or(0) : 0.0f;
+        float paddingHeight = holder_ == ImageAnalyzerHolder::IMAGE ? padding.top.value_or(0) +
+                                                                      padding.bottom.value_or(0) : 0.0f;
         NG::SizeF frameSize = geometryNode->GetFrameSize();
         bool shouldUpdateSize = analyzerUIConfig_.contentWidth != frameSize.Width() - paddingWidth ||
                                 analyzerUIConfig_.contentHeight != frameSize.Height() - paddingHeight;
@@ -321,8 +251,8 @@ void ImageAnalyzerManager::UpdateAnalyzerUIConfig(const RefPtr<NG::GeometryNode>
     auto renderContext = node->GetRenderContext();
     CHECK_NULL_VOID(renderContext);
     auto transformMat = renderContext->GetTransformMatrixValue(Matrix4::CreateIdentity());
-    if (!(transformMat == analyzerUIConfig_.transformMat)) {
-        transformMat.CopyMatrix(analyzerUIConfig_.transformMat);
+    if (!(analyzerUIConfig_.transformMat == transformMat)) {
+        analyzerUIConfig_.transformMat = transformMat;
         isUIConfigUpdate = true;
     }
 
@@ -339,15 +269,14 @@ bool ImageAnalyzerManager::UpdateVideoConfig(const PixelMapInfo& info)
     auto layoutProps = node->GetLayoutProperty();
     CHECK_NULL_RETURN(layoutProps, false);
     auto videoProps = DynamicCast<NG::VideoLayoutProperty>(layoutProps);
-    if (analyzerUIConfig_.imageFit != static_cast<int32_t>(videoProps->GetObjectFitValue(ImageFit::COVER))) {
-        analyzerUIConfig_.imageFit = static_cast<int32_t>(videoProps->GetObjectFitValue(ImageFit::COVER));
+    if (analyzerUIConfig_.imageFit != videoProps->GetObjectFitValue(ImageFit::COVER)) {
+        analyzerUIConfig_.imageFit = videoProps->GetObjectFitValue(ImageFit::COVER);
         shouldUpdateFit = true;
     }
 
     bool shouldUpdateSize = analyzerUIConfig_.contentWidth != info.width ||
                             analyzerUIConfig_.contentHeight != info.height ||
-                            analyzerUIConfig_.overlayOffset.GetX() != info.overlayOffset.GetX() ||
-                            analyzerUIConfig_.overlayOffset.GetY() != info.overlayOffset.GetY();
+                            analyzerUIConfig_.overlayOffset != info.overlayOffset;
     if (shouldUpdateSize) {
         analyzerUIConfig_.UpdateFromInfo(info);
     }
@@ -399,7 +328,7 @@ void ImageAnalyzerManager::UpdatePressOverlay(const RefPtr<OHOS::Ace::PixelMap>&
         analyzerUIConfig_.touchInfo.touchPoint.x = 1.0 * pointX / rectWidth * pixelMap->GetWidth();
         analyzerUIConfig_.touchInfo.touchPoint.y = 1.0 * pointY / rectHeight * pixelMap->GetHeight();
     }
-    analyzerUIConfig_.touchInfo.touchType = static_cast<size_t>(TouchType::DOWN);
+    analyzerUIConfig_.touchInfo.touchType = TouchType::DOWN;
     analyzerUIConfig_.selectedStatus = Status::SELECTED;
     analyzerUIConfig_.menuStatus = Status::MENU_SHOW;
     if (!analyzerUIConfig_.onTextSelected) {
@@ -420,7 +349,7 @@ void ImageAnalyzerManager::UpdateOverlayTouchInfo(int touchPointX, int touchPoin
 {
     analyzerUIConfig_.touchInfo.touchPoint.x = touchPointX - analyzerUIConfig_.overlayOffset.GetX();
     analyzerUIConfig_.touchInfo.touchPoint.y = touchPointY - analyzerUIConfig_.overlayOffset.GetY();
-    analyzerUIConfig_.touchInfo.touchType = static_cast<size_t>(touchType);
+    analyzerUIConfig_.touchInfo.touchType = touchType;
     ImageAnalyzerMgr::GetInstance().UpdatePressOverlay(&overlayData_, &analyzerUIConfig_);
 }
 
@@ -446,34 +375,15 @@ void ImageAnalyzerManager::UpdateAIButtonConfig(AIButtonConfig config)
     ImageAnalyzerMgr::GetInstance().UpdateAIButtonConfig(&overlayData_, &config);
 }
 
-void ImageAnalyzerManager::UpdateKeyEvent(KeyEvent keyEvent)
-{
-    CHECK_NULL_VOID(isAnalyzerOverlayBuild_);
-    ImageAnalyzerMgr::GetInstance().UpdateKeyEvent(&overlayData_, keyEvent.rawKeyEvent.get());
-}
-
 void ImageAnalyzerManager::UpdateOverlayActiveStatus(bool status)
 {
     CHECK_NULL_VOID(isAnalyzerOverlayBuild_);
     ImageAnalyzerMgr::GetInstance().UpdateOverlayActiveStatus(&overlayData_, status);
 }
 
-bool ImageAnalyzerManager::NeedUpdateOverlayOffset()
-{
-    return holder_ == ImageAnalyzerHolder::IMAGE ||
-           holder_ == ImageAnalyzerHolder::VIDEO_CUSTOM ||
-           holder_ == ImageAnalyzerHolder::XCOMPONENT;
-}
-
 void ImageAnalyzerManager::SetNotifySelectedCallback(
     OnNotifySelectedStatusCallback&& callback)
 {
     analyzerUIConfig_.onNotifySelectedStatus = std::move(callback);
-}
-
-void ImageAnalyzerManager::SetOnCanPlayCallback(
-    OnCanPlayCallback&& onCanPlay)
-{
-    analyzerUIConfig_.onCanPlay = std::move(onCanPlay);
 }
 } // namespace OHOS::Ace

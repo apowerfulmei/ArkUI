@@ -17,13 +17,10 @@
 
 #include "base/geometry/ng/size_t.h"
 #include "core/components_ng/image_provider/image_loading_context.h"
-#include "core/components_ng/pattern/image/image_dfx.h"
 
 namespace OHOS::Ace::NG {
-ImageLoadingContext::ImageLoadingContext(const ImageSourceInfo& src, LoadNotifier&& loadNotifier, bool syncLoad,
-    bool isSceneBoardWindow, const ImageDfxConfig& imageDfxConfig)
-    : src_(src), notifiers_(std::move(loadNotifier)), syncLoad_(syncLoad), isSceneBoardWindow_(isSceneBoardWindow),
-      imageDfxConfig_(imageDfxConfig)
+ImageLoadingContext::ImageLoadingContext(const ImageSourceInfo& src, LoadNotifier&& loadNotifier, bool syncLoad)
+    : src_(src), notifiers_(loadNotifier), syncLoad_(syncLoad)
 {}
 
 ImageLoadingContext::~ImageLoadingContext() = default;
@@ -64,10 +61,10 @@ void ImageLoadingContext::SuccessCallback(const RefPtr<CanvasImage>& image)
     }
 }
 
-void ImageLoadingContext::FailCallback(const std::string& errorMsg, const ImageErrorInfo& errorInfo)
+void ImageLoadingContext::FailCallback(const std::string& errorMsg)
 {
     if (notifiers_.onLoadFail_) {
-        notifiers_.onLoadFail_(src_, errorMsg, errorInfo);
+        notifiers_.onLoadFail_(src_, errorMsg);
     }
 }
 
@@ -155,8 +152,14 @@ bool ImageLoadingContext::NeedAlt() const
     return true;
 }
 
+const std::optional<Color>& ImageLoadingContext::GetSvgFillColor() const
+{
+    return src_.GetFillColor();
+}
+
 void ImageLoadingContext::ResetLoading() {}
 void ImageLoadingContext::ResumeLoading() {}
+void ImageLoadingContext::DownloadImage() {}
 void ImageLoadingContext::ResizableCalcDstSize() {}
 
 const std::string ImageLoadingContext::GetCurrentLoadingState()
@@ -174,8 +177,9 @@ bool ImageLoadingContext::Downloadable()
     return true;
 }
 
-std::string ImageLoadingContext::GetImageSizeInfo() const
-{
-    return "";
-}
+void ImageLoadingContext::PerformDownload() {}
+
+void ImageLoadingContext::DownloadImageSuccess(const std::string& imageData) {}
+
+void ImageLoadingContext::DownloadImageFailed(const std::string& errorMessage) {}
 } // namespace OHOS::Ace::NG

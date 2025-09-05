@@ -19,7 +19,6 @@
 #include "base/memory/referenced.h"
 #include "base/utils/utils.h"
 #include "bridge/common/utils/engine_helper.h"
-#include "bridge/declarative_frontend/engine/functions/js_xcomponent_onload_function.h"
 #include "bridge/declarative_frontend/engine/js_converter.h"
 #include "bridge/declarative_frontend/engine/js_ref_ptr.h"
 #include "bridge/declarative_frontend/jsview/js_view_common_def.h"
@@ -49,21 +48,28 @@ XComponentType ConvertToXComponentType(const std::string& type)
 }
 } // namespace
 
+std::unique_ptr<XComponentModel> XComponentModel::instance_ = nullptr;
+std::mutex XComponentModel::mutex_;
+
 XComponentModel* XComponentModel::GetInstance()
 {
+    if (!instance_) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (!instance_) {
 #ifdef NG_BUILD
-    static NG::XComponentModelNG instance;
-    return &instance;
+            instance_.reset(new NG::XComponentModelNG());
 #else
-    if (Container::IsCurrentUseNewPipeline()) {
-        static NG::XComponentModelNG instance;
-        return &instance;
-    } else {
-        static Framework::XComponentModelImpl instance;
-        return &instance;
-    }
+            if (Container::IsCurrentUseNewPipeline()) {
+                instance_.reset(new NG::XComponentModelNG());
+            } else {
+                instance_.reset(new Framework::XComponentModelImpl());
+            }
 #endif
+        }
+    }
+    return instance_.get();
 }
+
 } // namespace OHOS::Ace
 
 namespace OHOS::Ace::Framework {
@@ -196,9 +202,6 @@ void JSXComponent::JSBind(BindingTarget globalObj)
     JSClass<JSXComponent>::StaticMethod("enableAnalyzer", &JSXComponent::JsEnableAnalyzer);
     JSClass<JSXComponent>::StaticMethod("renderFit", &JSXComponent::JsRenderFit);
     JSClass<JSXComponent>::StaticMethod("enableSecure", &JSXComponent::JsEnableSecure);
-    JSClass<JSXComponent>::StaticMethod("hdrBrightness", &JSXComponent::JsHdrBrightness);
-    JSClass<JSXComponent>::StaticMethod("blendMode", &JSXComponent::JsBlendMode);
-    JSClass<JSXComponent>::StaticMethod("enableTransparentLayer", &JSXComponent::JsEnableTransparentLayer);
 
     JSClass<JSXComponent>::InheritAndBind<JSContainerBase>(globalObj);
 }
@@ -208,19 +211,35 @@ void JSXComponent::Create(const JSCallbackInfo& info)
     if (info.Length() < 1 || !info[0]->IsObject()) {
         return;
     }
-    XComponentOptions options;
-    JSRef<JSObject> controllerObj;
     auto paramObject = JSRef<JSObject>::Cast(info[0]);
-    auto aiOptions = paramObject->GetProperty("imageAIOptions");
-    ExtractInfoToXComponentOptions(options, controllerObj, paramObject, info);
-    if (options.id == std::nullopt && options.xcomponentController == nullptr &&
-        (options.xcomponentType == XComponentType::SURFACE || options.xcomponentType == XComponentType::TEXTURE)) {
-        XComponentModel::GetInstance()->Create(options.xcomponentType);
-    } else {
-        XComponentModel::GetInstance()->Create(
-            options.id, options.xcomponentType, options.libraryName, options.xcomponentController);
+    auto id = paramObject->GetProperty("id");
+
+    auto type = paramObject->GetProperty("type");
+    auto libraryNameValue = paramObject->GetProperty("libraryname");
+    std::optional<std::string> idOpt = std::nullopt;
+    std::optional<std::string> libraryNameOpt = std::nullopt;
+    if (id->IsString()) {
+        idOpt = id->ToString();
     }
-    if (!options.libraryName.has_value() && options.xcomponentController && !controllerObj->IsUndefined()) {
+    if (libraryNameValue->IsString()) {
+        libraryNameOpt = libraryNameValue->ToString();
+    }
+    auto controller = paramObject->GetProperty("controller");
+    auto aiOptions = paramObject->GetProperty("imageAIOptions");
+    std::shared_ptr<InnerXComponentController> xcomponentController = nullptr;
+    JSRef<JSObject> controllerObj;
+    if (controller->IsObject()) {
+        controllerObj = JSRef<JSObject>::Cast(controller);
+        xcomponentController = GetXComponentController(controllerObj, idOpt, info.GetExecutionContext());
+    }
+    XComponentType xcomponentType = XComponentType::SURFACE;
+    if (type->IsString()) {
+        xcomponentType = ConvertToXComponentType(type->ToString());
+    } else if (type->IsNumber()) {
+        xcomponentType = static_cast<XComponentType>(type->ToNumber<int32_t>());
+    }
+    XComponentModel::GetInstance()->Create(idOpt, xcomponentType, libraryNameOpt, xcomponentController);
+    if (!libraryNameOpt.has_value() && xcomponentController && !controllerObj->IsUndefined()) {
         SetControllerCallback(controllerObj, info.GetExecutionContext());
     }
 
@@ -235,40 +254,6 @@ void JSXComponent::Create(const JSCallbackInfo& info)
         XComponentModel::GetInstance()->SetSoPath(soPath);
     }
     ParseImageAIOptions(aiOptions);
-
-    if (options.xcomponentType == XComponentType::SURFACE && options.screenId.has_value()) {
-        XComponentModel::GetInstance()->SetScreenId(options.screenId.value());
-    }
-}
-
-void JSXComponent::ExtractInfoToXComponentOptions(
-    XComponentOptions& options, JSRef<JSObject>& controllerObj,
-    const JSRef<JSObject>& paramObject, const JSCallbackInfo& info)
-{
-    auto id = paramObject->GetProperty("id");
-    auto type = paramObject->GetProperty("type");
-    auto libraryNameValue = paramObject->GetProperty("libraryname");
-    auto controller = paramObject->GetProperty("controller");
-    auto screenIdValue = paramObject->GetProperty("screenId");
-
-    if (id->IsString()) {
-        options.id = id->ToString();
-    }
-    if (libraryNameValue->IsString()) {
-        options.libraryName = libraryNameValue->ToString();
-    }
-    if (controller->IsObject()) {
-        controllerObj = JSRef<JSObject>::Cast(controller);
-        options.xcomponentController = GetXComponentController(controllerObj, options.id, info.GetExecutionContext());
-    }
-    if (type->IsString()) {
-        options.xcomponentType = ConvertToXComponentType(type->ToString());
-    } else if (type->IsNumber()) {
-        options.xcomponentType = static_cast<XComponentType>(type->ToNumber<int32_t>());
-    }
-    if (screenIdValue->IsNumber()) {
-        options.screenId = screenIdValue->ToNumber<uint64_t>();
-    }
 }
 
 void* JSXComponent::Create(const XComponentParams& params)
@@ -280,7 +265,6 @@ void* JSXComponent::Create(const XComponentParams& params)
     auto frameNode = AceType::DynamicCast<NG::FrameNode>(XComponentModel::GetInstance()->Create(params.elmtId,
         static_cast<float>(params.width), static_cast<float>(params.height), params.xcomponentId,
         static_cast<XComponentType>(params.xcomponentType), params.libraryName, xcomponentController));
-    CHECK_NULL_RETURN(frameNode, nullptr);
     frameNode->SetIsArkTsFrameNode(true);
     auto pattern = frameNode->GetPattern<NG::XComponentPattern>();
     CHECK_NULL_RETURN(pattern, nullptr);
@@ -339,7 +323,7 @@ void JSXComponent::JsOnLoad(const JSCallbackInfo& args)
     if (args.Length() < 1 || !args[0]->IsFunction()) {
         return;
     }
-    auto jsFunc = AceType::MakeRefPtr<JsXComponentOnloadFunction>(JSRef<JSFunc>::Cast(args[0]));
+    auto jsFunc = AceType::MakeRefPtr<JsFunction>(JSRef<JSObject>(), JSRef<JSFunc>::Cast(args[0]));
     WeakPtr<NG::FrameNode> targetNode = AceType::WeakClaim(NG::ViewStackProcessor::GetInstance()->GetMainFrameNode());
     auto onLoad = [execCtx = args.GetExecutionContext(), func = std::move(jsFunc), node = targetNode](
                       const std::string& xcomponentId) {
@@ -749,44 +733,6 @@ void JSXComponent::JsEnableSecure(const JSCallbackInfo& args)
     if (args[0]->IsBoolean()) {
         bool isSecure = args[0]->ToBoolean();
         XComponentModel::GetInstance()->EnableSecure(isSecure);
-    }
-}
-
-void JSXComponent::JsHdrBrightness(const JSCallbackInfo& args)
-{
-    auto type = XComponentModel::GetInstance()->GetType();
-    if (type != XComponentType::SURFACE || args.Length() != 1) {
-        return;
-    }
-    // set hdrBrightness on SurfaceNode when type is SURFACE
-    if (args[0]->IsNumber()) {
-        float hdrBrightness = args[0]->ToNumber<float>();
-        XComponentModel::GetInstance()->HdrBrightness(std::clamp(hdrBrightness, 0.0f, 1.0f));
-    } else {
-        XComponentModel::GetInstance()->HdrBrightness(1.0f);
-    }
-}
-
-void JSXComponent::JsBlendMode(const JSCallbackInfo& args)
-{
-    auto type = XComponentModel::GetInstance()->GetType();
-    if (type == XComponentType::TEXTURE && Container::LessThanAPITargetVersion(PlatformVersion::VERSION_EIGHTEEN)) {
-        return;
-    }
-
-    JSViewAbstract::JsBlendMode(args);
-}
-
-void JSXComponent::JsEnableTransparentLayer(const JSCallbackInfo& args)
-{
-    auto type = XComponentModel::GetInstance()->GetType();
-    if (type != XComponentType::SURFACE || args.Length() != 1) {
-        return;
-    }
-    // set isTransparentLayer on SurfaceNode when type is SURFACE
-    if (args[0]->IsBoolean()) {
-        bool isTransparentLayer = args[0]->ToBoolean();
-        XComponentModel::GetInstance()->EnableTransparentLayer(isTransparentLayer);
     }
 }
 } // namespace OHOS::Ace::Framework

@@ -20,13 +20,11 @@
 #include "core/components_ng/base/inspector_filter.h"
 #include "core/components_ng/property/property.h"
 #include "core/components_ng/render/paint_property.h"
-#include "core/components/toggle/toggle_theme.h"
-#include "core/pipeline_ng/pipeline_context.h"
 
 namespace OHOS::Ace::NG {
 
 class ToggleButtonPaintProperty : public PaintProperty {
-    DECLARE_ACE_TYPE(ToggleButtonPaintProperty, PaintProperty);
+    DECLARE_ACE_TYPE(ToggleButtonPaintProperty, PaintProperty)
 
 public:
     ToggleButtonPaintProperty() = default;
@@ -38,7 +36,6 @@ public:
         value->propIsOn_ = CloneIsOn();
         value->propSelectedColor_ = CloneSelectedColor();
         value->propBackgroundColor_ = CloneBackgroundColor();
-        value->propSelectedColorSetByUser_ = CloneSelectedColorSetByUser();
         return value;
     }
 
@@ -48,7 +45,6 @@ public:
         ResetIsOn();
         ResetSelectedColor();
         ResetBackgroundColor();
-        ResetSelectedColorSetByUser();
     }
 
     void ToJsonValue(std::unique_ptr<JsonValue>& json, const InspectorFilter& filter) const override
@@ -57,22 +53,14 @@ public:
         if (filter.IsFastFilter()) {
             return;
         }
-        auto host = GetHost();
-        CHECK_NULL_VOID(host);
-        auto pipeline = host->GetContext();
-        CHECK_NULL_VOID(pipeline);
-        auto toggleTheme = pipeline->GetTheme<ToggleTheme>(host->GetThemeScopeId());
-        CHECK_NULL_VOID(toggleTheme);
-        auto selectedColor = toggleTheme->GetCheckedColor();
         json->PutExtAttr("type", "ToggleType.Button", filter);
         json->PutExtAttr("isOn", propIsOn_.value_or(false) ? "true" : "false", filter);
-        json->PutExtAttr("selectedColor", propSelectedColor_.value_or(selectedColor).ColorToString().c_str(), filter);
+        json->PutExtAttr("selectedColor", propSelectedColor_.value_or(Color()).ColorToString().c_str(), filter);
     }
 
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(IsOn, bool, PROPERTY_UPDATE_RENDER);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(SelectedColor, Color, PROPERTY_UPDATE_RENDER);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(BackgroundColor, Color, PROPERTY_UPDATE_RENDER);
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(SelectedColorSetByUser, bool, PROPERTY_UPDATE_RENDER);
     ACE_DISALLOW_COPY_AND_MOVE(ToggleButtonPaintProperty);
 };
 } // namespace OHOS::Ace::NG

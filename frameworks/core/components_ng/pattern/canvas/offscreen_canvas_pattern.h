@@ -25,7 +25,7 @@
 namespace OHOS::Ace::NG {
 class OffscreenCanvasPaintMethod;
 // OffscreenCanvasPattern is the base class for custom paint render node to perform paint canvas.
-class CJ_FORCE_EXPORT OffscreenCanvasPattern : public Pattern {
+class ACE_EXPORT OffscreenCanvasPattern : public Pattern {
     DECLARE_ACE_TYPE(OffscreenCanvasPattern, Pattern);
 
 public:
@@ -48,7 +48,6 @@ public:
     void Arc(const ArcParam& param);
     void ArcTo(const ArcToParam& param);
     void AddRect(const Rect& rect);
-    void AddRoundRect(const Rect& rect, const std::vector<double>& radii);
     void Ellipse(const EllipseParam& param);
     void BezierCurveTo(const BezierCurveParam& param);
     void QuadraticCurveTo(const QuadraticCurveParam& param);
@@ -56,7 +55,7 @@ public:
     void FillText(const std::string& text, double x, double y, std::optional<double> maxWidth);
     void StrokeText(const std::string& text, double x, double y, std::optional<double> maxWidth);
     TextMetrics MeasureTextMetrics(const std::string& text, const PaintState& state);
-
+    
     void DrawImage(const Ace::CanvasImage& image, double width, double height);
     void DrawSvgImage(RefPtr<SvgDomBase> svgDom, const Ace::CanvasImage& image, const ImageFit& imageFit);
     void DrawPixelMap(RefPtr<PixelMap> pixelMap, const Ace::CanvasImage& image);
@@ -91,7 +90,6 @@ public:
     void SetFontStyle(FontStyle style);
     void SetFontFamilies(const std::vector<std::string>& fontFamilies);
     void SetFontSize(const Dimension& size);
-    void SetLetterSpacing(const Dimension& letterSpacing);
     void SetFillColor(const Color& color);
     int32_t GetWidth();
     int32_t GetHeight();
@@ -118,7 +116,6 @@ public:
     void Reset();
     RefPtr<PixelMap> TransferToImageBitmap();
     void SetDensity(double density);
-    void SetTransform(std::shared_ptr<Ace::Pattern> pattern, const TransformParam& transform);
 
     size_t GetBitmapSize();
 private:

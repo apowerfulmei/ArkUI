@@ -23,9 +23,12 @@
 #include "base/utils/macros.h"
 #include "base/utils/resource_configuration.h"
 #include "bridge/common/utils/source_map.h"
+#include "core/accessibility/accessibility_manager.h"
+#include "core/common/ace_page.h"
 #include "core/common/js_message_dispatcher.h"
 #include "core/common/router_recover_record.h"
 #include "core/event/ace_event_handler.h"
+#include "core/pipeline/pipeline_base.h"
 #include "interfaces/inner_api/ace/constants.h"
 
 using FrontendDialogCallback = std::function<void(const std::string& event, const std::string& param)>;
@@ -34,11 +37,6 @@ typedef struct napi_value__* napi_value;
 
 namespace OHOS::Ace {
 
-class AcePage;
-class PipelineBase;
-class AssetManager;
-class TaskExecutor;
-class AccessibilityManager;
 enum class ContentInfoType;
 
 #ifndef WEARABLE_PRODUCT
@@ -78,11 +76,7 @@ struct WindowConfig {
     }
 };
 
-enum class FrontendType {
-    JSON, JS, JS_CARD, DECLARATIVE_JS, JS_PLUGIN, ETS_CARD, DECLARATIVE_CJ, ARK_TS,
-    DYNAMIC_HYBRID_STATIC, STATIC_HYBRID_DYNAMIC
-};
-
+enum class FrontendType { JSON, JS, JS_CARD, DECLARATIVE_JS, JS_PLUGIN, ETS_CARD, DECLARATIVE_CJ };
 struct PageTarget;
 
 class ACE_FORCE_EXPORT Frontend : public AceType {
@@ -150,48 +144,9 @@ public:
         return UIContentErrorCode::NO_ERRORS;
     }
 
-    virtual UIContentErrorCode RunIntentPage()
-    {
-        return UIContentErrorCode::NO_ERRORS;
-    }
-
-    virtual UIContentErrorCode SetRouterIntentInfo(const std::string& intentInfoSerialized, bool isColdStart,
-        const std::function<void()>&& loadPageCallback)
-    {
-        return UIContentErrorCode::NO_ERRORS;
-    }
-
-    virtual std::string GetTopNavDestinationInfo(bool onlyFullScreen, bool needParam)
-    {
-        return "";
-    }
-
     virtual void ReplacePage(const std::string& url, const std::string& params) = 0;
 
     virtual void PushPage(const std::string& url, const std::string& params) = 0;
-
-#if defined(ACE_STATIC)
-    // For ArkTS1.2
-    virtual void* PushExtender(
-        const std::string& url, const std::string& params, bool recoverable, std::function<void()>&& finishCallback)
-    {
-        return nullptr;
-    };
-    virtual void* ReplaceExtender(const std::string& url, const std::string& params, bool recoverable,
-        std::function<void()>&& enterFinishCallback, std::function<void()>&& exitFinishCallback)
-    {
-        return nullptr;
-    };
-    virtual void* RunPageExtender(
-        const std::string& url, const std::string& params, bool recoverable, std::function<void()>&& finishCallback)
-    {
-        return nullptr;
-    };
-    virtual void BackExtender(const std::string& url, const std::string& params) {};
-    virtual void ClearExtender() {};
-    virtual void ShowAlertBeforeBackPageExtender(const std::string& url) {};
-    virtual void HideAlertBeforeBackPageExtender() {};
-#endif
 
     // Gets front-end event handler to handle ace event.
     virtual RefPtr<AceEventHandler> GetEventHandler() = 0;
@@ -209,7 +164,10 @@ public:
         return type_;
     }
 
-    RefPtr<TaskExecutor> GetTaskExecutor() const;
+    RefPtr<TaskExecutor> GetTaskExecutor() const
+    {
+        return taskExecutor_;
+    }
 
     // inform the frontend that onCreate or onDestroy
     virtual void UpdateState(State) = 0;
@@ -301,8 +259,6 @@ public:
 
     virtual void OnLayoutCompleted(const std::string& componentId) = 0;
     virtual void OnDrawCompleted(const std::string& componentId) = 0;
-    virtual void OnDrawChildrenCompleted(const std::string& componentId) = 0;
-    virtual bool IsDrawChildrenCallbackFuncExist(const std::string& componentId) = 0;
 
     virtual void TriggerGarbageCollection() {}
 
@@ -347,11 +303,6 @@ public:
         return value;
     }
 
-    virtual bool BuilderNodeFunc(std::string functionName, const std::vector<int32_t>& nodeIds)
-    {
-        return false;
-    }
-
     virtual napi_value GetFrameNodeValueByNodeId(int32_t nodeId)
     {
         return nullptr;
@@ -381,12 +332,6 @@ public:
     }
 
     virtual void SetErrorEventHandler(std::function<void(const std::string&, const std::string&)>&& errorCallback) {}
-
-    virtual std::string GetPagePathByUrl(const std::string& url) const
-    {
-        return "";
-    }
-    virtual void* GetEnv() { return nullptr; }
 
 protected:
     virtual bool MaybeRelease() override;

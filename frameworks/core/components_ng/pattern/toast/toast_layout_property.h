@@ -27,6 +27,7 @@ enum class ToastShowMode {
     TOP_MOST = 1,
     SYSTEM_TOP_MOST = 2,
 };
+
 struct ToastInfo {
     std::string message;
     int32_t duration = 0;

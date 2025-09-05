@@ -13,32 +13,23 @@
  * limitations under the License.
  *
  */
-/// <reference path="./arkts_util.d.ts" />
-class Utils {
-    private static currentAppApiVersion: number = -1;
-    private static arkTsUtil: ArkTsUtil | undefined = undefined;
 
-    public static getApiVersion(): number {
-        if (Utils.currentAppApiVersion <= 0) {
-            Utils.currentAppApiVersion = typeof ViewStackProcessor.getApiVersion === 'function'
-                ? ViewStackProcessor.getApiVersion() : -1;
-        }
-        return Utils.currentAppApiVersion;
+class Utils {
+    public static getApiVersion() : number {
+        return typeof ViewStackProcessor["getApiVersion"] === "function"
+               ? ViewStackProcessor["getApiVersion"]()
+               : undefined;
     }
 
     public static isApiVersionEQAbove(target: number): boolean {
         let version = Utils.getApiVersion();
-        if (version <= 0) {
-            stateMgmtConsole.error(`get api version error in isApiVersionEQAbove, version:${version}`);
+
+        if (version == null) {
             return false;
         }
-        return version % 1000 >= target;
-    }
-
-    public static getArkTsUtil(): ArkTsUtil {
-        if (!Utils.arkTsUtil) {
-            Utils.arkTsUtil = requireInternal('util');
+        if (typeof version === "number") {
+            version = version % 1000;
         }
-        return Utils.arkTsUtil;
+        return version >= target;
     }
 }

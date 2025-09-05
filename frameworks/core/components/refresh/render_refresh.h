@@ -36,7 +36,7 @@
 namespace OHOS::Ace {
 
 class RenderRefresh : public RenderNode {
-    DECLARE_ACE_TYPE(RenderRefresh, RenderNode);
+    DECLARE_ACE_TYPE(RenderRefresh, RenderNode)
 
 public:
     RenderRefresh();
@@ -103,8 +103,7 @@ protected:
 
     bool IsWatch() const
     {
-        return SystemProperties::GetDeviceType() == DeviceType::WATCH ||
-               SystemProperties::GetDeviceType() == DeviceType::WEARABLE;
+        return SystemProperties::GetDeviceType() == DeviceType::WATCH;
     }
 
 private:

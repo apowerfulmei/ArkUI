@@ -14,8 +14,11 @@
  */
 #include "bridge/cj_frontend/interfaces/cj_ffi/cj_if_else_ffi.h"
 
+#include <cstdint>
 
 #include "core/common/container.h"
+#include "core/components_ng/syntax/if_else_model.h"
+#include "core/components_ng/syntax/if_else_model_ng.h"
 
 using namespace OHOS::Ace;
 using namespace OHOS::Ace::Framework;
@@ -34,8 +37,7 @@ void FfiOHOSAceFrameworkIfElsePop()
 void FfiOHOSAceFrameworkIfElseSetBranchId(int32_t value)
 {
     std::list<int32_t> removes;
-    std::list<int32_t> reserves;
-    IfElseModel::GetInstance()->SetBranchId(value, removes, reserves);
+    IfElseModel::GetInstance()->SetBranchId(value, removes);
 }
 
 int32_t FfiOHOSAceFrameworkIfElseGetBranchId()

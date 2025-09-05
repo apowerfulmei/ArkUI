@@ -14,9 +14,9 @@
  */
 
 #include "core/components_ng/pattern/toggle/switch_accessibility_property.h"
-#if defined(OHOS_STANDARD_SYSTEM) and !defined(ACE_UNITTEST)
-#include "accessibility_element_info.h"
-#endif
+
+#include "base/utils/utils.h"
+#include "core/components_ng/base/frame_node.h"
 #include "core/components_ng/pattern/toggle/switch_pattern.h"
 
 namespace OHOS::Ace::NG {
@@ -37,10 +37,8 @@ bool SwitchAccessibilityProperty::IsChecked() const
     return switchPattern->IsChecked();
 }
 
-void SwitchAccessibilityProperty::GetExtraElementInfo(Accessibility::ExtraElementInfo& extraElementInfo)
+std::string SwitchAccessibilityProperty::GetHintText() const
 {
-#if defined(OHOS_STANDARD_SYSTEM) and !defined(ACE_UNITTEST)
-    extraElementInfo.SetExtraElementInfo("ToggleType", SWITCH);
-#endif
+    return SWITCH_TAG;
 }
 } // namespace OHOS::Ace::NG

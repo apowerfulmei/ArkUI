@@ -16,6 +16,10 @@
 #ifndef FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_SELECT_POPUP_ROSEN_RENDER_SELECT_POPUP_H
 #define FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_SELECT_POPUP_ROSEN_RENDER_SELECT_POPUP_H
 
+#ifndef USE_ROSEN_DRAWING
+#include "include/core/SkCanvas.h"
+#endif
+
 #include "core/components/select_popup/render_select_popup.h"
 
 namespace OHOS::Ace {

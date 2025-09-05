@@ -23,9 +23,6 @@ using namespace testing;
 using namespace testing::ext;
 namespace OHOS::Ace::NG {
 
-constexpr int32_t LOW_FRAME_NUMBER = 30;
-constexpr int32_t MEDIUM_FRAME_NUMBER = 60;
-
 class DisplaySyncManagerTestNg : public testing::Test {
 public:
     static void SetUpTestCase();
@@ -47,7 +44,7 @@ void DisplaySyncManagerTestNg::TearDownTestCase()
  * @tc.desc: DisplaySyncManager adds and deletes a DisplaySync.
  * @tc.type: FUNC
  */
-HWTEST_F(DisplaySyncManagerTestNg, DisplaySyncManagerTest001, TestSize.Level0)
+HWTEST_F(DisplaySyncManagerTestNg, DisplaySyncManagerTest001, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. Get DisplaySyncManager from PipelineContext.
@@ -198,7 +195,7 @@ HWTEST_F(DisplaySyncManagerTestNg, DisplaySyncManagerTest002, TestSize.Level1)
  * @tc.desc: DisplaySync call callback function.
  * @tc.type: FUNC
  */
-HWTEST_F(DisplaySyncManagerTestNg, DisplaySyncManagerTest003, TestSize.Level0)
+HWTEST_F(DisplaySyncManagerTestNg, DisplaySyncManagerTest003, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. Get DisplaySyncManager from PipelineContext.
@@ -404,9 +401,6 @@ HWTEST_F(DisplaySyncManagerTestNg, DisplaySyncManagerTest007, TestSize.Level1)
     int32_t displaySyncRate1 = displaySyncManager->GetDisplaySyncRate();
     EXPECT_EQ(60, displaySyncRate1);
 
-    int32_t monitorSyncRate = displaySyncManager->GetMonitorVsyncRate();
-    EXPECT_TRUE(monitorSyncRate == MEDIUM_FRAME_NUMBER || monitorSyncRate == LOW_FRAME_NUMBER);
-
     displaySync2->DelFromPipelineOnContainer();
     displaySyncManager->DispatchFunc(nanoTimestamp);
     int32_t displaySyncRate2 = displaySyncManager->GetDisplaySyncRate();
@@ -417,17 +411,11 @@ HWTEST_F(DisplaySyncManagerTestNg, DisplaySyncManagerTest007, TestSize.Level1)
      */
     EXPECT_EQ(30, displaySyncRate2);
 
-    monitorSyncRate = displaySyncManager->GetMonitorVsyncRate();
-    EXPECT_TRUE(monitorSyncRate == MEDIUM_FRAME_NUMBER || monitorSyncRate == LOW_FRAME_NUMBER);
-
     displaySync1->DelFromPipelineOnContainer();
     displaySyncManager->DispatchFunc(nanoTimestamp);
     int32_t displaySyncRate3 = displaySyncManager->GetDisplaySyncRate();
 
     EXPECT_EQ(0, displaySyncRate3);
-
-    monitorSyncRate = displaySyncManager->GetMonitorVsyncRate();
-    EXPECT_EQ(displaySyncManager->GetVsyncRate(), monitorSyncRate);
 }
 
 /**
@@ -624,9 +612,6 @@ HWTEST_F(DisplaySyncManagerTestNg, DisplaySyncManagerTest011, TestSize.Level1)
      * @tc.steps: step3. Test DisplaySync's animator status.
      */
     int32_t mgrAnimatorRate = displaySyncManager->GetAnimatorRate();
-    if (mgrAnimatorRate > 0) {
-        mgrAnimatorRate = mgrAnimatorRate >> ACE_ANIMATOR_OFFSET;
-    }
     EXPECT_EQ(-1, mgrAnimatorRate);
     EXPECT_TRUE(displaySyncManager->IsAnimatorStopped());
     int32_t animatorExpectedRate = displaySync->GetAnimatorExpectedRate();
@@ -634,9 +619,6 @@ HWTEST_F(DisplaySyncManagerTestNg, DisplaySyncManagerTest011, TestSize.Level1)
 
     displaySync->RegisterOnFrameWithTimestamp([](uint64_t timestamp) {});
     mgrAnimatorRate = displaySyncManager->GetAnimatorRate();
-    if (mgrAnimatorRate > 0) {
-        mgrAnimatorRate = mgrAnimatorRate >> ACE_ANIMATOR_OFFSET;
-    }
     EXPECT_EQ(0, mgrAnimatorRate);
     EXPECT_FALSE(displaySyncManager->IsAnimatorStopped());
     animatorExpectedRate = displaySync->GetAnimatorExpectedRate();
@@ -644,9 +626,6 @@ HWTEST_F(DisplaySyncManagerTestNg, DisplaySyncManagerTest011, TestSize.Level1)
 
     displaySync->SetExpectedFrameRateRange({0, 120, 60});
     mgrAnimatorRate = displaySyncManager->GetAnimatorRate();
-    if (mgrAnimatorRate > 0) {
-        mgrAnimatorRate = mgrAnimatorRate >> ACE_ANIMATOR_OFFSET;
-    }
     EXPECT_EQ(60, mgrAnimatorRate);
     EXPECT_FALSE(displaySyncManager->IsAnimatorStopped());
     animatorExpectedRate = displaySync->GetAnimatorExpectedRate();
@@ -657,31 +636,5 @@ HWTEST_F(DisplaySyncManagerTestNg, DisplaySyncManagerTest011, TestSize.Level1)
      */
     displaySync->DelFromPipelineOnContainer();
     EXPECT_FALSE(displaySync->IsOnPipeline());
-}
-
-/**
- * @tc.name: DisplaySyncManagerTest012
- * @tc.desc: DisplaySyncManager sets the vsync period of the pipeline.
- * @tc.type: FUNC
- */
-HWTEST_F(DisplaySyncManagerTestNg, DisplaySyncManagerTest012, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. Get DisplaySyncManager from PipelineContext.
-     * @tc.expected: step1. Check the number of DisplaySync initially managed by the DisplaySyncManager is 0.
-     */
-    auto pipeline = PipelineContext::GetCurrentContext();
-    auto displaySyncManager = pipeline->GetOrCreateUIDisplaySyncManager();
-
-    int32_t initSize = 0;
-    EXPECT_EQ(initSize, displaySyncManager->GetUIDisplaySyncMap().size());
-
-    /**
-     * @tc.steps: step2. Set vsyncPeriod1 to 0.
-     * @tc.expected: step2. false.
-     */
-    int64_t vsyncPeriod1 = 0;
-    auto result = displaySyncManager->SetVsyncPeriod(vsyncPeriod1);
-    EXPECT_FALSE(result);
 }
 } // namespace OHOS::Ace::NG

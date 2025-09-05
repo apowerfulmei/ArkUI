@@ -68,8 +68,6 @@ constexpr float COLUMN_HEIGHT = 200.0f;
 constexpr float FULL_SCREEN_WIDTH = 720.0f;
 constexpr float FULL_SCREEN_HEIGHT = 1136.0f;
 constexpr float ZERO = 0.0f;
-constexpr float MIN_FONT_SCALE = 0.5f;
-constexpr float MAX_FONT_SCALE = 2.0f;
 const SizeF CONTAINER_SIZE(FULL_SCREEN_WIDTH, FULL_SCREEN_HEIGHT);
 constexpr int32_t TEXTFIELD_INDEX = 0;
 constexpr int32_t IMAGE_INDEX = 1;
@@ -78,29 +76,18 @@ constexpr int32_t CANCEL_BUTTON_INDEX = 3;
 constexpr int32_t BUTTON_INDEX = 4;
 constexpr int32_t DIVIDER_INDEX = 5;
 const std::string EMPTY_VALUE;
-const std::u16string EMPTY_VALUE_U16;
 const std::string PLACEHOLDER = "DEFAULT PLACEHOLDER";
-const std::u16string PLACEHOLDER_U16 = u"DEFAULT PLACEHOLDER";
 const std::string SEARCH_SVG = "resource:///ohos_search.svg";
 const std::list<std::pair<std::string, int32_t>> FONT_FEATURE_VALUE_1 = ParseFontFeatureSettings("\"ss01\" 1");
 const std::list<std::pair<std::string, int32_t>> FONT_FEATURE_VALUE_0 = ParseFontFeatureSettings("\"ss01\" 0");
 const Color DEFAULT_SELECTED_BACKFROUND_COLOR_BLUE = Color::BLUE;
 const Color DEFAULT_SELECTED_BACKFROUND_COLOR_RED = Color::RED;
 const std::string DEFAULT_TEXT = "abcdefghijklmnopqrstuvwxyz";
-const std::u16string DEFAULT_TEXT_U16 = u"abcdefghijklmnopqrstuvwxyz";
 const std::string DEFAULT_FILTER_TEXT = "CabcdefgABhCDEFG0123a456A789";
-const std::u16string DEFAULT_FILTER_TEXT_U16 = u"CabcdefgABhCDEFG0123a456A789";
 const std::string NUMBER_FILTER = "^[0-9]*$";
-const std::u16string NUMBER_FILTER_U16 = u"^[0-9]*$";
 const std::string NUM_FILTER = "[0-9]";
-const std::u16string NUM_FILTER_U16 = u"[0-9]";
 const std::string FILTER_NUM_TEXT = "0123456789";
-const std::u16string FILTER_NUM_TEXT_U16 = u"0123456789";
 const Dimension DEFAULT_INDENT_SIZE = Dimension(5, DimensionUnit::VP);
-const Dimension LETTER_SPACING = Dimension(10, DimensionUnit::PX);
-const Dimension TEXT_INDENT = Dimension(5, DimensionUnit::PX);
-const Dimension SEARCH_BUTTON_FONT_SIZE = Dimension(20, DimensionUnit::VP);
-const Dimension CARET_WIDTH = Dimension(2, DimensionUnit::VP);
 
 class SearchBases : public testing::Test {
 public:

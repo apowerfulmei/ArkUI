@@ -31,17 +31,7 @@ public:
     void SetSymbolEffect(const std::uint32_t effectStrategy) override;
     void SetClipEdge() override;
     void SetSymbolEffectOptions(NG::SymbolEffectOptions& symbolEffectOptions) override;
-    void SetMinFontScale(const float value) override;
-    void SetMaxFontScale(const float value) override;
-    void SetSymbolShadow(const SymbolShadow& symbolShadow) override;
-    void SetShaderStyle(const std::vector<SymbolGradient>& style) override;
-    void ResetShaderStyle() override;
 
-    void RegisterSymbolFontColorResource(const std::string& key, std::vector<Color>& symbolColor,
-        const std::vector<std::pair<int32_t, RefPtr<ResourceObject>>>& resObjArr) override;
-
-    void SetFontFamilies(std::vector<std::string>& familyNames) override;
-    void SetSymbolType(SymbolType value) override;
     static RefPtr<FrameNode> CreateFrameNode(int32_t nodeId);
     static void SetFontColor(FrameNode* frameNode, const std::vector<Color>& symbolColor);
     static void SetFontSize(FrameNode* frameNode, const Dimension& value);
@@ -49,20 +39,8 @@ public:
     static void SetRenderingStrategy(FrameNode* frameNode, const std::uint32_t renderingStrategy);
     static void SetSymbolEffect(FrameNode* frameNode, const std::uint32_t effectStrategy);
     static void InitialSymbol(FrameNode* frameNode, const std::uint32_t& unicode);
-    static void InitialCustomSymbol(FrameNode* frameNode, const std::uint32_t& unicode, const char* fontFamilyName);
     static void SetSymbolEffectOptions(FrameNode* frameNode, NG::SymbolEffectOptions& symbolEffectOptions);
     static void SetSymbolGlyphInitialize(FrameNode* framwNode, const std::uint32_t& symbolId);
-    static void SetCustomSymbolGlyphInitialize(FrameNode* frameNode, const std::uint32_t& symbolId,
-        const char* fontFamilyName);
-    static void SetMinFontScale(FrameNode* frameNode, const float value);
-    static void SetMaxFontScale(FrameNode* frameNode, const float value);
-    static void UpdateSymbolEffect(FrameNode* frameNode, const std::uint32_t symbolEffectType, const bool isActive,
-        const std::int16_t isTxtActiveSource);
-    static void SetSymbolShadow(FrameNode* frameNode, const SymbolShadow& symbolShadow);
-    static void SetShaderStyle(FrameNode* frameNode, const std::vector<SymbolGradient>& style);
-    static void ResetShaderStyle(FrameNode* frameNode);
-    static void RegisterSymbolFontColorResource(FrameNode* frameNode, const std::string& key,
-        std::vector<Color>& symbolColor, const std::vector<std::pair<int32_t, RefPtr<ResourceObject>>>& resObjArr);
 };
 } // namespace OHOS::Ace::NG
 

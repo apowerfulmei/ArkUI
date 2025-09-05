@@ -254,10 +254,7 @@ void FillSubComponentProperty(
 {
     info->SetProperty<std::string>("name", layoutWrapper->GetHostNode()->GetTag());
     info->SetProperty<std::string>("id", std::to_string(layoutWrapper->GetHostNode()->GetId()));
-    const auto& layoutProperty = layoutWrapper->GetLayoutProperty();
-    if (layoutProperty) {
-        info->SetPropertyObject("constraint", GenConstraint(layoutProperty->GetLayoutConstraint()));
-    }
+    info->SetPropertyObject("constraint", GenConstraint(layoutWrapper->GetLayoutProperty()->GetLayoutConstraint()));
     info->SetPropertyObject("borderInfo", GenBorderInfo(layoutWrapper));
     info->SetPropertyObject("position", GenPositionInfo(layoutWrapper));
 }
@@ -374,11 +371,6 @@ void JSMeasureLayoutParamNG::GenChildArray(int32_t start, int32_t end)
     for (int32_t index = start; index < end; index++) {
         JSRef<JSObjTemplate> info = JSRef<JSObjTemplate>::New();
         info->SetInternalFieldCount(1);
-        auto child = GetChildByIndex(index);
-        if (child && child->GetHostNode()) {
-            auto uniqueId = child->GetHostNode()->GetId();
-            info->SetProperty("uniqueId", uniqueId);
-        }
         info->SetPropertyObject("measureResult", size);
         info->Wrap<NG::MeasureLayoutChild>(&Get(index));
         info->SetPropertyObject("measure", measureFunc);
@@ -578,8 +570,7 @@ panda::Local<panda::JSValueRef> ViewMeasureLayout::JSLayout(panda::JsiRuntimeCal
     if (!(xResult || yResult)) {
         LOGE("the position prop is illegal");
     } else {
-        child->GetGeometryNode()->SetMarginFrameOffset({ static_cast<float>(dimenX.ConvertToPx()),
-            static_cast<float>(dimenY.ConvertToPx()) });
+        child->GetGeometryNode()->SetMarginFrameOffset({ dimenX.ConvertToPx(), dimenY.ConvertToPx() });
     }
     child->Layout();
 
@@ -617,8 +608,7 @@ panda::Local<panda::JSValueRef> ViewMeasureLayout::JSPlaceChildren(panda::JsiRun
     if (!(xResult || yResult)) {
         LOGE("the position prop is illegal");
     } else {
-        child->GetGeometryNode()->SetMarginFrameOffset({ static_cast<float>(dimenX.ConvertToPx()),
-            static_cast<float>(dimenY.ConvertToPx()) });
+        child->GetGeometryNode()->SetMarginFrameOffset({ dimenX.ConvertToPx(), dimenY.ConvertToPx() });
     }
     child->Layout();
     return panda::JSValueRef::Undefined(vm);

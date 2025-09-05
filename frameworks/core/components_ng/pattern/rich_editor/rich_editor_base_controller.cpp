@@ -38,13 +38,6 @@ int32_t RichEditorBaseController::GetCaretOffset()
     return position;
 }
 
-RectF RichEditorBaseController::GetCaretRect()
-{
-    auto richEditorPattern = pattern_.Upgrade();
-    CHECK_NULL_RETURN(richEditorPattern, RectF(-1, -1, -1, -1));
-    return richEditorPattern->GetCaretRelativeRect();
-}
-
 bool RichEditorBaseController::SetCaretOffset(int32_t caretPosition)
 {
     auto richEditorPattern = pattern_.Upgrade();
@@ -69,14 +62,6 @@ std::optional<struct UpdateSpanStyle> RichEditorBaseController::GetTypingStyle()
     return richEditorPattern->GetTypingStyle();
 }
 
-void RichEditorBaseController::SetTypingParagraphStyle(std::optional<struct UpdateParagraphStyle> typingParagraphStyle)
-{
-    auto richEditorPattern = AceType::DynamicCast<RichEditorPattern>(pattern_.Upgrade());
-    CHECK_NULL_VOID(richEditorPattern);
-    richEditorPattern->SetTypingParagraphStyle(typingParagraphStyle);
-    richEditorPattern->ForceTriggerAvoidOnCaretChange();
-}
-
 void RichEditorBaseController::CloseSelectionMenu()
 {
     auto richEditorPattern = pattern_.Upgrade();
@@ -98,16 +83,6 @@ void RichEditorBaseController::StopEditing()
     richEditorPattern->StopEditing();
 }
 
-#if defined(ACE_STATIC)
-void RichEditorBaseController::SetSelection(
-    int32_t selectionStart, int32_t selectionEnd, const std::optional<SelectionOptions>& options, bool isForward)
-{
-    auto richEditorPattern = pattern_.Upgrade();
-    CHECK_NULL_VOID(richEditorPattern);
-    richEditorPattern->SetSelection(selectionStart, selectionEnd, options, isForward);
-    richEditorPattern->ForceTriggerAvoidOnCaretChange();
-}
-#else
 void RichEditorBaseController::SetSelection(
     int32_t selectionStart, int32_t selectionEnd, const std::optional<SelectionOptions>& options)
 {
@@ -116,27 +91,11 @@ void RichEditorBaseController::SetSelection(
     richEditorPattern->SetSelection(selectionStart, selectionEnd, options);
     richEditorPattern->ForceTriggerAvoidOnCaretChange();
 }
-#endif
 
 const PreviewTextInfo RichEditorBaseController::GetPreviewTextInfo() const
 {
     auto richEditorPattern = pattern_.Upgrade();
     CHECK_NULL_RETURN(richEditorPattern, PreviewTextInfo());
     return richEditorPattern->GetPreviewTextInfo();
-}
-
-ColorMode RichEditorBaseController::GetColorMode()
-{
-    auto richEditorPattern = pattern_.Upgrade();
-    CHECK_NULL_RETURN(richEditorPattern, ColorMode::COLOR_MODE_UNDEFINED);
-    return richEditorPattern->GetColorMode();
-}
-
-RefPtr<NG::RichEditorTheme> RichEditorBaseController::GetTheme()
-{
-    auto richEditorPattern = pattern_.Upgrade();
-    CHECK_NULL_RETURN(richEditorPattern, {});
-    auto theme = richEditorPattern->GetTheme<NG::RichEditorTheme>();
-    return theme;
 }
 } // namespace OHOS::Ace::NG

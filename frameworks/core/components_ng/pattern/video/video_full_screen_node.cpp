@@ -22,7 +22,6 @@
 namespace OHOS::Ace::NG {
 void VideoFullScreenNode::InitVideoFullScreenNode(const RefPtr<VideoNode>& video)
 {
-    CHECK_NULL_VOID(video);
     if (video->HasMediaColumnNode()) {
         auto mediaColumnId = GetMediaColumnId();
         auto mediaColumNode = FrameNode::GetOrCreateFrameNode(
@@ -40,7 +39,6 @@ void VideoFullScreenNode::InitVideoFullScreenNode(const RefPtr<VideoNode>& video
     if (video->HasControllerRowNode()) {
         int32_t controlRowId = GetControllerRowId();
         auto fullScreenPattern = AceType::DynamicCast<VideoFullScreenPattern>(GetPattern());
-        CHECK_NULL_VOID(fullScreenPattern);
         auto controlRowNode = fullScreenPattern->CreateControlBar(controlRowId);
         CHECK_NULL_VOID(controlRowNode);
         AddChild(controlRowNode);

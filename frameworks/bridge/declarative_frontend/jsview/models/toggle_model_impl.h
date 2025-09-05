@@ -24,7 +24,7 @@ class ToggleModelImpl : public OHOS::Ace::ToggleModel {
 public:
     void Create(NG::ToggleType toggleType, bool isOn) override;
     void SetSelectedColor(const std::optional<Color>& selectedColor) override;
-    void SetSwitchPointColor(const std::optional<Color>& switchPointColor) override;
+    void SetSwitchPointColor(const Color& switchPointColor) override;
     void OnChange(NG::ChangeEvent&& onChange) override;
     void SetWidth(const Dimension& width) override;
     void SetHeight(const Dimension& height) override;
@@ -34,10 +34,6 @@ public:
     void SetResponseRegion(const std::vector<DimensionRect>& responseRegion) override {};
     void SetHoverEffect(HoverEffectType hoverEffect) override {};
     void Pop() override;
-    void CreateWithColorResourceObj(const RefPtr<ResourceObject>& resObj,
-        const ToggleColorType toggleColorType) override {};
-    void CreateWithDimensionVpResourceObj(const RefPtr<ResourceObject>& resObj,
-        const ToggleDimensionType toggleDimensionType) override {};
 };
 
 } // namespace OHOS::Ace::Framework

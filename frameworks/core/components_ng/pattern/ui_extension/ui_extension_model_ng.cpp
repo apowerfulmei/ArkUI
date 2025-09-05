@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2023-2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -15,12 +15,17 @@
 
 #include "core/components_ng/pattern/ui_extension/ui_extension_model_ng.h"
 
-#include "core/components_ng/pattern/ui_extension/dynamic_component/dynamic_node.h"
-#include "core/components_ng/pattern/ui_extension/dynamic_component/dynamic_pattern.h"
-#include "core/components_ng/pattern/ui_extension/isolated_component/isolated_pattern.h"
-#include "core/components_ng/pattern/ui_extension/security_ui_extension_component/security_ui_extension_pattern.h"
-#include "core/components_ng/pattern/ui_extension/ui_extension_component/ui_extension_node.h"
-#include "core/components_ng/pattern/ui_extension/ui_extension_component/ui_extension_pattern.h"
+#include "interfaces/inner_api/ace/modal_ui_extension_config.h"
+#include "want.h"
+
+#include "core/components/common/layout/constants.h"
+#include "core/components_ng/base/view_stack_processor.h"
+#include "core/components_ng/pattern/ui_extension/isolated_pattern.h"
+#include "core/components_ng/pattern/ui_extension/session_wrapper.h"
+#include "core/components_ng/pattern/ui_extension/security_ui_extension_pattern.h"
+#include "core/components_ng/pattern/ui_extension/ui_extension_hub.h"
+#include "core/components_ng/pattern/ui_extension/ui_extension_pattern.h"
+#include "core/components_v2/inspector/inspector_constants.h"
 #include "core/pipeline_ng/pipeline_context.h"
 
 namespace OHOS::Ace::NG {
@@ -30,11 +35,10 @@ RefPtr<FrameNode> UIExtensionModelNG::Create(const std::string& bundleName, cons
 {
     auto nodeId = ElementRegister::GetInstance()->MakeUniqueId();
     ACE_LAYOUT_SCOPED_TRACE("Create[%s][self:%d]", V2::UI_EXTENSION_COMPONENT_ETS_TAG, nodeId);
-    auto frameNode = UIExtensionNode::GetOrCreateUIExtensionNode(
-        V2::UI_EXTENSION_COMPONENT_ETS_TAG, nodeId, []() { return AceType::MakeRefPtr<UIExtensionPattern>(); });
     auto wantWrap = WantWrap::CreateWantWrap(bundleName, abilityName);
-    CHECK_NULL_RETURN(wantWrap, frameNode);
     wantWrap->SetWantParam(params);
+    auto frameNode = FrameNode::GetOrCreateFrameNode(
+        V2::UI_EXTENSION_COMPONENT_ETS_TAG, nodeId, []() { return AceType::MakeRefPtr<UIExtensionPattern>(); });
     auto pattern = frameNode->GetPattern<UIExtensionPattern>();
     CHECK_NULL_RETURN(pattern, frameNode);
     pattern->UpdateWant(wantWrap);
@@ -49,15 +53,13 @@ RefPtr<FrameNode> UIExtensionModelNG::Create(
     bool isAsyncModalBinding = config.isAsyncModalBinding;
     bool isModal = config.isModal;
     auto nodeId = ElementRegister::GetInstance()->MakeUniqueId();
-    auto frameNode = UIExtensionNode::GetOrCreateUIExtensionNode(V2::UI_EXTENSION_COMPONENT_ETS_TAG, nodeId,
+    auto frameNode = FrameNode::GetOrCreateFrameNode(V2::UI_EXTENSION_COMPONENT_ETS_TAG, nodeId,
         [isAsyncModalBinding, isModal]() {
             return AceType::MakeRefPtr<UIExtensionPattern>(false, isModal, isAsyncModalBinding);
         });
     auto pattern = frameNode->GetPattern<UIExtensionPattern>();
     CHECK_NULL_RETURN(pattern, frameNode);
-    pattern->SetModalRequestFocus(config.isModalRequestFocus);
     pattern->SetDensityDpi(config.isDensityFollowHost);
-    pattern->SetIsWindowModeFollowHost(config.isWindowModeFollowHost);
     pattern->UpdateWant(want);
     auto pipeline = PipelineContext::GetCurrentContext();
     CHECK_NULL_RETURN(pipeline, frameNode);
@@ -68,28 +70,33 @@ RefPtr<FrameNode> UIExtensionModelNG::Create(
     pattern->SetOnReceiveCallback(std::move(callbacks.onReceive));
     pattern->SetModalOnRemoteReadyCallback(std::move(callbacks.onRemoteReady));
     pattern->SetModalOnDestroy(std::move(callbacks.onDestroy));
+    auto dragDropManager = pipeline->GetDragDropManager();
+    CHECK_NULL_RETURN(dragDropManager, frameNode);
+    dragDropManager->AddDragFrameNode(nodeId, AceType::WeakClaim(AceType::RawPtr(frameNode)));
     return frameNode;
 }
 
 void UIExtensionModelNG::Create(const RefPtr<OHOS::Ace::WantWrap>& wantWrap,
     const std::map<PlaceholderType, RefPtr<NG::FrameNode>>& placeholderMap,
-    bool transferringCaller, bool densityDpi, bool isWindowModeFollowHost)
+    bool transferringCaller, bool densityDpi)
 {
     auto* stack = ViewStackProcessor::GetInstance();
     auto nodeId = stack->ClaimNodeId();
-    auto frameNode = UIExtensionNode::GetOrCreateUIExtensionNode(V2::UI_EXTENSION_COMPONENT_ETS_TAG, nodeId,
+    auto frameNode = FrameNode::GetOrCreateFrameNode(V2::UI_EXTENSION_COMPONENT_ETS_TAG, nodeId,
         [transferringCaller]() { return AceType::MakeRefPtr<UIExtensionPattern>(transferringCaller); });
     auto pattern = frameNode->GetPattern<UIExtensionPattern>();
     CHECK_NULL_VOID(pattern);
     pattern->SetNeedCheckWindowSceneId(true);
     pattern->SetPlaceholderMap(placeholderMap);
-    pattern->SetDensityDpi(densityDpi);
-    pattern->SetIsWindowModeFollowHost(isWindowModeFollowHost);
     pattern->UpdateWant(wantWrap);
+    pattern->SetDensityDpi(densityDpi);
     stack->Push(frameNode);
     auto pipeline = PipelineContext::GetCurrentContext();
     CHECK_NULL_VOID(pipeline);
     pipeline->AddWindowStateChangedCallback(nodeId);
+    auto dragDropManager = pipeline->GetDragDropManager();
+    CHECK_NULL_VOID(dragDropManager);
+    dragDropManager->AddDragFrameNode(nodeId, AceType::WeakClaim(AceType::RawPtr(frameNode)));
 }
 
 // for EmbeddedComponent
@@ -97,7 +104,7 @@ void UIExtensionModelNG::Create(const RefPtr<OHOS::Ace::WantWrap>& wantWrap, Ses
 {
     auto* stack = ViewStackProcessor::GetInstance();
     auto nodeId = stack->ClaimNodeId();
-    auto frameNode = UIExtensionNode::GetOrCreateUIExtensionNode(V2::EMBEDDED_COMPONENT_ETS_TAG, nodeId,
+    auto frameNode = FrameNode::GetOrCreateFrameNode(V2::EMBEDDED_COMPONENT_ETS_TAG, nodeId,
         [sessionType]() { return AceType::MakeRefPtr<UIExtensionPattern>(false, false, false, sessionType); });
     auto pattern = frameNode->GetPattern<UIExtensionPattern>();
     CHECK_NULL_VOID(pattern);
@@ -110,41 +117,14 @@ void UIExtensionModelNG::Create(const RefPtr<OHOS::Ace::WantWrap>& wantWrap, Ses
     auto pipeline = PipelineContext::GetCurrentContext();
     CHECK_NULL_VOID(pipeline);
     pipeline->AddWindowStateChangedCallback(nodeId);
+    auto dragDropManager = pipeline->GetDragDropManager();
+    CHECK_NULL_VOID(dragDropManager);
+    dragDropManager->AddDragFrameNode(nodeId, AceType::WeakClaim(AceType::RawPtr(frameNode)));
 }
 
-void UIExtensionModelNG::Create(const UIExtensionConfig& config)
+// for DynamicComponent
+void UIExtensionModelNG::Create()
 {
-    switch (config.sessionType) {
-        case SessionType::SECURITY_UI_EXTENSION_ABILITY:
-            CreateSecurityUIExtension(config);
-            break;
-        case SessionType::DYNAMIC_COMPONENT:
-            CreateDynamicComponent(config);
-            break;
-        case SessionType::ISOLATED_COMPONENT:
-            CreateIsolatedComponent(config);
-            break;
-        default:
-            LOGW("The type uiextension is not supported");
-    }
-}
-
-void UIExtensionModelNG::CreateDynamicComponent(const UIExtensionConfig& config)
-{
-    TAG_LOGI(AceLogTag::ACE_DYNAMIC_COMPONENT, "CreateDynamicComponent");
-    auto* stack = ViewStackProcessor::GetInstance();
-    auto nodeId = stack->ClaimNodeId();
-    auto frameNode = DynamicNode::GetOrCreateDynamicNode(
-        V2::DYNAMIC_COMPONENT_ETS_TAG, nodeId, []() { return AceType::MakeRefPtr<DynamicPattern>(); });
-    auto pattern = frameNode->GetPattern<DynamicPattern>();
-    CHECK_NULL_VOID(pattern);
-    pattern->SetBackgroundTransparent(config.backgroundTransparent);
-    stack->Push(frameNode);
-}
-
-void UIExtensionModelNG::CreateIsolatedComponent(const UIExtensionConfig& config)
-{
-    TAG_LOGI(AceLogTag::ACE_ISOLATED_COMPONENT, "CreateIsolatedComponent");
     auto* stack = ViewStackProcessor::GetInstance();
     auto nodeId = stack->ClaimNodeId();
     auto frameNode = FrameNode::GetOrCreateFrameNode(
@@ -155,6 +135,17 @@ void UIExtensionModelNG::CreateIsolatedComponent(const UIExtensionConfig& config
     auto pipeline = PipelineContext::GetCurrentContext();
     CHECK_NULL_VOID(pipeline);
     pipeline->AddWindowStateChangedCallback(nodeId);
+}
+
+void UIExtensionModelNG::Create(const UIExtensionConfig& config)
+{
+    switch (config.sessionType) {
+        case SessionType::SECURITY_UI_EXTENSION_ABILITY:
+            CreateSecurityUIExtension(config);
+            break;
+        default:
+            LOGW("The type uiextension is not supported");
+    }
 }
 
 void UIExtensionModelNG::CreateSecurityUIExtension(const UIExtensionConfig& config)
@@ -174,12 +165,15 @@ void UIExtensionModelNG::CreateSecurityUIExtension(const UIExtensionConfig& conf
     auto pipeline = PipelineContext::GetCurrentContext();
     CHECK_NULL_VOID(pipeline);
     pipeline->AddWindowStateChangedCallback(nodeId);
+    auto dragDropManager = pipeline->GetDragDropManager();
+    CHECK_NULL_VOID(dragDropManager);
+    dragDropManager->AddDragFrameNode(nodeId, AceType::WeakClaim(AceType::RawPtr(frameNode)));
 }
 
 void UIExtensionModelNG::InitializeDynamicComponent(const RefPtr<FrameNode>& frameNode, const std::string& hapPath,
     const std::string& abcPath, const std::string& entryPoint, void* runtime)
 {
-    auto pattern = frameNode->GetPattern<DynamicPattern>();
+    auto pattern = frameNode->GetPattern<IsolatedPattern>();
     CHECK_NULL_VOID(pattern);
     pattern->InitializeDynamicComponent(hapPath, abcPath, entryPoint, runtime);
 }
@@ -279,18 +273,6 @@ void UIExtensionModelNG::SetOnReceive(
     pattern->SetOnReceiveCallback(std::move(onReceive));
 }
 
-std::string UIExtensionModelNG::GetUiExtensionType(NG::SessionType sessionType)
-{
-    auto frameNode = ViewStackProcessor::GetInstance()->GetMainFrameNode();
-    CHECK_NULL_RETURN(frameNode, "");
-    if (sessionType == SessionType::SECURITY_UI_EXTENSION_ABILITY) {
-        auto pattern = frameNode->GetPattern<SecurityUIExtensionPattern>();
-        CHECK_NULL_RETURN(pattern, "");
-        return pattern->GetUiExtensionType();
-    }
-    return "";
-}
-
 void UIExtensionModelNG::SetOnError(
     std::function<void(int32_t code, const std::string& name, const std::string& message)>&& onError,
     NG::SessionType sessionType)
@@ -314,17 +296,8 @@ void UIExtensionModelNG::SetPlatformOnError(
 {
     auto frameNode = ViewStackProcessor::GetInstance()->GetMainFrameNode();
     CHECK_NULL_VOID(frameNode);
-    auto pattern = frameNode->GetPattern<PlatformPattern>();
+    auto pattern = frameNode->GetPattern<IsolatedPattern>();
     CHECK_NULL_VOID(pattern);
     pattern->SetOnErrorCallback(std::move(onError));
-}
-
-void UIExtensionModelNG::SetOnDrawReady(std::function<void()>&& onDrawReady)
-{
-    auto frameNode = ViewStackProcessor::GetInstance()->GetMainFrameNode();
-    CHECK_NULL_VOID(frameNode);
-    auto pattern = frameNode->GetPattern<UIExtensionPattern>();
-    CHECK_NULL_VOID(pattern);
-    pattern->SetOnDrawReadyCallback(std::move(onDrawReady));
 }
 } // namespace OHOS::Ace::NG

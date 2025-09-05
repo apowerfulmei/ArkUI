@@ -16,14 +16,13 @@
 #include "ui_observer.h"
 
 #include "bridge/common/utils/engine_helper.h"
-#include "core/components_ng/base/node_render_status_monitor.h"
+
+#include <algorithm>
 
 namespace OHOS::Ace::Napi {
 std::list<std::shared_ptr<UIObserverListener>> UIObserver::unspecifiedNavigationListeners_;
 std::unordered_map<std::string, std::list<std::shared_ptr<UIObserverListener>>>
     UIObserver::specifiedCNavigationListeners_;
-std::unordered_map<int32_t, std::list<std::shared_ptr<UIObserverListener>>>
-    UIObserver::specifiedUniqueIdNavigationListeners_;
 
 std::list<std::shared_ptr<UIObserverListener>> UIObserver::scrollEventListeners_;
 std::unordered_map<std::string, std::list<std::shared_ptr<UIObserverListener>>>
@@ -60,41 +59,7 @@ std::list<std::shared_ptr<UIObserverListener>> UIObserver::tabContentStateListen
 std::unordered_map<std::string, std::list<std::shared_ptr<UIObserverListener>>>
     UIObserver::specifiedTabContentStateListeners_;
 
-std::unordered_map<napi_ref, std::list<std::shared_ptr<UIObserverListener>>>
-    UIObserver::abilityContextBeforePanStartListeners_;
-std::unordered_map<int32_t, std::list<std::shared_ptr<UIObserverListener>>>
-    UIObserver::specifiedBeforePanStartListeners_;
-std::unordered_map<napi_ref, NG::AbilityContextInfo> UIObserver::beforePanStartInfos_;
-std::unordered_map<napi_ref, std::list<std::shared_ptr<UIObserverListener>>>
-    UIObserver::abilityContextBeforePanEndListeners_;
-std::unordered_map<int32_t, std::list<std::shared_ptr<UIObserverListener>>>
-    UIObserver::specifiedBeforePanEndListeners_;
-std::unordered_map<napi_ref, NG::AbilityContextInfo> UIObserver::beforePanEndInfos_;
-
-std::unordered_map<napi_ref, std::list<std::shared_ptr<UIObserverListener>>>
-    UIObserver::abilityContextAfterPanStartListeners_;
-std::unordered_map<int32_t, std::list<std::shared_ptr<UIObserverListener>>>
-    UIObserver::specifiedAfterPanStartListeners_;
-std::unordered_map<napi_ref, NG::AbilityContextInfo> UIObserver::afterPanStartInfos_;
-std::unordered_map<napi_ref, std::list<std::shared_ptr<UIObserverListener>>>
-    UIObserver::abilityContextAfterPanEndListeners_;
-std::unordered_map<int32_t, std::list<std::shared_ptr<UIObserverListener>>>
-    UIObserver::specifiedAfterPanEndListeners_;
-std::unordered_map<napi_ref, NG::AbilityContextInfo> UIObserver::afterPanEndInfos_;
-std::unordered_map<napi_ref, NG::AbilityContextInfo> UIObserver::PanGestureInfos_;
-
-std::unordered_map<NG::FrameNode*, std::shared_ptr<UIObserver::NodeRenderListener>>
-    UIObserver::specifiedNodeRenderStateListeners_;
-
-template<typename ListenerList, typename... Args>
-void SafeIterateListeners(const ListenerList& listeners, void (UIObserverListener::*callback)(Args...), Args... args)
-{
-    ListenerList listenersCopy = listeners;
-    for (const auto& listener : listenersCopy) {
-        (listener.get()->*callback)(std::forward<Args>(args)...);
-    }
-}
-
+// UIObserver.on(type: "navDestinationUpdate", callback)
 // register a global listener without options
 void UIObserver::RegisterNavigationCallback(const std::shared_ptr<UIObserverListener>& listener)
 {
@@ -114,24 +79,6 @@ void UIObserver::RegisterNavigationCallback(
     if (iter == specifiedCNavigationListeners_.end()) {
         specifiedCNavigationListeners_.emplace(
             navigationId, std::list<std::shared_ptr<UIObserverListener>>({ listener }));
-        return;
-    }
-    auto& holder = iter->second;
-    if (std::find(holder.begin(), holder.end(), listener) != holder.end()) {
-        return;
-    }
-    holder.emplace_back(listener);
-}
-
-// UIObserver.on(type: "navDestinationUpdate", navigationUniqueId, callback)
-// register a listener on a specified Navigation
-void UIObserver::RegisterNavigationCallback(
-    int32_t navigationUniqueId, const std::shared_ptr<UIObserverListener>& listener)
-{
-    auto iter = specifiedUniqueIdNavigationListeners_.find(navigationUniqueId);
-    if (iter == specifiedUniqueIdNavigationListeners_.end()) {
-        specifiedUniqueIdNavigationListeners_.emplace(
-            navigationUniqueId, std::list<std::shared_ptr<UIObserverListener>>({ listener }));
         return;
     }
     auto& holder = iter->second;
@@ -185,30 +132,6 @@ void UIObserver::UnRegisterNavigationCallback(std::string navigationId, napi_val
     );
 }
 
-// UIObserver.off(type: "navDestinationUpdate", navigationUniqueId, callback)
-void UIObserver::UnRegisterNavigationCallback(int32_t navigationUniqueId, napi_value cb)
-{
-    auto iter = specifiedUniqueIdNavigationListeners_.find(navigationUniqueId);
-    if (iter == specifiedUniqueIdNavigationListeners_.end()) {
-        return;
-    }
-    auto& holder = iter->second;
-    if (cb == nullptr) {
-        holder.clear();
-        return;
-    }
-    holder.erase(
-        std::remove_if(
-            holder.begin(),
-            holder.end(),
-            [cb](const std::shared_ptr<UIObserverListener>& registeredListener) {
-                return registeredListener->NapiEqual(cb);
-            }
-        ),
-        holder.end()
-    );
-}
-
 void UIObserver::HandleNavigationStateChange(const NG::NavDestinationInfo& info)
 {
     auto unspecifiedHolder = unspecifiedNavigationListeners_;
@@ -216,21 +139,14 @@ void UIObserver::HandleNavigationStateChange(const NG::NavDestinationInfo& info)
         listener->OnNavigationStateChange(info);
     }
     auto iter = specifiedCNavigationListeners_.find(info.navigationId);
-    if (iter != specifiedCNavigationListeners_.end()) {
-        auto holder = iter->second;
-
-        for (const auto& listener : holder) {
-            listener->OnNavigationStateChange(info);
-        }
+    if (iter == specifiedCNavigationListeners_.end()) {
+        return;
     }
 
-    auto navigationdUniqueIdIter = specifiedUniqueIdNavigationListeners_.find(info.navigationUniqueId);
-    if (navigationdUniqueIdIter != specifiedUniqueIdNavigationListeners_.end()) {
-        auto holder = navigationdUniqueIdIter->second;
+    auto holder = iter->second;
 
-        for (const auto& listener : holder) {
-            listener->OnNavigationStateChange(info);
-        }
+    for (const auto& listener : holder) {
+        listener->OnNavigationStateChange(info);
     }
 }
 
@@ -250,12 +166,11 @@ void UIObserver::RegisterScrollEventCallback(const std::shared_ptr<UIObserverLis
 void UIObserver::RegisterScrollEventCallback(
     const std::string& id, const std::shared_ptr<UIObserverListener>& listener)
 {
-    auto iter = specifiedScrollEventListeners_.find(id);
-    if (iter == specifiedScrollEventListeners_.end()) {
-        specifiedScrollEventListeners_.emplace(id, std::list<std::shared_ptr<UIObserverListener>>({ listener }));
+    if (specifiedScrollEventListeners_.find(id) == specifiedScrollEventListeners_.end()) {
+        specifiedScrollEventListeners_[id] = std::list<std::shared_ptr<UIObserverListener>>({ listener });
         return;
     }
-    auto& holder = iter->second;
+    auto& holder = specifiedScrollEventListeners_[id];
     if (std::find(holder.begin(), holder.end(), listener) != holder.end()) {
         return;
     }
@@ -305,12 +220,10 @@ void UIObserver::UnRegisterScrollEventCallback(const std::string& id, napi_value
 }
 
 void UIObserver::HandleScrollEventStateChange(const std::string& id, int32_t uniqueId,
-    NG::ScrollEventType eventType, float offset, Ace::Axis axis)
+    NG::ScrollEventType eventType, float offset)
 {
-    // copy value to avoid developer call off while execute callback of on
-    auto scrollEventListeners = scrollEventListeners_;
-    for (const auto& listener : scrollEventListeners) {
-        listener->OnScrollEventStateChange(id, uniqueId, eventType, offset, axis);
+    for (const auto& listener : scrollEventListeners_) {
+        listener->OnScrollEventStateChange(id, uniqueId, eventType, offset);
     }
 
     auto iter = specifiedScrollEventListeners_.find(id);
@@ -318,11 +231,10 @@ void UIObserver::HandleScrollEventStateChange(const std::string& id, int32_t uni
         return;
     }
 
-    // copy value to avoid developer call off while execute callback of on
-    auto holder = iter->second;
+    auto& holder = iter->second;
 
     for (const auto& listener : holder) {
-        listener->OnScrollEventStateChange(id, uniqueId, eventType, offset, axis);
+        listener->OnScrollEventStateChange(id, uniqueId, eventType, offset);
     }
 }
 
@@ -458,11 +370,7 @@ void UIObserver::UnRegisterDrawCallback(int32_t uiContextInstanceId, napi_value 
     }
     auto& holder = specifiedDrawListeners_[uiContextInstanceId];
     if (callback == nullptr) {
-        auto container = Container::GetContainer(uiContextInstanceId);
-        CHECK_NULL_VOID(container);
-        auto taskExecutor = container->GetTaskExecutor();
-        CHECK_NULL_VOID(taskExecutor);
-        taskExecutor->PostTask([&holder]() { holder.clear(); }, TaskExecutor::TaskType::UI, "ArkUIClearListener");
+        holder.clear();
         return;
     }
     holder.erase(
@@ -505,11 +413,7 @@ void UIObserver::UnRegisterLayoutCallback(int32_t uiContextInstanceId, napi_valu
     }
     auto& holder = specifiedLayoutListeners_[uiContextInstanceId];
     if (callback == nullptr) {
-        auto container = Container::GetContainer(uiContextInstanceId);
-        CHECK_NULL_VOID(container);
-        auto taskExecutor = container->GetTaskExecutor();
-        CHECK_NULL_VOID(taskExecutor);
-        taskExecutor->PostTask([&holder]() { holder.clear(); }, TaskExecutor::TaskType::UI, "ArkUIClearListener");
+        holder.clear();
         return;
     }
     holder.erase(
@@ -561,13 +465,12 @@ void UIObserver::RegisterDensityCallback(
     if (uiContextInstanceId == 0) {
         uiContextInstanceId = Container::CurrentId();
     }
-    auto iter = specifiedDensityListeners_.find(uiContextInstanceId);
-    if (iter == specifiedDensityListeners_.end()) {
-        specifiedDensityListeners_.emplace(
-            uiContextInstanceId, std::list<std::shared_ptr<UIObserverListener>>({ listener }));
+    if (specifiedDensityListeners_.find(uiContextInstanceId) == specifiedDensityListeners_.end()) {
+        specifiedDensityListeners_[uiContextInstanceId] =
+            std::list<std::shared_ptr<UIObserverListener>>({ listener });
         return;
     }
-    auto& holder = iter->second;
+    auto& holder = specifiedDensityListeners_[uiContextInstanceId];
     if (std::find(holder.begin(), holder.end(), listener) != holder.end()) {
         return;
     }
@@ -580,11 +483,10 @@ void UIObserver::UnRegisterDensityCallback(int32_t uiContextInstanceId, napi_val
     if (uiContextInstanceId == 0) {
         uiContextInstanceId = Container::CurrentId();
     }
-    auto iter = specifiedDensityListeners_.find(uiContextInstanceId);
-    if (iter == specifiedDensityListeners_.end()) {
+    if (specifiedDensityListeners_.find(uiContextInstanceId) == specifiedDensityListeners_.end()) {
         return;
     }
-    auto& holder = iter->second;
+    auto& holder = specifiedDensityListeners_[uiContextInstanceId];
     if (callback == nullptr) {
         holder.clear();
         return;
@@ -602,11 +504,13 @@ void UIObserver::UnRegisterDensityCallback(int32_t uiContextInstanceId, napi_val
 void UIObserver::HandleDensityChange(NG::AbilityContextInfo& info, double density)
 {
     auto currentId = Container::CurrentId();
-    auto iter = specifiedDensityListeners_.find(currentId);
-    if (iter == specifiedDensityListeners_.end()) {
+    if (specifiedDensityListeners_.find(currentId) == specifiedDensityListeners_.end()) {
         return;
     }
-    SafeIterateListeners(iter->second, &UIObserverListener::OnDensityChange, density);
+    auto& holder = specifiedDensityListeners_[currentId];
+    for (const auto& listener : holder) {
+        listener->OnDensityChange(density);
+    }
 }
 
 void UIObserver::HandDrawCommandSendChange()
@@ -615,7 +519,10 @@ void UIObserver::HandDrawCommandSendChange()
     if (specifiedDrawListeners_.find(currentId) == specifiedDrawListeners_.end()) {
         return;
     }
-    SafeIterateListeners(specifiedDrawListeners_[currentId], &UIObserverListener::OnDrawOrLayout);
+    auto& holder = specifiedDrawListeners_[currentId];
+    for (const auto& listener : holder) {
+        listener->OnDrawOrLayout();
+    }
 }
 
 void UIObserver::HandLayoutDoneChange()
@@ -624,7 +531,10 @@ void UIObserver::HandLayoutDoneChange()
     if (specifiedLayoutListeners_.find(currentId) == specifiedLayoutListeners_.end()) {
         return;
     }
-    SafeIterateListeners(specifiedLayoutListeners_[currentId], &UIObserverListener::OnDrawOrLayout);
+    auto& holder = specifiedLayoutListeners_[currentId];
+    for (const auto& listener : holder) {
+        listener->OnDrawOrLayout();
+    }
 }
 
 /**
@@ -1150,590 +1060,6 @@ void UIObserver::HandleDidClick(NG::AbilityContextInfo& info, const GestureEvent
         listener->OnDidClick(gestureEventInfo, clickInfo, frameNode);
     }
     napi_close_handle_scope(env, scope);
-}
-
-void UIObserver::RegisterBeforePanStartCallback(
-    napi_env env, napi_value uiAbilityContext, const std::shared_ptr<UIObserverListener>& listener)
-{
-    napi_handle_scope scope = nullptr;
-    auto status = napi_open_handle_scope(env, &scope);
-    if (status != napi_ok) {
-        return;
-    }
-    NG::AbilityContextInfo info;
-    GetAbilityInfos(env, uiAbilityContext, info);
-    for (auto listenerPair : abilityContextBeforePanStartListeners_) {
-        auto ref = listenerPair.first;
-        auto localInfo = beforePanStartInfos_[ref];
-        if (info.IsEqual(localInfo)) {
-            auto& holder = listenerPair.second;
-            if (std::find(holder.begin(), holder.end(), listener) != holder.end()) {
-                napi_close_handle_scope(env, scope);
-                return;
-            }
-            holder.emplace_back(listener);
-            napi_close_handle_scope(env, scope);
-            return;
-        }
-    }
-    napi_ref newRef = nullptr;
-    napi_create_reference(env, uiAbilityContext, 1, &newRef);
-    abilityContextBeforePanStartListeners_[newRef] = std::list<std::shared_ptr<UIObserverListener>>({ listener });
-    beforePanStartInfos_[newRef] = info;
-    napi_close_handle_scope(env, scope);
-}
-
-void UIObserver::RegisterBeforePanStartCallback(
-    int32_t uiContextInstanceId, const std::shared_ptr<UIObserverListener>& listener)
-{
-    if (uiContextInstanceId == 0) {
-        uiContextInstanceId = Container::CurrentId();
-    }
-    auto iter = specifiedBeforePanStartListeners_.find(uiContextInstanceId);
-    if (iter == specifiedBeforePanStartListeners_.end()) {
-        specifiedBeforePanStartListeners_.emplace(
-            uiContextInstanceId, std::list<std::shared_ptr<UIObserverListener>>({ listener }));
-        return;
-    }
-    auto& holder = iter->second;
-    if (std::find(holder.begin(), holder.end(), listener) != holder.end()) {
-        return;
-    }
-    holder.emplace_back(listener);
-}
-
-void UIObserver::UnRegisterBeforePanStartCallback(napi_env env, napi_value uiAbilityContext, napi_value callback)
-{
-    napi_handle_scope scope = nullptr;
-    auto status = napi_open_handle_scope(env, &scope);
-    if (status != napi_ok) {
-        return;
-    }
-    NG::AbilityContextInfo info;
-    GetAbilityInfos(env, uiAbilityContext, info);
-    for (auto listenerPair : abilityContextBeforePanStartListeners_) {
-        auto ref = listenerPair.first;
-        auto localInfo = beforePanStartInfos_[ref];
-        if (!info.IsEqual(localInfo)) {
-            continue;
-        }
-        auto& holder = listenerPair.second;
-        if (callback == nullptr) {
-            holder.clear();
-        } else {
-            holder.erase(
-                std::remove_if(
-                    holder.begin(),
-                    holder.end(),
-                    [callback](const std::shared_ptr<UIObserverListener>& registeredListener) {
-                        return registeredListener->NapiEqual(callback);
-                    }),
-                holder.end());
-        }
-        if (holder.empty()) {
-            beforePanStartInfos_.erase(ref);
-            abilityContextBeforePanStartListeners_.erase(ref);
-            napi_delete_reference(env, ref);
-        }
-    }
-    napi_close_handle_scope(env, scope);
-}
-
-void UIObserver::UnRegisterBeforePanStartCallback(int32_t uiContextInstanceId, napi_value callback)
-{
-    if (uiContextInstanceId == 0) {
-        uiContextInstanceId = Container::CurrentId();
-    }
-    auto iter = specifiedBeforePanStartListeners_.find(uiContextInstanceId);
-    if (iter == specifiedBeforePanStartListeners_.end()) {
-        return;
-    }
-    auto& holder = iter->second;
-    if (callback == nullptr) {
-        holder.clear();
-        return;
-    }
-    holder.erase(
-        std::remove_if(
-            holder.begin(),
-            holder.end(),
-            [callback](const std::shared_ptr<UIObserverListener>& registeredListener) {
-                return registeredListener->NapiEqual(callback);
-            }),
-        holder.end());
-}
-
-void UIObserver::RegisterBeforePanEndCallback(
-    napi_env env, napi_value uiAbilityContext, const std::shared_ptr<UIObserverListener>& listener)
-{
-    napi_handle_scope scope = nullptr;
-    auto status = napi_open_handle_scope(env, &scope);
-    if (status != napi_ok) {
-        return;
-    }
-    NG::AbilityContextInfo info;
-    GetAbilityInfos(env, uiAbilityContext, info);
-    for (auto listenerPair : abilityContextBeforePanEndListeners_) {
-        auto ref = listenerPair.first;
-        auto localInfo = beforePanEndInfos_[ref];
-        if (info.IsEqual(localInfo)) {
-            auto& holder = listenerPair.second;
-            if (std::find(holder.begin(), holder.end(), listener) != holder.end()) {
-                napi_close_handle_scope(env, scope);
-                return;
-            }
-            holder.emplace_back(listener);
-            napi_close_handle_scope(env, scope);
-            return;
-        }
-    }
-    napi_ref newRef = nullptr;
-    napi_create_reference(env, uiAbilityContext, 1, &newRef);
-    abilityContextBeforePanEndListeners_[newRef] = std::list<std::shared_ptr<UIObserverListener>>({ listener });
-    beforePanEndInfos_[newRef] = info;
-    napi_close_handle_scope(env, scope);
-}
-
-void UIObserver::RegisterBeforePanEndCallback(
-    int32_t uiContextInstanceId, const std::shared_ptr<UIObserverListener>& listener)
-{
-    if (uiContextInstanceId == 0) {
-        uiContextInstanceId = Container::CurrentId();
-    }
-    auto iter = specifiedBeforePanEndListeners_.find(uiContextInstanceId);
-    if (iter == specifiedBeforePanEndListeners_.end()) {
-        specifiedBeforePanEndListeners_.emplace(
-            uiContextInstanceId, std::list<std::shared_ptr<UIObserverListener>>({ listener }));
-        return;
-    }
-    auto& holder = iter->second;
-    if (std::find(holder.begin(), holder.end(), listener) != holder.end()) {
-        return;
-    }
-    holder.emplace_back(listener);
-}
-
-void UIObserver::UnRegisterBeforePanEndCallback(napi_env env, napi_value uiAbilityContext, napi_value callback)
-{
-    napi_handle_scope scope = nullptr;
-    auto status = napi_open_handle_scope(env, &scope);
-    if (status != napi_ok) {
-        return;
-    }
-    NG::AbilityContextInfo info;
-    GetAbilityInfos(env, uiAbilityContext, info);
-    for (auto listenerPair : abilityContextBeforePanEndListeners_) {
-        auto ref = listenerPair.first;
-        auto localInfo = beforePanEndInfos_[ref];
-        if (!info.IsEqual(localInfo)) {
-            continue;
-        }
-        auto& holder = listenerPair.second;
-        if (callback == nullptr) {
-            holder.clear();
-        } else {
-            holder.erase(
-                std::remove_if(
-                    holder.begin(),
-                    holder.end(),
-                    [callback](const std::shared_ptr<UIObserverListener>& registeredListener) {
-                        return registeredListener->NapiEqual(callback);
-                    }),
-                holder.end());
-        }
-        if (holder.empty()) {
-            beforePanEndInfos_.erase(ref);
-            abilityContextBeforePanEndListeners_.erase(ref);
-            napi_delete_reference(env, ref);
-        }
-    }
-    napi_close_handle_scope(env, scope);
-}
-
-void UIObserver::UnRegisterBeforePanEndCallback(int32_t uiContextInstanceId, napi_value callback)
-{
-    if (uiContextInstanceId == 0) {
-        uiContextInstanceId = Container::CurrentId();
-    }
-    auto iter = specifiedBeforePanEndListeners_.find(uiContextInstanceId);
-    if (iter == specifiedBeforePanEndListeners_.end()) {
-        return;
-    }
-    auto& holder = iter->second;
-    if (callback == nullptr) {
-        holder.clear();
-        return;
-    }
-    holder.erase(
-        std::remove_if(
-            holder.begin(),
-            holder.end(),
-            [callback](const std::shared_ptr<UIObserverListener>& registeredListener) {
-                return registeredListener->NapiEqual(callback);
-            }),
-        holder.end());
-}
-
-void UIObserver::RegisterAfterPanStartCallback(
-    napi_env env, napi_value uiAbilityContext, const std::shared_ptr<UIObserverListener>& listener)
-{
-    napi_handle_scope scope = nullptr;
-    auto status = napi_open_handle_scope(env, &scope);
-    if (status != napi_ok) {
-        return;
-    }
-    NG::AbilityContextInfo info;
-    GetAbilityInfos(env, uiAbilityContext, info);
-    for (auto listenerPair : abilityContextAfterPanStartListeners_) {
-        auto ref = listenerPair.first;
-        auto localInfo = afterPanStartInfos_[ref];
-        if (info.IsEqual(localInfo)) {
-            auto& holder = listenerPair.second;
-            if (std::find(holder.begin(), holder.end(), listener) != holder.end()) {
-                napi_close_handle_scope(env, scope);
-                return;
-            }
-            holder.emplace_back(listener);
-            napi_close_handle_scope(env, scope);
-            return;
-        }
-    }
-    napi_ref newRef = nullptr;
-    napi_create_reference(env, uiAbilityContext, 1, &newRef);
-    abilityContextAfterPanStartListeners_[newRef] = std::list<std::shared_ptr<UIObserverListener>>({ listener });
-    afterPanStartInfos_[newRef] = info;
-    napi_close_handle_scope(env, scope);
-}
-
-void UIObserver::RegisterAfterPanStartCallback(
-    int32_t uiContextInstanceId, const std::shared_ptr<UIObserverListener>& listener)
-{
-    if (uiContextInstanceId == 0) {
-        uiContextInstanceId = Container::CurrentId();
-    }
-    auto iter = specifiedAfterPanStartListeners_.find(uiContextInstanceId);
-    if (iter == specifiedAfterPanStartListeners_.end()) {
-        specifiedAfterPanStartListeners_.emplace(
-            uiContextInstanceId, std::list<std::shared_ptr<UIObserverListener>>({ listener }));
-        return;
-    }
-    auto& holder = iter->second;
-    if (std::find(holder.begin(), holder.end(), listener) != holder.end()) {
-        return;
-    }
-    holder.emplace_back(listener);
-}
-
-void UIObserver::UnRegisterAfterPanStartCallback(napi_env env, napi_value uiAbilityContext, napi_value callback)
-{
-    napi_handle_scope scope = nullptr;
-    auto status = napi_open_handle_scope(env, &scope);
-    if (status != napi_ok) {
-        return;
-    }
-    NG::AbilityContextInfo info;
-    GetAbilityInfos(env, uiAbilityContext, info);
-    for (auto listenerPair : abilityContextAfterPanStartListeners_) {
-        auto ref = listenerPair.first;
-        auto localInfo = afterPanStartInfos_[ref];
-        if (!info.IsEqual(localInfo)) {
-            continue;
-        }
-        auto& holder = listenerPair.second;
-        if (callback == nullptr) {
-            holder.clear();
-        } else {
-            holder.erase(
-                std::remove_if(
-                    holder.begin(),
-                    holder.end(),
-                    [callback](const std::shared_ptr<UIObserverListener>& registeredListener) {
-                        return registeredListener->NapiEqual(callback);
-                    }),
-                holder.end());
-        }
-        if (holder.empty()) {
-            afterPanStartInfos_.erase(ref);
-            abilityContextAfterPanStartListeners_.erase(ref);
-            napi_delete_reference(env, ref);
-        }
-    }
-    napi_close_handle_scope(env, scope);
-}
-
-void UIObserver::UnRegisterAfterPanStartCallback(int32_t uiContextInstanceId, napi_value callback)
-{
-    if (uiContextInstanceId == 0) {
-        uiContextInstanceId = Container::CurrentId();
-    }
-    auto iter = specifiedAfterPanStartListeners_.find(uiContextInstanceId);
-    if (iter == specifiedAfterPanStartListeners_.end()) {
-        return;
-    }
-    auto& holder = iter->second;
-    if (callback == nullptr) {
-        holder.clear();
-        return;
-    }
-    holder.erase(
-        std::remove_if(
-            holder.begin(),
-            holder.end(),
-            [callback](const std::shared_ptr<UIObserverListener>& registeredListener) {
-                return registeredListener->NapiEqual(callback);
-            }),
-        holder.end());
-}
-
-void UIObserver::RegisterAfterPanEndCallback(
-    napi_env env, napi_value uiAbilityContext, const std::shared_ptr<UIObserverListener>& listener)
-{
-    napi_handle_scope scope = nullptr;
-    auto status = napi_open_handle_scope(env, &scope);
-    if (status != napi_ok) {
-        return;
-    }
-    NG::AbilityContextInfo info;
-    GetAbilityInfos(env, uiAbilityContext, info);
-    for (auto listenerPair : abilityContextAfterPanEndListeners_) {
-        auto ref = listenerPair.first;
-        auto localInfo = afterPanEndInfos_[ref];
-        if (info.IsEqual(localInfo)) {
-            auto& holder = listenerPair.second;
-            if (std::find(holder.begin(), holder.end(), listener) != holder.end()) {
-                napi_close_handle_scope(env, scope);
-                return;
-            }
-            holder.emplace_back(listener);
-            napi_close_handle_scope(env, scope);
-            return;
-        }
-    }
-    napi_ref newRef = nullptr;
-    napi_create_reference(env, uiAbilityContext, 1, &newRef);
-    abilityContextAfterPanEndListeners_[newRef] = std::list<std::shared_ptr<UIObserverListener>>({ listener });
-    afterPanEndInfos_[newRef] = info;
-    napi_close_handle_scope(env, scope);
-}
-
-void UIObserver::RegisterAfterPanEndCallback(
-    int32_t uiContextInstanceId, const std::shared_ptr<UIObserverListener>& listener)
-{
-    if (uiContextInstanceId == 0) {
-        uiContextInstanceId = Container::CurrentId();
-    }
-    auto iter = specifiedAfterPanEndListeners_.find(uiContextInstanceId);
-    if (iter == specifiedAfterPanEndListeners_.end()) {
-        specifiedAfterPanEndListeners_.emplace(
-            uiContextInstanceId, std::list<std::shared_ptr<UIObserverListener>>({ listener }));
-        return;
-    }
-    auto& holder = iter->second;
-    if (std::find(holder.begin(), holder.end(), listener) != holder.end()) {
-        return;
-    }
-    holder.emplace_back(listener);
-}
-
-void UIObserver::UnRegisterAfterPanEndCallback(napi_env env, napi_value uiAbilityContext, napi_value callback)
-{
-    napi_handle_scope scope = nullptr;
-    auto status = napi_open_handle_scope(env, &scope);
-    if (status != napi_ok) {
-        return;
-    }
-    NG::AbilityContextInfo info;
-    GetAbilityInfos(env, uiAbilityContext, info);
-    for (auto listenerPair : abilityContextAfterPanEndListeners_) {
-        auto ref = listenerPair.first;
-        auto localInfo = afterPanEndInfos_[ref];
-        if (!info.IsEqual(localInfo)) {
-            continue;
-        }
-        auto& holder = listenerPair.second;
-        if (callback == nullptr) {
-            holder.clear();
-        } else {
-            holder.erase(
-                std::remove_if(
-                    holder.begin(),
-                    holder.end(),
-                    [callback](const std::shared_ptr<UIObserverListener>& registeredListener) {
-                        return registeredListener->NapiEqual(callback);
-                    }),
-                holder.end());
-        }
-        if (holder.empty()) {
-            afterPanEndInfos_.erase(ref);
-            abilityContextAfterPanEndListeners_.erase(ref);
-            napi_delete_reference(env, ref);
-        }
-    }
-    napi_close_handle_scope(env, scope);
-}
-
-void UIObserver::UnRegisterAfterPanEndCallback(int32_t uiContextInstanceId, napi_value callback)
-{
-    if (uiContextInstanceId == 0) {
-        uiContextInstanceId = Container::CurrentId();
-    }
-    auto iter = specifiedAfterPanEndListeners_.find(uiContextInstanceId);
-    if (iter == specifiedAfterPanEndListeners_.end()) {
-        return;
-    }
-    auto& holder = iter->second;
-    if (callback == nullptr) {
-        holder.clear();
-        return;
-    }
-    holder.erase(
-        std::remove_if(
-            holder.begin(),
-            holder.end(),
-            [callback](const std::shared_ptr<UIObserverListener>& registeredListener) {
-                return registeredListener->NapiEqual(callback);
-            }),
-        holder.end());
-}
-
-void UIObserver::HandlePanGestureAccept(NG::AbilityContextInfo& info, const GestureEvent& gestureEventInfo,
-    const RefPtr<NG::PanRecognizer>& current, const RefPtr<NG::FrameNode>& frameNode,
-    const NG::PanGestureInfo& panGestureInfo)
-{
-    auto env = GetCurrentNapiEnv();
-    napi_handle_scope scope = nullptr;
-    auto status = napi_open_handle_scope(env, &scope);
-    if (status != napi_ok) {
-        return;
-    }
-
-    auto [listeners, specifiedListeners] = GetPanGestureListeners(panGestureInfo);
-    if (listeners.empty() && specifiedListeners.empty()) {
-        napi_close_handle_scope(env, scope);
-        return;
-    }
-    for (auto& listenerPair : listeners) {
-        auto ref = listenerPair.first;
-        auto localInfo = PanGestureInfos_[ref];
-        if (info.IsEqual(localInfo)) {
-            napi_value abilityContext = nullptr;
-            napi_get_reference_value(env, ref, &abilityContext);
-
-            auto& holder = listenerPair.second;
-            for (const auto& listener : holder) {
-                listener->OnPanGestureStateChange(gestureEventInfo, current, frameNode);
-            }
-            break;
-        }
-    }
-
-    auto currentId = Container::CurrentId();
-    auto iter = specifiedListeners.find(currentId);
-    if (iter == specifiedListeners.end()) {
-        napi_close_handle_scope(env, scope);
-        return;
-    }
-    auto& holder = iter->second;
-    for (const auto& listener : holder) {
-        listener->OnPanGestureStateChange(gestureEventInfo, current, frameNode);
-    }
-    napi_close_handle_scope(env, scope);
-}
-
-UIObserver::PanGestureListenersPair UIObserver::GetPanGestureListeners(const NG::PanGestureInfo& panGestureInfo)
-{
-    static std::unordered_map<napi_ref, std::list<std::shared_ptr<UIObserverListener>>> emptyListeners;
-    static std::unordered_map<int32_t, std::list<std::shared_ptr<UIObserverListener>>> emptySpecifiedListeners;
-    if (panGestureInfo.callbackState == NG::CurrentCallbackState::START &&
-        panGestureInfo.gestureState == NG::PanGestureState::BEFORE) {
-        return { abilityContextBeforePanStartListeners_, specifiedBeforePanStartListeners_ };
-    } else if (panGestureInfo.callbackState == NG::CurrentCallbackState::END &&
-               panGestureInfo.gestureState == NG::PanGestureState::BEFORE) {
-        return { abilityContextBeforePanEndListeners_, specifiedBeforePanEndListeners_ };
-    } else if (panGestureInfo.callbackState == NG::CurrentCallbackState::START &&
-               panGestureInfo.gestureState == NG::PanGestureState::AFTER) {
-        return { abilityContextAfterPanStartListeners_, specifiedAfterPanStartListeners_ };
-    } else if (panGestureInfo.callbackState == NG::CurrentCallbackState::END &&
-               panGestureInfo.gestureState == NG::PanGestureState::AFTER) {
-        return { abilityContextAfterPanEndListeners_, specifiedAfterPanEndListeners_ };
-    } else {
-        return { emptyListeners, emptySpecifiedListeners };
-    }
-}
-
-void UIObserver::RegisterNodeRenderStateChangeCallback(RefPtr<NG::FrameNode> frameNode,
-    const std::shared_ptr<UIObserverListener>& listener, const RefPtr<NG::NodeRenderStatusMonitor>& monitor)
-{
-    CHECK_NULL_VOID(frameNode);
-    CHECK_NULL_VOID(monitor);
-    auto frameNodePtr = AceType::RawPtr(frameNode);
-
-    auto iter = specifiedNodeRenderStateListeners_.find(frameNodePtr);
-    if (iter == specifiedNodeRenderStateListeners_.end()) {
-        auto nodeRenderStatusHandleFunc = [](NG::FrameNode* frameNode, NG::NodeRenderState state,
-                                              NG::RenderMonitorReason reason) {
-            CHECK_NULL_VOID(frameNode);
-            auto iter = specifiedNodeRenderStateListeners_.find(frameNode);
-            if (iter == specifiedNodeRenderStateListeners_.end()) {
-                return;
-            }
-            CHECK_NULL_VOID(iter->second);
-            for (const auto& listener : iter->second->listeners) {
-                listener->OnNodeRenderStateChange(frameNode, state);
-            }
-            if (reason == NG::RenderMonitorReason::NODE_RELEASE) {
-                specifiedNodeRenderStateListeners_.erase(frameNode);
-            }
-        };
-        auto result = monitor->RegisterNodeRenderStatusListener(
-            frameNodePtr, std::move(nodeRenderStatusHandleFunc), NG::MonitorSourceType::OBSERVER);
-        if (result.id != NG::MONITOR_INVALID_ID) {
-            specifiedNodeRenderStateListeners_.emplace(
-                frameNodePtr, std::make_shared<NodeRenderListener>(
-                                    result.id, std::list<std::shared_ptr<UIObserverListener>>({ listener })));
-        }
-        listener->OnNodeRenderStateChange(frameNodePtr, result.state);
-        return;
-    }
-    CHECK_NULL_VOID(iter->second);
-    auto& holder = iter->second->listeners;
-    if (std::find(holder.begin(), holder.end(), listener) != holder.end()) {
-        return;
-    }
-    holder.emplace_back(listener);
-    listener->OnNodeRenderStateChange(frameNodePtr, monitor->GetNodeCurrentRenderState(frameNodePtr));
-}
-
-void UIObserver::UnRegisterNodeRenderStateChangeCallback(
-    RefPtr<NG::FrameNode> frameNode, napi_value callback, const RefPtr<NG::NodeRenderStatusMonitor>& monitor)
-{
-    CHECK_NULL_VOID(frameNode);
-    CHECK_NULL_VOID(monitor);
-    auto frameNodePtr = AceType::RawPtr(frameNode);
-    auto iter = specifiedNodeRenderStateListeners_.find(frameNodePtr);
-    if (iter == specifiedNodeRenderStateListeners_.end()) {
-        return;
-    }
-    CHECK_NULL_VOID(iter->second);
-    auto& holder = iter->second->listeners;
-    if (callback == nullptr) {
-        holder.clear();
-        specifiedNodeRenderStateListeners_.erase(AceType::RawPtr(frameNode));
-        monitor->UnRegisterNodeRenderStatusListener(frameNodePtr, iter->second->id);
-        return;
-    }
-    holder.erase(
-        std::remove_if(
-            holder.begin(),
-            holder.end(),
-            [callback](const std::shared_ptr<UIObserverListener>& registeredListener) {
-                return registeredListener->NapiEqual(callback);
-            }),
-        holder.end());
-    if (holder.empty()) {
-        specifiedNodeRenderStateListeners_.erase(AceType::RawPtr(frameNode));
-        monitor->UnRegisterNodeRenderStatusListener(frameNodePtr, iter->second->id);
-    }
 }
 
 // UIObserver.on(type: "tabContentState", callback)

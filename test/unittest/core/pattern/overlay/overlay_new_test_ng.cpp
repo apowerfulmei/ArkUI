@@ -20,7 +20,6 @@
 
 #define private public
 #define protected public
-#include "test/mock/base/mock_system_properties.h"
 #include "test/mock/base/mock_task_executor.h"
 #include "test/mock/core/common/mock_container.h"
 #include "test/mock/core/common/mock_theme_manager.h"
@@ -35,7 +34,6 @@
 #include "base/utils/utils.h"
 #include "base/log/dump_log.h"
 #include "base/window/foldable_window.h"
-#include "core/common/ace_engine.h"
 #include "core/components/common/properties/color.h"
 #include "core/components/dialog/dialog_properties.h"
 #include "core/components/dialog/dialog_theme.h"
@@ -89,8 +87,6 @@ const std::string BOTTOMSTRING = "test";
 constexpr int32_t START_YEAR_BEFORE = 1990;
 constexpr int32_t SELECTED_YEAR = 2000;
 constexpr int32_t END_YEAR = 2090;
-const std::int32_t TARGET_ID = 1;
-const std::int32_t TARGET_ID_NEW = 2;
 const std::vector<std::string> FONT_FAMILY_VALUE = { "cursive" };
 } // namespace
 class OverlayNewTestNg : public testing::Test {
@@ -257,7 +253,7 @@ HWTEST_F(OverlayNewTestNg, MenuNewTest001, TestSize.Level1)
     overlayManager->ShowMenuInSubWindow(rootNode->GetId(), MENU_OFFSET, menuNode);
     overlayManager->HideMenuInSubWindow(menuNode, rootNode->GetId());
     overlayManager->HideMenuInSubWindow();
-    EXPECT_TRUE(overlayManager->menuMap_.empty());
+    EXPECT_FALSE(overlayManager->menuMap_.empty());
     auto layoutProperty = menuNode->GetLayoutProperty();
     CHECK_NULL_VOID(layoutProperty);
     layoutProperty->UpdateVisibility(VisibleType::VISIBLE, true);
@@ -707,7 +703,7 @@ HWTEST_F(OverlayNewTestNg, MenuNewTest007, TestSize.Level1)
     overlayManager->ShowMenuInSubWindow(rootNode->GetId(), MENU_OFFSET, menuNode);
     overlayManager->HideMenuInSubWindow(menuNode, rootNode->GetId());
     overlayManager->HideMenuInSubWindow();
-    EXPECT_TRUE(overlayManager->menuMap_.empty());
+    EXPECT_FALSE(overlayManager->menuMap_.empty());
     auto layoutProperty = menuNode->GetLayoutProperty();
     CHECK_NULL_VOID(layoutProperty);
     layoutProperty->UpdateVisibility(VisibleType::VISIBLE, true);
@@ -780,7 +776,7 @@ HWTEST_F(OverlayNewTestNg, MenuNewTest008, TestSize.Level1)
     overlayManager->ShowMenuInSubWindow(rootNode->GetId(), MENU_OFFSET, menuNode);
     overlayManager->HideMenuInSubWindow(menuNode, rootNode->GetId());
     overlayManager->HideMenuInSubWindow();
-    EXPECT_TRUE(overlayManager->menuMap_.empty());
+    EXPECT_FALSE(overlayManager->menuMap_.empty());
     auto layoutProperty = menuNode->GetLayoutProperty();
     CHECK_NULL_VOID(layoutProperty);
     layoutProperty->UpdateVisibility(VisibleType::VISIBLE, true);
@@ -852,7 +848,7 @@ HWTEST_F(OverlayNewTestNg, MenuNewTest009, TestSize.Level1)
     overlayManager->ShowMenuInSubWindow(rootNode->GetId(), MENU_OFFSET, menuNode);
     overlayManager->HideMenuInSubWindow(menuNode, rootNode->GetId());
     overlayManager->HideMenuInSubWindow();
-    EXPECT_TRUE(overlayManager->menuMap_.empty());
+    EXPECT_FALSE(overlayManager->menuMap_.empty());
     auto layoutProperty = menuNode->GetLayoutProperty();
     CHECK_NULL_VOID(layoutProperty);
     layoutProperty->UpdateVisibility(VisibleType::INVISIBLE, true);
@@ -1302,7 +1298,7 @@ HWTEST_F(OverlayNewTestNg, MenuNewTest015, TestSize.Level1)
     overlayManager->ShowMenuInSubWindow(rootNode->GetId(), MENU_OFFSET, menuNode);
     overlayManager->HideMenuInSubWindow(menuNode, rootNode->GetId());
     overlayManager->HideMenuInSubWindow();
-    EXPECT_TRUE(overlayManager->menuMap_.empty());
+    EXPECT_FALSE(overlayManager->menuMap_.empty());
     auto layoutProperty = menuNode->GetLayoutProperty();
     CHECK_NULL_VOID(layoutProperty);
     layoutProperty->UpdateVisibility(VisibleType::INVISIBLE, true);
@@ -1375,7 +1371,7 @@ HWTEST_F(OverlayNewTestNg, MenuNewTest016, TestSize.Level1)
     overlayManager->ShowMenuInSubWindow(rootNode->GetId(), MENU_OFFSET, menuNode);
     overlayManager->HideMenuInSubWindow(menuNode, rootNode->GetId());
     overlayManager->HideMenuInSubWindow();
-    EXPECT_TRUE(overlayManager->menuMap_.empty());
+    EXPECT_FALSE(overlayManager->menuMap_.empty());
     auto layoutProperty = menuNode->GetLayoutProperty();
     CHECK_NULL_VOID(layoutProperty);
     layoutProperty->UpdateVisibility(VisibleType::INVISIBLE, true);
@@ -1447,7 +1443,7 @@ HWTEST_F(OverlayNewTestNg, MenuNewTest017, TestSize.Level1)
     overlayManager->ShowMenuInSubWindow(rootNode->GetId(), MENU_OFFSET, menuNode);
     overlayManager->HideMenuInSubWindow(menuNode, rootNode->GetId());
     overlayManager->HideMenuInSubWindow();
-    EXPECT_TRUE(overlayManager->menuMap_.empty());
+    EXPECT_FALSE(overlayManager->menuMap_.empty());
     auto layoutProperty = menuNode->GetLayoutProperty();
     CHECK_NULL_VOID(layoutProperty);
     layoutProperty->UpdateVisibility(VisibleType::GONE, true);
@@ -1552,320 +1548,5 @@ HWTEST_F(OverlayNewTestNg, MenuNewTest018, TestSize.Level1)
     overlayManager->RemoveOverlayInSubwindow();
     overlayManager->DeleteMenu(targetId);
     EXPECT_TRUE(overlayManager->menuMap_.empty());
-}
-
-/**
- * @tc.name: GetFrameChildByIndex001
- * @tc.desc: Test GetFrameChildByIndex function.
- * @tc.type: FUNC
- */
-HWTEST_F(OverlayNewTestNg, GetFrameChildByIndex001, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. create target node.
-     */
-    auto targetNode = CreateTargetNode();
-    auto stageNode = FrameNode::CreateFrameNode(
-        V2::STAGE_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(), AceType::MakeRefPtr<StagePattern>());
-    auto rootNode = FrameNode::CreateFrameNode(V2::ROOT_ETS_TAG, 1, AceType::MakeRefPtr<RootPattern>());
-    stageNode->MountToParent(rootNode);
-    targetNode->MountToParent(stageNode);
-    rootNode->MarkDirtyNode();
-
-    /**
-     * @tc.steps: step2. create empty builder.
-     */
-
-    auto builderFunc = []() -> RefPtr<UINode> { return nullptr; };
-    auto buildTitleNodeFunc = []() -> RefPtr<UINode> { return nullptr; };
-
-    /**
-     * @tc.steps: step3. excute OnBindSheet funtion.
-     * @tc.expected: GetFrameChildByIndex is return and modalStack_ is empty.
-     */
-    SheetStyle sheetStyle;
-    CreateSheetStyle(sheetStyle);
-    bool isShow = true;
-    auto overlayManager = AceType::MakeRefPtr<OverlayManager>(rootNode);
-    overlayManager->OnBindSheet(isShow, nullptr, std::move(builderFunc), std::move(buildTitleNodeFunc), sheetStyle,
-        nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, targetNode);
-    EXPECT_TRUE(overlayManager->modalStack_.empty());
-    EXPECT_TRUE(overlayManager->modalList_.empty());
-
-    /**
-     * @tc.steps: step4. create not empty builder.
-     */
-    auto builderFunc_new = []() -> RefPtr<UINode> {
-        auto frameNode =
-            FrameNode::GetOrCreateFrameNode(V2::COLUMN_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(),
-                []() { return AceType::MakeRefPtr<LinearLayoutPattern>(true); });
-        auto childFrameNode = FrameNode::GetOrCreateFrameNode(V2::BUTTON_ETS_TAG,
-            ElementRegister::GetInstance()->MakeUniqueId(), []() { return AceType::MakeRefPtr<ButtonPattern>(); });
-        frameNode->AddChild(childFrameNode);
-        return frameNode;
-    };
-
-    auto buildTitleNodeFunc_new = []() -> RefPtr<UINode> {
-        auto frameNode =
-            FrameNode::GetOrCreateFrameNode(V2::COLUMN_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(),
-                []() { return AceType::MakeRefPtr<LinearLayoutPattern>(true); });
-        auto childFrameNode = FrameNode::GetOrCreateFrameNode(V2::TEXT_ETS_TAG,
-            ElementRegister::GetInstance()->MakeUniqueId(), []() { return AceType::MakeRefPtr<TextPattern>(); });
-        frameNode->AddChild(childFrameNode);
-        return frameNode;
-    };
-
-    /**
-     * @tc.steps: step5. excute OnBindSheet funtion.
-     * @tc.expected: GetFrameChildByIndex is not return and modalStack_ is not empty.
-     */
-    overlayManager->OnBindSheet(isShow, nullptr, std::move(builderFunc_new), std::move(buildTitleNodeFunc_new),
-        sheetStyle, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
-        targetNode);
-    EXPECT_FALSE(overlayManager->modalStack_.empty());
-    EXPECT_FALSE(overlayManager->modalList_.empty());
-    auto sheetNode = overlayManager->modalStack_.top().Upgrade();
-    EXPECT_EQ(sheetNode->GetTag(), V2::SHEET_PAGE_TAG);
-}
-
-/**
- * @tc.name: GetFirstFrameNodeOfBuilder001
- * @tc.desc: Test GetFirstFrameNodeOfBuilder function.
- * @tc.type: FUNC
- */
-HWTEST_F(OverlayNewTestNg, GetFirstFrameNodeOfBuilder001, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. create builder.
-     */
-    auto builder = FrameNode::CreateFrameNode(V2::COLUMN_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(),
-        AceType::MakeRefPtr<LinearLayoutPattern>(true));
-    auto buildTitleNodeFunc = nullptr;
-    auto callback = [](const std::string&) {};
-    SheetStyle style;
-
-    /**
-     * @tc.steps: step2. create sheetNode.
-     * @tc.expected: sheetNode is not empty.
-     */
-    auto sheetNode = SheetView::CreateSheetPage(0, "", builder, buildTitleNodeFunc, std::move(callback), style);
-    ASSERT_NE(sheetNode, nullptr);
-
-    /**
-     * @tc.steps: step3. excute GetFirstFrameNodeOfBuilder function.
-     * @tc.expected: not return nullptr.
-     */
-    auto sheetPattern = sheetNode->GetPattern<SheetPresentationPattern>();
-    auto sheetContent = sheetPattern->GetFirstFrameNodeOfBuilder();
-    EXPECT_NE(sheetContent, nullptr);
-}
-
-/**
- * @tc.name: IsNeedAvoidFoldCrease001
- * @tc.desc: Test IsNeedAvoidFoldCrease.
- * @tc.type: FUNC
- */
-HWTEST_F(OverlayNewTestNg, IsNeedAvoidFoldCrease001, TestSize.Level1)
-{
-    RefPtr<FrameNode> frameNode = FrameNode::GetOrCreateFrameNode(V2::MENU_ETS_TAG, TARGET_ID,
-        []() { return AceType::MakeRefPtr<MenuPattern>(TARGET_ID, "Menu", MenuType::MENU); });
-    ASSERT_NE(frameNode, nullptr);
-    OverlayManager overlayManager(frameNode);
-    MockSystemProperties::g_isSuperFoldDisplayDevice = true;
-    RefPtr<MockContainer> containerOne = AceType::MakeRefPtr<MockContainer>();
-    RefPtr<MockContainer> containerTwo = AceType::MakeRefPtr<MockContainer>();
-    containerOne->isSubContainer_ = true;
-    AceEngine::Get().AddContainer(0, containerOne);
-    AceEngine::Get().AddContainer(1, containerTwo);
-    std::optional<bool> enableHoverMode = true;
-    EXPECT_FALSE(overlayManager.IsNeedAvoidFoldCrease(frameNode, true, true, enableHoverMode));
-}
-
-/**
- * @tc.name: IsNeedAvoidFoldCrease002
- * @tc.desc: Test IsNeedAvoidFoldCrease.
- * @tc.type: FUNC
- */
-HWTEST_F(OverlayNewTestNg, IsNeedAvoidFoldCrease002, TestSize.Level1)
-{
-    RefPtr<FrameNode> frameNode = FrameNode::GetOrCreateFrameNode(V2::MENU_ETS_TAG, TARGET_ID_NEW,
-        []() { return AceType::MakeRefPtr<MenuPattern>(TARGET_ID_NEW, "MenuTest", MenuType::MENU); });
-    ASSERT_NE(frameNode, nullptr);
-    OverlayManager overlayManager(frameNode);
-    MockSystemProperties::g_isSuperFoldDisplayDevice = true;
-    RefPtr<MockContainer> containerOne = AceType::MakeRefPtr<MockContainer>();
-    RefPtr<MockContainer> containerTwo = AceType::MakeRefPtr<MockContainer>();
-    containerOne->isSubContainer_ = true;
-    AceEngine::Get().AddContainer(0, containerOne);
-    AceEngine::Get().AddContainer(-1, containerTwo);
-    std::optional<bool> enableHoverMode = true;
-    EXPECT_FALSE(overlayManager.IsNeedAvoidFoldCrease(frameNode, true, true, enableHoverMode));
-}
-
-/**
- * @tc.name: HandleModalShow001
- * @tc.desc: if (contentCoverParam.transitionEffect != nullptr)
- * @tc.type: FUNC
- */
-HWTEST_F(OverlayNewTestNg, HandleModalShow001, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. create target node.
-     */
-    auto targetNode = CreateTargetNode();
-    auto stageNode = FrameNode::CreateFrameNode(
-        V2::STAGE_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(), AceType::MakeRefPtr<StagePattern>());
-    auto rootNode = FrameNode::CreateFrameNode(V2::ROOT_ETS_TAG, 1, AceType::MakeRefPtr<RootPattern>());
-    stageNode->MountToParent(rootNode);
-    targetNode->MountToParent(stageNode);
-    rootNode->MarkDirtyNode();
-
-    /**
-     * @tc.steps: step2. create modal page node.
-     */
-    auto builderFunc = []() -> RefPtr<UINode> {
-        auto frameNode =
-            FrameNode::GetOrCreateFrameNode(V2::COLUMN_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(),
-                []() { return AceType::MakeRefPtr<LinearLayoutPattern>(true); });
-        auto childFrameNode = FrameNode::GetOrCreateFrameNode(V2::BUTTON_ETS_TAG,
-            ElementRegister::GetInstance()->MakeUniqueId(), []() { return AceType::MakeRefPtr<ButtonPattern>(); });
-        frameNode->AddChild(childFrameNode);
-        return frameNode;
-    };
-
-    ModalStyle modalStyle;
-    bool isShow = true;
-    std::function<void(int32_t info)> onWillDismiss = [](int32_t info) {};
-    RefPtr<NG::ChainedTransitionEffect> effect = AceType::MakeRefPtr<NG::ChainedOpacityEffect>(1.0);
-    auto overlayManager = AceType::MakeRefPtr<OverlayManager>(rootNode);
-
-    /**
-     * @tc.steps: step3. set the transitionEffect.
-     * @tc.expected: GetVisibility is VISIBLE.
-     */
-    ContentCoverParam contentCoverParam;
-    contentCoverParam.onWillDismiss = onWillDismiss;
-    contentCoverParam.transitionEffect = std::move(effect);
-    overlayManager->OnBindContentCover(isShow, nullptr, std::move(builderFunc), modalStyle, nullptr, nullptr, nullptr,
-        nullptr, contentCoverParam, targetNode);
-    auto topModalNode = overlayManager->modalStack_.top().Upgrade();
-    auto topModalPattern = topModalNode->GetPattern<ModalPresentationPattern>();
-    topModalPattern = topModalNode->GetPattern<ModalPresentationPattern>();
-
-    const auto& layoutProperty = topModalNode->GetLayoutProperty();
-    EXPECT_EQ(layoutProperty->GetVisibility(), VisibleType::VISIBLE);
-}
-
-/**
- * @tc.name: HandleModalShow002
- * @tc.desc: if (modalStyle.isModalRequestFocus)
- * @tc.type: FUNC
- */
-HWTEST_F(OverlayNewTestNg, HandleModalShow002, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. create target node.
-     */
-    auto targetNode = CreateTargetNode();
-    auto stageNode = FrameNode::CreateFrameNode(
-        V2::STAGE_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(), AceType::MakeRefPtr<StagePattern>());
-    auto rootNode = FrameNode::CreateFrameNode(V2::ROOT_ETS_TAG, 1, AceType::MakeRefPtr<RootPattern>());
-    stageNode->MountToParent(rootNode);
-    targetNode->MountToParent(stageNode);
-    rootNode->MarkDirtyNode();
-
-    /**
-     * @tc.steps: step2. create modal page node.
-     */
-    auto builderFunc = []() -> RefPtr<UINode> {
-        auto frameNode =
-            FrameNode::GetOrCreateFrameNode(V2::COLUMN_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(),
-                []() { return AceType::MakeRefPtr<LinearLayoutPattern>(true); });
-        auto childFrameNode = FrameNode::GetOrCreateFrameNode(V2::BUTTON_ETS_TAG,
-            ElementRegister::GetInstance()->MakeUniqueId(), []() { return AceType::MakeRefPtr<ButtonPattern>(); });
-        frameNode->AddChild(childFrameNode);
-        return frameNode;
-    };
-
-    ModalStyle modalStyle;
-    modalStyle.isModalRequestFocus = false;
-    bool isShow = true;
-    auto overlayManager = AceType::MakeRefPtr<OverlayManager>(rootNode);
-
-    /**
-     * @tc.steps: step3. BindContentCover.
-     * @tc.expected: topModalNode is not focus.
-     */
-    ContentCoverParam contentCoverParam;
-    overlayManager->OnBindContentCover(isShow, nullptr, std::move(builderFunc), modalStyle, nullptr, nullptr, nullptr,
-        nullptr, contentCoverParam, targetNode);
-    auto topModalNode = overlayManager->modalStack_.top().Upgrade();
-    auto focusHub = topModalNode->GetFocusHub();
-    ASSERT_NE(focusHub, nullptr);
-    EXPECT_EQ(focusHub->IsCurrentFocus(), false);
-}
-
-/**
- * @tc.name: GetLastChildNotRemovingForAtm001
- * @tc.desc: get overlay node in atomicservice
- * @tc.type: FUNC
- */
-HWTEST_F(OverlayNewTestNg, GetLastChildNotRemovingForAtm001, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. create atomic node.
-     */
-    auto atomicNode = FrameNode::CreateFrameNode(V2::ATOMIC_SERVICE_ETS_TAG,
-        ElementRegister::GetInstance()->MakeUniqueId(), AceType::MakeRefPtr<LinearLayoutPattern>(false));
-    auto rootNode = FrameNode::CreateFrameNode(V2::ROOT_ETS_TAG, 1, AceType::MakeRefPtr<RootPattern>());
-    atomicNode->MountToParent(rootNode);
-
-    /**
-     * @tc.steps: step2. create menubar and content.
-     */
-    auto containerNode = FrameNode::CreateFrameNode(V2::ROW_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(),
-        AceType::MakeRefPtr<LinearLayoutPattern>(false));
-    containerNode->UpdateInspectorId("AtomicServiceContainerId");
-    containerNode->MountToParent(atomicNode);
-
-    auto menubarNode = FrameNode::CreateFrameNode(V2::ROW_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(),
-        AceType::MakeRefPtr<LinearLayoutPattern>(false));
-    menubarNode->UpdateInspectorId("AtomicServiceMenubarRowId");
-
-    auto contentNode = FrameNode::CreateFrameNode(V2::COLUMN_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(),
-        AceType::MakeRefPtr<LinearLayoutPattern>(false));
-    contentNode->UpdateInspectorId("AtomicServiceStageId");
-
-    contentNode->MountToParent(containerNode);
-    menubarNode->MountToParent(containerNode);
-    auto overlayManager = AceType::MakeRefPtr<OverlayManager>(rootNode);
-
-    /**
-     * @tc.steps: step3. create overlay node.
-     */
-    auto overlayNode = overlayManager->GetLastChildNotRemovingForAtm(atomicNode);
-    EXPECT_EQ(overlayNode, nullptr);
-
-    auto dialogNode = FrameNode::CreateFrameNode(V2::DIALOG_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(),
-        AceType::MakeRefPtr<DialogPattern>(AceType::MakeRefPtr<DialogTheme>(), nullptr));
-    dialogNode->MountToParent(containerNode);
-
-    overlayNode = overlayManager->GetLastChildNotRemovingForAtm(atomicNode);
-    ASSERT_NE(overlayNode, nullptr);
-    containerNode->Clean();
-    auto menubarWrapper = FrameNode::CreateFrameNode(V2::ROW_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(),
-        AceType::MakeRefPtr<LinearLayoutPattern>(false));
-    auto contentWrapper = FrameNode::CreateFrameNode(V2::ROW_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(),
-        AceType::MakeRefPtr<LinearLayoutPattern>(false));
-    auto dialogNodeInPhone =
-        FrameNode::CreateFrameNode(V2::DIALOG_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(),
-            AceType::MakeRefPtr<DialogPattern>(AceType::MakeRefPtr<DialogTheme>(), nullptr));
-    menubarNode->MountToParent(menubarWrapper);
-    contentNode->MountToParent(contentWrapper);
-    contentWrapper->MountToParent(containerNode);
-    dialogNodeInPhone->MountToParent(containerNode);
-    menubarWrapper->MountToParent(containerNode);
-    overlayNode = overlayManager->GetLastChildNotRemovingForAtm(atomicNode);
-    ASSERT_NE(overlayNode, nullptr);
 }
 } // namespace OHOS::Ace::NG

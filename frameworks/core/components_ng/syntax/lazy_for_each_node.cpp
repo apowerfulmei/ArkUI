@@ -15,7 +15,16 @@
 
 #include "core/components_ng/syntax/lazy_for_each_node.h"
 
+#include <utility>
+
+#include "base/log/ace_trace.h"
+#include "base/log/dump_log.h"
+#include "base/memory/referenced.h"
+#include "base/utils/time_util.h"
+#include "base/utils/utils.h"
+#include "core/components_ng/base/view_stack_processor.h"
 #include "core/components_ng/pattern/list/list_item_pattern.h"
+#include "core/components_ng/property/property.h"
 #include "core/components_ng/syntax/lazy_layout_wrapper_builder.h"
 #include "core/components_v2/inspector/inspector_constants.h"
 #include "core/pipeline/base/element_register.h"
@@ -40,38 +49,12 @@ RefPtr<LazyForEachNode> LazyForEachNode::GetOrCreateLazyForEachNode(
     return node;
 }
 
-void LazyForEachNode::OnDelete()
-{
-    if (builder_ && isRegisterListener_) {
-        builder_->UnregisterDataChangeListener(this);
-        isRegisterListener_ = false;
-    }
-
-    UINode::OnDelete();
-}
-
-LazyForEachNode::~LazyForEachNode()
-{
-    CHECK_NULL_VOID(builder_);
-    if (isRegisterListener_) {
-        builder_->UnregisterDataChangeListener(this);
-        isRegisterListener_ = false;
-    }
-    builder_->ClearAllOffscreenNode();
-}
-
 RefPtr<LazyForEachNode> LazyForEachNode::CreateLazyForEachNode(
     int32_t nodeId, const RefPtr<LazyForEachBuilder>& forEachBuilder)
 {
     auto node = MakeRefPtr<LazyForEachNode>(nodeId, forEachBuilder);
     ElementRegister::GetInstance()->AddUINode(node);
     return node;
-}
-
-void LazyForEachNode::NotifyColorModeChange(uint32_t colorMode)
-{
-    CHECK_NULL_VOID(builder_);
-    builder_->NotifyColorModeChange(colorMode, GetRerenderable());
 }
 
 void LazyForEachNode::AdjustLayoutWrapperTree(
@@ -195,14 +178,6 @@ void LazyForEachNode::OnDataDeleted(size_t index)
                 node->DetachFromMainTree();
             }
             builder_->ProcessOffscreenNode(node, true);
-        }
-        auto pipeline = GetContext();
-        if (pipeline && !pipeline->GetOnShow()) {
-            pipeline->AddAfterLayoutTask(
-                [node = std::move(node)]() mutable {
-                    node = nullptr;
-                }
-            );
         }
     }
     tempChildren_.clear();
@@ -361,9 +336,6 @@ void LazyForEachNode::MarkNeedSyncRenderTree(bool needRebuild)
 
 RefPtr<UINode> LazyForEachNode::GetFrameChildByIndex(uint32_t index, bool needBuild, bool isCache, bool addToRenderTree)
 {
-    ACE_SYNTAX_SCOPED_TRACE("LazyForEach.GetFrameChildByIndex index[%d] needBuild[%d] isCache[%d] addToRenderTree[%d]",
-        static_cast<int32_t>(index), static_cast<int32_t>(needBuild),
-        static_cast<int32_t>(isCache), static_cast<int32_t>(addToRenderTree));
     if (index >= static_cast<uint32_t>(FrameCount())) {
         return nullptr;
     }
@@ -371,7 +343,6 @@ RefPtr<UINode> LazyForEachNode::GetFrameChildByIndex(uint32_t index, bool needBu
     if (!child.second) {
         return nullptr;
     }
-    child.second->UpdateThemeScopeId(GetThemeScopeId());
     if (isCache) {
         child.second->SetParent(WeakClaim(this));
         child.second->SetJSViewActive(false, true);
@@ -478,7 +449,7 @@ const std::list<RefPtr<UINode>>& LazyForEachNode::GetChildren(bool notDetach) co
     return children_;
 }
 
-void LazyForEachNode::UpdateChildrenFreezeState(bool isFreeze, bool isForceUpdateFreezeVaule)
+void LazyForEachNode::UpdateChildrenFreezeState(bool isFreeze)
 {
     if (!builder_) {
         return;
@@ -494,7 +465,6 @@ void LazyForEachNode::UpdateChildrenFreezeState(bool isFreeze, bool isForceUpdat
 
 void LazyForEachNode::LoadChildren(bool notDetach) const
 {
-    ACE_SYNTAX_SCOPED_TRACE("LazyForEach.LoadChildren notDetach[%d]", static_cast<int32_t>(notDetach));
     std::list<std::pair<std::string, RefPtr<UINode>>> childList;
     const auto& items = builder_->GetItems(childList);
 
@@ -513,21 +483,6 @@ void LazyForEachNode::LoadChildren(bool notDetach) const
             const_cast<LazyForEachNode*>(this)->RemoveDisappearingChild(item.second);
             children_.push_back(item.second);
         }
-    }
-}
-
-const std::list<RefPtr<UINode>>& LazyForEachNode::GetChildrenForInspector(bool needCacheNode) const
-{
-    if (needCacheNode) {
-        std::vector<UINode*> childList;
-        builder_->GetAllItems(childList);
-        childrenWithCache_.clear();
-        for (const auto& uiNode : childList) {
-            childrenWithCache_.emplace_back(Claim(uiNode));
-        }
-        return childrenWithCache_;
-    } else {
-        return children_;
     }
 }
 
@@ -552,18 +507,6 @@ void LazyForEachNode::SetOnMove(std::function<void(int32_t, int32_t)>&& onMove)
         InitAllChilrenDragManager(false);
     }
     onMoveEvent_ = onMove;
-}
-
-void LazyForEachNode::SetItemDragHandler(std::function<void(int32_t)>&& onLongPress,
-    std::function<void(int32_t)>&& onDragStart, std::function<void(int32_t, int32_t)>&& onMoveThrough,
-    std::function<void(int32_t)>&& onDrop)
-{
-    if (onMoveEvent_) {
-        onLongPressEvent_ = onLongPress;
-        onDragStartEvent_ = onDragStart;
-        onMoveThroughEvent_ = onMoveThrough;
-        onDropEvent_ = onDrop;
-    }
 }
 
 void LazyForEachNode::MoveData(int32_t from, int32_t to)
@@ -690,13 +633,6 @@ void LazyForEachNode::ParseOperations(const std::list<V2::Operation>& dataOperat
                 }
                 break;
         }
-    }
-}
-
-void LazyForEachNode::EnablePreBuild(bool enable)
-{
-    if (builder_) {
-        builder_->EnablePreBuild(enable);
     }
 }
 } // namespace OHOS::Ace::NG

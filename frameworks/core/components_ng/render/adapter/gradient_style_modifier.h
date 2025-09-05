@@ -20,10 +20,8 @@
 #include <optional>
 #include <vector>
 
-#include "common/rs_vector4.h"
-#include "render_service_client/core/modifier_ng/custom/rs_background_style_modifier.h"
-
 #include "base/geometry/dimension.h"
+#include "common/rs_vector4.h"
 #include "core/components_ng/property/gradient_property.h"
 #include "core/components_ng/render/adapter/rosen_modifier_adapter.h"
 
@@ -45,7 +43,7 @@ public:
 
     void PaddingColors(size_t size, const Color& defaultColor)
     {
-        auto color = colors_.size() == 0 ? defaultColor : colors_.back();
+        auto color = colors_.empty() ? defaultColor : colors_.back();
         colors_.insert(colors_.end(), size, color);
     }
 
@@ -76,9 +74,7 @@ private:
     std::vector<Dimension> colorStops_;
 };
 
-using RSBackgroundStyleModifier = Rosen::ModifierNG::RSBackgroundStyleModifier;
-
-class [[deprecated]] GradientStyleModifier : public RSBackgroundStyleModifier {
+class GradientStyleModifier : public Rosen::RSBackgroundStyleModifier {
 public:
     explicit GradientStyleModifier(const WeakPtr<RosenRenderContext>& context) : renderContext_(context) {}
     ~GradientStyleModifier() override = default;
@@ -104,7 +100,6 @@ private:
     std::shared_ptr<Rosen::RSAnimatableProperty<Rosen::Vector2f>> sizeF_;
     // No animatable
     std::shared_ptr<Rosen::RSProperty<Gradient>> gradient_;
-    ColorSpace colorSpace_ = ColorSpace::SRGB;
 };
 } // namespace OHOS::Ace::NG
 #endif // FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_RENDER_ADAPTER_GRADIENT_STYLE_MODIFIER_H

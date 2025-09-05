@@ -12,16 +12,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "ui/base/ace_type.h"
-#include "ui/base/utils/utils.h"
-#include "base/geometry/dimension.h"
-#include "base/utils/utf_helper.h"
-#include "core/components/common/layout/constants.h"
-#include "core/components_ng/pattern/security_component/security_component_common.h"
 #include "core/components_ng/pattern/security_component/security_component_layout_element.h"
+
+#include "base/log/ace_scoring_log.h"
+#include "base/memory/ace_type.h"
+#include "core/components_ng/pattern/image/image_layout_property.h"
 #include "core/components_ng/pattern/security_component/security_component_layout_property.h"
 #include "core/components_ng/pattern/security_component/security_component_theme.h"
-#include "core/components_ng/pattern/text/text_layout_algorithm.h"
 #include "core/components_ng/pattern/text/text_layout_property.h"
 #include "core/components_ng/pattern/text/text_pattern.h"
 #include "core/components_ng/property/measure_property.h"
@@ -31,22 +28,14 @@
 #endif
 
 namespace OHOS::Ace::NG {
-
-constexpr double DEFAULT_SIZE_24 = 24;
-
-void IconLayoutElement::Init(const RefPtr<SecurityComponentLayoutProperty>& property,
+void IconLayoutElement::Init(RefPtr<SecurityComponentLayoutProperty>& property,
     RefPtr<LayoutWrapper>& iconWrap)
 {
     CHECK_NULL_VOID(property);
     CHECK_NULL_VOID(iconWrap);
     secCompProperty_ = property;
     iconWrap_ = iconWrap;
-    bool isSymbolIcon = iconWrap->GetHostTag() == V2::SYMBOL_ETS_TAG;
-    if (isSymbolIcon &&
-        static_cast<int32_t>(property->GetSymbolIconStyle().value_or(-1)) ==
-        static_cast<int32_t>(SecurityComponentIconStyle::ICON_NULL)) {
-        return;
-    } else if (!isSymbolIcon && property->GetIconStyle().value_or(-1) ==
+    if (property->GetIconStyle().value_or(-1) ==
         static_cast<int32_t>(SecurityComponentIconStyle::ICON_NULL)) {
         return;
     }
@@ -57,45 +46,12 @@ void IconLayoutElement::Init(const RefPtr<SecurityComponentLayoutProperty>& prop
     auto theme = pipeline->GetTheme<SecurityComponentTheme>();
     CHECK_NULL_VOID(theme);
     minIconSize_ = theme->GetMinIconSize().ConvertToPx();
-    auto iconNode = iconWrap_->GetHostNode();
-    CHECK_NULL_VOID(iconNode);
 
-    width_ = isSymbolIcon ? Dimension(DEFAULT_SIZE_24, DimensionUnit::VP).ConvertToPx() :
-        theme->GetIconSize().ConvertToPx();
-    height_ = width_ * alpha_;
-
-    UpdateUserSetSize(property);
-
-    std::optional<NG::CalcLength> propWidth;
-    propWidth.emplace(Dimension(Dimension(width_).ConvertToVp(), DimensionUnit::VP));
-    std::optional<NG::CalcLength> propHeight;
-    propHeight.emplace(Dimension(Dimension(height_).ConvertToVp(), DimensionUnit::VP));
-    auto iconLayoutProperty = iconNode->GetLayoutProperty<ImageLayoutProperty>();
-    CHECK_NULL_VOID(iconLayoutProperty);
-    iconLayoutProperty->UpdateUserDefinedIdealSize(CalcSize(propWidth, propHeight));
-}
-
-void IconLayoutElement::UpdateUserSetSize(const RefPtr<SecurityComponentLayoutProperty>& property)
-{
-    if (property->GetIconCalcSize()->Width().has_value() && property->GetIconCalcSize()->Height().has_value()) {
-        isSetSize_ = true;
-        width_ = property->GetIconCalcSize()->Width()->GetDimension().ConvertToPx();
-        height_ = property->GetIconCalcSize()->Height()->GetDimension().ConvertToPx();
-        if (!property->GetImageSourceInfo().has_value()) {
-            double tmp = GreatNotEqual(width_, height_) ? height_ : width_;
-            width_ = height_ = tmp;
-        }
-    } else if (property->GetIconCalcSize()->Width().has_value()) {
-        isSetSize_ = true;
-        width_ = property->GetIconCalcSize()->Width()->GetDimension().ConvertToPx();
-        height_ = width_ * alpha_;
-    } else if (property->GetIconCalcSize()->Height().has_value()) {
-        isSetSize_ = true;
-        height_ = property->GetIconCalcSize()->Height()->GetDimension().ConvertToPx();
-        width_ = (NearEqual(alpha_, 0.0)) ? 0.0 : (height_ / alpha_);
-    } else if (property->GetIconSize().has_value()) {
+    if (property->GetIconSize().has_value()) {
         isSetSize_ = true;
         width_ = height_ = property->GetIconSize().value().ConvertToPx();
+    } else {
+        width_ = height_ = theme->GetIconSize().ConvertToPx();
     }
 }
 
@@ -115,33 +71,15 @@ double IconLayoutElement::ShrinkWidth(double reduceSize)
     if (!isExist_ || isSetSize_) {
         return reduceSize;
     }
-    if (NearEqual(alpha_, 0.0)) {
-        return reduceSize;
+    if (GreatNotEqual(minIconSize_, (width_ - reduceSize))) {
+        int remain = reduceSize - (width_ - minIconSize_);
+        height_ = width_ = minIconSize_;
+        return remain;
     }
 
-    if (GreatOrEqual(height_, width_)) {
-        if (GreatNotEqual(minIconSize_, (width_ - reduceSize))) {
-            int remain = reduceSize - (width_ - minIconSize_);
-            width_ = minIconSize_;
-            height_ = width_ * alpha_;
-            return remain;
-        }
-
-        width_ -= reduceSize;
-        height_ = width_ * alpha_;
-        return 0.0;
-    } else {
-        if (GreatNotEqual(minIconSize_, (height_ - reduceSize * alpha_))) {
-            int remain = reduceSize - (height_ - minIconSize_) / alpha_;
-            height_ = minIconSize_;
-            width_ = height_ / alpha_;
-            return remain;
-        }
-
-        width_ -= reduceSize;
-        height_ = width_ * alpha_;
-        return 0.0;
-    }
+    width_ -= reduceSize;
+    height_ = width_;
+    return 0.0;
 }
 
 double IconLayoutElement::ShrinkHeight(double reduceSize)
@@ -149,74 +87,17 @@ double IconLayoutElement::ShrinkHeight(double reduceSize)
     if (!isExist_ || isSetSize_) {
         return reduceSize;
     }
-    if (NearEqual(alpha_, 0.0)) {
-        return reduceSize;
+    if (GreatNotEqual(minIconSize_, (height_ - reduceSize))) {
+        double remain = reduceSize - (height_ - minIconSize_);
+        width_ = height_ = minIconSize_;
+        return remain;
     }
-
-    if (GreatOrEqual(height_, width_)) {
-        if (GreatNotEqual(minIconSize_, (width_ - reduceSize / alpha_))) {
-            int remain = reduceSize - (width_ - minIconSize_) * alpha_;
-            width_ = minIconSize_;
-            height_ = width_ * alpha_;
-            return remain;
-        }
-
-        height_ -= reduceSize;
-        width_ = height_ / alpha_;
-        return 0.0;
-    } else {
-        if (GreatNotEqual(minIconSize_, (height_ - reduceSize))) {
-            int remain = reduceSize - (height_ - minIconSize_);
-            height_ = minIconSize_;
-            width_ = height_ / alpha_;
-            return remain;
-        }
-
-        height_ -= reduceSize;
-        width_ = height_ / alpha_;
-        return 0.0;
-    }
+    height_ -= reduceSize;
+    width_ = height_;
+    return 0.0;
 }
 
-void TextLayoutElement::UpdateFontSize()
-{
-    auto layoutAlgorithmWrap = textWrap_->GetLayoutAlgorithm();
-    CHECK_NULL_VOID(layoutAlgorithmWrap);
-    auto layoutAlgorithm = AceType::DynamicCast<TextLayoutAlgorithm>(layoutAlgorithmWrap->GetLayoutAlgorithm());
-    CHECK_NULL_VOID(layoutAlgorithm);
-    auto textStyle = layoutAlgorithm->GetTextStyle();
-    auto textProp = AceType::DynamicCast<TextLayoutProperty>(textWrap_->GetLayoutProperty());
-    CHECK_NULL_VOID(textProp);
-    if (isAdaptive_ && !NearEqual(textStyle.GetFontSize().Value(), 0.0f)) {
-        Dimension fontSize(textStyle.GetFontSize().ConvertToFp(), DimensionUnit::FP);
-        textProp->UpdateFontSize(fontSize);
-    }
-}
-
-float TextLayoutElement::GetHeightConstraint(const RefPtr<SecurityComponentLayoutProperty>& property, float height)
-{
-    CHECK_NULL_RETURN(property, 0.0f);
-    auto isVertical = (property->GetTextIconLayoutDirection().value_or(
-        SecurityComponentLayoutDirection::HORIZONTAL) == SecurityComponentLayoutDirection::VERTICAL);
-
-    auto textProp = AceType::DynamicCast<TextLayoutProperty>(textWrap_->GetLayoutProperty());
-    CHECK_NULL_RETURN(textProp, 0.0f);
-    auto context = PipelineContext::GetCurrentContextSafely();
-    CHECK_NULL_RETURN(context, 0.0f);
-    auto theme = context->GetTheme<SecurityComponentTheme>();
-    CHECK_NULL_RETURN(theme, 0.0f);
-    auto topPadding = property->GetBackgroundTopPadding().value_or(theme->GetBackgroundTopPadding());
-    auto bottomPadding = property->GetBackgroundBottomPadding().value_or(theme->GetBackgroundBottomPadding());
-    if (isVertical) {
-        auto iconSize = (property->GetIconSize().value_or(theme->GetIconSize()));
-        auto textIconSpace = (property->GetTextIconSpace().value_or(theme->GetTextIconSpace()));
-        return height - topPadding.Value() - bottomPadding.Value() - iconSize.Value() - textIconSpace.Value();
-    }
-
-    return height - topPadding.Value() - bottomPadding.Value();
-}
-
-void TextLayoutElement::Init(const RefPtr<SecurityComponentLayoutProperty>& property,
+void TextLayoutElement::Init(RefPtr<SecurityComponentLayoutProperty>& property,
     RefPtr<LayoutWrapper>& textWrap)
 {
     secCompProperty_ = property;
@@ -236,14 +117,7 @@ void TextLayoutElement::Init(const RefPtr<SecurityComponentLayoutProperty>& prop
     auto theme = context->GetTheme<SecurityComponentTheme>();
     CHECK_NULL_VOID(theme);
     minFontSize_ = theme->GetMinFontSize();
-    if (property->GetAdaptMaxFontSize().has_value() && property->GetAdaptMinFontSize().has_value()) {
-        if (GreatOrEqual(property->GetAdaptMaxFontSize()->ConvertToFp(),
-            property->GetAdaptMinFontSize()->ConvertToFp())) {
-            textProp->UpdateFontSize(property->GetAdaptMaxFontSize().value());
-            isAdaptive_ = true;
-        }
-        isSetSize_ = true;
-    } else if (property->GetFontSize().has_value()) {
+    if (property->GetFontSize().has_value()) {
         isSetSize_ = true;
     } else {
         defaultFontSize_ = theme->GetFontSize();
@@ -252,18 +126,8 @@ void TextLayoutElement::Init(const RefPtr<SecurityComponentLayoutProperty>& prop
 
     auto textConstraint = property->CreateChildConstraint();
     SizeT<float> maxSize { textConstraint.maxSize.Width(), Infinity<float>() };
-    if (isAdaptive_ && property->GetHeightAdaptivePolicy().has_value() &&
-        property->GetHeightAdaptivePolicy() == TextHeightAdaptivePolicy::LAYOUT_CONSTRAINT_FIRST) {
-        SC_LOG_DEBUG("Component height constrained.");
-        auto heightConstraint = GetHeightConstraint(property, textConstraint.maxSize.Height());
-        if (LessOrEqual(heightConstraint, 0.0f)) {
-            heightConstraint = 0.0f;
-        }
-        maxSize.SetHeight(heightConstraint);
-    }
     textConstraint.maxSize = maxSize;
     textWrap_->Measure(std::optional<LayoutConstraintF>(textConstraint));
-    UpdateFontSize();
     auto geometryNode = textWrap->GetGeometryNode();
     CHECK_NULL_VOID(geometryNode);
     auto textSizeF = geometryNode->GetFrameSize();
@@ -279,7 +143,6 @@ void TextLayoutElement::MeasureForWidth(float width)
     CHECK_NULL_VOID(textConstraint);
     textConstraint->selfIdealSize.SetWidth(width);
     textWrap_->Measure(textConstraint);
-    UpdateFontSize();
     auto textSizeF = textWrap_->GetGeometryNode()->GetFrameSize();
     width_ = textSizeF.Width();
     height_ = textSizeF.Height();
@@ -321,7 +184,7 @@ void TextLayoutElement::ChooseExactFontSize(RefPtr<TextLayoutProperty>& property
     Dimension step = ADAPT_UNIT;
     Dimension fontSize = (property->GetFontSize().has_value()) ? property->GetFontSize().value() : defaultFontSize_;
     while (fontSize > minFontSize_) {
-        auto tempSize = GetMeasureTextSize(UtfUtils::Str16ToStr8(property->GetContent().value_or(u"")),
+        auto tempSize = GetMeasureTextSize(property->GetContent().value_or(""),
             fontSize,
             property->GetFontWeight().value_or(FontWeight::NORMAL), 0.0);
         if (!tempSize.has_value()) {
@@ -356,37 +219,11 @@ void TextLayoutElement::UpdateSize(bool isWidth)
     }
 
     textWrap_->Measure(textConstraint);
-    UpdateFontSize();
     auto geometryNode = textWrap_->GetGeometryNode();
     CHECK_NULL_VOID(geometryNode);
     auto textSizeF = geometryNode->GetFrameSize();
     width_ = textSizeF.Width();
     height_ = textSizeF.Height();
-}
-
-bool TextLayoutElement::DidExceedMaxLines(std::optional<SizeF>& currentTextSize)
-{
-    if (!isExist_) {
-        return false;
-    }
-
-    auto textNode = textWrap_->GetHostNode();
-    CHECK_NULL_RETURN(textNode, false);
-    auto textPattern = textNode->GetPattern<TextPattern>();
-    CHECK_NULL_RETURN(textPattern, false);
-    if (textPattern->DidExceedMaxLines()) {
-        return true;
-    }
-
-    auto textProp = AceType::DynamicCast<TextLayoutProperty>(textWrap_->GetLayoutProperty());
-    CHECK_NULL_RETURN(textProp, false);
-    auto textConstraint = textProp->GetContentLayoutConstraint();
-    CHECK_NULL_RETURN(textConstraint, false);
-
-    if (currentTextSize.has_value() && GreatNotEqual(currentTextSize->Height(), textConstraint->maxSize.Height())) {
-        return true;
-    }
-    return false;
 }
 
 bool TextLayoutElement::GetCurrentTextSize(std::optional<SizeF>& currentTextSize, Dimension& currentFontSize)
@@ -403,8 +240,8 @@ bool TextLayoutElement::GetCurrentTextSize(std::optional<SizeF>& currentTextSize
     if (!textProp->GetContent().has_value()) {
         return false;
     }
-    currentTextSize = GetMeasureTextSize(UtfUtils::Str16ToStr8(textProp->GetContent().value()),
-        textProp->GetFontSize().value(), textProp->GetFontWeight().value_or(FontWeight::NORMAL), width_);
+    currentTextSize = GetMeasureTextSize(textProp->GetContent().value(), textProp->GetFontSize().value(),
+        textProp->GetFontWeight().value_or(FontWeight::NORMAL), width_);
     if (!currentTextSize.has_value()) {
         return false;
     }
@@ -415,36 +252,36 @@ bool TextLayoutElement::GetCurrentTextSize(std::optional<SizeF>& currentTextSize
 bool TextLayoutElement::TryShrinkTextWidth(SizeF& point, SizeF& circlePoint, bool maxSpaceToShrink, float maxDistance,
     float threshold)
 {
-#ifdef ENABLE_ROSEN_BACKEND
     auto textProp = AceType::DynamicCast<TextLayoutProperty>(textWrap_->GetLayoutProperty());
     CHECK_NULL_RETURN(textProp, false);
 
     auto stepPx = Dimension(1.0, DimensionUnit::VP).ConvertToPx();
-    auto currentHeight = height_;
+    auto tempHeight = height_;
     auto tempWidth = width_;
     auto currentRectWidth = point.Width();
-    while (NearEqual(currentHeight, height_)) {
+    while (NearEqual(tempHeight, height_)) {
         if (LessOrEqual(tempWidth, threshold)) {
-            MeasureForWidth(tempWidth + stepPx);
             return false;
         }
-        auto newWidth = tempWidth - stepPx;
+        tempWidth -= stepPx;
         currentRectWidth -= stepPx;
-        MeasureForWidth(newWidth);
-        if (!NearEqual(currentHeight, height_)) {
-            MeasureForWidth(tempWidth);
+        auto tempSize = GetMeasureTextSize(textProp->GetContent().value(), textProp->GetFontSize().value(),
+            textProp->GetFontWeight().value_or(FontWeight::NORMAL), tempWidth);
+        if (!tempSize.has_value()) {
+            return false;
+        }
+        tempHeight = tempSize.value().Height();
+        if (!NearEqual(tempHeight, height_)) {
             return false;
         }
         auto distance = pow(currentRectWidth - circlePoint.Width()) + pow(point.Height() - circlePoint.Height());
-        tempWidth = newWidth;
         if (!GreatNotEqual(distance, maxDistance)) {
             break;
         }
     }
+
+    MeasureForWidth(tempWidth);
     return true;
-#else
-    return false;
-#endif
 }
 
 std::optional<SizeF> TextLayoutElement::GetMeasureTextSize(const std::string& data,
@@ -470,7 +307,7 @@ void TextLayoutElement::MeasureMinTextSize()
 {
     auto textProp = AceType::DynamicCast<TextLayoutProperty>(textWrap_->GetLayoutProperty());
     CHECK_NULL_VOID(textProp);
-    minTextSize_ = GetMeasureTextSize(UtfUtils::Str16ToStr8(textProp->GetContent().value_or(u"")),
+    minTextSize_ = GetMeasureTextSize(textProp->GetContent().value_or(""),
         minFontSize_,
         textProp->GetFontWeight().value_or(FontWeight::NORMAL), 0.0);
 }

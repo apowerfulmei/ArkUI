@@ -18,6 +18,7 @@
 
 #include "core/components/theme/theme.h"
 #include "core/components/theme/theme_constants.h"
+#include "core/components/theme/theme_constants_defines.h"
 #include "core/components/theme/theme_manager.h"
 #include "frameworks/bridge/common/utils/utils.h"
 
@@ -38,11 +39,12 @@ public:
 
         RefPtr<ImageTheme> Build(const RefPtr<ThemeConstants>& themeConstants) const
         {
-            RefPtr<ImageTheme> theme = AceType::MakeRefPtr<ImageTheme>();
+            RefPtr<ImageTheme> theme = AceType::Claim(new ImageTheme());
             if (!themeConstants) {
                 return theme;
             }
             auto themeStyle = themeConstants->GetThemeStyle();
+            theme->fillColor_ = themeConstants->GetColor(THEME_IMAGE_FILL_COLOR);
             ParsePattern(themeConstants, theme);
             return theme;
         }
@@ -59,17 +61,10 @@ public:
             auto draggable = pattern->GetAttr<std::string>("draggable", "0");
             theme->draggable_ = StringUtils::StringToInt(draggable);
             theme->minEdgeAntialiasing_ = pattern->GetAttr<double>("min_edge_antialiasing", 0.0);
-            theme->cornerRadius_ = pattern->GetAttr<Dimension>("image_animator_corner_radius", 0.0_vp);
-            theme->clipEdge_ = static_cast<bool>(pattern->GetAttr<double>("image_animator_clip_edge", 0.0));
         }
     };
 
     ~ImageTheme() override = default;
-
-    bool GetClipEdge() const
-    {
-        return clipEdge_;
-    }
 
     const Color& GetFillColor() const
     {
@@ -80,15 +75,10 @@ public:
     {
         return draggable_;
     }
-
+    
     float GetMinEdgeAntialiasing() const
     {
         return minEdgeAntialiasing_;
-    }
-
-    const Dimension& GetCornerRadius() const
-    {
-        return cornerRadius_;
     }
 
 protected:
@@ -98,8 +88,6 @@ private:
     Color fillColor_;
     bool draggable_ = false;
     float minEdgeAntialiasing_ = 0.0;
-    Dimension cornerRadius_ ;
-    bool clipEdge_ = false;
 };
 
 } // namespace OHOS::Ace

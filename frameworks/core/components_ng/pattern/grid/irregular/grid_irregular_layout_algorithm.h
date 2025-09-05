@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2023-2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -33,10 +33,8 @@ class GridIrregularLayoutAlgorithm : public GridLayoutBaseAlgorithm {
     DECLARE_ACE_TYPE(GridIrregularLayoutAlgorithm, GridLayoutBaseAlgorithm);
 
 public:
-    explicit GridIrregularLayoutAlgorithm(
-        GridLayoutInfo info, bool canOverScrollStart = false, bool canOverScrollEnd = false)
-        : GridLayoutBaseAlgorithm(std::move(info)), canOverScrollStart_(canOverScrollStart),
-          canOverScrollEnd_(canOverScrollEnd) {};
+    explicit GridIrregularLayoutAlgorithm(GridLayoutInfo info, bool overScroll = false)
+        : GridLayoutBaseAlgorithm(std::move(info)), info_(gridLayoutInfo_), overScroll_(overScroll) {};
 
     ~GridIrregularLayoutAlgorithm() override = default;
 
@@ -65,7 +63,7 @@ private:
 
     void MeasureOnOffset(float mainSize);
     void MeasureForward(float mainSize);
-    void MeasureBackward(float mainSize, bool toAdjust = false);
+    void MeasureBackward(float mainSize);
 
     /**
      * @brief Check if offset is larger than the entire viewport. If so, skip measuring intermediate items and jump
@@ -91,9 +89,8 @@ private:
      * @brief Performs the layout of the children based on the main offset.
      * @param mainOffset The main offset of the layout.
      * @param cacheLine number of lines of cache items to layout
-     * @return number of cached items laid out in front and back
      */
-    std::pair<int32_t, int32_t> LayoutChildren(float mainOffset, int32_t cacheLine);
+    void LayoutChildren(float mainOffset, int32_t cacheLine);
 
     /**
      * @brief Update variables in GridLayoutInfo at the end of Layout.
@@ -159,6 +156,8 @@ private:
 
     void AdaptToChildMainSize(RefPtr<GridLayoutProperty>& gridLayoutProperty, float mainSize, SizeF idealSize);
 
+    GridLayoutInfo& info_;
+
     LayoutWrapper* wrapper_ = nullptr;
 
     std::vector<float> crossLens_; /**< The column widths of the GridItems. */
@@ -166,11 +165,9 @@ private:
     float mainGap_ = 0.0f;         /**< The main-axis gap between GridItems. */
 
     float postJumpOffset_ = 0.0f; /**< The offset to be applied after performing a jump. */
-    float overscrollOffsetBeforeJump_ = 0.0f;
 
     bool enableSkip_ = true;
-    bool canOverScrollStart_ = false;
-    bool canOverScrollEnd_ = false;
+    bool overScroll_ = false;
 
     SizeF frameSize_;
 

@@ -46,20 +46,13 @@ public:
     void SetWidth(const Dimension& width) override;
     void SetHeight(const Dimension& height) override;
     void SetPadding(const NG::PaddingPropertyF& args, const NG::PaddingProperty& newArgs, bool flag) override;
-    void SetIsUserSetMargin(bool isUserSet) override;
     void SetChangeEvent(ChangeEvent&& changeEvent) override;
     void SetResponseRegion(const std::vector<DimensionRect>& responseRegion) override;
     void SetCheckboxStyle(CheckBoxStyle checkboxStyle) override;
-    void ResetSelectedColor() override;
-    void ResetUnSelectedColor() override;
-    void ResetCheckMarkColor() override;
-    void CreateWithColorResourceObj(const RefPtr<ResourceObject>& resObj,
-        const CheckBoxColorType checkBoxColorType) override;
-
+    
     static RefPtr<FrameNode> CreateFrameNode(int32_t nodeId);
     static void SetSelect(FrameNode* frameNode, bool isSelected);
     static void SetSelectedColor(FrameNode* frameNode, const Color& color);
-    static void SetSelectedColorFlagByUser(FrameNode* frameNode, const bool isByUser);
     static void SetUnSelectedColor(FrameNode* frameNode, const Color& color);
     static void SetWidth(FrameNode* frameNode, const Dimension& width);
     static void SetHeight(FrameNode* frameNode, const Dimension& height);
@@ -67,16 +60,12 @@ public:
     static void SetCheckMarkSize(FrameNode* frameNode, const Dimension& size);
     static void SetCheckMarkWidth(FrameNode* frameNode, const Dimension& width);
     static void SetPadding(FrameNode* frameNode, const NG::PaddingProperty& padding);
-    static void SetIsUserSetMargin(FrameNode* frameNode, bool isUserSet);
     static void SetResponseRegion(FrameNode* frameNode, const std::vector<DimensionRect>& responseRegion);
     static void SetBuilderFunc(FrameNode* frameNode, NG::CheckBoxMakeCallback&& jsMake);
     static void SetChangeValue(FrameNode* frameNode, bool value);
     static void SetCheckboxStyle(FrameNode* frameNode, CheckBoxStyle checkboxStyle);
     static void SetCheckboxName(FrameNode* frameNode, const std::optional<std::string>& name);
     static void SetCheckboxGroup(FrameNode* frameNode, const std::optional<std::string>& groupName);
-    static void ResetSelectedColor(FrameNode* frameNode);
-    static void ResetUnSelectedColor(FrameNode* frameNode);
-    static void ResetCheckMarkColor(FrameNode* frameNode);
 
     static bool GetSelect(FrameNode* frameNode);
     static Color GetSelectedColor(FrameNode* frameNode);
@@ -89,13 +78,6 @@ public:
     static std::string GetCheckboxGroup(FrameNode* frameNode);
 
     static void SetOnChange(FrameNode* frameNode, ChangeEvent&& onChange);
-    static void ResetComponentColor(FrameNode* frameNode, const CheckBoxColorType type);
-    static void UpdateComponentColor(FrameNode* frameNode, const CheckBoxColorType type, const Color& color);
-    static void CreateWithResourceObj(
-        FrameNode* frameNode, const CheckBoxColorType type, const RefPtr<ResourceObject>& resObj);
-
-private:
-    static std::string ColorTypeToString(const CheckBoxColorType checkBoxColorType);
 };
 } // namespace OHOS::Ace::NG
 #endif // FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_PATTERNS_CHECKBOX_CHECKBOX_MODEL_NG_H

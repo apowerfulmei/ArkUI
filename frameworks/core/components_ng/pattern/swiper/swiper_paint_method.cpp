@@ -15,6 +15,7 @@
 
 #include "core/components_ng/pattern/swiper/swiper_paint_method.h"
 
+#include "base/utils/utils.h"
 #include "core/components_ng/pattern/swiper/swiper_paint_property.h"
 #include "core/components_ng/render/drawing_prop_convertor.h"
 
@@ -44,10 +45,6 @@ void SwiperPaintMethod::PaintFade(RSCanvas& canvas, PaintWrapper* paintWrapper) 
     CHECK_NULL_VOID(paintWrapper);
     auto paintProperty = DynamicCast<SwiperPaintProperty>(paintWrapper->GetPaintProperty());
     CHECK_NULL_VOID(paintProperty);
-    auto geometryNode = paintWrapper->GetGeometryNode();
-    CHECK_NULL_VOID(geometryNode);
-    auto renderContext = paintWrapper->GetRenderContext();
-    CHECK_NULL_VOID(renderContext);
 
     // TODO use theme.
     constexpr float FADE_MAX_DISTANCE = 2000.0f;
@@ -57,7 +54,7 @@ void SwiperPaintMethod::PaintFade(RSCanvas& canvas, PaintWrapper* paintWrapper) 
     constexpr float FADE_SCALE_RATE = 0.2f;
 
     bool isVertical = (axis_ == Axis::VERTICAL);
-    auto frameSize = renderContext->GetPaintRectWithoutTransform();
+    auto frameSize = paintWrapper->GetGeometryNode()->GetFrameSize();
     float width = frameSize.Width();
     float height = frameSize.Height();
     float centerX = 0.0;
@@ -99,9 +96,6 @@ void SwiperPaintMethod::PaintFade(RSCanvas& canvas, PaintWrapper* paintWrapper) 
         }
     }
 
-    auto clipRect = RSRect(0, 0, width, height);
-    canvas.ClipRect(clipRect, RSClipOp::INTERSECT);
-
     RSBrush brush;
     brush.SetColor(ToRSColor(paintProperty->GetFadeColor().value_or(Color::GRAY)));
     brush.SetAlphaF(FADE_ALPHA);
@@ -127,11 +121,10 @@ CanvasDrawFunction SwiperPaintMethod::GetContentDrawFunction(PaintWrapper* paint
 
 void SwiperPaintMethod::ClipPadding(PaintWrapper* paintWrapper, RSCanvas& canvas) const
 {
-    if (!needClipPadding_ || !paintWrapper) {
+    if (!needClipPadding_) {
         return;
     }
     const auto& geometryNode = paintWrapper->GetGeometryNode();
-    CHECK_NULL_VOID(geometryNode);
     auto frameSize = geometryNode->GetPaddingSize();
     OffsetF paddingOffset = geometryNode->GetPaddingOffset() - geometryNode->GetFrameOffset();
     auto renderContext = paintWrapper->GetRenderContext();

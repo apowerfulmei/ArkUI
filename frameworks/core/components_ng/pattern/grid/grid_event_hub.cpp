@@ -15,8 +15,15 @@
 
 #include "core/components_ng/pattern/grid/grid_event_hub.h"
 
+#include "core/animation/spring_curve.h"
+#include "core/components_ng/base/frame_node.h"
+#include "core/components_ng/pattern/grid/grid_item_layout_property.h"
 #include "core/components_ng/pattern/grid/grid_item_pattern.h"
+#include "core/components_ng/pattern/grid/grid_layout_property.h"
+#include "core/components_ng/pattern/grid/grid_pattern.h"
 #include "core/components_ng/render/adapter/component_snapshot.h"
+#include "core/pipeline_ng/pipeline_context.h"
+#include "core/pipeline_ng/ui_task_scheduler.h"
 
 namespace OHOS::Ace::NG {
 #if defined(PIXEL_MAP_SUPPORTED)
@@ -171,24 +178,16 @@ void GridEventHub::HandleOnItemDragStart(const GestureEvent& info)
 #if defined(PIXEL_MAP_SUPPORTED)
     auto callback = [id = Container::CurrentId(), pipeline, info, host, gridItem, weak = WeakClaim(this)](
                         std::shared_ptr<Media::PixelMap> mediaPixelMap, int32_t /*arg*/,
-                        const std::function<void()>& finishCallback) {
+                        const std::function<void()>& /*unused*/) {
         ContainerScope scope(id);
         if (!mediaPixelMap) {
             TAG_LOGE(AceLogTag::ACE_DRAG, "gridItem drag start failed, custom component screenshot is empty.");
             return;
         }
-        CHECK_NULL_VOID(pipeline);
-        auto taskScheduler = pipeline->GetTaskExecutor();
-        CHECK_NULL_VOID(taskScheduler);
-        taskScheduler->PostTask(
-            [finishCallback]() {
-                if (finishCallback) {
-                    finishCallback();
-                }
-            },
-            TaskExecutor::TaskType::UI, "ArkUIGridItemDragRemoveCustomNode");
         auto pixelMap = PixelMap::CreatePixelMap(reinterpret_cast<void*>(&mediaPixelMap));
         CHECK_NULL_VOID(pixelMap);
+        auto taskScheduler = pipeline->GetTaskExecutor();
+        CHECK_NULL_VOID(taskScheduler);
         taskScheduler->PostTask(
             [weak, pipeline, info, pixelMap, host, gridItem]() {
                 auto eventHub = weak.Upgrade();
@@ -207,10 +206,6 @@ void GridEventHub::HandleOnItemDragStart(const GestureEvent& info)
             TaskExecutor::TaskType::UI, "ArkUIGridItemDragStart");
     };
     SnapshotParam param;
-    if (auto pixmap = ComponentSnapshot::CreateSync(customNode, param); pixmap) {
-        callback(pixmap, 0, nullptr);
-        return;
-    }
     param.delay = CREATE_PIXELMAP_TIME;
     NG::ComponentSnapshot::Create(customNode, std::move(callback), true, param);
 #else
@@ -359,10 +354,7 @@ void GridEventHub::MoveItems(int32_t itemIndex, int32_t insertIndex) const
     auto curve = MakeRefPtr<SpringCurve>(
         ANIMATION_CURVE_VELOCITY, ANIMATION_CURVE_MASS, ANIMATION_CURVE_STIFFNESS, ANIMATION_CURVE_DAMPING);
     option.SetCurve(curve);
-    auto context = host->GetContextRefPtr();
-    CHECK_NULL_VOID(context);
     AnimationUtils::Animate(
-        option, [pattern, itemIndex, insertIndex]() { pattern->MoveItems(itemIndex, insertIndex); }, nullptr,
-        nullptr, context);
+        option, [pattern, itemIndex, insertIndex]() { pattern->MoveItems(itemIndex, insertIndex); }, nullptr);
 }
 } // namespace OHOS::Ace::NG

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2023-2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -26,94 +26,35 @@
 #include "core/components_ng/base/frame_node.h"
 #include "core/components_ng/pattern//linear_layout/column_model_ng.h"
 #include "core/components_ng/pattern//linear_layout/row_model_ng.h"
-#include "core/components_ng/pattern/scrollable/scrollable.h"
-#include "core/components_ng/pattern/stack/stack_model_ng.h"
 #include "core/components_ng/pattern/text/text_model_ng.h"
-#include "core/components_ng/pattern/scrollable/scrollable_animation_consts.h"
 
 namespace OHOS::Ace::NG {
+namespace {
 using namespace testing;
 using namespace testing::ext;
 constexpr Dimension FILL_LENGTH = Dimension(1.0, DimensionUnit::PERCENT);
-constexpr int32_t NULL_VALUE = -1;
 constexpr double DEFAULT_FRICTION = 0.6;
 constexpr double NEW_DEFAULT_FRICTION = 0.7;
-constexpr float DRAG_VELOCITY = 200.f;
+constexpr int32_t NULL_VALUE = -1;
+} // namespace
 
 class TestNG : public testing::Test {
 public:
     static void SetUpTestSuite();
     static void TearDownTestSuite();
-    void FlushUITasks();
-    void FlushUITasks(const RefPtr<FrameNode>& frameNode);
-    void CreateDone();
-    RefPtr<FrameNode> GetStageNode();
-    void MountToStageNode(const RefPtr<FrameNode>& frameNode);
-    void RemoveFromStageNode();
+    RefPtr<PaintWrapper> FlushLayoutTask(const RefPtr<FrameNode>& frameNode, bool markDirty = false);
+    RefPtr<PaintWrapper> CreateDone(const RefPtr<FrameNode>& frameNode = nullptr);
     uint64_t GetActions(const RefPtr<AccessibilityProperty>& accessibilityProperty);
     TouchEventInfo CreateTouchEventInfo(TouchType touchType, Offset location);
     static RefPtr<ThemeConstants> CreateThemeConstants(const std::string& patternName);
     void FlushExpandSafeAreaTask();
     void CreateLayoutTask(const RefPtr<FrameNode>& frameNode);
-    RefPtr<FrameNode> CreateText(const std::u16string& content, const std::function<void(TextModelNG)>& callback);
+    RefPtr<FrameNode> CreateText(const std::string& content, const std::function<void(TextModelNG)>& callback);
     RefPtr<FrameNode> CreateRow(const std::function<void(RowModelNG)>& callback);
     RefPtr<FrameNode> CreateColumn(const std::function<void(ColumnModelNG)>& callback);
-    RefPtr<FrameNode> CreateStack(const std::function<void(StackModelNG)>& callback);
-    void SetSize(std::optional<Axis> axis, const CalcLength& crossSize, const CalcLength& mainSize);
-    AssertionResult IsExist(const RefPtr<FrameNode>& frameNode, int32_t index);
-    AssertionResult IsExistAndActive(const RefPtr<FrameNode>& frameNode, int32_t index);
-    AssertionResult IsExistAndInActive(const RefPtr<FrameNode>& frameNode, int32_t index);
+    void SetSize(Axis axis, const CalcLength& crossSize, const CalcLength& mainSize);
 
-    AssertionResult IsEqual(const double& actual, const double& expected)
-    {
-        if (NearEqual(actual, expected)) {
-            return AssertionSuccess();
-        }
-        return AssertionFailure() << "Actual: " << actual << " Expected: " << expected;
-    }
-    
-    AssertionResult IsEqual(const float& actual, const double& expected)
-    {
-        if (NearEqual(actual, expected)) {
-            return AssertionSuccess();
-        }
-        return AssertionFailure() << "Actual: " << actual << " Expected: " << expected;
-    }
-
-    AssertionResult IsEqual(const double& actual, const float& expected)
-    {
-        if (NearEqual(actual, expected)) {
-            return AssertionSuccess();
-        }
-        return AssertionFailure() << "Actual: " << actual << " Expected: " << expected;
-    }
-
-    AssertionResult IsEqual(const float& actual, const float& expected)
-    {
-        if (NearEqual(actual, expected)) {
-            return AssertionSuccess();
-        }
-        return AssertionFailure() << "Actual: " << actual << " Expected: " << expected;
-    }
-
-    AssertionResult IsEqual(const int32_t& actual, const int32_t& expected)
-    {
-        if (NearEqual(actual, expected)) {
-            return AssertionSuccess();
-        }
-        return AssertionFailure() << "Actual: " << actual << " Expected: " << expected;
-    }
-
-    AssertionResult IsEqual(const std::string& actual, const std::string& expected)
-    {
-        if (NearEqual(actual, expected)) {
-            return AssertionSuccess();
-        }
-        return AssertionFailure() << "Actual: " << actual << " Expected: " << expected;
-    }
-
-    template<typename T>
-    AssertionResult IsEqual(const T& actual, const T& expected)
+    AssertionResult IsEqual(const SizeF& actual, const SizeF& expected)
     {
         if (NearEqual(actual, expected)) {
             return AssertionSuccess();
@@ -121,13 +62,45 @@ public:
         return AssertionFailure() << "Actual: " << actual.ToString() << " Expected: " << expected.ToString();
     }
 
-    AssertionResult IsEqual(const NG::OverScrollOffset& actual, const NG::OverScrollOffset& expected)
+    AssertionResult IsEqual(const OverScrollOffset& actual, const OverScrollOffset& expected)
     {
         if (NearEqual(actual.start, expected.start) && NearEqual(actual.end, expected.end)) {
             return AssertionSuccess();
         }
         return AssertionFailure() << "Actual: " << "{ " << actual.start << " , " << actual.end << " }"
                                   << " Expected: " << "{ " << expected.start << " , " << expected.end << " }";
+    }
+
+    AssertionResult IsEqual(const Offset& actual, const Offset& expected)
+    {
+        if (NearEqual(actual, expected)) {
+            return AssertionSuccess();
+        }
+        return AssertionFailure() << "Actual: " << actual.ToString() << " Expected: " << expected.ToString();
+    }
+
+    AssertionResult IsEqual(const OffsetF& actual, const OffsetF& expected)
+    {
+        if (NearEqual(actual, expected)) {
+            return AssertionSuccess();
+        }
+        return AssertionFailure() << "Actual: " << actual.ToString() << " Expected: " << expected.ToString();
+    }
+
+    AssertionResult IsEqual(const Rect& actual, const Rect& expected)
+    {
+        if (NearEqual(actual, expected)) {
+            return AssertionSuccess();
+        }
+        return AssertionFailure() << "Actual: " << actual.ToString() << " Expected: " << expected.ToString();
+    }
+
+    AssertionResult IsEqual(const RectF& actual, const RectF& expected)
+    {
+        if (NearEqual(actual, expected)) {
+            return AssertionSuccess();
+        }
+        return AssertionFailure() << "Actual: " << actual.ToString() << " Expected: " << expected.ToString();
     }
 
     AssertionResult IsEqual(const ListItemIndex& actual, const ListItemIndex& expected)
@@ -139,6 +112,23 @@ public:
         return AssertionFailure() << "Actual: " << "{ " << actual.index << " , " << actual.area << " , "
                                   << actual.indexInGroup << " }" << " Expected: " << "{ " << expected.index << " , "
                                   << expected.area << " , " << expected.indexInGroup << " }";
+    }
+
+    AssertionResult IsEqual(const BorderRadiusProperty& actual, const BorderRadiusProperty& expected)
+    {
+        if (NearEqual(actual, expected)) {
+            return AssertionSuccess();
+        }
+        return AssertionFailure() << "Actual: " << actual.ToString() << " Expected: " << expected.ToString();
+    }
+
+    template<typename T>
+    AssertionResult IsEqual(const T& actual, const T& expected)
+    {
+        if (NearEqual(actual, expected)) {
+            return AssertionSuccess();
+        }
+        return AssertionFailure() << "Actual: " << actual << " Expected: " << expected;
     }
 
     RefPtr<FrameNode> GetChildFrameNode(const RefPtr<FrameNode>& frameNode, int32_t index)
@@ -225,10 +215,10 @@ public:
 
     void ResetElmtId()
     {
-        elmtId_ = 10000;
+        elmtId_ = ElementRegister::UndefinedElementId;
     }
 
-    ElementIdType elmtId_ = 10000;
+    ElementIdType elmtId_ = ElementRegister::UndefinedElementId;
 };
 } // namespace OHOS::Ace::NG
 #endif // FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_PATTERNS_SCROLL_SCROLL_PATTERN_H

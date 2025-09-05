@@ -19,7 +19,6 @@ namespace OHOS::Ace::NG {
 namespace {
 constexpr Dimension INDICATOR_DRAG_MIN_DISTANCE = 4.0_vp;
 constexpr Dimension INDICATOR_DRAG_MAX_DISTANCE = 18.0_vp;
-constexpr Dimension INDICATOR_TOUCH_BOTTOM_MAX_DISTANCE = 80.0_vp;
 constexpr Dimension INDICATOR_BORDER_RADIUS = 16.0_vp;
 constexpr float DEFAULT_COUNT = 2.0f;
 } // namespace
@@ -27,6 +26,28 @@ constexpr float DEFAULT_COUNT = 2.0f;
 IndicatorPattern::IndicatorPattern()
 {
     indicatorController_ = MakeRefPtr<IndicatorController>();
+    InitIndicatorController();
+}
+
+void IndicatorPattern::InitIndicatorController()
+{
+    indicatorController_->SetShowNextImpl([weak = WeakClaim(this)]() {
+        auto indicator = weak.Upgrade();
+        CHECK_NULL_VOID(indicator);
+        indicator->ShowNext();
+    });
+
+    indicatorController_->SetShowPrevImpl([weak = WeakClaim(this)]() {
+        auto indicator = weak.Upgrade();
+        CHECK_NULL_VOID(indicator);
+        indicator->ShowPrevious();
+    });
+
+    indicatorController_->SetChangeIndexImpl([weak = WeakClaim(this)](int32_t index, bool useAnimation) {
+        auto indicator = weak.Upgrade();
+        CHECK_NULL_VOID(indicator);
+        indicator->ChangeIndex(index, useAnimation);
+    });
 }
 
 void IndicatorPattern::SetSwiperDigitalParameters(const SwiperDigitalParameters& swiperDigitalParameters)
@@ -98,7 +119,6 @@ std::shared_ptr<SwiperParameters> IndicatorPattern::GetSwiperParameters()
         swiperParameters_->maskValue = false;
         swiperParameters_->colorVal = swiperIndicatorTheme->GetColor();
         swiperParameters_->selectedColorVal = swiperIndicatorTheme->GetSelectedColor();
-        swiperParameters_->dimSpace = swiperIndicatorTheme->GetIndicatorDotItemSpace();
     }
     return swiperParameters_;
 }
@@ -158,7 +178,6 @@ void IndicatorPattern::SaveDigitIndicatorProperty()
         swiperIndicatorTheme->GetDigitalIndicatorTextStyle().GetFontWeight()));
     layoutProperty->UpdateSelectedFontWeight(swiperDigitalParameters->selectedFontWeight.value_or(
         swiperIndicatorTheme->GetDigitalIndicatorTextStyle().GetFontWeight()));
-    ResetDotModifier();
 }
 
 void IndicatorPattern::SaveDotIndicatorProperty()
@@ -192,9 +211,7 @@ void IndicatorPattern::SaveDotIndicatorProperty()
         auto dimValue = swiperParameters->dimEnd.value();
         isRtl ? layoutProperty->UpdateLeft(dimValue) : layoutProperty->UpdateRight(dimValue);
     }
-    if (swiperParameters->dimSpace.has_value()) {
-        layoutProperty->UpdateSpace(swiperParameters->dimSpace.value());
-    }
+
     UpdatePaintProperty();
 }
 
@@ -221,7 +238,6 @@ void IndicatorPattern::UpdatePaintProperty()
     paintProperty->UpdateSelectedColor(
         swiperParameters->selectedColorVal.value_or(swiperIndicatorTheme->GetSelectedColor()));
     paintProperty->UpdateIsCustomSize(isCustomSize_);
-    paintProperty->UpdateSpace(swiperParameters->dimSpace.value_or(swiperIndicatorTheme->GetIndicatorDotItemSpace()));
     indicatorNode->MarkDirtyNode(PROPERTY_UPDATE_MEASURE);
     indicatorNode->MarkDirtyNode(PROPERTY_UPDATE_RENDER);
 }
@@ -311,7 +327,6 @@ bool IndicatorPattern::GetDigitFrameSize(RefPtr<GeometryNode>& geoNode, SizeF& f
 void IndicatorPattern::OnIndexChangeInSingleMode(int32_t index)
 {
     if (!IsLoop() || IsHover() || IsPressed()) {
-        singleIndicatorTouchBottomTypeLoop_ = TouchBottomTypeLoop::TOUCH_BOTTOM_TYPE_LOOP_NONE;
         if (index >= RealTotalCount()) {
             SetCurrentIndexInSingleMode(RealTotalCount() - 1);
             return;
@@ -332,7 +347,7 @@ void IndicatorPattern::ShowPrevious()
     }
 
     singleIndicatorTouchBottomTypeLoop_ = TouchBottomTypeLoop::TOUCH_BOTTOM_TYPE_LOOP_NONE;
-    if (IsHorizontalAndRightToLeft()) {
+    if (GetNonAutoLayoutDirection() == TextDirection::RTL) {
         singleGestureState_ = GestureState::GESTURE_STATE_RELEASE_RIGHT;
         if (IsLoop() && GetCurrentIndex() == 0) {
             singleIndicatorTouchBottomTypeLoop_ = TouchBottomTypeLoop::TOUCH_BOTTOM_TYPE_LOOP_RIGHT;
@@ -343,10 +358,7 @@ void IndicatorPattern::ShowPrevious()
             singleIndicatorTouchBottomTypeLoop_ = TouchBottomTypeLoop::TOUCH_BOTTOM_TYPE_LOOP_LEFT;
         }
     }
-    auto dotIndicatorModifier = GetDotIndicatorModifier();
-    if (dotIndicatorModifier && !dotIndicatorModifier->GetIsBottomAnimationFinished()) {
-        dotIndicatorModifier->FinishAnimationToTargetImmediately(dotIndicatorModifier->GetTargetCenter());
-    }
+
     lastIndex_ = GetCurrentIndex();
     OnIndexChangeInSingleMode(GetCurrentIndex() - 1);
 }
@@ -357,7 +369,7 @@ void IndicatorPattern::ShowNext()
         return SwiperIndicatorPattern::ShowNext();
     }
     singleIndicatorTouchBottomTypeLoop_ = TouchBottomTypeLoop::TOUCH_BOTTOM_TYPE_LOOP_NONE;
-    if (IsHorizontalAndRightToLeft()) {
+    if (GetNonAutoLayoutDirection() == TextDirection::RTL) {
         singleGestureState_ = GestureState::GESTURE_STATE_RELEASE_LEFT;
         if (IsLoop() && GetCurrentIndex() == (RealTotalCount() - 1)) {
             singleIndicatorTouchBottomTypeLoop_ = TouchBottomTypeLoop::TOUCH_BOTTOM_TYPE_LOOP_LEFT;
@@ -368,10 +380,7 @@ void IndicatorPattern::ShowNext()
             singleIndicatorTouchBottomTypeLoop_ = TouchBottomTypeLoop::TOUCH_BOTTOM_TYPE_LOOP_RIGHT;
         }
     }
-    auto dotIndicatorModifier = GetDotIndicatorModifier();
-    if (dotIndicatorModifier && !dotIndicatorModifier->GetIsBottomAnimationFinished()) {
-        dotIndicatorModifier->FinishAnimationToTargetImmediately(dotIndicatorModifier->GetTargetCenter());
-    }
+
     lastIndex_ = GetCurrentIndex();
     OnIndexChangeInSingleMode(GetCurrentIndex() + 1);
 }
@@ -394,10 +403,6 @@ void IndicatorPattern::ChangeIndex(int32_t index, bool useAnimation)
     } else {
         singleGestureState_ = GestureState::GESTURE_STATE_INIT;
     }
-    auto dotIndicatorModifier = GetDotIndicatorModifier();
-    if (dotIndicatorModifier) {
-        dotIndicatorModifier->StopAnimation();
-    }
     OnIndexChangeInSingleMode(index);
 }
 
@@ -415,14 +420,6 @@ int32_t IndicatorPattern::GetCurrentShownIndex() const
         return SwiperIndicatorPattern::GetCurrentShownIndex();
     }
     return currentIndexInSingleMode_;
-}
-
-int32_t IndicatorPattern::DisplayIndicatorTotalCount() const
-{
-    if (GetBindSwiperNode()) {
-        return SwiperIndicatorPattern::DisplayIndicatorTotalCount();
-    }
-    return GetCountFromProperty();
 }
 
 int32_t IndicatorPattern::RealTotalCount() const
@@ -491,96 +488,10 @@ void IndicatorPattern::SwipeTo(std::optional<int32_t> mouseClickIndex)
     }
 }
 
-bool IndicatorPattern::CheckIsTouchBottom(const TouchLocationInfo& info)
-{
-    auto host = GetHost();
-    CHECK_NULL_RETURN(host, false);
-    auto currentIndex = GetCurrentIndex();
-    auto dragPoint =
-        PointF(static_cast<float>(info.GetLocalLocation().GetX()), static_cast<float>(info.GetLocalLocation().GetY()));
-    float touchBottomRate = 0.0;
-    float touchOffset = 0.0;
-    auto offset = dragPoint - GetDragStartPoint();
-    touchOffset = GetDirection() == Axis::HORIZONTAL ? offset.GetX() : offset.GetY();
-    touchBottomRate = LessOrEqual(std::abs(touchOffset), INDICATOR_TOUCH_BOTTOM_MAX_DISTANCE.ConvertToPx())
-                            ? touchOffset / INDICATOR_TOUCH_BOTTOM_MAX_DISTANCE.ConvertToPx() : 1;
-    touchBottomRate_ = std::abs(touchBottomRate);
-    TouchBottomType touchBottomType = TouchBottomType::NONE;
-    if (currentIndex <= 0) {
-        if (IsHorizontalAndRightToLeft()) {
-            if (Positive(touchOffset)) {
-                touchBottomType = TouchBottomType::END;
-            }
-        } else {
-            if (NonPositive(touchOffset)) {
-                touchBottomType = TouchBottomType::START;
-            }
-        }
-    }
-    if (currentIndex >= RealTotalCount() - 1) {
-        if (IsHorizontalAndRightToLeft()) {
-            if (NonPositive(touchOffset)) {
-                touchBottomType = TouchBottomType::START;
-            }
-        } else {
-            if (Positive(touchOffset)) {
-                touchBottomType = TouchBottomType::END;
-            }
-        }
-    }
-    SetTouchBottomType(touchBottomType);
-    host->MarkDirtyNode(PROPERTY_UPDATE_RENDER);
-    return touchBottomType == TouchBottomType::NONE ? false : true;
-}
-
-void IndicatorPattern::HandleDragEnd(double dragVelocity)
-{
-    if (GetBindSwiperNode()) {
-        return SwiperIndicatorPattern::HandleDragEnd(dragVelocity);
-    }
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    SetTouchBottomType(TouchBottomType::NONE);
-    host->MarkDirtyNode(PROPERTY_UPDATE_RENDER);
-}
-
-RectF IndicatorPattern::CalcBoundsRect() const
-{
-    RectF boundsRect;
-    if (GetDotIndicatorModifier()) {
-        boundsRect = GetDotIndicatorModifier()->GetBoundsRect();
-    }
-    return boundsRect;
-}
-
-void IndicatorPattern::InitTouchEvent(const RefPtr<GestureEventHub>& gestureHub)
-{
-    SwiperIndicatorPattern::InitTouchEvent(gestureHub);
-    auto stopAnimationCb = [weak = WeakClaim(this)](bool ifImmediately) {
-        auto pattern = weak.Upgrade();
-        if (pattern) {
-            if (pattern->GetDotIndicatorModifier()) {
-                pattern->GetDotIndicatorModifier()->StopAnimation(ifImmediately);
-            }
-            if (pattern->GetOverlengthDotIndicatorModifier()) {
-                pattern->GetOverlengthDotIndicatorModifier()->StopAnimation(ifImmediately);
-            }
-        }
-    };
-    auto swiperNode = GetSwiperNode();
-    CHECK_NULL_VOID(swiperNode);
-    auto swiperPattern = swiperNode->GetPattern<SwiperPattern>();
-    CHECK_NULL_VOID(swiperPattern);
-    swiperPattern->SetStopIndicatorAnimationCb(stopAnimationCb);
-}
-
 void IndicatorPattern::HandleLongDragUpdate(const TouchLocationInfo& info)
 {
     if (GetBindSwiperNode()) {
         return SwiperIndicatorPattern::HandleLongDragUpdate(info);
-    }
-    if (CheckIsTouchBottom(info)) {
-        return;
     }
     float turnPageRate = 0.0;
     float turnPageRateOffset = 0.0;
@@ -620,57 +531,5 @@ int32_t IndicatorPattern::GetTouchCurrentIndex() const
     }
 
     return currentIndex;
-}
-
-std::pair<int32_t, int32_t> IndicatorPattern::CalMouseClickIndexStartAndEnd(
-    int32_t itemCount, int32_t currentIndex)
-{
-    if (GetBindSwiperNode()) {
-        return SwiperIndicatorPattern::CalMouseClickIndexStartAndEnd(itemCount, currentIndex);
-    }
-
-    int32_t loopCount = SwiperIndicatorUtils::CalcLoopCount(currentIndex, itemCount);
-    int32_t start = currentIndex >= 0 ? loopCount * itemCount : -(loopCount + 1) * itemCount;
-    int32_t end = currentIndex >= 0 ? (loopCount + 1) * itemCount : -loopCount * itemCount;
-    if (IsHorizontalAndRightToLeft()) {
-        end = currentIndex >= 0 ? loopCount * itemCount - 1 : -(loopCount + 1) * itemCount - 1;
-        start = currentIndex >= 0 ? (loopCount + 1) * itemCount - 1 : -loopCount * itemCount - 1;
-    }
-    return { start, end };
-}
-
-void IndicatorPattern::UpdateDefaultColor()
-{
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    auto pipeline = host->GetContext();
-    CHECK_NULL_VOID(pipeline);
-    auto swiperIndicatorTheme = pipeline->GetTheme<SwiperIndicatorTheme>();
-    CHECK_NULL_VOID(swiperIndicatorTheme);
-    if (swiperDigitalParameters_ && !swiperDigitalParameters_->parametersByUser.count("fontColor")) {
-        swiperDigitalParameters_->fontColor = swiperIndicatorTheme->GetDigitalIndicatorTextStyle().GetTextColor();
-    }
-    if (swiperDigitalParameters_ && !swiperDigitalParameters_->parametersByUser.count("selectedFontColor")) {
-        swiperDigitalParameters_->selectedFontColor =
-            swiperIndicatorTheme->GetDigitalIndicatorTextStyle().GetTextColor();
-    }
-    if (swiperParameters_ && !swiperParameters_->parametersByUser.count("colorVal")) {
-        swiperParameters_->colorVal = swiperIndicatorTheme->GetColor();
-    }
-    if (swiperParameters_ && !swiperParameters_->parametersByUser.count("selectedColorVal")) {
-        swiperParameters_->selectedColorVal = swiperIndicatorTheme->GetSelectedColor();
-    }
-}
-
-void IndicatorPattern::OnColorModeChange(uint32_t colorMode)
-{
-    UpdateDefaultColor();
-    Pattern::OnColorModeChange(colorMode);
-    if (GetIndicatorType() == SwiperIndicatorType::DOT) {
-        SaveDotIndicatorProperty();
-    } else if (GetIndicatorType() == SwiperIndicatorType::DIGIT) {
-        SaveDigitIndicatorProperty();
-        UpdateDigitalIndicator();
-    }
 }
 } // namespace OHOS::Ace::NG

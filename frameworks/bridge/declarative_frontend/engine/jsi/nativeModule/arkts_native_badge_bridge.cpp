@@ -174,7 +174,6 @@ ArkUINativeModuleValue BadgeBridge::SetBadgeParamWithNumber(ArkUIRuntimeCallInfo
     Local<JSValueRef> firstArg = runtimeCallInfo->GetCallArgRef(0);
     Local<JSValueRef> countArg = runtimeCallInfo->GetCallArgRef(12);    // 12: parameter index
     Local<JSValueRef> maxCountArg = runtimeCallInfo->GetCallArgRef(13); // 13: parameter index
-    CHECK_NULL_RETURN(firstArg->IsNativePointer(vm), panda::JSValueRef::Undefined(vm));
     auto nativeNode = nodePtr(firstArg->ToNativePointer(vm)->Value());
 
     ArkUIBadgeParam style;
@@ -195,9 +194,8 @@ ArkUINativeModuleValue BadgeBridge::SetBadgeParamWithNumber(ArkUIRuntimeCallInfo
     } else {
         maxCount = badgeTheme->GetMaxCount();
     }
-    auto nodeModifiers = GetArkUINodeModifiers();
-    CHECK_NULL_RETURN(nodeModifiers, panda::JSValueRef::Undefined(vm));
-    nodeModifiers->getBadgeModifier()->setBadgeParamWithNumber(nativeNode, &style, count, hasValue, maxCount);
+
+    GetArkUINodeModifiers()->getBadgeModifier()->setBadgeParamWithNumber(nativeNode, &style, count, hasValue, maxCount);
     return panda::JSValueRef::Undefined(vm);
 }
 
@@ -207,7 +205,6 @@ ArkUINativeModuleValue BadgeBridge::SetBadgeParamWithString(ArkUIRuntimeCallInfo
     CHECK_NULL_RETURN(vm, panda::NativePointerRef::New(vm, nullptr));
     Local<JSValueRef> firstArg = runtimeCallInfo->GetCallArgRef(0);
     Local<JSValueRef> valueArg = runtimeCallInfo->GetCallArgRef(12); // 12: parameter index
-    CHECK_NULL_RETURN(firstArg->IsNativePointer(vm), panda::JSValueRef::Undefined(vm));
     auto nativeNode = nodePtr(firstArg->ToNativePointer(vm)->Value());
 
     ArkUIBadgeParam style;
@@ -217,20 +214,11 @@ ArkUINativeModuleValue BadgeBridge::SetBadgeParamWithString(ArkUIRuntimeCallInfo
     if (!ParseBadgeBaseParam(vm, runtimeCallInfo, badgeTheme, style)) {
         return panda::JSValueRef::Undefined(vm);
     }
-    std::string content;
     if (!valueArg->IsNull() && valueArg->IsString(vm)) {
-        if (ArkTSUtils::ParseJsString(vm, valueArg, content)) {
-            value = content.c_str();
-        }
-    } else if (!valueArg->IsNull() && valueArg->IsObject(vm)) {
-        std::string valueResult;
-        ArkTSUtils::ParseJsString(vm, valueArg, valueResult);
-        value = valueResult.c_str();
+        value = valueArg->ToString(vm)->ToString(vm).c_str();
     }
 
-    auto nodeModifiers = GetArkUINodeModifiers();
-    CHECK_NULL_RETURN(nodeModifiers, panda::JSValueRef::Undefined(vm));
-    nodeModifiers->getBadgeModifier()->setBadgeParamWithString(nativeNode, &style, value);
+    GetArkUINodeModifiers()->getBadgeModifier()->setBadgeParamWithString(nativeNode, &style, value);
     return panda::JSValueRef::Undefined(vm);
 }
 } // namespace OHOS::Ace::NG

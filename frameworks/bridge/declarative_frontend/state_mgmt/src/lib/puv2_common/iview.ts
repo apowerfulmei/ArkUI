@@ -30,18 +30,17 @@ interface IView {
     getCardId(): number; // implemented in NativeViewPartialUpdate
     getParent(): IView | undefined;
     setParent(p: IView) : void;
-    setParentBuilderNode__(node: ViewBuildNodeBase): void;
     addChild(c: IView): boolean;
     getChildById(elmtId: number) : IView | undefined;
     removeChild(child: IView): boolean;
-    findViewInHierarchy(id: number): ViewPU | ViewV2 | undefined;
+    findViewPUInHierarchy(id: number): ViewPU | undefined;
 
     purgeDeleteElmtId(rmElmtId: number): boolean;
     initialRenderView(): void;
     forceCompleteRerender(deep: boolean): void;
     forceRerenderNode(elmtId: number): void;
     
-    uiNodeNeedUpdateV2(elmtId: number) : void;
+    uiNodeNeedUpdateV3(elmtId: number) : void;
     
     // FIXME replace updateStateVarsOfChildByElmtId by new solution
     updateStateVarsOfChildByElmtId(elmtId, params: Object): void;
@@ -52,9 +51,9 @@ interface IView {
     setDeleteStatusRecursively(): void;
 
     isCompFreezeAllowed(): boolean;
-    setActiveInternal(newState: boolean, isReuse: boolean): void;
+    setActiveInternal(newState: boolean): void;
 
-    findProvidePU__(providedPropName: string): ObservedPropertyAbstractPU<any> | undefined;
+    findProvidePU(providedPropName: string): ObservedPropertyAbstractPU<any> | undefined;
 
     localStorage_ : LocalStorage;
 
@@ -63,6 +62,4 @@ interface IView {
     debugInfoDirtDescendantElementIdsInternal(depth: number, recursive: boolean, counter: ProfileRecursionCounter): string;
 
     onGlobalThemeChanged(): void;
-
-    __ClearAllRecyle__PUV2ViewBase__Internal(): void;
 }

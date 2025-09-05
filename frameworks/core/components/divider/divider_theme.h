@@ -34,7 +34,7 @@ public:
 
         RefPtr<DividerTheme> Build(const RefPtr<ThemeConstants>& themeConstants) const
         {
-            RefPtr<DividerTheme> theme = AceType::MakeRefPtr<DividerTheme>();
+            RefPtr<DividerTheme> theme = AceType::Claim(new DividerTheme());
             if (!themeConstants) {
                 return theme;
             }
@@ -63,6 +63,8 @@ public:
 
 protected:
     DividerTheme() = default;
+
+private:
     Color color_;
     Dimension stokeWidth_;
 };

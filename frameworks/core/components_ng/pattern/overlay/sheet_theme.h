@@ -45,22 +45,17 @@ constexpr Dimension SHEET_POPUP_WIDTH = 360.0_vp;
 constexpr Dimension SHEET_BIG_WINDOW_WIDTH = 480.0_vp;
 constexpr Dimension SHEET_BIG_WINDOW_HEIGHT = 560.0_vp;
 constexpr Dimension SHEET_BIG_WINDOW_MIN_HEIGHT = 320.0_vp;
-constexpr Dimension SHEET_ARROW_WIDTH = 16.0_vp;
+constexpr Dimension SHEET_ARROW_WIDTH = 32.0_vp;
 constexpr Dimension SHEET_ARROW_HEIGHT = 8.0_vp;
 constexpr Dimension SHEET_TARGET_SPACE = 8.0_vp;
 constexpr Dimension SHEET_DEVICE_WIDTH_BREAKPOINT = 600.0_vp;
 constexpr Dimension SHEET_PC_DEVICE_WIDTH_BREAKPOINT = 840.0_vp;
 constexpr Dimension SHEET_DOUBLE_TITLE_TOP_PADDING = 16.0_vp;
 constexpr Dimension SHEET_DOUBLE_TITLE_BOTTON_MARGIN = 4.0_vp;
-constexpr Dimension SHEET_TITLE_AREA_MARGIN = -8.0_vp;
+constexpr Dimension SHEET_TITLE_AERA_MARGIN = -8.0_vp;
 constexpr int32_t SHEET_TITLE_MAX_LINES = 1;
 constexpr int32_t SHEET_SHADOW_NONE = 6;
 constexpr Dimension SHEET_TITLE_TEXT_HORIZONTAL_MARGIN = 16.0_vp;
-constexpr double SHEET_TITLE_FONT_WEIGHT = 9.0;
-// button style : NORMAL(0) EMPHASIZE(1)
-constexpr int SHEET_CLOSE_ICON_BUTTON_STYLE = 1;
-// sheet height mode : LARGE(1) AUTO(2)
-constexpr int SHEET_HEIGHT_DEFAULT_MODE = 1;
 } // namespace
 class SheetTheme : public virtual Theme {
     DECLARE_ACE_TYPE(SheetTheme, Theme);
@@ -73,7 +68,7 @@ public:
 
         RefPtr<SheetTheme> Build(const RefPtr<ThemeConstants>& themeConstants) const
         {
-            RefPtr<SheetTheme> theme = AceType::MakeRefPtr<SheetTheme>();
+            RefPtr<SheetTheme> theme = AceType::Claim(new SheetTheme());
             if (!themeConstants) {
                 return theme;
             }
@@ -92,7 +87,6 @@ public:
             }
 
             theme->sheetRadius_ = sheetPattern->GetAttr<Dimension>("sheet_radius", 32.0_vp);
-            theme->sheetSideRadius_ = sheetPattern->GetAttr<Dimension>("corner_radius_none", 0.0_vp);
             theme->titleTextFontSize_ = sheetPattern->GetAttr<Dimension>("title_text_font_size", 20.0_vp);
             theme->titleTextMargin_ = sheetPattern->GetAttr<Dimension>("title_text_margin", 16.0_vp);
             theme->subtitleTextFontSize_ = sheetPattern->GetAttr<Dimension>("subtitle_text_font_size", 14.0_fp);
@@ -111,8 +105,7 @@ public:
             theme->sheetMaxAgingScale_ = sheetPattern->GetAttr<double>("sheet_max_aging_scale", 1.75f);
             theme->closeIconSource_ = themeConstants->GetSymbolByName("sys.symbol.xmark");
             theme->closeIconSymbolColor_ = sheetPattern->GetAttr<Color>("close_icon_symbol_color", Color(0xff182431));
-            theme->sheetShadowConfig_ = sheetPattern->GetAttr<int32_t>("sheet_shadow_config", SHEET_SHADOW_NONE);
-            theme->sheetShadowConfigS_ = sheetPattern->GetAttr<int32_t>("sheet_shadow_config_s", SHEET_SHADOW_NONE);
+            theme->sheetShadowConfig_ = sheetPattern->GetAttr<int>("sheet_shadow_config", SHEET_SHADOW_NONE);
             theme->sheetOuterBorderWidth_ = sheetPattern->GetAttr<Dimension>("sheet_outline_border_width", 0.0_vp);
             // If the outline border width is valid, outline border, shadow and border are default enable.
             theme->isOuterBorderEnable_ = theme->sheetOuterBorderWidth_.IsValid();
@@ -126,41 +119,6 @@ public:
             theme->titleTextHorizMargin_ =
                 sheetPattern->GetAttr<Dimension>("title_text_horizontal_margin", SHEET_TITLE_TEXT_HORIZONTAL_MARGIN);
             theme->closeIconRadius_ = sheetPattern->GetAttr<Dimension>("close_icon_radius", SHEET_CLOSE_ICON_RADIUS);
-            ParseAdditionalStylePattern(sheetPattern, theme);
-        }
-
-        void ParseAdditionalStylePattern(
-            const RefPtr<ThemeStyle>& sheetPattern, const RefPtr<SheetTheme>& theme) const
-        {
-            theme->largePercent_ = sheetPattern->GetAttr<double>("sheet_height_percent_large", 1.0f);
-            theme->mediumPercent_ = sheetPattern->GetAttr<double>("sheet_height_percent_medium", 0.6f);
-            theme->operationAreaHeight_ = sheetPattern->GetAttr<Dimension>("sheet_operation_height", 56.0_vp);
-            theme->heightApplyFullScreen_ =
-                static_cast<bool>(sheetPattern->GetAttr<int>("sheet_height_apply_full_screen", 0));
-            theme->showCloseIcon_ = static_cast<bool>(sheetPattern->GetAttr<int>("sheet_show_close_icon", 1));
-            theme->sheetTitleFontWeight_ = FontWeight(static_cast<int32_t>(
-                sheetPattern->GetAttr<double>("sheet_title_font_weight", SHEET_TITLE_FONT_WEIGHT)));
-            theme->sheetDragBarHeight_ = sheetPattern->GetAttr<Dimension>("sheet_drag_bar_height",
-                SHEET_DRAG_BAR_HEIGHT);
-            theme->titleTopPadding_ = sheetPattern->GetAttr<Dimension>("sheet_double_title_top_padding",
-                SHEET_DOUBLE_TITLE_TOP_PADDING);
-            theme->sheetTitleAreaMargin_ = sheetPattern->GetAttr<Dimension>("sheet_title_area_margin",
-                SHEET_TITLE_AREA_MARGIN);
-            theme->closeIconButtonWidth_ =
-                sheetPattern->GetAttr<Dimension>("sheet_close_icon_button_width", SHEET_CLOSE_ICON_WIDTH);
-            theme->centerDefaultWidth_ =
-                sheetPattern->GetAttr<Dimension>("sheet_center_default_width", SHEET_LANDSCAPE_WIDTH);
-            theme->sheetCloseIconTitleSpaceNew_ =
-                sheetPattern->GetAttr<Dimension>("sheet_close_icon_title_space", SHEET_CLOSE_ICON_TITLE_SPACE_NEW);
-            theme->sheetHeightDefaultMode_ =
-                sheetPattern->GetAttr<int>("sheet_height_default_mode", SHEET_HEIGHT_DEFAULT_MODE);
-            theme->closeIconButtonStyle_ =
-                sheetPattern->GetAttr<int>("sheet_close_icon_button_style", SHEET_CLOSE_ICON_BUTTON_STYLE);
-            theme->sheetClose_ = sheetPattern->GetAttr<std::string>("sheet_close", "");
-            theme->operationAreaHeightDouble_ =
-                sheetPattern->GetAttr<Dimension>("operation_area_height_double", SHEET_OPERATION_AREA_HEIGHT_DOUBLE);
-            theme->bigWindowMinHeight_ =
-                sheetPattern->GetAttr<Dimension>("big_window_min_height", SHEET_BIG_WINDOW_MIN_HEIGHT);
         }
     };
     ~SheetTheme() override = default;
@@ -168,11 +126,6 @@ public:
     const Dimension& GetSheetRadius() const
     {
         return sheetRadius_;
-    }
-
-    const Dimension& GetSheetSideRadius() const
-    {
-        return sheetSideRadius_;
     }
 
     const Dimension& GetTitleTextFontSize() const
@@ -183,11 +136,6 @@ public:
     const Dimension& GetTitleTextMargin() const
     {
         return titleTextMargin_;
-    }
-
-    const Dimension& GetTitleTextHorizMargin() const
-    {
-        return titleTextHorizMargin_;
     }
 
     const Dimension& GetSubtitleTextFontSize() const
@@ -245,11 +193,6 @@ public:
         return sheetType_;
     }
 
-    const std::string& GetSheetBottomType() const
-    {
-        return sheetBottom_;
-    }
-
     const int& GetSheetBackgroundBlurStyle() const
     {
         return sheetBackgroundBlurStyle_;
@@ -275,14 +218,9 @@ public:
         return closeIconSource_;
     }
 
-    int32_t GetSheetShadowConfig() const
+    const int& GetSheetShadowConfig() const
     {
         return sheetShadowConfig_;
-    }
-
-    int32_t GetSheetShadowConfigS() const
-    {
-        return sheetShadowConfigS_;
     }
 
     const Dimension& GetSheetOuterBorderWidth() const
@@ -305,14 +243,6 @@ public:
         return sheetInnerBorderColor_;
     }
 
-    /**
-     * Now the switch is enabled on 2in1 and tv devices.
-     * When this switch is on, it affects
-     * the shadow config、
-     * outer border、
-     * inner border、
-     * enableHoverMode.
-     */
     bool IsOuterBorderEnable() const
     {
         return isOuterBorderEnable_;
@@ -323,108 +253,25 @@ public:
         return closeIconWidth_;
     }
 
+    const Dimension& GetTitleTextHorizMargin() const
+    {
+        return titleTextHorizMargin_;
+    }
+
     const Dimension& GetCloseIconRadius() const
     {
         return closeIconRadius_;
     }
 
-    const Dimension& GetOperationAreaHeight() const
-    {
-        return operationAreaHeight_;
-    }
-
-    const Dimension& GetCloseIconButtonWidth() const
-    {
-        return closeIconButtonWidth_;
-    }
-
-    const Dimension& GetCenterDefaultWidth() const
-    {
-        return centerDefaultWidth_;
-    }
-
-    const Dimension& GetSheetCloseIconTitleSpaceNew() const
-    {
-        return sheetCloseIconTitleSpaceNew_;
-    }
-
-    const int& GetCloseIconButtonStyle() const
-    {
-        return closeIconButtonStyle_;
-    }
-
-    const int& GetSheetHeightDefaultMode() const
-    {
-        return sheetHeightDefaultMode_;
-    }
-
-    double GetLargePercent() const
-    {
-        return largePercent_;
-    }
-
-    double GetMediumPercent() const
-    {
-        return mediumPercent_;
-    }
-
-    bool GetHeightApplyFullScreen() const
-    {
-        return heightApplyFullScreen_;
-    }
-
-    bool GetShowCloseIcon() const
-    {
-        return showCloseIcon_;
-    }
-    const FontWeight& GetSheetTitleFontWeight() const
-    {
-        return sheetTitleFontWeight_;
-    }
-
-    const Dimension& GetSheetDragBarHeight() const
-    {
-        return sheetDragBarHeight_;
-    }
-
-    const Dimension& GetTitleTopPadding() const
-    {
-        return titleTopPadding_;
-    }
-
-    const Dimension& GetSheetTitleAreaMargin() const
-    {
-        return sheetTitleAreaMargin_;
-    }
-    
-    const std::string& GetSheetClose() const
-    {
-        return sheetClose_;
-    }
-
-    const Dimension& GetOperationAreaHeightDouble() const
-    {
-        return operationAreaHeightDouble_;
-    }
-
-    const Dimension& GetBigWindowMinHeight() const
-    {
-        return bigWindowMinHeight_;
-    }
 protected:
     SheetTheme() = default;
 
 private:
     Dimension sheetRadius_;
-    Dimension sheetSideRadius_;
     Dimension titleTextFontSize_;
     Dimension titleTextMargin_;
     Dimension subtitleTextFontSize_;
     Dimension subtitleTextMargin_;
-    Dimension sheetDragBarHeight_;
-    Dimension titleTopPadding_;
-    Dimension sheetTitleAreaMargin_;
-    FontWeight sheetTitleFontWeight_ = FontWeight::BOLD;
     Color titleTextFontColor_;
     Color subtitleTextFontColor_;
     Color sheetBackgoundColor_;
@@ -433,15 +280,13 @@ private:
     Color closeIconColor_;
     Color closeIconImageColor_;
     Color closeIconSymbolColor_;
-    std::string sheetType_;
     std::string sheetBottom_;
-    std::string sheetClose_;
+    std::string sheetType_;
     int sheetBackgroundBlurStyle_;
     double sheetNormalScale_;
     double sheetMaxAgingScale_;
     uint32_t closeIconSource_ = 0;
-    int32_t sheetShadowConfig_;
-    int32_t sheetShadowConfigS_;
+    int sheetShadowConfig_;
     Dimension sheetOuterBorderWidth_;
     Dimension sheetInnerBorderWidth_;
     bool isOuterBorderEnable_;
@@ -450,19 +295,6 @@ private:
     Dimension closeIconWidth_;
     Dimension titleTextHorizMargin_;
     Dimension closeIconRadius_;
-    Dimension operationAreaHeight_;
-    Dimension closeIconButtonWidth_;
-    Dimension centerDefaultWidth_;
-    Dimension sheetCloseIconTitleSpaceNew_;
-    int closeIconButtonStyle_;
-    int sheetHeightDefaultMode_;
-    double largePercent_ = 1.0; // 1.0 is default value
-    double mediumPercent_ = 0.6; // 0.6 is default value
-    bool heightApplyFullScreen_ = false;
-    bool showCloseIcon_ = true;
-
-    Dimension operationAreaHeightDouble_ = SHEET_OPERATION_AREA_HEIGHT_DOUBLE;
-    Dimension bigWindowMinHeight_ = SHEET_BIG_WINDOW_MIN_HEIGHT;
 };
 } // namespace OHOS::Ace::NG
 

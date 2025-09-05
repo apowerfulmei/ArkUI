@@ -14,8 +14,6 @@
  */
 
 #include "base/log/ace_checker.h"
-#include "base/log/ace_performance_check.h"
-#include "base/websocket/websocket_manager.h"
 
 namespace OHOS::Ace {
 int32_t AceChecker::pageNodes_ = 0;
@@ -26,30 +24,13 @@ int32_t AceChecker::vsyncTimeout_ = 0;
 int32_t AceChecker::nodeTimeout_ = 0;
 int32_t AceChecker::foreachItems_ = 0;
 int32_t AceChecker::flexLayouts_ = 0;
-std::string AceChecker::checkMessage_ = "";
-bool AceChecker::isPerformanceCheckEnabled_ = false;
-bool AceChecker::isWebSocketCheckEnabled_ = false;
 
 bool AceChecker::IsPerformanceCheckEnabled()
 {
-    return isPerformanceCheckEnabled_;
+    return false;
 }
 
 void AceChecker::NotifyCaution(const std::string& tag) {}
 
 void AceChecker::InitPerformanceParameters() {}
-
-void AceChecker::SetPerformanceCheckStatus(bool status, const std::string& message)
-{
-    AceChecker::checkMessage_ = message;
-    AceChecker::isPerformanceCheckEnabled_ = status;
-    AceChecker::isWebSocketCheckEnabled_ = true;
-    if (status) {
-        AceChecker::InitPerformanceParameters();
-        AcePerformanceCheck::Start();
-    } else {
-        AcePerformanceCheck::Stop();
-    }
-}
-
 } // namespace OHOS::Ace

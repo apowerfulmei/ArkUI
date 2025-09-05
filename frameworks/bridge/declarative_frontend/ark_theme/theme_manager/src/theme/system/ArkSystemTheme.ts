@@ -12,16 +12,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-class ArkSystemTheme extends ArkThemeBase {
+class ArkSystemTheme implements ThemeInternal {
+    colors: Colors;
+    shapes: Shapes;
+    typography: Typography;
+
     constructor() {
-        super(
-            -1, // no parent theme
-            undefined,
-            ThemeColorMode.SYSTEM,
-            new ArkSystemColors(),
-            new ArkSystemColors(),
-            new ArkSystemShapes(),
-            new ArkSystemTypography()
-        );
+        this.colors = new ArkSystemColors();
+        this.shapes = new ArkSystemShapes();
+        this.typography = new ArkSystemTypography();
     }
 }

@@ -15,7 +15,15 @@
 
 #include "core/components_ng/event/state_style_manager.h"
 
+#include "base/memory/ace_type.h"
+#include "base/memory/referenced.h"
+#include "base/utils/utils.h"
+#include "core/components_ng/base/frame_node.h"
+#include "core/components_ng/base/view_stack_processor.h"
+#include "core/components_ng/event/touch_event.h"
+#include "core/components_ng/pattern/custom/custom_node_base.h"
 #include "core/components_ng/pattern/list/list_pattern.h"
+#include "core/components_ng/pattern/list/list_item_group_pattern.h"
 #include "core/components_ng/pattern/navigation/navigation_group_node.h"
 #include "core/components_ng/pattern/overlay/popup_base_pattern.h"
 #include "core/event/touch_event.h"
@@ -47,6 +55,7 @@ const RefPtr<TouchEventImpl>& StateStyleManager::GetPressedListener()
             TAG_LOGW(AceLogTag::ACE_STATE_STYLE, "the touch info is illegal");
             return;
         }
+
         auto lastPoint = changeTouches.back();
         const auto& type = lastPoint.GetTouchType();
         if (type == TouchType::DOWN) {
@@ -65,8 +74,8 @@ const RefPtr<TouchEventImpl>& StateStyleManager::GetPressedListener()
             if (stateStyleMgr->IsOutOfPressedRegion(sourceType, lastPoint.GetGlobalLocation())) {
                 auto frameNode = stateStyleMgr->GetFrameNode();
                 CHECK_NULL_VOID(frameNode);
-                TAG_LOGI(AceLogTag::ACE_STATE_STYLE, "Move out of node pressed region: %{public}s",
-                    frameNode->GetTag().c_str());
+                TAG_LOGI(AceLogTag::ACE_STATE_STYLE, "Move out of node pressed region: %{public}s/%{public}d",
+                    frameNode->GetTag().c_str(), frameNode->GetId());
                 stateStyleMgr->pointerId_.erase(lastPoint.GetFingerId());
                 if (stateStyleMgr->pointerId_.size() == 0) {
                     stateStyleMgr->ResetPressedState();
@@ -83,17 +92,13 @@ void StateStyleManager::HandleTouchDown()
 {
     auto node = GetFrameNode();
     CHECK_NULL_VOID(node);
-#ifdef IS_RELEASE_VERSION
-    TAG_LOGI(AceLogTag::ACE_STATE_STYLE, "Handle TouchDown event node: %{public}s", node->GetTag().c_str());
-#else
     TAG_LOGI(AceLogTag::ACE_STATE_STYLE, "Handle TouchDown event node: %{public}s/%{public}d",
         node->GetTag().c_str(), node->GetId());
-#endif
     HandleScrollingParent();
-    if (!hasScrollingParent_ || scrollingFeatureForbidden_) {
+    if (!hasScrollingParent_) {
         UpdateCurrentUIState(UI_STATE_PRESSED);
         PostListItemPressStyleTask(currentState_);
-    } else if (!isFastScrolling_) {
+    } else {
         if (IsPressedCancelStatePending()) {
             ResetPressedCancelState();
         }
@@ -106,13 +111,8 @@ void StateStyleManager::HandleTouchUp()
 {
     auto node = GetFrameNode();
     CHECK_NULL_VOID(node);
-#ifdef IS_RELEASE_VERSION
-    TAG_LOGI(AceLogTag::ACE_STATE_STYLE, "Handle TouchUp or Cancel event node: %{public}s",
-        node->GetTag().c_str());
-#else
     TAG_LOGI(AceLogTag::ACE_STATE_STYLE, "Handle TouchUp or Cancel event node: %{public}s/%{public}d",
         node->GetTag().c_str(), node->GetId());
-#endif
     if (IsPressedStatePending()) {
         DeletePressStyleTask();
         ResetPressedPendingState();
@@ -128,192 +128,70 @@ void StateStyleManager::HandleTouchUp()
     }
 }
 
-void StateStyleManager::SetCurrentUIState(UIState state, bool flag)
+void StateStyleManager::FireStateFunc(bool isReset)
 {
-    if (flag) {
-        currentState_ |= state;
-    } else {
-        currentState_ &= ~state;
-    }
-
-    if (!HasStateStyle(state)) {
-        return;
-    }
-
-    // When the UIState changes, trigger the user subscription callback registered by FrameNode and CAPI.
-    // If the frontend has already added supported UIState, forcibly skip frontend subscriber handling.
-    bool skipFrontendForcibly = frontendSubscribers_ != UI_STATE_UNKNOWN ? true : false;
-    FireStateFunc(state, currentState_, !flag, skipFrontendForcibly);
-}
-
-static bool IsCanUpdate(UIState subscribers, UIState handlingState, UIState currentState)
-{
-    if (subscribers == UI_STATE_UNKNOWN) {
-        return false;
-    }
-    return ((subscribers & handlingState) == handlingState || currentState == UI_STATE_NORMAL);
-}
-
-bool StateStyleManager::IsExcludeInner(UIState handlingState)
-{
-    return (userSubscribersExcludeConfigs_ & handlingState) == handlingState;
-}
-
-void StateStyleManager::AddSupportedUIStateWithCallback(
-    UIState state, std::function<void(uint64_t)>& callback, bool isInner, bool excludeInner)
-{
-    if (state == UI_STATE_NORMAL) {
-        return;
-    }
-    if (!HasStateStyle(state)) {
-        supportedStates_ = supportedStates_ | state;
-    }
-    if (isInner) {
-        innerStateStyleSubscribers_.first |= state;
-        innerStateStyleSubscribers_.second = callback;
-        return;
-    }
-    userStateStyleSubscribers_.first |= state;
-    userStateStyleSubscribers_.second = callback;
-    if (excludeInner) {
-        userSubscribersExcludeConfigs_ |= state;
-    } else {
-        userSubscribersExcludeConfigs_ &= ~state;
-    }
-}
-
-void StateStyleManager::RemoveSupportedUIState(UIState state, bool isInner)
-{
-    if (state == UI_STATE_NORMAL) {
-        return;
-    }
-    if (isInner) {
-        innerStateStyleSubscribers_.first &= ~state;
-    } else {
-        userStateStyleSubscribers_.first &= ~state;
-        userSubscribersExcludeConfigs_ &= ~state;
-    }
-    UIState temp = frontendSubscribers_ | innerStateStyleSubscribers_.first | userStateStyleSubscribers_.first;
-    if ((temp & state) != state) {
-        supportedStates_ = supportedStates_ & ~state;
-    }
-}
-
-void StateStyleManager::HandleStateChangeInternal(
-    UIState handlingState, UIState currentState, bool isReset, bool skipFrontendForcibly)
-{
-    std::function<void(UIState)> onStateStyleChange;
-    if (IsCanUpdate(innerStateStyleSubscribers_.first, handlingState, currentState) &&
-        !IsExcludeInner(handlingState)) {
-        onStateStyleChange = innerStateStyleSubscribers_.second;
-        if (onStateStyleChange) {
-            ScopedViewStackProcessor processor;
-            onStateStyleChange(currentState);
-            TAG_LOGD(AceLogTag::ACE_STATE_STYLE,
-                "Internal state style subscriber callbacks, currentState=%{public}" PRIu64 "", currentState);
-        }
-    }
-    if (IsCanUpdate(frontendSubscribers_, handlingState, currentState) && !skipFrontendForcibly) {
-        auto node = GetFrameNode();
-        CHECK_NULL_VOID(node);
-        auto nodeId = node->GetId();
-#ifdef IS_RELEASE_VERSION
-    TAG_LOGI(AceLogTag::ACE_STATE_STYLE,"Start execution, node is %{public}s, "
-        "reset is %{public}d", node->GetTag().c_str(), isReset);
-#else
+    auto node = GetFrameNode();
+    CHECK_NULL_VOID(node);
+    auto nodeId = node->GetId();
     TAG_LOGI(AceLogTag::ACE_STATE_STYLE, "Start execution, node is %{public}s/%{public}d, "
         "reset is %{public}d", node->GetTag().c_str(), nodeId, isReset);
-#endif
-        auto uiNode = DynamicCast<UINode>(node);
-        CHECK_NULL_VOID(uiNode);
-        RefPtr<CustomNodeBase> customNode;
-        GetCustomNode(customNode, uiNode);
-        if (!customNode || (!customNode->FireHasNodeUpdateFunc(nodeId))) {
-            TAG_LOGW(AceLogTag::ACE_STATE_STYLE, "Can not find customNode!");
-            return;
-        }
-        ScopedViewStackProcessor processor;
-        customNode->FireNodeUpdateFunc(nodeId);
+    RefPtr<CustomNodeBase> customNode;
+    GetCustomNode(customNode, node);
+    if (!customNode) {
+        TAG_LOGW(AceLogTag::ACE_STATE_STYLE, "Can not find customNode!");
         return;
     }
-    if (IsCanUpdate(userStateStyleSubscribers_.first, handlingState, currentState)) {
-        onStateStyleChange = userStateStyleSubscribers_.second;
-        if (onStateStyleChange) {
-            ScopedViewStackProcessor processor;
-            onStateStyleChange(currentState);
-        }
-    }
+    ScopedViewStackProcessor processor;
+    customNode->FireNodeUpdateFunc(nodeId);
 }
 
-void StateStyleManager::FireStateFunc(
-    UIState handlingState, UIState currentState, bool isReset, bool skipFrontendForcibly)
-{
-    HandleStateChangeInternal(handlingState, currentState, isReset, skipFrontendForcibly);
-}
-
-void StateStyleManager::GetCustomNode(RefPtr<CustomNodeBase>& customNode, RefPtr<UINode> node)
+void StateStyleManager::GetCustomNode(RefPtr<CustomNodeBase>& customNode,
+    RefPtr<FrameNode>& node)
 {
     auto nodeId = node->GetId();
-    while (node) {
-        if (GetCustomNodeFromNavgation(node, customNode, nodeId)) {
+    if (AceType::InstanceOf<CustomNodeBase>(node)) {
+        customNode = DynamicCast<CustomNodeBase>(node);
+        if (customNode && customNode->FireHasNodeUpdateFunc(nodeId)) {
+            TAG_LOGI(AceLogTag::ACE_STATE_STYLE, "Find customNode by self: %{public}s",
+                customNode->GetJSViewName().c_str());
             return;
         }
+    }
+    auto parent = node->GetParent();
+    while (parent) {
+        if (AceType::InstanceOf<NavDestinationGroupNode>(parent)) {
+            auto navDestinationGroupNode = DynamicCast<NavDestinationGroupNode>(parent);
+            CHECK_NULL_VOID(navDestinationGroupNode);
+            customNode = navDestinationGroupNode->GetNavDestinationCustomNode();
+            if (customNode && customNode->FireHasNodeUpdateFunc(nodeId)) {
+                TAG_LOGI(AceLogTag::ACE_STATE_STYLE, "Find customNode from Navgation: %{public}s",
+                    customNode->GetJSViewName().c_str());
+                return;
+            }
+        }
 
-        auto parentFrameNode = DynamicCast<FrameNode>(node);
+        auto parentFrameNode = DynamicCast<FrameNode>(parent);
         auto parentPattern = parentFrameNode ? parentFrameNode->GetPattern<PopupBasePattern>() : nullptr;
         if (parentFrameNode && InstanceOf<PopupBasePattern>(parentPattern)) {
-            auto elementRegister = ElementRegister::GetInstance();
-            CHECK_NULL_VOID(elementRegister);
-            node = elementRegister->GetUINodeById(parentPattern->GetTargetId());
+            parent = ElementRegister::GetInstance()->GetUINodeById(parentPattern->GetTargetId());
             continue;
         }
 
-        if (GetCustomNodeFromSelf(node, customNode, nodeId)) {
-            return;
+        if (AceType::InstanceOf<CustomNodeBase>(parent)) {
+            customNode = DynamicCast<CustomNodeBase>(parent);
+            if (customNode && customNode->FireHasNodeUpdateFunc(nodeId)) {
+                TAG_LOGI(AceLogTag::ACE_STATE_STYLE, "Find customNode from parent: %{public}s",
+                    customNode->GetJSViewName().c_str());
+                return;
+            }
         }
-        CHECK_NULL_VOID(node);
-        node = node->GetParent();
+        parent = parent->GetParent();
     }
-}
-
-bool StateStyleManager::GetCustomNodeFromSelf(RefPtr<UINode>& node, RefPtr<CustomNodeBase>& customNode, int32_t nodeId)
-{
-    if (node && AceType::InstanceOf<CustomNodeBase>(node)) {
-        auto customNodeBase = DynamicCast<CustomNodeBase>(node);
-        if (customNodeBase && customNodeBase->FireHasNodeUpdateFunc(nodeId)) {
-            customNode = customNodeBase;
-            TAG_LOGI(
-                AceLogTag::ACE_STATE_STYLE, "Find customNode by self: %{public}s", customNode->GetJSViewName().c_str());
-            return true;
-        }
-    }
-    return false;
-}
-
-bool StateStyleManager::GetCustomNodeFromNavgation(
-    RefPtr<UINode>& node, RefPtr<CustomNodeBase>& customNode, int32_t nodeId)
-{
-    while (node && AceType::InstanceOf<NavDestinationGroupNode>(node)) {
-        auto navDestinationGroupNode = DynamicCast<NavDestinationGroupNode>(node);
-        CHECK_NULL_RETURN(navDestinationGroupNode, false);
-        auto navDestinationCustomNode = navDestinationGroupNode->GetNavDestinationCustomNode();
-        CHECK_NULL_RETURN(navDestinationCustomNode, false);
-        if (navDestinationCustomNode->FireHasNodeUpdateFunc(nodeId)) {
-            customNode = navDestinationCustomNode;
-            TAG_LOGI(AceLogTag::ACE_STATE_STYLE, "Find customNode from Navgation: %{public}s",
-                customNode->GetJSViewName().c_str());
-            return true;
-        }
-        auto customParent = DynamicCast<CustomNode>(navDestinationCustomNode);
-        CHECK_NULL_RETURN(customParent, false);
-        node = customParent->GetParent();
-    }
-    return false;
 }
 
 void StateStyleManager::PostPressStyleTask(uint32_t delayTime)
 {
-    auto pipeline = PipelineContext::GetCurrentContextSafelyWithCheck();
+    auto pipeline = PipelineContext::GetCurrentContext();
     CHECK_NULL_VOID(pipeline);
     auto taskExecutor = pipeline->GetTaskExecutor();
     CHECK_NULL_VOID(taskExecutor);
@@ -337,7 +215,7 @@ void StateStyleManager::PostPressStyleTask(uint32_t delayTime)
 
 void StateStyleManager::PostPressCancelStyleTask(uint32_t delayTime)
 {
-    auto pipeline = PipelineContext::GetCurrentContextSafelyWithCheck();
+    auto pipeline = PipelineContext::GetCurrentContext();
     CHECK_NULL_VOID(pipeline);
     auto taskExecutor = pipeline->GetTaskExecutor();
     CHECK_NULL_VOID(taskExecutor);
@@ -362,7 +240,7 @@ void StateStyleManager::PostPressCancelStyleTask(uint32_t delayTime)
 
 void StateStyleManager::PostListItemPressStyleTask(UIState state)
 {
-    bool isPressed = (state & UI_STATE_PRESSED) > 0;
+    bool isPressed = state == UI_STATE_PRESSED;
     auto node = GetFrameNode();
     CHECK_NULL_VOID(node);
     auto nodeId = node->GetId();
@@ -402,7 +280,7 @@ void StateStyleManager::HandleScrollingParent()
     };
 
     auto scrollingListener = MakeRefPtr<ScrollingListener>(std::move(scrollingEventCallback));
-    isFastScrolling_ = false;
+
     auto parent = node->GetAncestorNodeOfFrame(false);
     while (parent) {
         auto pattern = parent->GetPattern();
@@ -410,7 +288,6 @@ void StateStyleManager::HandleScrollingParent()
         if (pattern->ShouldDelayChildPressedState()) {
             hasScrollingParent_ = true;
             pattern->RegisterScrollingListener(scrollingListener);
-            isFastScrolling_ = isFastScrolling_ || pattern->ShouldPreventChildPressedState();
         }
         parent = parent->GetAncestorNodeOfFrame(false);
     }
@@ -420,6 +297,7 @@ void StateStyleManager::CleanScrollingParentListener()
 {
     auto node = GetFrameNode();
     CHECK_NULL_VOID(node);
+
     auto parent = node->GetAncestorNodeOfFrame(false);
     while (parent) {
         auto pattern = parent->GetPattern();
@@ -444,7 +322,7 @@ void StateStyleManager::Transform(PointF& localPointF, const WeakPtr<FrameNode>&
         CHECK_NULL_VOID(context);
         auto localMat = context->GetLocalTransformMatrix();
         vTrans.emplace_back(localMat);
-        host = host->GetAncestorNodeOfFrame(true);
+        host = host->GetAncestorNodeOfFrame(false);
     }
 
     Point temp(localPointF.GetX(), localPointF.GetY());
@@ -462,11 +340,11 @@ bool StateStyleManager::IsOutOfPressedRegion(int32_t sourceType, const Offset& l
     if (IsOutOfPressedRegionWithoutClip(node, sourceType, location)) {
         return true;
     }
-    auto parent = node->GetAncestorNodeOfFrame(true);
+    auto parent = node->GetAncestorNodeOfFrame(false);
     while (parent) {
         auto renderContext = parent->GetRenderContext();
         if (!renderContext) {
-            parent = parent->GetAncestorNodeOfFrame(true);
+            parent = parent->GetAncestorNodeOfFrame(false);
             continue;
         }
         // If the parent node has a "clip" attribute, the press region should be re-evaluated.
@@ -474,7 +352,7 @@ bool StateStyleManager::IsOutOfPressedRegion(int32_t sourceType, const Offset& l
         if (clip && IsOutOfPressedRegionWithoutClip(parent, sourceType, location)) {
             return true;
         }
-        parent = parent->GetAncestorNodeOfFrame(true);
+        parent = parent->GetAncestorNodeOfFrame(false);
     }
     return false;
 }

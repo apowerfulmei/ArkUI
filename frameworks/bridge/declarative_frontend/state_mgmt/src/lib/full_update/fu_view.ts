@@ -19,7 +19,6 @@
  * all definitions in this file are framework internal
  */
 
-/// <reference path="./fu_view_native.d.ts" />
 type ProvidedVarsMap = Map<string, ObservedPropertyAbstract<any>>;
 
 // Nativeview

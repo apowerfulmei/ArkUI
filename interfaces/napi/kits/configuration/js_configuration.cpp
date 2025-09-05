@@ -13,7 +13,9 @@
  * limitations under the License.
  */
 
+#include <string>
 
+#include "napi/native_api.h"
 #include "napi/native_node_api.h"
 
 #include "frameworks/core/common/ace_application_info.h"

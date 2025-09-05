@@ -29,7 +29,6 @@ public:
         : lattice_(std::move(lattice)) {}
     ~DrawingLatticeOhos() override = default;
     void* GetDrawingLatticeSptrAddr() override;
-    std::string DumpToString() override;
 
 private:
     std::shared_ptr<Rosen::Drawing::Lattice> lattice_;

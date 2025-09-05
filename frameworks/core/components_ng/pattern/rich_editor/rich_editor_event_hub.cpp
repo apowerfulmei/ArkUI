@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -13,9 +13,11 @@
  * limitations under the License.
  */
 #include "core/components_ng/pattern/rich_editor/rich_editor_event_hub.h"
-#include "base/utils/utf_helper.h"
+#if !defined(PREVIEW) && !defined(ACE_UNITTEST) && defined(OHOS_PLATFORM)
 #include "interfaces/inner_api/ui_session/ui_session_manager.h"
+#endif
 
+#include "core/components_ng/base/frame_node.h"
 #include "core/components_ng/pattern/rich_editor/rich_editor_pattern.h"
 
 namespace OHOS::Ace::NG {
@@ -29,22 +31,22 @@ int32_t RichEditorInsertValue::GetInsertOffset() const
     return insertOffset_;
 }
 
-void RichEditorInsertValue::SetInsertValue(const std::u16string& insertValue)
+void RichEditorInsertValue::SetInsertValue(const std::string& insertValue)
 {
     insertValue_ = insertValue;
 }
 
-void RichEditorInsertValue::SetPreviewText(const std::u16string& previewText)
+void RichEditorInsertValue::SetPreviewText(const std::string& previewText)
 {
     previewText_ = previewText;
 }
 
-const std::u16string& RichEditorInsertValue::GetInsertValue() const
+const std::string& RichEditorInsertValue::GetInsertValue() const
 {
     return insertValue_;
 }
 
-const std::u16string& RichEditorInsertValue::GetPreviewText() const
+const std::string& RichEditorInsertValue::GetPreviewText() const
 {
     return previewText_;
 }
@@ -109,22 +111,22 @@ int32_t RichEditorAbstractSpanResult::GetEraseLength() const
     return eraseLength_;
 }
 
-void RichEditorAbstractSpanResult::SetValue(const std::u16string& value)
+void RichEditorAbstractSpanResult::SetValue(const std::string& value)
 {
     value_ = value;
 }
 
-const std::u16string& RichEditorAbstractSpanResult::GetValue() const
+const std::string& RichEditorAbstractSpanResult::GetValue() const
 {
     return value_;
 }
 
-void RichEditorAbstractSpanResult::SetPreviewText(const std::u16string& previewText)
+void RichEditorAbstractSpanResult::SetPreviewText(const std::string& previewText)
 {
     previewText_ = previewText;
 }
 
-const std::u16string& RichEditorAbstractSpanResult::GetPreviewText() const
+const std::string& RichEditorAbstractSpanResult::GetPreviewText() const
 {
     return previewText_;
 }
@@ -162,16 +164,6 @@ void RichEditorAbstractSpanResult::SetLineHeight(double lineHeight)
 double RichEditorAbstractSpanResult::GetLineHeight() const
 {
     return lineHeight_;
-}
-
-void RichEditorAbstractSpanResult::SetHalfLeading(bool halfLeading)
-{
-    halfLeading_ = halfLeading;
-}
-
-bool RichEditorAbstractSpanResult::GetHalfLeading() const
-{
-    return halfLeading_;
 }
 
 void RichEditorAbstractSpanResult::SetLetterspacing(double letterSpacing)
@@ -279,16 +271,6 @@ TextDecorationStyle RichEditorAbstractSpanResult::GetTextDecorationStyle() const
     return textDecorationStyle_;
 }
 
-void RichEditorAbstractSpanResult::SetLineThicknessScale(float thicknessScale)
-{
-    lineThicknessScale_ = thicknessScale;
-}
-
-float RichEditorAbstractSpanResult::GetLineThicknessScale() const
-{
-    return lineThicknessScale_;
-}
-
 void RichEditorAbstractSpanResult::SetValuePixelMap(const RefPtr<PixelMap>& valuePixelMap)
 {
     valuePixelMap_ = valuePixelMap;
@@ -347,16 +329,6 @@ void RichEditorAbstractSpanResult::SetImageFit(ImageFit objectFit)
 ImageFit RichEditorAbstractSpanResult::GetObjectFit() const
 {
     return objectFit_;
-}
-
-void RichEditorAbstractSpanResult::SetUrlAddress(const std::u16string& urlAddress)
-{
-    urlAddress_ = urlAddress;
-}
-
-const std::u16string& RichEditorAbstractSpanResult::GetUrlAddress() const
-{
-    return urlAddress_;
 }
 
 void RichEditorDeleteValue::SetOffset(int32_t offset)
@@ -464,11 +436,6 @@ TextRange RichEditorChangeValue::GetRangeAfter() const
     return rangeAfter_;
 }
 
-TextChangeReason RichEditorChangeValue::GetChangeReason() const
-{
-    return changeReason_;
-}
-
 void StyledStringChangeValue::SetRangeBefore(const TextRange& range)
 {
     rangeBefore_ = range;
@@ -497,16 +464,6 @@ void StyledStringChangeValue::SetReplacementString(const RefPtr<SpanStringBase>&
 const RefPtr<SpanStringBase> StyledStringChangeValue::GetReplacementString() const
 {
     return replacementString_;
-}
-
-void StyledStringChangeValue::SetPreviewText(const RefPtr<SpanStringBase>& previewText)
-{
-    previewText_ = previewText;
-}
-
-const RefPtr<SpanStringBase> StyledStringChangeValue::GetPreviewText() const
-{
-    return previewText_;
 }
 
 void RichEditorEventHub::SetOnReady(std::function<void()>&& func)
@@ -576,7 +533,9 @@ void RichEditorEventHub::FireOnDeleteComplete()
 {
     if (onDeleteComplete_) {
         onDeleteComplete_();
-        UiSessionManager::GetInstance()->ReportComponentChangeEvent("event", "Radio.onChange");
+#if !defined(PREVIEW) && !defined(ACE_UNITTEST) && defined(OHOS_PLATFORM)
+        UiSessionManager::GetInstance().ReportComponentChangeEvent("event", "Radio.onChange");
+#endif
     }
 }
 
@@ -602,7 +561,7 @@ void RichEditorEventHub::SetOnEditingChange(std::function<void(const bool&)>&& f
 {
     onEditingChange_ = std::move(func);
 }
-
+ 
 void RichEditorEventHub::FireOnEditingChange(bool isEditing)
 {
     if (onEditingChange_) {
@@ -671,19 +630,7 @@ void RichEditorEventHub::FireOnCopy(NG::TextCommonEvent& value)
     }
 }
 
-void RichEditorEventHub::SetOnShare(std::function<void(NG::TextCommonEvent&)>&& func)
-{
-    onShare_ = std::move(func);
-}
-
-void RichEditorEventHub::FireOnShare(NG::TextCommonEvent& value)
-{
-    if (onShare_) {
-        onShare_(value);
-    }
-}
-
-void RichEditorEventHub::SetOnStyledStringWillChange(std::function<bool(const StyledStringChangeValue&)> && func)
+void RichEditorEventHub::SetOnStyledStringWillChange(std::function<bool(const StyledStringChangeValue&)>&& func)
 {
     onStyledStringWillChange_ = std::move(func);
 }
@@ -698,7 +645,7 @@ bool RichEditorEventHub::HasOnStyledStringWillChange() const
     return static_cast<bool>(onStyledStringWillChange_);
 }
 
-void RichEditorEventHub::SetOnStyledStringDidChange(std::function<void(const StyledStringChangeValue&)> && func)
+void RichEditorEventHub::SetOnStyledStringDidChange(std::function<void(const StyledStringChangeValue&)>&& func)
 {
     onStyledStringDidChange_ = std::move(func);
 }

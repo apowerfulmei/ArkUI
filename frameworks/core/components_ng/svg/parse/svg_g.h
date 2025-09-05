@@ -27,10 +27,12 @@ public:
     SvgG();
     ~SvgG() override = default;
     static RefPtr<SvgNode> Create();
-    RSRecordingPath AsPath(const SvgLengthScaleRule& lengthRule) override;
+
+#ifndef USE_ROSEN_DRAWING
+    SkPath AsPath(const Size& viewPort) const override;
+#else
     RSRecordingPath AsPath(const Size& viewPort) const override;
-    void OnDraw(RSCanvas& canvas, const SvgLengthScaleRule& lengthRule) override;
-    void ApplyOpacity(RSCanvas& canvas);
+#endif
 };
 
 } // namespace OHOS::Ace::NG

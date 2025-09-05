@@ -14,7 +14,12 @@
  */
 #include "core/interfaces/native/node/node_container_span_modifier.h"
 
+#include "core/components/common/layout/constants.h"
+#include "core/components_ng/base/frame_node.h"
+#include "core/components_ng/base/ui_node.h"
+#include "core/components_ng/base/view_abstract.h"
 #include "core/components_ng/pattern/text/span_model_ng.h"
+#include "core/pipeline/base/element_register.h"
 
 namespace OHOS::Ace::NG {
 namespace {
@@ -25,17 +30,11 @@ constexpr int NUM_3 = 3;
 constexpr int DEFAULT_LENGTH = 4;
 
 void SetContainerSpanTextBackgroundStyle(
-    ArkUINodeHandle node, ArkUI_Uint32 color, const ArkUI_Float32* values, const ArkUI_Int32* units, ArkUI_Int32 length,
-    void* style)
+    ArkUINodeHandle node, ArkUI_Uint32 color, const ArkUI_Float32* values, const ArkUI_Int32* units, ArkUI_Int32 length)
 {
     auto* uiNode = reinterpret_cast<UINode*>(node);
     CHECK_NULL_VOID(uiNode);
     if (length != DEFAULT_LENGTH) {
-        return;
-    }
-    if (SystemProperties::ConfigChangePerform() && style) {
-        auto textBackgroundStyle = reinterpret_cast<TextBackgroundStyle*>(style);
-        SpanModelNG::SetTextBackgroundStyleByBaseSpan(uiNode, *textBackgroundStyle);
         return;
     }
     TextBackgroundStyle font;
@@ -71,23 +70,17 @@ void ResetContainerSpanTextBackgroundStyle(ArkUINodeHandle node)
 namespace NodeModifier {
 const ArkUIContainerSpanModifier* GetContainerSpanModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
     static const ArkUIContainerSpanModifier modifier = {
-        .setContainerSpanTextBackgroundStyle = SetContainerSpanTextBackgroundStyle,
-        .resetContainerSpanTextBackgroundStyle = ResetContainerSpanTextBackgroundStyle,
-    };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
+        SetContainerSpanTextBackgroundStyle,
+        ResetContainerSpanTextBackgroundStyle };
     return &modifier;
 }
 
 const CJUIContainerSpanModifier* GetCJUIContainerSpanModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
     static const CJUIContainerSpanModifier modifier = {
-        .setContainerSpanTextBackgroundStyle = SetContainerSpanTextBackgroundStyle,
-        .resetContainerSpanTextBackgroundStyle = ResetContainerSpanTextBackgroundStyle,
-    };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
+        SetContainerSpanTextBackgroundStyle,
+        ResetContainerSpanTextBackgroundStyle };
     return &modifier;
 }
 } // namespace NodeModifier

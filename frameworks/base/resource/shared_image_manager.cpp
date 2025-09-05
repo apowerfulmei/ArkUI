@@ -23,7 +23,8 @@ namespace {
 constexpr uint32_t DELAY_TIME_FOR_IMAGE_DATA_CLEAN = 30000;
 constexpr char MEMORY_IMAGE_HEAD[] = "memory://";
 
-constexpr size_t MAX_SIZE_FOR_TOTAL_IMAGE = 10000000;
+constexpr uint32_t MAX_SIZE_FOR_EACH_IMAGE = 2000000;
+constexpr uint32_t MAX_NUM_OF_IMAGE = 5;
 
 } // namespace
 
@@ -40,9 +41,6 @@ std::function<void()> SharedImageManager::GenerateClearImageDataCallback(const s
         }
         {
             std::lock_guard<std::mutex> lockCancelableCallbackMap_(sharedImageManager->cancelableCallbackMapMutex_);
-            std::lock_guard<std::mutex> lockImageMap(sharedImageManager->sharedImageMapMutex_);
-            LOGW("clear image cache name: %{public}s", picName.c_str());
-            sharedImageManager->sharedImageTotalSize_ -= dataSize;
             sharedImageManager->cancelableCallbackMap_.erase(picName);
         }
     };
@@ -84,7 +82,19 @@ void SharedImageManager::AddSharedImage(const std::string& name, SharedImage&& s
         }
         // step2: lock image map to add shared image and notify [LazyMemoryImageProvider]s to update data and reload
         // update image data when the name can be found in map
-        bool isClear = UpdateImageMap(name, sharedImage);
+        bool isClear = false;
+        auto iter = sharedImageMap_.find(name);
+        if (iter != sharedImageMap_.end()) {
+            iter->second = std::move(sharedImage);
+        } else {
+            sharedImageMap_.emplace(name, std::move(sharedImage));
+            if (sharedImageMap_.size() > MAX_NUM_OF_IMAGE) {
+                isClear = true;
+            }
+        }
+        if (sharedImage.size() > MAX_SIZE_FOR_EACH_IMAGE) {
+            isClear = true;
+        }
         auto taskExecutor = taskExecutor_.Upgrade();
         CHECK_NULL_VOID(taskExecutor);
         taskExecutor->PostTask(
@@ -116,31 +126,6 @@ void SharedImageManager::AddSharedImage(const std::string& name, SharedImage&& s
             TaskExecutor::TaskType::UI, "ArkUIImageAddSharedImageData");
 }
 
-bool SharedImageManager::UpdateImageMap(const std::string& name, const SharedImage& sharedImage)
-{
-    bool isClear = false;
-    auto iter = sharedImageMap_.find(name);
-    if (iter != sharedImageMap_.end()) {
-        sharedImageTotalSize_ -= iter->second.size();
-        sharedImageTotalSize_ += sharedImage.size();
-        iter->second = sharedImage;
-    } else {
-        sharedImageTotalSize_ += sharedImage.size();
-        sharedImageMap_.emplace(name, sharedImage);
-        if (static_cast<int>(sharedImageMap_.size()) > sharedImageCacheThreshold_) {
-            LOGW("will clear %{public}s cache, sharedImageMap_ size %{public}d max cache: %{public}d",
-                name.c_str(), static_cast<int>(sharedImageMap_.size()), sharedImageCacheThreshold_);
-            isClear = true;
-        }
-    }
-    if (sharedImageTotalSize_ > MAX_SIZE_FOR_TOTAL_IMAGE) {
-        LOGW("will clear %{public}s cache, sharedImageTotalSize_ size %{public}d",
-            name.c_str(), static_cast<int32_t>(sharedImageTotalSize_));
-        isClear = true;
-    }
-    return isClear;
-}
-
 void SharedImageManager::AddPictureNamesToReloadMap(std::string&& name)
 {
     // add names of memory image to be read from shared memory
@@ -151,10 +136,8 @@ void SharedImageManager::AddPictureNamesToReloadMap(std::string&& name)
 bool SharedImageManager::FindImageInSharedImageMap(
     const std::string& name, const WeakPtr<ImageProviderLoader>& providerWp)
 {
-    LOGD("find image %{public}s in SharedImageMap", name.c_str());
     auto loader = providerWp.Upgrade();
     if (!loader) {
-        LOGW("image %{public}s loader nullptr", name.c_str());
         return false;
     }
     std::lock_guard<std::mutex> lockImageMap(sharedImageMapMutex_);
@@ -177,14 +160,6 @@ bool SharedImageManager::RegisterLoader(const std::string& name, const WeakPtr<I
 
 bool SharedImageManager::Remove(const std::string& name)
 {
-    std::lock_guard<std::mutex> lockImageMap(sharedImageMapMutex_);
-    auto iter = sharedImageMap_.find(name);
-    if (iter == sharedImageMap_.end()) {
-        LOGW("Remove failed: image data of %{private}s does not found in SharedImageMap", name.c_str());
-        return false;
-    }
-    sharedImageTotalSize_ -= iter->second.size();
-    LOGW("clear image cache name: %{public}s", name.c_str());
     int res = static_cast<int>(sharedImageMap_.erase(name));
     return (res != 0);
 }

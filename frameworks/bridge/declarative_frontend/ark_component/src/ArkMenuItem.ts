@@ -46,7 +46,11 @@ class LabelFontColorModifier extends ModifierWithKey<ResourceColor> {
   }
 
   checkObjectDiff(): boolean {
-    return !isBaseOrResourceEqual(this.stageValue, this.value);
+    if (isResource(this.stageValue) && isResource(this.value)) {
+      return !isResourceEqual(this.stageValue, this.value);
+    } else {
+      return true;
+    }
   }
 }
 
@@ -64,7 +68,11 @@ class ContentFontColorModifier extends ModifierWithKey<ResourceColor> {
   }
 
   checkObjectDiff(): boolean {
-    return !isBaseOrResourceEqual(this.stageValue, this.value);
+    if (isResource(this.stageValue) && isResource(this.value)) {
+      return !isResourceEqual(this.stageValue, this.value);
+    } else {
+      return true;
+    }
   }
 }
 
@@ -133,20 +141,6 @@ class MenuItemSelectIconModifier extends ModifierWithKey<boolean | ResourceStr> 
   }
 }
 
-class MenuItemOnChangeModifier extends ModifierWithKey<(selected: boolean) => void> {
-  constructor(value: (selected: boolean) => void) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('menuItemOnChange');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().menuitem.resetOnChange(node);
-    } else{
-      getUINativeModule().menuitem.setOnChange(node, this.value);
-    }
-  }
-}
-
 class ArkMenuItemComponent extends ArkComponent implements MenuItemAttribute {
   constructor(nativePtr: KNode, classType?: ModifierType) {
     super(nativePtr, classType);
@@ -160,8 +154,7 @@ class ArkMenuItemComponent extends ArkComponent implements MenuItemAttribute {
     return this;
   }
   onChange(callback: (selected: boolean) => void): this {
-    modifierWithKey(this._modifiersWithKeys, MenuItemOnChangeModifier.identity, MenuItemOnChangeModifier, callback);
-    return this;
+    throw new Error('Method not implemented.');
   }
   contentFont(value: Font): this {
     modifierWithKey(this._modifiersWithKeys, ContentFontModifier.identity, ContentFontModifier, value);

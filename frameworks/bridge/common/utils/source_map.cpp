@@ -15,7 +15,7 @@
 
 #include "frameworks/bridge/common/utils/source_map.h"
 
-#include "base/log/log.h"
+#include "base/log/log_wrapper.h"
 
 namespace OHOS::Ace::Framework {
 
@@ -164,27 +164,6 @@ void RevSourceMap::ExtractKeyInfo(const std::string& sourceMap, std::vector<std:
     }
 }
 
-void RevSourceMap::HandleKeyInfo(const std::string& keyInfo, std::string& mark)
-{
-    // first: find the key info and record the temp key info
-    // second: add the detail into the keyinfo
-    if (keyInfo == SOURCES || keyInfo == NAMES || keyInfo == MAPPINGS || keyInfo == FILE || keyInfo == SOURCE_CONTENT ||
-        keyInfo == SOURCE_ROOT || keyInfo == NAMEMAP) {
-        // record the temp key info
-        mark = keyInfo;
-    } else if (mark == SOURCES) {
-        sources_.push_back(keyInfo);
-    } else if (mark == NAMES) {
-        names_.push_back(keyInfo);
-    } else if (mark == MAPPINGS) {
-        mappings_.push_back(keyInfo);
-    } else if (mark == FILE) {
-        files_.push_back(keyInfo);
-    } else if (mark == NAMEMAP) {
-        nameMap_.push_back(keyInfo);
-    }
-}
-
 void RevSourceMap::Init(const std::string& sourceMap)
 {
     std::vector<std::string> sourceKeyInfo;
@@ -195,7 +174,23 @@ void RevSourceMap::Init(const std::string& sourceMap)
     // first: find the key info and record the temp key info
     // second: add the detail into the keyinfo
     for (auto keyInfo : sourceKeyInfo) {
-        HandleKeyInfo(keyInfo, mark);
+        if (keyInfo == SOURCES || keyInfo == NAMES || keyInfo == MAPPINGS || keyInfo == FILE ||
+            keyInfo == SOURCE_CONTENT || keyInfo == SOURCE_ROOT || keyInfo == NAMEMAP) {
+            // record the temp key info
+            mark = keyInfo;
+        } else if (mark == SOURCES) {
+            sources_.push_back(keyInfo);
+        } else if (mark == NAMES) {
+            names_.push_back(keyInfo);
+        } else if (mark == MAPPINGS) {
+            mappings_.push_back(keyInfo);
+        } else if (mark == FILE) {
+            files_.push_back(keyInfo);
+        } else if (mark == NAMEMAP) {
+            nameMap_.push_back(keyInfo);
+        } else {
+            continue;
+        }
     }
 
     if (mappings_.empty()) {

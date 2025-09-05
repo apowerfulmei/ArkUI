@@ -25,7 +25,6 @@
 #include "base/utils/macros.h"
 #include "core/components/common/properties/animation_option.h"
 #include "core/components/common/properties/state_attributes.h"
-#include "core/components_ng/base/view_stack_processor.h"
 
 namespace OHOS::Ace {
 
@@ -35,9 +34,6 @@ public:
     virtual ~ViewStackModel() = default;
 
     virtual void Push(const RefPtr<AceType>& node, bool isCustomView) = 0;
-#ifdef ACE_STATIC
-    virtual void PushPtr(int64_t ptr) {};
-#endif
     virtual void Pop() = 0;
     virtual void PopContainer() = 0;
     virtual void PushKey(const std::string& key) = 0;
@@ -56,10 +52,6 @@ public:
     virtual void GetAndPushFrameNode(const std::string& tag, int32_t elmtId) = 0;
     virtual bool CheckTopNodeFirstBuilding() const = 0;
     virtual bool IsEmptyStack() const = 0;
-    virtual void PushPrebuildCompCmd() {};
-    virtual void PushPrebuildCompCmd(const char* commandName, NG::PrebuildFunc prebuildFunc) {};
-    virtual bool CheckIsPrebuildTimeout() { return false; };
-    virtual bool IsPrebuilding() { return false; };
 };
 
 } // namespace OHOS::Ace

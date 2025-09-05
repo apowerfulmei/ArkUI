@@ -15,20 +15,22 @@
 
 #include "core/components_ng/event/pan_event.h"
 
+#include "base/utils/utils.h"
 #include "core/components_ng/base/frame_node.h"
-#include "core/gestures/gesture_info.h"
+#include "core/components_ng/event/gesture_event_hub.h"
+#include "core/components_ng/gestures/recognizers/pan_recognizer.h"
 
 namespace OHOS::Ace::NG {
 
 PanEventActuator::PanEventActuator(const WeakPtr<GestureEventHub>& gestureEventHub, PanDirection direction,
-    int32_t fingers, float distance)
+    int32_t fingers, float distance, bool isOverrideDistance)
     : gestureEventHub_(gestureEventHub), direction_(direction), fingers_(fingers), distance_(distance)
 {
     if (fingers_ < DEFAULT_PAN_FINGER) {
         fingers_ = DEFAULT_PAN_FINGER;
     }
 
-    if (LessNotEqual(distance_, 0.0)) {
+    if (!isOverrideDistance && LessOrEqual(distance_, DEFAULT_PAN_DISTANCE.ConvertToPx())) {
         distance_ = DEFAULT_PAN_DISTANCE.ConvertToPx();
     }
 
@@ -37,26 +39,6 @@ PanEventActuator::PanEventActuator(const WeakPtr<GestureEventHub>& gestureEventH
     auto frameNode = gestureHub->GetFrameNode();
     CHECK_NULL_VOID(frameNode);
     panRecognizer_ = MakeRefPtr<PanRecognizer>(fingers_, direction_, distance_);
-}
-
-PanEventActuator::PanEventActuator(const WeakPtr<GestureEventHub>& gestureEventHub, PanDirection direction,
-    int32_t fingers, PanDistanceMap distanceMap)
-    : gestureEventHub_(gestureEventHub), direction_(direction), fingers_(fingers)
-{
-    if (fingers_ < DEFAULT_PAN_FINGER) {
-        fingers_ = DEFAULT_PAN_FINGER;
-    }
-    panRecognizer_ = MakeRefPtr<PanRecognizer>(fingers_, direction_, distanceMap);
-}
-
-PanEventActuator::PanEventActuator(const WeakPtr<GestureEventHub>& gestureEventHub, PanDirection direction,
-    int32_t fingers, const PanDistanceMapDimension& distanceMap)
-    : gestureEventHub_(gestureEventHub), direction_(direction), fingers_(fingers)
-{
-    if (fingers_ < DEFAULT_PAN_FINGER) {
-        fingers_ = DEFAULT_PAN_FINGER;
-    }
-    panRecognizer_ = MakeRefPtr<PanRecognizer>(fingers_, direction_, distanceMap);
 }
 
 void PanEventActuator::OnCollectTouchTarget(const OffsetF& coordinateOffset, const TouchRestrict& touchRestrict,
@@ -113,7 +95,6 @@ void PanEventActuator::OnCollectTouchTarget(const OffsetF& coordinateOffset, con
     auto actionEnd = [weak = WeakClaim(this)](GestureEvent& info) {
         auto actuator = weak.Upgrade();
         CHECK_NULL_VOID(actuator);
-        // In the actionEnd callback, actuator->panEvents_ may be modified
         auto copyPanEvents = actuator->panEvents_;
         for (const auto& panEvent : copyPanEvents) {
             auto actionEnd = panEvent->GetActionEndEventFunc();
@@ -132,7 +113,7 @@ void PanEventActuator::OnCollectTouchTarget(const OffsetF& coordinateOffset, con
     };
     panRecognizer_->SetOnActionEnd(actionEnd);
 
-    auto actionCancel = [weak = WeakClaim(this)](const GestureEvent& info) {
+    auto actionCancel = [weak = WeakClaim(this)]() {
         auto actuator = weak.Upgrade();
         CHECK_NULL_VOID(actuator);
         // In the actionCancel callback, actuator->panEvents_ may be modified
@@ -158,9 +139,6 @@ void PanEventActuator::OnCollectTouchTarget(const OffsetF& coordinateOffset, con
 
     panRecognizer_->SetCoordinateOffset(Offset(coordinateOffset.GetX(), coordinateOffset.GetY()));
     panRecognizer_->SetGetEventTargetImpl(getEventTargetImpl);
-    if (isExcludedAxis_ && touchRestrict.inputEventType == InputEventType::AXIS) {
-        return;
-    }
     result.emplace_back(panRecognizer_);
     responseLinkResult.emplace_back(panRecognizer_);
 }

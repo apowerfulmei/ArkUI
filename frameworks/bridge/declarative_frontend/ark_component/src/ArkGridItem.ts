@@ -98,20 +98,6 @@ class GridItemOptionsModifier extends ModifierWithKey<GridItemOptions> {
   }
 }
 
-class GridItemOnSelectedModifier extends ModifierWithKey<(isSelected: boolean) => void> {
-  constructor(value: (isSelected: boolean) => void) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('gridItemOnSelected');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().gridItem.resetGridItemOnSelected(node);
-    } else {
-      getUINativeModule().gridItem.setGridItemOnSelected(node, this.value!);
-    }
-  }
-}
-
 class ArkGridItemComponent extends ArkComponent implements GridItemAttribute {
   constructor(nativePtr: KNode, classType?: ModifierType) {
     super(nativePtr, classType);
@@ -153,8 +139,7 @@ class ArkGridItemComponent extends ArkComponent implements GridItemAttribute {
     return this;
   }
   onSelect(event: (isSelected: boolean) => void): this {
-    modifierWithKey(this._modifiersWithKeys, GridItemOnSelectedModifier.identity, GridItemOnSelectedModifier, event);
-    return this;
+    throw new Error('Method not implemented.');
   }
 }
 

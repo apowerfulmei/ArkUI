@@ -15,8 +15,6 @@
 
 #include "frameworks/bridge/declarative_frontend/jsview/scroll_bar/js_scroll_bar.h"
 
-#include "bridge/declarative_frontend/engine/jsi/js_ui_index.h"
-#include "bridge/declarative_frontend/jsview/js_scrollable.h"
 #include "bridge/declarative_frontend/jsview/js_scroller.h"
 #include "bridge/declarative_frontend/jsview/models/scroll_bar_model_impl.h"
 #include "core/common/container.h"
@@ -65,7 +63,6 @@ void JSScrollBar::JSBind(BindingTarget globalObj)
     JSClass<JSScrollBar>::StaticMethod("onDeleteEvent", &JSInteractableView::JsOnDelete);
     JSClass<JSScrollBar>::StaticMethod("onClick", &JSInteractableView::JsOnClick);
     JSClass<JSScrollBar>::StaticMethod("enableNestedScroll", &JSScrollBar::JsSetEnableNestedScroll);
-    JSClass<JSScrollBar>::StaticMethod("scrollBarColor", &JSScrollBar::JsSetScrollBarColor);
 
     JSClass<JSScrollBar>::InheritAndBind<JSContainerBase>(globalObj);
 }
@@ -77,32 +74,25 @@ void JSScrollBar::Create(const JSCallbackInfo& info)
     int directionNum = -1;
     int stateNum = -1;
     bool infoflag = false;
-    if (info.Length() <= 0) {
-        ScrollBarModel::GetInstance()->Create(proxy, infoflag, proxyFlag, directionNum, stateNum);
-        return;
-    }
-    auto jsVal = info[0];
-    if (jsVal->IsObject()) {
+    if (info.Length() > 0 && info[0]->IsObject()) {
         infoflag = true;
-        auto obj = JSRef<JSObject>::Cast(jsVal);
-        auto scrollerValue = obj->GetProperty(static_cast<int32_t>(ArkUIIndex::SCROLLER));
-        if (scrollerValue->IsObject()) {
+        auto obj = JSRef<JSObject>::Cast(info[0]);
+        auto scrollerValue = obj->GetProperty("scroller");
+        if (scrollerValue->IsObject() && JSRef<JSObject>::Cast(scrollerValue)->Unwrap<JSScroller>()) {
             auto jsScroller = JSRef<JSObject>::Cast(scrollerValue)->Unwrap<JSScroller>();
-            if (jsScroller) {
-                jsScroller->SetInstanceId(Container::CurrentId());
-                auto scrollBarProxy = jsScroller->GetScrollBarProxy();
-                proxyFlag = true;
-                proxy = ScrollBarModel::GetInstance()->GetScrollBarProxy(scrollBarProxy);
-                jsScroller->SetScrollBarProxy(proxy);
-            }
+            jsScroller->SetInstanceId(Container::CurrentId());
+            auto scrollBarProxy = jsScroller->GetScrollBarProxy();
+            proxyFlag = true;
+            proxy = ScrollBarModel::GetInstance()->GetScrollBarProxy(scrollBarProxy);
+            jsScroller->SetScrollBarProxy(proxy);
         }
 
-        auto directionValue = obj->GetProperty(static_cast<int32_t>(ArkUIIndex::DIRECTION));
+        auto directionValue = obj->GetProperty("direction");
         if (directionValue->IsNumber()) {
             directionNum = directionValue->ToNumber<int32_t>();
         }
 
-        auto stateValue = obj->GetProperty(static_cast<int32_t>(ArkUIIndex::STATE));
+        auto stateValue = obj->GetProperty("state");
         if (stateValue->IsNumber()) {
             stateNum = stateValue->ToNumber<int32_t>();
         }
@@ -121,17 +111,4 @@ void JSScrollBar::JsSetEnableNestedScroll(const JSCallbackInfo& args)
     ScrollBarModel::GetInstance()->SetEnableNestedScroll(args[0]->ToBoolean());
 }
 
-void JSScrollBar::JsSetScrollBarColor(const JSCallbackInfo& args)
-{
-    Color color;
-    RefPtr<ResourceObject> resObj;
-    if (!JSViewAbstract::ParseColorMetricsToColor(args[0], color, resObj)) {
-        CompleteResourceObjectFromColor(resObj, color, false);
-        ScrollBarModel::GetInstance()->ResetScrollBarColor();
-    } else {
-        CompleteResourceObjectFromColor(resObj, color, true);
-        ScrollBarModel::GetInstance()->SetScrollBarColor(color);
-    }
-    ScrollBarModel::GetInstance()->CreateWithResourceObj(ScrollBarJsResType::SCROLLBAR_COLOR, resObj);
-}
 } // namespace OHOS::Ace::Framework

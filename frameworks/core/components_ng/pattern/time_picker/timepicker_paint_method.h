@@ -27,11 +27,10 @@
 namespace OHOS::Ace::NG {
 
 class ACE_EXPORT TimePickerPaintMethod : public NodePaintMethod {
-    DECLARE_ACE_TYPE(TimePickerPaintMethod, NodePaintMethod);
-
+    DECLARE_ACE_TYPE(TimePickerPaintMethod, NodePaintMethod)
 public:
     TimePickerPaintMethod() = default;
-    ~TimePickerPaintMethod() override {}
+    ~TimePickerPaintMethod() override = default;
 
     CanvasDrawFunction GetForegroundDrawFunction(PaintWrapper* paintWrapper) override;
 

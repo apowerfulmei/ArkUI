@@ -28,12 +28,9 @@
 #include "base/utils/noncopyable.h"
 #include "core/components/box/drag_drop_event.h"
 #include "core/components/common/properties/color.h"
-#include "core/common/resource/resource_object.h"
-#include "core/common/resource/resource_parse_utils.h"
 #include "core/components/hyperlink/hyperlink_theme.h"
 #include "core/components_ng/event/gesture_event_hub.h"
 #include "core/components_ng/pattern/text/layout_info_interface.h"
-#include "core/components_ng/pattern/text/text_layout_property.h"
 #include "core/components_ng/pattern/text/text_menu_extension.h"
 #include "core/components_ng/pattern/text/text_styles.h"
 #include "core/components_ng/pattern/text_field/text_field_model.h"
@@ -47,11 +44,10 @@ struct TextDetectConfig {
     TextDecoration entityDecorationType = TextDecoration::UNDERLINE;
     Color entityDecorationColor;
     TextDecorationStyle entityDecorationStyle = TextDecorationStyle::SOLID;
-    bool enablePreviewMenu = false;
 
     TextDetectConfig()
     {
-        auto pipeline = PipelineContext::GetCurrentContextSafelyWithCheck();
+        auto pipeline = PipelineContext::GetCurrentContextSafely();
         CHECK_NULL_VOID(pipeline);
         auto hyperlinkTheme = pipeline->GetTheme<HyperlinkTheme>();
         CHECK_NULL_VOID(hyperlinkTheme);
@@ -70,57 +66,8 @@ struct TextDetectConfig {
         decorationJson->Put("color", entityDecorationColor.ToString().c_str());
         decorationJson->Put("style", static_cast<int64_t>(entityDecorationStyle));
         jsonValue->Put("decoration", decorationJson);
-        jsonValue->Put("enablePreviewMenu", enablePreviewMenu ? "true" : "false");
         return jsonValue->ToString();
     }
-
-    void AddResource(const std::string& key, const RefPtr<ResourceObject>& resObj,
-        std::function<void(const RefPtr<ResourceObject>&, TextDetectConfig&)>&& updateFunc)
-    {
-        if (resObj == nullptr || !updateFunc) {
-            return;
-        }
-        detectConfigResMap_[key] = { resObj, std::move(updateFunc) };
-    }
-
-    void ReloadResources()
-    {
-        for (const auto& [key, resourceUpdater] : detectConfigResMap_) {
-            resourceUpdater.updateFunc(resourceUpdater.obj, *this);
-        }
-    }
-
-    static void RegisterColorResource(TextDetectConfig& textDetectConfig, RefPtr<ResourceObject>& resObj)
-    {
-        if (SystemProperties::ConfigChangePerform() && resObj) {
-            auto&& updateFunc = [](const RefPtr<ResourceObject>& resObj, TextDetectConfig& textDetectConfig) {
-                Color colorValue;
-                ResourceParseUtils::ParseResColor(resObj, colorValue);
-                textDetectConfig.entityColor = colorValue;
-                textDetectConfig.entityDecorationColor = colorValue;
-            };
-            textDetectConfig.AddResource("textDetectConfig.Color", resObj, std::move(updateFunc));
-        }
-    }
-
-    static void RegisterDecoColorResource(TextDetectConfig& textDetectConfig, RefPtr<ResourceObject>& resObj)
-    {
-        if (SystemProperties::ConfigChangePerform() && resObj) {
-            auto&& updateFunc = [](const RefPtr<ResourceObject>& resObj, TextDetectConfig& textDetectConfig) {
-                Color colorValue;
-                ResourceParseUtils::ParseResColor(resObj, colorValue);
-                textDetectConfig.entityDecorationColor = colorValue;
-            };
-            textDetectConfig.AddResource("textDetectConfig.DecoColor", resObj, std::move(updateFunc));
-        }
-    }
-
-    struct ResourceUpdater {
-        RefPtr<ResourceObject> obj;
-        std::function<void(const RefPtr<ResourceObject>&, TextDetectConfig&)> updateFunc;
-    };
-
-    std::unordered_map<std::string, ResourceUpdater> detectConfigResMap_;
 };
 
 class ACE_EXPORT SpanStringBase : public AceType {
@@ -140,13 +87,11 @@ public:
     static TextModel* GetInstance();
     virtual ~TextModel() = default;
 
-    virtual void Create(const std::u16string& content) {};
-    virtual void Create(const std::string& content) {};
+    virtual void Create(const std::string& content) = 0;
     virtual void Create(const RefPtr<SpanStringBase>& spanString) = 0;
     virtual void SetFont(const Font& value) = 0;
     virtual void SetFontSize(const Dimension& value) = 0;
     virtual void SetTextColor(const Color& value) = 0;
-    virtual void ResetTextColor() = 0;
     virtual void SetTextShadow(const std::vector<Shadow>& value) = 0;
     virtual void SetItalicFontStyle(Ace::FontStyle value) = 0;
     virtual void SetFontWeight(FontWeight value) = 0;
@@ -163,7 +108,6 @@ public:
     virtual void SetTextIndent(const Dimension& value) = 0;
     virtual void SetLineHeight(const Dimension& value) = 0;
     virtual void SetLineSpacing(const Dimension& value) = 0;
-    virtual void SetIsOnlyBetweenLines(bool isOnlyBetweenLines) = 0;
     virtual void SetTextDecoration(TextDecoration value) = 0;
     virtual void SetTextDecorationColor(const Color& value) = 0;
     virtual void SetTextDecorationStyle(TextDecorationStyle value) = 0;
@@ -173,23 +117,24 @@ public:
     virtual void SetAdaptMinFontSize(const Dimension& value) = 0;
     virtual void SetAdaptMaxFontSize(const Dimension& value) = 0;
     virtual void SetHeightAdaptivePolicy(TextHeightAdaptivePolicy value) = 0;
-    virtual void SetContentTransition(TextEffectStrategy value, TextFlipDirection direction, bool enableBlur) {};
-    virtual void ResetContentTransition() {};
     virtual void SetTextDetectEnable(bool value) = 0;
     virtual void SetTextDetectConfig(const TextDetectConfig& textDetectConfig) = 0;
     virtual void OnSetWidth() {};
     virtual void OnSetHeight() {};
     virtual void OnSetAlign() {};
-    virtual void SetTextContentAlign(TextContentAlign value) {};
-    virtual void ReSetTextContentAlign() {};
     virtual void SetOnClick(std::function<void(BaseEventInfo* info)>&& click, double distanceThreshold) = 0;
     virtual void ClearOnClick() = 0;
     virtual void SetRemoteMessage(std::function<void()>&& click) = 0;
     virtual void SetCopyOption(CopyOptions copyOption) = 0;
-    virtual void SetOnCopy(std::function<void(const std::u16string&)>&& func) = 0;
+    virtual void SetOnCopy(std::function<void(const std::string&)>&& func) = 0;
     virtual void SetEllipsisMode(EllipsisMode modal) = 0;
 
     virtual void SetOnDragStart(NG::OnDragStartFunc&& onDragStart) = 0;
+    virtual void SetOnDragEnter(NG::OnDragDropFunc&& onDragEnter) = 0;
+    virtual void SetOnDragMove(NG::OnDragDropFunc&& onDragMove) = 0;
+    virtual void SetOnDragLeave(NG::OnDragDropFunc&& onDragLeave) = 0;
+    virtual void SetOnDrop(NG::OnDragDropFunc&& onDrop) = 0;
+
     virtual void SetTextSelection(int32_t startIndex, int32_t endIndex) = 0;
     virtual void SetTextSelectableMode(TextSelectableMode textSelectable) = 0;
     virtual void SetTextCaretColor(const Color& value) = 0;
@@ -203,21 +148,11 @@ public:
     };
     virtual void SetClipEdge(bool clip) = 0;
     virtual void SetFontFeature(const std::list<std::pair<std::string, int32_t>>& value) = 0;
-    virtual void SetMarqueeOptions(const NG::TextMarqueeOptions& options) = 0;
-    virtual void SetOnMarqueeStateChange(std::function<void(int32_t)>&& func) = 0;
-    virtual void SetSelectionMenuOptions(const NG::OnCreateMenuCallback&& onCreateMenuCallback,
-        const NG::OnMenuItemClickCallback&& onMenuItemClick,
-        const NG::OnPrepareMenuCallback&& onPrepareMenuCallback) {};
+    virtual void SetSelectionMenuOptions(
+        const NG::OnCreateMenuCallback&& onCreateMenuCallback, const NG::OnMenuItemClickCallback&& onMenuItemClick) {};
     virtual void SetResponseRegion(bool isUserSetResponseRegion) {};
     virtual void SetHalfLeading(bool halfLeading) = 0;
     virtual void SetEnableHapticFeedback(bool state) = 0;
-    virtual void SetEnableAutoSpacing(bool enabled) = 0;
-    virtual void SetLineThicknessScale(float value) = 0;
-    virtual void SetOptimizeTrailingSpace(bool trim) = 0;
-    virtual void SetGradientShaderStyle(NG::Gradient& gradient) = 0;
-    virtual void SetColorShaderStyle(const Color& value) = 0;
-    virtual void ResetGradientShaderStyle() = 0;
-    virtual void SetTextVerticalAlign(TextVerticalAlign verticalAlign) = 0;
 
 private:
     static std::unique_ptr<TextModel> instance_;

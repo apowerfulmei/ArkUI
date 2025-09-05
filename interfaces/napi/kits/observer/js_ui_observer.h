@@ -33,9 +33,7 @@ public:
     napi_value ProcessUnRegister(napi_env env, napi_callback_info info);
 private:
     napi_value ProcessNavigationRegister(napi_env env, napi_callback_info info);
-    napi_value ProcessNavigationRegisterByUniqueId(napi_env env, napi_callback_info info);
     napi_value ProcessNavigationUnRegister(napi_env env, napi_callback_info info);
-    napi_value ProcessNavigationUnRegisterByUniqueId(napi_env env, napi_callback_info info);
     napi_value ProcessScrollEventRegister(napi_env env, napi_callback_info info);
     napi_value ProcessScrollEventUnRegister(napi_env env, napi_callback_info info);
     napi_value ProcessRouterPageRegister(napi_env env, napi_callback_info info);
@@ -55,16 +53,6 @@ private:
     napi_value ProcessDidClickUnRegister(napi_env env, napi_callback_info info);
     napi_value ProcessTabContentStateRegister(napi_env env, napi_callback_info info);
     napi_value ProcessTabContentStateUnRegister(napi_env env, napi_callback_info info);
-    napi_value ProcessBeforePanStartRegister(napi_env env, napi_callback_info info);
-    napi_value ProcessBeforePanStartUnRegister(napi_env env, napi_callback_info info);
-    napi_value ProcessBeforePanEndRegister(napi_env env, napi_callback_info info);
-    napi_value ProcessBeforePanEndUnRegister(napi_env env, napi_callback_info info);
-    napi_value ProcessAfterPanStartRegister(napi_env env, napi_callback_info info);
-    napi_value ProcessAfterPanStartUnRegister(napi_env env, napi_callback_info info);
-    napi_value ProcessAfterPanEndRegister(napi_env env, napi_callback_info info);
-    napi_value ProcessAfterPanEndUnRegister(napi_env env, napi_callback_info info);
-    napi_value ProcessNodeRenderStateRegister(napi_env env, napi_callback_info info);
-    napi_value ProcessNodeRenderStateUnRegister(napi_env env, napi_callback_info info);
     napi_value AddToScrollEventType(napi_env env);
     napi_value AddToRouterPageState(napi_env env);
     napi_value CreateNavDestinationState(napi_env env);
@@ -75,7 +63,6 @@ private:
     bool isLayoutDoneChangeSetted_ = false;
     bool isWillClickFuncSetted_ = false;
     bool isDidClickFuncSetted_ = false;
-    bool isPanGestureHandleFuncSetted_ = false;
     bool isTabContentStateUpdateFuncSetted_ = false;
     bool isRouterPageHandleFuncSetted_ = false;
     bool isDestinationSwitchHandleFuncSetted_ = false;

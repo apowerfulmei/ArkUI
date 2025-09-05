@@ -15,9 +15,8 @@
 
 #include <dlfcn.h>
 
+#include "base/utils/utils.h"
 #include "base/ressched/ressched_report.h"
-#include <unistd.h>
-#include <sys/syscall.h>
 
 namespace OHOS::Ace {
 namespace {
@@ -30,40 +29,9 @@ ReportDataFunc LoadReportDataFunc()
     CHECK_NULL_RETURN(handle, nullptr);
     auto func = reinterpret_cast<ReportDataFunc>(dlsym(handle, "ReportData"));
     if (func == nullptr) {
-        LOGW("dlsym function ReportData failed!");
         dlclose(handle);
         return nullptr;
     }
-    LOGI("dlsym function ReportData success.");
     return func;
-}
-
-ReportSyncEventFunc LoadReportSyncEventFunc()
-{
-    auto handle = dlopen(RES_SCHED_CLIENT_SO.c_str(), RTLD_NOW);
-    CHECK_NULL_RETURN(handle, nullptr);
-    auto func = reinterpret_cast<ReportSyncEventFunc>(dlsym(handle, "ReportSyncEvent"));
-    if (func == nullptr) {
-        LOGW("dlsym function ReportSyncEvent failed!");
-        dlclose(handle);
-        return nullptr;
-    }
-    LOGI("dlsym function ReportSyncEvent success.");
-    return func;
-}
-
-int64_t ResSchedReport::GetTid()
-{
-    return gettid();
-}
-
-int64_t ResSchedReport::GetPid()
-{
-    return getpid();
-}
-
-pthread_t ResSchedReport::GetPthreadSelf()
-{
-    return pthread_self();
 }
 } // namespace OHOS::Ace

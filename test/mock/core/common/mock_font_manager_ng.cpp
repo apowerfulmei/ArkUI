@@ -21,7 +21,6 @@
 namespace OHOS::Ace {
 
 std::string FontManager::appCustomFont_ = "";
-bool FontManager::isDefaultFontChanged_ = false;
 const std::vector<std::string>& FontManager::GetFontNames() const
 {
     return {};
@@ -35,7 +34,7 @@ bool FontManager::RegisterCallbackNG(
 
 bool FontManager::IsDefaultFontChanged()
 {
-    return isDefaultFontChanged_;
+    return false;
 }
 
 void FontManager::UnRegisterCallbackNG(const WeakPtr<NG::UINode>& node) {}
@@ -69,11 +68,4 @@ const std::string& FontManager::GetAppCustomFont() const
 void FontManager::AddFontObserver(WeakPtr<FontChangeObserver> node) {}
 
 void FontManager::RemoveFontChangeObserver(WeakPtr<FontChangeObserver> node) {}
-
-void FontManager::AddHybridRenderNode(const WeakPtr<NG::UINode>& node) {}
-void FontManager::RemoveHybridRenderNode(const WeakPtr<NG::UINode>& node) {}
-void FontManager::UpdateHybridRenderNodes() {}
-void FontManager::StartAbilityOnInstallAppInStore(const std::string& appName) const {}
-void FontManager::OnPreviewMenuOptionClick(TextDataDetectType type, const std::string& content) {}
-void FontManager::StartAbilityOnCalendar(const std::map<std::string, std::string>& params) const {}
 } // namespace OHOS::Ace

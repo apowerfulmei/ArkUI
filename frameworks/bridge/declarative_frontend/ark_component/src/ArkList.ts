@@ -18,9 +18,6 @@
 import { ArkScrollable } from "./ArkScrollable";
 
 class ListEditModeModifier extends ModifierWithKey<boolean> {
-  constructor(value: boolean) {
-    super(value);
-  }
   static identity: Symbol = Symbol('editMode');
   applyPeer(node: KNode, reset: boolean): void {
     if (reset) {
@@ -32,9 +29,6 @@ class ListEditModeModifier extends ModifierWithKey<boolean> {
 }
 
 class ListMultiSelectableModifier extends ModifierWithKey<boolean> {
-  constructor(value: boolean) {
-    super(value);
-  }
   static identity: Symbol = Symbol('listMultiSelectable');
   applyPeer(node: KNode, reset: boolean): void {
     if (reset) {
@@ -46,9 +40,6 @@ class ListMultiSelectableModifier extends ModifierWithKey<boolean> {
 }
 
 class ListAlignListItemModifier extends ModifierWithKey<ListItemAlign> {
-  constructor(value: ListItemAlign) {
-    super(value);
-  }
   static identity: Symbol = Symbol('listAlignListItem');
   applyPeer(node: KNode, reset: boolean): void {
     if (reset) {
@@ -60,9 +51,6 @@ class ListAlignListItemModifier extends ModifierWithKey<ListItemAlign> {
 }
 
 class ListScrollSnapAlignModifier extends ModifierWithKey<ScrollSnapAlign> {
-  constructor(value: ScrollSnapAlign) {
-    super(value);
-  }
   static identity: Symbol = Symbol('listScrollSnapAlign');
   applyPeer(node: KNode, reset: boolean): void {
     if (reset) {
@@ -123,9 +111,6 @@ class ListDividerModifier extends ModifierWithKey<DividerStyle> {
 }
 
 class ChainAnimationOptionsModifier extends ModifierWithKey<ChainAnimationOptions> {
-  constructor(value: ChainAnimationOptions) {
-    super(value);
-  }
   static identity: Symbol = Symbol('chainAnimationOptions');
   applyPeer(node: KNode, reset: boolean): void {
     if (reset) {
@@ -146,9 +131,6 @@ class ChainAnimationOptionsModifier extends ModifierWithKey<ChainAnimationOption
 }
 
 class ListChainAnimationModifier extends ModifierWithKey<boolean> {
-  constructor(value: boolean) {
-    super(value);
-  }
   static identity: Symbol = Symbol('listChainAnimation');
   applyPeer(node: KNode, reset: boolean): void {
     if (reset) {
@@ -160,9 +142,6 @@ class ListChainAnimationModifier extends ModifierWithKey<boolean> {
 }
 
 class ListCachedCountModifier extends ModifierWithKey<number> {
-  constructor(value: number) {
-    super(value);
-  }
   static identity: Symbol = Symbol('listCachedCount');
   applyPeer(node: KNode, reset: boolean): void {
     if (reset) {
@@ -174,9 +153,6 @@ class ListCachedCountModifier extends ModifierWithKey<number> {
 }
 
 class ListEnableScrollInteractionModifier extends ModifierWithKey<boolean> {
-  constructor(value: boolean) {
-    super(value);
-  }
   static identity: Symbol = Symbol('listEnableScrollInteraction');
   applyPeer(node: KNode, reset: boolean): void {
     if (reset) {
@@ -188,9 +164,6 @@ class ListEnableScrollInteractionModifier extends ModifierWithKey<boolean> {
 }
 
 class ListStickyModifier extends ModifierWithKey<number> {
-  constructor(value: number) {
-    super(value);
-  }
   static identity: Symbol = Symbol('listSticky');
   applyPeer(node: KNode, reset: boolean): void {
     if (reset) {
@@ -201,10 +174,22 @@ class ListStickyModifier extends ModifierWithKey<number> {
   }
 }
 
-class ListListDirectionModifier extends ModifierWithKey<number> {
-  constructor(value: number) {
-    super(value);
+class ListEdgeEffectModifier extends ModifierWithKey<ArkListEdgeEffect> {
+  static identity: Symbol = Symbol('listEdgeEffect');
+  applyPeer(node: KNode, reset: boolean): void {
+    if (reset) {
+      getUINativeModule().list.resetListEdgeEffect(node);
+    } else {
+      getUINativeModule().list.setListEdgeEffect(node, this.value.value!, this.value.options?.alwaysEnabled);
+    }
   }
+  checkObjectDiff(): boolean {
+    return !((this.stageValue.value === this.value.value) &&
+      (this.stageValue.options === this.value.options));
+  }
+}
+
+class ListListDirectionModifier extends ModifierWithKey<number> {
   static identity: Symbol = Symbol('listListDirection');
   applyPeer(node: KNode, reset: boolean): void {
     if (reset) {
@@ -216,9 +201,6 @@ class ListListDirectionModifier extends ModifierWithKey<number> {
 }
 
 class ListFrictionModifier extends ModifierWithKey<number | Resource> {
-  constructor(value: number | Resource) {
-    super(value);
-  }
   static identity: Symbol = Symbol('listFriction');
   applyPeer(node: KNode, reset: boolean): void {
     if (reset) {
@@ -251,20 +233,6 @@ class ListMaintainVisibleContentPositionModifier extends ModifierWithKey<boolean
   }
 }
 
-class ListSyncLoadModifier extends ModifierWithKey<boolean | undefined> {
-  constructor(value: boolean | undefined) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('listSyncLoad');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().list.resetListSyncLoad(node);
-    } else {
-      getUINativeModule().list.setListSyncLoad(node, this.value);
-    }
-  }
-}
-
 class ListNestedScrollModifier extends ModifierWithKey<NestedScrollOptions> {
   constructor(value: NestedScrollOptions) {
     super(value);
@@ -280,9 +248,6 @@ class ListNestedScrollModifier extends ModifierWithKey<NestedScrollOptions> {
 }
 
 class ListScrollBarModifier extends ModifierWithKey<number> {
-  constructor(value: number) {
-    super(value);
-  }
   static identity: Symbol = Symbol('listScrollBar');
   applyPeer(node: KNode, reset: boolean): void {
     if (reset) {
@@ -345,9 +310,6 @@ class ListFlingSpeedLimitModifier extends ModifierWithKey<number> {
 }
 
 class ListLanesModifier extends ModifierWithKey<ArkLanesOpt> {
-  constructor(value: ArkLanesOpt) {
-    super(value);
-  }
   static identity: Symbol = Symbol('listLanes');
   applyPeer(node: KNode, reset: boolean): void {
     if (reset) {
@@ -591,6 +553,24 @@ class ListOnDidScrollModifier extends ModifierWithKey<(xOffset: number, yOffset:
   }
 }
 
+class ListFadingEdgeModifier extends ModifierWithKey<ArkFadingEdge> {
+  constructor(value: ArkFadingEdge) {
+    super(value);
+  }
+  static identity: Symbol = Symbol('listFadingEdge');
+  applyPeer(node: KNode, reset: boolean): void {
+    if (reset) {
+      getUINativeModule().list.resetFadingEdge(node);
+    } else {
+      getUINativeModule().list.setFadingEdge(node, this.value.value!, this.value.options?.fadingEdgeLength);
+    }
+  }
+  checkObjectDiff(): boolean {
+    return !((this.stageValue.value === this.value.value) &&
+      (this.stageValue.options === this.value.options));
+  }
+}
+
 class ListChildrenMainSizeModifier extends ModifierWithKey<ChildrenMainSize> {
   constructor(value: ChildrenMainSize) {
     super(value);
@@ -653,19 +633,6 @@ class ListInitialScrollerModifier extends ModifierWithKey<number> {
   }
 }
 
-class ListFocusWrapModeModifier extends ModifierWithKey<FocusWrapMode> {
-  constructor(value: FocusWrapMode) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('listFocusWrapMode');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().list.resetFocusWrapMode(node);
-    } else {
-      getUINativeModule().list.setFocusWrapMode(node, this.value);
-    }
-  }
-}
 interface ListParam {
   initialIndex?: number;
   space?: number | string;
@@ -732,6 +699,13 @@ class ArkListComponent extends ArkScrollable<ListAttribute> implements ListAttri
     modifierWithKey(this._modifiersWithKeys, ListFlingSpeedLimitModifier.identity, ListFlingSpeedLimitModifier, value);
     return this;
   }
+  edgeEffect(value: EdgeEffect, options?: EdgeEffectOptions | undefined): this {
+    let effect: ArkListEdgeEffect = new ArkListEdgeEffect();
+    effect.value = value;
+    effect.options = options;
+    modifierWithKey(this._modifiersWithKeys, ListEdgeEffectModifier.identity, ListEdgeEffectModifier, effect);
+    return this;
+  }
   contentStartOffset(value: number): this {
     modifierWithKey(this._modifiersWithKeys, ContentStartOffsetModifier.identity, ContentStartOffsetModifier, value);
     return this;
@@ -788,10 +762,6 @@ class ArkListComponent extends ArkScrollable<ListAttribute> implements ListAttri
   maintainVisibleContentPosition(value: boolean | undefined): this {
     modifierWithKey(this._modifiersWithKeys, ListMaintainVisibleContentPositionModifier.identity,
       ListMaintainVisibleContentPositionModifier, value);
-    return this;
-  }
-  syncLoad(value: boolean | undefined): this {
-    modifierWithKey(this._modifiersWithKeys, ListSyncLoadModifier.identity, ListSyncLoadModifier, value);
     return this;
   }
   clip(value: boolean | CircleAttribute | EllipseAttribute | PathAttribute | RectAttribute): this {
@@ -865,12 +835,15 @@ class ArkListComponent extends ArkScrollable<ListAttribute> implements ListAttri
     modifierWithKey(this._modifiersWithKeys, ListOnScrollStopModifier.identity, ListOnScrollStopModifier, event);
     return this;
   }
-  childrenMainSize(value: ChildrenMainSize): this {
-    modifierWithKey(this._modifiersWithKeys, ListChildrenMainSizeModifier.identity, ListChildrenMainSizeModifier, value);
+  fadingEdge(value: boolean, options?: FadingEdgeOptions | undefined): this {
+    let fadingEdge: ArkFadingEdge = new ArkFadingEdge();
+    fadingEdge.value = value;
+    fadingEdge.options = options;
+    modifierWithKey(this._modifiersWithKeys, ListFadingEdgeModifier.identity, ListFadingEdgeModifier, fadingEdge);
     return this;
   }
-  focusWrapMode(value: FocusWrapMode): this {
-    modifierWithKey(this._modifiersWithKeys, ListFocusWrapModeModifier.identity, ListFocusWrapModeModifier, value);
+  childrenMainSize(value: ChildrenMainSize): this {
+    modifierWithKey(this._modifiersWithKeys, ListChildrenMainSizeModifier.identity, ListChildrenMainSizeModifier, value);
     return this;
   }
 }
@@ -882,9 +855,4 @@ globalThis.List.attributeModifier = function (modifier: ArkComponent): void {
   }, (nativePtr: KNode, classType: ModifierType, modifierJS: ModifierJS) => {
     return new modifierJS.ListModifier(nativePtr, classType);
   });
-};
-
-globalThis.List.onWillStopDragging = function (value: (velocity: number) => void): void {
-  let nodePtr = getUINativeModule().frameNode.getStackTopNode();
-  getUINativeModule().scrollable.setOnWillStopDragging(nodePtr, value);
 };

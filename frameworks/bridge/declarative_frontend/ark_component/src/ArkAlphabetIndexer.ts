@@ -19,8 +19,7 @@ class ArkAlphabetIndexerComponent extends ArkComponent implements AlphabetIndexe
     super(nativePtr, classType);
   }
   onSelected(callback: (index: number) => void): this {
-    modifierWithKey(this._modifiersWithKeys, OnSelectedModifier.identity, OnSelectedModifier, callback);
-    return this;
+    throw new Error('Method not implemented.');
   }
   color(value: ResourceColor): this {
     modifierWithKey(this._modifiersWithKeys, ColorModifier.identity, ColorModifier, value);
@@ -86,16 +85,13 @@ class ArkAlphabetIndexerComponent extends ArkComponent implements AlphabetIndexe
     return this;
   }
   onSelect(callback: (index: number) => void): this {
-    modifierWithKey(this._modifiersWithKeys, OnSelectModifier.identity, OnSelectModifier, callback);
-    return this;
+    throw new Error('Method not implemented.');
   }
   onRequestPopupData(callback: (index: number) => string[]): this {
-    modifierWithKey(this._modifiersWithKeys, OnRequestPopupDataModifier.identity, OnRequestPopupDataModifier, callback);
-    return this;
+    throw new Error('Method not implemented.');
   }
   onPopupSelect(callback: (index: number) => void): this {
-    modifierWithKey(this._modifiersWithKeys, OnPopupSelectModifier.identity, OnPopupSelectModifier, callback);
-    return this;
+    throw new Error('Method not implemented.');
   }
   selected(index: number): this {
     modifierWithKey(this._modifiersWithKeys, AlphabetIndexerSelectedModifier.identity, AlphabetIndexerSelectedModifier, index);
@@ -144,9 +140,6 @@ globalThis.AlphabetIndexer.attributeModifier = function (modifier: ArkComponent)
 };
 
 class PopupItemFontModifier extends ModifierWithKey<Font> {
-  constructor(value: Font) {
-    super(value);
-  }
   static identity: Symbol = Symbol('popupItemFont');
   applyPeer(node: KNode, reset: boolean) {
     if (reset) {
@@ -166,9 +159,6 @@ class PopupItemFontModifier extends ModifierWithKey<Font> {
 }
 
 class SelectedFontModifier extends ModifierWithKey<Font> {
-  constructor(value: Font) {
-    super(value);
-  }
   static identity: Symbol = Symbol('alphaBetIndexerSelectedFont');
   applyPeer(node: KNode, reset: boolean) {
     if (reset) {
@@ -188,9 +178,6 @@ class SelectedFontModifier extends ModifierWithKey<Font> {
 }
 
 class PopupFontModifier extends ModifierWithKey<Font> {
-  constructor(value: Font) {
-    super(value);
-  }
   static identity: Symbol = Symbol('popupFont');
   applyPeer(node: KNode, reset: boolean) {
     if (reset) {
@@ -210,9 +197,6 @@ class PopupFontModifier extends ModifierWithKey<Font> {
 }
 
 class AlphabetIndexerFontModifier extends ModifierWithKey<Font> {
-  constructor(value: Font) {
-    super(value);
-  }
   static identity: Symbol = Symbol('alphaBetIndexerFont');
   applyPeer(node: KNode, reset: boolean) {
     if (reset) {
@@ -246,62 +230,6 @@ class PopupItemBackgroundColorModifier extends ModifierWithKey<ResourceColor> {
 
   checkObjectDiff(): boolean {
     return !isBaseOrResourceEqual(this.stageValue, this.value);
-  }
-}
-
-class OnSelectedModifier extends ModifierWithKey<(index: number) => void> {
-  constructor(value: (index: number) => void) {
-    super(value);
-  }
-  static identity = Symbol('onSelected');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().alphabetIndexer.resetOnSelected(node);
-    } else {
-      getUINativeModule().alphabetIndexer.setOnSelected(node, this.value);
-    }
-  }
-}
-
-class OnSelectModifier extends ModifierWithKey<(index: number) => void> {
-  constructor(value: (index: number) => void) {
-    super(value);
-  }
-  static identity = Symbol('onSelect');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {  
-      getUINativeModule().alphabetIndexer.resetOnSelect(node);
-    } else {
-      getUINativeModule().alphabetIndexer.setOnSelect(node, this.value);
-    }
-  }
-}
-
-class OnRequestPopupDataModifier extends ModifierWithKey<(index: number) => string[]> {
-  constructor(value: (index: number) => string[]) {
-    super(value);
-  }
-  static identity = Symbol('onRequestPopupData');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().alphabetIndexer.resetOnRequestPopupData(node);
-    } else {
-      getUINativeModule().alphabetIndexer.setOnRequestPopupData(node, this.value);
-    }
-  }
-}
-
-class OnPopupSelectModifier extends ModifierWithKey<(index: number) => void> {
-  constructor(value: (index: number) => void) {
-    super(value);
-  }
-  static identity = Symbol('onPopupSelect');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().alphabetIndexer.resetOnPopupSelect(node);
-    } else {
-      getUINativeModule().alphabetIndexer.setOnPopupSelect(node, this.value);
-    }
   }
 }
 
@@ -432,9 +360,6 @@ class PopupSelectedColorModifier extends ModifierWithKey<ResourceColor> {
 }
 
 class AlignStyleModifier extends ModifierWithKey<ArkAlignStyle> {
-  constructor(value: ArkAlignStyle) {
-    super(value);
-  }
   static identity = Symbol('alignStyle');
   applyPeer(node: KNode, reset: boolean): void {
     if (reset) {
@@ -452,9 +377,6 @@ class AlignStyleModifier extends ModifierWithKey<ArkAlignStyle> {
 }
 
 class UsingPopupModifier extends ModifierWithKey<boolean> {
-  constructor(value: boolean) {
-    super(value);
-  }
   static identity = Symbol('usingPopup');
   applyPeer(node: KNode, reset: boolean): void {
     if (reset) {
@@ -466,9 +388,6 @@ class UsingPopupModifier extends ModifierWithKey<boolean> {
 }
 
 class AlphabetIndexerSelectedModifier extends ModifierWithKey<number> {
-  constructor(value: number) {
-    super(value);
-  }
   static identity = Symbol('alphabetIndexerSelected');
   applyPeer(node: KNode, reset: boolean): void {
     if (reset) {
@@ -480,9 +399,6 @@ class AlphabetIndexerSelectedModifier extends ModifierWithKey<number> {
 }
 
 class ItemSizeModifier extends ModifierWithKey<number | string> {
-  constructor(value: number | string) {
-    super(value);
-  }
   static identity: Symbol = Symbol('itemSize');
   applyPeer(node: KNode, reset: boolean): void {
     if (reset) {
@@ -494,9 +410,6 @@ class ItemSizeModifier extends ModifierWithKey<number | string> {
 }
 
 class PopupPositionModifier extends ModifierWithKey<Position> {
-  constructor(value: Position) {
-    super(value);
-  }
   static identity: Symbol = Symbol('popupPosition');
   applyPeer(node: KNode, reset: boolean): void {
     if (reset) {

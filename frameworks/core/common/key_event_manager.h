@@ -21,7 +21,6 @@
 #include "core/components/common/layout/constants.h"
 #include "core/event/key_event.h"
 #include "core/event/focus_axis_event.h"
-#include "core/event/crown_event.h"
 
 namespace OHOS::Ace {
 namespace NG {
@@ -41,7 +40,6 @@ public:
     bool IsSameKeyboardShortcutNode(const std::string& value, uint8_t keys);
     bool DispatchKeyboardShortcut(const KeyEvent& event);
     void ReDispatch(KeyEvent& keyEvent);
-    bool RemoveOverlayByESC(const KeyEvent& keyEvent);
     void SetIsKeyConsumed(bool value);
     void SetPressedKeyCodes(const std::vector<KeyCode>& pressedKeyCodes)
     {
@@ -63,14 +61,14 @@ protected:
 
     bool OnKeyEvent(const KeyEvent& event);
     bool OnFocusAxisEvent(const FocusAxisEvent& event);
-    bool OnCrownEvent(const CrownEvent& event);
+
 private:
     // Distribute the key event to the corresponding root node. If the root node is not processed, return false and the
     // platform will handle it.
     bool DispatchKeyEventNG(const KeyEvent& event, const RefPtr<NG::FrameNode>& focusNode);
     bool DispatchTabIndexEventNG(const KeyEvent& event, const RefPtr<NG::FrameNode>& mainView);
     bool TriggerKeyEventDispatch(const KeyEvent& event);
-    bool IsSystemKeyboardShortcut(const KeyEvent& event);
+    bool IsSystemKeyboardShortcut(const std::string& value, uint8_t keys);
     bool DispatchTabKey(const KeyEvent& event, const RefPtr<FocusView>& curFocusView);
     bool IsSkipShortcutAndFocusMove();
 

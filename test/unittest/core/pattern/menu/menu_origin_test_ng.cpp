@@ -19,6 +19,7 @@
 #define private public
 #define protected public
 
+#include "base/memory/ace_type.h"
 #include "test/mock/base/mock_pixel_map.h"
 #include "test/mock/core/common/mock_container.h"
 #include "test/mock/core/common/mock_theme_manager.h"
@@ -27,13 +28,10 @@
 #include "test/mock/core/rosen/mock_canvas.h"
 #include "test/mock/core/rosen/testing_canvas.h"
 
-#include "base/memory/ace_type.h"
-#include "core/components/button/button_theme.h"
 #include "core/components/common/layout/constants.h"
 #include "core/components/common/layout/grid_system_manager.h"
 #include "core/components/common/properties/shadow_config.h"
 #include "core/components/container_modal/container_modal_constants.h"
-#include "core/components/button/button_theme.h"
 #include "core/components/select/select_theme.h"
 #include "core/components/theme/shadow_theme.h"
 #include "core/components_ng/base/view_stack_processor.h"
@@ -52,7 +50,6 @@
 #include "core/components_ng/pattern/menu/preview/menu_preview_pattern.h"
 #include "core/components_ng/pattern/menu/sub_menu_layout_algorithm.h"
 #include "core/components_ng/pattern/menu/wrapper/menu_wrapper_pattern.h"
-#include "core/components_ng/pattern/overlay/dialog_manager.h"
 #include "core/components_ng/pattern/pattern.h"
 #include "core/components_ng/pattern/root/root_pattern.h"
 #include "core/components_ng/pattern/scroll/scroll_pattern.h"
@@ -74,6 +71,7 @@ const InspectorFilter filter;
 constexpr int32_t TARGET_ID = 3;
 constexpr MenuType TYPE = MenuType::MENU;
 constexpr int32_t SELECTED_INDEX = 10;
+constexpr float CURRENT_OFFSET = -0.5f;
 const std::string EMPTY_TEXT = "";
 const std::string TEXT_TAG = "text";
 const std::string MENU_TAG = "menu";
@@ -106,6 +104,7 @@ const std::vector<SelectParam> CREATE_VALUE = { { "content1", "icon1" }, { "cont
     { "", "icon3" }, { "", "" } };
 const std::vector<SelectParam> CREATE_VALUE_NEW = { { "content1_new", "" }, { "", "icon4_new" },
     { "", "" }, { "", "icon4_new" } };
+const V2::ItemDivider ITEM_DIVIDER = { Dimension(5.f), Dimension(10), Dimension(20), Color(0x000000) };
 } // namespace
 class MenuTestNg : public testing::Test {
 public:
@@ -119,8 +118,6 @@ public:
     PaintWrapper* GetPaintWrapper(RefPtr<MenuPaintProperty> paintProperty);
     RefPtr<FrameNode> GetPreviewMenuWrapper(
         SizeF itemSize = SizeF(0.0f, 0.0f), std::optional<MenuPreviewAnimationOptions> scaleOptions = std::nullopt);
-    RefPtr<FrameNode> GetImagePreviewMenuWrapper();
-    RefPtr<FrameNode> GetHoverImagePreviewMenuWrapper();
     RefPtr<FrameNode> menuFrameNode_;
     RefPtr<MenuAccessibilityProperty> menuAccessibilityProperty_;
     RefPtr<FrameNode> menuItemFrameNode_;
@@ -166,8 +163,6 @@ void MenuTestNg::MockPipelineContextGetTheme()
             return AceType::MakeRefPtr<IconTheme>();
         } else if (type == SelectTheme::TypeId()) {
             return AceType::MakeRefPtr<SelectTheme>();
-        } else if (type == ButtonTheme::TypeId()) {
-            return AceType::MakeRefPtr<ButtonTheme>();
         } else {
             return AceType::MakeRefPtr<MenuTheme>();
         }
@@ -240,82 +235,6 @@ RefPtr<FrameNode> MenuTestNg::GetPreviewMenuWrapper(
     return menuWrapperNode;
 }
 
-RefPtr<FrameNode> MenuTestNg::GetImagePreviewMenuWrapper()
-{
-    auto rootNode = FrameNode::CreateFrameNode(
-        V2::ROOT_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(), AceType::MakeRefPtr<RootPattern>());
-    CHECK_NULL_RETURN(rootNode, nullptr);
-    auto targetNode = FrameNode::CreateFrameNode(
-        V2::TEXT_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(), AceType::MakeRefPtr<TextPattern>());
-    CHECK_NULL_RETURN(targetNode, nullptr);
-    auto targetGestureHub = targetNode->GetOrCreateGestureEventHub();
-    auto pixelMap = AceType::MakeRefPtr<MockPixelMap>();
-    targetGestureHub->SetPixelMap(pixelMap);
-
-    auto textNode = FrameNode::CreateFrameNode(
-        V2::TEXT_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(), AceType::MakeRefPtr<TextPattern>());
-    CHECK_NULL_RETURN(textNode, nullptr);
-    auto itemGeometryNode = textNode->GetGeometryNode();
-    CHECK_NULL_RETURN(itemGeometryNode, nullptr);
-    itemGeometryNode->SetFrameSize(SizeF(MENU_SIZE_WIDTH, MENU_SIZE_HEIGHT));
-
-    targetNode->MountToParent(rootNode);
-    targetNode->GetOrCreateGestureEventHub();
-    MenuParam menuParam;
-    menuParam.type = MenuType::CONTEXT_MENU;
-    menuParam.previewMode = MenuPreviewMode::IMAGE;
-
-    auto customNode = FrameNode::CreateFrameNode(
-        V2::TEXT_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(), AceType::MakeRefPtr<TextPattern>());
-    CHECK_NULL_RETURN(customNode, nullptr);
-    auto customGeometryNode = customNode->GetGeometryNode();
-    CHECK_NULL_RETURN(customGeometryNode, nullptr);
-    customGeometryNode->SetFrameSize(SizeF(TARGET_SIZE_WIDTH, TARGET_SIZE_HEIGHT));
-    auto menuWrapperNode =
-        MenuView::Create(textNode, targetNode->GetId(), V2::TEXT_ETS_TAG, menuParam, true, customNode);
-    return menuWrapperNode;
-}
-
-RefPtr<FrameNode> MenuTestNg::GetHoverImagePreviewMenuWrapper()
-{
-    auto rootNode = FrameNode::CreateFrameNode(
-        V2::ROOT_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(), AceType::MakeRefPtr<RootPattern>());
-    CHECK_NULL_RETURN(rootNode, nullptr);
-    auto targetNode = FrameNode::CreateFrameNode(
-        V2::TEXT_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(), AceType::MakeRefPtr<TextPattern>());
-    CHECK_NULL_RETURN(targetNode, nullptr);
-    auto targetGestureHub = targetNode->GetOrCreateGestureEventHub();
-    auto pixelMap = AceType::MakeRefPtr<MockPixelMap>();
-    targetGestureHub->SetPixelMap(pixelMap);
-
-    auto textNode = FrameNode::CreateFrameNode(
-        V2::TEXT_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(), AceType::MakeRefPtr<TextPattern>());
-    CHECK_NULL_RETURN(textNode, nullptr);
-    auto itemGeometryNode = textNode->GetGeometryNode();
-    CHECK_NULL_RETURN(itemGeometryNode, nullptr);
-    itemGeometryNode->SetFrameSize(SizeF(MENU_SIZE_WIDTH, MENU_SIZE_HEIGHT));
-
-    auto customNode = FrameNode::CreateFrameNode(
-        V2::TEXT_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(), AceType::MakeRefPtr<TextPattern>());
-    CHECK_NULL_RETURN(customNode, nullptr);
-    auto customGeometryNode = customNode->GetGeometryNode();
-    CHECK_NULL_RETURN(customGeometryNode, nullptr);
-    customGeometryNode->SetFrameSize(SizeF(TARGET_SIZE_WIDTH, TARGET_SIZE_HEIGHT));
-
-    targetNode->MountToParent(rootNode);
-    targetNode->GetOrCreateGestureEventHub();
-
-    MenuParam menuParam;
-    menuParam.type = MenuType::CONTEXT_MENU;
-    menuParam.previewMode = MenuPreviewMode::CUSTOM;
-    menuParam.isShowHoverImage = true;
-    menuParam.hoverImageAnimationOptions = { 1.0f, 0.95f };
-
-    auto menuWrapperNode =
-        MenuView::Create(textNode, targetNode->GetId(), V2::TEXT_ETS_TAG, menuParam, true, customNode);
-    return menuWrapperNode;
-}
-
 /**
  * @tc.name: PerformActionTest001
  * @tc.desc: MenuItem Accessibility PerformAction test Select and ClearSelection.
@@ -363,6 +282,65 @@ HWTEST_F(MenuTestNg, PerformActionTest001, TestSize.Level1)
 }
 
 /**
+ * @tc.name: PerformActionTest002
+ * @tc.desc: Menu Accessibility PerformAction test ScrollForward and ScrollBackward.
+ * @tc.type: FUNC
+ */
+HWTEST_F(MenuTestNg, PerformActionTest002, TestSize.Level1)
+{
+    /**
+     * @tc.steps: step1. Create menu, get menu frameNode and pattern, set callback function.
+     * @tc.expected: FrameNode and pattern is not null, related function is called.
+     */
+    MenuModelNG model;
+    model.Create();
+    auto frameNode = AceType::DynamicCast<FrameNode>(ViewStackProcessor::GetInstance()->Finish());
+    ASSERT_NE(frameNode, nullptr);
+    auto menuPattern = frameNode->GetPattern<MenuPattern>();
+    ASSERT_NE(menuPattern, nullptr);
+    auto menuAccessibilityProperty = frameNode->GetAccessibilityProperty<MenuAccessibilityProperty>();
+    ASSERT_NE(menuAccessibilityProperty, nullptr);
+    menuPattern->SetAccessibilityAction();
+
+    /**
+     * @tc.steps: step2. When firstChild is null, call the callback function in menuAccessibilityProperty.
+     * @tc.expected: Related function is called.
+     */
+    EXPECT_TRUE(menuAccessibilityProperty->ActActionScrollForward());
+    EXPECT_TRUE(menuAccessibilityProperty->ActActionScrollBackward());
+
+    /**
+     * @tc.steps: step3. When firstChild is not null and firstChild tag is SCROLL_ETS_TAG, call the callback function in
+     *                   menuAccessibilityProperty.
+     * @tc.expected: Related function is called.
+     */
+    auto scrollPattern = AceType::MakeRefPtr<ScrollPattern>();
+    ASSERT_NE(scrollPattern, nullptr);
+    scrollPattern->SetAxis(Axis::VERTICAL);
+    scrollPattern->scrollableDistance_ = 1.0f;
+    auto scroll =
+        FrameNode::CreateFrameNode(V2::SCROLL_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(), scrollPattern);
+    ASSERT_NE(scroll, nullptr);
+    scroll->MountToParent(frameNode, 0);
+    scroll->MarkModifyDone();
+    EXPECT_TRUE(menuAccessibilityProperty->ActActionScrollForward());
+    EXPECT_TRUE(menuAccessibilityProperty->ActActionScrollBackward());
+
+    /**
+     * @tc.steps: step4. When firstChild is not null and firstChild tag is not SCROLL_ETS_TAG, call the callback
+     *                   function in menuAccessibilityProperty.
+     * @tc.expected: Related function is called.
+     */
+    auto textNode = FrameNode::CreateFrameNode(
+        V2::TEXT_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(), AceType::MakeRefPtr<TextPattern>());
+    ASSERT_NE(textNode, nullptr);
+    textNode->MountToParent(frameNode, 0);
+    textNode->MarkModifyDone();
+    EXPECT_TRUE(menuAccessibilityProperty->ActActionScrollForward());
+    EXPECT_TRUE(menuAccessibilityProperty->ActActionScrollBackward());
+}
+
+/**
  * @tc.name: PerformActionTest003
  * @tc.desc: MenuItem Accessibility PerformAction test Select and ClearSelection.
  * @tc.type: FUNC
@@ -395,9 +373,9 @@ HWTEST_F(MenuTestNg, MenuAccessibilityEventTestNg001, TestSize.Level1)
      * @tc.steps: step1. Create Option for Menu.
      */
     auto frameNode = FrameNode::GetOrCreateFrameNode(V2::OPTION_ETS_TAG,
-        ViewStackProcessor::GetInstance()->ClaimNodeId(), []() {return AceType::MakeRefPtr<MenuItemPattern>(true, 0);});
+        ViewStackProcessor::GetInstance()->ClaimNodeId(), []() { return AceType::MakeRefPtr<OptionPattern>(0); });
     ASSERT_NE(frameNode, nullptr);
-    auto optionPattern = frameNode->GetPattern<MenuItemPattern>();
+    auto optionPattern = frameNode->GetPattern<OptionPattern>();
     ASSERT_NE(optionPattern, nullptr);
 
     /**
@@ -405,7 +383,7 @@ HWTEST_F(MenuTestNg, MenuAccessibilityEventTestNg001, TestSize.Level1)
      */
     int testIndex = SELECTED_INDEX;
     auto selectFunc = [optionPattern, testIndex](int index) { optionPattern->index_ = testIndex; };
-    auto optionEventHub = frameNode->GetEventHub<MenuItemEventHub>();
+    auto optionEventHub = frameNode->GetEventHub<OptionEventHub>();
     optionEventHub->SetOnSelect(selectFunc);
     optionPattern->RegisterOnClick();
 
@@ -464,6 +442,357 @@ HWTEST_F(MenuTestNg, DesktopMenuPattern001, TestSize.Level1)
 }
 
 /**
+ * @tc.name: MenuAccessibilityPropertyIsScrollable001
+ * @tc.desc: Test menuAccessibilityProperty::IsScrollable
+ * @tc.type: FUNC
+ */
+HWTEST_F(MenuTestNg, MenuAccessibilityPropertyIsScrollable001, TestSize.Level1)
+{
+    InitMenuTestNg();
+    EXPECT_FALSE(menuAccessibilityProperty_->IsScrollable());
+
+    auto scrollPattern = AceType::MakeRefPtr<ScrollPattern>();
+    ASSERT_NE(scrollPattern, nullptr);
+    scrollPattern->SetAxis(Axis::VERTICAL);
+    scrollPattern->scrollableDistance_ = 1.0f;
+    auto scroll =
+        FrameNode::CreateFrameNode(V2::SCROLL_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(), scrollPattern);
+    ASSERT_NE(scroll, nullptr);
+    scroll->MountToParent(menuFrameNode_, 0);
+    scroll->MarkModifyDone();
+    EXPECT_TRUE(menuAccessibilityProperty_->IsScrollable());
+
+    scrollPattern->SetAxis(Axis::NONE);
+    EXPECT_FALSE(menuAccessibilityProperty_->IsScrollable());
+    scrollPattern->scrollableDistance_ = 0.0f;
+    EXPECT_FALSE(menuAccessibilityProperty_->IsScrollable());
+    /**
+     * @tc.steps: step1. Create Menu and test firstchild not SCROLL.
+     */
+    RefPtr<FrameNode> menuNode =
+        FrameNode::GetOrCreateFrameNode(V2::MENU_TAG, ViewStackProcessor::GetInstance()->ClaimNodeId(),
+            []() { return AceType::MakeRefPtr<MenuPattern>(TARGET_ID, "", TYPE); });
+    ASSERT_NE(menuNode, nullptr);
+    RefPtr<MenuAccessibilityProperty> menuAccessibility =
+        menuNode->GetAccessibilityProperty<MenuAccessibilityProperty>();
+    ASSERT_NE(menuAccessibility, nullptr);
+    auto textNode = FrameNode::CreateFrameNode(
+        V2::TEXT_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(), AceType::MakeRefPtr<TextPattern>());
+    ASSERT_NE(textNode, nullptr);
+    textNode->MountToParent(menuNode, 0);
+    EXPECT_FALSE(menuAccessibility->IsScrollable());
+}
+
+/**
+ * @tc.name: MenuAccessibilityPropertyGetSupportAction001
+ * @tc.desc: Test MenuAccessibilityProperty::SetSpecificSupportAction
+ * @tc.type: FUNC
+ */
+HWTEST_F(MenuTestNg, MenuAccessibilityPropertyGetSupportAction001, TestSize.Level1)
+{
+    InitMenuTestNg();
+    auto scrollPattern = AceType::MakeRefPtr<ScrollPattern>();
+    ASSERT_NE(scrollPattern, nullptr);
+    scrollPattern->SetAxis(Axis::VERTICAL);
+    scrollPattern->scrollableDistance_ = 1.0f;
+    scrollPattern->currentOffset_ = CURRENT_OFFSET;
+    auto scroll =
+        FrameNode::CreateFrameNode(V2::SCROLL_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(), scrollPattern);
+    ASSERT_NE(scroll, nullptr);
+    scroll->MountToParent(menuFrameNode_, 0);
+
+    menuAccessibilityProperty_->ResetSupportAction();
+    std::unordered_set<AceAction> supportAceActions = menuAccessibilityProperty_->GetSupportAction();
+    uint64_t actions = 0, expectActions = 0;
+    expectActions |= 1UL << static_cast<uint32_t>(AceAction::ACTION_SCROLL_FORWARD);
+    expectActions |= 1UL << static_cast<uint32_t>(AceAction::ACTION_SCROLL_BACKWARD);
+    for (auto action : supportAceActions) {
+        actions |= 1UL << static_cast<uint32_t>(action);
+    }
+    EXPECT_EQ(actions, expectActions);
+    /**
+     * @tc.steps: step1. test IsAtTop and IsAtBottom.
+     */
+    scrollPattern->scrollableDistance_ = -1.0;
+    scrollPattern->currentOffset_ = 0.0f;
+    menuAccessibilityProperty_->SetSpecificSupportAction();
+    expectActions |= 1UL << static_cast<uint32_t>(AceAction::ACTION_SCROLL_FORWARD);
+    EXPECT_EQ(menuAccessibilityProperty_->supportActions_, expectActions);
+    expectActions |= 1UL << static_cast<uint32_t>(AceAction::ACTION_SCROLL_BACKWARD);
+    scrollPattern->SetAxis(Axis::NONE);
+    scrollPattern->scrollableDistance_ = 0.0f;
+    menuAccessibilityProperty_->SetSpecificSupportAction();
+    EXPECT_EQ(menuAccessibilityProperty_->supportActions_, expectActions);
+    /**
+     * @tc.steps: step2. Create Menu and test firstchild not SCROLL.
+     */
+    RefPtr<FrameNode> menuNode =
+        FrameNode::GetOrCreateFrameNode(V2::MENU_TAG, ViewStackProcessor::GetInstance()->ClaimNodeId(),
+            []() { return AceType::MakeRefPtr<MenuPattern>(TARGET_ID, "", TYPE); });
+    ASSERT_NE(menuNode, nullptr);
+    RefPtr<MenuAccessibilityProperty> menuAccessibility =
+        menuNode->GetAccessibilityProperty<MenuAccessibilityProperty>();
+    ASSERT_NE(menuAccessibility, nullptr);
+    menuAccessibility->SetSpecificSupportAction();
+    auto textNode = FrameNode::CreateFrameNode(
+        V2::TEXT_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(), AceType::MakeRefPtr<TextPattern>());
+    ASSERT_NE(textNode, nullptr);
+    textNode->MountToParent(menuNode, 0);
+    menuAccessibility->SetSpecificSupportAction();
+    EXPECT_EQ(menuAccessibility->supportActions_, (0));
+}
+
+/**
+ * @tc.name: MenuLayoutPropertyTestNg001
+ * @tc.desc: Verify GetPositionOffset.
+ * @tc.type: FUNC
+ */
+HWTEST_F(MenuTestNg, MenuLayoutPropertyTestNg001, TestSize.Level1)
+{
+    MenuLayoutProperty property;
+    EXPECT_FALSE(property.GetPositionOffset().has_value());
+    property.UpdatePositionOffset(OffsetF(25.0f, 30.0f));
+    ASSERT_TRUE(property.GetPositionOffset().has_value());
+    EXPECT_EQ(property.GetPositionOffset().value(), OffsetF(25.0f, 30.0f));
+}
+
+/**
+ * @tc.name: MenuLayoutPropertyTestNg002
+ * @tc.desc: Verify GetTitle.
+ * @tc.type: FUNC
+ */
+HWTEST_F(MenuTestNg, MenuLayoutPropertyTestNg002, TestSize.Level1)
+{
+    MenuLayoutProperty property;
+    EXPECT_FALSE(property.GetTitle().has_value());
+    property.UpdateTitle("title");
+    ASSERT_TRUE(property.GetTitle().has_value());
+    EXPECT_EQ(property.GetTitle().value(), "title");
+}
+
+/**
+ * @tc.name: MenuLayoutPropertyTestNg003
+ * @tc.desc: Verify GetFontSize.
+ * @tc.type: FUNC
+ */
+HWTEST_F(MenuTestNg, MenuLayoutPropertyTestNg003, TestSize.Level1)
+{
+    MenuLayoutProperty property;
+    EXPECT_FALSE(property.GetFontSize().has_value());
+    property.UpdateFontSize(Dimension(25.0f));
+    ASSERT_TRUE(property.GetFontSize().has_value());
+    EXPECT_EQ(property.GetFontSize().value(), Dimension(25.0f));
+}
+
+/**
+ * @tc.name: MenuLayoutPropertyTestNg004
+ * @tc.desc: Verify GetFontColor.
+ * @tc.type: FUNC
+ */
+HWTEST_F(MenuTestNg, MenuLayoutPropertyTestNg004, TestSize.Level1)
+{
+    MenuLayoutProperty property;
+    EXPECT_FALSE(property.GetFontColor().has_value());
+    property.UpdateFontColor(Color::RED);
+    ASSERT_TRUE(property.GetFontColor().has_value());
+    EXPECT_EQ(property.GetFontColor().value(), Color::RED);
+}
+
+/**
+ * @tc.name: MenuLayoutPropertyTestNg005
+ * @tc.desc: Verify GetFontWeight.
+ * @tc.type: FUNC
+ */
+HWTEST_F(MenuTestNg, MenuLayoutPropertyTestNg005, TestSize.Level1)
+{
+    MenuLayoutProperty property;
+    EXPECT_FALSE(property.GetFontWeight().has_value());
+    property.UpdateFontWeight(FontWeight::BOLD);
+    ASSERT_TRUE(property.GetFontWeight().has_value());
+    EXPECT_EQ(property.GetFontWeight().value(), FontWeight::BOLD);
+}
+
+/**
+ * @tc.name: MenuLayoutPropertyTestNg006
+ * @tc.desc: Verify GetMenuOffset.
+ * @tc.type: FUNC
+ */
+HWTEST_F(MenuTestNg, MenuLayoutPropertyTestNg006, TestSize.Level1)
+{
+    MenuLayoutProperty property;
+    EXPECT_FALSE(property.GetMenuOffset().has_value());
+    property.UpdateMenuOffset(OffsetF(25.0f, 30.0f));
+    ASSERT_TRUE(property.GetMenuOffset().has_value());
+    EXPECT_EQ(property.GetMenuOffset().value(), OffsetF(25.0f, 30.0f));
+}
+
+/**
+ * @tc.name: MenuLayoutPropertyTestNg007
+ * @tc.desc: Verify Reset.
+ * @tc.type: FUNC
+ */
+HWTEST_F(MenuTestNg, MenuLayoutPropertyTestNg007, TestSize.Level1)
+{
+    MenuLayoutProperty property;
+    property.UpdateMenuOffset(OffsetF(25.0f, 30.0f));
+    property.UpdatePositionOffset(OffsetF(25.0f, 30.0f));
+    property.UpdateTitle("title");
+    property.UpdateFontSize(Dimension(25.0f));
+    property.UpdateFontColor(Color::RED);
+    property.UpdateFontWeight(FontWeight::BOLD);
+    property.UpdateAlignType(MenuAlignType::START);
+    property.UpdateOffset(DimensionOffset(Dimension(0, DimensionUnit::VP), Dimension(0, DimensionUnit::VP)));
+    EXPECT_TRUE(property.GetMenuOffset().has_value());
+    EXPECT_TRUE(property.GetPositionOffset().has_value());
+    EXPECT_TRUE(property.GetTitle().has_value());
+    EXPECT_TRUE(property.GetFontSize().has_value());
+    EXPECT_TRUE(property.GetFontColor().has_value());
+    EXPECT_TRUE(property.GetFontWeight().has_value());
+    EXPECT_TRUE(property.GetAlignType().has_value());
+    EXPECT_TRUE(property.GetOffset().has_value());
+    property.Reset();
+    EXPECT_FALSE(property.GetMenuOffset().has_value());
+    EXPECT_FALSE(property.GetPositionOffset().has_value());
+    EXPECT_FALSE(property.GetTitle().has_value());
+    EXPECT_FALSE(property.GetFontSize().has_value());
+    EXPECT_FALSE(property.GetFontColor().has_value());
+    EXPECT_FALSE(property.GetFontWeight().has_value());
+    EXPECT_FALSE(property.GetAlignType().has_value());
+    EXPECT_FALSE(property.GetOffset().has_value());
+}
+
+/**
+ * @tc.name: MenuLayoutPropertyTestNg008
+ * @tc.desc: Verify Clone.
+ * @tc.type: FUNC
+ */
+HWTEST_F(MenuTestNg, MenuLayoutPropertyTestNg008, TestSize.Level1)
+{
+    MenuLayoutProperty property;
+    property.UpdateMenuOffset(OffsetF(25.0f, 30.0f));
+    property.UpdatePositionOffset(OffsetF(25.0f, 30.0f));
+    property.UpdateTitle("title");
+    property.UpdateFontSize(Dimension(25.0f));
+    property.UpdateFontColor(Color::RED);
+    property.UpdateFontWeight(FontWeight::BOLD);
+    property.UpdateAlignType(MenuAlignType::START);
+    property.UpdateOffset(DimensionOffset(Dimension(10.0, DimensionUnit::VP), Dimension(10.0, DimensionUnit::VP)));
+
+    auto cloneProperty = AceType::DynamicCast<MenuLayoutProperty>(property.Clone());
+    ASSERT_NE(cloneProperty, nullptr);
+    EXPECT_EQ(property.GetMenuOffset().value(), cloneProperty->GetMenuOffset().value());
+    EXPECT_EQ(property.GetPositionOffset().value(), cloneProperty->GetPositionOffset().value());
+    EXPECT_EQ(property.GetTitle().value(), cloneProperty->GetTitle().value());
+    EXPECT_EQ(property.GetFontSize().value(), cloneProperty->GetFontSize().value());
+    EXPECT_EQ(property.GetFontColor().value(), cloneProperty->GetFontColor().value());
+    EXPECT_EQ(property.GetFontWeight().value(), cloneProperty->GetFontWeight().value());
+    EXPECT_EQ(property.GetAlignType().value(), cloneProperty->GetAlignType().value());
+    EXPECT_EQ(property.GetOffset().value(), cloneProperty->GetOffset().value());
+}
+
+/**
+ * @tc.name: MenuLayoutPropertyTestNg009
+ * @tc.desc: Verify MenuLayoutProperty::ToJsonValue.
+ * @tc.type: FUNC
+ */
+HWTEST_F(MenuTestNg, MenuLayoutPropertyTestNg009, TestSize.Level1)
+{
+    MenuLayoutProperty property;
+    property.UpdateMenuOffset(OffsetF(25.0f, 30.0f));
+    property.UpdatePositionOffset(OffsetF(25.0f, 30.0f));
+    property.UpdateTitle("title");
+    property.UpdateFontSize(Dimension(25.0f));
+    property.UpdateFontColor(Color::RED);
+    property.UpdateFontWeight(FontWeight::BOLD);
+    property.UpdateItemDivider(ITEM_DIVIDER);
+    property.UpdateItemGroupDivider(ITEM_DIVIDER);
+    property.UpdateExpandingMode(SubMenuExpandingMode::EMBEDDED);
+
+    auto json = JsonUtil::Create(true);
+    property.ToJsonValue(json, filter);
+    auto fontJsonObject = json->GetObject("font");
+    EXPECT_EQ(json->GetString("title"), "title");
+    EXPECT_EQ(json->GetString("offset"), OffsetF(25.0f, 30.0f).ToString());
+    EXPECT_EQ(json->GetString("fontSize"), Dimension(25.0f).ToString());
+    EXPECT_EQ(json->GetString("fontColor"), Color::RED.ColorToString());
+    EXPECT_EQ(fontJsonObject->GetString("weight"), V2::ConvertWrapFontWeightToStirng(FontWeight::BOLD));
+    property.UpdateExpandingMode(SubMenuExpandingMode::STACK);
+    property.ToJsonValue(json, filter);
+    EXPECT_EQ(json->GetString("title"), "title");
+    EXPECT_EQ(json->GetString("offset"), OffsetF(25.0f, 30.0f).ToString());
+    EXPECT_EQ(json->GetString("fontSize"), Dimension(25.0f).ToString());
+    EXPECT_EQ(json->GetString("fontColor"), Color::RED.ColorToString());
+    EXPECT_EQ(fontJsonObject->GetString("weight"), V2::ConvertWrapFontWeightToStirng(FontWeight::BOLD));
+}
+
+/**
+ * @tc.name: MenuLayoutPropertyTestNg010
+ * @tc.desc: Verify ToJsonValue.
+ * @tc.type: FUNC
+ */
+HWTEST_F(MenuTestNg, MenuLayoutPropertyTestNg010, TestSize.Level1)
+{
+    MockPipelineContextGetTheme();
+    std::vector<OptionParam> optionParams;
+    optionParams.emplace_back("MenuItem1", "fakeIcon", nullptr);
+    optionParams.emplace_back("MenuItem2", "", nullptr);
+    MenuParam menuParam;
+    auto menuWrapperNode = MenuView::Create(std::move(optionParams), TARGET_ID, "", TYPE, menuParam);
+    ASSERT_NE(menuWrapperNode, nullptr);
+    ASSERT_EQ(menuWrapperNode->GetChildren().size(), 1);
+    auto menuNode = AceType::DynamicCast<FrameNode>(menuWrapperNode->GetChildAtIndex(0));
+    ASSERT_NE(menuNode, nullptr);
+    auto property = menuNode->GetLayoutProperty<MenuLayoutProperty>();
+    ASSERT_NE(property, nullptr);
+
+    auto json = JsonUtil::Create(true);
+    property->ToJsonValue(json, filter);
+    auto itemArray = json->GetValue("bindMenu");
+    ASSERT_EQ(itemArray->GetArraySize(), 2u);
+    auto item1 = itemArray->GetArrayItem(0);
+    EXPECT_EQ(item1->GetString("value"), "MenuItem1");
+    EXPECT_EQ(item1->GetString("icon"), "fakeIcon");
+    auto item2 = itemArray->GetArrayItem(1);
+    EXPECT_EQ(item2->GetString("value"), "MenuItem2");
+    EXPECT_EQ(item2->GetString("icon"), "");
+}
+
+/**
+ * @tc.name: MenuLayoutPropertyTestNg011
+ * @tc.desc: Verify SelectMenuAlignOption AlignType.
+ * @tc.type: FUNC
+ */
+HWTEST_F(MenuTestNg, MenuLayoutPropertyTestNg011, TestSize.Level1)
+{
+    MenuLayoutProperty property;
+    EXPECT_FALSE(property.GetAlignType().has_value());
+    /**
+     * @tc.cases: case1. verify the alignType property.
+     */
+    property.UpdateAlignType(MenuAlignType::CENTER);
+    ASSERT_TRUE(property.GetAlignType().has_value());
+    EXPECT_EQ(property.GetAlignType().value(), MenuAlignType::CENTER);
+}
+
+/**
+ * @tc.name: MenuLayoutPropertyTestNg012
+ * @tc.desc: Verify SelectMenuAlignOption Offset.
+ * @tc.type: FUNC
+ */
+HWTEST_F(MenuTestNg, MenuLayoutPropertyTestNg012, TestSize.Level1)
+{
+    MenuLayoutProperty property;
+    EXPECT_FALSE(property.GetOffset().has_value());
+    DimensionOffset offset(Dimension(MENU_OFFSET_X, DimensionUnit::VP), Dimension(MENU_OFFSET_Y, DimensionUnit::VP));
+    /**
+     * @tc.cases: case1. verify the offset property.
+     */
+    property.UpdateOffset(offset);
+    ASSERT_TRUE(property.GetOffset().has_value());
+    EXPECT_EQ(property.GetOffset().value(), offset);
+}
+
+/**
  * @tc.name: MenuViewTestNgCreate001
  * @tc.desc: Verify Create.
  * @tc.type: FUNC
@@ -487,14 +816,14 @@ HWTEST_F(MenuTestNg, MenuViewTestNgCreate001, TestSize.Level1)
     auto firstOption = menuPattern->GetOptions()[0];
     ASSERT_NE(firstOption, nullptr);
     EXPECT_EQ(firstOption->GetTag(), V2::OPTION_ETS_TAG);
-    auto firstPattern = firstOption->GetPattern<MenuItemPattern>();
+    auto firstPattern = firstOption->GetPattern<OptionPattern>();
     ASSERT_NE(firstPattern, nullptr);
     EXPECT_EQ(firstPattern->GetText(), "MenuItem1");
     EXPECT_EQ(firstPattern->GetIcon(), "fakeIcon");
     auto secondOption = menuPattern->GetOptions()[1];
     ASSERT_NE(secondOption, nullptr);
     EXPECT_EQ(secondOption->GetTag(), V2::OPTION_ETS_TAG);
-    auto secondPattern = secondOption->GetPattern<MenuItemPattern>();
+    auto secondPattern = secondOption->GetPattern<OptionPattern>();
     ASSERT_NE(secondPattern, nullptr);
     EXPECT_EQ(secondPattern->GetText(), "MenuItem2");
     EXPECT_EQ(secondPattern->GetIcon(), "");
@@ -531,7 +860,7 @@ HWTEST_F(MenuTestNg, MenuViewTestNgCreate002, TestSize.Level1)
     auto textProperty = titleChild->GetLayoutProperty<TextLayoutProperty>();
     ASSERT_NE(textProperty, nullptr);
     EXPECT_TRUE(textProperty->GetContent().has_value());
-    EXPECT_EQ(textProperty->GetContent().value(), u"Title");
+    EXPECT_EQ(textProperty->GetContent().value(), "Title");
 }
 
 /**
@@ -587,49 +916,266 @@ HWTEST_F(MenuTestNg, MenuViewTestNgCreate004, TestSize.Level1)
 }
 
 /**
- * @tc.name: MenuViewTestNgCreate005
- * @tc.desc: Verify Create SubMenu.
+ * @tc.name: MenuViewTestNgSetFontSize001
+ * @tc.desc: Verify SetFontSize.
  * @tc.type: FUNC
  */
-HWTEST_F(MenuTestNg, MenuViewTestNgCreate005, TestSize.Level1)
+HWTEST_F(MenuTestNg, MenuViewTestNgSetFontSize001, TestSize.Level1)
+{
+    MockPipelineContextGetTheme();
+    MenuModelNG MneuModelInstance;
+    std::vector<OptionParam> optionParams;
+    optionParams.emplace_back("MenuItem", "", nullptr);
+    MenuParam menuParam;
+    auto menuWrapperNode = MenuView::Create(std::move(optionParams), TARGET_ID, "", TYPE, menuParam);
+    ASSERT_NE(menuWrapperNode, nullptr);
+    ASSERT_EQ(menuWrapperNode->GetChildren().size(), 1);
+    auto menuNode = AceType::DynamicCast<FrameNode>(menuWrapperNode->GetChildAtIndex(0));
+    ASSERT_NE(menuNode, nullptr);
+    auto property = menuNode->GetLayoutProperty<MenuLayoutProperty>();
+    ASSERT_NE(property, nullptr);
+    ViewStackProcessor::GetInstance()->Push(menuNode);
+    MneuModelInstance.SetFontSize(Dimension(50.0));
+    ASSERT_TRUE(property->GetFontSize().has_value());
+    EXPECT_EQ(property->GetFontSize().value(), Dimension(50.0));
+    ViewStackProcessor::GetInstance()->Finish();
+}
+
+/**
+ * @tc.name: MenuViewTestNgSetFontSize002
+ * @tc.desc: Verify SetFontSize.
+ * @tc.type: FUNC
+ */
+HWTEST_F(MenuTestNg, MenuViewTestNgSetFontSize002, TestSize.Level1)
+{
+    MockPipelineContextGetTheme();
+    MenuModelNG MneuModelInstance;
+    std::vector<OptionParam> optionParams;
+    optionParams.emplace_back("MenuItem", "", nullptr);
+    MenuParam menuParam;
+    auto menuWrapperNode = MenuView::Create(std::move(optionParams), TARGET_ID, "", TYPE, menuParam);
+    ASSERT_NE(menuWrapperNode, nullptr);
+    ASSERT_EQ(menuWrapperNode->GetChildren().size(), 1);
+    auto menuNode = AceType::DynamicCast<FrameNode>(menuWrapperNode->GetChildAtIndex(0));
+    ASSERT_NE(menuNode, nullptr);
+    auto property = menuNode->GetLayoutProperty<MenuLayoutProperty>();
+    ASSERT_NE(property, nullptr);
+    ViewStackProcessor::GetInstance()->Push(menuNode);
+    MneuModelInstance.SetFontSize(Dimension());
+    EXPECT_FALSE(property->GetFontSize().has_value());
+    ViewStackProcessor::GetInstance()->Finish();
+}
+
+/**
+ * @tc.name: MenuViewTestNgSetFontSize003
+ * @tc.desc: Verify SetFontSize.
+ * @tc.type: FUNC
+ */
+HWTEST_F(MenuTestNg, MenuViewTestNgSetFontSize003, TestSize.Level1)
+{
+    MockPipelineContextGetTheme();
+    MenuModelNG MneuModelInstance;
+    std::vector<OptionParam> optionParams;
+    optionParams.emplace_back("MenuItem", "", nullptr);
+    MenuParam menuParam;
+    auto menuWrapperNode = MenuView::Create(std::move(optionParams), TARGET_ID, "", TYPE, menuParam);
+    ASSERT_NE(menuWrapperNode, nullptr);
+    ASSERT_EQ(menuWrapperNode->GetChildren().size(), 1);
+    auto menuNode = AceType::DynamicCast<FrameNode>(menuWrapperNode->GetChildAtIndex(0));
+    ASSERT_NE(menuNode, nullptr);
+    auto property = menuNode->GetLayoutProperty<MenuLayoutProperty>();
+    ASSERT_NE(property, nullptr);
+    MneuModelInstance.SetFontSize(Dimension(50.0));
+    ASSERT_FALSE(property->GetFontSize().has_value());
+}
+
+/**
+ * @tc.name: MenuViewTestNgSetFontColor001
+ * @tc.desc: Verify SetFontColor.
+ * @tc.type: FUNC
+ */
+HWTEST_F(MenuTestNg, MenuViewTestNgSetFontColor001, TestSize.Level1)
+{
+    MockPipelineContextGetTheme();
+    MenuModelNG MneuModelInstance;
+    std::vector<OptionParam> optionParams;
+    optionParams.emplace_back("MenuItem", "", nullptr);
+    MenuParam menuParam;
+    auto menuWrapperNode = MenuView::Create(std::move(optionParams), TARGET_ID, "", TYPE, menuParam);
+    ASSERT_NE(menuWrapperNode, nullptr);
+    ASSERT_EQ(menuWrapperNode->GetChildren().size(), 1);
+    auto menuNode = AceType::DynamicCast<FrameNode>(menuWrapperNode->GetChildAtIndex(0));
+    ASSERT_NE(menuNode, nullptr);
+    auto property = menuNode->GetLayoutProperty<MenuLayoutProperty>();
+    ASSERT_NE(property, nullptr);
+    ViewStackProcessor::GetInstance()->Push(menuNode);
+    MneuModelInstance.SetFontColor(Color::RED);
+    ASSERT_TRUE(property->GetFontColor().has_value());
+    EXPECT_EQ(property->GetFontColor().value(), Color::RED);
+    ViewStackProcessor::GetInstance()->Finish();
+}
+
+/**
+ * @tc.name: MenuViewTestNgSetFontColor002
+ * @tc.desc: Verify SetFontColor.
+ * @tc.type: FUNC
+ */
+HWTEST_F(MenuTestNg, MenuViewTestNgSetFontColor002, TestSize.Level1)
+{
+    MockPipelineContextGetTheme();
+    MenuModelNG MneuModelInstance;
+    std::vector<OptionParam> optionParams;
+    optionParams.emplace_back("MenuItem", "", nullptr);
+    MenuParam menuParam;
+    auto menuWrapperNode = MenuView::Create(std::move(optionParams), TARGET_ID, "", TYPE, menuParam);
+    ASSERT_NE(menuWrapperNode, nullptr);
+    ASSERT_EQ(menuWrapperNode->GetChildren().size(), 1);
+    auto menuNode = AceType::DynamicCast<FrameNode>(menuWrapperNode->GetChildAtIndex(0));
+    ASSERT_NE(menuNode, nullptr);
+    auto property = menuNode->GetLayoutProperty<MenuLayoutProperty>();
+    ASSERT_NE(property, nullptr);
+    MneuModelInstance.SetFontColor(Color::RED);
+    ASSERT_FALSE(property->GetFontColor().has_value());
+}
+
+/**
+ * @tc.name: MenuViewTestNgSetFontColor003
+ * @tc.desc: Verify SetFontColor.
+ * @tc.type: FUNC
+ */
+HWTEST_F(MenuTestNg, MenuViewTestNgSetFontColor003, TestSize.Level1)
+{
+    MockPipelineContextGetTheme();
+    MenuModelNG MneuModelInstance;
+    std::vector<OptionParam> optionParams;
+    optionParams.emplace_back("MenuItem", "", nullptr);
+    MenuParam menuParam;
+    auto menuWrapperNode = MenuView::Create(std::move(optionParams), TARGET_ID, "", TYPE, menuParam);
+    ASSERT_NE(menuWrapperNode, nullptr);
+    ASSERT_EQ(menuWrapperNode->GetChildren().size(), 1);
+    auto menuNode = AceType::DynamicCast<FrameNode>(menuWrapperNode->GetChildAtIndex(0));
+    ASSERT_NE(menuNode, nullptr);
+    auto property = menuNode->GetLayoutProperty<MenuLayoutProperty>();
+    ASSERT_NE(property, nullptr);
+    ViewStackProcessor::GetInstance()->Push(menuNode);
+    MneuModelInstance.SetFontColor(Color::RED);
+    ASSERT_TRUE(property->GetFontColor().has_value());
+    EXPECT_EQ(property->GetFontColor().value(), Color::RED);
+    MneuModelInstance.SetFontColor(std::nullopt);
+    ASSERT_FALSE(property->GetFontColor().has_value());
+    ViewStackProcessor::GetInstance()->Finish();
+}
+
+/**
+ * @tc.name: MenuViewTestNgSetFontWeight001
+ * @tc.desc: Verify SetFontWeight.
+ * @tc.type: FUNC
+ */
+HWTEST_F(MenuTestNg, MenuViewTestNgSetFontWeight001, TestSize.Level1)
+{
+    MockPipelineContextGetTheme();
+    MenuModelNG MneuModelInstance;
+    std::vector<OptionParam> optionParams;
+    optionParams.emplace_back("MenuItem", "", nullptr);
+    MenuParam menuParam;
+    auto menuWrapperNode = MenuView::Create(std::move(optionParams), TARGET_ID, "", TYPE, menuParam);
+    ASSERT_NE(menuWrapperNode, nullptr);
+    ASSERT_EQ(menuWrapperNode->GetChildren().size(), 1);
+    auto menuNode = AceType::DynamicCast<FrameNode>(menuWrapperNode->GetChildAtIndex(0));
+    ASSERT_NE(menuNode, nullptr);
+    auto property = menuNode->GetLayoutProperty<MenuLayoutProperty>();
+    ASSERT_NE(property, nullptr);
+    ViewStackProcessor::GetInstance()->Push(menuNode);
+    MneuModelInstance.SetFontWeight(FontWeight::BOLDER);
+    ASSERT_TRUE(property->GetFontWeight().has_value());
+    EXPECT_EQ(property->GetFontWeight().value(), FontWeight::BOLDER);
+    ViewStackProcessor::GetInstance()->Finish();
+}
+
+/**
+ * @tc.name: MenuViewTestNgSetFontWeight002
+ * @tc.desc: Verify SetFontWeight.
+ * @tc.type: FUNC
+ */
+HWTEST_F(MenuTestNg, MenuViewTestNgSetFontWeight002, TestSize.Level1)
+{
+    MockPipelineContextGetTheme();
+    MenuModelNG MneuModelInstance;
+    std::vector<OptionParam> optionParams;
+    optionParams.emplace_back("MenuItem", "", nullptr);
+    MenuParam menuParam;
+    auto menuWrapperNode = MenuView::Create(std::move(optionParams), TARGET_ID, "", TYPE, menuParam);
+    ASSERT_NE(menuWrapperNode, nullptr);
+    ASSERT_EQ(menuWrapperNode->GetChildren().size(), 1);
+    auto menuNode = AceType::DynamicCast<FrameNode>(menuWrapperNode->GetChildAtIndex(0));
+    ASSERT_NE(menuNode, nullptr);
+    auto property = menuNode->GetLayoutProperty<MenuLayoutProperty>();
+    ASSERT_NE(property, nullptr);
+    MneuModelInstance.SetFontWeight(FontWeight::BOLDER);
+    ASSERT_FALSE(property->GetFontWeight().has_value());
+}
+
+/**
+ * @tc.name: MenuViewTestNgSetMenuPlacement001
+ * @tc.desc: Verify SetMenuPlacement.
+ * @tc.type: FUNC
+ */
+HWTEST_F(MenuTestNg, MenuViewTestNgSetMenuPlacement001, TestSize.Level1)
 {
     /**
-     * @tc.steps: step1: create custom node and menuWrapper node
-     * @tc.expected: menuWrapperNode not null
+     * @tc.steps: step1. create menuWrapperNode with menuItems and set MenuPlacement to Placement::TOP
+     * @tc.expected: step1. Get menuPlacement is Placement::TOP
+     */
+    MockPipelineContextGetTheme();
+    std::vector<OptionParam> optionParams;
+    optionParams.emplace_back("MenuItem", "", nullptr);
+    MenuParam menuParam;
+    menuParam.placement = OHOS::Ace::Placement::TOP;
+    auto menuWrapperNode = MenuView::Create(std::move(optionParams), TARGET_ID, "", TYPE, menuParam);
+    ASSERT_NE(menuWrapperNode, nullptr);
+    ASSERT_EQ(menuWrapperNode->GetChildren().size(), 1);
+    auto menuNode = AceType::DynamicCast<FrameNode>(menuWrapperNode->GetChildAtIndex(0));
+    ASSERT_NE(menuNode, nullptr);
+    auto property = menuNode->GetLayoutProperty<MenuLayoutProperty>();
+    ASSERT_NE(property, nullptr);
+    EXPECT_TRUE(property->GetMenuPlacement().has_value());
+    EXPECT_EQ(property->GetMenuPlacement().value(), OHOS::Ace::Placement::TOP);
+}
+
+/**
+ * @tc.name: MenuViewTestNgSetMenuPlacement002
+ * @tc.desc: Verify SetMenuPlacement.
+ * @tc.type: FUNC
+ */
+HWTEST_F(MenuTestNg, MenuViewTestNgSetMenuPlacement002, TestSize.Level1)
+{
+    /**
+     * @tc.steps: step1. create menuWrapperNode with custom node from a builder and set MenuPlacement to
+     * Placement::BOTTOM
+     * @tc.expected: step1. Get menuPlacement is Placement::BOTTOM
      */
     auto textNode = FrameNode::CreateFrameNode(
         V2::TEXT_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(), AceType::MakeRefPtr<TextPattern>());
+    ASSERT_NE(textNode, nullptr);
     MenuParam menuParam;
-    menuParam.enableHoverMode = true;
-    RefPtr<NG::UINode> customNode;
-    auto menuWrapperNode =
-        MenuView::Create(textNode, TARGET_ID, V2::TEXT_ETS_TAG, menuParam, true, customNode);
+    menuParam.placement = OHOS::Ace::Placement::BOTTOM;
+    menuParam.type = TYPE;
+    auto menuWrapperNode = MenuView::Create(textNode, TARGET_ID, "", menuParam);
     ASSERT_NE(menuWrapperNode, nullptr);
-    /**
-     * @tc.steps: step2: create custom menu node
-     * @tc.expected: menuNode not null,menuWrapperNode->GetChildren() size is 1
-     */
+    ASSERT_EQ(menuWrapperNode->GetChildren().size(), 1);
     auto menuNode = AceType::DynamicCast<FrameNode>(menuWrapperNode->GetChildAtIndex(0));
     ASSERT_NE(menuNode, nullptr);
-    ASSERT_EQ(menuWrapperNode->GetChildren().size(), 1);
-    /**
-     * @tc.steps: step3: create custom menu pattern
-     * @tc.expected: enableFold is ture
-     */
-    auto menuWrapperPattern = menuWrapperNode->GetPattern<MenuWrapperPattern>();
-    ASSERT_NE(menuWrapperPattern, nullptr);
-    ASSERT_EQ(menuWrapperPattern->enableFold_, true);
-    ASSERT_EQ(menuWrapperPattern->GetHoverMode(), true);
-
-    /**
-     * @tc.steps: step4: menu pattern SetFold
-     * @tc.expected: enableFold is fasle/ture
-     */
-    menuWrapperPattern->SetHoverMode(true);
-    ASSERT_EQ(menuWrapperPattern->enableFold_, true);
-    menuWrapperPattern->SetHoverMode(false);
-    ASSERT_EQ(menuWrapperPattern->enableFold_, false);
+    auto property = menuNode->GetLayoutProperty<MenuLayoutProperty>();
+    ASSERT_NE(property, nullptr);
+    EXPECT_TRUE(property->GetMenuPlacement().has_value());
+    EXPECT_EQ(property->GetMenuPlacement().value(), OHOS::Ace::Placement::BOTTOM);
 }
+
+/**
+ * @tc.name: MenuPaintMethodTestNg001
+ * @tc.desc: Verify MenuPaintMethod::GetOverlayDrawFunction.
+ * @tc.type: FUNC
+ */
 HWTEST_F(MenuTestNg, MenuPaintMethodTestNg001, TestSize.Level1)
 {
     /**
@@ -638,12 +1184,15 @@ HWTEST_F(MenuTestNg, MenuPaintMethodTestNg001, TestSize.Level1)
     RefPtr<MenuPaintProperty> paintProp = AceType::MakeRefPtr<MenuPaintProperty>();
     RefPtr<MenuPaintMethod> paintMethod = AceType::MakeRefPtr<MenuPaintMethod>();
     PaintWrapper* paintWrapperNoMenu = GetPaintWrapper(paintProp);
-    paintMethod->GetContentDrawFunction(paintWrapperNoMenu);
+    paintMethod->GetOverlayDrawFunction(paintWrapperNoMenu);
     delete paintWrapperNoMenu;
     paintWrapperNoMenu = nullptr;
     Testing::MockCanvas canvas;
+    EXPECT_CALL(canvas, AttachBrush(_)).WillRepeatedly(ReturnRef(canvas));
+    EXPECT_CALL(canvas, DrawPath(_)).Times(AtLeast(1));
+    EXPECT_CALL(canvas, DetachBrush()).WillRepeatedly(ReturnRef(canvas));
     /**
-     * @tc.steps: step2. update paint property and excute GetContentDrawFunction.
+     * @tc.steps: step2. update paint property and excute GetOverlayDrawFunction.
      * @tc.expected:  return value are as expected.
      */
     paintProp->UpdateEnableArrow(true);
@@ -652,7 +1201,7 @@ HWTEST_F(MenuTestNg, MenuPaintMethodTestNg001, TestSize.Level1)
     for (Placement placementValue : placements) {
         paintProp->UpdateArrowPlacement(placementValue);
         PaintWrapper* paintWrapper = GetPaintWrapper(paintProp);
-        auto result = paintMethod->GetContentDrawFunction(paintWrapper);
+        auto result = paintMethod->GetOverlayDrawFunction(paintWrapper);
         EXPECT_NE(result, nullptr);
         result(canvas);
         delete paintWrapper;
@@ -664,9 +1213,40 @@ HWTEST_F(MenuTestNg, MenuPaintMethodTestNg001, TestSize.Level1)
      */
     paintProp->UpdateEnableArrow(false);
     PaintWrapper* paintWrapper = GetPaintWrapper(paintProp);
-    auto result = paintMethod->GetContentDrawFunction(paintWrapper);
+    auto result = paintMethod->GetOverlayDrawFunction(paintWrapper);
     EXPECT_NE(result, nullptr);
     result(canvas);
+    delete paintWrapper;
+    paintWrapper = nullptr;
+}
+
+/**
+ * @tc.name: MenuPaintMethodTestNg002
+ * @tc.desc: Verify MenuPaintMethod::UpdateArrowPath.
+ * @tc.type: FUNC
+ */
+HWTEST_F(MenuTestNg, MenuPaintMethodTestNg002, TestSize.Level1)
+{
+    /**
+     * @tc.steps: step1. prepare paint method object.
+     */
+    RefPtr<MenuPaintProperty> paintProp = AceType::MakeRefPtr<MenuPaintProperty>();
+    RefPtr<MenuPaintMethod> paintMethod = AceType::MakeRefPtr<MenuPaintMethod>();
+    PaintWrapper* paintWrapper = GetPaintWrapper(paintProp);
+    /**
+     * @tc.steps: step2. execute functions.
+     * @tc.expected:  return value are as expected.
+     */
+    auto arrowX = 0.0;
+    auto arrowY = 0.0;
+    RSPath path;
+    Placement placements[] = { Placement::TOP, Placement::TOP_RIGHT, Placement::BOTTOM_RIGHT, Placement::RIGHT_TOP,
+        Placement::LEFT_TOP, Placement::NONE };
+    for (Placement placementValue : placements) {
+        paintMethod->UpdateArrowPath(placementValue, arrowX, arrowY, path);
+    }
+    auto result = paintMethod->GetOverlayDrawFunction(paintWrapper);
+    EXPECT_NE(result, nullptr);
     delete paintWrapper;
     paintWrapper = nullptr;
 }
@@ -693,6 +1273,202 @@ HWTEST_F(MenuTestNg, OnColorConfigurationUpdate001, TestSize.Level1)
     menuPattern->OnColorConfigurationUpdate();
     auto renderContext = menuNode->GetRenderContext();
     EXPECT_EQ(renderContext->GetBackgroundColor(), Color::BLACK);
+}
+
+/**
+ * @tc.name: MenuPaintPropertyTestNg001
+ * @tc.desc: Verify GetEnableArrow.
+ * @tc.type: FUNC
+ */
+HWTEST_F(MenuTestNg, MenuPaintPropertyTestNg001, TestSize.Level1)
+{
+    /**
+     * @tc.steps: step1. Build a object MenuPaintProperty.
+     * @tc.expected: enableArrow has not value.
+     */
+    MenuPaintProperty property;
+    EXPECT_FALSE(property.GetEnableArrow().has_value());
+    /**
+     * @tc.steps: step2. update enableArrow
+     * @tc.expected: enableArrow value are as expected.
+     */
+    property.UpdateEnableArrow(true);
+    ASSERT_TRUE(property.GetEnableArrow().has_value());
+    EXPECT_TRUE(property.GetEnableArrow().value());
+}
+
+/**
+ * @tc.name: MenuPaintPropertyTestNg002
+ * @tc.desc: Verify GetArrowOffset.
+ * @tc.type: FUNC
+ */
+HWTEST_F(MenuTestNg, MenuPaintPropertyTestNg002, TestSize.Level1)
+{
+    /**
+     * @tc.steps: step1. Build a object MenuPaintProperty.
+     * @tc.expected: arrowOffset has not value.
+     */
+    MenuPaintProperty property;
+    EXPECT_FALSE(property.GetArrowOffset().has_value());
+    /**
+     * @tc.steps: step2. update arrowOffset
+     * @tc.expected: arrowOffset value are as expected.
+     */
+    property.UpdateArrowOffset(Dimension(10.0f));
+    ASSERT_TRUE(property.GetArrowOffset().has_value());
+    EXPECT_EQ(property.GetArrowOffset().value(), Dimension(10.0f));
+}
+
+/**
+ * @tc.name: MenuPaintPropertyTestNg003
+ * @tc.desc: Verify GetArrowPosition.
+ * @tc.type: FUNC
+ */
+HWTEST_F(MenuTestNg, MenuPaintPropertyTestNg003, TestSize.Level1)
+{
+    /**
+     * @tc.steps: step1. Build a object MenuPaintProperty.
+     * @tc.expected: arrowPosition has not value.
+     */
+    MenuPaintProperty property;
+    EXPECT_FALSE(property.GetArrowPosition().has_value());
+    /**
+     * @tc.steps: step2. update arrowPosition
+     * @tc.expected: arrowPosition value are as expected.
+     */
+    property.UpdateArrowPosition(OffsetF(10.0f, 10.0f));
+    ASSERT_TRUE(property.GetArrowPosition().has_value());
+    EXPECT_EQ(property.GetArrowPosition().value(), OffsetF(10.0f, 10.0f));
+}
+
+/**
+ * @tc.name: MenuPaintPropertyTestNg004
+ * @tc.desc: Verify GetArrowPlacement.
+ * @tc.type: FUNC
+ */
+HWTEST_F(MenuTestNg, MenuPaintPropertyTestNg004, TestSize.Level1)
+{
+    /**
+     * @tc.steps: step1. Build a object MenuPaintProperty.
+     * @tc.expected: arrowPlacement has not value.
+     */
+    MenuPaintProperty property;
+    EXPECT_FALSE(property.GetArrowPlacement().has_value());
+    /**
+     * @tc.steps: step2. update arrowPlacement
+     * @tc.expected: arrowPlacement value are as expected.
+     */
+    property.UpdateArrowPlacement(Placement::TOP);
+    ASSERT_TRUE(property.GetArrowPlacement().has_value());
+    EXPECT_EQ(property.GetArrowPlacement().value(), Placement::TOP);
+}
+
+/**
+ * @tc.name: MenuPaintPropertyTestNg005
+ * @tc.desc: Verify Reset.
+ * @tc.type: FUNC
+ */
+HWTEST_F(MenuTestNg, MenuPaintPropertyTestNg005, TestSize.Level1)
+{
+    /**
+     * @tc.steps: step1. Build a object MenuPaintProperty, update property
+     * @tc.expected: property value are as expected.
+     */
+    MenuPaintProperty property;
+    property.UpdateEnableArrow(true);
+    property.UpdateArrowOffset(Dimension(10.0f));
+    property.UpdateArrowPosition(OffsetF(10.0f, 10.0f));
+    property.UpdateArrowPlacement(Placement::TOP);
+    EXPECT_TRUE(property.GetEnableArrow().has_value());
+    EXPECT_TRUE(property.GetArrowOffset().has_value());
+    EXPECT_TRUE(property.GetArrowPosition().has_value());
+    EXPECT_TRUE(property.GetArrowPlacement().has_value());
+    /**
+     * @tc.steps: step2. reset property
+     * @tc.expected: property value are as expected.
+     */
+    property.Reset();
+    EXPECT_FALSE(property.GetEnableArrow().has_value());
+    EXPECT_FALSE(property.GetArrowOffset().has_value());
+    EXPECT_FALSE(property.GetArrowPosition().has_value());
+    EXPECT_FALSE(property.GetArrowPlacement().has_value());
+}
+
+/**
+ * @tc.name: MenuPaintPropertyTestNg006
+ * @tc.desc: Verify Clone.
+ * @tc.type: FUNC
+ */
+HWTEST_F(MenuTestNg, MenuPaintPropertyTestNg006, TestSize.Level1)
+{
+    /**
+     * @tc.steps: step1. Build a object MenuPaintProperty, update property
+     */
+    MenuPaintProperty property;
+    property.UpdateEnableArrow(true);
+    property.UpdateArrowOffset(Dimension(10.0f));
+    property.UpdateArrowPosition(OffsetF(10.0f, 10.0f));
+    property.UpdateArrowPlacement(Placement::TOP);
+    /**
+     * @tc.steps: step2. clone property
+     * @tc.expected: property value are as expected.
+     */
+    auto cloneProperty = AceType::DynamicCast<MenuPaintProperty>(property.Clone());
+    ASSERT_NE(cloneProperty, nullptr);
+    EXPECT_EQ(property.GetEnableArrow().value(), cloneProperty->GetEnableArrow().value());
+    EXPECT_EQ(property.GetArrowOffset().value(), cloneProperty->GetArrowOffset().value());
+    EXPECT_EQ(property.GetArrowPosition().value(), cloneProperty->GetArrowPosition().value());
+    EXPECT_EQ(property.GetArrowPlacement().value(), cloneProperty->GetArrowPlacement().value());
+}
+
+/**
+ * @tc.name: MenuPaintPropertyTestNg007
+ * @tc.desc: Verify ToJsonValue.
+ * @tc.type: FUNC
+ */
+HWTEST_F(MenuTestNg, MenuPaintPropertyTestNg007, TestSize.Level1)
+{
+    /**
+     * @tc.steps: step1. Build a object MenuPaintProperty, update property
+     */
+    MenuPaintProperty property;
+    property.UpdateEnableArrow(true);
+    property.UpdateArrowOffset(Dimension(10.0f));
+    property.UpdateArrowPosition(OffsetF(10.0f, 10.0f));
+    property.UpdateArrowPlacement(Placement::TOP);
+    /**
+     * @tc.steps: step2. property to json
+     * @tc.expected: property jsonValue are as expected.
+     */
+    auto json = JsonUtil::Create(true);
+    property.ToJsonValue(json, filter);
+    EXPECT_EQ(json->GetString("enableArrow"), V2::ConvertBoolToString(true).c_str());
+    EXPECT_EQ(json->GetString("arrowOffset"), Dimension(10.0f).ToString().c_str());
+    EXPECT_EQ(json->GetString("arrowPosition"), OffsetF(10.0f, 10.0f).ToString().c_str());
+    EXPECT_EQ(json->GetString("arrowPlacement"), property.ConvertPlacementToString(Placement::TOP).c_str());
+}
+
+/**
+ * @tc.name: MenuPaintPropertyTestNg008
+ * @tc.desc: Verify ToJsonValue default value.
+ * @tc.type: FUNC
+ */
+HWTEST_F(MenuTestNg, MenuPaintPropertyTestNg008, TestSize.Level1)
+{
+    /**
+     * @tc.steps: step1. Build a object MenuPaintProperty
+     */
+    MenuPaintProperty property;
+    /**
+     * @tc.steps: step2. property to json
+     * @tc.expected: property jsonValue are as expected.
+     */
+    auto json = JsonUtil::Create(true);
+    property.ToJsonValue(json, filter);
+    EXPECT_EQ(json->GetString("enableArrow"), V2::ConvertBoolToString(false).c_str());
+    EXPECT_EQ(json->GetString("arrowOffset"), Dimension(0.0, DimensionUnit::VP).ToString().c_str());
+    EXPECT_EQ(json->GetString("arrowPosition"), OffsetF(0.0f, 0.0f).ToString().c_str());
+    EXPECT_EQ(json->GetString("arrowPlacement"), property.ConvertPlacementToString(Placement::NONE).c_str());
 }
 
 /**
@@ -1275,7 +2051,6 @@ HWTEST_F(MenuTestNg, MenuLayoutAlgorithmAPI11PaddingTest2, TestSize.Level1)
     algorithm->canExpandCurrentWindow_ = false;
     auto selectTheme = MockPipelineContext::GetCurrent()->GetTheme<SelectTheme>();
     selectTheme->outPadding_ = 10.0_vp;
-    selectTheme->menuPadding_ = 10.0_vp;
     selectTheme->menuLargeMargin_ = 10.0_vp;
     algorithm->InitializePaddingAPI12(wrapper);
     ASSERT_EQ(algorithm->optionPadding_, 10.0f);
@@ -1307,9 +2082,6 @@ HWTEST_F(MenuTestNg, MenuLayoutAlgorithmAvoidWithPreview, TestSize.Level1)
     ASSERT_NE(menuWrapperNode, nullptr);
     auto menuNode = AceType::DynamicCast<FrameNode>(menuWrapperNode->GetChildAtIndex(0));
     ASSERT_NE(menuNode, nullptr);
-    auto nodeContainer = Container::Current();
-    menuNode->instanceId_ = nodeContainer->GetInstanceId();
-    AceEngine::Get().AddContainer(nodeContainer->GetInstanceId(), nodeContainer);
     auto menuAlgorithmWrapper = menuNode->GetLayoutAlgorithm();
     auto menuGeometryNode = menuNode->GetGeometryNode();
     ASSERT_NE(menuGeometryNode, nullptr);
@@ -1326,7 +2098,7 @@ HWTEST_F(MenuTestNg, MenuLayoutAlgorithmAvoidWithPreview, TestSize.Level1)
     menuAlgorithm->targetOffset_ = OffsetF(OFFSET_THIRD, OFFSET_THIRD);
     menuAlgorithm->targetSecurity_ = TARGET_SECURITY.ConvertToPx();
     menuAlgorithm->previewScale_ = 1.0f;
-    auto pipelineContext = DialogManager::GetMainPipelineContext(menuNode);
+    auto pipelineContext = menuAlgorithm->GetCurrentPipelineContext();
     ASSERT_NE(pipelineContext, nullptr);
     /**
      * @tc.steps: step2. the window can accommodate preview, placement is LEFT_TOP, layout preview and menu
@@ -1485,8 +2257,6 @@ HWTEST_F(MenuTestNg, MenuViewTestNgTextMaxLines001, TestSize.Level1)
             return AceType::MakeRefPtr<IconTheme>();
         } else if (type == SelectTheme::TypeId()) {
             return AceType::MakeRefPtr<SelectTheme>();
-        } else if (type == ButtonTheme::TypeId()) {
-            return AceType::MakeRefPtr<ButtonTheme>();
         } else {
             return AceType::MakeRefPtr<MenuTheme>();
         }
@@ -1519,7 +2289,7 @@ HWTEST_F(MenuTestNg, MenuViewTestNgTextMaxLines001, TestSize.Level1)
     ASSERT_EQ(children.size(), 1);
     auto optionNode = AceType::DynamicCast<FrameNode>(column->GetChildAtIndex(0));
     ASSERT_NE(optionNode, nullptr);
-    auto optionPattern = optionNode->GetPattern<MenuItemPattern>();
+    auto optionPattern = optionNode->GetPattern<OptionPattern>();
     ASSERT_NE(optionPattern, nullptr);
     auto textNode = AceType::DynamicCast<FrameNode>(optionPattern->GetTextNode());
     ASSERT_NE(textNode, nullptr);
@@ -1600,8 +2370,6 @@ HWTEST_F(MenuTestNg, MenuViewTestNg003, TestSize.Level1)
     MockPipelineContext::GetCurrent()->SetThemeManager(themeManager);
     RefPtr<MenuTheme> menuTheme = AceType::MakeRefPtr<MenuTheme>();
     EXPECT_CALL(*themeManager, GetTheme(_)).WillRepeatedly(Return(menuTheme));
-    RefPtr<SelectTheme> selectTheme = AceType::MakeRefPtr<SelectTheme>();
-    EXPECT_CALL(*themeManager, GetTheme(_)).WillRepeatedly(Return(selectTheme));
 
     auto gestureHub = customNode->GetOrCreateGestureEventHub();
     menuTheme->doubleBorderEnable_ = 1;
@@ -1773,632 +2541,5 @@ HWTEST_F(MenuTestNg, MenuViewTestNg006, TestSize.Level1)
     auto menuWrapperNode4 = MenuView::Create(textNode, 11, V2::TEXT_ETS_TAG, menuParam, true, customNode);
     ASSERT_NE(menuWrapperNode4, nullptr);
     EXPECT_EQ(menuWrapperNode4->GetChildren().size(), 2);
-}
-
-/**
- * @tc.name: MenuViewTestNg003
- * @tc.desc: Test menu view init pan event.
- * @tc.type: FUNC
- */
-HWTEST_F(MenuTestNg, MenuViewTestNg007, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. create frame node, menu node and preview node.
-     */
-    auto frameNode = FrameNode::CreateFrameNode(V2::COLUMN_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(),
-        AceType::MakeRefPtr<Pattern>());
-    ASSERT_NE(frameNode, nullptr);
-    auto menuWrapperNode = FrameNode::CreateFrameNode(V2::MENU_WRAPPER_ETS_TAG,
-        ElementRegister::GetInstance()->MakeUniqueId(), AceType::MakeRefPtr<MenuWrapperPattern>(1));
-    auto menuNode = FrameNode::CreateFrameNode(V2::MENU_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(),
-        AceType::MakeRefPtr<MenuPattern>(frameNode->GetId(), frameNode->GetTag(), MenuType::MENU));
-    auto previewNode = FrameNode::CreateFrameNode(V2::MENU_PREVIEW_ETS_TAG,
-        ElementRegister::GetInstance()->MakeUniqueId(), AceType::MakeRefPtr<MenuPreviewPattern>());
-    ASSERT_NE(menuNode, nullptr);
-    ASSERT_NE(previewNode, nullptr);
-    menuNode->MountToParent(menuWrapperNode);
-    previewNode->MountToParent(menuWrapperNode);
-    auto previewEventHub = previewNode->GetEventHub<EventHub>();
-    ASSERT_NE(previewEventHub, nullptr);
-    auto previewGestureEventHub = previewEventHub->GetOrCreateGestureEventHub();
-    ASSERT_NE(previewGestureEventHub, nullptr);
-    EXPECT_TRUE(previewGestureEventHub->IsPanEventEmpty());
-
-    /**
-     * @tc.steps: step2. init menu pan event.
-     */
-    auto menuPreviewPattern = previewNode->GetPattern<MenuPreviewPattern>();
-    ASSERT_NE(menuPreviewPattern, nullptr);
-    auto hub = previewNode->GetEventHub<EventHub>();
-    ASSERT_NE(hub, nullptr);
-    auto gestureHub = hub->GetOrCreateGestureEventHub();
-    menuPreviewPattern->InitPanEvent(gestureHub);
-
-    /**
-     * @tc.steps: step3. check menu preview pan event.
-     */
-    EXPECT_FALSE(previewGestureEventHub->IsPanEventEmpty());
-}
-
-/**
- * @tc.name: MenuViewTestNg008
- * @tc.desc: Verify HandleMenuMaskAndFilter with MenuView::Create.
- * @tc.type: FUNC
- */
-HWTEST_F(MenuTestNg, MenuViewTestNg008, TestSize.Level1)
-{
-    auto textNode = FrameNode::CreateFrameNode(
-        V2::TEXT_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(), AceType::MakeRefPtr<TextPattern>());
-    ASSERT_NE(textNode, nullptr);
-    auto customNode = FrameNode::CreateFrameNode(
-        V2::TEXT_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(), AceType::MakeRefPtr<TextPattern>());
-    ASSERT_NE(customNode, nullptr);
-    auto targetParentNode = FrameNode::CreateFrameNode(
-        V2::TEXT_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(), AceType::MakeRefPtr<TextPattern>());
-    ASSERT_NE(targetParentNode, nullptr);
-
-    MenuParam menuParam;
-    menuParam.type = MenuType::CONTEXT_MENU;
-
-    auto targetNode = FrameNode::CreateFrameNode(V2::TEXT_ETS_TAG, 11, AceType::MakeRefPtr<TextPattern>());
-    ASSERT_NE(targetNode, nullptr);
-    auto targetGestureHub = targetNode->GetOrCreateGestureEventHub();
-
-    auto themeManager = AceType::MakeRefPtr<MockThemeManager>();
-    auto pipeline = MockPipelineContext::GetCurrent();
-    pipeline->SetThemeManager(themeManager);
-
-    MockContainer::SetUp();
-    auto container = MockContainer::Current();
-    container->pipelineContext_ = pipeline;
-
-    RefPtr<MenuTheme> menuTheme = AceType::MakeRefPtr<MenuTheme>();
-    EXPECT_CALL(*themeManager, GetTheme(_)).WillRepeatedly(Return(menuTheme));
-
-    targetParentNode->SetDepth(1);
-    targetNode->SetParent(targetParentNode);
-
-    pipeline->GetTheme<MenuTheme>()->hasFilter_ = true;
-    targetNode->GetLayoutProperty()->UpdateIsBindOverlay(true);
-
-    targetNode->draggable_ = true;
-    menuParam.maskEnable = true;
-    auto menuWrapperNode1 = MenuView::Create(textNode, 11, V2::TEXT_ETS_TAG, menuParam, true, customNode);
-    ASSERT_NE(menuWrapperNode1, nullptr);
-    ASSERT_EQ(menuWrapperNode1->GetChildren().size(), 1);
-
-    menuParam.type = MenuType::MENU;
-    menuParam.maskType = NG::MenuMaskType();
-    menuParam.maskType->maskColor = Color::RED;
-    menuParam.maskType->maskBackGroundBlurStyle = BlurStyle::BACKGROUND_THIN;
-    auto menuWrapperNode2 = MenuView::Create(textNode, 11, V2::TEXT_ETS_TAG, menuParam, true, customNode);
-    ASSERT_NE(menuWrapperNode2, nullptr);
-    ASSERT_EQ(menuWrapperNode2->GetChildren().size(), 1);
-}
-
-/**
- * @tc.name: MenuPreviewTestNg001
- * @tc.desc: Test menu view create with image preview.
- * @tc.type: FUNC
- */
-HWTEST_F(MenuTestNg, MenuPreviewTestNg001, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. create MenuWrapper with image preview
-     * @tc.expected: menuWrapper node and menuWrapper pattern are not null
-     */
-    auto menuWrapperNode = GetImagePreviewMenuWrapper();
-    ASSERT_NE(menuWrapperNode, nullptr);
-    auto menuWrapperPattern = menuWrapperNode->GetPattern<MenuWrapperPattern>();
-    ASSERT_NE(menuWrapperPattern, nullptr);
-
-    /**
-     * @tc.steps: step2. call IsContextMenu and GetPreviewMode
-     * @tc.expected: IsContextMenu is true, GetPreviewMode is MenuPreviewMode::IMAGE
-     */
-    EXPECT_TRUE(menuWrapperPattern->IsContextMenu());
-    EXPECT_EQ(menuWrapperPattern->GetPreviewMode(), MenuPreviewMode::IMAGE);
-
-    /**
-     * @tc.steps: step3. call GetMenu
-     * @tc.expected: menuNode is not null, tag is V2::MENU_ETS_TAG
-     */
-    auto menuMode =  menuWrapperPattern->GetMenu();
-    ASSERT_NE(menuMode, nullptr);
-    EXPECT_EQ(menuMode->GetTag(), V2::MENU_ETS_TAG);
-
-    /**
-     * @tc.steps: step4. call GetPreview
-     * @tc.expected: previewMode is not null, tag is V2::IMAGE_ETS_TAG
-     */
-    auto previewMode =  menuWrapperPattern->GetPreview();
-    ASSERT_NE(previewMode, nullptr);
-    EXPECT_EQ(previewMode->GetTag(), V2::IMAGE_ETS_TAG);
-}
-
-/**
- * @tc.name: MenuPreviewTestNg002
- * @tc.desc: Test menu view create with hoverimage preview.
- * @tc.type: FUNC
- */
-HWTEST_F(MenuTestNg, MenuPreviewTestNg002, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. create MenuWrapper with image preview
-     * @tc.expected: menuWrapper node and menuWrapper pattern are not null
-     */
-    auto menuWrapperNode = GetHoverImagePreviewMenuWrapper();
-    ASSERT_NE(menuWrapperNode, nullptr);
-    auto menuWrapperPattern = menuWrapperNode->GetPattern<MenuWrapperPattern>();
-    ASSERT_NE(menuWrapperPattern, nullptr);
-
-    /**
-     * @tc.steps: step2. call IsContextMenu and GetPreviewMode
-     * @tc.expected: IsContextMenu is true, GetPreviewMode is MenuPreviewMode::IMAGE
-     */
-    EXPECT_TRUE(menuWrapperPattern->IsContextMenu());
-    EXPECT_EQ(menuWrapperPattern->GetPreviewMode(), MenuPreviewMode::CUSTOM);
-
-    /**
-     * @tc.steps: step3. call GetMenu
-     * @tc.expected: menuNode is not null, tag is V2::MENU_ETS_TAG
-     */
-    auto menuMode =  menuWrapperPattern->GetMenu();
-    ASSERT_NE(menuMode, nullptr);
-    EXPECT_EQ(menuMode->GetTag(), V2::MENU_ETS_TAG);
-
-    /**
-     * @tc.steps: step4. call GetPreview
-     * @tc.expected: previewMode is not null, tag is V2::MENU_PREVIEW_ETS_TAG
-     */
-    auto previewMode =  menuWrapperPattern->GetPreview();
-    ASSERT_NE(previewMode, nullptr);
-    EXPECT_EQ(previewMode->GetTag(), V2::MENU_PREVIEW_ETS_TAG);
-
-    /**
-     * @tc.steps: step5. call GetHoverImagePreview
-     * @tc.expected: imageMode is not null, tag is V2::IMAGE_ETS_TAG
-     */
-    auto ImageMode =  menuWrapperPattern->GetHoverImagePreview();
-    ASSERT_NE(ImageMode, nullptr);
-    EXPECT_EQ(ImageMode->GetTag(), V2::IMAGE_ETS_TAG);
-
-    /**
-     * @tc.steps: step6. call GetHoverImageCustomPreview
-     * @tc.expected: customPreview node is not null, tag is V2::MENU_PREVIEW_ETS_TAG
-     */
-    auto customPreview =  menuWrapperPattern->GetHoverImageCustomPreview();
-    ASSERT_NE(customPreview, nullptr);
-    EXPECT_EQ(customPreview->GetTag(), V2::MENU_PREVIEW_ETS_TAG);
-}
-
-/**
- * @tc.name: CreateMenuTest001
- * @tc.desc: Test CreateMenu creates a FrameNode.
- * @tc.type: FUNC
- */
-HWTEST_F(MenuTestNg, CreateMenuTest001, TestSize.Level1)
-{
-    auto menuNode = MenuModelNG::CreateMenu();
-    ASSERT_NE(menuNode, nullptr);
-
-    auto layoutProps = menuNode->GetLayoutProperty<MenuLayoutProperty>();
-    ASSERT_NE(layoutProps, nullptr);
-}
-
-/**
- * @tc.name: MenuViewTestNg009
- * @tc.desc: Verify MenuView::Create when mask is true.
- * @tc.type: FUNC
- */
-HWTEST_F(MenuTestNg, MenuViewTestNg009, TestSize.Level1)
-{
-    auto customNode = FrameNode::CreateFrameNode(
-        V2::TEXT_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(), AceType::MakeRefPtr<TextPattern>());
-    ASSERT_NE(customNode, nullptr);
-    auto targetParentNode = FrameNode::CreateFrameNode(
-        V2::TEXT_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(), AceType::MakeRefPtr<TextPattern>());
-    ASSERT_NE(targetParentNode, nullptr);
-    auto targetNode = FrameNode::CreateFrameNode(V2::TEXT_ETS_TAG, 11, AceType::MakeRefPtr<TextPattern>());
-    ASSERT_NE(targetNode, nullptr);
-    targetParentNode->SetDepth(1);
-    targetNode->SetParent(targetParentNode);
-    customNode->SetDepth(2);
-    targetParentNode->SetParent(customNode);
- 
-    MenuParam menuParam;
-    menuParam.type = MenuType::MENU;
-    menuParam.maskEnable = true;
-    menuParam.isShowInSubWindow = true;
-    std::vector<OptionParam> optionParams;
- 
-    auto themeManager = AceType::MakeRefPtr<MockThemeManager>();
-    auto pipeline = MockPipelineContext::GetCurrent();
-    pipeline->SetThemeManager(themeManager);
- 
-    auto container = MockContainer::Current();
-    container->pipelineContext_ = pipeline;
- 
-    RefPtr<MenuTheme> menuTheme = AceType::MakeRefPtr<MenuTheme>();
-    EXPECT_CALL(*themeManager, GetTheme(_)).WillRepeatedly(Return(menuTheme));
- 
-    auto menuWrapperNode = MenuView::Create(std::move(optionParams), 11, V2::TEXT_ETS_TAG, MenuType::MENU, menuParam);
-    ASSERT_NE(menuWrapperNode, nullptr);
-    auto menuWrapperPattern = menuWrapperNode->GetPattern<MenuWrapperPattern>();
-    ASSERT_NE(menuWrapperPattern->GetFilterColumnNode(), nullptr);
-}
- 
-/**
- * @tc.name: MenuViewTestNg010
- * @tc.desc: Verify MenuView::Create when mask is false.
- * @tc.type: FUNC
- */
-HWTEST_F(MenuTestNg, MenuViewTestNg010, TestSize.Level1)
-{
-    auto textNode = FrameNode::CreateFrameNode(
-        V2::TEXT_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(), AceType::MakeRefPtr<TextPattern>());
-    ASSERT_NE(textNode, nullptr);
-    auto customNode = FrameNode::CreateFrameNode(
-        V2::TEXT_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(), AceType::MakeRefPtr<TextPattern>());
-    ASSERT_NE(customNode, nullptr);
-    MenuParam menuParam;
-    menuParam.type = MenuType::MENU;
-    menuParam.maskEnable = false;
- 
-    auto menuWrapperNode = MenuView::Create(textNode, 11, V2::TEXT_ETS_TAG, menuParam, true, customNode);
-    ASSERT_NE(menuWrapperNode, nullptr);
-    auto menuWrapperPattern = menuWrapperNode->GetPattern<MenuWrapperPattern>();
-    ASSERT_EQ(menuWrapperPattern->GetFilterColumnNode(), nullptr);
-}
-
-/**
- * @tc.name: CreateWithFontFamilyResourceObj
- * @tc.desc: Verify MenuModelNg::CreateWithFontFamilyResourceObj.
- * @tc.type: FUNC
- */
-HWTEST_F(MenuTestNg, CreateWithFontFamilyResourceObj, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. Create Menu frame node.
-     * @tc.expected: step1. Frame node is not null.
-     */
-    MenuModelNG model;
-    model.Create();
-    auto menuNode = ViewStackProcessor::GetInstance()->GetMainFrameNode();
-    ASSERT_NE(menuNode, nullptr);
-    auto pattern = menuNode->GetPattern<MenuPattern>();
-    ASSERT_NE(pattern, nullptr);
-
-    /**
-     * @tc.steps: step2. Create fontFamily resource object and verify resource manager.
-     * @tc.expected: step2. Resource is added to manager.
-     */
-    ResourceObjectParams params { .value = "", .type = ResourceObjectParamType::NONE };
-    RefPtr<ResourceObject> resObjWithParams =
-        AceType::MakeRefPtr<ResourceObject>(1, 10001, std::vector<ResourceObjectParams> { params }, "", "", 100000);
-    model.CreateWithFontFamilyResourceObj(resObjWithParams, MenuFamilyType::FONT_FAMILY);
-    std::string key = "Menu" + model.FamilyTypeToString(MenuFamilyType::FONT_FAMILY);
-    pattern->OnColorModeChange(1);
-    auto resMgr = pattern->resourceMgr_;
-    ASSERT_NE(resMgr, nullptr);
-    auto count = resMgr->resMap_.count(key);
-    EXPECT_EQ(count, 1);
-
-    /**
-     * @tc.steps: step3. Create unknown fontFamily resource object with parameters.
-     * @tc.expected: step3. Resource is added to manager.
-     */
-    model.CreateWithFontFamilyResourceObj(resObjWithParams, static_cast<MenuFamilyType>(999));
-    key = "Menu" + model.FamilyTypeToString(static_cast<MenuFamilyType>(999));
-    pattern->OnColorModeChange(1);
-    count = resMgr->resMap_.count(key);
-    EXPECT_EQ(count, 1);
-    ViewStackProcessor::GetInstance()->Finish();
-}
-
-/**
- * @tc.name: ColorTypeToString
- * @tc.desc: Verify MenuModelNg::ColorTypeToString.
- * @tc.type: FUNC
- */
-HWTEST_F(MenuTestNg, ColorTypeToString, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. Define test cases for all MenuColorType values and an unknown value.
-     * @tc.expected: step1. Test cases cover all possible enum values and edge case.
-     */
-    std::vector<std::pair<MenuColorType, std::string>> types = {
-        { MenuColorType::FONT_COLOR, "FontColor" },
-        { MenuColorType::GROUP_DIVIDER_COLOR, "GroupDividerColor" },
-        { MenuColorType::DIVIDER_COLOR, "DividerColor" },
-        { static_cast<MenuColorType>(999), "Unknown" } };
-
-    /**
-     * @tc.steps: step2. Iterate through test cases and verify string conversion.
-     * @tc.expected: step2. All enum values are converted to their correct string representations.
-     */
-    for (const auto& [type, expected] : types) {
-        auto result = MenuModelNG::ColorTypeToString(type);
-        EXPECT_EQ(result, expected);
-    }
-}
-
-/**
- * @tc.name: DimensionTypeToString
- * @tc.desc: Verify MenuModelNG::DimensionTypeToString.
- * @tc.type: FUNC
- */
-HWTEST_F(MenuTestNg, DimensionTypeToString, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. Define test cases for all MenuDimensionType values and an unknown value.
-     * @tc.expected: step1. Test cases cover all possible enum values and edge case.
-     */
-    std::vector<std::pair<MenuDimensionType, std::string>> types = {
-        { MenuDimensionType::WIDTH, "Width" },
-        { MenuDimensionType::FONT_SIZE, "FontSize" },
-        { MenuDimensionType::RADIUS_TOP_LEFT, "RadiusTopLeft" },
-        { MenuDimensionType::RADIUS_TOP_RIGHT, "RadiusTopRight" },
-        { MenuDimensionType::RADIUS_BOTTOM_LEFT, "RadiusBottomLeft" },
-        { MenuDimensionType::RADIUS_BOTTOM_RIGHT, "RadiusBottomRight" },
-        { MenuDimensionType::BORDER_RADIUS, "BorderRadius" },
-        { static_cast<MenuDimensionType>(999), "Unknown" } };
-
-    /**
-     * @tc.steps: step2. Iterate through test cases and verify string conversion.
-     * @tc.expected: step2. All enum values are converted to their correct string representations.
-     */
-    for (const auto& [type, expected] : types) {
-        auto result = MenuModelNG::DimensionTypeToString(type);
-        EXPECT_EQ(result, expected);
-    }
-}
-
-/**
- * @tc.name: DimensionTypeToString
- * @tc.desc: Verify MenuModelNG::DimensionTypeToString.
- * @tc.type: FUNC
- */
-HWTEST_F(MenuTestNg, FamilyTypeToString, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. Define test cases for all MenuFamilyType values and an unknown value.
-     * @tc.expected: step1. Test cases cover all possible enum values and edge case.
-     */
-    std::vector<std::pair<MenuFamilyType, std::string>> types = {
-        { MenuFamilyType::FONT_FAMILY, "FontFamily" },
-        { static_cast<MenuFamilyType>(999), "Unknown" } };
-
-    /**
-     * @tc.steps: step2. Iterate through test cases and verify string conversion.
-     * @tc.expected: step2. All enum values are converted to their correct string representations.
-     */
-    for (const auto& [type, expected] : types) {
-        auto result = MenuModelNG::FamilyTypeToString(type);
-        EXPECT_EQ(result, expected);
-    }
-}
-
-/**
- * @tc.name: CreateWithDimensionResourceObj
- * @tc.desc: Verify MenuModelNg::CreateWithDimensionResourceObj.
- * @tc.type: FUNC
- */
-HWTEST_F(MenuTestNg, CreateWithDimensionResourceObj, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. Create Menu frame node.
-     * @tc.expected: step1. Frame node is not null.
-     */
-    MenuModelNG model;
-    model.Create();
-    auto menuNode = ViewStackProcessor::GetInstance()->GetMainFrameNode();
-    ASSERT_NE(menuNode, nullptr);
-    auto pattern = menuNode->GetPattern<MenuPattern>();
-    ASSERT_NE(pattern, nullptr);
-
-    /**
-     * @tc.steps: step2. Create dimension resource object and verify resource manager.
-     * @tc.expected: step2. Resource is added to manager.
-     */
-    ResourceObjectParams params { .value = "", .type = ResourceObjectParamType::NONE };
-    RefPtr<ResourceObject> resObjWithParams =
-        AceType::MakeRefPtr<ResourceObject>(1, 10001, std::vector<ResourceObjectParams> { params }, "", "", 100000);
-    model.CreateWithDimensionResourceObj(resObjWithParams, MenuDimensionType::FONT_SIZE);
-    std::string key = "Menu" + model.DimensionTypeToString(MenuDimensionType::FONT_SIZE);
-    pattern->OnColorModeChange(1);
-    auto resMgr = pattern->resourceMgr_;
-    ASSERT_NE(resMgr, nullptr);
-    auto count = resMgr->resMap_.count(key);
-    EXPECT_EQ(count, 1);
-
-    /**
-     * @tc.steps: step3. Add a second dimension resource of type BORDER_RADIUS.
-     * @tc.expected: step3. The resource is successfully recorded in the manager.
-     */
-    model.CreateWithDimensionResourceObj(resObjWithParams, MenuDimensionType::BORDER_RADIUS);
-    key = "Menu" + model.DimensionTypeToString(MenuDimensionType::BORDER_RADIUS);
-    pattern->OnColorModeChange(1);
-    resMgr = pattern->resourceMgr_;
-    ASSERT_NE(resMgr, nullptr);
-    count = resMgr->resMap_.count(key);
-    EXPECT_EQ(count, 1);
-
-    /**
-     * @tc.steps: step4. Re-add the same BORDER_RADIUS resource and manually cache a value.
-     * @tc.expected: step4. Resource count remains 1, cache entry is accepted.
-     */
-    model.CreateWithDimensionResourceObj(resObjWithParams, MenuDimensionType::BORDER_RADIUS);
-    key = "Menu" + model.DimensionTypeToString(MenuDimensionType::BORDER_RADIUS);
-    resMgr = pattern->resourceMgr_;
-    ASSERT_NE(resMgr, nullptr);
-    resMgr->AddResCache(key, "1.0");
-    pattern->OnColorModeChange(1);
-    count = resMgr->resMap_.count(key);
-    EXPECT_EQ(count, 1);
-
-    ViewStackProcessor::GetInstance()->Finish();
-}
-
-/**
- * @tc.name: SetMenuDimensionValue
- * @tc.desc: Verify MenuModelNg::SetMenuDimensionValue.
- * @tc.type: FUNC
- */
-HWTEST_F(MenuTestNg, SetMenuDimensionValue, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. Create Menu frame node.
-     * @tc.expected: step1. Frame node is not null.
-     */
-    MenuModelNG model;
-    model.Create();
-    auto menuNode = AceType::DynamicCast<FrameNode>(ViewStackProcessor::GetInstance()->Finish());
-    ASSERT_NE(menuNode, nullptr);
-    auto layoutProperty = menuNode->GetLayoutProperty<MenuLayoutProperty>();
-    ASSERT_NE(layoutProperty, nullptr);
-
-    CalcDimension defaultDim(10.0f, DimensionUnit::VP);
-    CalcDimension dimension(20.0f, DimensionUnit::VP);
-
-    /**
-     * @tc.steps: step2. Set WIDTH dimension and verify.
-     * @tc.expected: step2. The layout property returns the correct width value.
-     */
-    model.SetMenuDimensionValue(MenuDimensionType::WIDTH, menuNode, dimension);
-    EXPECT_EQ(layoutProperty->GetMenuWidthValue(defaultDim), dimension);
-
-    /**
-     * @tc.steps: step3. Set FONT_SIZE dimension and verify.
-     * @tc.expected: step3. The layout property returns the correct font-size value.
-     */
-    model.SetMenuDimensionValue(MenuDimensionType::FONT_SIZE, menuNode, dimension);
-    EXPECT_EQ(layoutProperty->GetFontSizeValue(defaultDim), dimension);
-
-    /**
-     * @tc.steps: step4. Attempt to set FONT_SIZE with PERCENT unit (invalid).
-     * @tc.expected: step4. Invalid unit causes the font-size to remain at default.
-     */
-    CalcDimension fontSizeDim(20.0f, DimensionUnit::PERCENT);
-    model.SetMenuDimensionValue(MenuDimensionType::FONT_SIZE, menuNode, fontSizeDim);
-    EXPECT_EQ(layoutProperty->GetFontSizeValue(defaultDim), defaultDim);
-
-    /**
-     * @tc.steps: step5. Set BORDER_RADIUS dimension and verify existence.
-     * @tc.expected: step5. BorderRadius property is present.
-     */
-    model.SetMenuDimensionValue(MenuDimensionType::BORDER_RADIUS, menuNode, dimension);
-    ASSERT_EQ(layoutProperty->GetBorderRadius().has_value(), true);
-
-    /**
-     * @tc.steps: step6. Attempt to set an unknown dimension type.
-     * @tc.expected: step6. No crash or change; function handles unknown gracefully.
-     */
-    model.SetMenuDimensionValue(static_cast<MenuDimensionType>(999), menuNode, dimension);
-}
-
-/**
- * @tc.name: CreateWithColorResourceObj
- * @tc.desc: Verify MenuModelNg::CreateWithColorResourceObj.
- * @tc.type: FUNC
- */
-HWTEST_F(MenuTestNg, CreateWithColorResourceObj, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. Create Menu frame node.
-     * @tc.expected: step1. Frame node is not null.
-     */
-    MenuModelNG model;
-    model.Create();
-    auto menuNode = ViewStackProcessor::GetInstance()->GetMainFrameNode();
-    ASSERT_NE(menuNode, nullptr);
-    auto pattern = menuNode->GetPattern<MenuPattern>();
-    ASSERT_NE(pattern, nullptr);
-
-    /**
-     * @tc.steps: step2. Create color resource object and verify resource manager.
-     * @tc.expected: step2. Resource is added to manager.
-     */
-    ResourceObjectParams params { .value = "", .type = ResourceObjectParamType::NONE };
-    RefPtr<ResourceObject> resObjWithParams =
-        AceType::MakeRefPtr<ResourceObject>(1, 10001, std::vector<ResourceObjectParams> { params }, "", "", 100000);
-
-    model.CreateWithColorResourceObj(resObjWithParams, MenuColorType::FONT_COLOR);
-    std::string key = "Menu" + model.ColorTypeToString(MenuColorType::FONT_COLOR);
-    pattern->OnColorModeChange(1);
-    auto resMgr = pattern->resourceMgr_;
-    ASSERT_NE(resMgr, nullptr);
-    auto count = resMgr->resMap_.count(key);
-    EXPECT_EQ(count, 1);
-
-    /**
-     * @tc.steps: step3. Re-add the same FONT_COLOR resource and manually cache a value.
-     * @tc.expected: step3. Resource count remains 1; cache entry is accepted.
-     */
-    model.CreateWithColorResourceObj(resObjWithParams, MenuColorType::FONT_COLOR);
-    key = "Menu" + model.ColorTypeToString(MenuColorType::FONT_COLOR);
-    resMgr = pattern->resourceMgr_;
-    ASSERT_NE(resMgr, nullptr);
-    resMgr->AddResCache(key, "0xffff0000");
-    pattern->OnColorModeChange(1);
-    count = resMgr->resMap_.count(key);
-    EXPECT_EQ(count, 1);
-
-    ViewStackProcessor::GetInstance()->Finish();
-}
-
-/**
- * @tc.name: SetMenuColorValue
- * @tc.desc: Verify MenuModelNg::SetMenuColorValue.
- * @tc.type: FUNC
- */
-HWTEST_F(MenuTestNg, SetMenuColorValue, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. Create Menu frame node.
-     * @tc.expected: step1. Frame node is not null.
-     */
-    MenuModelNG model;
-    model.Create();
-    auto menuNode = AceType::DynamicCast<FrameNode>(ViewStackProcessor::GetInstance()->Finish());
-    ASSERT_NE(menuNode, nullptr);
-    auto layoutProperty = menuNode->GetLayoutProperty<MenuLayoutProperty>();
-    ASSERT_NE(layoutProperty, nullptr);
-
-    Color defaultColor(Color::BLACK);
-    Color color(Color::RED);
-    layoutProperty->UpdateItemDivider(V2::ItemDivider {});
-    layoutProperty->UpdateItemGroupDivider(V2::ItemDivider {});
-
-    /**
-     * @tc.steps: step2. Set FONT_COLOR and verify.
-     * @tc.expected: step2. Font color in layout property matches the set value.
-     */
-    model.SetMenuColorValue(MenuColorType::FONT_COLOR, menuNode, color);
-    EXPECT_EQ(layoutProperty->GetFontColorValue(defaultColor), color);
-
-    /**
-     * @tc.steps: step3. Set DIVIDER_COLOR and verify.
-     * @tc.expected: step3. Item divider color is updated accordingly.
-     */
-    V2::ItemDivider itemDivider;
-    itemDivider.color = color;
-    model.SetMenuColorValue(MenuColorType::DIVIDER_COLOR, menuNode, color);
-    EXPECT_EQ(layoutProperty->GetItemDividerValue(V2::ItemDivider {}), itemDivider);
-
-    /**
-     * @tc.steps: step4. Set GROUP_DIVIDER_COLOR and verify.
-     * @tc.expected: step4. Item group divider color is updated accordingly.
-     */
-    V2::ItemDivider itemGroupDivider;
-    itemGroupDivider.color = color;
-    model.SetMenuColorValue(MenuColorType::GROUP_DIVIDER_COLOR, menuNode, color);
-    EXPECT_EQ(layoutProperty->GetItemGroupDividerValue(V2::ItemDivider {}), itemGroupDivider);
-
-    /**
-     * @tc.steps: step5. Attempt to set an unknown color type.
-     * @tc.expected: step5. No crash or change; function handles unknown gracefully.
-     */
-    model.SetMenuColorValue(static_cast<MenuColorType>(999), menuNode, color);
 }
 } // namespace OHOS::Ace::NG

@@ -14,7 +14,9 @@
  */
 
 #include "bridge/declarative_frontend/jsview/js_list.h"
+#if !defined(PREVIEW) && defined(OHOS_PLATFORM)
 #include "interfaces/inner_api/ui_session/ui_session_manager.h"
+#endif
 
 #include "base/geometry/axis.h"
 #include "base/log/ace_scoring_log.h"
@@ -59,8 +61,8 @@ ListModel* ListModel::GetInstance()
 
 namespace OHOS::Ace::Framework {
 
-const std::vector<ScrollSnapAlign> SCROLL_SNAP_ALIGN = { ScrollSnapAlign::NONE, ScrollSnapAlign::START,
-    ScrollSnapAlign::CENTER, ScrollSnapAlign::END };
+const std::vector<V2::ScrollSnapAlign> SCROLL_SNAP_ALIGN = { V2::ScrollSnapAlign::NONE, V2::ScrollSnapAlign::START,
+    V2::ScrollSnapAlign::CENTER, V2::ScrollSnapAlign::END };
 
 namespace {
 const std::regex DIMENSION_REGEX(R"(^[-+]?\d+(?:\.\d+)?(?:px|vp|fp|lpx)?$)", std::regex::icase);
@@ -130,8 +132,7 @@ void SyncChildrenSize(const JSRef<JSObject>& childrenSizeObj, RefPtr<NG::ListChi
 
 void JSList::SetDirection(int32_t direction)
 {
-    if (Container::GreatOrEqualAPITargetVersion(PlatformVersion::VERSION_THIRTEEN) && direction != 0 &&
-        direction != 1) {
+    if (Container::GreatOrEqualAPITargetVersion(PlatformVersion::VERSION_TWELVE) && direction != 0 && direction != 1) {
         direction = 0;
     }
     ListModel::GetInstance()->SetListDirection(static_cast<Axis>(direction));
@@ -145,13 +146,9 @@ void JSList::SetScrollBar(const JSCallbackInfo& info)
 
 void JSList::SetScrollBarColor(const JSCallbackInfo& info)
 {
-    RefPtr<ResourceObject> resObj;
-    auto scrollBarColor = JSScrollable::ParseBarColor(info, resObj);
+    auto scrollBarColor = JSScrollable::ParseBarColor(info);
     if (!scrollBarColor.empty()) {
         ListModel::GetInstance()->SetScrollBarColor(scrollBarColor);
-    }
-    if (SystemProperties::ConfigChangePerform()) {
-        ListModel::GetInstance()->CreateWithResourceObjScrollBarColor(resObj);
     }
 }
 
@@ -166,16 +163,14 @@ void JSList::SetScrollBarWidth(const JSCallbackInfo& scrollWidth)
 void JSList::SetEdgeEffect(const JSCallbackInfo& info)
 {
     auto edgeEffect = EdgeEffect::SPRING;
-    auto effectEdge = EffectEdge::ALL;
     if (info.Length() > 0) {
         edgeEffect = JSScrollable::ParseEdgeEffect(info[0], EdgeEffect::SPRING);
     }
     auto alwaysEnabled = false;
     if (info.Length() > 1) {
         alwaysEnabled = JSScrollable::ParseAlwaysEnable(info[1], false);
-        effectEdge = JSScrollable::ParseEffectEdge(info[1]);
     }
-    ListModel::GetInstance()->SetEdgeEffect(edgeEffect, alwaysEnabled, effectEdge);
+    ListModel::GetInstance()->SetEdgeEffect(edgeEffect, alwaysEnabled);
 }
 
 void JSList::SetEditMode(bool editMode)
@@ -248,7 +243,6 @@ void JSList::Create(const JSCallbackInfo& args)
 void JSList::SetChildrenMainSize(const JSCallbackInfo& args)
 {
     if (args.Length() != 1 || !(args[0]->IsObject())) {
-        ListModel::GetInstance()->ResetListChildrenMainSize();
         return;
     }
     SetChildrenMainSize(JSRef<JSObject>::Cast(args[0]));
@@ -258,7 +252,7 @@ void JSList::SetChildrenMainSize(const JSRef<JSObject>& childrenSizeObj)
 {
     double defaultSize = 0.0f;
     if (!ParseJsDouble(childrenSizeObj->GetProperty("childDefaultSize"), defaultSize) || !NonNegative(defaultSize)) {
-        TAG_LOGW(AceLogTag::ACE_LIST, "JSList input parameter defaultSize check failed.");
+        LOGW("JSList input parameter defaultSize check failed.");
         return;
     }
     auto listChildrenMainSize = ListModel::GetInstance()->GetOrCreateListChildrenMainSize();
@@ -298,9 +292,9 @@ void JSList::SetChildrenMainSize(const JSRef<JSObject>& childrenSizeObj)
     JSRef<JSVal>::Cast(func->Call(childrenSizeObj));
 }
 
-void JSList::SetChainAnimation(const JSCallbackInfo& args)
+void JSList::SetChainAnimation(bool enableChainAnimation)
 {
-    ListModel::GetInstance()->SetChainAnimation(args[0]->IsBoolean() ? args[0]->ToBoolean() : false);
+    ListModel::GetInstance()->SetChainAnimation(enableChainAnimation);
 }
 
 void JSList::SetChainAnimationOptions(const JSCallbackInfo& info)
@@ -358,14 +352,10 @@ void JSList::SetLanes(const JSCallbackInfo& info)
 
     if (info.Length() >= 2 && !(info[1]->IsNull())) { /* 2: parameter count */
         CalcDimension laneGutter;
-        RefPtr<ResourceObject> resObjLaneGutter;
-        if (JSViewAbstract::ParseJsDimensionVp(info[1], laneGutter, resObjLaneGutter)) {
+        if (JSViewAbstract::ParseJsDimensionVp(info[1], laneGutter)) {
             if (laneGutter.IsNegative()) {
                 laneGutter.Reset();
             }
-        }
-        if (SystemProperties::ConfigChangePerform()) {
-            ListModel::GetInstance()->CreateWithResourceObjLaneGutter(resObjLaneGutter);
         }
         ListModel::GetInstance()->SetLaneGutter(laneGutter);
     }
@@ -377,23 +367,18 @@ void JSList::SetLanes(const JSCallbackInfo& info)
         ListModel::GetInstance()->SetLaneConstrain(-1.0_vp, -1.0_vp);
         return;
     }
-    RefPtr<ResourceObject> resObjMinLengthValue;
-    RefPtr<ResourceObject> resObjMaxLengthValue;
     if (info[0]->IsObject()) {
         JSRef<JSObject> jsObj = JSRef<JSObject>::Cast(info[0]);
         auto minLengthParam = jsObj->GetProperty("minLength");
         auto maxLengthParam = jsObj->GetProperty("maxLength");
         if (minLengthParam->IsNull() || maxLengthParam->IsNull()) {
-            TAG_LOGW(AceLogTag::ACE_LIST, "minLength and maxLength are not both set");
-            if (SystemProperties::ConfigChangePerform()) {
-                ListModel::GetInstance()->CreateWithResourceObjLaneConstrain(nullptr, nullptr);
-            }
+            LOGW("minLength and maxLength are not both set");
             return;
         }
         CalcDimension minLengthValue;
         CalcDimension maxLengthValue;
-        if (!ParseJsDimensionVp(minLengthParam, minLengthValue, resObjMinLengthValue)
-            || !ParseJsDimensionVp(maxLengthParam, maxLengthValue, resObjMaxLengthValue)) {
+        if (!ParseJsDimensionVp(minLengthParam, minLengthValue)
+            || !ParseJsDimensionVp(maxLengthParam, maxLengthValue)) {
             ListModel::GetInstance()->SetLanes(1);
             ListModel::GetInstance()->SetLaneConstrain(-1.0_vp, -1.0_vp);
             return;
@@ -401,7 +386,6 @@ void JSList::SetLanes(const JSCallbackInfo& info)
         ListModel::GetInstance()->SetLaneConstrain(minLengthValue, maxLengthValue);
     }
     ListModel::GetInstance()->SetLanes(1);
-    ListModel::GetInstance()->CreateWithResourceObjLaneConstrain(resObjMinLengthValue, resObjMaxLengthValue);
 }
 
 void JSList::SetSticky(int32_t sticky)
@@ -425,11 +409,11 @@ void JSList::SetContentEndOffset(const JSCallbackInfo& info)
 
 void JSList::SetScrollSnapAlign(int32_t scrollSnapAlign)
 {
-    ScrollSnapAlign param;
+    V2::ScrollSnapAlign param;
     if (scrollSnapAlign < 0 || scrollSnapAlign >= static_cast<int32_t>(SCROLL_SNAP_ALIGN.size())) {
-        param = ScrollSnapAlign::NONE;
+        param = V2::ScrollSnapAlign::NONE;
     } else {
-        param = ScrollSnapAlign(scrollSnapAlign);
+        param = V2::ScrollSnapAlign(scrollSnapAlign);
     }
     ListModel::GetInstance()->SetScrollSnapAlign(param);
 }
@@ -439,47 +423,29 @@ void JSList::SetDivider(const JSCallbackInfo& args)
     V2::ItemDivider divider;
     if (args.Length() >= 1 && args[0]->IsObject()) {
         JSRef<JSObject> obj = JSRef<JSObject>::Cast(args[0]);
-        RefPtr<ResourceObject> resObjStrokeWidth;
-        RefPtr<ResourceObject> resObjColor;
-        RefPtr<ResourceObject> resObjStartMargin;
-        RefPtr<ResourceObject> resObjEndMargin;
         bool needReset = obj->GetProperty("strokeWidth")->IsString() &&
-                         !std::regex_match(obj->GetProperty("strokeWidth")->ToString(), DIMENSION_REGEX);
-        if (needReset ||
-            !ConvertFromJSValue(obj->GetProperty("strokeWidth"), divider.strokeWidth, resObjStrokeWidth)) {
+            !std::regex_match(obj->GetProperty("strokeWidth")->ToString(), DIMENSION_REGEX);
+        if (needReset || !ConvertFromJSValue(obj->GetProperty("strokeWidth"), divider.strokeWidth)) {
             divider.strokeWidth = 0.0_vp;
         }
-        bool setByUser = false;
-        if (!ConvertFromJSValue(obj->GetProperty("color"), divider.color, resObjColor)) {
+        if (!ConvertFromJSValue(obj->GetProperty("color"), divider.color)) {
             // Failed to get color from param, using default color defined in theme
             RefPtr<ListTheme> listTheme = GetTheme<ListTheme>();
             if (listTheme) {
                 divider.color = listTheme->GetDividerColor();
-                setByUser = false;
             }
-        } else {
-            setByUser = true;
         }
-        ListModel::GetInstance()->SetDividerColorByUser(setByUser);
 
         needReset = obj->GetProperty("startMargin")->IsString() &&
-                    !std::regex_match(obj->GetProperty("startMargin")->ToString(), DIMENSION_REGEX);
-        if (needReset ||
-            !ConvertFromJSValue(obj->GetProperty("startMargin"), divider.startMargin, resObjStartMargin)) {
+            !std::regex_match(obj->GetProperty("startMargin")->ToString(), DIMENSION_REGEX);
+        if (needReset || !ConvertFromJSValue(obj->GetProperty("startMargin"), divider.startMargin)) {
             divider.startMargin = 0.0_vp;
         }
 
         needReset = obj->GetProperty("endMargin")->IsString() &&
-                    !std::regex_match(obj->GetProperty("endMargin")->ToString(), DIMENSION_REGEX);
-        if (needReset || !ConvertFromJSValue(obj->GetProperty("endMargin"), divider.endMargin, resObjEndMargin)) {
+            !std::regex_match(obj->GetProperty("endMargin")->ToString(), DIMENSION_REGEX);
+        if (needReset || !ConvertFromJSValue(obj->GetProperty("endMargin"), divider.endMargin)) {
             divider.endMargin = 0.0_vp;
-        }
-
-        if (SystemProperties::ConfigChangePerform()) {
-            ListModel::GetInstance()->ParseResObjDividerStrokeWidth(resObjStrokeWidth);
-            ListModel::GetInstance()->ParseResObjDividerColor(resObjColor);
-            ListModel::GetInstance()->ParseResObjDividerStartMargin(resObjStartMargin);
-            ListModel::GetInstance()->ParseResObjDividerEndMargin(resObjEndMargin);
         }
     }
     ListModel::GetInstance()->SetDivider(divider);
@@ -537,28 +503,10 @@ void JSList::ScrollCallback(const JSCallbackInfo& args)
 void JSList::SetFriction(const JSCallbackInfo& info)
 {
     double friction = -1.0;
-    RefPtr<ResourceObject> resObj;
-    if (!JSViewAbstract::ParseJsDouble(info[0], friction, resObj)) {
+    if (!JSViewAbstract::ParseJsDouble(info[0], friction)) {
         friction = -1.0;
     }
-    if (SystemProperties::ConfigChangePerform()) {
-        ListModel::GetInstance()->CreateWithResourceObjFriction(resObj);
-    }
     ListModel::GetInstance()->SetFriction(friction);
-}
-
-void JSList::SetFocusWrapMode(const JSCallbackInfo& args)
-{
-    if (args.Length() < 1) {
-        return;
-    }
-    auto focusWrapMode = static_cast<int32_t>(FocusWrapMode::DEFAULT);
-    if (!JSViewAbstract::ParseJsInt32(args[0], focusWrapMode) ||
-        focusWrapMode < static_cast<int32_t>(FocusWrapMode::DEFAULT) ||
-        focusWrapMode > static_cast<int32_t>(FocusWrapMode::WRAP_WITH_ARROW)) {
-        focusWrapMode = static_cast<int32_t>(FocusWrapMode::DEFAULT);
-    }
-    ListModel::GetInstance()->SetFocusWrapMode(static_cast<FocusWrapMode>(focusWrapMode));
 }
 
 void JSList::MaintainVisibleContentPosition(const JSCallbackInfo& args)
@@ -571,93 +519,59 @@ void JSList::MaintainVisibleContentPosition(const JSCallbackInfo& args)
     ListModel::GetInstance()->SetMaintainVisibleContentPosition(enabled);
 }
 
-void JSList::SetStackFromEnd(const JSCallbackInfo& args)
-{
-    bool enabled = false;
-    JSRef<JSVal> arg0 = args[0];
-    if (arg0->IsBoolean()) {
-        enabled = arg0->ToBoolean();
-    }
-    ListModel::GetInstance()->SetStackFromEnd(enabled);
-}
-
-void JSList::SetSyncLoad(const JSCallbackInfo& args)
-{
-    bool enabled = true;
-    JSRef<JSVal> arg0 = args[0];
-    if (arg0->IsBoolean()) {
-        enabled = arg0->ToBoolean();
-    }
-    ListModel::GetInstance()->SetSyncLoad(enabled);
-}
-
 void JSList::ReachStartCallback(const JSCallbackInfo& args)
 {
-    if (args.Length() <= 0) {
-        return;
-    }
     if (args[0]->IsFunction()) {
         auto onReachStart = [execCtx = args.GetExecutionContext(), func = JSRef<JSFunc>::Cast(args[0])]() {
             func->Call(JSRef<JSObject>());
-            UiSessionManager::GetInstance()->ReportComponentChangeEvent("event", "onReachStart");
+#if !defined(PREVIEW) && defined(OHOS_PLATFORM)
+            UiSessionManager::GetInstance().ReportComponentChangeEvent("event", "onReachStart");
+#endif
             return;
         };
         ListModel::GetInstance()->SetOnReachStart(std::move(onReachStart));
-    } else {
-        ListModel::GetInstance()->SetOnReachStart(nullptr);
     }
     args.ReturnSelf();
 }
 
 void JSList::ReachEndCallback(const JSCallbackInfo& args)
 {
-    if (args.Length() <= 0) {
-        return;
-    }
     if (args[0]->IsFunction()) {
         auto onReachEnd = [execCtx = args.GetExecutionContext(), func = JSRef<JSFunc>::Cast(args[0])]() {
             func->Call(JSRef<JSObject>());
-            UiSessionManager::GetInstance()->ReportComponentChangeEvent("event", "onReachEnd");
+#if !defined(PREVIEW) && defined(OHOS_PLATFORM)
+            UiSessionManager::GetInstance().ReportComponentChangeEvent("event", "onReachEnd");
+#endif
             return;
         };
         ListModel::GetInstance()->SetOnReachEnd(std::move(onReachEnd));
-    } else {
-        ListModel::GetInstance()->SetOnReachEnd(nullptr);
     }
     args.ReturnSelf();
 }
 
 void JSList::ScrollStartCallback(const JSCallbackInfo& args)
 {
-    if (args.Length() <= 0) {
-        return;
-    }
     if (args[0]->IsFunction()) {
         auto onScrollStart = [execCtx = args.GetExecutionContext(), func = JSRef<JSFunc>::Cast(args[0])]() {
             func->Call(JSRef<JSObject>());
             return;
         };
         ListModel::GetInstance()->SetOnScrollStart(std::move(onScrollStart));
-    } else {
-        ListModel::GetInstance()->SetOnScrollStart(nullptr);
     }
     args.ReturnSelf();
 }
 
 void JSList::ScrollStopCallback(const JSCallbackInfo& args)
 {
-    if (args.Length() <= 0) {
-        return;
-    }
     if (args[0]->IsFunction()) {
         auto onScrollStop = [execCtx = args.GetExecutionContext(), func = JSRef<JSFunc>::Cast(args[0])]() {
             func->Call(JSRef<JSObject>());
-            UiSessionManager::GetInstance()->ReportComponentChangeEvent("event", "onScrollStop");
+#if !defined(PREVIEW) && defined(OHOS_PLATFORM)
+            UiSessionManager::GetInstance().ReportComponentChangeEvent("event", "onScrollStop");
+#endif
             return;
         };
         ListModel::GetInstance()->SetOnScrollStop(std::move(onScrollStop));
-    } else {
-        ListModel::GetInstance()->SetOnScrollStop(nullptr);
     }
     args.ReturnSelf();
 }
@@ -842,7 +756,9 @@ void JSList::ItemDropCallback(const JSCallbackInfo& info)
         JAVASCRIPT_EXECUTION_SCOPE_WITH_CHECK(execCtx);
         ACE_SCORING_EVENT("List.onItemDrop");
         func->ItemDropExecute(dragInfo, itemIndex, insertIndex, isSuccess);
-        UiSessionManager::GetInstance()->ReportComponentChangeEvent("event", "List.onItemDrop");
+#if !defined(PREVIEW) && defined(OHOS_PLATFORM)
+        UiSessionManager::GetInstance().ReportComponentChangeEvent("event", "List.onItemDrop");
+#endif
     };
     ListModel::GetInstance()->SetOnItemDrop(onItemDrop);
 }
@@ -941,10 +857,8 @@ void JSList::JSBind(BindingTarget globalObj)
     JSClass<JSList>::StaticMethod("enableScrollInteraction", &JSList::SetScrollEnabled);
     JSClass<JSList>::StaticMethod("scrollSnapAlign", &JSList::SetScrollSnapAlign);
     JSClass<JSList>::StaticMethod("friction", &JSList::SetFriction);
-    JSClass<JSList>::StaticMethod("focusWrapMode", &JSList::SetFocusWrapMode);
     JSClass<JSList>::StaticMethod("maintainVisibleContentPosition", &JSList::MaintainVisibleContentPosition);
-    JSClass<JSList>::StaticMethod("stackFromEnd", &JSList::SetStackFromEnd);
-    JSClass<JSList>::StaticMethod("syncLoad", &JSList::SetSyncLoad);
+
     JSClass<JSList>::StaticMethod("onScroll", &JSList::ScrollCallback);
     JSClass<JSList>::StaticMethod("onReachStart", &JSList::ReachStartCallback);
     JSClass<JSList>::StaticMethod("onReachEnd", &JSList::ReachEndCallback);
@@ -1066,7 +980,8 @@ void JSListScroller::GetVisibleListContentInfo(const JSCallbackInfo& args)
                 retObj->SetProperty<int32_t>("itemIndexInGroup", itemGroup.indexInGroup);
             }
 
-            args.SetReturnValue(retObj);
+            JSRef<JSVal> ret = JSRef<JSObject>::Cast(retObj);
+            args.SetReturnValue(ret);
         }
     }
     return;

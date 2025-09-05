@@ -22,18 +22,17 @@
 #include "core/components_ng/pattern/text_drag/text_drag_base.h"
 #include "core/components_ng/render/drawing.h"
 #include "core/components_v2/inspector/inspector_constants.h"
-#include "core/components_ng/event/event_hub.h"
 
 namespace OHOS::Ace::NG {
 RefPtr<FrameNode> RichEditorDragPattern::CreateDragNode(const RefPtr<FrameNode>& hostNode,
-    const TextDragInfo& info)
+    const RichEditorDragInfo& info)
 {
     CHECK_NULL_RETURN(hostNode, nullptr);
     auto hostPattern = hostNode->GetPattern<TextDragBase>();
     CHECK_NULL_RETURN(hostPattern, nullptr);
     const auto nodeId = ElementRegister::GetInstance()->MakeUniqueId();
     auto dragNode = FrameNode::GetOrCreateFrameNode(V2::RICH_EDITOR_DRAG_ETS_TAG, nodeId, [hostPattern, info]() {
-        auto dragInfo = std::make_shared<TextDragInfo>(info);
+        auto dragInfo = std::make_shared<RichEditorDragInfo>(info);
         return MakeRefPtr<RichEditorDragPattern>(DynamicCast<TextPattern>(hostPattern), dragInfo);
     });
     auto dragContext = dragNode->GetRenderContext();
@@ -48,10 +47,6 @@ RefPtr<FrameNode> RichEditorDragPattern::CreateDragNode(const RefPtr<FrameNode>&
     }
     auto dragPattern = dragNode->GetPattern<RichEditorDragPattern>();
     CHECK_NULL_RETURN(dragPattern, nullptr);
-    auto hub = dragNode->GetEventHub<EventHub>();
-    CHECK_NULL_RETURN(hub, nullptr);
-    auto gestureHub = hub->GetOrCreateGestureEventHub();
-    CHECK_NULL_RETURN(gestureHub, nullptr);
     auto data = CalculateTextDragData(hostPattern, dragNode);
     dragPattern->Initialize(data);
     dragPattern->SetLastLineHeight(data.lastLineHeight_);
@@ -63,25 +58,15 @@ RefPtr<FrameNode> RichEditorDragPattern::CreateDragNode(const RefPtr<FrameNode>&
     return dragNode;
 }
 
-void RichEditorDragPattern::AdjustMaxWidth(float& width, const RectF& contentRect, const std::vector<RectF>& boxes)
-{
-    auto richEditor = DynamicCast<RichEditorPattern>(hostPattern_.Upgrade());
-    if (richEditor) {
-        width = NearZero(info_->maxSelectedWidth) ? contentRect.Width() : info_->maxSelectedWidth;
-    } else {
-        TextDragPattern::AdjustMaxWidth(width, contentRect, boxes);
-    }
-}
-
 RefPtr<FrameNode> RichEditorDragPattern::CreateDragNode(
     const RefPtr<FrameNode>& hostNode, std::list<RefPtr<FrameNode>>& imageChildren)
 {
-    TextDragInfo info;
+    RichEditorDragInfo info;
     return RichEditorDragPattern::CreateDragNode(hostNode, imageChildren, info);
 }
 
 RefPtr<FrameNode> RichEditorDragPattern::CreateDragNode(
-    const RefPtr<FrameNode>& hostNode, std::list<RefPtr<FrameNode>>& imageChildren, const TextDragInfo& info)
+    const RefPtr<FrameNode>& hostNode, std::list<RefPtr<FrameNode>>& imageChildren, const RichEditorDragInfo& info)
 {
     CHECK_NULL_RETURN(hostNode, nullptr);
     auto hostPattern = hostNode->GetPattern<TextDragBase>();
@@ -93,7 +78,6 @@ RefPtr<FrameNode> RichEditorDragPattern::CreateDragNode(
     auto textPattern = hostNode->GetPattern<TextPattern>();
     CHECK_NULL_RETURN(textPattern, nullptr);
     auto placeholderIndex = textPattern->GetPlaceHolderIndex();
-    CHECK_NULL_RETURN(imageChildren.size() <= placeholderIndex.size(), nullptr);
     auto rectsForPlaceholders = textPattern->GetRectsForPlaceholders();
 
     size_t index = 0;

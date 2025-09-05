@@ -59,9 +59,9 @@ const int SYSTEM_BASE = 10;
 #if defined(ANDROID_PLATFORM)
 const std::string ARK_DEBUGGER_LIB_PATH = "libark_inspector.so";
 #elif defined(APP_USE_ARM)
-const std::string ARK_DEBUGGER_LIB_PATH = "libark_inspector.z.so";
+const std::string ARK_DEBUGGER_LIB_PATH = "/system/lib/platformsdk/libark_inspector.z.so";
 #else
-const std::string ARK_DEBUGGER_LIB_PATH = "libark_inspector.z.so";
+const std::string ARK_DEBUGGER_LIB_PATH = "/system/lib64/platformsdk/libark_inspector.z.so";
 #endif
 const int32_t MAX_READ_TEXT_LENGTH = 4096;
 const std::regex URI_PATTERN("^\\/([a-z0-9A-Z_]+\\/)*[a-z0-9A-Z_]+\\.?[a-z0-9A-Z_]*$");
@@ -916,7 +916,7 @@ void ShowToast(const shared_ptr<JsRuntime>& runtime, const shared_ptr<JsValue>& 
         .showMode = NG::ToastShowMode::DEFAULT,
         .alignment = -1,
         .offset = std::nullopt };
-    GetFrontendDelegate(runtime)->ShowToast(toastInfo, nullptr);
+    GetFrontendDelegate(runtime)->ShowToast(toastInfo);
 }
 
 std::vector<ButtonInfo> ParseDialogButtons(
@@ -3136,7 +3136,7 @@ void JsiEngine::RegisterInitWorkerFunc()
     if (debugVersion) {
         libraryPath = ARK_DEBUGGER_LIB_PATH;
     }
-    auto&& initWorkerFunc = [weakInstance, libraryPath, debugVersion](
+    auto&& initWorkerFunc = [weakInstance, libraryPath, debugVersion, instanceId = instanceId_](
                                 NativeEngine* nativeEngine) {
         LOGI("WorkerCore RegisterInitWorkerFunc called");
         if (nativeEngine == nullptr) {
@@ -3204,7 +3204,7 @@ void JsiEngine::RegisterAssetFunc()
 {
     auto weakDelegate = WeakPtr(engineInstance_->GetDelegate());
     auto&& assetFunc = [weakDelegate](const std::string& uri, uint8_t** buff, size_t* buffSize,
-        std::vector<uint8_t>& content, std::string& ami, bool& useSecureMem, void** mapper, bool isRestricted) {
+        std::vector<uint8_t>& content, std::string& ami, bool& useSecureMem, bool isRestricted) {
         LOGI("WorkerCore RegisterAssetFunc called");
         auto delegate = weakDelegate.Upgrade();
         if (delegate == nullptr) {
@@ -3233,7 +3233,7 @@ void JsiEngine::RegisterWorker()
 
 JsiEngine::~JsiEngine()
 {
-    LOGI("Engine destroyed");
+    LOG_DESTROY();
     if (nativeEngine_ != nullptr) {
 #if !defined(PREVIEW)
         nativeEngine_->CancelCheckUVLoop();

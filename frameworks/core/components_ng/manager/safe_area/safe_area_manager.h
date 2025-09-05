@@ -24,17 +24,6 @@
 
 namespace OHOS::Ace::NG {
 // SafeAreaManager stores layout information to apply SafeArea correctly.
-
-struct WindowTypeConfig {
-    WindowTypeConfig() = default;
-    WindowTypeConfig(bool isAppWindow, bool isSystemWindow, bool isSceneBoardWindow)
-        : isAppWindow(isAppWindow), isSystemWindow(isSystemWindow), isSceneBoardWindow(isSceneBoardWindow)
-    {}
-    bool isAppWindow = true;
-    bool isSystemWindow = false;
-    bool isSceneBoardWindow = false;
-};
-
 class SafeAreaManager : public virtual AceType {
     DECLARE_ACE_TYPE(SafeAreaManager, AceType);
 
@@ -64,7 +53,7 @@ public:
      * @param safeArea The new navigation indictor safe area.
      * @return True if the incoming safe area is identical to the current one, false otherwise.
      */
-    bool CheckNavSafeArea(const SafeAreaInsets& safeArea);
+    bool CheckNavArea(const SafeAreaInsets& safeArea);
 
     /**
      * @brief Updates the navigation indictor safe area.
@@ -72,7 +61,7 @@ public:
      * @param safeArea The new navigation indictor safe area.
      * @return True if the system safe area was modified, false otherwise.
      */
-    bool UpdateNavSafeArea(const SafeAreaInsets& safeArea);
+    bool UpdateNavArea(const SafeAreaInsets& safeArea);
 
     /**
      * @brief Retrieves the system safe area insets.
@@ -83,11 +72,6 @@ public:
      * @return The system safe area insets.
      */
     SafeAreaInsets GetSystemSafeArea() const;
-
-    SafeAreaInsets GetNavSafeArea() const
-    {
-        return navSafeArea_;
-    }
 
     /**
      * @brief Cut the incoming area with root size, then check if the result is identical to the cutout safe area.
@@ -116,20 +100,6 @@ public:
      */
     SafeAreaInsets GetCutoutSafeArea() const;
 
-    bool UpdateScbSystemSafeArea(const SafeAreaInsets& safeArea);
-
-    bool UpdateScbCutoutSafeArea(
-        const SafeAreaInsets& safeArea, NG::OptionalSize<uint32_t> rootSize = NG::OptionalSize<uint32_t>());
-
-    bool UpdateScbNavSafeArea(const SafeAreaInsets& safeArea);
-
-    /**
-     * @brief Retrieves the safe area insets that account for any cutout areas on the screen.
-     *
-     * @return The safe area insets that account for cutout areas on the screen without any judgement.
-     */
-    SafeAreaInsets GetCutoutSafeAreaWithoutProcess() const;
-
     /**
      * @brief Retrieves the safe area insets combining System and Cutout.
      *
@@ -155,19 +125,6 @@ public:
     bool UpdateKeyboardSafeArea(float keyboardHeight, std::optional<uint32_t> rootHeight = std::nullopt);
 
     /**
-     * @brief Updates a mirror of safe area to accommodate the keyboard from web.
-     *
-     * Third-party platform may use SafeArea, so web_pattern using SafeArea to keep menu away
-     * from keyboard might lead to several problem.This function is called to update a mirror of
-     * KeyboardInset when the keyboard is shown or hidden by web. SelectOverlaylayoutAlgorithm will
-     * use it to calculate the position of menu, but not participate in other SafeArea calculation.
-     *
-     * @param keyboardHeight The height of the keyboard in pixels.
-     * @return true if the safe area was modified, false otherwise.
-     */
-    bool UpdateKeyboardWebSafeArea(float keyboardHeight, std::optional<uint32_t> rootHeight = std::nullopt);
-
-    /**
      * @brief Retrieves the inset of the safe area caused by the keyboard.
      *
      * @return The inset of the safe area caused by the keyboard.
@@ -181,27 +138,16 @@ public:
         return keyboardInset_;
     }
 
-    SafeAreaInsets::Inset GetKeyboardWebInset() const
-    {
-        if (keyboardAvoidMode_ == KeyBoardAvoidMode::NONE) {
-            SafeAreaInsets::Inset inset;
-            return inset;
-        }
-        return keyboardWebInset_;
-    }
-
     void UpdateKeyboardOffset(float offset)
     {
         keyboardOffset_ = offset;
     }
-
+    
     float GetKeyboardOffset(bool withoutProcess = false) const;
 
-    void SetKeyboardInfo(float height);
-
-    int32_t GetKeyboardOrientation() const
+    float GetKeyboardOffsetDirectly() const
     {
-        return keyboardOrientation_;
+        return keyboardOffset_;
     }
 
     float GetRawKeyboardHeight() const
@@ -236,8 +182,6 @@ public:
         needExpandNodes_.insert(node);
     }
 
-    std::vector<WeakPtr<FrameNode>> GetExpandNodeSet();
-
     bool AddNodeToExpandListIfNeeded(const WeakPtr<FrameNode>& node);
 
     void ClearNeedExpandNode()
@@ -254,7 +198,6 @@ public:
     {
         return safeAreaCurve_;
     }
-
     void ExpandSafeArea();
 
     OffsetF GetWindowWrapperOffset();
@@ -265,24 +208,19 @@ public:
     bool SetIsNeedAvoidWindow(bool value);
     bool SetIgnoreSafeArea(bool value);
     bool SetKeyBoardAvoidMode(KeyBoardAvoidMode value);
-
     KeyBoardAvoidMode GetKeyBoardAvoidMode();
-
-    bool IsIgnoreSafeArea()
+    bool IsIgnoreAsfeArea()
     {
         return ignoreSafeArea_;
     }
-
     bool IsNeedAvoidWindow()
     {
         return isNeedAvoidWindow_;
     }
-
     bool IsFullScreen()
     {
         return isFullScreen_;
     }
-
     bool SetIsAtomicService(bool value);
     bool IsAtomicService() const;
 
@@ -303,25 +241,13 @@ public:
     }
 
     bool IsSafeAreaValid() const;
-
     // check if the page node needs to be avoid keyboard
     bool CheckPageNeedAvoidKeyboard(const RefPtr<FrameNode>& frameNode);
-
-    void SetWindowTypeConfig(bool isAppWindow, bool isSystemWindow, bool isSceneBoardWindow)
-    {
-        windowTypeConfig_ = WindowTypeConfig(isAppWindow, isSystemWindow, isSceneBoardWindow);
-    }
-
-    WindowTypeConfig GetWindowTypeConfig()
-    {
-        return windowTypeConfig_;
-    }
 
     uint32_t GetkeyboardHeightConsideringUIExtension()
     {
         return keyboardHeightConsideringUIExtension_;
     }
-
     void SetkeyboardHeightConsideringUIExtension(uint32_t height)
     {
         if (keyboardHeightConsideringUIExtension_ != height) {
@@ -333,39 +259,16 @@ public:
             keyboardHeightConsideringUIExtension_ = height;
         }
     }
-
     void AddKeyboardChangeCallbackConsideringUIExt(int32_t nodeId, const std::function<void()>& callback)
     {
         keyboardChangeCbsConsideringUIExt_[nodeId] = callback;
     }
-
     void RemoveKeyboardChangeCallbackConsideringUIExt(int32_t nodeId)
     {
         keyboardChangeCbsConsideringUIExt_.erase(nodeId);
     }
 
-    void SetUseCutout(bool useCutout)
-    {
-        useCutout_ = useCutout;
-    }
-
-    bool GetUseCutout()
-    {
-        return useCutout_;
-    }
-
-    PaddingPropertyF SafeAreaToPadding(
-        bool withoutProcess = false, LayoutSafeAreaType ignoreType = LAYOUT_SAFE_AREA_TYPE_SYSTEM);
-
-    SafeAreaInsets::Inset GetKeyboardInsetImpl()
-    {
-        return getKeyboardInset ? getKeyboardInset(this) : GetKeyboardInset();
-    }
-
-    void SetKeyboardInsetImpl(std::function<SafeAreaInsets::Inset(SafeAreaManager*)> method)
-    {
-        getKeyboardInset = method;
-    }
+    PaddingPropertyF SafeAreaToPadding(bool withoutProcess = false);
 
 private:
     bool isAtomicService_ = false;
@@ -387,29 +290,17 @@ private:
     /**
      * @brief Indicates whether the keyboard safe area is enabled. When enabled, UI avoids the keyboard inset and the
      * Page is compressed when the keyboard is up. When disabled, the size of Page doesn't change, but Page would
-     * offset vertically according to [keyboardOffset_] when [keyboardAvoidMode_] is OFFSET or stay still when
-     * [keyboardAvoidMode_] is NONE.
+     * offset vertically according to [keyboardOffset_].
      */
     bool keyboardSafeAreaEnabled_ = false;
 
-    bool useCutout_ = false;
-
     KeyBoardAvoidMode keyboardAvoidMode_ = KeyBoardAvoidMode::OFFSET;
-    bool IsModeResize();
-    bool IsModeOffset();
 
     SafeAreaInsets systemSafeArea_;
     SafeAreaInsets cutoutSafeArea_;
     SafeAreaInsets navSafeArea_;
     // keyboard is bottom direction only
     SafeAreaInsets::Inset keyboardInset_;
-    SafeAreaInsets::Inset keyboardWebInset_;
-
-    std::optional<SafeAreaInsets> scbSystemSafeArea_;
-    std::optional<SafeAreaInsets> scbCutoutSafeArea_;
-    std::optional<SafeAreaInsets> scbNavSafeArea_;
-
-    WindowTypeConfig windowTypeConfig_;
 
     /**
      * @brief A set of weak pointers to FrameNode objects whose geometry info are saved before their SafeArea
@@ -439,7 +330,6 @@ private:
     float keyboardOffset_ = 0.0f;
     float lastKeyboardY_ = 0.0f;
     float rawKeyboardHeight_ = 0.0f;
-    int32_t keyboardOrientation_ = -1;
 
     static constexpr float SAFE_AREA_VELOCITY = 0.0f;
     static constexpr float SAFE_AREA_MASS = 1.0f;
@@ -450,8 +340,6 @@ private:
 
     uint32_t keyboardHeightConsideringUIExtension_ = 0;
     std::unordered_map<int32_t, std::function<void()>> keyboardChangeCbsConsideringUIExt_;
-
-    std::function<SafeAreaInsets::Inset(SafeAreaManager*)> getKeyboardInset = nullptr;
 
     ACE_DISALLOW_COPY_AND_MOVE(SafeAreaManager);
 };

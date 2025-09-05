@@ -61,15 +61,8 @@ public:
         float initHeight = 0.0f, bool isTypedNode = false);
     ~XComponentPattern() override = default;
 
-    bool IsEnableMatchParent() override
-    {
-        return true;
-    }
-
-    bool IsEnableFix() override
-    {
-        return true;
-    }
+    void OnAttachToMainTree() override;
+    void OnDetachFromMainTree() override;
 
     bool IsAtomicNode() const override
     {
@@ -112,7 +105,7 @@ public:
 
     bool NeedSoftKeyboard() const override
     {
-        return (nativeXComponentImpl_ ? nativeXComponentImpl_->IsNeedSoftKeyboard() : false) || isNeedSoftKeyboard_;
+        return nativeXComponentImpl_ ? nativeXComponentImpl_->IsNeedSoftKeyboard() : false;
     }
 
     std::pair<RefPtr<OHOS::Ace::NativeXComponentImpl>, std::weak_ptr<OH_NativeXComponent>> GetNativeXComponent()
@@ -127,8 +120,7 @@ public:
 
     void NativeXComponentDispatchTouchEvent(const OH_NativeXComponent_TouchEvent& touchEvent,
         const std::vector<XComponentTouchPoint>& xComponentTouchPoints);
-    void NativeXComponentDispatchMouseEvent(const OH_NativeXComponent_MouseEvent& mouseEvent,
-        const OH_NativeXComponent_ExtraMouseEventInfo& extraMouseEventInfo);
+    void NativeXComponentDispatchMouseEvent(const OH_NativeXComponent_MouseEvent& mouseEvent);
     void NativeXComponentDispatchAxisEvent(AxisEvent* axisEvent);
 
     void InitXComponent();
@@ -148,7 +140,8 @@ public:
         if (id_.has_value()) {
             return id_.value();
         }
-        return "nodeId_" + nodeId_;
+        auto host = GetHost();
+        return "nodeId:" + (host ? std::to_string(host->GetId()) : "-1");
     }
 
     void SetId(const std::string& id)
@@ -289,31 +282,6 @@ public:
         return isTypedNode_ && isNativeXComponent_ && hasLoadNativeDone_;
     }
 
-    bool HasGotSurfaceHolder() const
-    {
-        return hasGotSurfaceHolder_;
-    }
-
-    bool HasGotNativeXComponent() const
-    {
-        return hasGotNativeXComponent_;
-    }
-
-    virtual bool IsBindNative()
-    {
-        return false;
-    }
-
-    bool IsNativeXComponentDisabled() const
-    {
-        return isNativeXComponentDisabled_;
-    }
-
-    void SetHasGotNativeXComponent(bool hasGotNativeXComponent)
-    {
-        hasGotNativeXComponent_ = hasGotNativeXComponent;
-    }
-
     void SetExportTextureSurfaceId(const std::string& surfaceId);
     void FireExternalEvent(RefPtr<NG::PipelineContext> context,
         const std::string& componentId, const uint32_t nodeId, const bool isDestroy);
@@ -321,7 +289,7 @@ public:
 
     // accessibility
     void InitializeAccessibility();
-    void UninitializeAccessibility(FrameNode* frameNode);
+    void UninitializeAccessibility();
     bool OnAccessibilityChildTreeRegister(uint32_t windowId, int32_t treeId);
     bool OnAccessibilityChildTreeDeregister();
     void OnSetAccessibilityChildTree(int32_t childWindowId, int32_t childTreeId);
@@ -344,11 +312,10 @@ public:
     void StopImageAnalyzer();
     RectF AdjustPaintRect(float positionX, float positionY, float width, float height, bool isRound);
     float RoundValueToPixelGrid(float value, bool isRound, bool forceCeil, bool forceFloor);
-    void OnSurfaceDestroyed(FrameNode* frameNode = nullptr);
+    void OnSurfaceDestroyed();
     void SetRenderFit(RenderFit renderFit);
-    void SetScreenId(uint64_t screenId);
     void HandleSurfaceCreated();
-    void HandleSurfaceDestroyed(FrameNode* frameNode = nullptr);
+    void HandleSurfaceDestroyed();
     void ChangeSurfaceCallbackMode(SurfaceCallbackMode mode)
     {
         if (surfaceCallbackModeChangeEvent_) {
@@ -357,72 +324,18 @@ public:
     }
     void OnSurfaceCallbackModeChange(SurfaceCallbackMode mode);
     void EnableSecure(bool isSecure);
-    void HdrBrightness(float hdrBrightness);
-    void EnableTransparentLayer(bool isTransparentLayer);
-    RenderFit GetSurfaceRenderFit() const;
-    bool GetEnableAnalyzer();
-    void NativeStartImageAnalyzer(std::function<void(int32_t)>& callback);
-    RSCanvas* LockCanvas();
-    void UnlockCanvasAndPost(RSCanvas* canvas);
-    ArkUI_AccessibilityProvider* GetNativeProvider();
 
-protected:
-    void OnAttachToMainTree() override;
-    void OnDetachFromMainTree() override;
+private:
     void OnAttachToFrameNode() override;
     void OnDetachFromFrameNode(FrameNode* frameNode) override;
     void BeforeSyncGeometryProperties(const DirtySwapConfig& config) override;
     void OnRebuildFrame() override;
+    void OnAreaChangedInner() override;
     void OnWindowHide() override;
     void OnWindowShow() override;
     void OnModifyDone() override;
-    void AddAfterLayoutTaskForExportTexture();
-    void UpdateTransformHint();
     void DumpInfo() override;
-    static std::string XComponentTypeToString(XComponentType type);
-    static std::string XComponentNodeTypeToString(XComponentNodeType type);
-    void AdjustNativeWindowSize(float width, float height);
-    bool IsSupportImageAnalyzerFeature();
-    void UpdateAnalyzerUIConfig(const RefPtr<NG::GeometryNode>& geometryNode);
-    void RegisterTransformHintCallback(PipelineContext* context);
-
-    std::optional<std::string> id_;
-    std::string nodeId_ = "-1";
-    XComponentType type_;
-    bool hasGotSurfaceHolder_ = false;
-    bool hasGotNativeXComponent_ = false;
-    bool isNativeXComponentDisabled_ = false;
-    bool isCNode_ = false;
-    bool useNodeHandleAccessibilityProvider_ = false;
-    RefPtr<RenderSurface> renderSurface_;
-    OffsetF localPosition_;
-    OffsetF surfaceOffset_;
-    SizeF drawSize_;
-    SizeF surfaceSize_;
-    RectF paintRect_;
-    void* nativeWindow_ = nullptr;
-    bool hasReleasedSurface_ = false;
-    RefPtr<RenderContext> renderContextForSurface_;
-    std::optional<int32_t> transformHintChangedCallbackId_;
-    std::string surfaceId_;
-    bool isOnTree_ = false;
-    float hdrBrightness_ = 1.0f;
-    bool isTransparentLayer_ = false;
-    bool isEnableSecure_ = false;
-    bool isSurfaceLock_ = false;
-    RenderFit renderFit_ = RenderFit::RESIZE_FILL;
-    RefPtr<UIXComponentDisplaySync> displaySync_ = AceType::MakeRefPtr<UIXComponentDisplaySync>();
-    bool needRecoverDisplaySync_ = false;
-    std::shared_ptr<AccessibilityChildTreeCallback> accessibilityChildTreeCallback_;
-    ArkUI_AccessibilityProvider* arkuiAccessibilityProvider_ = nullptr;
-    bool isNeedSoftKeyboard_ = false;
-
-private:
-    void OnAreaChangedInner() override;
-    void DumpSimplifyInfo(std::shared_ptr<JsonValue>& json) override {}
-    void DumpInfo(std::unique_ptr<JsonValue>& json) override;
     void DumpAdvanceInfo() override;
-    void DumpAdvanceInfo(std::unique_ptr<JsonValue>& json) override;
     void OnAttachContext(PipelineContext *context) override;
     void OnDetachContext(PipelineContext *context) override;
     void ToJsonValue(std::unique_ptr<JsonValue>& json, const InspectorFilter& filter) const override;
@@ -465,28 +378,20 @@ private:
     void HandleOnFrameEvent();
     void HandleUnregisterOnFrameEvent();
     bool ExportTextureAvailable();
+    void AddAfterLayoutTaskForExportTexture();
     bool DoTextureExport();
     bool StopTextureExport();
     void InitializeRenderContext();
     void SetSurfaceNodeToGraphic();
+    bool IsSupportImageAnalyzerFeature();
     void CreateAnalyzerOverlay();
     void DestroyAnalyzerOverlay();
     void UpdateAnalyzerOverlay();
+    void UpdateAnalyzerUIConfig(const RefPtr<NG::GeometryNode>& geometryNode);
     void ReleaseImageAnalyzer();
+    void UpdateTransformHint();
     void SetRotation(uint32_t rotation);
     void RegisterSurfaceCallbackModeEvent();
-    void RegisterSurfaceRenderContext();
-    void UnregisterSurfaceRenderContext();
-    std::shared_ptr<Rosen::RSUIContext> GetRSUIContext(const RefPtr<FrameNode>& frameNode);
-    void RegisterNode();
-    void UnregisterNode();
-
-    void InitSurfaceMultiThread(const RefPtr<FrameNode>& host);
-    void InitControllerMultiThread();
-    void OnAttachToMainTreeMultiThread(const RefPtr<FrameNode>& host);
-    void RegisterContextEventMultiThread(const RefPtr<FrameNode>& host);
-    void OnDetachFromMainTreeMultiThread(const RefPtr<FrameNode>& host);
-    void OnDetachFromFrameNodeMultiThread(FrameNode* frameNode);
 
 #ifdef RENDER_EXTRACT_SUPPORTED
     RenderSurface::RenderSurfaceType CovertToRenderSurfaceType(const XComponentType& hostType);
@@ -495,11 +400,14 @@ private:
 #endif
 
     std::vector<OH_NativeXComponent_HistoricalPoint> SetHistoryPoint(const std::list<TouchLocationInfo>& touchInfoList);
+    std::optional<std::string> id_;
+    XComponentType type_;
     std::optional<std::string> libraryname_;
     std::shared_ptr<InnerXComponentController> xcomponentController_;
     std::optional<std::string> soPath_;
-    std::optional<uint64_t> screenId_;
 
+    RefPtr<RenderSurface> renderSurface_;
+    RefPtr<RenderContext> renderContextForSurface_;
     RefPtr<RenderContext> handlingSurfaceRenderContext_;
     WeakPtr<XComponentPattern> extPattern_;
 
@@ -516,34 +424,42 @@ private:
     std::vector<XComponentTouchPoint> nativeXComponentTouchPoints_;
     RefPtr<XComponentExtSurfaceCallbackClient> extSurfaceClient_;
     SizeF initSize_;
+    OffsetF localPosition_;
     OffsetF globalPosition_;
+    OffsetF surfaceOffset_;
+    SizeF drawSize_;
+    SizeF surfaceSize_;
+    RectF paintRect_;
+    RefPtr<UIDisplaySync> displaySync_ = AceType::MakeRefPtr<UIDisplaySync>(UIObjectType::DISPLAYSYNC_XCOMPONENT);
 
     std::optional<float> selfIdealSurfaceWidth_;
     std::optional<float> selfIdealSurfaceHeight_;
     std::optional<float> selfIdealSurfaceOffsetX_;
     std::optional<float> selfIdealSurfaceOffsetY_;
+    std::string surfaceId_;
+    void* nativeWindow_ = nullptr;
 
+    bool isSurfaceLock_ = false;
     uint32_t windowId_ = 0;
     int32_t treeId_ = 0;
+    std::shared_ptr<AccessibilityChildTreeCallback> accessibilityChildTreeCallback_;
     RefPtr<XComponentAccessibilityProvider> accessibilityProvider_;
     RefPtr<AccessibilitySessionAdapter> accessibilitySessionAdapter_;
 
     // for export texture
     NodeRenderType renderType_ = NodeRenderType::RENDER_TYPE_DISPLAY;
     uint64_t exportTextureSurfaceId_ = 0U;
+    bool hasReleasedSurface_ = false;
     std::shared_ptr<ImageAnalyzerManager> imageAnalyzerManager_;
     bool isEnableAnalyzer_ = false;
+    std::optional<int32_t> transformHintChangedCallbackId_;
     uint32_t rotation_ = 0;
     bool isTypedNode_ = false;
     bool isNativeXComponent_ = false;
     bool hasLoadNativeDone_ = false;
+    bool isEnableSecure_ = false;
     SurfaceCallbackMode surfaceCallbackMode_ = SurfaceCallbackMode::DEFAULT;
     std::function<void(SurfaceCallbackMode)> surfaceCallbackModeChangeEvent_;
-    // record displaySync_->DelFromPipelineOnContainer() from OnDetachFromMainTree
-    bool isNativeImageAnalyzing_ = false;
-    WeakPtr<PipelineContext> initialContext_ = nullptr;
-    // record the initial surfaceId_ in InitSurface, this variable should not be modified after the initial assignment
-    std::string initialSurfaceId_;
 };
 } // namespace OHOS::Ace::NG
 

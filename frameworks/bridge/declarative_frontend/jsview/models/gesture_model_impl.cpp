@@ -15,6 +15,8 @@
 
 #include "bridge/declarative_frontend/jsview/models/gesture_model_impl.h"
 
+#include "core/gestures/gesture_group.h"
+#include "core/gestures/gesture_processor.h"
 #include "core/gestures/long_press_gesture.h"
 #include "core/gestures/rotation_gesture.h"
 #include "core/gestures/pan_gesture.h"
@@ -90,19 +92,6 @@ void PanGestureModelImpl::Create(
     gestureProcessor->PushGesture(gesture);
 }
 
-void PanGestureModelImpl::Create(int32_t fingersNum, const PanDirection& panDirection,
-    const PanDistanceMapDimension& distanceMap, bool isLimitFingerCount)
-{
-    RefPtr<GestureProcessor> gestureProcessor;
-    gestureProcessor = ViewStackProcessor::GetInstance()->GetGestureComponent();
-    auto distanceNum = DEFAULT_PAN_DISTANCE.ConvertToPx();
-    if (distanceMap.find(SourceTool::UNKNOWN) != distanceMap.end()) {
-        distanceNum = distanceMap.at(SourceTool::UNKNOWN).ConvertToPx();
-    }
-    auto gesture = AceType::MakeRefPtr<PanGesture>(fingersNum, panDirection, distanceNum);
-    gestureProcessor->PushGesture(gesture);
-}
-
 void PanGestureModelImpl::SetPanGestureOption(const RefPtr<PanGestureOption>& panGestureOption)
 {
     RefPtr<GestureProcessor> gestureProcessor;
@@ -151,7 +140,7 @@ RefPtr<GestureProcessor> TimeoutGestureModelImpl::GetGestureProcessor()
     return gestureProcessor;
 }
 
-void GestureModelImpl::SetOnGestureEvent(const GestureEventFunc& gestureEventFunc)
+void GestureModelImpl::SetOnGestureEvent(const GestureEventNoParameter& gestureEventNoParameter)
 {
     RefPtr<GestureProcessor> gestureProcessor;
     gestureProcessor = ViewStackProcessor::GetInstance()->GetGestureComponent();
@@ -163,11 +152,12 @@ void GestureModelImpl::SetOnGestureEvent(const GestureEventFunc& gestureEventFun
     CHECK_NULL_VOID(inspector);
     impl = inspector->GetInspectorFunctionImpl();
 
-    gesture->SetOnActionCancelId([func = std::move(gestureEventFunc), impl](GestureEvent& info) {
+    gesture->SetOnActionCancelId([func = std::move(gestureEventNoParameter), impl]() {
+        auto info = GestureEvent();
         if (impl) {
             impl->UpdateEventInfo(info);
         }
-        func(info);
+        func();
     });
 }
 

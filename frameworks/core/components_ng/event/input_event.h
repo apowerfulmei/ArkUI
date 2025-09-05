@@ -24,7 +24,7 @@ class InputEventHub;
 class FrameNode;
 
 class InputEvent : public virtual AceType {
-    DECLARE_ACE_TYPE(InputEvent, AceType);
+    DECLARE_ACE_TYPE(InputEvent, AceType)
 public:
     explicit InputEvent(OnMouseEventFunc&& callback) : onMouseCallback_(std::move(callback)) {}
 
@@ -33,7 +33,7 @@ public:
     explicit InputEvent(OnHoverFunc&& callback) : onHoverEventCallback_(std::move(callback)) {}
 
     explicit InputEvent(OnHoverMoveFunc&& callback) : onHoverMoveCallback_(std::move(callback)) {}
-
+    
     explicit InputEvent(OnAxisEventFunc&& callback) : onAxisCallback_(std::move(callback)) {}
 
     explicit InputEvent(OnAccessibilityHoverFunc&& callback) : onAccessibilityHoverFunc_(std::move(callback)) {}
@@ -110,25 +110,6 @@ public:
             onAccessibilityHoverFunc_(state, info);
         }
     }
-    bool GetIstips() const
-    {
-        return istips_;
-    }
-
-    void SetIstips(bool istips)
-    {
-        istips_ = istips;
-    }
-
-    bool GetTipsFollowCursor() const
-    {
-        return followCursor_;
-    }
-
-    void SetTipsFollowCursor(bool followCursor)
-    {
-        followCursor_ = followCursor;
-    }
 
 private:
     OnMouseEventFunc onMouseCallback_;
@@ -137,12 +118,10 @@ private:
     OnHoverMoveFunc onHoverMoveCallback_;
     OnAxisEventFunc onAxisCallback_;
     OnAccessibilityHoverFunc onAccessibilityHoverFunc_;
-    bool istips_ = false;
-    bool followCursor_ = false;
 };
 
 class ACE_EXPORT InputEventActuator : public virtual AceType {
-    DECLARE_ACE_TYPE(InputEventActuator, AceType);
+    DECLARE_ACE_TYPE(InputEventActuator, AceType)
 public:
     explicit InputEventActuator(const WeakPtr<InputEventHub>& inputEventHub);
     ~InputEventActuator() override = default;
@@ -152,11 +131,6 @@ public:
         if (userCallback_) {
             userCallback_.Reset();
         }
-    }
-
-    bool HasUserCallback()
-    {
-        return userCallback_ != nullptr;
     }
 
     void ClearJSFrameNodeCallback()
@@ -244,24 +218,10 @@ public:
         inputEvents_.remove(inputEvent);
     }
 
-    void RemoveAllTipsEvents()
-    {
-        inputEvents_.remove_if([](const RefPtr<InputEvent>& event) {
-            CHECK_NULL_RETURN(event, false);
-            return event->GetIstips();
-        });
-    }
-
     void OnCollectMouseEvent(const OffsetF& coordinateOffset, const GetEventTargetImpl& getEventTargetImpl,
         TouchTestResult& result);
 
-    void OnCollectMouseEventForTips(
-        const OffsetF& coordinateOffset, const GetEventTargetImpl& getEventTargetImpl, TouchTestResult& result);
-
     void OnCollectHoverEvent(
-        const OffsetF& coordinateOffset, const GetEventTargetImpl& getEventTargetImpl, TouchTestResult& result);
-
-    void OnCollectHoverEventForTips(
         const OffsetF& coordinateOffset, const GetEventTargetImpl& getEventTargetImpl, TouchTestResult& result);
 
     void OnCollectHoverEffect(const OffsetF& coordinateOffset, const GetEventTargetImpl& getEventTargetImpl,

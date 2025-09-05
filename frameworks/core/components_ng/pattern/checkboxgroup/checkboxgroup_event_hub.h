@@ -29,7 +29,7 @@ namespace OHOS::Ace::NG {
 using GroupChangeEvent = std::function<void(const BaseEventInfo* info)>;
 
 class CheckBoxGroupEventHub : public EventHub {
-    DECLARE_ACE_TYPE(CheckBoxGroupEventHub, EventHub);
+    DECLARE_ACE_TYPE(CheckBoxGroupEventHub, EventHub)
 
 public:
     CheckBoxGroupEventHub() = default;
@@ -57,10 +57,7 @@ public:
             auto host = GetFrameNode();
             if (host) {
                 auto id = host->GetInspectorIdValue("");
-                builder.SetId(id)
-                    .SetType(host->GetHostTag())
-                    .SetDescription(host->GetAutoEventParamValue(""))
-                    .SetHost(host);
+                builder.SetId(id).SetType(host->GetHostTag()).SetDescription(host->GetAutoEventParamValue(""));
                 if (!id.empty()) {
                     Recorder::NodeDataCache::Get().PutMultiple(host, id, groupname_, groupRet->GetNameList());
                 }

@@ -15,12 +15,19 @@
 
 #include "frameworks/bridge/card_frontend/card_frontend_delegate_declarative.h"
 
+#include <string>
+
+#include "base/log/event_report.h"
+#include "base/utils/utils.h"
+#include "base/utils/measure_util.h"
+#include "core/common/thread_checker.h"
+
 namespace OHOS::Ace::Framework {
 
 CardFrontendDelegateDeclarative::~CardFrontendDelegateDeclarative()
 {
     CHECK_RUN_ON(JS);
-    TAG_LOGI(AceLogTag::ACE_FORM, "CardDelegateDeclarative Destroyed");
+    LOG_DESTROY();
 }
 
 UIContentErrorCode CardFrontendDelegateDeclarative::RunCard(

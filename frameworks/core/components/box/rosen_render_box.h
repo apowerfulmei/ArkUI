@@ -23,15 +23,12 @@
 #include "base/memory/referenced.h"
 #include "core/components/box/render_box.h"
 #include "core/components/common/layout/constants.h"
+#include "core/components/common/properties/border_edge.h"
 #include "core/components/common/properties/border_image.h"
 #include "core/components_ng/render/canvas_image.h"
 #include "core/image/image_object.h"
 #include "core/image/image_provider.h"
 #include "core/pipeline/base/rosen_render_context.h"
-
-namespace OHOS::Rosen {
-    class RSUIContext;
-}
 
 namespace OHOS::Ace {
 
@@ -161,7 +158,6 @@ private:
     void SyncDecorationToRSNode();
 
     bool CheckBorderEdgeForRRect(const Border& border);
-    std::shared_ptr<Rosen::RSUIContext> GetUIContext(const RefPtr<PipelineContext>& context);
 #ifndef USE_ROSEN_DRAWING
     SkVector GetSkRadii(const Radius& radius, double shrinkFactor, double borderWidth);
     void UpdateBackgroundImage(const RefPtr<BackgroundImage>& image);

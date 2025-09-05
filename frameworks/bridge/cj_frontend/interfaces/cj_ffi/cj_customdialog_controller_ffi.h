@@ -27,14 +27,8 @@
 #include "core/components_ng/pattern/dialog/custom_dialog_controller_model.h"
 #include "ffi_remote_data.h"
 #include "cj_animate_param_ffi.h"
-#include "cj_action_sheet_ffi.h"
 
 extern "C" {
-struct NativeOptionShadow {
-    bool hasValue;
-    NativeShadowOptions options;
-};
-
 struct NativeCustomDialogControllerOptions {
     void(*cancel)();
     bool autoCancel;
@@ -51,33 +45,7 @@ struct NativeCustomDialogControllerOptions {
     NativeLength cornerRadius;
 };
 
-struct NativeCustomDialogControllerOptionsV2 {
-    void(*cancel)();
-    bool autoCancel;
-    int32_t alignment;
-    NativeOffset offset;
-    bool customStyle;
-    NativeOptionInt32 gridCount;
-    uint32_t maskColor;
-    NativeRectangle maskRect;
-    NativeOptionAnimateParam openAnimation;
-    NativeOptionAnimateParam closeAnimation;
-    bool showInSubWindow;
-    NativeOptionUInt32 backgroundColor;
-    NativeLength cornerRadius;
-    NativeOptionBool isModal;
-    NativeOptionCallback1Param onWillDismiss;
-    NativeOptionLength borderWidth;
-    NativeOptionUInt32 borderColor;
-    NativeOptionEdgeStyle borderStyle;
-    NativeOptionLength width;
-    NativeOptionLength height;
-    NativeOptionShadow shadow;
-    NativeOptionInt32 backgroundBlurStyle;
-};
-
 CJ_EXPORT int64_t FfiOHOSAceFrameworkCustomDialogControllerCtor(NativeCustomDialogControllerOptions options);
-CJ_EXPORT int64_t FfiOHOSAceFrameworkCustomDialogControllerCtorV2(NativeCustomDialogControllerOptionsV2 options);
 CJ_EXPORT void FfiOHOSAceFrameworkCustomDialogControllerBindView(int64_t controllerId, int64_t nativeViewId);
 CJ_EXPORT void FfiOHOSAceFrameworkCustomDialogControllerSetBuilder(int64_t controllerId, void(*builder)());
 CJ_EXPORT void FfiOHOSAceFrameworkCustomDialogControllerOpen(int64_t id);
@@ -87,10 +55,9 @@ CJ_EXPORT void FfiOHOSAceFrameworkCustomDialogControllerClose(int64_t id);
 namespace OHOS::Ace::Framework {
 
 class ACE_EXPORT NativeCustomDialogController : public OHOS::FFI::FFIData, public virtual AceType {
-    DECLARE_ACE_TYPE(NativeCustomDialogController, AceType);
+    DECLARE_ACE_TYPE(NativeCustomDialogController, AceType)
 public:
     NativeCustomDialogController(NativeCustomDialogControllerOptions options);
-    NativeCustomDialogController(NativeCustomDialogControllerOptionsV2 options);
 
     void SetView(NativeView* view)
     {
@@ -111,7 +78,6 @@ private:
     NativeView* ownerView_ = nullptr;
     bool isShown_ = false;
     bool pending_ = false;
-    bool hasBind_ = false;
     // NG
     std::vector<WeakPtr<AceType>> dialogs_;
 

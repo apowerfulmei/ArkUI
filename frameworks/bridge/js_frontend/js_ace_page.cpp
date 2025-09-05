@@ -33,7 +33,7 @@ JsAcePage::JsAcePage(int32_t pageId, const RefPtr<DOMDocument>& document, const 
 
 JsAcePage::~JsAcePage()
 {
-    LOGI("Page destroyed");
+    LOG_DESTROY();
 #ifndef NG_BUILD
     auto pipelineContext = pipelineContext_.Upgrade();
     if (!pipelineContext) {

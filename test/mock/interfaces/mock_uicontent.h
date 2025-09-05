@@ -58,8 +58,6 @@ public:
     MOCK_METHOD1(ProcessAxisEvent, bool(const std::shared_ptr<OHOS::MMI::AxisEvent>& axisEvent));
     MOCK_METHOD1(ProcessVsyncEvent, bool(uint64_t timeStampNanos));
     MOCK_METHOD1(UpdateConfiguration, void(const std::shared_ptr<OHOS::AppExecFwk::Configuration>& config));
-    MOCK_METHOD2(UpdateConfiguration, void(const std::shared_ptr<OHOS::AppExecFwk::Configuration>& config,
-                                          const std::shared_ptr<Global::Resource::ResourceManager>& resourceManager));
     MOCK_METHOD2(UpdateWindowMode, void(OHOS::Rosen::WindowMode mode, bool hasDeco));
     MOCK_METHOD2(UpdateTitleInTargetPos, void(bool isShow, int32_t height));
     MOCK_METHOD2(UpdateDecorVisible, void(bool visible, bool hasDeco));
@@ -67,7 +65,6 @@ public:
     MOCK_METHOD1(SetIgnoreViewSafeArea, void(bool ignoreViewSafeArea));
     MOCK_METHOD0(GetBackgroundColor, uint32_t());
     MOCK_METHOD1(SetBackgroundColor, void(uint32_t color));
-    MOCK_METHOD2(SetWindowContainerColor, void(uint32_t activeColor, uint32_t inactiveColor));
     MOCK_METHOD2(DumpInfo, void(const std::vector<std::string>& params, std::vector<std::string>& info));
     MOCK_METHOD1(SetNextFrameLayoutCallback, void(std::function<void()>&& callback));
     MOCK_METHOD1(NotifyMemoryLevel, void(int32_t level));
@@ -98,7 +95,6 @@ public:
     MOCK_METHOD1(SetParentToken, void(sptr<IRemoteObject> token));
     MOCK_METHOD0(GetParentToken, sptr<IRemoteObject>());
 
-    MOCK_METHOD1(GetContainerModalTitleVisible, bool(bool isImmersive));
     MOCK_METHOD2(SetContainerModalTitleVisible, void(bool customTitleSettedShow, bool floatingTitleSettedShow));
     MOCK_METHOD1(SetContainerModalTitleHeight, void(int height));
     MOCK_METHOD0(GetContainerModalTitleHeight, int());
@@ -112,8 +108,7 @@ public:
     MOCK_METHOD0(IsUIExtensionSubWindow, bool());
     MOCK_METHOD0(IsUIExtensionAbilityProcess, bool());
     MOCK_METHOD0(IsUIExtensionAbilityHost, bool());
-    MOCK_METHOD4(SetForceSplitEnable, void(bool isForceSplit, const std::string& homePage,
-        bool isRouter, bool ignoreOrientation));
+    MOCK_METHOD2(SetForceSplitEnable, void(bool isForceSplit, const std::string& homePage));
 
 #ifndef PREVIEW
     MOCK_METHOD4(

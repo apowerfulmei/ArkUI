@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -25,7 +25,6 @@ class ACE_EXPORT WaterFlowModelNG : public WaterFlowModel {
 public:
     void Create() override;
     void SetFooter(std::function<void()>&& footer) override;
-    void SetFooterWithFrameNode(const RefPtr<NG::UINode>& footer) override;
     RefPtr<ScrollControllerBase> CreateScrollController() override;
     RefPtr<ScrollProxy> CreateScrollBarProxy() override;
     void SetScroller(RefPtr<ScrollControllerBase> scroller, RefPtr<ScrollProxy> proxy) override;
@@ -56,13 +55,11 @@ public:
 
     void SetFriction(double friction) override;
     void SetCachedCount(int32_t value, bool show = false) override;
-    void SetEdgeEffect(EdgeEffect edgeEffect, bool alwaysEnabled, EffectEdge edge = EffectEdge::ALL) override;
+    void SetEdgeEffect(EdgeEffect edgeEffect, bool alwaysEnabled) override;
 
     void SetScrollBarMode(DisplayMode value) override;
     void SetScrollBarColor(const std::string& value) override;
     void SetScrollBarWidth(const std::string& value) override;
-    void SetSyncLoad(bool syncLoad) override;
-    void ParseResObjScrollBarColor(const RefPtr<ResourceObject>& resObj) override;
 
     RefPtr<WaterFlowSections> GetOrCreateWaterFlowSections() override;
     void ResetSections() override;
@@ -73,27 +70,24 @@ public:
     static void SetScrollEnabled(FrameNode* frameNode, bool scrollEnabled);
     static void SetColumnsGap(FrameNode* frameNode, const Dimension& value);
     static void SetRowsGap(FrameNode* frameNode, const Dimension& value);
-    static void SetColumnsGap(FrameNode* frameNode, const std::optional<Dimension>& value);
-    static void SetRowsGap(FrameNode* frameNode, const std::optional<Dimension>& value);
-    static void SetItemMinWidth(FrameNode* frameNode, const std::optional<Dimension>& minWidth);
-    static void SetItemMaxWidth(FrameNode* frameNode, const std::optional<Dimension>& maxWidth);
-    static void SetItemMinHeight(FrameNode* frameNode, const std::optional<Dimension>& minHeight);
-    static void SetItemMaxHeight(FrameNode* frameNode, const std::optional<Dimension>& maxHeight);
-    static void SetLayoutDirection(FrameNode* frameNode, const std::optional<FlexDirection>& value);
+    static void SetItemMinWidth(FrameNode* frameNode, const Dimension& minWidth);
+    static void SetItemMaxWidth(FrameNode* frameNode, const Dimension& maxWidth);
+    static void SetItemMinHeight(FrameNode* frameNode, const Dimension& minHeight);
+    static void SetItemMaxHeight(FrameNode* frameNode, const Dimension& maxHeight);
+    static void SetLayoutDirection(FrameNode* frameNode, FlexDirection value);
     static void SetNestedScroll(FrameNode* frameNode, const NestedScrollOptions& nestedOpt);
-    static void SetFriction(FrameNode* frameNode, const std::optional<double>& friction);
+    static void SetFriction(FrameNode* frameNode, double friction);
     static FlexDirection GetLayoutDirection(FrameNode* frameNode);
     static std::string GetColumnsTemplate(FrameNode* frameNode);
     static std::string GetRowsTemplate(FrameNode* frameNode);
     static float GetColumnsGap(FrameNode* frameNode);
     static float GetRowsGap(FrameNode* frameNode);
     static NestedScrollOptions GetNestedScroll(FrameNode* frameNode);
-    static void SetCachedCount(FrameNode* frameNode, const std::optional<int32_t>& value);
+    static void SetCachedCount(FrameNode* frameNode, int32_t value);
     static int32_t GetCachedCount(FrameNode* frameNode);
     static void SetShowCached(FrameNode* frameNode, bool show);
     static int32_t GetShowCached(FrameNode* frameNode);
-    static void SetEdgeEffect(FrameNode* frameNode, EdgeEffect edgeEffect, bool alwaysEnabled,
-        EffectEdge edge = EffectEdge::ALL);
+    static void SetEdgeEffect(FrameNode* frameNode, EdgeEffect edgeEffect, bool alwaysEnabled);
     static float GetFriction(FrameNode* frameNode);
     static void SetScrollBarMode(FrameNode* frameNode, DisplayMode value);
     static int32_t GetScrollBarMode(FrameNode* frameNode);
@@ -103,7 +97,6 @@ public:
     static float GetScrollBarWidth(FrameNode* frameNode);
     static int32_t GetEdgeEffect(FrameNode* frameNode);
     static int32_t GetEdgeEffectAlways(FrameNode* frameNode);
-    static EffectEdge GetEffectEdge(FrameNode* frameNode);
     static Dimension GetItemMinWidth(FrameNode* frameNode);
     static Dimension GetItemMaxWidth(FrameNode* frameNode);
     static Dimension GetItemMinHeight(FrameNode* frameNode);
@@ -117,22 +110,13 @@ public:
     static void SetOnScrollFrameBegin(FrameNode* frameNode, OnScrollFrameBeginEvent&& ScrollFrameBegin);
     static void SetOnScrollIndex(FrameNode* frameNode, ScrollIndexFunc&& onScrollIndex);
     static void SetScrollToIndex(FrameNode* frameNode, int32_t index, int32_t animation, int32_t alignment);
-    static void SetScrollToIndexMultiThread(FrameNode* frameNode, int32_t index, int32_t animation, int32_t alignment);
     static void SetOnReachStart(FrameNode* frameNode, OnReachEvent&& onReachStart);
     static void SetOnReachEnd(FrameNode* frameNode, OnReachEvent&& onReachEnd);
     static void SetWaterflowFooter(FrameNode* frameNode, FrameNode* footerNode);
-    static void SetWaterflowFooterWithFrameNode(FrameNode* frameNode, const RefPtr<NG::UINode>& footer);
     static bool hasFooter(FrameNode* frameNode);
     static void SetFlingSpeedLimit(FrameNode* frameNode, double maxSpeed);
     static void SetScroller(FrameNode* frameNode, RefPtr<ScrollControllerBase> scroller, RefPtr<ScrollProxy> proxy);
     static void SetLayoutMode(FrameNode* frameNode, WaterFlowLayoutMode mode);
-    static WaterFlowLayoutMode GetLayoutMode(FrameNode* frameNode);
-    static void SetFooter(FrameNode* frameNode, std::function<void()>&& footer);
-    static void SetSyncLoad(FrameNode* frameNode, bool syncLoad);
-    static bool GetSyncLoad(FrameNode* frameNode);
-    void ParseResObjFriction(const RefPtr<ResourceObject>& resObj) override;
-    static void ParseResObjFriction(FrameNode* frameNode, const RefPtr<ResourceObject>& resObj);
-    static void ParseResObjScrollBarColor(FrameNode* frameNode, const RefPtr<ResourceObject>& resObj);
 };
 } // namespace OHOS::Ace::NG
 #endif // FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_PATTERN_WATERFLOW_WATER_FLOW_MODEL_NG_H

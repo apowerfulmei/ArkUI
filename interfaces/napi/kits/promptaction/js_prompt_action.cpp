@@ -13,8 +13,6 @@
  * limitations under the License.
  */
 
-#include "interfaces/napi/kits/promptaction/js_level_order.h"
-#include "interfaces/napi/kits/promptaction/js_prompt_controller.h"
 #include "interfaces/napi/kits/promptaction/prompt_action.h"
 #include "interfaces/napi/kits/utils/napi_utils.h"
 
@@ -46,20 +44,14 @@ static napi_value PromptActionExport(napi_env env, napi_value exports)
 
     napi_property_descriptor promptDesc[] = {
         DECLARE_NAPI_FUNCTION("showToast", JSPromptShowToast),
-        DECLARE_NAPI_FUNCTION("openToast", JSPromptOpenToast),
-        DECLARE_NAPI_FUNCTION("closeToast", JSPromptCloseToast),
         DECLARE_NAPI_FUNCTION("showDialog", JSPromptShowDialog),
         DECLARE_NAPI_FUNCTION("showActionMenu", JSPromptShowActionMenu),
         DECLARE_NAPI_FUNCTION("openCustomDialog", JSPromptOpenCustomDialog),
-        DECLARE_NAPI_FUNCTION("openCustomDialogWithController", JSPromptOpenCustomDialogWithController),
-        DECLARE_NAPI_FUNCTION("presentCustomDialog", JSPromptPresentCustomDialog),
         DECLARE_NAPI_FUNCTION("updateCustomDialog", JSPromptUpdateCustomDialog),
         DECLARE_NAPI_FUNCTION("closeCustomDialog", JSPromptCloseCustomDialog),
         DECLARE_NAPI_PROPERTY("ToastShowMode", showMode),
     };
     NAPI_CALL(env, napi_define_properties(env, exports, sizeof(promptDesc) / sizeof(promptDesc[0]), promptDesc));
-    NAPI_CALL(env, JSPromptController::Define(env, exports));
-    NAPI_CALL(env, JSLevelOrder::Define(env, exports));
     return exports;
 }
 

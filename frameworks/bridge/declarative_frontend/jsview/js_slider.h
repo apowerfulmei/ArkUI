@@ -34,8 +34,6 @@ enum class SliderChangeMode {
     END,
 };
 
-using StepOptions = std::unordered_map<uint32_t, std::string>;
-
 class JSSlider : public JSViewAbstract {
 public:
     static void Create(const JSCallbackInfo& info);
@@ -58,17 +56,9 @@ public:
     static void SetBlockSize(const JSCallbackInfo& info);
     static void SetBlockStyle(const JSCallbackInfo& info);
     static void SetStepSize(const JSCallbackInfo& info);
-    static void SetDigitalCrownSensitivity(const JSCallbackInfo& info);
     static void OnChange(const JSCallbackInfo& info);
     static void SetValidSlideRange(const JSCallbackInfo& info);
-    static void SetEnableHapticFeedback(const JSCallbackInfo& info);
-    static void SetPrefix(const JSCallbackInfo& args);
-    static void SetSuffix(const JSCallbackInfo& args);
 
-    static napi_value GetIteratorNext(const napi_env env, napi_value iterator, napi_value func, bool *done);
-    static napi_value ParseStepOptionsMap(JSRef<JSVal> jsStepOptionsMap, StepOptions& stepOptionsMap);
-    static int32_t ParseStepOptionItemKey(const napi_env env, napi_value item);
-    static bool ParseStepOptionItemValue(const napi_env env, napi_value item, std::string& stepText);
 private:
     static void ResetBlockStyle();
     static bool ConvertGradientColor(const JsiRef<JsiValue>& param, NG::Gradient& gradient);

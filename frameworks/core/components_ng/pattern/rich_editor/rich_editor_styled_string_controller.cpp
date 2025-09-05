@@ -31,7 +31,7 @@ void RichEditorStyledStringController::SetStyledString(const RefPtr<SpanStringBa
 RefPtr<SpanStringBase> RichEditorStyledStringController::GetStyledString()
 {
     auto richEditorPattern = pattern_.Upgrade();
-    auto mutableSpanString = AceType::MakeRefPtr<MutableSpanString>(u"");
+    auto mutableSpanString = AceType::MakeRefPtr<MutableSpanString>("");
     CHECK_NULL_RETURN(richEditorPattern, mutableSpanString);
     auto styledString = richEditorPattern->GetStyledString();
     CHECK_NULL_RETURN(styledString, mutableSpanString);

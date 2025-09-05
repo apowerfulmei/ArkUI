@@ -130,30 +130,6 @@ class ComponentSnapshot {
         __JSScopeUtil__.restoreInstanceId();
         return pixelmap;
     }
-
-    createFromComponent(content, delay, checkImageStatus, options) {
-        if (content === undefined || content === null) {
-            let paramErrMsg =
-            'Parameter error. Possible causes: 1. Mandatory parameters are left unspecified;' +
-            ' 2. Incorrect parameter types; 3. Parameter verification failed.';
-            __JSScopeUtil__.restoreInstanceId();
-            return new Promise((resolve, reject) => {
-                reject({ message: paramErrMsg, code: 401 });
-            });
-        }
-        __JSScopeUtil__.syncInstanceId(this.instanceId_);
-        let promise = this.ohos_componentSnapshot.createFromComponent(content.getFrameNode(), delay, checkImageStatus, options);
-        __JSScopeUtil__.restoreInstanceId();
-        return promise;
-    }
-
-    getWithRange(start, end, isStartRect, options)
-    {
-        __JSScopeUtil__.syncInstanceId(this.instanceId_);
-        let pixelmap = this.ohos_componentSnapshot.getWithRange(start, end, isStartRect, options);
-        __JSScopeUtil__.restoreInstanceId();
-        return pixelmap;
-    }
 }
 
 class DragController {
@@ -200,21 +176,9 @@ class DragController {
         __JSScopeUtil__.restoreInstanceId();
     }
 
-    notifyDragStartRequest(request) {
-        __JSScopeUtil__.syncInstanceId(this.instanceId_);
-        JSViewAbstract.notifyDragStartRequest(request);
-        __JSScopeUtil__.restoreInstanceId();
-    }
-
     cancelDataLoading(key) {
         __JSScopeUtil__.syncInstanceId(this.instanceId_);
         JSViewAbstract.cancelDataLoading(key);
-        __JSScopeUtil__.restoreInstanceId();
-    }
-
-    enableDropDisallowedBadge(enable) {
-        __JSScopeUtil__.syncInstanceId(this.instanceId_);
-        JSViewAbstract.enableDropDisallowedBadge(enable);
         __JSScopeUtil__.restoreInstanceId();
     }
 }
@@ -232,16 +196,6 @@ class UIObserver {
     off(...args) {
         __JSScopeUtil__.syncInstanceId(this.instanceId_);
         this.ohos_observer.off(...args);
-        __JSScopeUtil__.restoreInstanceId();
-    }
-    addGlobalGestureListener(...args) {
-        __JSScopeUtil__.syncInstanceId(this.instanceId_);
-        this.ohos_observer?.addGlobalGestureListener(...args);
-        __JSScopeUtil__.restoreInstanceId();
-    }
-    removeGlobalGestureListener(...args) {
-        __JSScopeUtil__.syncInstanceId(this.instanceId_);
-        this.ohos_observer?.removeGlobalGestureListener(...args);
         __JSScopeUtil__.restoreInstanceId();
     }
 }
@@ -271,13 +225,6 @@ class MeasureUtils {
         __JSScopeUtil__.restoreInstanceId();
         return sizeOption;
     }
-
-    getParagraphs(styledString, options) {
-        __JSScopeUtil__.syncInstanceId(this.instanceId_);
-        let paraArr = TextLayout.getParagraphs(styledString, options);
-        __JSScopeUtil__.restoreInstanceId();
-        return paraArr;
-    }
 }
 
 class FrameCallback {
@@ -292,23 +239,6 @@ class UIContext {
      */
     constructor(instanceId) {
         this.instanceId_ = instanceId;
-    }
-
-    static createUIContextWithoutWindow(context) {
-        let utils = globalThis.requireNapi('arkui.containerUtils');
-        let uicontext = undefined;
-        if (utils) {
-            uicontext = utils.createContainerWithoutWindow(context);
-        }
-
-        return uicontext;
-    }
-
-    static destroyUIContextWithoutWindow() {
-        let utils = globalThis.requireNapi('arkui.containerUtils');
-        if (utils) {
-            utils.destroyContainerWithoutWindow();
-        }
     }
 
     getDragController() {
@@ -574,19 +504,6 @@ class UIContext {
         return keyBoardAvoidMode;
     }
 
-    setPixelRoundMode(pixelRoundMode) {
-        __JSScopeUtil__.syncInstanceId(this.instanceId_);
-        JSViewAbstract.setPixelRoundMode(pixelRoundMode);
-        __JSScopeUtil__.restoreInstanceId();
-    }
-
-    getPixelRoundMode() {
-        __JSScopeUtil__.syncInstanceId(this.instanceId_);
-        let pixelRoundMode = JSViewAbstract.getPixelRoundMode();
-        __JSScopeUtil__.restoreInstanceId();
-        return pixelRoundMode;
-    }
-
     dispatchKeyEvent(node, event) {
         __JSScopeUtil__.syncInstanceId(this.instanceId_);
         let result = JSViewAbstract.dispatchKeyEvent(node, event);
@@ -688,6 +605,22 @@ class UIContext {
         return node;
     }
 
+    getFocusController() {
+        if (this.focusController_ == null) {
+            this.focusController_ = new FocusController(this.instanceId_);
+        }
+        return this.focusController_;
+    }
+
+    setDynamicDimming(id, number) {
+        __JSScopeUtil__.syncInstanceId(this.instanceId_);
+        let nodePtr = getUINativeModule().getFrameNodeByKey(id);
+        if (!nodePtr) {
+            return;
+        }
+        Context.setDynamicDimming(nodePtr, number);
+    }
+
     getFrameNodeByUniqueId(uniqueId) {
         __JSScopeUtil__.syncInstanceId(this.instanceId_);
         let nodePtr = getUINativeModule().getFrameNodeByUniqueId(uniqueId);
@@ -718,29 +651,13 @@ class UIContext {
         return navigationInfo;
     }
 
-    getFocusController() {
-        if (this.focusController_ == null) {
-            this.focusController_ = new FocusController(this.instanceId_);
-        }
-        return this.focusController_;
-    }
-
-    setDynamicDimming(id, number) {
-        __JSScopeUtil__.syncInstanceId(this.instanceId_);
-        let nodePtr = getUINativeModule().getFrameNodeByKey(id);
-        if (!nodePtr) {
-            return;
-        }
-        Context.setDynamicDimming(nodePtr, number);
-    }
-
     getCursorController() {
         if (this.cursorController_ == null) {
             this.cursorController_ = new CursorController(this.instanceId_);
         }
         return this.cursorController_;
     }
-    
+
     getContextMenuController() {
         if (this.contextMenuController_ == null) {
             this.contextMenuController_ = new ContextMenuController(this.instanceId_);
@@ -752,7 +669,7 @@ class UIContext {
         __JSScopeUtil__.syncInstanceId(this.instanceId_);
         const windowName = getUINativeModule().common.getWindowName();
         __JSScopeUtil__.restoreInstanceId();
-        return windowName;
+        return windowName
     }
 
     getWindowWidthBreakpoint() {
@@ -769,10 +686,6 @@ class UIContext {
         return breakpoint;
     }
 
-    clearResourceCache() {
-        getUINativeModule().resource.clearCache();
-    }
-
     postFrameCallback(frameCallback) {
         __JSScopeUtil__.syncInstanceId(this.instanceId_);
         getUINativeModule().common.postFrameCallback(frameCallback, 0);
@@ -785,6 +698,10 @@ class UIContext {
         __JSScopeUtil__.restoreInstanceId();
     }
 
+    clearResourceCache() {
+        getUINativeModule().resource.clearCache();
+    }
+    
     requireDynamicSyncScene(id) {
         __JSScopeUtil__.syncInstanceId(this.instanceId_);
         let dynamicSceneInfo = getUINativeModule().requireDynamicSyncScene(id);
@@ -792,12 +709,12 @@ class UIContext {
             __JSScopeUtil__.restoreInstanceId();
             return [];
         }
-        if (dynamicSceneInfo.tag === 'Swiper') {
+        if (dynamicSceneInfo.tag == 'Swiper') {
             __JSScopeUtil__.restoreInstanceId();
             let nodeRef = dynamicSceneInfo.nativeRef;
             return SwiperDynamicSyncScene.createInstances(nodeRef);
         }
-        if (dynamicSceneInfo.tag === 'Marquee') {
+        if (dynamicSceneInfo.tag == 'Marquee') {
             __JSScopeUtil__.restoreInstanceId();
             let nodeRef = dynamicSceneInfo.nativeRef;
             return MarqueeDynamicSyncScene.createInstances(nodeRef);
@@ -843,49 +760,8 @@ class UIContext {
         Context.unbindTabsFromNestedScrollable(tabsController, parentScroller, childScroller);
         __JSScopeUtil__.restoreInstanceId();
     }
-
-    enableSwipeBack(enabled) {
-        __JSScopeUtil__.syncInstanceId(this.instanceId_);
-        Context.enableSwipeBack(enabled);
-        __JSScopeUtil__.restoreInstanceId();
-    }
-
-    getTextMenuController() {
-        if (this.textMenuController_ == null) {
-            this.textMenuController_ = new TextMenuController(this.instanceId_);
-        }
-        return this.textMenuController_;
-    }
-
-    freezeUINode(idOrUniqueId, isFreeze) {
-        __JSScopeUtil__.syncInstanceId(this.instanceId_);
-        if (typeof idOrUniqueId === "string") {
-            getUINativeModule().common.freezeUINodeById(idOrUniqueId, isFreeze);
-        } else if (typeof idOrUniqueId === "number") {
-            getUINativeModule().common.freezeUINodeByUniqueId(idOrUniqueId, isFreeze);
-        }
-        __JSScopeUtil__.restoreInstanceId();
-    }
-        
-    isAvailable() {
-        return __availableInstanceIds__.has(this.instanceId_);
-    }
-
-    setKeyboardAppearanceConfig(uniqueId, config) {
-        __JSScopeUtil__.syncInstanceId(this.instanceId_);
-        let nodePtr = getUINativeModule().getFrameNodeByUniqueId(uniqueId);
-        Context.setKeyboardAppearanceConfig(nodePtr, config);
-        __JSScopeUtil__.restoreInstanceId();
-    }
-
-    setCacheRange(frameNode, range) {
-        __JSScopeUtil__.syncInstanceId(this.instanceId_);
-        let nodePtr = frameNode.getNodePtr();
-        getUINativeModule().list.setCacheRange(nodePtr, range);
-        __JSScopeUtil__.restoreInstanceId();
-    }
 }
-
+ 
 class DynamicSyncScene {
     /**
      * Construct new instance of DynamicSyncScene.
@@ -910,7 +786,7 @@ class DynamicSyncScene {
         return this.frameRateRange;
     }
 }
-
+ 
 class SwiperDynamicSyncScene extends DynamicSyncScene {
     /**
      * Create instances of SwiperDynamicSyncScene.
@@ -981,7 +857,6 @@ class FocusController {
         this.instanceId_ = instanceId;
         this.ohos_focusController = globalThis.requireNapi('arkui.focusController');
     }
-
     clearFocus() {
         if (this.ohos_focusController === null || this.ohos_focusController === undefined) {
             return;
@@ -1002,9 +877,6 @@ class FocusController {
     }
 
     activate(isActive, autoInactive) {
-        if (this.ohos_focusController === null || this.ohos_focusController === undefined) {
-            return false;
-        }
         __JSScopeUtil__.syncInstanceId(this.instanceId_);
         if (arguments.length === 2) {
             let result = this.ohos_focusController.activate(isActive, autoInactive);
@@ -1017,40 +889,18 @@ class FocusController {
         }
     }
 
-    isActive() {
-        if (this.ohos_focusController === null || this.ohos_focusController === undefined) {
-            return;
-        }
-        __JSScopeUtil__.syncInstanceId(this.instanceId_);
-        let result = this.ohos_focusController.isActive();
-        __JSScopeUtil__.restoreInstanceId();
-        return result;
-    }
-
-    setAutoFocusTransfer(value) {
-        if (this.ohos_focusController === null || this.ohos_focusController === undefined) {
-            return;
-        }
-        __JSScopeUtil__.syncInstanceId(this.instanceId_);
-        this.ohos_focusController.setAutoFocusTransfer(value);
-        __JSScopeUtil__.restoreInstanceId();
-    }
-
-    configWindowMask(enable) {
-        if (this.ohos_focusController === null || this.ohos_focusController === undefined) {
-            return;
-        }
-        __JSScopeUtil__.syncInstanceId(this.instanceId_);
-        this.ohos_focusController.configWindowMask(enable);
-        __JSScopeUtil__.restoreInstanceId();
-    }
-
     setKeyProcessingMode(value) {
         if (this.ohos_focusController === null || this.ohos_focusController === undefined) {
             return;
         }
         __JSScopeUtil__.syncInstanceId(this.instanceId_);
         this.ohos_focusController.setKeyProcessingMode(value);
+        __JSScopeUtil__.restoreInstanceId();
+    }
+
+    setAutoFocusTransfer(value) {
+        __JSScopeUtil__.syncInstanceId(this.instanceId_);
+        this.ohos_focusController.setAutoFocusTransfer(value);
         __JSScopeUtil__.restoreInstanceId();
     }
 }
@@ -1071,7 +921,7 @@ class CursorController {
         cursorControl.restoreDefault();
         __JSScopeUtil__.restoreInstanceId();
     }
-    
+
     setCursor(value) {
         __JSScopeUtil__.syncInstanceId(this.instanceId_);
         cursorControl.setCursor(value);
@@ -1110,7 +960,7 @@ class ComponentUtils {
     }
     getRectangleById(id) {
         __JSScopeUtil__.syncInstanceId(this.instanceId_);
-        if (typeof this.ohos_componentUtils.getRectangleById !== 'function'){
+        if (typeof this.ohos_componentUtils.getRectangleById !== 'function') {
             throw Error('getRectangleById is not callable');
         }
         let componentInformation = this.ohos_componentUtils?.getRectangleById?.(id);
@@ -1293,19 +1143,6 @@ class PromptAction {
         __JSScopeUtil__.restoreInstanceId();
     }
 
-    openToast(options) {
-        __JSScopeUtil__.syncInstanceId(this.instanceId_);
-        let promise = this.ohos_prompt.openToast(options);
-        __JSScopeUtil__.restoreInstanceId();
-        return promise;
-    }
-
-    closeToast(toastId) {
-        __JSScopeUtil__.syncInstanceId(this.instanceId_);
-        this.ohos_prompt.closeToast(toastId);
-        __JSScopeUtil__.restoreInstanceId();
-    }
-
     showDialog(options, callback) {
         __JSScopeUtil__.syncInstanceId(this.instanceId_);
         if (typeof callback !== 'undefined') {
@@ -1340,55 +1177,6 @@ class PromptAction {
         }
     }
 
-    openCustomDialogWithController(content, controller, options) {
-        __JSScopeUtil__.syncInstanceId(this.instanceId_);
-        let paramErrMsg =
-            'Parameter error. Possible causes: 1. Mandatory parameters are left unspecified;' +
-            ' 2. Incorrect parameter types; 3. Parameter verification failed.';
-        let isDialogController = controller instanceof this.ohos_prompt.DialogController;
-        if (!isDialogController) {
-            __JSScopeUtil__.restoreInstanceId();
-            return new Promise((resolve, reject) => {
-                reject({ message: paramErrMsg, code: 401 });
-            });
-        }
-        if (typeof options === 'undefined') {
-            let result_ = this.ohos_prompt.openCustomDialogWithController(content.getFrameNode(), controller);
-            __JSScopeUtil__.restoreInstanceId();
-            return result_;
-        }
-        let result_ = this.ohos_prompt.openCustomDialogWithController(content.getFrameNode(), controller, options);
-        __JSScopeUtil__.restoreInstanceId();
-        return result_;
-    }
-
-    presentCustomDialog(builder, controller, options) {
-        __JSScopeUtil__.syncInstanceId(this.instanceId_);
-        if (typeof controller === 'undefined' && typeof options === 'undefined') {
-            let result_ = this.ohos_prompt.presentCustomDialog(builder);
-            __JSScopeUtil__.restoreInstanceId();
-            return result_;
-        }
-        let paramErrMsg =
-            'Parameter error. Possible causes: 1. Mandatory parameters are left unspecified;' +
-            ' 2. Incorrect parameter types; 3. Parameter verification failed.';
-        let isDialogController = controller instanceof this.ohos_prompt.DialogController;
-        if (!isDialogController) {
-            __JSScopeUtil__.restoreInstanceId();
-            return new Promise((resolve, reject) => {
-                reject({ message: paramErrMsg, code: 401 });
-            });
-        }
-        if (typeof options === 'undefined') {
-            let result_ = this.ohos_prompt.presentCustomDialog(builder, controller);
-            __JSScopeUtil__.restoreInstanceId();
-            return result_;
-        }
-        let result_ = this.ohos_prompt.presentCustomDialog(builder, controller, options);
-        __JSScopeUtil__.restoreInstanceId();
-        return result_;
-    }
-
     updateCustomDialog(content, options) {
         __JSScopeUtil__.syncInstanceId(this.instanceId_);
         let result_ = this.ohos_prompt.updateCustomDialog(content.getFrameNode(), options);
@@ -1407,142 +1195,6 @@ class PromptAction {
             __JSScopeUtil__.restoreInstanceId();
             return result_;
         }
-    }
-
-    getTopOrder() {
-        __JSScopeUtil__.syncInstanceId(this.instanceId_);
-        let result_ = this.ohos_prompt.__getTopOrder__();
-        __JSScopeUtil__.restoreInstanceId();
-        return result_;
-    }
-
-    getBottomOrder() {
-        __JSScopeUtil__.syncInstanceId(this.instanceId_);
-        let result_ = this.ohos_prompt.__getBottomOrder__();
-        __JSScopeUtil__.restoreInstanceId();
-        return result_;
-    }
-
-    openPopup(content, target, options) {
-        __JSScopeUtil__.syncInstanceId(this.instanceId_);
-        let argLength = arguments.length;
-        let paramErrMsg =
-            'Parameter error. Possible causes: 1. Mandatory parameters are left unspecified;' +
-            ' 2. Incorrect parameter types; 3. Parameter verification failed.';
-        if (argLength < 2 || argLength > 3 || content === null || content === undefined || target === null || target === undefined) {
-            __JSScopeUtil__.restoreInstanceId();
-            return new Promise((resolve, reject) => {
-                reject({ message: paramErrMsg, code: 401 });
-            });
-        }
-        let result_;
-        if (argLength === 2) {
-            result_ = Context.openPopup(content.getNodePtr(), target);
-        } else {
-            result_ = Context.openPopup(content.getNodePtr(), target, options);
-        }
-        __JSScopeUtil__.restoreInstanceId();
-        return result_;
-    }
-
-    updatePopup(content, options, partialUpdate) {
-        __JSScopeUtil__.syncInstanceId(this.instanceId_);
-        let argLength = arguments.length;
-        let paramErrMsg =
-            'Parameter error. Possible causes: 1. Mandatory parameters are left unspecified;' +
-            ' 2. Incorrect parameter types; 3. Parameter verification failed.';
-        if (argLength < 2 || argLength > 3 || content === null || content === undefined || options === null || options === undefined) {
-            __JSScopeUtil__.restoreInstanceId();
-            return new Promise((resolve, reject) => {
-                reject({ message: paramErrMsg, code: 401 });
-            });
-        }
-        let result_;
-        if (argLength === 2) {
-            result_ = Context.updatePopup(content.getNodePtr(), options);
-        } else {
-            result_ = Context.updatePopup(content.getNodePtr(), options, partialUpdate);
-        }
-        __JSScopeUtil__.restoreInstanceId();
-        return result_;
-    }
-
-    closePopup(content) {
-        __JSScopeUtil__.syncInstanceId(this.instanceId_);
-        let argLength = arguments.length;
-        const paramErrMsg =
-            'Parameter error. Possible causes: 1. Mandatory parameters are left unspecified;' +
-            ' 2. Incorrect parameter types; 3. Parameter verification failed.';
-        if (argLength !== 1 || content === null || content === undefined) {
-            __JSScopeUtil__.restoreInstanceId();
-            return new Promise((resolve, reject) => {
-                reject({ message: paramErrMsg, code: 401 });
-            });
-        }
-        let result_ = Context.closePopup(content.getNodePtr());
-        __JSScopeUtil__.restoreInstanceId();
-        return result_;
-    }
-
-    openMenu(content, target, options) {
-        __JSScopeUtil__.syncInstanceId(this.instanceId_);
-        let argLength = arguments.length;
-        let paramErrMsg =
-            'Parameter error. Possible causes: 1. Mandatory parameters are left unspecified;' +
-            ' 2. Incorrect parameter types; 3. Parameter verification failed.';
-        if (argLength < 2 || argLength > 3 || content === null || content === undefined || target === null || target === undefined) {
-            __JSScopeUtil__.restoreInstanceId();
-            return new Promise((resolve, reject) => {
-                reject({ message: paramErrMsg, code: 401 });
-            });
-        }
-        let result_;
-        if (argLength === 2) {
-            result_ = Context.openMenu(content.getNodePtr(), target);
-        } else {
-            result_ = Context.openMenu(content.getNodePtr(), target, options);
-        }
-        __JSScopeUtil__.restoreInstanceId();
-        return result_;
-    }
-
-    updateMenu(content, options, partialUpdate) {
-        __JSScopeUtil__.syncInstanceId(this.instanceId_);
-        let argLength = arguments.length;
-        let paramErrMsg =
-            'Parameter error. Possible causes: 1. Mandatory parameters are left unspecified;' +
-            ' 2. Incorrect parameter types; 3. Parameter verification failed.';
-        if (argLength < 2 || argLength > 3 || content === null || content === undefined || options === null || options === undefined) {
-            __JSScopeUtil__.restoreInstanceId();
-            return new Promise((resolve, reject) => {
-                reject({ message: paramErrMsg, code: 401 });
-            });
-        }
-        let result_;
-        if (argLength === 2) {
-            result_ = Context.updateMenu(content.getNodePtr(), options);
-        } else {
-            result_ = Context.updateMenu(content.getNodePtr(), options, partialUpdate);
-        }
-        __JSScopeUtil__.restoreInstanceId();
-        return result_;
-    }
-
-    closeMenu(content) {
-        __JSScopeUtil__.syncInstanceId(this.instanceId_);
-        let argLength = arguments.length;
-        const paramErrMsg =
-            'Parameter error. Possible causes: 1. Mandatory parameters are left unspecified;' +
-            ' 2. Incorrect parameter types; 3. Parameter verification failed.';
-        if (argLength !== 1 || content === null || content === undefined) {
-            __JSScopeUtil__.restoreInstanceId();
-            return new Promise((resolve, reject) => {
-                reject({ message: paramErrMsg, code: 401 });
-            });
-        }
-        let result_ = Context.closeMenu(content.getNodePtr());
-        __JSScopeUtil__.restoreInstanceId();
-        return result_;
     }
 
     showActionMenu(options, callback) {
@@ -1645,16 +1297,6 @@ class OverlayManager {
         __JSScopeUtil__.restoreInstanceId();
     }
 
-    addComponentContentWithOrder(content, levelOrder) {
-        __JSScopeUtil__.syncInstanceId(this.instanceId_);
-        if (typeof levelOrder !== 'undefined') {
-            this.ohos_overlayManager.addFrameNodeWithOrder(content.getFrameNode(), levelOrder);
-        } else {
-            this.ohos_overlayManager.addFrameNodeWithOrder(content.getFrameNode());
-        }
-        __JSScopeUtil__.restoreInstanceId();
-    }
-
     removeComponentContent(content) {
         __JSScopeUtil__.syncInstanceId(this.instanceId_);
         this.ohos_overlayManager.removeFrameNode(content.getFrameNode());
@@ -1685,35 +1327,6 @@ class OverlayManager {
         __JSScopeUtil__.restoreInstanceId();
     }
 }
-
-class TextMenuController {
-    /**
-     * Construct new instance of TextMenuController.
-     * initialzie with instanceId.
-     * @param instanceId obtained on the c++ side.
-     * @since 16
-     */
-    constructor(instanceId) {
-        this.instanceId_ = instanceId;
-    }
-
-    setMenuOptions(textMenuOptions) {
-        __JSScopeUtil__.syncInstanceId(this.instanceId_);
-        TextMenu.setMenuOptions(textMenuOptions);
-        __JSScopeUtil__.restoreInstanceId();
-    }
-
-    static disableSystemServiceMenuItems(disable) {
-        let controller = globalThis.requireNapi('arkui.textMenuController');
-        controller.disableSystemServiceMenuItems(disable);
-    }
-
-    static disableMenuItems(items) {
-        let controller = globalThis.requireNapi('arkui.textMenuController');
-        controller.disableMenuItems(items);
-    }
-}
-
 /**
  * Get UIContext instance.
  * @param instanceId obtained on the c++ side.
@@ -1748,22 +1361,4 @@ function __checkRegexValid__(pattern) {
     } finally {
         return result;
     }
-}
-
-const __availableInstanceIds__ = new Set();
-
-/**
- * add available instanceId
- * @param instanceId instanceId to add
- */
-function __addAvailableInstanceId__(instanceId) {
-    __availableInstanceIds__.add(instanceId);
-}
-
-/**
- * remove available instanceId
- * @param instanceId instanceId to remove
- */
-function __removeAvailableInstanceId__(instanceId) {
-    __availableInstanceIds__.delete(instanceId);
 }

@@ -15,8 +15,12 @@
 #include "node_toggle_modifier.h"
 
 #include "core/components/checkable/checkable_theme.h"
-#include "core/components_ng/base/view_abstract.h"
+#include "core/components/common/layout/constants.h"
+#include "core/components_ng/base/frame_node.h"
 #include "core/components_ng/pattern/toggle/toggle_model_ng.h"
+#include "core/interfaces/arkoala/arkoala_api.h"
+#include "core/interfaces/native/node/node_api.h"
+#include "core/pipeline/base/element_register.h"
 #include "core/pipeline_ng/pipeline_context.h"
 
 namespace OHOS::Ace::NG {
@@ -62,28 +66,12 @@ void SetToggleSelectedColor(ArkUINodeHandle node, ArkUI_Uint32 selectedColor)
     ToggleModelNG::SetSelectedColor(frameNode, Color(selectedColor));
 }
 
-void SetToggleSelectedColorPtr(ArkUINodeHandle node, ArkUI_Uint32 selectedColor, void* colorRawPtr)
-{
-    CHECK_NULL_VOID(node);
-    SetToggleSelectedColor(node, selectedColor);
-    if (SystemProperties::ConfigChangePerform()) {
-        auto* frameNode = reinterpret_cast<FrameNode*>(node);
-        CHECK_NULL_VOID(frameNode);
-        auto* color = reinterpret_cast<ResourceObject*>(colorRawPtr);
-        auto colorResObj = AceType::Claim(color);
-        ToggleModelNG::CreateWithResourceObj(frameNode, ToggleColorType::SELECTED_COLOR, colorResObj);
-    }
-}
-
 void ResetToggleSelectedColor(ArkUINodeHandle node)
 {
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
     std::optional<Color> selectedColor;
     ToggleModelNG::SetSelectedColor(frameNode, selectedColor);
-    if (SystemProperties::ConfigChangePerform()) {
-        ToggleModelNG::CreateWithResourceObj(frameNode, ToggleColorType::SELECTED_COLOR, nullptr);
-    }
 }
 
 void SetToggleSwitchPointColor(ArkUINodeHandle node, ArkUI_Uint32 switchPointColor)
@@ -91,20 +79,6 @@ void SetToggleSwitchPointColor(ArkUINodeHandle node, ArkUI_Uint32 switchPointCol
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
     ToggleModelNG::SetSwitchPointColor(frameNode, Color(switchPointColor));
-    ToggleModelNG::SetSwitchPointColorSetByUser(frameNode, true);
-}
-
-void SetToggleSwitchPointColorPtr(ArkUINodeHandle node, ArkUI_Uint32 switchPointColor, void* colorRawPtr)
-{
-    CHECK_NULL_VOID(node);
-    SetToggleSwitchPointColor(node, switchPointColor);
-    if (SystemProperties::ConfigChangePerform()) {
-        auto* frameNode = reinterpret_cast<FrameNode*>(node);
-        CHECK_NULL_VOID(frameNode);
-        auto* color = reinterpret_cast<ResourceObject*>(colorRawPtr);
-        auto colorResObj = AceType::Claim(color);
-        ToggleModelNG::CreateWithResourceObj(frameNode, ToggleColorType::SWITCH_POINT_COLOR, colorResObj);
-    }
 }
 
 void ResetToggleSwitchPointColor(ArkUINodeHandle node)
@@ -121,10 +95,6 @@ void ResetToggleSwitchPointColor(ArkUINodeHandle node)
         color = theme->GetPointColor();
     }
     ToggleModelNG::SetSwitchPointColor(frameNode, Color(color));
-    ToggleModelNG::SetSwitchPointColorSetByUser(frameNode, false);
-    if (SystemProperties::ConfigChangePerform()) {
-        ToggleModelNG::CreateWithResourceObj(frameNode, ToggleColorType::SWITCH_POINT_COLOR, nullptr);
-    }
 }
 
 ArkUI_Uint32 GetToggleSelectedColor(ArkUINodeHandle node)
@@ -262,19 +232,6 @@ void SetToggleBackgroundColor(ArkUINodeHandle node, ArkUI_Uint32 color)
     ToggleModelNG::SetBackgroundColor(frameNode, Color(color));
 }
 
-void SetToggleBackgroundColorWithColorSpace(ArkUINodeHandle node, ArkUI_Uint32 color, ArkUI_Int32 colorSpace)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    Color backgroundColor { color };
-    if (ColorSpace::DISPLAY_P3 == colorSpace) {
-        backgroundColor.SetColorSpace(ColorSpace::DISPLAY_P3);
-    } else {
-        backgroundColor.SetColorSpace(ColorSpace::SRGB);
-    }
-    ToggleModelNG::SetBackgroundColor(frameNode, backgroundColor);
-}
-
 void ResetToggleBackgroundColor(ArkUINodeHandle node)
 {
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
@@ -307,27 +264,11 @@ void SetTogglePointRadius(ArkUINodeHandle node, ArkUI_Float32 value, ArkUI_Int32
     ToggleModelNG::SetPointRadius(frameNode, switchPointRadius);
 }
 
-void SetTogglePointRadiusPtr(ArkUINodeHandle node, ArkUI_Float32 value, ArkUI_Int32 unit, void* radiusRawPtr)
-{
-    CHECK_NULL_VOID(node);
-    SetTogglePointRadius(node, value, unit);
-    if (SystemProperties::ConfigChangePerform()) {
-        auto* frameNode = reinterpret_cast<FrameNode*>(node);
-        CHECK_NULL_VOID(frameNode);
-        auto* pointRadius = reinterpret_cast<ResourceObject*>(radiusRawPtr);
-        auto resObj = AceType::Claim(pointRadius);
-        ToggleModelNG::CreateWithResourceObj(frameNode, ToggleDimensionType::POINT_RADIUS, resObj);
-    }
-}
-
 void ResetTogglePointRadius(ArkUINodeHandle node)
 {
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
     ToggleModelNG::ResetPointRadius(frameNode);
-    if (SystemProperties::ConfigChangePerform()) {
-        ToggleModelNG::CreateWithResourceObj(frameNode, ToggleDimensionType::POINT_RADIUS, nullptr);
-    }
 }
 
 void SetToggleUnselectedColor(ArkUINodeHandle node, ArkUI_Uint32 unselectedColor)
@@ -335,20 +276,6 @@ void SetToggleUnselectedColor(ArkUINodeHandle node, ArkUI_Uint32 unselectedColor
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
     ToggleModelNG::SetUnselectedColor(frameNode, Color(unselectedColor));
-    ToggleModelNG::SetUnselectedColorSetByUser(frameNode, true);
-}
-
-void SetToggleUnselectedColorPtr(ArkUINodeHandle node, ArkUI_Uint32 unselectedColor, void* colorRawPtr)
-{
-    CHECK_NULL_VOID(node);
-    SetToggleUnselectedColor(node, unselectedColor);
-    if (SystemProperties::ConfigChangePerform()) {
-        auto* frameNode = reinterpret_cast<FrameNode*>(node);
-        CHECK_NULL_VOID(frameNode);
-        auto* color = reinterpret_cast<ResourceObject*>(colorRawPtr);
-        auto colorResObj = AceType::Claim(color);
-        ToggleModelNG::CreateWithResourceObj(frameNode, ToggleColorType::UN_SELECTED_COLOR, colorResObj);
-    }
 }
 
 void ResetToggleUnselectedColor(ArkUINodeHandle node)
@@ -366,10 +293,6 @@ void ResetToggleUnselectedColor(ArkUINodeHandle node)
         unselectedColor = switchTheme->GetInactiveColor();
     }
     ToggleModelNG::SetUnselectedColor(frameNode, unselectedColor);
-    ToggleModelNG::SetUnselectedColorSetByUser(frameNode, false);
-    if (SystemProperties::ConfigChangePerform()) {
-        ToggleModelNG::CreateWithResourceObj(frameNode, ToggleColorType::UN_SELECTED_COLOR, nullptr);
-    }
 }
 
 void SetToggleTrackBorderRadius(ArkUINodeHandle node, ArkUI_Float32 value, ArkUI_Int32 unit)
@@ -381,27 +304,11 @@ void SetToggleTrackBorderRadius(ArkUINodeHandle node, ArkUI_Float32 value, ArkUI
     ToggleModelNG::SetTrackBorderRadius(frameNode, borderRadius);
 }
 
-void SetToggleTrackBorderRadiusPtr(ArkUINodeHandle node, ArkUI_Float32 value, ArkUI_Int32 unit, void* radiusRawPtr)
-{
-    CHECK_NULL_VOID(node);
-    SetToggleTrackBorderRadius(node, value, unit);
-    if (SystemProperties::ConfigChangePerform()) {
-        auto* frameNode = reinterpret_cast<FrameNode*>(node);
-        CHECK_NULL_VOID(frameNode);
-        auto* trackBorderRadius = reinterpret_cast<ResourceObject*>(radiusRawPtr);
-        auto resObj = AceType::Claim(trackBorderRadius);
-        ToggleModelNG::CreateWithResourceObj(frameNode, ToggleDimensionType::TRACK_BORDER_RADIUS, resObj);
-    }
-}
-
 void ResetToggleTrackBorderRadius(ArkUINodeHandle node)
 {
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
     ToggleModelNG::ResetTrackBorderRadius(frameNode);
-    if (SystemProperties::ConfigChangePerform()) {
-        ToggleModelNG::CreateWithResourceObj(frameNode, ToggleDimensionType::TRACK_BORDER_RADIUS, nullptr);
-    }
 }
 
 void SetToggleIsOn(ArkUINodeHandle node, ArkUI_Bool switchPointColor)
@@ -431,120 +338,72 @@ ArkUI_Uint32 GetToggleUnselectedColor(ArkUINodeHandle node)
     CHECK_NULL_RETURN(frameNode, ERROR_UINT_CODE);
     return ToggleModelNG::GetUnselectedColor(frameNode).GetValue();
 }
-
-void SetToggleState(ArkUINodeHandle node, ArkUI_Bool isOn)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    ToggleModelNG::SetToggleState(frameNode, static_cast<bool>(isOn));
-}
-
-void SetToggleOnChange(ArkUINodeHandle node, void* callback)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    if (callback) {
-        auto onChange = reinterpret_cast<std::function<void(bool)>*>(callback);
-        ToggleModelNG::OnChange(frameNode, std::move(*onChange));
-    } else {
-        ToggleModelNG::OnChange(frameNode, nullptr);
-    }
-}
-
-void ResetToggleOnChange(ArkUINodeHandle node)
-{
-    auto *frameNode = reinterpret_cast<FrameNode *>(node);
-    CHECK_NULL_VOID(frameNode);
-    ToggleModelNG::OnChange(frameNode, nullptr);
-}
-
-void SetIsUserSetMargin(ArkUINodeHandle node)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    ToggleModelNG::SetIsUserSetMargin(frameNode, true);
-}
 } // namespace
 namespace NodeModifier {
 const ArkUIToggleModifier* GetToggleModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
     static const ArkUIToggleModifier modifier = {
-        .setToggleSelectedColor = SetToggleSelectedColor,
-        .resetToggleSelectedColor = ResetToggleSelectedColor,
-        .setToggleSwitchPointColor = SetToggleSwitchPointColor,
-        .resetToggleSwitchPointColor = ResetToggleSwitchPointColor,
-        .setToggleHeight = SetToggleHeight,
-        .resetToggleHeight = ResetToggleHeight,
-        .setToggleResponseRegion = SetToggleResponseRegion,
-        .resetToggleResponseRegion = ResetToggleResponseRegion,
-        .setTogglePadding = SetTogglePadding,
-        .resetTogglePadding = ResetTogglePadding,
-        .setToggleBackgroundColor = SetToggleBackgroundColor,
-        .setToggleBackgroundColorWithColorSpace = SetToggleBackgroundColorWithColorSpace,
-        .resetToggleBackgroundColor = ResetToggleBackgroundColor,
-        .setToggleHoverEffect = SetToggleHoverEffect,
-        .resetToggleHoverEffect = ResetToggleHoverEffect,
-        .getToggleSelectedColor = GetToggleSelectedColor,
-        .getToggleSwitchPointColor = GetToggleSwitchPointColor,
-        .setToggleIsOn = SetToggleIsOn,
-        .resetToggleIsOn = ResetToggleIsOn,
-        .getToggleIsOn = GetToggleIsOn,
-        .setTogglePointRadius = SetTogglePointRadius,
-        .resetTogglePointRadius = ResetTogglePointRadius,
-        .setToggleUnselectedColor = SetToggleUnselectedColor,
-        .resetToggleUnselectedColor = ResetToggleUnselectedColor,
-        .setToggleTrackBorderRadius = SetToggleTrackBorderRadius,
-        .resetToggleTrackBorderRadius = ResetToggleTrackBorderRadius,
-        .getToggleUnselectedColor = GetToggleUnselectedColor,
-        .setToggleState = SetToggleState,
-        .setToggleOnChange = SetToggleOnChange,
-        .resetToggleOnChange = ResetToggleOnChange,
-        .setToggleSelectedColorPtr = SetToggleSelectedColorPtr,
-        .setToggleSwitchPointColorPtr = SetToggleSwitchPointColorPtr,
-        .setTogglePointRadiusPtr = SetTogglePointRadiusPtr,
-        .setToggleUnselectedColorPtr = SetToggleUnselectedColorPtr,
-        .setToggleTrackBorderRadiusPtr = SetToggleTrackBorderRadiusPtr,
-        .setIsUserSetMargin = SetIsUserSetMargin,
+        SetToggleSelectedColor,
+        ResetToggleSelectedColor,
+        SetToggleSwitchPointColor,
+        ResetToggleSwitchPointColor,
+        SetToggleHeight,
+        ResetToggleHeight,
+        SetToggleResponseRegion,
+        ResetToggleResponseRegion,
+        SetTogglePadding,
+        ResetTogglePadding,
+        SetToggleBackgroundColor,
+        ResetToggleBackgroundColor,
+        SetToggleHoverEffect,
+        ResetToggleHoverEffect,
+        GetToggleSelectedColor,
+        GetToggleSwitchPointColor,
+        SetToggleIsOn,
+        ResetToggleIsOn,
+        GetToggleIsOn,
+        SetTogglePointRadius,
+        ResetTogglePointRadius,
+        SetToggleUnselectedColor,
+        ResetToggleUnselectedColor,
+        SetToggleTrackBorderRadius,
+        ResetToggleTrackBorderRadius,
+        GetToggleUnselectedColor,
     };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
 
     return &modifier;
 }
 
 const CJUIToggleModifier* GetCJUIToggleModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
     static const CJUIToggleModifier modifier = {
-        .setToggleSelectedColor = SetToggleSelectedColor,
-        .resetToggleSelectedColor = ResetToggleSelectedColor,
-        .setToggleSwitchPointColor = SetToggleSwitchPointColor,
-        .resetToggleSwitchPointColor = ResetToggleSwitchPointColor,
-        .setToggleHeight = SetToggleHeight,
-        .resetToggleHeight = ResetToggleHeight,
-        .setToggleResponseRegion = SetToggleResponseRegion,
-        .resetToggleResponseRegion = ResetToggleResponseRegion,
-        .setTogglePadding = SetTogglePadding,
-        .resetTogglePadding = ResetTogglePadding,
-        .setToggleBackgroundColor = SetToggleBackgroundColor,
-        .setToggleBackgroundColorWithColorSpace = SetToggleBackgroundColorWithColorSpace,
-        .resetToggleBackgroundColor = ResetToggleBackgroundColor,
-        .setToggleHoverEffect = SetToggleHoverEffect,
-        .resetToggleHoverEffect = ResetToggleHoverEffect,
-        .getToggleSelectedColor = GetToggleSelectedColor,
-        .getToggleSwitchPointColor = GetToggleSwitchPointColor,
-        .setToggleIsOn = SetToggleIsOn,
-        .resetToggleIsOn = ResetToggleIsOn,
-        .getToggleIsOn = GetToggleIsOn,
-        .setTogglePointRadius = SetTogglePointRadius,
-        .resetTogglePointRadius = ResetTogglePointRadius,
-        .setToggleUnselectedColor = SetToggleUnselectedColor,
-        .resetToggleUnselectedColor = ResetToggleUnselectedColor,
-        .setToggleTrackBorderRadius = SetToggleTrackBorderRadius,
-        .resetToggleTrackBorderRadius = ResetToggleTrackBorderRadius,
-        .getToggleUnselectedColor = GetToggleUnselectedColor,
+        SetToggleSelectedColor,
+        ResetToggleSelectedColor,
+        SetToggleSwitchPointColor,
+        ResetToggleSwitchPointColor,
+        SetToggleHeight,
+        ResetToggleHeight,
+        SetToggleResponseRegion,
+        ResetToggleResponseRegion,
+        SetTogglePadding,
+        ResetTogglePadding,
+        SetToggleBackgroundColor,
+        ResetToggleBackgroundColor,
+        SetToggleHoverEffect,
+        ResetToggleHoverEffect,
+        GetToggleSelectedColor,
+        GetToggleSwitchPointColor,
+        SetToggleIsOn,
+        ResetToggleIsOn,
+        GetToggleIsOn,
+        SetTogglePointRadius,
+        ResetTogglePointRadius,
+        SetToggleUnselectedColor,
+        ResetToggleUnselectedColor,
+        SetToggleTrackBorderRadius,
+        ResetToggleTrackBorderRadius,
+        GetToggleUnselectedColor,
     };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
 
     return &modifier;
 }
@@ -559,7 +418,7 @@ void SetOnToggleChange(ArkUINodeHandle node, void* extraParam)
         event.extraParam = reinterpret_cast<intptr_t>(extraParam);
         event.componentAsyncEvent.subKind = ON_TOGGLE_CHANGE;
         event.componentAsyncEvent.data[0].u32 = isOn;
-        SendArkUISyncEvent(&event);
+        SendArkUIAsyncEvent(&event);
     };
     ToggleModelNG::OnChange(frameNode, std::move(onChange));
 }

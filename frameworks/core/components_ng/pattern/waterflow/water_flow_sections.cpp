@@ -67,29 +67,24 @@ void WaterFlowSections::ReplaceFrom(size_t start, const std::vector<WaterFlowSec
 void WaterFlowSections::NotifySectionChange(
     int32_t start, int32_t deleteCount, const std::vector<WaterFlowSections::Section>& newSections)
 {
-    if (deleteCount == 0 || newSections.size() == 0 || !notifySectionChange_) {
+    if (deleteCount == 1 && newSections.size() == 1) {
         return;
     }
     int32_t addItemCount = 0;
-    const int32_t n = static_cast<int32_t>(sections_.size());
-    const int32_t oldSegLen = start + deleteCount - 1;
-    const int32_t newSegLen = static_cast<int32_t>(newSections.size()) - 1;
-    for (int32_t i = 0; i < newSegLen; i++) {
+    int32_t n = static_cast<int32_t>(sections_.size());
+    for (int32_t i = 0; i < static_cast<int32_t>(newSections.size()) - 1; i++) {
         addItemCount += newSections[i].itemsCount;
     }
     int32_t deleteItemCount = 0;
-    for (int32_t i = start; i < std::min(oldSegLen, n); i++) {
+    for (int32_t i = start; i < std::min(start + deleteCount - 1, n); i++) {
         deleteItemCount += sections_[i].itemsCount;
     }
     int32_t itemCount = 0;
     for (int32_t i = 0; i < std::min(start, n); i++) {
         itemCount += sections_[i].itemsCount;
     }
-
-    if (!sections_[oldSegLen].OnlyCountDiff(newSections[newSegLen])) {
-        notifySectionChange_(itemCount + deleteItemCount + sections_[oldSegLen].itemsCount - 1);
-    } else {
-        notifySectionChange_(itemCount + std::max(addItemCount, deleteItemCount) - 1);
+    if (notifyDataChange_) {
+        notifyDataChange_(itemCount + std::max(addItemCount, deleteItemCount), 0);
     }
 }
 } // namespace OHOS::Ace::NG

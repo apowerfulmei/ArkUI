@@ -14,13 +14,18 @@
  */
 #include "core/interfaces/native/node/node_span_modifier.h"
 
-#include "base/utils/utf_helper.h"
+#include "base/geometry/dimension.h"
+#include "base/geometry/dimension_size.h"
+#include "base/utils/utils.h"
 #include "bridge/common/utils/utils.h"
-#include "core/common/resource/resource_parse_utils.h"
+#include "core/components/common/layout/constants.h"
+#include "core/components/common/properties/alignment.h"
+#include "core/components/common/properties/text_style.h"
+#include "core/components_ng/base/frame_node.h"
+#include "core/components_ng/base/view_abstract.h"
 #include "core/components_ng/pattern/text/span_model_ng.h"
 #include "core/pipeline/base/element_register.h"
 #include "draw/canvas.h"
-#include "frameworks/core/components/common/properties/text_style.h"
 
 namespace OHOS::Ace::NG {
 namespace {
@@ -29,7 +34,7 @@ constexpr FontWeight DEFAULT_FONT_WEIGHT = FontWeight::NORMAL;
 constexpr Ace::FontStyle DEFAULT_FONT_STYLE_VALUE = Ace::FontStyle::NORMAL;
 constexpr Dimension DEFAULT_FONT_SIZE = Dimension(16.0, DimensionUnit::FP);
 constexpr Dimension DEFAULT_BASELINE_OFFSET { 0.0, DimensionUnit::FP };
-thread_local std::string g_strValue;
+std::string g_strValue;
 constexpr int NUM_0 = 0;
 constexpr int NUM_1 = 1;
 constexpr int NUM_2 = 2;
@@ -38,18 +43,17 @@ constexpr int NUM_32 = 32;
 constexpr int DEFAULT_LENGTH = 4;
 void SetSpanContent(ArkUINodeHandle node, const char* value)
 {
-    CHECK_NULL_VOID(value);
     auto* uiNode = reinterpret_cast<UINode*>(node);
     CHECK_NULL_VOID(uiNode);
     std::string content(value);
-    SpanModelNG::InitSpan(uiNode, UtfUtils::Str8DebugToStr16(content));
+    SpanModelNG::InitSpan(uiNode, content);
 }
 
 const char* GetSpanContent(ArkUINodeHandle node)
 {
     auto* uiNode = reinterpret_cast<UINode*>(node);
     CHECK_NULL_RETURN(uiNode, nullptr);
-    g_strValue = UtfUtils::Str16DebugToStr8(SpanModelNG::GetContent(uiNode));
+    g_strValue = SpanModelNG::GetContent(uiNode);
     return g_strValue.c_str();
 }
 
@@ -57,8 +61,7 @@ void SetSpanSrc(ArkUINodeHandle node, ArkUI_CharPtr src)
 {
     auto* uiNode = reinterpret_cast<UINode*>(node);
     CHECK_NULL_VOID(uiNode);
-    std::string content(src);
-    SpanModelNG::InitSpan(uiNode, UtfUtils::Str8DebugToStr16(content));
+    SpanModelNG::InitSpan(uiNode, src);
 }
 
 void SetSpanTextCase(ArkUINodeHandle node, int32_t value)
@@ -90,13 +93,11 @@ void SetSpanFontWeightStr(ArkUINodeHandle node, const char* value)
     SpanModelNG::SetFontWeight(uiNode, Framework::ConvertStrToFontWeight(value));
 }
 
-void SetSpanFontWeight(ArkUINodeHandle node, ArkUI_Int32 fontWeight, void* resRawPtr)
+void SetSpanFontWeight(ArkUINodeHandle node, ArkUI_Int32 fontWeight)
 {
     auto* uiNode = reinterpret_cast<UINode*>(node);
     CHECK_NULL_VOID(uiNode);
     SpanModelNG::SetFontWeight(uiNode, static_cast<FontWeight>(fontWeight));
-    NodeModifier::ProcessResourceObj<FontWeight>(
-        uiNode, "fontWeight", static_cast<FontWeight>(fontWeight), resRawPtr);
 }
 
 int32_t GetSpanFontWeight(ArkUINodeHandle node)
@@ -112,20 +113,13 @@ void ResetSpanFontWeight(ArkUINodeHandle node)
     auto* uiNode = reinterpret_cast<UINode*>(node);
     CHECK_NULL_VOID(uiNode);
     SpanModelNG::ResetFontWeight(uiNode);
-    if (SystemProperties::ConfigChangePerform()) {
-        auto spanNode = AceType::DynamicCast<NG::SpanNode>(uiNode);
-        CHECK_NULL_VOID(spanNode);
-        spanNode->UnregisterResource("fontWeight");
-    }
 }
 
-void SetSpanLineHeight(ArkUINodeHandle node, ArkUI_Float32 number, ArkUI_Int32 unit, void* lineHeightRawPtr)
+void SetSpanLineHeight(ArkUINodeHandle node, ArkUI_Float32 number, ArkUI_Int32 unit)
 {
     auto* uiNode = reinterpret_cast<UINode*>(node);
     CHECK_NULL_VOID(uiNode);
     SpanModelNG::SetLineHeight(uiNode, Dimension(number, static_cast<DimensionUnit>(unit)));
-    NodeModifier::ProcessResourceObj<CalcDimension>(
-        uiNode, "lineHeight", Dimension(number, static_cast<DimensionUnit>(unit)), lineHeightRawPtr);
 }
 
 float GetSpanLineHeight(ArkUINodeHandle node)
@@ -140,11 +134,6 @@ void ResetSpanLineHeight(ArkUINodeHandle node)
     auto* uiNode = reinterpret_cast<UINode*>(node);
     CHECK_NULL_VOID(uiNode);
     SpanModelNG::ResetLineHeight(uiNode);
-    if (SystemProperties::ConfigChangePerform()) {
-        auto spanNode = AceType::DynamicCast<NG::SpanNode>(uiNode);
-        CHECK_NULL_VOID(spanNode);
-        spanNode->UnregisterResource("lineHeight");
-    }
 }
 
 void SetSpanFontStyle(ArkUINodeHandle node, int32_t value)
@@ -169,13 +158,11 @@ void ResetSpanFontStyle(ArkUINodeHandle node)
     SpanModelNG::ResetItalicFontStyle(uiNode);
 }
 
-void SetSpanFontSize(ArkUINodeHandle node, ArkUI_Float32 number, ArkUI_Int32 unit, void* fontSizeRawPtr)
+void SetSpanFontSize(ArkUINodeHandle node, ArkUI_Float32 number, ArkUI_Int32 unit)
 {
     auto* uiNode = reinterpret_cast<UINode*>(node);
     CHECK_NULL_VOID(uiNode);
-    auto fontSizeValue = Dimension(number, static_cast<DimensionUnit>(unit));
-    SpanModelNG::SetFontSize(uiNode, fontSizeValue);
-    NodeModifier::ProcessResourceObj<CalcDimension>(uiNode, "fontSize", fontSizeValue, fontSizeRawPtr);
+    SpanModelNG::SetFontSize(uiNode, Dimension(number, static_cast<DimensionUnit>(unit)));
 }
 
 float GetSpanFontSize(ArkUINodeHandle node, ArkUI_Int32 unit)
@@ -190,14 +177,9 @@ void ResetSpanFontSize(ArkUINodeHandle node)
     auto* uiNode = reinterpret_cast<UINode*>(node);
     CHECK_NULL_VOID(uiNode);
     SpanModelNG::ResetFontSize(uiNode);
-    if (SystemProperties::ConfigChangePerform()) {
-        auto spanNode = AceType::DynamicCast<NG::SpanNode>(uiNode);
-        CHECK_NULL_VOID(spanNode);
-        spanNode->UnregisterResource("fontSize");
-    }
 }
 
-void SetSpanFontFamily(ArkUINodeHandle node, const char** fontFamilies, uint32_t length, void* resObj)
+void SetSpanFontFamily(ArkUINodeHandle node, const char** fontFamilies, uint32_t length)
 {
     CHECK_NULL_VOID(fontFamilies);
     if (length <= 0) {
@@ -213,7 +195,6 @@ void SetSpanFontFamily(ArkUINodeHandle node, const char** fontFamilies, uint32_t
         }
     }
     SpanModelNG::SetFontFamily(uiNode, families);
-    NodeModifier::ProcessResourceObj<std::vector<std::string>>(uiNode, "fontFamily", families, resObj);
 }
 
 void ResetSpanFontFamily(ArkUINodeHandle node)
@@ -221,28 +202,15 @@ void ResetSpanFontFamily(ArkUINodeHandle node)
     auto* uiNode = reinterpret_cast<UINode*>(node);
     CHECK_NULL_VOID(uiNode);
     SpanModelNG::ResetFontFamily(uiNode);
-    if (SystemProperties::ConfigChangePerform()) {
-        auto spanNode = AceType::DynamicCast<NG::SpanNode>(uiNode);
-        CHECK_NULL_VOID(spanNode);
-        spanNode->UnregisterResource("fontFamily");
-    }
 }
 
-void SetSpanDecoration(ArkUINodeHandle node, ArkUI_Int32 decoration,
-    ArkUI_Uint32 color, void* colorRawPtr, ArkUI_Int32 style, ArkUI_Float32 lineThicknessScale = 1.0f)
+void SetSpanDecoration(ArkUINodeHandle node, ArkUI_Int32 decoration, ArkUI_Uint32 color, ArkUI_Int32 style)
 {
     auto* uiNode = reinterpret_cast<UINode*>(node);
     CHECK_NULL_VOID(uiNode);
     SpanModelNG::SetTextDecoration(uiNode, static_cast<TextDecoration>(decoration));
     SpanModelNG::SetTextDecorationStyle(uiNode, static_cast<TextDecorationStyle>(style));
-    NodeModifier::ProcessResourceObj<Color>(uiNode, "decorationColor", Color(color), colorRawPtr);
     SpanModelNG::SetTextDecorationColor(uiNode, Color(color));
-    SpanModelNG::SetLineThicknessScale(uiNode, lineThicknessScale);
-}
-
-void SetSpanDecoration(ArkUINodeHandle node, ArkUI_Int32 decoration, ArkUI_Uint32 color, ArkUI_Int32 style)
-{
-    SetSpanDecoration(node, decoration, color, nullptr, style, 1.0f); // make cj happy
 }
 
 void GetSpanDecoration(ArkUINodeHandle node, ArkUITextDecorationType* decoration)
@@ -262,20 +230,13 @@ void ResetSpanDecoration(ArkUINodeHandle node)
     SpanModelNG::ResetTextDecoration(uiNode);
     SpanModelNG::ResetTextDecorationStyle(uiNode);
     SpanModelNG::ResetTextDecorationColor(uiNode);
-    SpanModelNG::ResetLineThicknessScale(uiNode);
-    if (SystemProperties::ConfigChangePerform()) {
-        auto spanNode = AceType::DynamicCast<NG::SpanNode>(uiNode);
-        CHECK_NULL_VOID(spanNode);
-        spanNode->UnregisterResource("decorationColor");
-    }
 }
 
-void SetSpanFontColor(ArkUINodeHandle node, uint32_t textColor, void* fontColorRawPtr)
+void SetSpanFontColor(ArkUINodeHandle node, uint32_t textColor)
 {
     auto* uiNode = reinterpret_cast<UINode*>(node);
     CHECK_NULL_VOID(uiNode);
     SpanModelNG::SetTextColor(uiNode, Color(textColor));
-    NodeModifier::ProcessResourceObj<Color>(uiNode, "fontColor", Color(textColor), fontColorRawPtr);
 }
 
 uint32_t GetSpanFontColor(ArkUINodeHandle node)
@@ -290,15 +251,9 @@ void ResetSpanFontColor(ArkUINodeHandle node)
     auto* uiNode = reinterpret_cast<UINode*>(node);
     CHECK_NULL_VOID(uiNode);
     SpanModelNG::ResetTextColor(uiNode);
-    if (SystemProperties::ConfigChangePerform()) {
-        auto spanNode = AceType::DynamicCast<NG::SpanNode>(uiNode);
-        CHECK_NULL_VOID(spanNode);
-        spanNode->UnregisterResource("fontColor");
-    }
 }
 
-void SetSpanLetterSpacing(ArkUINodeHandle node, const struct ArkUIStringAndFloat* letterSpacingValue,
-    void* letterRawPtr)
+void SetSpanLetterSpacing(ArkUINodeHandle node, const struct ArkUIStringAndFloat* letterSpacingValue)
 {
     auto* uiNode = reinterpret_cast<UINode*>(node);
     CHECK_NULL_VOID(uiNode);
@@ -309,7 +264,6 @@ void SetSpanLetterSpacing(ArkUINodeHandle node, const struct ArkUIStringAndFloat
         result = Dimension(letterSpacingValue->value, DimensionUnit::FP);
     }
     SpanModelNG::SetLetterSpacing(uiNode, result);
-    NodeModifier::ProcessResourceObj<CalcDimension>(uiNode, "letterSpacing", result, letterRawPtr);
 }
 
 float GetSpanLetterSpacing(ArkUINodeHandle node)
@@ -324,20 +278,13 @@ void ResetSpanLetterSpacing(ArkUINodeHandle node)
     auto* uiNode = reinterpret_cast<UINode*>(node);
     CHECK_NULL_VOID(uiNode);
     SpanModelNG::ResetLetterSpacing(uiNode);
-    if (SystemProperties::ConfigChangePerform()) {
-        auto spanNode = AceType::DynamicCast<NG::SpanNode>(uiNode);
-        CHECK_NULL_VOID(spanNode);
-        spanNode->UnregisterResource("letterSpacing");
-    }
 }
 
-void SetSpanBaselineOffset(ArkUINodeHandle node, ArkUI_Float32 value, ArkUI_Int32 unit, void* resourceRawPtr)
+void SetSpanBaselineOffset(ArkUINodeHandle node, ArkUI_Float32 value, ArkUI_Int32 unit)
 {
     auto* uiNode = reinterpret_cast<UINode*>(node);
     CHECK_NULL_VOID(uiNode);
     SpanModelNG::SetBaselineOffset(uiNode, CalcDimension(value, (DimensionUnit)unit));
-    NodeModifier::ProcessResourceObj<CalcDimension>(
-        uiNode, "baselineOffset", CalcDimension(value, (DimensionUnit)unit), resourceRawPtr);
 }
 
 float GetSpanBaselineOffset(ArkUINodeHandle node)
@@ -352,11 +299,6 @@ void ResetSpanBaselineOffset(ArkUINodeHandle node)
     auto* uiNode = reinterpret_cast<UINode*>(node);
     CHECK_NULL_VOID(uiNode);
     SpanModelNG::SetBaselineOffset(uiNode, DEFAULT_BASELINE_OFFSET);
-    if (SystemProperties::ConfigChangePerform()) {
-        auto spanNode = AceType::DynamicCast<NG::SpanNode>(uiNode);
-        CHECK_NULL_VOID(spanNode);
-        spanNode->UnregisterResource("baselineOffset");
-    }
 }
 
 void SetSpanFont(ArkUINodeHandle node, const struct ArkUIFontStruct* fontInfo)
@@ -370,9 +312,6 @@ void SetSpanFont(ArkUINodeHandle node, const struct ArkUIFontStruct* fontInfo)
     font.fontWeight = static_cast<FontWeight>(fontInfo->fontWeight);
     std::vector<std::string> families;
     if (fontInfo->fontFamilies && fontInfo->familyLength > 0) {
-        if (fontInfo->familyLength > DEFAULT_MAX_FONT_FAMILY_LENGTH) {
-            return;
-        }
         families.resize(fontInfo->familyLength);
         for (uint32_t i = 0; i < fontInfo->familyLength; i++) {
             families.at(i) = std::string(*(fontInfo->fontFamilies + i));
@@ -389,17 +328,12 @@ void ResetSpanFont(ArkUINodeHandle node)
     SpanModelNG::ResetFont(uiNode);
 }
 
-void SetSpanTextBackgroundStyle(ArkUINodeHandle node, ArkUI_Uint32 color, const ArkUI_Float32* values,
-    const ArkUI_Int32* units, ArkUI_Int32 length, void* style)
+void SetSpanTextBackgroundStyle(
+    ArkUINodeHandle node, ArkUI_Uint32 color, const ArkUI_Float32* values, const ArkUI_Int32* units, ArkUI_Int32 length)
 {
     auto* uiNode = reinterpret_cast<UINode*>(node);
     CHECK_NULL_VOID(uiNode);
     if (length != DEFAULT_LENGTH) {
-        return;
-    }
-    if (SystemProperties::ConfigChangePerform() && style) {
-        auto textBackgroundStyle = reinterpret_cast<TextBackgroundStyle*>(style);
-        SpanModelNG::SetTextBackgroundStyle(uiNode, *textBackgroundStyle);
         return;
     }
     TextBackgroundStyle font;
@@ -428,12 +362,6 @@ void ResetSpanTextBackgroundStyle(ArkUINodeHandle node)
     font.backgroundRadius = borderRadius;
     font.backgroundRadius->multiValued = true;
     SpanModelNG::SetTextBackgroundStyle(uiNode, font);
-    SpanModelNG::ResetLetterSpacing(uiNode);
-    if (SystemProperties::ConfigChangePerform()) {
-        auto spanNode = AceType::DynamicCast<NG::SpanNode>(uiNode);
-        CHECK_NULL_VOID(spanNode);
-        spanNode->UnregisterResource("textbackgroundStyle");
-    }
 }
 
 void GetSpanTextBackgroundStyle(ArkUINodeHandle node, ArkUITextBackgroundStyleOptions* options)
@@ -445,38 +373,15 @@ void GetSpanTextBackgroundStyle(ArkUINodeHandle node, ArkUITextBackgroundStyleOp
     options->topLeft = styleOptions.backgroundRadius->radiusTopLeft->Value();
     options->topRight = styleOptions.backgroundRadius->radiusTopRight->Value();
     options->bottomLeft = styleOptions.backgroundRadius->radiusBottomLeft->Value();
-    options->bottomRight= styleOptions.backgroundRadius->radiusBottomRight->Value();
+    options->bottomLeft = styleOptions.backgroundRadius->radiusBottomLeft->Value();
 }
 
-void SetTextTextShadow(ArkUINodeHandle node, struct ArkUITextShadowStruct* shadows, ArkUI_Uint32 length,
-    const void* radiusResArrs, const void* colorResArrs,
-    const void* offsetXResArrs, const void* offsetYResArrs)
+void SetTextTextShadow(ArkUINodeHandle node, struct ArkUITextShadowStruct* shadows, ArkUI_Uint32 length)
 {
     CHECK_NULL_VOID(shadows);
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
     std::vector<Shadow> shadowList(length);
-    std::vector<RefPtr<ResourceObject>> radiusResArr;
-    std::vector<RefPtr<ResourceObject>> colorResArr;
-    std::vector<RefPtr<ResourceObject>> offsetXResArr;
-    std::vector<RefPtr<ResourceObject>> offsetYResArr;
-    if (SystemProperties::ConfigChangePerform()) {
-        if (radiusResArrs != nullptr) {
-            radiusResArr = *(static_cast<const std::vector<RefPtr<ResourceObject>>*>(radiusResArrs));
-        }
-        if (colorResArrs != nullptr) {
-            colorResArr =
-                *(static_cast<const std::vector<RefPtr<ResourceObject>>*>(colorResArrs));
-        }
-        if (offsetXResArrs != nullptr) {
-            offsetXResArr =
-                *(static_cast<const std::vector<RefPtr<ResourceObject>>*>(offsetXResArrs));
-        }
-        if (offsetYResArrs != nullptr) {
-            offsetYResArr =
-            *(static_cast<const std::vector<RefPtr<ResourceObject>>*>(offsetYResArrs));
-        }
-    }
     for (uint32_t i = 0; i < length; i++) {
         Shadow shadow;
         ArkUITextShadowStruct* shadowStruct = shadows + i;
@@ -486,13 +391,6 @@ void SetTextTextShadow(ArkUINodeHandle node, struct ArkUITextShadowStruct* shado
         shadow.SetOffsetX(shadowStruct->offsetX);
         shadow.SetOffsetY(shadowStruct->offsetY);
         shadow.SetIsFilled(static_cast<bool>(shadowStruct->fill));
-        if (SystemProperties::ConfigChangePerform()) {
-            RefPtr<ResourceObject> radiusObject = (radiusResArr.size() > i) ? radiusResArr[i] : nullptr;
-            RefPtr<ResourceObject> colorObject = (colorResArr.size() > i) ? colorResArr[i] : nullptr;
-            RefPtr<ResourceObject> offsetXObject = (offsetXResArr.size() > i) ? offsetXResArr[i] : nullptr;
-            RefPtr<ResourceObject> offsetYObject = (offsetYResArr.size() > i) ? offsetYResArr[i] : nullptr;
-            Shadow::RegisterShadowResourceObj(shadow, radiusObject, colorObject, offsetXObject, offsetYObject);
-        }
         shadowList.at(i) = shadow;
     }
     SpanModelNG::SetTextShadow(frameNode, shadowList);
@@ -522,6 +420,25 @@ void ResetTextTextShadow(ArkUINodeHandle node)
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
     SpanModelNG::ResetTextShadow(frameNode);
+}
+
+ArkUI_CharPtr GetSpanFontFamily(ArkUINodeHandle node)
+{
+    auto* frameNode = reinterpret_cast<UINode*>(node);
+    CHECK_NULL_RETURN(frameNode, nullptr);
+    std::vector<std::string> fontFamilies = SpanModelNG::GetSpanFontFamily(frameNode);
+    std::string families;
+    //set index start
+    uint32_t index = 0;
+    for (auto& family : fontFamilies) {
+        families += family;
+        if (index != fontFamilies.size() - 1) {
+            families += ",";
+        }
+        index++;
+    }
+    g_strValue = families;
+    return g_strValue.c_str();
 }
 
 void SetAccessibilityText(ArkUINodeHandle node, ArkUI_CharPtr value)
@@ -570,152 +487,35 @@ void ResetAccessibilityLevel(ArkUINodeHandle node)
     CHECK_NULL_VOID(frameNode);
     SpanModelNG::SetAccessibilityImportance(frameNode, "");
 }
-
-ArkUI_CharPtr GetSpanFontFamily(ArkUINodeHandle node)
-{
-    auto* frameNode = reinterpret_cast<UINode*>(node);
-    CHECK_NULL_RETURN(frameNode, nullptr);
-    std::vector<std::string> fontFamilies = SpanModelNG::GetSpanFontFamily(frameNode);
-    std::string families;
-    //set index start
-    uint32_t index = 0;
-    for (auto& family : fontFamilies) {
-        families += family;
-        if (index != fontFamilies.size() - 1) {
-            families += ",";
-        }
-        index++;
-    }
-    g_strValue = families;
-    return g_strValue.c_str();
-}
-
-void SetSpanOnHover(ArkUINodeHandle node, void* callback)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    if (callback) {
-        auto onHover = reinterpret_cast<OnHoverFunc*>(callback);
-        SpanModelNG::SetOnHover(frameNode, std::move(*onHover));
-    } else {
-        SpanModelNG::ResetOnHover(frameNode);
-    }
-}
-
-void ResetSpanOnHover(ArkUINodeHandle node)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    SpanModelNG::ResetOnHover(frameNode);
-}
 } // namespace
 namespace NodeModifier {
 const ArkUISpanModifier* GetSpanModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
-    static const ArkUISpanModifier modifier = {
-        .setSpanSrc = SetSpanSrc,
-        .setContent = SetSpanContent,
-        .setSpanTextCase = SetSpanTextCase,
-        .resetSpanTextCase = ResetSpanTextCase,
-        .setSpanFontWeight = SetSpanFontWeight,
-        .resetSpanFontWeight = ResetSpanFontWeight,
-        .setSpanLineHeight = SetSpanLineHeight,
-        .resetSpanLineHeight = ResetSpanLineHeight,
-        .setSpanFontStyle = SetSpanFontStyle,
-        .resetSpanFontStyle = ResetSpanFontStyle,
-        .setSpanFontSize = SetSpanFontSize,
-        .resetSpanFontSize = ResetSpanFontSize,
-        .setSpanFontFamily = SetSpanFontFamily,
-        .resetSpanFontFamily = ResetSpanFontFamily,
-        .setSpanDecoration = SetSpanDecoration,
-        .resetSpanDecoration = ResetSpanDecoration,
-        .setSpanFontColor = SetSpanFontColor,
-        .resetSpanFontColor = ResetSpanFontColor,
-        .setSpanLetterSpacing = SetSpanLetterSpacing,
-        .resetSpanLetterSpacing = ResetSpanLetterSpacing,
-        .setSpanBaselineOffset = SetSpanBaselineOffset,
-        .resetSpanBaselineOffset = ResetSpanBaselineOffset,
-        .setSpanFont = SetSpanFont,
-        .resetSpanFont = ResetSpanFont,
-        .setSpanFontWeightStr = SetSpanFontWeightStr,
-        .getSpanContent = GetSpanContent,
-        .getSpanDecoration = GetSpanDecoration,
-        .getSpanFontColor = GetSpanFontColor,
-        .getSpanFontSize = GetSpanFontSize,
-        .getSpanFontStyle = GetSpanFontStyle,
-        .getSpanFontWeight = GetSpanFontWeight,
-        .getSpanLineHeight = GetSpanLineHeight,
-        .getSpanTextCase = GetSpanTextCase,
-        .getSpanLetterSpacing = GetSpanLetterSpacing,
-        .getSpanBaselineOffset = GetSpanBaselineOffset,
-        .setSpanTextBackgroundStyle = SetSpanTextBackgroundStyle,
-        .resetSpanTextBackgroundStyle = ResetSpanTextBackgroundStyle,
-        .getSpanTextBackgroundStyle = GetSpanTextBackgroundStyle,
-        .setTextShadow = SetTextTextShadow,
-        .resetTextShadow = ResetTextTextShadow,
-        .getTextShadows = GetTextShadow,
-        .getSpanFontFamily = GetSpanFontFamily,
-        .setAccessibilityText = SetAccessibilityText,
-        .resetAccessibilityText = ResetAccessibilityText,
-        .setAccessibilityDescription = SetAccessibilityDescription,
-        .resetAccessibilityDescription = ResetAccessibilityDescription,
-        .setAccessibilityLevel = SetAccessibilityLevel,
-        .resetAccessibilityLevel = ResetAccessibilityLevel,
-        .setSpanOnHover = SetSpanOnHover,
-        .resetSpanOnHover = ResetSpanOnHover,
-    };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
+    static const ArkUISpanModifier modifier = { SetSpanSrc, SetSpanContent, SetSpanTextCase, ResetSpanTextCase,
+        SetSpanFontWeight, ResetSpanFontWeight, SetSpanLineHeight, ResetSpanLineHeight, SetSpanFontStyle,
+        ResetSpanFontStyle, SetSpanFontSize, ResetSpanFontSize, SetSpanFontFamily, ResetSpanFontFamily,
+        SetSpanDecoration, ResetSpanDecoration, SetSpanFontColor, ResetSpanFontColor, SetSpanLetterSpacing,
+        ResetSpanLetterSpacing, SetSpanBaselineOffset, ResetSpanBaselineOffset, SetSpanFont, ResetSpanFont,
+        SetSpanFontWeightStr, GetSpanContent, GetSpanDecoration, GetSpanFontColor, GetSpanFontSize, GetSpanFontStyle,
+        GetSpanFontWeight, GetSpanLineHeight, GetSpanTextCase, GetSpanLetterSpacing, GetSpanBaselineOffset,
+        SetSpanTextBackgroundStyle, ResetSpanTextBackgroundStyle, GetSpanTextBackgroundStyle, SetTextTextShadow,
+        ResetTextTextShadow, GetTextShadow, GetSpanFontFamily,
+        SetAccessibilityText, ResetAccessibilityText, SetAccessibilityDescription, ResetAccessibilityDescription,
+        SetAccessibilityLevel, ResetAccessibilityLevel };
     return &modifier;
 }
 
 const CJUISpanModifier* GetCJUISpanModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
-    static const CJUISpanModifier modifier = {
-        .setSpanSrc = SetSpanSrc,
-        .setContent = SetSpanContent,
-        .setSpanTextCase = SetSpanTextCase,
-        .resetSpanTextCase = ResetSpanTextCase,
-        .setSpanFontWeight = SetSpanFontWeight,
-        .resetSpanFontWeight = ResetSpanFontWeight,
-        .setSpanLineHeight = SetSpanLineHeight,
-        .resetSpanLineHeight = ResetSpanLineHeight,
-        .setSpanFontStyle = SetSpanFontStyle,
-        .resetSpanFontStyle = ResetSpanFontStyle,
-        .setSpanFontSize = SetSpanFontSize,
-        .resetSpanFontSize = ResetSpanFontSize,
-        .setSpanFontFamily = SetSpanFontFamily,
-        .resetSpanFontFamily = ResetSpanFontFamily,
-        .setSpanDecoration = SetSpanDecoration,
-        .resetSpanDecoration = ResetSpanDecoration,
-        .setSpanFontColor = SetSpanFontColor,
-        .resetSpanFontColor = ResetSpanFontColor,
-        .setSpanLetterSpacing = SetSpanLetterSpacing,
-        .resetSpanLetterSpacing = ResetSpanLetterSpacing,
-        .setSpanBaselineOffset = SetSpanBaselineOffset,
-        .resetSpanBaselineOffset = ResetSpanBaselineOffset,
-        .setSpanFont = SetSpanFont,
-        .resetSpanFont = ResetSpanFont,
-        .setSpanFontWeightStr = SetSpanFontWeightStr,
-        .getSpanContent = GetSpanContent,
-        .getSpanDecoration = GetSpanDecoration,
-        .getSpanFontColor = GetSpanFontColor,
-        .getSpanFontSize = GetSpanFontSize,
-        .getSpanFontStyle = GetSpanFontStyle,
-        .getSpanFontWeight = GetSpanFontWeight,
-        .getSpanLineHeight = GetSpanLineHeight,
-        .getSpanTextCase = GetSpanTextCase,
-        .getSpanLetterSpacing = GetSpanLetterSpacing,
-        .getSpanBaselineOffset = GetSpanBaselineOffset,
-        .setSpanTextBackgroundStyle = SetSpanTextBackgroundStyle,
-        .resetSpanTextBackgroundStyle = ResetSpanTextBackgroundStyle,
-        .getSpanTextBackgroundStyle = GetSpanTextBackgroundStyle,
-        .setTextShadow = SetTextTextShadow,
-        .resetTextShadow = ResetTextTextShadow,
-        .getTextShadows = GetTextShadow,
-    };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
+    static const CJUISpanModifier modifier = { SetSpanSrc, SetSpanContent, SetSpanTextCase, ResetSpanTextCase,
+        SetSpanFontWeight, ResetSpanFontWeight, SetSpanLineHeight, ResetSpanLineHeight, SetSpanFontStyle,
+        ResetSpanFontStyle, SetSpanFontSize, ResetSpanFontSize, SetSpanFontFamily, ResetSpanFontFamily,
+        SetSpanDecoration, ResetSpanDecoration, SetSpanFontColor, ResetSpanFontColor, SetSpanLetterSpacing,
+        ResetSpanLetterSpacing, SetSpanBaselineOffset, ResetSpanBaselineOffset, SetSpanFont, ResetSpanFont,
+        SetSpanFontWeightStr, GetSpanContent, GetSpanDecoration, GetSpanFontColor, GetSpanFontSize, GetSpanFontStyle,
+        GetSpanFontWeight, GetSpanLineHeight, GetSpanTextCase, GetSpanLetterSpacing, GetSpanBaselineOffset,
+        SetSpanTextBackgroundStyle, ResetSpanTextBackgroundStyle, GetSpanTextBackgroundStyle, SetTextTextShadow,
+        ResetTextTextShadow, GetTextShadow };
     return &modifier;
 }
 
@@ -768,27 +568,6 @@ void SetCustomSpanOnDraw(ArkUINodeHandle node, void* extraParam)
     };
     frameNode->GetSpanItem()->onDraw = onDrawFunc;
 }
-
-template<typename T>
-void ProcessResourceObj(UINode* uinode, std::string key, T value, void* objRawPtr)
-{
-    CHECK_NULL_VOID(SystemProperties::ConfigChangePerform());
-    CHECK_NULL_VOID(uinode);
-    auto spanNode = AceType::DynamicCast<NG::SpanNode>(uinode);
-    CHECK_NULL_VOID(spanNode);
-    if (objRawPtr) {
-        auto resObj = AceType::Claim(reinterpret_cast<ResourceObject*>(objRawPtr));
-        spanNode->RegisterResource<T>(key, resObj, value);
-    } else {
-        spanNode->UnregisterResource(key);
-    }
-}
-
-template void ProcessResourceObj<FontWeight>(UINode* uinode, std::string key, FontWeight value, void* objRawPtr);
-template void ProcessResourceObj<Color>(UINode* uinode, std::string key, Color value, void* objRawPtr);
-template void ProcessResourceObj<CalcDimension>(UINode* uinode, std::string key, CalcDimension value, void* objRawPtr);
-template void ProcessResourceObj<std::vector<std::string>>(UINode* uinode, std::string key,
-    std::vector<std::string> value, void* objRawPtr);
 } // namespace NodeModifier
 
 } // namespace OHOS::Ace::NG

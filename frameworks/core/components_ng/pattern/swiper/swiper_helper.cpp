@@ -16,12 +16,11 @@
 #include "swiper_helper.h"
 
 #include "base/log/dump_log.h"
-#include "core/pipeline/base/constants.h"
+#include "core/components_ng/pattern/swiper_indicator/indicator_common/swiper_indicator_layout_property.h"
 
 namespace OHOS::Ace::NG {
 void SwiperHelper::InitSwiperController(const RefPtr<SwiperController>& controller, const WeakPtr<SwiperPattern>& weak)
 {
-    CHECK_NULL_VOID(controller);
     controller->SetSwipeToImpl([weak](int32_t index, bool reverse) {
         auto swiper = weak.Upgrade();
         CHECK_NULL_VOID(swiper);
@@ -40,7 +39,6 @@ void SwiperHelper::InitSwiperController(const RefPtr<SwiperController>& controll
         auto swiperNode = swiper->GetHost();
         CHECK_NULL_VOID(swiperNode);
         TAG_LOGI(AceLogTag::ACE_SWIPER, "Swiper ShowNext, id:%{public}d", swiperNode->GetId());
-        swiper->ResetAnimationParam();
         swiper->ShowNext();
     });
 
@@ -50,15 +48,13 @@ void SwiperHelper::InitSwiperController(const RefPtr<SwiperController>& controll
         auto swiperNode = swiper->GetHost();
         CHECK_NULL_VOID(swiperNode);
         TAG_LOGI(AceLogTag::ACE_SWIPER, "Swiper ShowPrevious, id:%{public}d", swiperNode->GetId());
-        swiper->ResetAnimationParam();
         swiper->ShowPrevious();
     });
 
     controller->SetChangeIndexImpl([weak](int32_t index, bool useAnimation) {
         auto swiper = weak.Upgrade();
         CHECK_NULL_VOID(swiper);
-        TAG_LOGI(AceLogTag::ACE_SWIPER, "Swiper ChangeIndex %{public}d, useAnimation:%{public}d, id:%{public}d", index,
-            useAnimation, swiper->GetId());
+        TAG_LOGI(AceLogTag::ACE_SWIPER, "Swiper ChangeIndex %{public}d, useAnimation:%{public}d", index, useAnimation);
         swiper->ChangeIndex(index, useAnimation);
     });
 
@@ -67,7 +63,6 @@ void SwiperHelper::InitSwiperController(const RefPtr<SwiperController>& controll
     controller->SetFinishImpl([weak]() {
         auto swiper = weak.Upgrade();
         CHECK_NULL_VOID(swiper);
-        TAG_LOGI(AceLogTag::ACE_SWIPER, "Swiper user finish animation id:%{public}d", swiper->GetId());
         swiper->FinishAnimation();
     });
 
@@ -89,24 +84,6 @@ void SwiperHelper::SetChangeIndexWithModeImpl(const RefPtr<SwiperController>& co
             index, animationMode);
         swiper->ChangeIndex(index, animationMode);
     });
-}
-
-void SwiperHelper::SaveDigitIndicatorIgnoreSize(const SwiperPattern& swiper,
-    const std::shared_ptr<SwiperDigitalParameters>& digitalParams,
-    RefPtr<SwiperIndicatorLayoutProperty>& indicatorProps, bool isSidebarMiddle, bool isShowArrow)
-{
-    CHECK_NULL_VOID(digitalParams);
-    auto axis = swiper.GetDirection();
-    bool hasBottomValue = digitalParams->dimBottom.has_value() ? true : false;
-    bool ignoreSizeForHorizontal = (axis == Axis::HORIZONTAL) && (!hasBottomValue ||
-        (hasBottomValue && digitalParams->dimBottom == 0.0_vp));
-    bool ignoreSizeForVertical = (axis == Axis::VERTICAL) && hasBottomValue &&
-        (digitalParams->dimBottom == 0.0_vp) && (!isShowArrow || (isShowArrow && isSidebarMiddle));
-    if (digitalParams->ignoreSizeValue.has_value() && (ignoreSizeForHorizontal || ignoreSizeForVertical)) {
-        indicatorProps->UpdateIgnoreSize(digitalParams->ignoreSizeValue.value());
-    } else {
-        indicatorProps->UpdateIgnoreSize(false);
-    }
 }
 
 void SwiperHelper::SaveDigitIndicatorProperty(const RefPtr<FrameNode>& indicatorNode, SwiperPattern& swiper)
@@ -146,9 +123,6 @@ void SwiperHelper::SaveDigitIndicatorProperty(const RefPtr<FrameNode>& indicator
         digitalParams->selectedFontWeight.value_or(theme->GetDigitalIndicatorTextStyle().GetFontWeight()));
     auto props = swiper.GetLayoutProperty<SwiperLayoutProperty>();
     CHECK_NULL_VOID(props);
-    auto isSidebarMiddle = props->GetIsSidebarMiddleValue(false);
-    auto isShowArrow = props->GetDisplayArrowValue(false);
-    SaveDigitIndicatorIgnoreSize(swiper, digitalParams, indicatorProps, isSidebarMiddle, isShowArrow);
     props->UpdateLeft(digitalParams->dimLeft.value_or(0.0_vp));
     props->UpdateTop(digitalParams->dimTop.value_or(0.0_vp));
     props->UpdateRight(digitalParams->dimRight.value_or(0.0_vp));
@@ -175,14 +149,6 @@ void SwiperHelper::SaveDotIndicatorProperty(const RefPtr<FrameNode>& indicatorNo
     }
     if (params->dimBottom.has_value()) {
         indicatorProps->UpdateBottom(params->dimBottom.value());
-    }
-    if (params->dimSpace.has_value()) {
-        indicatorProps->UpdateSpace(params->dimSpace.value());
-    }
-    if (params->ignoreSizeValue.has_value()) {
-        indicatorProps->UpdateIgnoreSize(params->ignoreSizeValue.value());
-    } else {
-        indicatorProps->UpdateIgnoreSize(false);
     }
     const bool isRtl = swiper.GetNonAutoLayoutDirection() == TextDirection::RTL;
     if (params->dimStart.has_value()) {
@@ -275,10 +241,6 @@ void DumpIndicatorType(const std::optional<SwiperIndicatorType>& type)
                 DumpLog::GetInstance().AddDesc("SwiperIndicatorType:DIGIT");
                 break;
             }
-            case SwiperIndicatorType::ARC_DOT: {
-                DumpLog::GetInstance().AddDesc("SwiperIndicatorType:ARC_DOT");
-                break;
-            }
             default: {
                 break;
             }
@@ -318,10 +280,6 @@ void SwiperHelper::DumpAdvanceInfo(SwiperPattern& swiper)
     }
     DumpPanDirection(swiper.panDirection_);
     DumpDirection(swiper.direction_);
-    swiper.IsDisableSwipe() ? DumpLog::GetInstance().AddDesc("disableSwipe:true")
-                            : DumpLog::GetInstance().AddDesc("disableSwipe:false");
-    swiper.GetNonAutoLayoutDirection() == TextDirection::RTL ? DumpLog::GetInstance().AddDesc("TextDirection::RTL")
-                                                             : DumpLog::GetInstance().AddDesc("TextDirection::LTR");
 }
 
 void SwiperHelper::DumpInfoAddPositionDesc(SwiperPattern& swiper)
@@ -337,6 +295,9 @@ void SwiperHelper::DumpInfoAddPositionDesc(SwiperPattern& swiper)
     swiper.targetIndex_.has_value()
         ? DumpLog::GetInstance().AddDesc("targetIndex:" + std::to_string(swiper.targetIndex_.value()))
         : DumpLog::GetInstance().AddDesc("targetIndex:null");
+    swiper.preTargetIndex_.has_value()
+        ? DumpLog::GetInstance().AddDesc("preTargetIndex:" + std::to_string(swiper.preTargetIndex_.value()))
+        : DumpLog::GetInstance().AddDesc("preTargetIndex:null");
     swiper.pauseTargetIndex_.has_value()
         ? DumpLog::GetInstance().AddDesc("pauseTargetIndex:" + std::to_string(swiper.pauseTargetIndex_.value()))
         : DumpLog::GetInstance().AddDesc("pauseTargetIndex:null");
@@ -401,7 +362,7 @@ void SwiperHelper::DumpInfoAddAnimationDesc(SwiperPattern& swiper)
                               : DumpLog::GetInstance().AddDesc("isFinishAnimation:false");
     swiper.mainSizeIsMeasured_ ? DumpLog::GetInstance().AddDesc("mainSizeIsMeasured:true")
                                : DumpLog::GetInstance().AddDesc("mainSizeIsMeasured:false");
-    swiper.propertyAnimationIsRunning_ ? DumpLog::GetInstance().AddDesc("usePropertyAnimation:true")
+    swiper.usePropertyAnimation_ ? DumpLog::GetInstance().AddDesc("usePropertyAnimation:true")
                                  : DumpLog::GetInstance().AddDesc("usePropertyAnimation:false");
     swiper.isUserFinish_ ? DumpLog::GetInstance().AddDesc("isUserFinish:true")
                          : DumpLog::GetInstance().AddDesc("isUserFinish:false");
@@ -430,14 +391,13 @@ std::string SwiperHelper::GetDotIndicatorStyle(const std::shared_ptr<SwiperParam
 {
     CHECK_NULL_RETURN(params, "");
     auto jsonValue = JsonUtil::Create(true);
-    CHECK_NULL_RETURN(jsonValue, "");
     jsonValue->Put("left", params->dimLeft.value_or(0.0_vp).ToString().c_str());
     jsonValue->Put("top", params->dimTop.value_or(0.0_vp).ToString().c_str());
     jsonValue->Put("right", params->dimRight.value_or(0.0_vp).ToString().c_str());
     jsonValue->Put("bottom", params->dimBottom.value_or(0.0_vp).ToString().c_str());
     jsonValue->Put("itemWidth", params->itemWidth.value_or(6.0_vp).ToString().c_str());
     jsonValue->Put("itemHeight", params->itemHeight.value_or(6.0_vp).ToString().c_str());
-    jsonValue->Put("selectedItemWidth", params->selectedItemWidth.value_or(12.0_vp).ToString().c_str());
+    jsonValue->Put("selectedItemWidth", params->selectedItemWidth.value_or(6.0_vp).ToString().c_str());
     jsonValue->Put("selectedItemHeight", params->selectedItemHeight.value_or(6.0_vp).ToString().c_str());
     jsonValue->Put(
         "selectedColor", params->selectedColorVal.value_or(Color::FromString("#ff007dff")).ColorToString().c_str());
@@ -445,8 +405,6 @@ std::string SwiperHelper::GetDotIndicatorStyle(const std::shared_ptr<SwiperParam
     jsonValue->Put("mask", params->maskValue.value_or(false) ? "true" : "false");
     jsonValue->Put(
         "maxDisplayCount", (params->maxDisplayCountVal.has_value()) ? params->maxDisplayCountVal.value() : 0);
-    jsonValue->Put("space", params->dimSpace.value_or(8.0_vp).ToString().c_str());
-    jsonValue->Put("ignoreSize", params->ignoreSizeValue.value_or(false) ? "true" : "false");
     return jsonValue->ToString();
 }
 
@@ -454,7 +412,6 @@ std::string SwiperHelper::GetDigitIndicatorStyle(const std::shared_ptr<SwiperDig
 {
     CHECK_NULL_RETURN(params, "");
     auto jsonValue = JsonUtil::Create(true);
-    CHECK_NULL_RETURN(jsonValue, "");
     auto pipeline = PipelineBase::GetCurrentContext();
     CHECK_NULL_RETURN(pipeline, "");
     auto theme = pipeline->GetTheme<SwiperIndicatorTheme>();
@@ -477,21 +434,6 @@ std::string SwiperHelper::GetDigitIndicatorStyle(const std::shared_ptr<SwiperDig
                                  .c_str());
     jsonValue->Put("selectedFontWeight",
         V2::ConvertWrapFontWeightToStirng(params->selectedFontWeight.value_or(FontWeight::NORMAL)).c_str());
-    jsonValue->Put("ignoreSize", params->ignoreSizeValue.value_or(false) ? "true" : "false");
     return jsonValue->ToString();
-}
-
-float SwiperHelper::CalculateFriction(float gamma)
-{
-    if (LessOrEqual(gamma, 0.0f)) {
-        return 1.0f;
-    }
-    if (GreatOrEqual(gamma, 1.0f)) {
-        gamma = 1.0f;
-    }
-    constexpr float scrollRatio = 0.72f;
-    const float coefficient = ACE_E / (1.0f -  ACE_E);
-    auto fx = (gamma + coefficient) * (log(ACE_E - (ACE_E - 1.0f) * gamma) - 1.0f);
-    return scrollRatio * fx / gamma;
 }
 } // namespace OHOS::Ace::NG

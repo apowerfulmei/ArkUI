@@ -20,20 +20,19 @@ namespace {
 constexpr int32_t PUBLISHER_UID = 7800;
 const std::string TOUCH_EVENTS_PASS_THROUGH = "touch.events.pass.through";
 const std::string GAME_INFO_TO_GAME_RESAMPLE = "touch.events.game.resample";
-const std::string TOUCH_EVENTS_UEGAME_START = "touch.events.uegame.start";
+const std::string TOUCH_EVENTS_UGAME_START = "touch.events.uegame.start";
 } // namespace
 
 void EventPassThroughSubscribeProxy::SubscribeEvent(int32_t instanceId)
 {
     TAG_LOGI(AceLogTag::ACE_INPUTKEYFLOW, "Subscribe touch.events.pass.through Event");
-    std::lock_guard<std::mutex> lock(mutex_);
     if (eventPassThroughReceiver_ == nullptr) {
         // create subscribe info
         MatchingSkills matchingSkills;
         // add common events
         matchingSkills.AddEvent(TOUCH_EVENTS_PASS_THROUGH);
         matchingSkills.AddEvent(GAME_INFO_TO_GAME_RESAMPLE);
-        matchingSkills.AddEvent(TOUCH_EVENTS_UEGAME_START);
+        matchingSkills.AddEvent(TOUCH_EVENTS_UGAME_START);
         CommonEventSubscribeInfo subscribeInfo(matchingSkills);
         subscribeInfo.SetPublisherUid(PUBLISHER_UID);
         subscribeInfo.SetThreadMode(EventFwk::CommonEventSubscribeInfo::ThreadMode::HANDLER);
@@ -52,7 +51,6 @@ void EventPassThroughSubscribeProxy::SubscribeEvent(int32_t instanceId)
 
 void EventPassThroughSubscribeProxy::UnSubscribeEvent()
 {
-    std::lock_guard<std::mutex> lock(mutex_);
     if (eventReceiver_ != nullptr) {
         CommonEventManager::UnSubscribeCommonEvent(eventReceiver_);
         eventReceiver_ = nullptr;
@@ -62,7 +60,6 @@ void EventPassThroughSubscribeProxy::UnSubscribeEvent()
 
 void EventPassThroughSubscribeProxy::UnSubscribeEvent(int32_t instanceId)
 {
-    std::lock_guard<std::mutex> lock(mutex_);
     if (eventReceiver_ != nullptr) {
         if (eventPassThroughReceiver_->EraseContainerAddCheckUnSubscribe(instanceId)) {
             CommonEventManager::UnSubscribeCommonEvent(eventReceiver_);
@@ -82,17 +79,14 @@ void EventPassThroughSubscriber::OnReceiveEvent(const CommonEventData& data)
         return;
     }
     bool needPassThrough = false;
-    {
-        std::lock_guard<std::mutex> lock(instanceMapMutex_);
-        for (const auto& instanceId : instanceMap_) {
-            auto container = Platform::AceContainer::GetContainer(instanceId);
-            if (!container) {
-                continue;
-            }
-            if (container->GetBundleName() == bundleName) {
-                needPassThrough = true;
-                break;
-            }
+    for (const auto& instanceId : instanceMap_) {
+        auto container = Platform::AceContainer::GetContainer(instanceId);
+        if (!container) {
+            continue;
+        }
+        if (container->GetBundleName() == bundleName) {
+            needPassThrough = true;
+            break;
         }
     }
     if (!needPassThrough) {
@@ -100,7 +94,7 @@ void EventPassThroughSubscriber::OnReceiveEvent(const CommonEventData& data)
         return;
     }
 
-    if (action == TOUCH_EVENTS_UEGAME_START) {
+    if (action == TOUCH_EVENTS_UGAME_START) {
         TAG_LOGI(AceLogTag::ACE_INPUTKEYFLOW, "OnReceiveEvent %{public}s", action.c_str());
         AceApplicationInfo::GetInstance().SetTouchPadIdChanged(true);
         return;
@@ -112,43 +106,38 @@ void EventPassThroughSubscriber::OnReceiveEvent(const CommonEventData& data)
     TouchPassMode mode =
         (action == TOUCH_EVENTS_PASS_THROUGH) ? TouchPassMode::PASS_THROUGH : TouchPassMode::ACCELERATE;
     AceApplicationInfo::GetInstance().SetTouchEventPassMode(mode);
-    {
-        std::lock_guard<std::mutex> lock(instanceMapMutex_);
-        for (const auto& instanceId : instanceMap_) {
-            auto container = Platform::AceContainer::GetContainer(instanceId);
-            if (!container) {
-                continue;
-            }
-            auto taskExecutor = container->GetTaskExecutor();
-            CHECK_NULL_VOID(taskExecutor);
-            taskExecutor->PostTask(
-                [mode, instanceId]() {
-                    auto container = Platform::AceContainer::GetContainer(instanceId);
-                    CHECK_NULL_VOID(container);
-                    auto pipeline = container->GetPipelineContext();
-                    CHECK_NULL_VOID(pipeline);
-                    if (mode == TouchPassMode::PASS_THROUGH) {
-                        pipeline->SetTouchPassThrough(true);
-                        pipeline->SetTouchAccelarate(false);
-                    } else {
-                        pipeline->SetTouchAccelarate(true);
-                        pipeline->SetTouchPassThrough(false);
-                    }
-                },
-                TaskExecutor::TaskType::UI, "ArkUIReceiveEventsPassThroughAsync");
+    for (const auto& instanceId : instanceMap_) {
+        auto container = Platform::AceContainer::GetContainer(instanceId);
+        if (!container) {
+            continue;
         }
+        auto taskExecutor = container->GetTaskExecutor();
+        CHECK_NULL_VOID(taskExecutor);
+        taskExecutor->PostTask(
+            [mode, instanceId]() {
+                auto container = Platform::AceContainer::GetContainer(instanceId);
+                CHECK_NULL_VOID(container);
+                auto pipeline = container->GetPipelineContext();
+                CHECK_NULL_VOID(pipeline);
+                if (mode == TouchPassMode::PASS_THROUGH) {
+                    pipeline->SetTouchPassThrough(true);
+                    pipeline->SetTouchAccelarate(false);
+                } else {
+                    pipeline->SetTouchAccelarate(true);
+                    pipeline->SetTouchPassThrough(false);
+                }
+            },
+            TaskExecutor::TaskType::UI, "ArkUIReceiveEventsPassThroughAsync");
     }
 }
 
 void EventPassThroughSubscriber::AddInstanceId(int32_t instanceId)
 {
-    std::lock_guard<std::mutex> lock(instanceMapMutex_);
     instanceMap_.emplace(instanceId);
 }
 
 bool EventPassThroughSubscriber::EraseContainerAddCheckUnSubscribe(int32_t instanceId)
 {
-    std::lock_guard<std::mutex> lock(instanceMapMutex_);
     instanceMap_.erase(instanceId);
     return instanceMap_.empty();
 }

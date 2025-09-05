@@ -15,6 +15,8 @@
 
 #include "core/components/web/rosen_render_web.h"
 
+#include "render_service_client/core/ui/rs_surface_node.h"
+
 #include "base/log/log.h"
 #include "core/pipeline/base/rosen_render_context.h"
 

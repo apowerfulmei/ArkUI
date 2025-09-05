@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2022-2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -17,8 +17,8 @@
 #define FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_PATTERN_LOADING_PROGRESS_LOADING_PROGRESS_MODEL_NG_H
 
 #include "core/components_ng/base/common_configuration.h"
-#include "core/components_ng/base/frame_node.h"
 #include "core/components_ng/base/view_abstract.h"
+#include "core/components_ng/base/frame_node.h"
 #include "core/components_ng/pattern/loading_progress/loading_progress_model.h"
 
 namespace OHOS::Ace::NG {
@@ -31,31 +31,19 @@ public:
 };
 using LoadingProgressMakeCallback =
     std::function<RefPtr<FrameNode>(const LoadingProgressConfiguration& loadingProgressConfiguration)>;
-class ACE_EXPORT LoadingProgressModelNG : public OHOS::Ace::LoadingProgressModel {
+class  ACE_EXPORT LoadingProgressModelNG : public OHOS::Ace::LoadingProgressModel {
 public:
     void Create() override;
     void SetColor(const Color& value) override;
-    void SetColorByUser(bool isSetByUser) override;
     void SetEnableLoading(bool enable) override;
-    void ResetColor() override;
-    void SetForegroundColorParseFailed(bool isParseFailed) override;
-    void CreateWithResourceObj(
-        LoadingProgressResourceType LoadingProgressResourceType, const RefPtr<ResourceObject>& resObj) override;
-
+    
     static RefPtr<FrameNode> CreateFrameNode(int32_t nodeId);
     static uint32_t GetColor(FrameNode* frameNode);
     static void SetColor(FrameNode* frameNode, const Color& value);
-    static void SetColorByUser(FrameNode* frameNode, bool isSetByUser);
     static bool GetEnableLoading(FrameNode* frameNode);
     static void SetEnableLoading(FrameNode* frameNode, bool enable);
     static void SetForegroundColor(FrameNode* frameNode, const Color& value);
     static void SetBuilderFunc(FrameNode* frameNode, NG::LoadingProgressMakeCallback&& jsMake);
-    static void ResetColor(FrameNode* frameNode);
-    static void ResetForegroundColor(FrameNode* frameNode);
-    static void SetForegroundColorParseFailed(FrameNode* frameNode, bool isParseFailed);
-    static void SetColorParseFailed(FrameNode* frameNode, bool isParseFailed);
-    static void CreateWithResourceObj(FrameNode* frameNode, LoadingProgressResourceType LoadingProgressResourceType,
-        const RefPtr<ResourceObject>& resObj);
 };
 
 } // namespace OHOS::Ace::NG

@@ -29,7 +29,7 @@ namespace OHOS::Ace::NG {
 using ChangeEvent = std::function<void(const bool)>;
 
 class ToggleButtonEventHub : public ButtonEventHub {
-    DECLARE_ACE_TYPE(ToggleButtonEventHub, ButtonEventHub);
+    DECLARE_ACE_TYPE(ToggleButtonEventHub, ButtonEventHub)
 
 public:
     ToggleButtonEventHub() = default;
@@ -53,10 +53,7 @@ public:
             auto host = GetFrameNode();
             if (host) {
                 auto id = host->GetInspectorIdValue("");
-                builder.SetId(id)
-                    .SetType(host->GetHostTag())
-                    .SetDescription(host->GetAutoEventParamValue(""))
-                    .SetHost(host);
+                builder.SetId(id).SetType(host->GetHostTag()).SetDescription(host->GetAutoEventParamValue(""));
                 if (!id.empty()) {
                     Recorder::NodeDataCache::Get().PutBool(host, id, select);
                 }

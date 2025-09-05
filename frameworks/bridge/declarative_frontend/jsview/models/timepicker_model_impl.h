@@ -25,11 +25,8 @@ public:
     ~TimePickerModelImpl() override = default;
 
     void CreateTimePicker(RefPtr<PickerTheme> pickerTheme, bool hasSecond = false) override;
-    void SetStartTime(const PickerTime& value) override {};
-    void SetEndTime(const PickerTime& value) override {};
     void SetSelectedTime(const PickerTime& value) override;
     void SetOnChange(ChangeEvent&& onChange) override;
-    void SetOnEnterSelectedArea(ChangeEvent&& onEnterSelectedArea) override;
     void SetHour24(bool isUseMilitaryTime) override;
     void SetWheelModeEnabled(bool wheelModeEnabled) override {};
     void SetDisappearTextStyle(const RefPtr<PickerTheme>& theme, const NG::PickerTextStyle& value) override {};
@@ -41,9 +38,6 @@ public:
     void SetBackgroundColor(const Color& color) override;
     void SetChangeEvent(ChangeEvent&& onChange) override {};
     void HasUserDefinedOpacity() override {};
-    void SetEnableCascade(bool isEnableCascade) override;
-    void SetDigitalCrownSensitivity(int32_t value) override {};
-    void UpdateUserSetSelectColor() override {};
 };
 
 class TimePickerDialogModelImpl : public TimePickerDialogModel {
@@ -53,8 +47,7 @@ public:
 
     void SetTimePickerDialogShow(PickerDialogInfo& pickerDialog, NG::TimePickerSettingData& settingData,
         std::function<void()>&& onCancel, std::function<void(const std::string&)>&& onAccept,
-        std::function<void(const std::string&)>&& onChange,
-        std::function<void(const std::string&)>&& onEnterSelectedArea, TimePickerDialogEvent& timePickerDialogEvent,
+        std::function<void(const std::string&)>&& onChange, TimePickerDialogEvent& timePickerDialogEvent,
         const std::vector<ButtonInfo>& buttonInfos) override;
 };
 } // namespace OHOS::Ace::Framework

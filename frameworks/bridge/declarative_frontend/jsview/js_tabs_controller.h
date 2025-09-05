@@ -49,21 +49,12 @@ public:
 
     void SetTabsController(const RefPtr<NG::TabsControllerNG>& tabsController)
     {
-        auto oldTabsController = tabsControllerWeak_.Upgrade();
-        if (oldTabsController) {
-            // old controller bind another tabs.
-            oldTabsController->StartShowTabBar();
-            oldTabsController->SetOnChangeImpl(nullptr);
-        }
-        if (tabsController) {
-            tabsController->SetOnChangeImpl(onChangeImpl_);
-        }
-        tabsControllerWeak_ = tabsController;
+        tabsController_ = tabsController;
     }
 
-    const WeakPtr<NG::TabsControllerNG>& GetTabsController() const
+    const RefPtr<NG::TabsControllerNG>& GetTabsController() const
     {
-        return tabsControllerWeak_;
+        return tabsController_;
     }
 
     void SetInstanceId(int32_t id)
@@ -71,20 +62,10 @@ public:
         instanceId_ = id;
     }
 
-    void SetOnChangeImpl(const OnChangeFunc& onChangeImpl)
-    {
-        onChangeImpl_ = onChangeImpl;
-        auto tabsController = tabsControllerWeak_.Upgrade();
-        if (tabsController) {
-            tabsController->SetOnChangeImpl(onChangeImpl);
-        }
-    }
-
 private:
     int32_t instanceId_ = INSTANCE_ID_UNDEFINED;
     RefPtr<TabController> controller_;
-    WeakPtr<NG::TabsControllerNG> tabsControllerWeak_; // used by ng structure
-    OnChangeFunc onChangeImpl_;
+    RefPtr<NG::TabsControllerNG> tabsController_; // used by ng structure
 
     ACE_DISALLOW_COPY_AND_MOVE(JSTabsController);
 };

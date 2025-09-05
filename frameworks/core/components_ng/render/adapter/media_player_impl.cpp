@@ -70,19 +70,15 @@ void MediaPlayerImpl::InitListener()
 
     auto uiTaskExecutor = SingleTaskExecutor::Make(context->GetTaskExecutor(), TaskExecutor::TaskType::UI);
 
-    auto onPrepared = [uiTaskExecutor, weak = WeakClaim(this)]([[maybe_unused]] uint32_t width,
-                          [[maybe_unused]] uint32_t height, [[maybe_unused]] bool isPlaying,
-                          [[maybe_unused]] uint32_t duration, [[maybe_unused]] uint32_t currentPos,
-                          [[maybe_unused]] bool needFireEvent) {
-        uiTaskExecutor.PostSyncTask(
-            [weak] {
+    auto onPrepared = [uiTaskExecutor, weak = WeakClaim(this)](uint32_t width, uint32_t height, bool isPlaying,
+                          uint32_t duration, uint32_t currentPos, bool needFireEvent) {
+        uiTaskExecutor.PostSyncTask([weak, width, height, isPlaying, duration, currentPos, needFireEvent] {
                 auto player = weak.Upgrade();
                 CHECK_NULL_VOID(player);
                 if (player->stateChangeCallback_) {
                     player->stateChangeCallback_(PlaybackStatus::PREPARED);
                 }
-            },
-            "ArkUIVideoPlayerPrepared");
+            }, "ArkUIVideoPlayerPrepared");
     };
 
     auto onPlayerStatus = [weak = WeakClaim(this), uiTaskExecutor](bool isPlaying) {
@@ -120,21 +116,10 @@ void MediaPlayerImpl::InitListener()
             }, "ArkUIVideoPlayerCompletion");
     };
 
-    auto onSeekDone = [weak = WeakClaim(this), uiTaskExecutor](uint32_t currentPos) {
-        uiTaskExecutor.PostSyncTask([weak, currentPos] {
-                auto player = weak.Upgrade();
-                CHECK_NULL_VOID(player);
-                if (player->seekDoneCallback_) {
-                    player->seekDoneCallback_(currentPos);
-                }
-            }, "ArkUIVideoPlayerSeekDone");
-    };
-
     player_->AddPreparedListener(onPrepared);
     player_->AddPlayStatusListener(onPlayerStatus);
     player_->AddCurrentPosListener(onCurrentTimeChange);
     player_->AddCompletionListener(onCompletion);
-    player_->AddSeekDoneListener(onSeekDone);
 }
 
 void MediaPlayerImpl::ResetMediaPlayer() {}
@@ -184,11 +169,6 @@ void MediaPlayerImpl::RegisterMediaPlayerEvent(PositionUpdatedEvent&& positionUp
     errorCallback_ = errorEvent;
     resolutionChangeCallback_ = resolutionChangeEvent;
     startRenderFrameCallback_ = startRenderFrameEvent;
-}
-
-void MediaPlayerImpl::RegisterMediaPlayerSeekDoneEvent(SeekDoneEvent&& seekDoneEvent)
-{
-    seekDoneCallback_ = seekDoneEvent;
 }
 
 void MediaPlayerImpl::RegisterTextureEvent(TextureRefreshEnVent&& textureRefreshEvent)
@@ -266,7 +246,7 @@ bool MediaPlayerImpl::IsPlaying()
 int32_t MediaPlayerImpl::Play()
 {
     CHECK_NULL_RETURN(player_, -1);
-    TAG_LOGI(AceLogTag::ACE_VIDEO, "Media player start to play.");
+    LOGI("Media player start to play.");
     player_->Start();
     return 0;
 }
@@ -274,7 +254,7 @@ int32_t MediaPlayerImpl::Play()
 int32_t MediaPlayerImpl::Pause()
 {
     CHECK_NULL_RETURN(player_, -1);
-    TAG_LOGI(AceLogTag::ACE_VIDEO, "Media player start to pause.");
+    LOGI("Media player start to pause.");
     player_->Pause();
     return 0;
 }
@@ -282,7 +262,7 @@ int32_t MediaPlayerImpl::Pause()
 int32_t MediaPlayerImpl::Stop()
 {
     CHECK_NULL_RETURN(player_, -1);
-    TAG_LOGI(AceLogTag::ACE_VIDEO, "Media player start to stop.");
+    LOGI("Media player start to stop.");
     player_->Stop();
     return 0;
 }
@@ -290,7 +270,7 @@ int32_t MediaPlayerImpl::Stop()
 int32_t MediaPlayerImpl::Seek(int32_t mSeconds, OHOS::Ace::SeekMode mode)
 {
     CHECK_NULL_RETURN(player_, -1);
-    TAG_LOGI(AceLogTag::ACE_VIDEO, "Media player start to seek.");
+    LOGI("Media player start to seek.");
     player_->SeekTo(mSeconds, static_cast<uint32_t>(mode));
     return 0;
 }
@@ -298,20 +278,20 @@ int32_t MediaPlayerImpl::Seek(int32_t mSeconds, OHOS::Ace::SeekMode mode)
 int32_t MediaPlayerImpl::FullScreenChange(bool isFullScreen)
 {
     CHECK_NULL_RETURN(player_, -1);
-    TAG_LOGI(AceLogTag::ACE_VIDEO, "Media player change fullscreen");
+    LOGI("Media player change fullscreen");
     player_->SetFullScreenChange(isFullScreen);
     return 0;
 }
 
 void MediaPlayerImpl::ProcessSurfaceCreate()
 {
-    TAG_LOGI(AceLogTag::ACE_VIDEO, "Media player ProcessSurfaceCreate.");
+    LOGI("Media player ProcessSurfaceCreate.");
     SetSurface();
 }
 
 void MediaPlayerImpl::ProcessSurfaceChange(int32_t width, int32_t height)
 {
-    TAG_LOGI(AceLogTag::ACE_VIDEO, "Media player ProcessSurfaceChange (%{public}d, %{public}d)", width, height);
+    LOGI("Media player ProcessSurfaceChange (%{public}d, %{public}d)", width, height);
     if (resolutionChangeCallback_) {
         resolutionChangeCallback_();
     }

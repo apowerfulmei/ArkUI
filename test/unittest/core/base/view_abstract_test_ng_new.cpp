@@ -15,11 +15,6 @@
 
 #include "test/unittest/core/base/view_abstract_test_ng.h"
 
-#include "base/subwindow/subwindow_manager.h"
-#include "core/components_ng/event/focus_hub.h"
-#include "core/event/key_event.h"
-#include "test/mock/base/mock_system_properties.h"
-
 using namespace testing;
 using namespace testing::ext;
 
@@ -638,57 +633,6 @@ HWTEST_F(ViewAbstractTestNg, ViewAbstractTest042, TestSize.Level1)
 }
 
 /**
- * @tc.name: ViewAbstractBackground001
- * @tc.desc: Test the background of View_Abstract.
- * @tc.type: FUNC
- */
-HWTEST_F(ViewAbstractTestNg, ViewAbstractBackground001, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. Create a FrameNode.
-     */
-    const RefPtr<FrameNode> node = FrameNode::CreateFrameNode("main", 1, AceType::MakeRefPtr<Pattern>(), true);
-    auto instance = ViewStackProcessor::GetInstance();
-    instance->Push(node);
-    auto renderContext = node->GetRenderContext();
-    ASSERT_NE(renderContext, nullptr);
-    auto pattern = node->GetPattern<Pattern>();
-    ASSERT_TRUE(pattern);
-    pattern->resourceMgr_ = AceType::MakeRefPtr<PatternResourceManager>();
-    ASSERT_TRUE(pattern->resourceMgr_);
-    instance->ClearVisualState();
-    EXPECT_TRUE(instance->IsCurrentVisualStateProcess());
-    /**
-     * @tc.steps: step2. Set background options.
-     * @tc.expected: Options are set successfully.
-     */
-    Alignment align = Alignment::TOP_CENTER;
-    ViewAbstract::SetBackgroundAlign(node.GetRawPtr(), align);
-    auto backgroundAlign = renderContext->GetBackgroundAlign().value_or(Alignment::BOTTOM_CENTER);
-    EXPECT_EQ(backgroundAlign, align);
-
-    Color color = Color::RED;
-    ViewAbstract::SetBackgroundColor(node.GetRawPtr(), color);
-    EXPECT_EQ(renderContext->GetBackgroundColor().value_or(Color::TRANSPARENT), color);
-
-    auto resourceObject = AceType::MakeRefPtr<ResourceObject>();
-    ViewAbstract::SetCustomBackgroundColorWithResourceObj(node.GetRawPtr(), BLUE, resourceObject);
-    EXPECT_TRUE(pattern->resourceMgr_->resMap_.find("customBackgroundColor") != pattern->resourceMgr_->resMap_.end());
-
-    LayoutSafeAreaEdge edge = LAYOUT_SAFE_AREA_EDGE_START;
-    ViewAbstract::SetBackgroundIgnoresLayoutSafeAreaEdges(node.GetRawPtr(), edge);
-    ASSERT_NE(node->GetLayoutProperty(), nullptr);
-    EXPECT_EQ(node->GetLayoutProperty()->GetBackgroundIgnoresLayoutSafeAreaEdges(), edge);
-
-    ViewAbstract::SetIsTransitionBackground(node.GetRawPtr(), true);
-    EXPECT_TRUE(renderContext->GetIsTransitionBackground().value_or(false));
-
-    ViewAbstract::SetIsBuilderBackground(node.GetRawPtr(), true);
-    EXPECT_TRUE(renderContext->GetBuilderBackgroundFlag().value_or(false));
-}
-
-
-/**
  * @tc.name: ViewAbstractOffsetEdges001
  * @tc.desc: test offset attribute, use Edges type.
  * @tc.type: FUNC
@@ -897,51 +841,8 @@ HWTEST_F(ViewAbstractTestNg, ViewAbstractDisableMouseTest, TestSize.Level1)
      */
     OnMouseEventFunc onMouseEventFunc2;
     ViewAbstract::SetOnMouse(std::move(onMouseEventFunc2));
-    ViewAbstract::SetFrameNodeCommonOnMouse(AceType::RawPtr(FRAME_NODE_REGISTER), std::move(onMouseEventFunc2));
+    ViewAbstract::SetJSFrameNodeOnMouse(AceType::RawPtr(FRAME_NODE_REGISTER), std::move(onMouseEventFunc2));
     ViewAbstract::ClearJSFrameNodeOnMouse(AceType::RawPtr(FRAME_NODE_REGISTER));
-    EXPECT_NE(callback, nullptr);
-    ViewStackProcessor::GetInstance()->instance = nullptr;
-}
-
-/**
- * @tc.name: ViewAbstractDisableAxis
- * @tc.desc: Test the operation of View_Abstract.
- * @tc.type: FUNC
- */
-HWTEST_F(ViewAbstractTestNg, ViewAbstractDisableAxisTest, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. create framenode and check callback;
-     * @tc.expected: callback is not null.
-     */
-    ViewStackProcessor::GetInstance()->Push(FRAME_NODE_ROOT);
-    ViewStackProcessor::GetInstance()->Push(FRAME_NODE_CHILD);
-    OnAxisEventFunc onAxisEventFunc;
-    ViewAbstract::SetOnAxisEvent(std::move(onAxisEventFunc));
-
-    auto topFrameNodeOne = ViewStackProcessor::GetInstance()->GetMainElementNode();
-    EXPECT_EQ(strcmp(topFrameNodeOne->GetTag().c_str(), TAG_CHILD), 0);
-    auto frameNode = AceType::DynamicCast<FrameNode>(topFrameNodeOne);
-    ASSERT_NE(frameNode, nullptr);
-    auto node = AceType::DynamicCast<NG::FrameNode>(frameNode);
-    ASSERT_NE(node, nullptr);
-    auto eventHub = node->GetOrCreateInputEventHub();
-    auto& callback = eventHub->axisEventActuator_->userCallback_;
-    EXPECT_NE(callback, nullptr);
-
-    /**
-     * @tc.steps: step2. Disable callback.
-     * @tc.expected: callback is null.
-     */
-    ViewAbstract::DisableOnAxisEvent();
-    EXPECT_EQ(callback, nullptr);
-
-    /**
-     * @tc.steps: step3. Add callback again.
-     * @tc.expected: callback is not null.
-     */
-    OnAxisEventFunc onAxisEventFunc2;
-    ViewAbstract::SetOnAxisEvent(std::move(onAxisEventFunc2));
     EXPECT_NE(callback, nullptr);
     ViewStackProcessor::GetInstance()->instance = nullptr;
 }
@@ -1272,9 +1173,6 @@ HWTEST_F(ViewAbstractTestNg, ViewAbstractMenuTransition001, TestSize.Level1)
     viewAbstractModelNG.BindMenu(std::move(params), std::move(buildFunc), menuParam);
     auto targetId = targetNode->GetId();
 
-    auto menu =
-        FrameNode::CreateFrameNode("targetNode", targetId, AceType::MakeRefPtr<MenuWrapperPattern>(targetId), false);
-    overlayManager->menuMap_[targetId] = menu;
     auto menuNode = overlayManager->GetMenuNode(targetId);
     ASSERT_NE(menuNode, nullptr);
     auto wrapperPattern = menuNode->GetPattern<MenuWrapperPattern>();
@@ -1331,15 +1229,12 @@ HWTEST_F(ViewAbstractTestNg, ViewAbstractMenuTransition002, TestSize.Level1)
     viewAbstractModelNG.BindMenu(std::move(params), std::move(buildFunc), menuParam);
     auto targetId = targetNode->GetId();
 
-    auto menu =
-        FrameNode::CreateFrameNode("targetNode", targetId, AceType::MakeRefPtr<MenuWrapperPattern>(targetId), false);
-    overlayManager->menuMap_[targetId] = menu;
     auto menuNode = overlayManager->GetMenuNode(targetId);
     ASSERT_NE(menuNode, nullptr);
     auto wrapperPattern = menuNode->GetPattern<MenuWrapperPattern>();
     ASSERT_NE(wrapperPattern, nullptr);
-    EXPECT_EQ(wrapperPattern->HasTransitionEffect(), false);
-    EXPECT_EQ(wrapperPattern->HasPreviewTransitionEffect(), false);
+    EXPECT_EQ(wrapperPattern->HasTransitionEffect(), true);
+    EXPECT_EQ(wrapperPattern->HasPreviewTransitionEffect(), true);
 }
 
 /**
@@ -1384,14 +1279,11 @@ HWTEST_F(ViewAbstractTestNg, ViewAbstractMenuBorderRadius001, TestSize.Level1)
     viewAbstractModelNG.BindMenu(std::move(params), std::move(buildFunc), menuParam);
     auto targetId = targetNode->GetId();
 
-    auto menu =
-        FrameNode::CreateFrameNode("targetNode", targetId, AceType::MakeRefPtr<MenuWrapperPattern>(targetId), false);
-    overlayManager->menuMap_[targetId] = menu;
     auto menuNode = overlayManager->GetMenuNode(targetId);
     ASSERT_NE(menuNode, nullptr);
     auto wrapperPattern = menuNode->GetPattern<MenuWrapperPattern>();
     ASSERT_NE(wrapperPattern, nullptr);
-    EXPECT_EQ(wrapperPattern->GetHasCustomRadius(), false);
+    EXPECT_EQ(wrapperPattern->GetHasCustomRadius(), true);
 }
 
 /**
@@ -1493,40 +1385,6 @@ HWTEST_F(ViewAbstractTestNg, ViewAbstractDisableMouseByFrameNodeTest, TestSize.L
      * @tc.expected: callback is null.
      */
     ViewAbstract::DisableOnMouse(AceType::RawPtr(node));
-    EXPECT_EQ(callback, nullptr);
-}
-
-/**
- * @tc.name: ViewAbstractDisableAxisByFrameNodeTest
- * @tc.desc: Test the operation of View_Abstract.
- * @tc.type: FUNC
- */
-HWTEST_F(ViewAbstractTestNg, ViewAbstractDisableAxisByFrameNodeTest, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. create framenode and check callback;
-     * @tc.expected: callback is not null.
-     */
-    ViewStackProcessor::GetInstance()->Push(FRAME_NODE_ROOT);
-    ViewStackProcessor::GetInstance()->Push(FRAME_NODE_CHILD);
-
-    auto topFrameNodeOne = ViewStackProcessor::GetInstance()->GetMainElementNode();
-    EXPECT_EQ(strcmp(topFrameNodeOne->GetTag().c_str(), TAG_CHILD), 0);
-    auto frameNode = AceType::DynamicCast<FrameNode>(topFrameNodeOne);
-    ASSERT_NE(frameNode, nullptr);
-    auto node = AceType::DynamicCast<NG::FrameNode>(frameNode);
-    ASSERT_NE(node, nullptr);
-    OnAxisEventFunc onAxisEventFunc;
-    ViewAbstract::SetOnAxisEvent(AceType::RawPtr(node), std::move(onAxisEventFunc));
-    auto eventHub = node->GetOrCreateInputEventHub();
-    auto& callback = eventHub->axisEventActuator_->userCallback_;
-    EXPECT_NE(callback, nullptr);
-
-    /**
-     * @tc.steps: step2. Disable callback.
-     * @tc.expected: callback is null.
-     */
-    ViewAbstract::DisableOnAxisEvent(AceType::RawPtr(node));
     EXPECT_EQ(callback, nullptr);
 }
 
@@ -1908,420 +1766,5 @@ HWTEST_F(ViewAbstractTestNg, SetForegroundEffectTest, TestSize.Level1)
     ViewStackProcessor::GetInstance()->visualState_ = std::nullopt;
     ViewAbstract::SetForegroundEffect(1.1f);
     ASSERT_EQ(frameNode->GetRenderContext()->GetForegroundEffect(), 1.1f);
-}
-
-/**
- * @tc.name: ViewAbstractTest045
- * @tc.desc: Test SetNeedFocus of View_Abstract
- * @tc.type: FUNC
- */
-HWTEST_F(ViewAbstractTestNg, ViewAbstractTest045, TestSize.Level1)
-{
-    auto frameNode = AceType::MakeRefPtr<FrameNode>(V2::ROW_ETS_TAG, -1,
-        AceType::MakeRefPtr<Pattern>());
-    frameNode->GetOrCreateFocusHub();
-
-    RefPtr<EventHub> eventHub = AceType::MakeRefPtr<EventHub>();
-    eventHub->AttachHost(frameNode);
-    auto focusHub = AceType::MakeRefPtr<FocusHub>(AceType::WeakClaim(AceType::RawPtr(eventHub)));
-    focusHub->currentFocus_ = true;
-
-    /**
-    * @tc.steps: Set frameNode attached context null
-    * @tc.expected: do not set scop instanceId and excute lost focus to view root.
-    */
-    frameNode->DetachContext(true);
-    ViewAbstract::SetNeedFocus(AceType::RawPtr(frameNode), false);
-    EXPECT_EQ(ContainerScope::CurrentId(), -1);
-}
-
-/**
- * @tc.name: RemoveResObj
- * @tc.desc: Test RemoveResObj of View_Abstract
- * @tc.type: FUNC
- */
-HWTEST_F(ViewAbstractTestNg, ViewAbstractTest046, TestSize.Level1)
-{
-    auto frameNode = ViewStackProcessor::GetInstance()->GetMainFrameNode();
-    ASSERT_NE(frameNode, nullptr);
-    auto pattern = frameNode->GetPattern<Pattern>();
-    ASSERT_NE(pattern, nullptr);
-    g_isConfigChangePerform = true;
-    std::string key = "clipShape";
-    ViewAbstractModelNG::RemoveResObj(frameNode, key);
-    g_isConfigChangePerform = false;
-    ViewAbstractModelNG::RemoveResObj(frameNode, key);
-}
-
-/**
- * @tc.name: ViewAbstractDisableOnKeyEventDispatchTest
- * @tc.desc: Test the operation of View_Abstract.
- * @tc.type: FUNC
- */
-HWTEST_F(ViewAbstractTestNg, ViewAbstractDisableOnKeyEventDispatchTest, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. create framenode and check callback;
-     * @tc.expected: callback is not null.
-     */
-    ViewStackProcessor::GetInstance()->Push(FRAME_NODE_ROOT);
-    ViewStackProcessor::GetInstance()->Push(FRAME_NODE_CHILD);
-    OnKeyConsumeFunc onKeyCallback = [](KeyEventInfo& info) -> bool { return false; };
-    ViewAbstract::SetOnKeyEventDispatch(std::move(onKeyCallback));
-
-    auto topFrameNodeOne = ViewStackProcessor::GetInstance()->GetMainElementNode();
-    EXPECT_EQ(strcmp(topFrameNodeOne->GetTag().c_str(), TAG_CHILD), 0);
-    auto frameNode = AceType::DynamicCast<FrameNode>(topFrameNodeOne);
-    ASSERT_NE(frameNode, nullptr);
-    auto node = AceType::DynamicCast<NG::FrameNode>(frameNode);
-    ASSERT_NE(node, nullptr);
-    auto focusHub = node->GetOrCreateFocusHub();
-    auto& callback = focusHub->focusCallbackEvents_->onKeyEventDispatchCallback_;
-    EXPECT_TRUE(callback);
-
-    /**
-     * @tc.steps: step2. Disable callback.
-     * @tc.expected: callback is null.
-     */
-    ViewAbstract::DisableOnKeyEventDispatch();
-    EXPECT_FALSE(callback);
-
-    /**
-     * @tc.steps: step3. Add callback again.
-     * @tc.expected: callback is not null.
-     */
-    OnKeyConsumeFunc onKeyCallback2 = [](KeyEventInfo& info) -> bool { return false; };
-    ViewAbstract::SetOnKeyEventDispatch(std::move(onKeyCallback2));
-    EXPECT_TRUE(callback);
-    ViewStackProcessor::GetInstance()->instance = nullptr;
-}
-
-/**
- * @tc.name: DispatchKeyEvent001
- * @tc.desc: Test DispatchKeyEvent
- * @tc.type: FUNC
- */
-HWTEST_F(ViewAbstractTestNg, DispatchKeyEvent001, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. Create frameNode.
-     */
-    std::string tag = "uiNode1";
-    int32_t nodeId = 1;
-    FrameNode frameNode(tag, nodeId, AceType::MakeRefPtr<Pattern>());
-    int32_t repeatTime = 0;
-    int64_t timeStamp = 0;
-    int64_t deviceId = 0;
-
-    /**
-     * @tc.steps: step2. Create keyEvent.
-     */
-    KeyEvent keyEvent(KeyCode::KEY_UNKNOWN, KeyAction::UNKNOWN, repeatTime, timeStamp, deviceId, SourceType::KEYBOARD);
-    ViewAbstract::DispatchKeyEvent(&frameNode, keyEvent);
-    EXPECT_NE(&frameNode, nullptr);
-}
-
-#ifdef SUPPORT_DIGITAL_CROWN
-/**
- * @tc.name: ViewAbstract
- * @tc.desc: Test DisableOnCrownEvent001 of View_Abstract
- * @tc.type: FUNC
- */
-HWTEST_F(ViewAbstractTestNg, DisableOnCrownEvent001, TestSize.Level1)
-{
-    /**
-    * @tc.steps1: create and put frameNode
-    * @tc.expected: frameNode is't nullptr.
-    */
-    auto topFrameNodeOne = ViewStackProcessor::GetInstance()->GetMainElementNode();
-    auto frameNode = AceType::DynamicCast<FrameNode>(topFrameNodeOne);
-    ASSERT_NE(frameNode, nullptr);
-    auto node = AceType::DynamicCast<NG::FrameNode>(frameNode);
-    ASSERT_NE(node, nullptr);
-
-    /**
-     * @tc.steps2: Call the function SetOnCrownEvent and DisableOnCrownEvent
-     */
-    OnCrownCallbackFunc onCrownCallback = [](CrownEventInfo& info) {};
-    ViewAbstract::SetOnCrownEvent(AceType::RawPtr(node), std::move(onCrownCallback));
-    ViewAbstract::DisableOnCrownEvent(AceType::RawPtr(node));
-    EXPECT_NE(onCrownCallback, nullptr);
-}
-
-/**
- * @tc.name: ViewAbstract
- * @tc.desc: Test DisableOnCrownEvent002 of View_Abstract
- * @tc.type: FUNC
- */
-HWTEST_F(ViewAbstractTestNg, DisableOnCrownEvent002, TestSize.Level1)
-{
-    auto frameNode = AceType::MakeRefPtr<FrameNode>(V2::ROW_ETS_TAG, -1,
-        AceType::MakeRefPtr<Pattern>());
-    frameNode->GetOrCreateFocusHub();
-
-    auto eventHub = AceType::MakeRefPtr<EventHub>();
-    eventHub->AttachHost(frameNode);
-    auto focusHub = AceType::MakeRefPtr<FocusHub>(eventHub);
-    focusHub->currentFocus_ = true;
-
-    /**
-     * @tc.steps: Call the function SetOnCrownEvent and DisableOnCrownEvent
-     */
-    OnCrownCallbackFunc onCrownCallback = [](CrownEventInfo& info) {};
-    ViewAbstract::SetOnCrownEvent(std::move(onCrownCallback));
-    ViewAbstract::DisableOnCrownEvent();
-    EXPECT_EQ(ContainerScope::CurrentId(), -1);
-}
-
-/**
- * @tc.name: ViewAbstract
- * @tc.desc: Test DisableOnCrownEvent003 of View_Abstract
- * @tc.type: FUNC
- */
-HWTEST_F(ViewAbstractTestNg, DisableOnCrownEvent003, TestSize.Level1)
-{
-    /**
-     * @tc.steps: Call the function SetOnCrownEvent, node is nullptr
-     */
-    auto node = AceType::DynamicCast<NG::FrameNode>((AceType*)nullptr);
-    OnCrownCallbackFunc onCrownCallback = [](CrownEventInfo& info) {};
-
-    ViewAbstract::SetOnCrownEvent(node, std::move(onCrownCallback));
-    EXPECT_NE(onCrownCallback, nullptr);
-}
-#endif
-
-/**
- * @tc.name: CheckLocalizedMarginOrPadding001
- * @tc.desc: Test CheckLocalizedMarginOrPadding when start,top,bottom,left have values
- * @tc.type: FUNC
- */
-HWTEST_F(ViewAbstractTestNg, CheckLocalizedMarginOrPadding001, TestSize.Level1)
-{
-    PaddingProperty paddingProperty;
-    paddingProperty.start = std::make_optional<CalcLength>(5.0);
-    paddingProperty.top = std::make_optional<CalcLength>(6.0);
-    paddingProperty.bottom = std::make_optional<CalcLength>(7.0);
-    paddingProperty.left = std::make_optional<CalcLength>(8.0);
-
-    auto textDirection = TextDirection::LTR;
-    ViewAbstract::CheckLocalizedMarginOrPadding(paddingProperty, textDirection);
-    EXPECT_EQ(paddingProperty.left.value(), CalcLength(5.0));
-
-    textDirection = TextDirection::RTL;
-    ViewAbstract::CheckLocalizedMarginOrPadding(paddingProperty, textDirection);
-    EXPECT_EQ(paddingProperty.right.value(), CalcLength(5.0));
-}
-
-/**
- * @tc.name: CheckLocalizedMarginOrPadding002
- * @tc.desc: Test CheckLocalizedMarginOrPadding when end,right have values
- * @tc.type: FUNC
- */
-HWTEST_F(ViewAbstractTestNg, CheckLocalizedMarginOrPadding002, TestSize.Level1)
-{
-    PaddingProperty paddingProperty;
-    paddingProperty.end = std::make_optional<CalcLength>(5.0);
-    paddingProperty.right = std::make_optional<CalcLength>(6.0);
-
-    auto textDirection = TextDirection::LTR;
-    ViewAbstract::CheckLocalizedMarginOrPadding(paddingProperty, textDirection);
-    EXPECT_EQ(paddingProperty.right.value(), CalcLength(5.0));
-
-    textDirection = TextDirection::RTL;
-    ViewAbstract::CheckLocalizedMarginOrPadding(paddingProperty, textDirection);
-    EXPECT_EQ(paddingProperty.left.value(), CalcLength(5.0));
-}
-
-/**
- * @tc.name: CheckLocalizedMarginOrPadding003
- * @tc.desc: Test CheckLocalizedMarginOrPadding When neither start nor end has a value
- * @tc.type: FUNC
- */
-HWTEST_F(ViewAbstractTestNg, CheckLocalizedMarginOrPadding003, TestSize.Level1)
-{
-    PaddingProperty paddingProperty;
-
-    auto textDirection = TextDirection::LTR;
-    ViewAbstract::CheckLocalizedMarginOrPadding(paddingProperty, textDirection);
-    EXPECT_FALSE(paddingProperty.right.has_value());
-    EXPECT_FALSE(paddingProperty.left.has_value());
-}
-
-/**
- * @tc.name: CheckPositionOrOffsetLocalizedEdges001
- * @tc.desc: Test CheckPositionOrOffsetLocalizedEdges
- * @tc.type: FUNC
- */
-HWTEST_F(ViewAbstractTestNg, CheckPositionOrOffsetLocalizedEdges001, TestSize.Level1)
-{
-    auto top = CalcDimension(1.0);
-    auto bottom = CalcDimension(2.0);
-    auto start = CalcDimension(3.0);
-    auto end = CalcDimension(4.0);
-
-    EdgesParam edges;
-    edges.SetTop(top);
-    edges.SetBottom(bottom);
-    edges.start = start;
-    edges.end = end;
-
-    auto textDirection = TextDirection::LTR;
-    ViewAbstract::CheckPositionOrOffsetLocalizedEdges(edges, textDirection);
-    EXPECT_EQ(edges.left.value(), start);
-
-    textDirection = TextDirection::RTL;
-    ViewAbstract::CheckPositionOrOffsetLocalizedEdges(edges, textDirection);
-    EXPECT_EQ(edges.left.value(), end);
-}
-
-/**
- * @tc.name: CheckPositionOrOffsetLocalizedEdges002
- * @tc.desc: Test CheckPositionOrOffsetLocalizedEdges
- * @tc.type: FUNC
- */
-HWTEST_F(ViewAbstractTestNg, CheckPositionOrOffsetLocalizedEdges002, TestSize.Level1)
-{
-    EdgesParam edges;
-
-    auto textDirection = TextDirection::LTR;
-    ViewAbstract::CheckPositionOrOffsetLocalizedEdges(edges, textDirection);
-    EXPECT_FALSE(edges.left.has_value());
-    EXPECT_FALSE(edges.right.has_value());
-}
-
-/**
- * @tc.name: RegisterRadiusesResObj
- * @tc.desc: Test RegisterRadiusesResObj
- * @tc.type: FUNC
- */
-HWTEST_F(ViewAbstractTestNg, RegisterRadiusesResObj, TestSize.Level1)
-{
-    std::string bundleName = "com.example.test";
-    std::string moduleName = "entry";
-    RefPtr<ResourceObject> resObj = AceType::MakeRefPtr<ResourceObject>(bundleName, moduleName, 0);
-    NG::BorderRadiusProperty borderRadius;
-    ViewAbstractModelNG::RegisterRadiusesResObj("borderRadius.topLeft", borderRadius, resObj);
-    borderRadius.ReloadResources();
-    EXPECT_EQ(borderRadius.resMap_.size(), 1);
-    ViewAbstractModelNG::RegisterRadiusesResObj("borderRadius.topRight", borderRadius, resObj);
-    borderRadius.ReloadResources();
-    EXPECT_EQ(borderRadius.resMap_.size(), 2);
-    ViewAbstractModelNG::RegisterRadiusesResObj("borderRadius.bottomLeft", borderRadius, resObj);
-    borderRadius.ReloadResources();
-    EXPECT_EQ(borderRadius.resMap_.size(), 3);
-    ViewAbstractModelNG::RegisterRadiusesResObj("borderRadius.bottomRight", borderRadius, resObj);
-    borderRadius.ReloadResources();
-    EXPECT_EQ(borderRadius.resMap_.size(), 4);
-    ViewAbstractModelNG::RegisterRadiusesResObj("", borderRadius, nullptr);
-    EXPECT_EQ(borderRadius.resMap_.size(), 4);
-}
-
-/**
- * @tc.name: RegisterLocationPropsEdgesResObj
- * @tc.desc: Test RegisterLocationPropsEdgesResObj
- * @tc.type: FUNC
- */
-HWTEST_F(ViewAbstractTestNg, RegisterLocationPropsEdgesResObj, TestSize.Level1)
-{
-    std::string bundleName = "com.example.test";
-    std::string moduleName = "entry";
-    RefPtr<ResourceObject> resObj = AceType::MakeRefPtr<ResourceObject>(bundleName, moduleName, 0);
-    EdgesParam edges;
-    ViewAbstractModelNG::RegisterLocationPropsEdgesResObj("edges.top", edges, resObj);
-    edges.ReloadResources();
-    EXPECT_EQ(edges.resMap_.size(), 1);
-    ViewAbstractModelNG::RegisterLocationPropsEdgesResObj("edges.left", edges, resObj);
-    edges.ReloadResources();
-    EXPECT_EQ(edges.resMap_.size(), 2);
-    ViewAbstractModelNG::RegisterLocationPropsEdgesResObj("edges.bottom", edges, resObj);
-    edges.ReloadResources();
-    EXPECT_EQ(edges.resMap_.size(), 3);
-    ViewAbstractModelNG::RegisterLocationPropsEdgesResObj("edges.right", edges, resObj);
-    edges.ReloadResources();
-    EXPECT_EQ(edges.resMap_.size(), 4);
-    ViewAbstractModelNG::RegisterLocationPropsEdgesResObj("", edges, nullptr);
-    EXPECT_EQ(edges.resMap_.size(), 4);
-}
-
-/**
- * @tc.name: RegisterEdgesWidthResObj
- * @tc.desc: Test RegisterEdgesWidthResObj
- * @tc.type: FUNC
- */
-HWTEST_F(ViewAbstractTestNg, RegisterEdgesWidthResObj, TestSize.Level1)
-{
-    std::string bundleName = "com.example.test";
-    std::string moduleName = "entry";
-    RefPtr<ResourceObject> resObj = AceType::MakeRefPtr<ResourceObject>(bundleName, moduleName, 0);
-    NG::BorderWidthProperty borderWidth;
-    ViewAbstractModelNG::RegisterEdgesWidthResObj("borderWidth.top", borderWidth, resObj);
-    borderWidth.ReloadResources();
-    EXPECT_EQ(borderWidth.resMap_.size(), 1);
-    ViewAbstractModelNG::RegisterEdgesWidthResObj("borderWidth.left", borderWidth, resObj);
-    borderWidth.ReloadResources();
-    EXPECT_EQ(borderWidth.resMap_.size(), 2);
-    ViewAbstractModelNG::RegisterEdgesWidthResObj("borderWidth.bottom", borderWidth, resObj);
-    borderWidth.ReloadResources();
-    EXPECT_EQ(borderWidth.resMap_.size(), 3);
-    ViewAbstractModelNG::RegisterEdgesWidthResObj("borderWidth.right", borderWidth, resObj);
-    borderWidth.ReloadResources();
-    EXPECT_EQ(borderWidth.resMap_.size(), 4);
-    ViewAbstractModelNG::RegisterEdgesWidthResObj("", borderWidth, nullptr);
-    EXPECT_EQ(borderWidth.resMap_.size(), 4);
-}
-
-/**
- * @tc.name: RegisterEdgeMarginsResObj
- * @tc.desc: Test RegisterEdgeMarginsResObj
- * @tc.type: FUNC
- */
-HWTEST_F(ViewAbstractTestNg, RegisterEdgeMarginsResObj, TestSize.Level1)
-{
-    std::string bundleName = "com.example.test";
-    std::string moduleName = "entry";
-    RefPtr<ResourceObject> resObj = AceType::MakeRefPtr<ResourceObject>(bundleName, moduleName, 0);
-    NG::MarginProperty margins;
-    ViewAbstractModelNG::RegisterEdgeMarginsResObj("margin.top", margins, resObj);
-    margins.ReloadResources();
-    EXPECT_EQ(margins.resMap_.size(), 1);
-    ViewAbstractModelNG::RegisterEdgeMarginsResObj("margin.left", margins, resObj);
-    margins.ReloadResources();
-    EXPECT_EQ(margins.resMap_.size(), 2);
-    ViewAbstractModelNG::RegisterEdgeMarginsResObj("margin.bottom", margins, resObj);
-    margins.ReloadResources();
-    EXPECT_EQ(margins.resMap_.size(), 3);
-    ViewAbstractModelNG::RegisterEdgeMarginsResObj("margin.right", margins, resObj);
-    margins.ReloadResources();
-    EXPECT_EQ(margins.resMap_.size(), 4);
-    ViewAbstractModelNG::RegisterEdgeMarginsResObj("", margins, nullptr);
-    EXPECT_EQ(margins.resMap_.size(), 4);
-}
-
-/**
- * @tc.name: RegisterLocalizedBorderColor
- * @tc.desc: Test RegisterLocalizedBorderColor
- * @tc.type: FUNC
- */
-HWTEST_F(ViewAbstractTestNg, RegisterLocalizedBorderColor, TestSize.Level1)
-{
-    std::string bundleName = "com.example.test";
-    std::string moduleName = "entry";
-    RefPtr<ResourceObject> resObj = AceType::MakeRefPtr<ResourceObject>(bundleName, moduleName, 0);
-    NG::BorderColorProperty borderColors;
-    ViewAbstractModelNG::RegisterLocalizedBorderColor("borderColor.top", borderColors, resObj);
-    borderColors.ReloadResources();
-    EXPECT_EQ(borderColors.resMap_.size(), 1);
-    ViewAbstractModelNG::RegisterLocalizedBorderColor("borderColor.start", borderColors, resObj);
-    borderColors.ReloadResources();
-    EXPECT_EQ(borderColors.resMap_.size(), 2);
-    ViewAbstractModelNG::RegisterLocalizedBorderColor("borderColor.bottom", borderColors, resObj);
-    borderColors.ReloadResources();
-    EXPECT_EQ(borderColors.resMap_.size(), 3);
-    ViewAbstractModelNG::RegisterLocalizedBorderColor("borderColor.end", borderColors, resObj);
-    borderColors.ReloadResources();
-    EXPECT_EQ(borderColors.resMap_.size(), 4);
-    ViewAbstractModelNG::RegisterLocalizedBorderColor("", borderColors, nullptr);
-    EXPECT_EQ(borderColors.resMap_.size(), 4);
 }
 } // namespace OHOS::Ace::NG

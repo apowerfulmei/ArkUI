@@ -90,7 +90,7 @@ public:
     MockStorageProxyImpl() = default;
     ~MockStorageProxyImpl() override = default;
 
-    RefPtr<Storage> GetStorage(int areaMode = -1) const override
+    RefPtr<Storage> GetStorage() const override
     {
         return AceType::MakeRefPtr<MockStorageImpl>();
     }

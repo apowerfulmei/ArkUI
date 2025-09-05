@@ -17,6 +17,4 @@
 
 namespace OHOS::Ace::Framework {
 
-    thread_local std::vector<std::unique_ptr<IFunctionBinding>> IFunctionBinding::functions;
-
 }; // namespace OHOS::Ace::Framework

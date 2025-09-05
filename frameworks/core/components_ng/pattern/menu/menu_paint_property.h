@@ -27,7 +27,7 @@ namespace OHOS::Ace::NG {
 namespace {
 constexpr Dimension ARROW_WIDTH = 32.0_vp;
 // arrow actual display height against shadow
-constexpr Dimension ARROW_HIGHT = 8.0_vp;
+constexpr Dimension ARROW_HIGHT = 7.4_vp;
 constexpr Dimension TARGET_SECURITY = 8.0_vp;
 // space from menu to target for arrow display
 constexpr Dimension TARGET_SPACE = 8.0_vp;
@@ -44,7 +44,7 @@ constexpr Dimension LANDSCAPE_BOTTOM_SECURITY = 24.0_vp;
 constexpr Dimension PREVIEW_INNER_SECURITY = 24.0_vp;
 } // namespace
 class ACE_EXPORT MenuPaintProperty : public PaintProperty {
-    DECLARE_ACE_TYPE(MenuPaintProperty, PaintProperty);
+    DECLARE_ACE_TYPE(MenuPaintProperty, PaintProperty)
 
 public:
     MenuPaintProperty() = default;
@@ -57,7 +57,6 @@ public:
         paintProperty->propArrowOffset_ = CloneArrowOffset();
         paintProperty->propArrowPosition_ = CloneArrowPosition();
         paintProperty->propArrowPlacement_ = CloneArrowPlacement();
-        paintProperty->propClipPath_ = CloneClipPath();
         return paintProperty;
     }
 
@@ -68,7 +67,6 @@ public:
         ResetArrowOffset();
         ResetArrowPosition();
         ResetArrowPlacement();
-        ResetClipPath();
     }
 
     std::string ConvertPlacementToString(const Placement& place) const
@@ -113,7 +111,6 @@ public:
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(ArrowOffset, Dimension, PROPERTY_UPDATE_RENDER);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(ArrowPosition, OffsetF, PROPERTY_UPDATE_RENDER);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(ArrowPlacement, Placement, PROPERTY_UPDATE_RENDER);
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(ClipPath, std::string, PROPERTY_UPDATE_RENDER);
     ACE_DISALLOW_COPY_AND_MOVE(MenuPaintProperty);
 };
 } // namespace OHOS::Ace::NG

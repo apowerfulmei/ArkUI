@@ -55,7 +55,7 @@ public:
 
     class DecorationSpanParam {
     public:
-        std::vector<TextDecoration> decorationType;
+        TextDecoration decorationType;
         Color color;
         TextDecorationStyle decorationSytle;
     };
@@ -72,8 +72,7 @@ public:
         Dimension dimension;
     };
     using StyleValue = std::variant<std::monostate, Font, DecorationSpanParam, BaseLineSpanParam,
-        LetterSpacingSpanParam, LineHeightSpanSparam, std::vector<Shadow>, ImageSpanOptions, SpanParagraphStyle,
-        TextBackgroundStyle, std::string>;
+        LetterSpacingSpanParam, LineHeightSpanSparam, std::vector<Shadow>, ImageSpanOptions, SpanParagraphStyle>;
     enum class StyleIndex {
         STYLE_NULL = 0,
         STYLE_FONT,
@@ -84,8 +83,6 @@ public:
         STYLE_SHADOWS,
         STYLE_IMAGE,
         STYLE_PARAGRAPH,
-        STYLE_BACKGROUND_COLOR,
-        STYLE_URL,
         STYLE_MAX
     };
 
@@ -94,7 +91,6 @@ private:
         PARAGRAPH = 0,
         IMAGE,
         TEXT,
-        ANCHOR,
         DEFAULT,
     };
 
@@ -109,7 +105,7 @@ private:
     T* Get(StyleValue* styleValue) const;
     Styles ParseStyleAttr(const std::string& style);
     bool IsParagraphAttr(const std::string& key);
-    void InitParagraph(const std::string& key, const std::string& value, const std::string& index, StyleValues& values);
+    void InitParagrap(const std::string& key, const std::string& value, const std::string& index, StyleValues& values);
     void InitFont(const std::string& key, const std::string& value, const std::string& index, StyleValues& values);
     bool IsFontAttr(const std::string& key);
     void InitDecoration(
@@ -127,7 +123,6 @@ private:
     void InitLineHeight(const std::string& key, const std::string& value, StyleValues& values);
     Dimension FromString(const std::string& str);
     TextAlign StringToTextAlign(const std::string& value);
-    TextVerticalAlign StringToTextVerticalAlign(const std::string& value);
     WordBreak StringToWordBreak(const std::string& value);
     TextOverflow StringToTextOverflow(const std::string& value);
     bool IsTextIndentAttr(const std::string& key);
@@ -137,12 +132,6 @@ private:
     bool IsBorderAttr(const std::string& key);
     bool IsDecorationLine(const std::string& key);
     bool IsDecorationStyle(const std::string& key);
-    bool IsBackgroundColorAttr(const std::string& key) const;
-    void InitBackgroundColor(
-        const std::string& key, const std::string& value, const std::string& index, StyleValues& values);
-    bool IsForegroundColorAttr(const std::string& key) const;
-    void InitForegroundColor(
-        const std::string& key, const std::string& value, const std::string& index, StyleValues& values);
     void SetPaddingOption(const std::string& key, const std::string& value, ImageSpanOptions& options);
     void SetMarginOption(const std::string& key, const std::string& value, ImageSpanOptions& options);
     void SetBorderOption(const std::string& key, const std::string& value, ImageSpanOptions& options);
@@ -169,7 +158,7 @@ private:
     void ToParagraphStyle(const Styles& styleMap, SpanParagraphStyle& style);
     void ToParagraphSpan(xmlNodePtr node, size_t len, size_t& pos, std::vector<SpanInfo>& spanInfos);
 
-    void ParseHtmlToSpanInfo(
+    void ParaseHtmlToSpanInfo(
         xmlNodePtr node, size_t& pos, std::string& allContent, std::vector<SpanInfo>& spanInfos,
         bool isNeedLoadPixelMap = true);
     void ToSpan(xmlNodePtr curNode, size_t& pos, std::string& allContent, std::vector<SpanInfo>& spanInfos,
@@ -186,8 +175,6 @@ private:
     RefPtr<SpanBase> MakeDecorationSpan(const SpanInfo& info, StyleValue& value);
     void AddImageSpans(const SpanInfo& info, RefPtr<MutableSpanString> mutableSpan);
     void AddSpans(const SpanInfo& info, RefPtr<MutableSpanString> span);
-    void ToAnchorSpan(xmlNodePtr node, size_t len, size_t& pos, std::vector<SpanInfo>& spanInfos);
-    std::string CleanTextSpaces(const std::string& text);
 
     std::string GetHtmlContent(xmlNodePtr node);
     RefPtr<MutableSpanString> GenerateSpans(const std::string& allContent, const std::vector<SpanInfo>& spanInfos);

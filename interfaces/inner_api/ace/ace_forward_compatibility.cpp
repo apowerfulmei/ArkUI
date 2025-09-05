@@ -15,7 +15,12 @@
 
 #include "ace_forward_compatibility.h"
 
+#include <cstdint>
 #include <fstream>
+#include <iostream>
+#include <sstream>
+#include <string>
+#include <unistd.h>
 #include <unordered_set>
 
 #include "arkui_log.h"

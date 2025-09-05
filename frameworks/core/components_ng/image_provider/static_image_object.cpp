@@ -15,68 +15,42 @@
 
 #include "core/components_ng/image_provider/static_image_object.h"
 
-#include "core/components_ng/image_provider/image_decoder.h"
 #include "core/components_ng/image_provider/image_loading_context.h"
+#include "core/components_ng/image_provider/image_provider.h"
 #include "core/components_ng/image_provider/image_utils.h"
-#include "core/components_ng/render/adapter/drawing_image.h"
+#include "core/components_ng/render/adapter/rosen/drawing_image.h"
 #include "frameworks/core/components_ng/render/adapter/pixelmap_image.h"
 
 namespace OHOS::Ace::NG {
-RefPtr<CanvasImage> StaticImageObject::QueryCanvasFromCache(const ImageSourceInfo& src, const SizeF& size)
+
+void StaticImageObject::MakeCanvasImage(const RefPtr<ImageLoadingContext>& ctx, const SizeF& targetSize,
+    bool forceResize, bool syncLoad, bool loadInVipChannel)
 {
-    auto key = ImageUtils::GenerateImageKey(src, size);
+    RefPtr<CanvasImage> cachedImage;
+    auto key = ImageUtils::GenerateImageKey(src_, targetSize);
     if (SystemProperties::GetImageFrameworkEnabled()) {
-        return PixelMapImage::QueryFromCache(key);
+        cachedImage = PixelMapImage::QueryFromCache(key);
     } else {
-        return DrawingImage::QueryFromCache(key);
+        cachedImage = DrawingImage::QueryFromCache(key);
     }
-    return nullptr;
-}
-
-RefPtr<CanvasImage> StaticImageObject::QueryWeakCanvasFromCache(const ImageSourceInfo& src, const SizeF& size)
-{
-    auto pixelMapWp = ImageDecoder::GetFromPixelMapCache(src, size);
-    auto pixelMapPtr = pixelMapWp.Upgrade();
-    if (pixelMapPtr) {
-        return PixelMapImage::Create(pixelMapPtr);
-    }
-    return nullptr;
-}
-
-void StaticImageObject::MakeCanvasImage(
-    const WeakPtr<ImageLoadingContext>& ctxWp, const SizeF& targetSize, bool forceResize, bool syncLoad)
-{
-    auto ctx = ctxWp.Upgrade();
-    CHECK_NULL_VOID(ctx);
-    RefPtr<CanvasImage> cachedImage = QueryCanvasFromCache(src_, targetSize);
     if (cachedImage) {
         ctx->SuccessCallback(cachedImage);
         return;
     }
-    cachedImage = QueryWeakCanvasFromCache(src_, targetSize);
-    if (cachedImage) {
-        auto notifyMakeCanvasImageSuccess = [ctx, cachedImage]() { ctx->SuccessCallback(cachedImage); };
-        if (syncLoad) {
-            notifyMakeCanvasImageSuccess();
-        } else {
-            ImageUtils::PostToUI(
-                std::move(notifyMakeCanvasImageSuccess), "ArkUIMakePixelmapSuccess", ctx->GetContainerId());
-        }
-        return;
-    }
-    ImageProvider::MakeCanvasImage(Claim(this), ctx, targetSize,
-        { .forceResize = forceResize,
-            .sync = syncLoad,
-            .imageQuality = ctx->GetImageQuality(),
-            .isHdrDecoderNeed = ctx->GetIsHdrDecoderNeed(),
-            .photoDecodeFormat = ctx->GetPhotoDecodeFormat() });
+    ImageProvider::MakeCanvasImage(Claim(this), ctx, targetSize, {
+        .forceResize = forceResize,
+        .sync = syncLoad,
+        .loadInVipChannel = loadInVipChannel,
+        .dynamicMode = ctx->GetDynamicRangeMode(),
+        .imageQuality = ctx->GetImageQuality(),
+        .isHdrDecoderNeed = ctx->GetIsHdrDecoderNeed()
+    });
 }
 
 RefPtr<ImageObject> StaticImageObject::Clone()
 {
     auto object = MakeRefPtr<StaticImageObject>(src_, imageSize_, data_);
     object->SetOrientation(orientation_);
-    object->SetImageFileSize(GetImageFileSize());
     return object;
 }
 } // namespace OHOS::Ace::NG

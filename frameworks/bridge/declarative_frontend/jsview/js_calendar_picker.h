@@ -32,23 +32,16 @@ public:
     static void JsHeight(const JSCallbackInfo& info);
     static void JsBorderColor(const JSCallbackInfo& info);
     static void JsBorderRadius(const JSCallbackInfo& info);
-    static void JsMarkToday(const JSCallbackInfo& info);
 
 private:
     static void ParseTextStyle(const JSRef<JSObject>& paramObj, NG::PickerTextStyle& textStyle);
-    static void ParseTextStyleWithResObj(const JSRef<JSObject>& paramObj, NG::PickerTextStyle& textStyle,
-        const std::string& key);
     static void ParseSelectedDateObject(const JSCallbackInfo& info, const JSRef<JSObject>& selectedObject);
-    static PickerDate ParseDate(const JSRef<JSVal>& dateVal, bool useCurrentDate = true);
+    static PickerDate ParseDate(const JSRef<JSVal>& dateVal);
     static void ParseCalendarPickerBorderColor(const JSRef<JSVal>& args);
     static NG::PaddingProperty SetPaddings(const std::optional<CalcDimension>& top,
         const std::optional<CalcDimension>& bottom, const std::optional<CalcDimension>& left,
         const std::optional<CalcDimension>& right);
     static bool ParseJsDimensionVpWithCheck(const JSRef<JSVal>& jsValue, CalcDimension& result);
-    static void ParseDisabledDateRange(const JSRef<JSVal>& disabledDateRangeVal, NG::CalendarSettingData& settingData);
-    static void ParseHintRadius(JSRef<JSObject>& obj, NG::CalendarSettingData& settingData, CalcDimension& dayRadius);
-    static void ParseTextStyleFontSize(const JSRef<JSVal>& fontSize, NG::PickerTextStyle& textStyle,
-        const std::string& key);
 };
 
 class JSCalendarPickerDialog : JSAlertDialog {
@@ -66,8 +59,7 @@ private:
     static std::map<std::string, NG::DialogGestureEvent> DialogCancelEvent(const JSCallbackInfo& info);
     static std::map<std::string, NG::DialogCancelEvent> LifeCycleDialogEvent(const JSCallbackInfo& info);
 
-    static PickerDate ParseDate(const JSRef<JSVal>& dateVal, bool useCurrentDate = false);
-    static void ParseDisabledDateRange(const JSRef<JSVal>& disabledDateRangeVal, NG::CalendarSettingData& settingData);
+    static PickerDate ParseDate(const JSRef<JSVal>& dateVal);
 };
 } // namespace OHOS::Ace::Framework
 #endif // FRAMEWORKS_BRIDGE_DECLARATIVE_FRONTEND_JS_VIEW_JS_CALENDAR_PICKER_H

@@ -93,9 +93,9 @@ std::map<KeyComb, std::function<void(TextInputClient*)>> TextInputClient::keyboa
     { KeyComb(KeyCode::KEY_DPAD_RIGHT, KEY_CTRL | KEY_SHIFT),
         [](tic* c) -> void { c->HandleSelect(CaretMoveIntent::RightWord); } },
     { KeyComb(KeyCode::KEY_DPAD_UP, KEY_CTRL | KEY_SHIFT),
-        [](tic* c) -> void { c->HandleSelectExtend(CaretMoveIntent::ParagraghBegin); } },
+        [](tic* c) -> void { c->CursorMove(CaretMoveIntent::ParagraghBegin); } },
     { KeyComb(KeyCode::KEY_DPAD_DOWN, KEY_CTRL | KEY_SHIFT),
-        [](tic* c) -> void { c->HandleSelectExtend(CaretMoveIntent::ParagraghEnd); } },
+        [](tic* c) -> void { c->CursorMove(CaretMoveIntent::ParagraghEnd); } },
     { KeyComb(KeyCode::KEY_MOVE_HOME, KEY_CTRL | KEY_SHIFT),
         [](tic* c) -> void { c->CursorMove(CaretMoveIntent::Home); } },
     { KeyComb(KeyCode::KEY_MOVE_END, KEY_CTRL | KEY_SHIFT),
@@ -151,7 +151,6 @@ std::map<KeyComb, std::function<void(TextInputClient*)>> TextInputClient::keyboa
     // when numLock off, KEY_NUMPAD_DOT perform as KEY_FORWARD_DEL
     { KeyComb(KeyCode::KEY_NUMPAD_DOT), [](tic* c) -> void { c->HandleOnDelete(false); } },
     { KeyComb(KeyCode::KEY_NUMPAD_DOT, KEY_CTRL), [](tic* c) -> void { c->HandleOnDeleteComb(false); } },
-    { KeyComb(KeyCode::KEY_DEL, KEY_ALT), &tic::HandleOnExtendUndoAction },
 };
 
 void TextInputClient::NotifyKeyboardHeight(uint32_t height)
@@ -190,15 +189,15 @@ bool TextInputClient::HandleKeyEvent(const KeyEvent& keyEvent)
     }
     auto iterFunctionKeys = functionKeys_.find(KeyComb(keyEvent.code, modKeyFlags));
     if (iterFunctionKeys != functionKeys_.end()) {
+        TAG_LOGD(AceLogTag::ACE_KEYBOARD, "find a function key, key code: %{public}d, modKeyFlags: %{public}d",
+            static_cast<int32_t>(keyEvent.code), modKeyFlags);
         this->ResetOriginCaretPosition();
         return iterFunctionKeys->second(this);
     }
     auto iterKeyboardShortCuts = keyboardShortCuts_.find(KeyComb(keyEvent.code, modKeyFlags));
     if (iterKeyboardShortCuts != keyboardShortCuts_.end()) {
-        auto isShortCutBlocked = IsShortCutBlocked();
-        TAG_LOGD(AceLogTag::ACE_KEYBOARD, "find a keyboard shortcut, key code: %{public}d, modKeyFlags: %{public}d, "
-            "isBlocked: %{public}d", static_cast<int32_t>(keyEvent.code), modKeyFlags, isShortCutBlocked);
-        CHECK_EQUAL_RETURN(isShortCutBlocked, true, true);
+        TAG_LOGD(AceLogTag::ACE_KEYBOARD, "find a keyboard shortcut, key code: %{public}d, modKeyFlags: %{public}d",
+            static_cast<int32_t>(keyEvent.code), modKeyFlags);
         if (KeyComb(keyEvent.code, modKeyFlags) == KeyComb(KeyCode::KEY_DPAD_UP, KEY_SHIFT) ||
             KeyComb(keyEvent.code, modKeyFlags) == KeyComb(KeyCode::KEY_DPAD_DOWN, KEY_SHIFT)) {
             this->RecordOriginCaretPosition();

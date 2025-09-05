@@ -41,7 +41,7 @@ constexpr int32_t TEXT_CASE_UPPERCASE = 2;
 constexpr double PERCENT_VALUE = 100.0;
 constexpr double DEGREES_VALUE = 360.0; // one turn means 360 deg
 constexpr double GRADIANS_VALUE = 400.0; // one turn means 400 grad
-const extern double RADIANS_VALUE; // one turn means 2*pi rad
+constexpr double RADIANS_VALUE = 2 * M_PI; // one turn means 2*pi rad
 const char ELLIPSIS[] = "...";
 
 inline std::u16string Str8ToStr16(const std::string& str)
@@ -83,11 +83,6 @@ inline std::wstring ToWstring(const std::string& str)
 inline bool IsLetterOrNumberForWchar(wchar_t chr)
 {
     return (chr >= L'0' && chr <= L'9') || (chr >= L'a' && chr <= L'z') || (chr >= L'A' && chr <= L'Z');
-}
-
-inline bool IsLetterOrNumberForChar16(char16_t chr)
-{
-    return (chr >= u'0' && chr <= u'9') || (chr >= u'a' && chr <= u'z') || (chr >= u'A' && chr <= u'Z');
 }
 
 inline std::string ToString(const std::wstring& str)
@@ -144,24 +139,6 @@ inline bool IsNumber(const std::string& value)
     return std::all_of(value.begin(), value.end(), [](char i) { return isdigit(i); });
 }
 
-inline bool IsFloat(const std::string& s)
-{
-    if (s.empty()) {
-        return false;
-    }
-    int dot_count = 0;
-    bool all_valid = std::all_of(s.begin(), s.end(), [&](char c) {
-        if (c == '.') {
-            dot_count++;
-            return true;
-        }
-        return std::isdigit(static_cast<unsigned char>(c)) != 0;
-    });
-    if (!all_valid || dot_count > 1) {
-        return false;
-    }
-    return s != "." && s != ".." && std::any_of(s.begin(), s.end(), ::isdigit);
-}
 inline void ReplaceSpace(std::string& data)
 {
     bool isFirstSpace = true;
@@ -226,13 +203,13 @@ inline std::string RestoreBackslash(const std::string& src)
     return res;
 }
 
-inline int32_t StringToInt(const std::string& value, int64_t defaultErr = 0)
+inline int32_t StringToInt(const std::string& value)
 {
     errno = 0;
     char* pEnd = nullptr;
     int64_t result = std::strtol(value.c_str(), &pEnd, 10);
     if (pEnd == value.c_str() || (result < INT_MIN || result > INT_MAX) || errno == ERANGE) {
-        return defaultErr;
+        return 0;
     } else {
         return result;
     }
@@ -705,17 +682,6 @@ inline void SplitStr(const std::string& str, const std::string& sep, std::vector
     }
 }
 
-inline bool CStringEqual(const char* first, const char* second)
-{
-    if (first == nullptr && second == nullptr) {
-        return true;
-    }
-    if (first && second) {
-        return std::strcmp(first, second) == 0;
-    }
-    return false;
-}
-
 const std::string ACE_FORCE_EXPORT FormatString(const char* fmt, ...);
 
 inline bool StartWith(const std::string& dst, const std::string& prefix)
@@ -739,8 +705,7 @@ inline bool EndWith(const std::string& str, const char* suffix, size_t suffixLen
     return ((len >= suffixLen) && (str.compare(len - suffixLen, suffixLen, suffix) == 0));
 }
 
-template<typename T>
-inline void TransformStrCase(T& str, int32_t textCase)
+inline void TransformStrCase(std::string& str, int32_t textCase)
 {
     if (str.empty()) {
         return;

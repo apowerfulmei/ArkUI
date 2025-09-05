@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -48,8 +48,6 @@
 #include "core/pipeline/base/render_node.h"
 #include "core/pipeline_ng/pipeline_context.h"
 #include "test/mock/core/pipeline/mock_pipeline_context.h"
-#include "test/mock/core/common/mock_container.h"
-#include "test/mock/base/mock_system_properties.h"
 
 using namespace testing;
 using namespace testing::ext;
@@ -96,15 +94,6 @@ constexpr Dimension VERTICAL_PADDING = Dimension(4.0);
 constexpr Dimension SHADOW_WIDTH_FORUPDATE = Dimension(6.0);
 constexpr float CHECKBOX_GROUP_LENGTH_ZERO = 0.0f;
 constexpr Dimension PADDING_SIZE = Dimension(2.0);
-const int32_t VERSION_TWELVE = 12;
-const SizeF TEST_SIZE_0 = SizeF(0.0f, 0.0f);
-const SizeF TEST_SIZE_100_200 = SizeF(100.0f, 200.0f);
-const SizeF TEST_SIZE_100 = SizeF(100.0f, 100.0f);
-const SizeF TEST_SIZE_200 = SizeF(200.0f, 200.0f);
-const SizeF TEST_SIZE_50 = SizeF(50.0f, 50.0f);
-const SizeF TEST_SIZE_60 = SizeF(60.0f, 60.0f);
-constexpr float TEST_WIDTH_50 = 50.0f;
-constexpr float TEST_HEIGHT_60 = 60.0f;
 } // namespace
 
 class CheckBoxGroupTestNG : public testing::Test {
@@ -121,7 +110,6 @@ void CheckBoxGroupTestNG::SetUpTestCase()
     auto themeManager = AceType::MakeRefPtr<MockThemeManager>();
     MockPipelineContext::GetCurrent()->SetThemeManager(themeManager);
     EXPECT_CALL(*themeManager, GetTheme(_)).WillRepeatedly(Return(AceType::MakeRefPtr<CheckboxTheme>()));
-    EXPECT_CALL(*themeManager, GetTheme(_, _)).WillRepeatedly(Return(AceType::MakeRefPtr<CheckboxTheme>()));
     RefPtr<FrameNode> stageNode = AceType::MakeRefPtr<FrameNode>("STAGE", -1, AceType::MakeRefPtr<Pattern>());
     auto stageManager = AceType::MakeRefPtr<StageManager>(stageNode);
     MockPipelineContext::GetCurrent()->stageManager_ = stageManager;
@@ -137,8 +125,7 @@ CheckBoxGroupModifier::Parameters CheckBoxGroupCreateDefModifierParam()
     CheckBoxGroupModifier::Parameters parameters = { BORDER_WIDTH, BORDER_RADIUS, CHECK_STROKE, CHECKMARK_PAINTSIZE,
         HOVER_DURATION, HOVER_TO_TOUCH_DURATION, POINT_COLOR, ACTIVE_COLOR, INACTIVE_COLOR, SHADOW_COLOR,
         CLICK_EFFECT_COLOR, HOVER_COLOR, INACTIVE_POINT_COLOR, HOVER_RADIUS, HORIZONTAL_PADDING, VERTICAL_PADDING,
-        SHADOW_WIDTH_FORUPDATE, UIStatus::UNSELECTED, PADDING_SIZE, PADDING_SIZE, false,
-        CheckBoxGroupPaintProperty::SelectStatus::NONE };
+        SHADOW_WIDTH_FORUPDATE, UIStatus::UNSELECTED, PADDING_SIZE, CheckBoxGroupPaintProperty::SelectStatus::NONE };
 
     return parameters;
 }
@@ -356,7 +343,6 @@ HWTEST_F(CheckBoxGroupTestNG, CheckBoxGroupPaintPropertyTest002, TestSize.Level1
     MockPipelineContext::GetCurrent()->SetThemeManager(themeManager);
     auto checkboxTheme = AceType::MakeRefPtr<CheckboxTheme>();
     EXPECT_CALL(*themeManager, GetTheme(_)).WillRepeatedly(Return(checkboxTheme));
-    EXPECT_CALL(*themeManager, GetTheme(_, _)).WillRepeatedly(Return(checkboxTheme));
     /**
      * @tc.steps: step1. Init CheckBoxGroup node
      */
@@ -860,8 +846,7 @@ HWTEST_F(CheckBoxGroupTestNG, CheckBoxPatternTest014, TestSize.Level1)
     auto pattern = frameNode->GetPattern<CheckBoxGroupPattern>();
     EXPECT_NE(pattern, nullptr);
     RefPtr<EventHub> eventHub = AccessibilityManager::MakeRefPtr<EventHub>();
-    RefPtr<FocusHub> focusHub = AccessibilityManager::MakeRefPtr<FocusHub>(
-        AccessibilityManager::WeakClaim(AccessibilityManager::RawPtr(eventHub)), FocusType::DISABLE, false);
+    RefPtr<FocusHub> focusHub = AccessibilityManager::MakeRefPtr<FocusHub>(eventHub, FocusType::DISABLE, false);
     pattern->InitOnKeyEvent(focusHub);
     RoundRect paintRect;
     pattern->GetInnerFocusPaintRect(paintRect);
@@ -1001,8 +986,6 @@ HWTEST_F(CheckBoxGroupTestNG, CheckBoxGroupPaintMethodTest001, TestSize.Level1)
     OffsetF offset;
     EXPECT_CALL(canvas, AttachBrush(_)).WillRepeatedly(ReturnRef(canvas));
     EXPECT_CALL(canvas, DrawRoundRect(_)).Times(1);
-    EXPECT_CALL(canvas, DetachBrush()).WillRepeatedly(ReturnRef(canvas));
-    EXPECT_CALL(canvas, DetachPen()).WillRepeatedly(ReturnRef(canvas));
     checkBoxGroupModifier_->DrawTouchAndHoverBoard(canvas, size, offset);
 }
 
@@ -1034,8 +1017,6 @@ HWTEST_F(CheckBoxGroupTestNG, CheckBoxGroupPaintMethodTest004, TestSize.Level1)
     Testing::MockCanvas canvas;
     EXPECT_CALL(canvas, AttachBrush(_)).WillRepeatedly(ReturnRef(canvas));
     EXPECT_CALL(canvas, AttachPen(_)).WillRepeatedly(ReturnRef(canvas));
-    EXPECT_CALL(canvas, DetachBrush()).WillRepeatedly(ReturnRef(canvas));
-    EXPECT_CALL(canvas, DetachPen()).WillRepeatedly(ReturnRef(canvas));
     DrawingContext context { canvas, COMPONENT_WIDTH, COMPONENT_HEIGHT };
     checkBoxGroupModifier_->PaintCheckBox(context, CONTENT_OFFSET, CONTENT_SIZE);
 }
@@ -1068,8 +1049,6 @@ HWTEST_F(CheckBoxGroupTestNG, CheckBoxGroupPaintMethodTest005, TestSize.Level1)
     Testing::MockCanvas canvas;
     EXPECT_CALL(canvas, AttachBrush(_)).WillRepeatedly(ReturnRef(canvas));
     EXPECT_CALL(canvas, AttachPen(_)).WillRepeatedly(ReturnRef(canvas));
-    EXPECT_CALL(canvas, DetachBrush()).WillRepeatedly(ReturnRef(canvas));
-    EXPECT_CALL(canvas, DetachPen()).WillRepeatedly(ReturnRef(canvas));
     DrawingContext context { canvas, COMPONENT_WIDTH, COMPONENT_HEIGHT };
     checkBoxGroupModifier_->PaintCheckBox(context, CONTENT_OFFSET, CONTENT_SIZE);
 }
@@ -1102,8 +1081,6 @@ HWTEST_F(CheckBoxGroupTestNG, CheckBoxGroupPaintMethodTest006, TestSize.Level1)
     Testing::MockCanvas canvas;
     EXPECT_CALL(canvas, AttachBrush(_)).WillRepeatedly(ReturnRef(canvas));
     EXPECT_CALL(canvas, AttachPen(_)).WillRepeatedly(ReturnRef(canvas));
-    EXPECT_CALL(canvas, DetachBrush()).WillRepeatedly(ReturnRef(canvas));
-    EXPECT_CALL(canvas, DetachPen()).WillRepeatedly(ReturnRef(canvas));
     DrawingContext context { canvas, COMPONENT_WIDTH, COMPONENT_HEIGHT };
     checkBoxGroupModifier_->PaintCheckBox(context, CONTENT_OFFSET, CONTENT_SIZE);
 }
@@ -1170,8 +1147,6 @@ HWTEST_F(CheckBoxGroupTestNG, CheckBoxGroupPaintMethodTest008, TestSize.Level1)
     Testing::MockCanvas canvas;
     EXPECT_CALL(canvas, AttachBrush(_)).WillRepeatedly(ReturnRef(canvas));
     EXPECT_CALL(canvas, AttachPen(_)).WillRepeatedly(ReturnRef(canvas));
-    EXPECT_CALL(canvas, DetachBrush()).WillRepeatedly(ReturnRef(canvas));
-    EXPECT_CALL(canvas, DetachPen()).WillRepeatedly(ReturnRef(canvas));
     DrawingContext context { canvas, COMPONENT_WIDTH, COMPONENT_HEIGHT };
     checkBoxGroupModifier_->PaintCheckBox(context, CONTENT_OFFSET, CONTENT_SIZE);
 }
@@ -1317,30 +1292,25 @@ HWTEST_F(CheckBoxGroupTestNG, CheckBoxGroupPaintMethodTest012, TestSize.Level1)
  */
 HWTEST_F(CheckBoxGroupTestNG, CheckBoxGroupPaintMethodTest013, TestSize.Level1)
 {
-    const std::optional<std::string> groupName;
-    CheckBoxGroupModelNG checkboxGroupModel;
-    checkboxGroupModel.Create(groupName);
-    auto groupFrameNode = AceType::DynamicCast<FrameNode>(ViewStackProcessor::GetInstance()->Finish());
-    ASSERT_NE(groupFrameNode, nullptr);
     CheckBoxGroupModifier::Parameters parameters = CheckBoxGroupCreateDefModifierParam();
     auto checkBoxGroupModifier_ = AceType::MakeRefPtr<CheckBoxGroupModifier>(parameters);
     checkBoxGroupModifier_->hoverColor_ = Color::RED;
     checkBoxGroupModifier_->clickEffectColor_ = Color::BLUE;
     checkBoxGroupModifier_->touchHoverType_ = TouchHoverAnimationType::HOVER;
-    checkBoxGroupModifier_->UpdateAnimatableProperty(groupFrameNode);
+    checkBoxGroupModifier_->UpdateAnimatableProperty();
     checkBoxGroupModifier_->animateTouchHoverColor_ =
         AceType::MakeRefPtr<AnimatablePropertyColor>(LinearColor(Color::TRANSPARENT));
     checkBoxGroupModifier_->touchHoverType_ = TouchHoverAnimationType::PRESS_TO_HOVER;
-    checkBoxGroupModifier_->UpdateAnimatableProperty(groupFrameNode);
+    checkBoxGroupModifier_->UpdateAnimatableProperty();
     EXPECT_EQ(checkBoxGroupModifier_->animateTouchHoverColor_->Get(), LinearColor(Color::RED));
     checkBoxGroupModifier_->touchHoverType_ = TouchHoverAnimationType::NONE;
-    checkBoxGroupModifier_->UpdateAnimatableProperty(groupFrameNode);
+    checkBoxGroupModifier_->UpdateAnimatableProperty();
     EXPECT_EQ(checkBoxGroupModifier_->animateTouchHoverColor_->Get(), LinearColor(Color::RED.BlendOpacity(0)));
     checkBoxGroupModifier_->touchHoverType_ = TouchHoverAnimationType::HOVER_TO_PRESS;
-    checkBoxGroupModifier_->UpdateAnimatableProperty(groupFrameNode);
+    checkBoxGroupModifier_->UpdateAnimatableProperty();
     EXPECT_EQ(checkBoxGroupModifier_->animateTouchHoverColor_->Get(), LinearColor(Color::BLUE));
     checkBoxGroupModifier_->touchHoverType_ = TouchHoverAnimationType::PRESS;
-    checkBoxGroupModifier_->UpdateAnimatableProperty(groupFrameNode);
+    checkBoxGroupModifier_->UpdateAnimatableProperty();
     EXPECT_EQ(checkBoxGroupModifier_->animateTouchHoverColor_->Get(), LinearColor(Color::BLUE));
 }
 
@@ -1568,14 +1538,8 @@ HWTEST_F(CheckBoxGroupTestNG, CheckBoxGroupLayoutAlgorithmTest001, TestSize.Leve
     OptionalSizeF optionalSizeF(nullLength, nullLength);
     LayoutConstraintF contentConstraint;
     contentConstraint.selfIdealSize = optionalSizeF;
-    CheckBoxGroupModelNG checkBoxGroupModelNG;
-    checkBoxGroupModelNG.Create(GROUP_NAME);
-    auto frameNode = AceType::DynamicCast<FrameNode>(ViewStackProcessor::GetInstance()->Finish());
-    ASSERT_NE(frameNode, nullptr);
-    RefPtr<GeometryNode> geometryNode = AceType::MakeRefPtr<GeometryNode>();
-    ASSERT_NE(geometryNode, nullptr);
     LayoutWrapperNode layoutWrapper =
-        LayoutWrapperNode(frameNode, geometryNode, AccessibilityManager::MakeRefPtr<LayoutProperty>());
+        LayoutWrapperNode(nullptr, nullptr, AccessibilityManager::MakeRefPtr<LayoutProperty>());
     auto themeManager = AceType::MakeRefPtr<MockThemeManager>();
     MockPipelineContext::GetCurrent()->SetThemeManager(themeManager);
     auto checkboxTheme = AceType::MakeRefPtr<CheckboxTheme>();
@@ -1584,7 +1548,6 @@ HWTEST_F(CheckBoxGroupTestNG, CheckBoxGroupLayoutAlgorithmTest001, TestSize.Leve
     checkboxTheme->hotZoneHorizontalPadding_ = Dimension(COMPONENT_WIDTH / 4);
     checkboxTheme->hotZoneVerticalPadding_ = Dimension(COMPONENT_WIDTH / 4);
     EXPECT_CALL(*themeManager, GetTheme(_)).WillRepeatedly(Return(checkboxTheme));
-    EXPECT_CALL(*themeManager, GetTheme(_, _)).WillRepeatedly(Return(checkboxTheme));
     auto checkBoxGroupLayoutAlgorithm = AceType::MakeRefPtr<CheckBoxGroupLayoutAlgorithm>();
     ASSERT_NE(checkBoxGroupLayoutAlgorithm, nullptr);
 
@@ -1665,9 +1628,6 @@ HWTEST_F(CheckBoxGroupTestNG, CheckBoxGroupPatternTest022, TestSize.Level1)
      * @tc.steps: step2. Call touchCallback with different touchType.
      * @tc.expected: TouchCallback works correctly.
      */
-    checkBoxGroupPattern->InitTouchEvent();
-    ASSERT_NE(checkBoxGroupPattern->touchListener_, nullptr);
-    checkBoxGroupPattern->InitTouchEvent();
     auto touchCallback = checkBoxGroupPattern->touchListener_->GetTouchEventCallback();
     TouchLocationInfo touchLocationInfo(-1);
     touchLocationInfo.SetTouchType(TouchType::UP);
@@ -1820,8 +1780,7 @@ HWTEST_F(CheckBoxGroupTestNG, CheckBoxGroupPatternTest025, TestSize.Level1)
      * @tc.expected: Get successfully.
      */
     RefPtr<EventHub> eventHub = AccessibilityManager::MakeRefPtr<EventHub>();
-    RefPtr<FocusHub> focusHub = AccessibilityManager::MakeRefPtr<FocusHub>(
-        AccessibilityManager::WeakClaim(AccessibilityManager::RawPtr(eventHub)), FocusType::DISABLE, false);
+    RefPtr<FocusHub> focusHub = AccessibilityManager::MakeRefPtr<FocusHub>(eventHub, FocusType::DISABLE, false);
     checkBoxGroupPattern->InitOnKeyEvent(focusHub);
     auto getInnerPaintRectCallback = focusHub->getInnerFocusRectFunc_;
 
@@ -1867,15 +1826,16 @@ HWTEST_F(CheckBoxGroupTestNG, OnColorConfigurationUpdate001, TestSize.Level1)
     ASSERT_NE(frameNode, nullptr);
     auto checkBoxGroupPattern = frameNode->GetPattern<CheckBoxGroupPattern>();
     ASSERT_NE(checkBoxGroupPattern, nullptr);
+    auto pipeline = PipelineBase::GetCurrentContext();
+    ASSERT_NE(pipeline, nullptr);
+    auto checkBoxTheme = pipeline->GetTheme<CheckboxTheme>();
+    ASSERT_NE(checkBoxTheme, nullptr);
+    checkBoxTheme->activeColor_ = Color::BLACK;
+    checkBoxTheme->inactiveColor_ = Color::BLACK;
+    checkBoxTheme->pointColor_ = Color::BLACK;
+    checkBoxGroupPattern->OnColorConfigurationUpdate();
     auto checkBoxGroupPaintProperty = frameNode->GetPaintProperty<CheckBoxGroupPaintProperty>();
     ASSERT_NE(checkBoxGroupPaintProperty, nullptr);
-    checkBoxGroupPaintProperty->UpdateCheckBoxGroupSelectedColor(Color::BLACK);
-    checkBoxGroupPaintProperty->UpdateCheckBoxGroupSelectedColorFlagByUser(true);
-    checkBoxGroupPaintProperty->UpdateCheckBoxGroupUnSelectedColor(Color::BLACK);
-    checkBoxGroupPaintProperty->UpdateCheckBoxGroupUnSelectedColorFlagByUser(true);
-    checkBoxGroupPaintProperty->UpdateCheckBoxGroupCheckMarkColor(Color::BLACK);
-    checkBoxGroupPaintProperty->UpdateCheckBoxGroupCheckMarkColorFlagByUser(true);
-    checkBoxGroupPattern->OnColorConfigurationUpdate();
     EXPECT_EQ(checkBoxGroupPaintProperty->GetCheckBoxGroupSelectedColor(), Color::BLACK);
     EXPECT_EQ(checkBoxGroupPaintProperty->GetCheckBoxGroupUnSelectedColor(), Color::BLACK);
     EXPECT_EQ(checkBoxGroupPaintProperty->GetCheckBoxGroupCheckMarkColor(), Color::BLACK);
@@ -1957,7 +1917,6 @@ HWTEST_F(CheckBoxGroupTestNG, CheckBoxGroupPaintPropertyTest028, TestSize.Level1
      * @tc.steps: step1. Init CheckBoxGroup node
      */
     int32_t backupApiVersion = AceApplicationInfo::GetInstance().GetApiTargetVersion();
-    AceApplicationInfo::GetInstance().SetApiTargetVersion(static_cast<int32_t>(PlatformVersion::VERSION_TWELVE));
     CheckBoxGroupModelNG checkBoxGroupModelNG;
     checkBoxGroupModelNG.Create(std::optional<string>());
 
@@ -2051,429 +2010,5 @@ HWTEST_F(CheckBoxGroupTestNG, CheckBoxGroupPatternTest030, TestSize.Level1)
     EXPECT_NE(checkBoxPaintProperty, nullptr);
     EXPECT_EQ(checkBoxPaintProperty->GetCheckBoxSelectedStyleValue(), CheckBoxStyle::CIRCULAR_STYLE);
     AceApplicationInfo::GetInstance().SetApiTargetVersion(backupApiVersion);
-}
-
-/**
- * @tc.name: CheckBoxGroupNGTest031
- * @tc.desc: Test SetCheckBoxName func.
- * @tc.type: FUNC
- */
-HWTEST_F(CheckBoxGroupTestNG, CheckBoxGroupNGTest031, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. Init CheckBox node
-     */
-    auto frameNode = CheckBoxGroupModelNG::CreateFrameNode(0);
-    ASSERT_NE(frameNode, nullptr);
-    /**
-     * @tc.steps: step2. SetCheckBoxName GroupName
-     */
-    auto node = AceType::RawPtr(frameNode);
-    ASSERT_NE(node, nullptr);
-    CheckBoxGroupModelNG::SetCheckboxGroupName(node, "testGroupName");
-
-    /**
-     * @tc.steps: step3. assert GroupName
-     */
-    auto eventHub = frameNode->GetEventHub<NG::CheckBoxGroupEventHub>();
-    ASSERT_NE(eventHub, nullptr);
-    EXPECT_EQ(eventHub->GetGroupName(), "testGroupName");
-}
-
-/**
- * @tc.name: CheckBoxGroupNGTest032
- * @tc.desc: Test retrieval of group、selectall、selectedcolor、unselectedcoulor、mark and shape values.
- * @tc.type: FUNC
- */
-HWTEST_F(CheckBoxGroupTestNG, CheckBoxGroupNGTest032, TestSize.Level1)
-{
-    auto frameNode = CheckBoxGroupModelNG::CreateFrameNode(0);
-    ASSERT_NE(frameNode, nullptr);
-    auto node = AceType::RawPtr(frameNode);
-    ASSERT_NE(node, nullptr);
-
-    CheckBoxGroupModelNG::SetCheckboxGroupName(node, GROUP_NAME);
-    EXPECT_EQ(CheckBoxGroupModelNG::GetCheckboxGroupName(node), GROUP_NAME);
-
-    CheckBoxGroupModelNG::SetSelectAll(node, SELECTED);
-    EXPECT_EQ(CheckBoxGroupModelNG::GetSelect(node), SELECTED);
-
-    CheckBoxGroupModelNG::SetSelectedColor(node, SELECTED_COLOR);
-    EXPECT_EQ(CheckBoxGroupModelNG::GetSelectedColor(node), SELECTED_COLOR);
-
-    CheckBoxGroupModelNG::SetUnSelectedColor(node, UNSELECTED_COLOR);
-    EXPECT_EQ(CheckBoxGroupModelNG::GetUnSelectedColor(node), UNSELECTED_COLOR);
-
-    CheckBoxGroupModelNG::SetCheckMarkColor(node, CHECK_MARK_COLOR);
-    EXPECT_EQ(CheckBoxGroupModelNG::GetCheckMarkColor(node), CHECK_MARK_COLOR);
-
-    CheckBoxGroupModelNG::SetCheckMarkSize(node, CHECK_MARK_SIZE);
-    EXPECT_EQ(CheckBoxGroupModelNG::GetCheckMarkSize(node), CHECK_MARK_SIZE);
-
-    CheckBoxGroupModelNG::SetCheckMarkWidth(node, CHECK_MARK_WIDTH);
-    EXPECT_EQ(CheckBoxGroupModelNG::GetCheckMarkWidth(node), CHECK_MARK_WIDTH);
-
-    CheckBoxGroupModelNG::SetCheckboxGroupStyle(node, CheckBoxStyle::SQUARE_STYLE);
-    EXPECT_EQ(CheckBoxGroupModelNG::GetCheckboxGroupStyle(node),  CheckBoxStyle::SQUARE_STYLE);
-}
-
-/**
- * @tc.name: CheckBoxGroupNGTest033
- * @tc.desc: Test CheckBoxGroupPattern InitOnKeyEvent.
- * @tc.type: FUNC
- */
-HWTEST_F(CheckBoxGroupTestNG, CheckBoxGroupNGTest033, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. Create CheckBoxGroupPattern.
-     * @tc.expected: Create successfully.
-     */
-    CheckBoxGroupModelNG CheckBoxGroupModelNG;
-    CheckBoxGroupModelNG.Create(GROUP_NAME);
-    auto frameNode = AceType::DynamicCast<FrameNode>(ViewStackProcessor::GetInstance()->Finish());
-    ASSERT_NE(frameNode, nullptr);
-    auto checkBoxGroupPattern = frameNode->GetPattern<CheckBoxGroupPattern>();
-    ASSERT_NE(checkBoxGroupPattern, nullptr);
-
-    /**
-     * @tc.steps: step2. Get onKeyEventCallback.
-     * @tc.expected: Get successfully.
-     */
-    RefPtr<EventHub> eventHub = AccessibilityManager::MakeRefPtr<EventHub>();
-    RefPtr<FocusHub> focusHub = AccessibilityManager::MakeRefPtr<FocusHub>(
-        AccessibilityManager::WeakClaim(AccessibilityManager::RawPtr(eventHub)), FocusType::DISABLE, false);
-    checkBoxGroupPattern->InitOnKeyEvent(focusHub);
-
-    /**
-     * test event.action != KeyAction::DOWN
-     */
-    KeyEvent keyEventOne(KeyCode::KEY_FUNCTION, KeyAction::UP);
-    EXPECT_FALSE(focusHub->ProcessOnKeyEventInternal(keyEventOne));
-    /**
-     * test event.action == KeyAction::DOWN and event.code != KeyCode::KEY_FUNCTION
-     */
-    KeyEvent keyEventTwo(KeyCode::KEY_A, KeyAction::DOWN);
-    EXPECT_FALSE(focusHub->ProcessOnKeyEventInternal(keyEventTwo));
-    /**
-     * test event.action == KeyAction::DOWN and event.code == KeyCode::KEY_FUNCTION
-     */
-    KeyEvent keyEventThr(KeyCode::KEY_FUNCTION, KeyAction::DOWN);
-    EXPECT_TRUE(focusHub->ProcessOnKeyEventInternal(keyEventThr));
-}
-
-/**
- * @tc.name: CheckBoxGroupNGTest034
- * @tc.desc: Test CheckBoxGroupModifier PaintCheckBox method in different situation.
- * @tc.type: FUNC
- */
-HWTEST_F(CheckBoxGroupTestNG, CheckBoxGroupNGTest034, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. MockContainer.apiTargetVersion_ = VERSION_TWELVE.
-     */
-    MockContainer::SetUp();
-    MockContainer::Current()->SetApiTargetVersion(VERSION_TWELVE);
-
-    /**
-     * @tc.steps: step2. Create CheckBoxGroupModifier.
-     * @tc.expected: Create successfully.
-     */
-    CheckBoxGroupModifier::Parameters parameters = CheckBoxGroupCreateDefModifierParam();
-    auto checkBoxGroupModifier = AceType::MakeRefPtr<CheckBoxGroupModifier>(parameters);
-    ASSERT_NE(checkBoxGroupModifier, nullptr);
-    Testing::MockCanvas canvas;
-    DrawingContext context { canvas, COMPONENT_WIDTH, COMPONENT_HEIGHT };
-
-    /**
-     * @tc.steps: step3. Call PaintCheckBox method.
-     * @tc.expected: Call method successfully.
-     */
-    checkBoxGroupModifier->SetSelectStatus(CheckBoxGroupPaintProperty::SelectStatus::PART);
-    checkBoxGroupModifier->SetEnabled(false);
-    checkBoxGroupModifier->SetCheckStroke(CHECKBOX_GROUP_LENGTH_ZERO);
-    EXPECT_CALL(canvas, AttachPen(_)).WillRepeatedly(ReturnRef(canvas));
-    EXPECT_CALL(canvas, AttachBrush(_)).WillRepeatedly(ReturnRef(canvas));
-    EXPECT_CALL(canvas, DetachBrush()).WillRepeatedly(ReturnRef(canvas));
-    EXPECT_CALL(canvas, DetachPen()).WillRepeatedly(ReturnRef(canvas));
-    checkBoxGroupModifier->PaintCheckBox(context, CONTENT_OFFSET, CONTENT_SIZE);
-    MockContainer::TearDown();
-}
-
-/**
- * @tc.name: CheckBoxGroupEventTest003
- * @tc.desc: Test CheckBoxGroup onChange event.
- * @tc.type: FUNC
- */
-HWTEST_F(CheckBoxGroupTestNG, CheckBoxGroupEventTest003, TestSize.Level1)
-{
-    auto frameNode = CheckBoxGroupModelNG::CreateFrameNode(0);
-    ASSERT_NE(frameNode, nullptr);
-    auto node = AceType::RawPtr(frameNode);
-    ASSERT_NE(node, nullptr);
-
-    bool isSelected = false;
-    auto onChange = [&isSelected](bool select) { isSelected = select; };
-    CheckBoxGroupModelNG::SetOnChange(node, onChange);
-
-    auto eventHub = frameNode->GetEventHub<NG::CheckBoxGroupEventHub>();
-    ASSERT_NE(eventHub, nullptr);
-    CheckboxGroupResult groupResult(
-        std::vector<std::string> {}, int(CheckBoxGroupPaintProperty::SelectStatus::ALL));
-    eventHub->UpdateChangeEvent(&groupResult);
-    EXPECT_EQ(isSelected, true);
-}
-
-/**
- * @tc.name: ColorTypeToString
- * @tc.desc: test ColorTypeToString.
- * @tc.type: FUNC
- */
-HWTEST_F(CheckBoxGroupTestNG, ColorTypeToString, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. Test color type to string conversion.
-     * @tc.expected: step1. Conversion returns correct string values.
-     */
-    std::vector<std::pair<CheckBoxGroupColorType, std::string>> types = {
-        { CheckBoxGroupColorType::SELECTED_COLOR, "SelectedColor" },
-        { CheckBoxGroupColorType::UN_SELECTED_COLOR, "UnSelectedColor" },
-        { static_cast<CheckBoxGroupColorType>(2), "Unknown" } };
-    for (const auto& [type, val] : types) {
-        auto ret = CheckBoxGroupModelNG::ColorTypeToString(type);
-        EXPECT_EQ(val, ret);
-    }
-}
-
-/**
- * @tc.name: CreateWithColorResourceObj
- * @tc.desc: Test CreateWithColorResourceObj.
- * @tc.type: FUNC
- */
-HWTEST_F(CheckBoxGroupTestNG, CreateWithColorResourceObj, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. Create CheckBoxGroup frame node.
-     * @tc.expected: step1. Frame node is not null.
-     */
-    CheckBoxGroupModelNG checkBoxGroupModelNG;
-    checkBoxGroupModelNG.Create(GROUP_NAME);
-    auto frameNode = ViewStackProcessor::GetInstance()->GetMainFrameNode();
-    ASSERT_NE(frameNode, nullptr);
-    auto pattern = frameNode->GetPattern<CheckBoxGroupPattern>();
-    ASSERT_NE(pattern, nullptr);
-
-    /**
-     * @tc.steps: step2. Create color resource object and verify resource manager.
-     * @tc.expected: step2. Resource is added to manager.
-     */
-    auto resObj = AceType::MakeRefPtr<ResourceObject>("", "", -1);
-    checkBoxGroupModelNG.CreateWithColorResourceObj(resObj, CheckBoxGroupColorType::SELECTED_COLOR);
-
-    std::string key = "checkboxgroup" + CheckBoxGroupModelNG::ColorTypeToString(CheckBoxGroupColorType::SELECTED_COLOR);
-    auto resMgr = pattern->resourceMgr_;
-    ASSERT_NE(resMgr, nullptr);
-    auto count = resMgr->resMap_.count(key);
-    EXPECT_EQ(count, 1);
-    pattern->OnColorModeChange(1);
-
-    /**
-     * @tc.steps: step3. Create another color resource object with parameters.
-     * @tc.expected: step3. Resource is added to manager.
-     */
-    ResourceObjectParams params { .value = "", .type = ResourceObjectParamType::NONE };
-    RefPtr<ResourceObject> resObjWithParams =
-        AceType::MakeRefPtr<ResourceObject>(1, 10001, std::vector<ResourceObjectParams> { params }, "", "", 100000);
-    checkBoxGroupModelNG.CreateWithColorResourceObj(resObjWithParams, CheckBoxGroupColorType::UN_SELECTED_COLOR);
-    key = "checkboxgroup" + CheckBoxGroupModelNG::ColorTypeToString(CheckBoxGroupColorType::UN_SELECTED_COLOR);
-    count = resMgr->resMap_.count(key);
-    EXPECT_EQ(count, 1);
-    pattern->OnColorModeChange(1);
-}
-
-/**
- * @tc.name: UpdateComponentColor
- * @tc.desc: Test UpdateComponentColor.
- * @tc.type: FUNC
- */
-HWTEST_F(CheckBoxGroupTestNG, UpdateComponentColor, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. Create CheckBoxGroup frame node and get necessary properties.
-     * @tc.expected: step1. Frame node and properties are not null.
-     */
-    CheckBoxGroupModelNG checkBoxGroupModelNG;
-    checkBoxGroupModelNG.Create(GROUP_NAME);
-    auto frameNode = ViewStackProcessor::GetInstance()->GetMainFrameNode();
-    ASSERT_NE(frameNode, nullptr);
-    auto pattern = frameNode->GetPattern<CheckBoxGroupPattern>();
-    ASSERT_NE(pattern, nullptr);
-    auto paintProperty = pattern->GetPaintProperty<CheckBoxGroupPaintProperty>();
-    ASSERT_NE(paintProperty, nullptr);
-
-    /**
-     * @tc.steps: step2. Update component color with different types.
-     * @tc.expected: step2. Color properties are updated correctly.
-     */
-    checkBoxGroupModelNG.UpdateComponentColor(frameNode, static_cast<CheckBoxGroupColorType>(2), Color::RED);
-    auto ret = paintProperty->GetCheckBoxGroupSelectedColor();
-    EXPECT_FALSE(ret.has_value());
-    checkBoxGroupModelNG.UpdateComponentColor(frameNode, CheckBoxGroupColorType::SELECTED_COLOR, Color::RED);
-    ret = paintProperty->GetCheckBoxGroupSelectedColor();
-    EXPECT_EQ(ret.value_or(Color::BLACK), Color::RED);
-    checkBoxGroupModelNG.UpdateComponentColor(frameNode, CheckBoxGroupColorType::UN_SELECTED_COLOR, Color::RED);
-    ret = paintProperty->GetCheckBoxGroupUnSelectedColor();
-    EXPECT_EQ(ret.value_or(Color::BLACK), Color::RED);
-}
-
-/**
- * @tc.name: ResetComponentColor
- * @tc.desc: Test ResetComponentColor.
- * @tc.type: FUNC
- */
-HWTEST_F(CheckBoxGroupTestNG, ResetComponentColor, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. Create CheckBoxGroup frame node and get necessary properties.
-     * @tc.expected: step1. Frame node and properties are not null.
-     */
-    CheckBoxGroupModelNG checkBoxGroupModelNG;
-    checkBoxGroupModelNG.Create(GROUP_NAME);
-    auto frameNode = ViewStackProcessor::GetInstance()->GetMainFrameNode();
-    ASSERT_NE(frameNode, nullptr);
-    auto pattern = frameNode->GetPattern<CheckBoxGroupPattern>();
-    ASSERT_NE(pattern, nullptr);
-    auto paintProperty = pattern->GetPaintProperty<CheckBoxGroupPaintProperty>();
-    ASSERT_NE(paintProperty, nullptr);
-    auto pipelineContext = frameNode->GetContext();
-    ASSERT_NE(pipelineContext, nullptr);
-    auto theme = pipelineContext->GetTheme<CheckboxTheme>();
-    ASSERT_NE(theme, nullptr);
-
-    /**
-     * @tc.steps: step2. Reset component color with different types.
-     * @tc.expected: step2. Color properties are reset to theme values.
-     */
-    checkBoxGroupModelNG.ResetComponentColor(frameNode, static_cast<CheckBoxGroupColorType>(2));
-    auto ret = paintProperty->GetCheckBoxGroupSelectedColor();
-    EXPECT_FALSE(ret.has_value());
-    checkBoxGroupModelNG.ResetComponentColor(frameNode, CheckBoxGroupColorType::SELECTED_COLOR);
-    ret = paintProperty->GetCheckBoxGroupSelectedColor();
-    EXPECT_EQ(ret.value_or(Color::BLACK), theme->GetActiveColor());
-    checkBoxGroupModelNG.ResetComponentColor(frameNode, CheckBoxGroupColorType::UN_SELECTED_COLOR);
-    ret = paintProperty->GetCheckBoxGroupUnSelectedColor();
-    EXPECT_EQ(ret.value_or(Color::BLACK), theme->GetInactiveColor());
-}
-
-/**
- * @tc.name: CheckBoxGroupMeasureContentTest001
- * @tc.desc: Test CheckBoxGroup MeasureContent.
- * @tc.type: FUNC
- */
-HWTEST_F(CheckBoxGroupTestNG, CheckBoxGroupMeasureContentTest001, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. Create CheckBoxGroupLayoutAlgorithm.
-     * @tc.expected: Create successfully.
-     */
-    CheckBoxGroupModelNG checkBoxGroupModelNG;
-    checkBoxGroupModelNG.Create(GROUP_NAME);
-    auto frameNode = AceType::DynamicCast<FrameNode>(ViewStackProcessor::GetInstance()->Finish());
-    ASSERT_NE(frameNode, nullptr);
-    RefPtr<GeometryNode> geometryNode = AceType::MakeRefPtr<GeometryNode>();
-    ASSERT_NE(geometryNode, nullptr);
-    LayoutWrapperNode layoutWrapper =
-        LayoutWrapperNode(frameNode, geometryNode, AccessibilityManager::MakeRefPtr<LayoutProperty>());
-    auto checkBoxGroupLayoutAlgorithm = AceType::MakeRefPtr<CheckBoxGroupLayoutAlgorithm>();
-    ASSERT_NE(checkBoxGroupLayoutAlgorithm, nullptr);
-
-    /**
-     * @tc.steps: step2. set widthLayoutPolicy_ and heightLayoutPolicy_ to MATCH_PARENT.
-     * @tc.expected: ret is equal to TEST_SIZE_100.
-     */
-    LayoutConstraintF contentConstraint;
-    contentConstraint.parentIdealSize.SetSize(TEST_SIZE_100_200);
-    auto layoutProperty = layoutWrapper.GetLayoutProperty();
-    ASSERT_NE(layoutProperty, nullptr);
-    LayoutPolicyProperty layoutPolicyProperty;
-    layoutPolicyProperty.widthLayoutPolicy_ = LayoutCalPolicy::MATCH_PARENT;
-    layoutPolicyProperty.heightLayoutPolicy_ = LayoutCalPolicy::MATCH_PARENT;
-    layoutProperty->layoutPolicy_ = layoutPolicyProperty;
-    auto ret = checkBoxGroupLayoutAlgorithm->MeasureContent(contentConstraint, &layoutWrapper);
-    EXPECT_EQ(ret, TEST_SIZE_100);
-}
-
-/**
- * @tc.name: CheckBoxGroupLayoutPolicyIsMatchParentTest001
- * @tc.desc: Test CheckBoxGroup LayoutPolicyIsMatchParent.
- * @tc.type: FUNC
- */
-HWTEST_F(CheckBoxGroupTestNG, CheckBoxGroupLayoutPolicyIsMatchParentTest001, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. Create CheckBoxGroupLayoutAlgorithm.
-     * @tc.expected: step1. Create successfully.
-     */
-    LayoutWrapperNode layoutWrapper =
-        LayoutWrapperNode(nullptr, nullptr, AccessibilityManager::MakeRefPtr<LayoutProperty>());
-    auto checkBoxGroupLayoutAlgorithm = AceType::MakeRefPtr<CheckBoxGroupLayoutAlgorithm>();
-    ASSERT_NE(checkBoxGroupLayoutAlgorithm, nullptr);
-    auto layoutPolicy = checkBoxGroupLayoutAlgorithm->GetLayoutPolicy(&layoutWrapper);
-
-    /**
-     * @tc.steps: step2. call LayoutPolicyIsMatchParent function.
-     * @tc.expected: step2. ret is equal to TEST_SIZE_0.
-     */
-    LayoutConstraintF contentConstraint;
-    auto ret = checkBoxGroupLayoutAlgorithm->LayoutPolicyIsMatchParent(contentConstraint,
-        layoutPolicy, &layoutWrapper);
-    EXPECT_EQ(ret, TEST_SIZE_0);
-
-    /**
-     * @tc.steps: step3. set layoutPolicy->widthLayoutPolicy_ to MATCH_PARENT.
-     * @tc.expected: step3. ret is equal to TEST_SIZE_100.
-     */
-    contentConstraint.parentIdealSize.SetSize(TEST_SIZE_100_200);
-    layoutPolicy->widthLayoutPolicy_ = LayoutCalPolicy::MATCH_PARENT;
-    ret = checkBoxGroupLayoutAlgorithm->LayoutPolicyIsMatchParent(contentConstraint,
-        layoutPolicy, &layoutWrapper);
-    EXPECT_EQ(ret, TEST_SIZE_100);
-
-    /**
-     * @tc.steps: step4. set selfIdealSize.height_ to TEST_HEIGHT_60.
-     * @tc.expected: step4. ret is equal to TEST_SIZE_60.
-     */
-    contentConstraint.selfIdealSize.SetHeight(TEST_HEIGHT_60);
-    ret = checkBoxGroupLayoutAlgorithm->LayoutPolicyIsMatchParent(contentConstraint,
-        layoutPolicy, &layoutWrapper);
-    EXPECT_EQ(ret, TEST_SIZE_60);
-
-    /**
-     * @tc.steps: step5. set layoutPolicy->heightLayoutPolicy_ to MATCH_PARENT.
-     * @tc.expected: step5. ret is equal to TEST_SIZE_200.
-     */
-    layoutPolicy->widthLayoutPolicy_ = LayoutCalPolicy::NO_MATCH;
-    layoutPolicy->heightLayoutPolicy_ = LayoutCalPolicy::MATCH_PARENT;
-    ret = checkBoxGroupLayoutAlgorithm->LayoutPolicyIsMatchParent(contentConstraint,
-        layoutPolicy, &layoutWrapper);
-    EXPECT_EQ(ret, TEST_SIZE_200);
-
-    /**
-     * @tc.steps: step6. set selfIdealSize.width_ to TEST_WIDTH_50.
-     * @tc.expected: step6. ret is equal to TEST_SIZE_50.
-     */
-    contentConstraint.selfIdealSize.SetWidth(TEST_WIDTH_50);
-    ret = checkBoxGroupLayoutAlgorithm->LayoutPolicyIsMatchParent(contentConstraint,
-        layoutPolicy, &layoutWrapper);
-    EXPECT_EQ(ret, TEST_SIZE_50);
-
-    /**
-     * @tc.steps: step7. set widthLayoutPolicy_ and heightLayoutPolicy_ to MATCH_PARENT.
-     * @tc.expected: step7. ret is equal to TEST_SIZE_100.
-     */
-    layoutPolicy->widthLayoutPolicy_ = LayoutCalPolicy::MATCH_PARENT;
-    layoutPolicy->heightLayoutPolicy_ = LayoutCalPolicy::MATCH_PARENT;
-    ret = checkBoxGroupLayoutAlgorithm->LayoutPolicyIsMatchParent(contentConstraint,
-        layoutPolicy, &layoutWrapper);
-    EXPECT_EQ(ret, TEST_SIZE_100);
 }
 } // namespace OHOS::Ace::NG

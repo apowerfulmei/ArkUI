@@ -22,20 +22,26 @@
 
 namespace OHOS::Ace {
 
+std::unique_ptr<RatingModel> RatingModel::instance_ = nullptr;
+std::mutex RatingModel::mutex_;
+
 RatingModel* RatingModel::GetInstance()
 {
+    if (!instance_) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (!instance_) {
 #ifdef NG_BUILD
-    static NG::RatingModelNG instance;
-    return &instance;
+            instance_.reset(new NG::RatingModelNG());
 #else
-    if (Container::IsCurrentUseNewPipeline()) {
-        static NG::RatingModelNG instance;
-        return &instance;
-    } else {
-        static Framework::RatingModelImpl instance;
-        return &instance;
-    }
+            if (Container::IsCurrentUseNewPipeline()) {
+                instance_.reset(new NG::RatingModelNG());
+            } else {
+                instance_.reset(new Framework::RatingModelImpl());
+            }
 #endif
+        }
+    }
+    return instance_.get();
 }
 
 } // namespace OHOS::Ace
@@ -73,18 +79,15 @@ void JSRating::Create(const JSCallbackInfo& info)
         auto paramObject = JSRef<JSObject>::Cast(info[0]);
         auto getRating = paramObject->GetProperty("rating");
         auto getIndicator = paramObject->GetProperty("indicator");
-        if (getRating->IsObject()) {
+        if (getRating->IsNumber()) {
+            rating = getRating->ToNumber<double>();
+        } else if (getRating->IsObject()) {
             JSRef<JSObject> ratingObj = JSRef<JSObject>::Cast(getRating);
             changeEventVal = ratingObj->GetProperty("changeEvent");
             auto ratingValue = ratingObj->GetProperty("value");
             if (ratingValue->IsNumber()) {
                 rating = ratingValue->ToNumber<double>();
             }
-        } else if (paramObject->HasProperty("$rating")) {
-            changeEventVal = paramObject->GetProperty("$rating");
-            rating = getRating->ToNumber<double>();
-        } else if (getRating->IsNumber()) {
-            rating = getRating->ToNumber<double>();
         }
         if (rating < 0) {
             rating = RATING_SCORE_DEFAULT;
@@ -139,36 +142,35 @@ void JSRating::SetStarStyle(const JSCallbackInfo& info)
     auto getBackgroundUri = paramObject->GetProperty("backgroundUri");
     auto getForegroundUri = paramObject->GetProperty("foregroundUri");
     auto getSecondaryUri = paramObject->GetProperty("secondaryUri");
-    
     std::string backgroundUri;
-    RefPtr<ResourceObject> bgUriResObj;
-    ParseJsMedia(getBackgroundUri, backgroundUri, bgUriResObj);
-    RatingModel::GetInstance()->SetBackgroundSrc(backgroundUri, backgroundUri.empty());
-    CreateWithResourceObj(bgUriResObj, RatingUriType::BACKGROUND_URI);
-
-    std::string foregroundUri;
-    RefPtr<ResourceObject> fgUriResObj;
-    ParseJsMedia(getForegroundUri, foregroundUri, fgUriResObj);
-    RatingModel::GetInstance()->SetForegroundSrc(foregroundUri, foregroundUri.empty());
-    CreateWithResourceObj(fgUriResObj, RatingUriType::FOREGROUND_URI);
-
-    std::string secondaryUri;
-    RefPtr<ResourceObject> secondaryUriResObj;
-    ParseJsMedia(getSecondaryUri, secondaryUri, secondaryUriResObj);
-
-    if (secondaryUri.empty()) {
-        RatingModel::GetInstance()->SetSecondarySrc(backgroundUri, backgroundUri.empty());
-        CreateWithResourceObj(bgUriResObj, RatingUriType::SECONDARY_URI);
+    if (getBackgroundUri->IsString()) {
+        backgroundUri = getBackgroundUri->ToString();
+        if (backgroundUri.empty()) {
+            RatingModel::GetInstance()->SetBackgroundSrc("", true);
+        } else {
+            RatingModel::GetInstance()->SetBackgroundSrc(backgroundUri, false);
+        }
     } else {
-        RatingModel::GetInstance()->SetSecondarySrc(secondaryUri, false);
-        CreateWithResourceObj(secondaryUriResObj, RatingUriType::SECONDARY_URI);
+        RatingModel::GetInstance()->SetBackgroundSrc("", true);
     }
-}
 
-void JSRating::CreateWithResourceObj(const RefPtr<ResourceObject>& resObj, const RatingUriType& ratingUriType)
-{
-    if (SystemProperties::ConfigChangePerform()) {
-        RatingModel::GetInstance()->CreateWithMediaResourceObj(resObj, ratingUriType);
+    if (getForegroundUri->IsString()) {
+        std::string foregroundUri = getForegroundUri->ToString();
+        if (foregroundUri.empty()) {
+            RatingModel::GetInstance()->SetForegroundSrc("", true);
+        } else {
+            RatingModel::GetInstance()->SetForegroundSrc(foregroundUri, false);
+        }
+    } else {
+        RatingModel::GetInstance()->SetForegroundSrc("", true);
+    }
+
+    if (getSecondaryUri->IsString() && !getSecondaryUri->ToString().empty()) {
+        RatingModel::GetInstance()->SetSecondarySrc(getSecondaryUri->ToString(), false);
+    } else if (getBackgroundUri->IsString() && !backgroundUri.empty()) {
+        RatingModel::GetInstance()->SetSecondarySrc(backgroundUri, false);
+    } else {
+        RatingModel::GetInstance()->SetSecondarySrc("", true);
     }
 }
 
@@ -185,7 +187,7 @@ void JSRating::SetOnChange(const JSCallbackInfo& info)
         JAVASCRIPT_EXECUTION_SCOPE_WITH_CHECK(execCtx);
         ACE_SCORING_EVENT("Rating.onChange");
         PipelineContext::SetCallBackNode(node);
-        auto newJSVal = JSRef<JSVal>::Make(ToJSValue(StringToDouble(value)));
+        auto newJSVal = JSRef<JSVal>::Make(ToJSValue(stod(value)));
         func->ExecuteJS(1, &newJSVal);
     };
 

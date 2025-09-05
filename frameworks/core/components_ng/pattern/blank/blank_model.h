@@ -18,7 +18,6 @@
 
 #include <mutex>
 
-#include "core/common/resource/resource_object.h"
 #include "core/components_ng/event/event_hub.h"
 
 namespace OHOS::Ace {
@@ -31,8 +30,11 @@ public:
     virtual void SetBlankMin(const Dimension& blankMin) = 0;
     virtual void SetHeight(const Dimension& height) = 0;
     virtual void SetColor(const Color& color) = 0;
-    virtual void SetColor(const RefPtr<ResourceObject>& resobj) {};
-    virtual void ResetResObj(const std::string& key) {};
+
+private:
+    static std::unique_ptr<BlankModel> instance_;
+    static std::mutex mutex_;
 };
 } // namespace OHOS::Ace
+
 #endif // FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_PATTERNS_BLANK_BLANK_MODEL_H

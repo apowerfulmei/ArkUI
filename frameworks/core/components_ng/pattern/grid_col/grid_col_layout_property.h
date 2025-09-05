@@ -74,8 +74,6 @@ public:
         return GetPropValue(offset, sizeType);
     }
 
-    std::string ToString() const;
-
 private:
     static int32_t GetPropValue(const V2::GridContainerSize& prop, V2::GridSizeType sizeType);
 };

@@ -24,17 +24,11 @@ class ACE_EXPORT ScrollBarModelNG : public OHOS::Ace::ScrollBarModel {
 public:
     RefPtr<ScrollProxy> GetScrollBarProxy(const  RefPtr<ScrollProxy>& scrollProxy) override;
     void Create(const RefPtr<ScrollProxy>& proxy, bool infoflag, bool proxyFlag,
-        int directionValue, int stateValue, bool isCreateArc = false) override;
+        int directionValue, int stateValue) override;
     void SetEnableNestedScroll(bool enableNestedSroll) override;
-    void SetScrollBarColor(const Color& color) override;
-    void ResetScrollBarColor() override;
-    void CreateWithResourceObj(ScrollBarJsResType jsResourceType, const RefPtr<ResourceObject>& resObj) override;
     static void SetEnableNestedScroll(FrameNode* frameNode, bool enableNestedSroll);
-    static void SetScrollBarColor(FrameNode* frameNode, Color color);
-    static void ResetScrollBarColor(FrameNode* frameNode);
     static void SetNestedScroll(RefPtr<FrameNode>& frameNode, RefPtr<ScrollablePattern>& pattern);
     static void UnSetNestedScroll(RefPtr<FrameNode>& frameNode, RefPtr<ScrollablePattern>& pattern);
-    static void HandleSetScrollBarColor(FrameNode* frameNode, const RefPtr<ResourceObject>& resObj);
 };
 } // namespace OHOS::Ace::NG
 #endif // FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_PATTERN_SCROLL_BAR_SCROLL_BAR_MODEL_NG_H

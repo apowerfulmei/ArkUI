@@ -25,7 +25,6 @@
 namespace OHOS::Ace {
 namespace {
 constexpr uint32_t FILE_SUFFIX_LEN = 4;
-constexpr uint32_t URL_LENGTH = 12;
 
 bool CheckSvgExtension(const std::string& src)
 {
@@ -55,9 +54,14 @@ bool ImageSourceInfo::IsSVGSource(const std::string& src, SrcType srcType, Inter
             resourceId < InternalResource::ResourceId::SVG_END);
 }
 
+bool ImageSourceInfo::IsPngSource(const std::string& src, InternalResource::ResourceId resourceId)
+{
+    return false;
+}
+
 bool ImageSourceInfo::IsValidBase64Head(const std::string& uri, const std::string& pattern)
 {
-    return uri.size() > URL_LENGTH ? true : false;
+    return true;
 }
 
 bool ImageSourceInfo::IsUriOfDataAbilityEncoded(const std::string& uri, const std::string& pattern)
@@ -113,7 +117,8 @@ SrcType ImageSourceInfo::ResolveURIType(const std::string& uri)
 ImageSourceInfo::ImageSourceInfo(std::string imageSrc, std::string bundleName, std::string moduleName, Dimension width,
     Dimension height, InternalResource::ResourceId resourceId, const RefPtr<PixelMap>& pixmap)
     : src_(std::move(imageSrc)), bundleName_(std::move(bundleName)), moduleName_(std::move(moduleName)),
-      sourceWidth_(width), sourceHeight_(height), resourceId_(resourceId), pixmap_(pixmap), srcType_(ResolveSrcType())
+      sourceWidth_(width), sourceHeight_(height), resourceId_(resourceId), pixmap_(pixmap),
+      isPng_(IsPngSource(src_, resourceId_)), srcType_(ResolveSrcType())
 {
     isSvg_ = IsSVGSource(src_, srcType_, resourceId_);
 }
@@ -122,7 +127,8 @@ ImageSourceInfo::ImageSourceInfo(const std::shared_ptr<std::string>& imageSrc, s
     std::string moduleName, Dimension width, Dimension height, InternalResource::ResourceId resourceId,
     const RefPtr<PixelMap>& pixmap)
     : bundleName_(std::move(bundleName)), moduleName_(std::move(moduleName)), sourceWidth_(width),
-      sourceHeight_(height), resourceId_(resourceId), pixmap_(pixmap), srcType_(ResolveSrcType())
+      sourceHeight_(height), resourceId_(resourceId), pixmap_(pixmap),
+      isPng_(IsPngSource(src_, resourceId_)), srcType_(ResolveSrcType())
 {
     isSvg_ = IsSVGSource(src_, srcType_, resourceId_);
 }
@@ -200,11 +206,12 @@ bool ImageSourceInfo::IsInternalResource() const
 
 bool ImageSourceInfo::IsValid() const
 {
-    if (src_ == "IsValid false") {
-        return false;
-    }
-
     return true;
+}
+
+bool ImageSourceInfo::IsPng() const
+{
+    return isPng_;
 }
 
 bool ImageSourceInfo::IsSvg() const
@@ -222,7 +229,7 @@ SrcType ImageSourceInfo::GetSrcType() const
     return srcType_;
 }
 
-std::string ImageSourceInfo::ToString(bool isNeedTruncated) const
+std::string ImageSourceInfo::ToString() const
 {
     return std::string("empty source");
 }
@@ -260,39 +267,9 @@ std::string ImageSourceInfo::GetKey() const
     return std::string("");
 }
 
-std::string ImageSourceInfo::GetTaskKey() const
-{
-    return std::string("");
-}
-
-void ImageSourceInfo::SetContainerId(int32_t containerId)
-{
-    containerId_ = containerId;
-}
-
-int32_t ImageSourceInfo::GetContainerId() const
-{
-    return containerId_;
-}
-
-void ImageSourceInfo::SetImageHdr(bool isHdr)
-{
-    isHdr_ = isHdr;
-}
-
-bool ImageSourceInfo::IsImageHdr() const
-{
-    return isHdr_;
-}
-
 bool ImageSourceInfo::SupportObjCache() const
 {
     return false;
-}
-
-const std::string& ImageSourceInfo::GetBundleName() const
-{
-    return bundleName_;
 }
 
 const std::string& ImageSourceInfo::GetModuleName() const

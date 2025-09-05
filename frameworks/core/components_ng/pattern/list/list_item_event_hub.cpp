@@ -15,6 +15,7 @@
 
 #include "core/components_ng/pattern/list/list_item_event_hub.h"
 
+#include "core/components_ng/base/frame_node.h"
 #include "core/components_ng/pattern/list/list_item_pattern.h"
 
 namespace OHOS::Ace::NG {

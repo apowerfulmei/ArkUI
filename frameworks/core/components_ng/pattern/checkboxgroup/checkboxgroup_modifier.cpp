@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -15,6 +15,12 @@
 
 #include "core/components_ng/pattern/checkboxgroup/checkboxgroup_modifier.h"
 
+#include "base/utils/utils.h"
+#include "core/common/container.h"
+#include "core/components/checkable/checkable_theme.h"
+#include "core/components_ng/base/modifier.h"
+#include "core/components_ng/pattern/checkboxgroup/checkboxgroup_paint_property.h"
+#include "core/components_ng/render/drawing.h"
 #include "core/components_ng/render/drawing_prop_convertor.h"
 
 namespace OHOS::Ace::NG {
@@ -42,24 +48,21 @@ CheckBoxGroupModifier::CheckBoxGroupModifier(const Parameters& parameters)
     checkMarkPaintSize_ = AceType::MakeRefPtr<AnimatablePropertyFloat>(parameters.checkMarkPaintSize);
     checkStroke_ = AceType::MakeRefPtr<AnimatablePropertyFloat>(parameters.checkStroke);
     enabled_ = AceType::MakeRefPtr<PropertyBool>(true);
-    useContentModifier_ = AceType::MakeRefPtr<PropertyBool>(false);
     uiStatus_ = AceType::MakeRefPtr<PropertyInt>(static_cast<int>(parameters.uiStatus));
     status_ = AceType::MakeRefPtr<PropertyInt>(static_cast<int>(UIStatus::UNSELECTED));
     offset_ = AceType::MakeRefPtr<PropertyOffsetF>(OffsetF());
     size_ = AceType::MakeRefPtr<PropertySizeF>(SizeF());
     animateTouchHoverColor_ = AceType::MakeRefPtr<AnimatablePropertyColor>(LinearColor(Color::TRANSPARENT));
-    inactivePointColor_ = AceType::MakeRefPtr<PropertyColor>(parameters.inactivePointColor);
 
     borderWidth_ = parameters.borderWidth;
     borderRadius_ = parameters.borderRadius;
     shadowColor_ = parameters.shadowColor;
     clickEffectColor_ = parameters.clickEffectColor;
     hoverColor_ = parameters.hoverColor;
+    inactivePointColor_ = parameters.inactivePointColor;
     hoverRadius_ = parameters.hoverRadius;
     hotZoneHorizontalPadding_ = parameters.hotZoneHorizontalPadding;
     defaultPaddingSize_ = parameters.defaultPaddingSize;
-    hoverPaddingSize_ = parameters.hoverPaddingSize;
-    showCircleDial_ = parameters.showCircleDial;
     hotZoneVerticalPadding_ = parameters.hotZoneVerticalPadding;
     shadowWidth_ = parameters.shadowWidth;
     hoverDuration_ = parameters.hoverDuration;
@@ -73,7 +76,6 @@ CheckBoxGroupModifier::CheckBoxGroupModifier(const Parameters& parameters)
     AttachProperty(activeColor_);
     AttachProperty(pointColor_);
     AttachProperty(inactiveColor_);
-    AttachProperty(inactivePointColor_);
     AttachProperty(checkMarkPaintSize_);
     AttachProperty(checkStroke_);
     AttachProperty(enabled_);
@@ -114,11 +116,11 @@ void CheckBoxGroupModifier::PaintCheckBox(
         DrawActiveBorder(canvas, paintOffset, brush, contentSize);
         DrawCheck(canvas, paintOffset, pen, shadowPen, contentSize);
     } else {
-        brush.SetColor(ToRSColor(inactivePointColor_->Get()));
+        brush.SetColor(ToRSColor(inactivePointColor_));
         pen.SetColor(ToRSColor(inactiveColor_->Get()));
         if (!enabled_->Get()) {
             brush.SetColor(
-                ToRSColor(inactivePointColor_->Get().BlendOpacity(static_cast<float>(DISABLED_ALPHA) / ENABLED_ALPHA)));
+                ToRSColor(inactivePointColor_.BlendOpacity(static_cast<float>(DISABLED_ALPHA) / ENABLED_ALPHA)));
             pen.SetColor(
                 ToRSColor(inactiveColor_->Get().BlendOpacity(static_cast<float>(DISABLED_ALPHA) / ENABLED_ALPHA)));
         }
@@ -272,14 +274,11 @@ void CheckBoxGroupModifier::DrawTouchAndHoverBoard(RSCanvas& canvas, const SizeF
     float originY;
     float endX;
     float endY;
-    auto paddingPx = (showCircleDial_ ? hoverPaddingSize_.ConvertToPx() : defaultPaddingSize_.ConvertToPx());
     if (Container::GreatOrEqualAPITargetVersion(PlatformVersion::VERSION_TWELVE)) {
-        originX = offset.GetX() - paddingPx;
-        originY = offset.GetY() - paddingPx;
-        endX = size.Width() + originX +
-            CHECKBOX_GROUP_DOUBLE_RATIO * paddingPx;
-        endY = size.Height() + originY +
-            CHECKBOX_GROUP_DOUBLE_RATIO * paddingPx;
+        originX = offset.GetX() - defaultPaddingSize_.ConvertToPx();
+        originY = offset.GetY() - defaultPaddingSize_.ConvertToPx();
+        endX = size.Width() + originX + CHECKBOX_GROUP_DOUBLE_RATIO * defaultPaddingSize_.ConvertToPx();
+        endY = size.Height() + originY + CHECKBOX_GROUP_DOUBLE_RATIO * defaultPaddingSize_.ConvertToPx();
     } else {
         originX = offset.GetX() - hotZoneHorizontalPadding_.ConvertToPx();
         originY = offset.GetY() - hotZoneVerticalPadding_.ConvertToPx();

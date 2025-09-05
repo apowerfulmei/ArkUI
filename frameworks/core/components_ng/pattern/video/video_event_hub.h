@@ -29,7 +29,7 @@ namespace OHOS::Ace::NG {
 using VideoEventCallback = std::function<void(const std::string&)>;
 
 class VideoEventHub : public EventHub {
-    DECLARE_ACE_TYPE(VideoEventHub, EventHub);
+    DECLARE_ACE_TYPE(VideoEventHub, EventHub)
 
 public:
     VideoEventHub() = default;
@@ -39,11 +39,8 @@ public:
     {
         onStart_ = std ::move(onStart);
     }
-    void FireStartEvent()
+    void FireStartEvent(const std::string& param)
     {
-        auto json = JsonUtil::Create(true);
-        json->Put("start", "");
-        auto param = json->ToString();
         if (onStart_) {
             // onStart_ may be overwritten in its invoke so we copy it first
             auto onStart = onStart_;
@@ -56,11 +53,8 @@ public:
     {
         onPause_ = std ::move(onPause);
     }
-    void FirePauseEvent()
+    void FirePauseEvent(const std::string& param)
     {
-        auto json = JsonUtil::Create(true);
-        json->Put("pause", "");
-        auto param = json->ToString();
         if (onPause_) {
             // onPause_ may be overwritten in its invoke so we copy it first
             auto onPause = onPause_;
@@ -73,11 +67,8 @@ public:
     {
         onFinish_ = std ::move(onFinish);
     }
-    void FireFinishEvent()
+    void FireFinishEvent(const std::string& param)
     {
-        auto json = JsonUtil::Create(true);
-        json->Put("finish", "");
-        auto param = json->ToString();
         if (onFinish_) {
             // onFinish_ may be overwritten in its invoke so we copy it first
             auto onFinish = onFinish_;
@@ -90,27 +81,8 @@ public:
     {
         onError_ = std ::move(onError);
     }
-    void FireErrorEvent()
+    void FireErrorEvent(const std::string& param)
     {
-        auto json = JsonUtil::Create(true);
-        json->Put("error", "");
-        auto param = json->ToString();
-        if (onError_) {
-            // onError_ may be overwritten in its invoke so we copy it first
-            auto onError = onError_;
-            onError(param);
-        }
-        RecorderOnEvent(Recorder::EventType::VIDEO_ERROR, param);
-    }
-    void FireErrorEvent(int32_t code, const std::string& message)
-    {
-        auto json = JsonUtil::Create(true);
-        const std::string name = "BusinessError";
-        json->Put("code", code);
-        json->Put("name", name.c_str());
-        json->Put("message", message.c_str());
-        auto param = json->ToString();
-
         if (onError_) {
             // onError_ may be overwritten in its invoke so we copy it first
             auto onError = onError_;
@@ -123,11 +95,8 @@ public:
     {
         onPrepared_ = std ::move(onPrepared);
     }
-    void FirePreparedEvent(const double duration)
+    void FirePreparedEvent(const std::string& param)
     {
-        auto json = JsonUtil::Create(true);
-        json->Put("duration", duration);
-        auto param = json->ToString();
         if (onPrepared_) {
             // onPrepared_ may be overwritten in its invoke so we copy it first
             auto onPrepared = onPrepared_;
@@ -140,11 +109,8 @@ public:
     {
         onSeeking_ = std ::move(onSeeking);
     }
-    void FireSeekingEvent(const double posTime)
+    void FireSeekingEvent(const std::string& param)
     {
-        auto json = JsonUtil::Create(true);
-        json->Put("time", posTime);
-        auto param = json->ToString();
         if (onSeeking_) {
             // onSeeking_ may be overwritten in its invoke so we copy it first
             auto onSeeking = onSeeking_;
@@ -156,11 +122,8 @@ public:
     {
         onSeeked_ = std ::move(onSeeked);
     }
-    void FireSeekedEvent(const double posTime)
+    void FireSeekedEvent(const std::string& param)
     {
-        auto json = JsonUtil::Create(true);
-        json->Put("time", posTime);
-        auto param = json->ToString();
         if (onSeeked_) {
             // onSeeked_ may be overwritten in its invoke so we copy it first
             auto onSeeked = onSeeked_;
@@ -173,11 +136,8 @@ public:
     {
         onUpdate_ = std ::move(onUpdate);
     }
-    void FireUpdateEvent(const double currentPos)
+    void FireUpdateEvent(const std::string& param)
     {
-        auto json = JsonUtil::Create(true);
-        json->Put("time", currentPos);
-        auto param = json->ToString();
         if (onUpdate_) {
             // onUpdate_ may be overwritten in its invoke so we copy it first
             auto onUpdate = onUpdate_;
@@ -189,11 +149,8 @@ public:
     {
         onStop_ = std ::move(onStop);
     }
-    void FireStopEvent()
+    void FireStopEvent(const std::string& param)
     {
-        auto json = JsonUtil::Create(true);
-        json->Put("stop", "");
-        auto param = json->ToString();
         if (onStop_) {
             // onStop_ may be overwritten in its invoke so we copy it first
             auto onStop = onStop_;
@@ -206,11 +163,8 @@ public:
     {
         onFullScreenChange_ = std ::move(onFullScreenChange);
     }
-    void FireFullScreenChangeEvent(const bool isFullScreen)
+    void FireFullScreenChangeEvent(const std::string& param)
     {
-        auto json = JsonUtil::Create(true);
-        json->Put("fullscreen", isFullScreen);
-        auto param = json->ToString();
         if (onFullScreenChange_) {
             // onFullScreenChange_ may be overwritten in its invoke so we copy it first
             auto onFullScreenChange = onFullScreenChange_;
@@ -234,7 +188,7 @@ private:
         builder.SetId(inspectorId_);
         auto host = GetFrameNode();
         if (host) {
-            builder.SetType(host->GetHostTag()).SetHost(host).SetDescription(host->GetAutoEventParamValue(""));
+            builder.SetType(host->GetHostTag()).SetDescription(host->GetAutoEventParamValue(""));
         }
         builder.SetEventType(eventType).SetText(param);
         Recorder::EventRecorder::Get().OnEvent(std::move(builder));

@@ -15,6 +15,12 @@
 
 #include "frameworks/bridge/card_frontend/card_frontend_delegate.h"
 
+#include <string>
+
+#include "base/log/event_report.h"
+#include "base/utils/utils.h"
+#include "core/common/thread_checker.h"
+
 namespace OHOS::Ace::Framework {
 
 CardFrontendDelegate::CardFrontendDelegate() : jsAccessibilityManager_(AccessibilityNodeManager::Create()) {}
@@ -22,7 +28,7 @@ CardFrontendDelegate::CardFrontendDelegate() : jsAccessibilityManager_(Accessibi
 CardFrontendDelegate::~CardFrontendDelegate()
 {
     CHECK_RUN_ON(JS);
-    TAG_LOGI(AceLogTag::ACE_FORM, "CardDelegate Destroyed");
+    LOG_DESTROY();
 }
 
 void CardFrontendDelegate::FireCardEvent(const EventMarker& eventMarker, const std::string& params)

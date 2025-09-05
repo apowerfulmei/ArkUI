@@ -23,6 +23,7 @@
 #include "core/components_ng/pattern/pattern.h"
 #include "core/components_ng/pattern/rich_editor/rich_editor_pattern.h"
 #include "core/components_ng/pattern/text_drag/text_drag_overlay_modifier.h"
+#include "core/components_ng/pattern/text_drag/text_drag_pattern.h"
 
 namespace OHOS::Ace::NG {
 class TextDragPattern;
@@ -115,16 +116,6 @@ public:
         shadowOpacity_->Set(opacity);
     }
 
-    void SetDragBackgroundColor(const std::optional<Color>& color)
-    {
-        dragBackgroundColor_ = color;
-    }
-
-    void SetIsDragShadowNeeded(bool isDragShadowNeeded)
-    {
-        isDragShadowNeeded_ = isDragShadowNeeded;
-    }
-
 private:
     void PaintImage(DrawingContext& context);
     void PaintImageNode(DrawingContext& context, const RefPtr<FrameNode>& imageNode,
@@ -153,8 +144,6 @@ private:
     RefPtr<AnimatablePropertyFloat> handleOpacity_;
     RefPtr<AnimatablePropertyFloat> shadowOpacity_;
     RefPtr<PropertyInt> selectedColor_;
-    std::optional<Color> dragBackgroundColor_;
-    bool isDragShadowNeeded_ = true;
     ACE_DISALLOW_COPY_AND_MOVE(RichEditorDragOverlayModifier);
 };
 } // namespace OHOS::Ace::NG

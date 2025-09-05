@@ -61,32 +61,24 @@ ohos_source_set("preview_osal_source") {
       "advance/image_analyzer_adapter_impl.cpp",
       "advance/image_analyzer_manager.cpp",
       "advance/image_analyzer_mgr.cpp",
-      "advance/text_share_adapter.cpp",
-      "advance/text_share_mgr.cpp",
       "advance/text_translation_adapter.cpp",
       "advance/text_translation_mgr.cpp",
       "app_bar_helper_impl.cpp",
-      "cpu_boost.cpp",
-      "device_config.cpp",
       "display_info_utils.cpp",
       "download_manager_preview.cpp",
       "drawing_color_filter_preview.cpp",
       "drawing_lattice_preview.cpp",
       "event_report.cpp",
       "exception_handler.cpp",
-      "feature_param.cpp",
       "fetch_manager.cpp",
       "file_uri_helper_preview.cpp",
       "frame_report.cpp",
       "image_packer_preview.cpp",
-      "image_perf_preview.cpp",
       "image_source_preview.cpp",
-      "input_manager.cpp",
       "input_method_manager_preview.cpp",
       "modal_ui_extension_impl.cpp",
       "mouse_style_ohos.cpp",
       "package_event_proxy_preview.cpp",
-      "perf_interfaces.cpp",
       "pixel_map_preview.cpp",
       "response_data.cpp",
       "ressched_report.cpp",
@@ -98,14 +90,12 @@ ohos_source_set("preview_osal_source") {
       "stylus_detector_mgr.cpp",
       "system_bar_style_ohos.cpp",
       "system_properties.cpp",
-      "system_properties_multi_thread.cpp",
       "task/task_runner_adapter_impl.cpp",
       "thread_priority.cpp",
       "time_event_proxy_preview.cpp",
       "trace_id_impl.cpp",
       "view_data_wrap_impl.cpp",
       "want_wrap_preview.cpp",
-      "websocket_manager.cpp",
     ]
 
     if (defined(resourceschedule_ffrt_support) &&
@@ -135,7 +125,7 @@ ohos_source_set("preview_osal_source") {
         "graphic_2d:drawing_napi_impl",
       ]
     }
-    include_dirs = [ ability_runtime_path ]
+
     configs = [ "$ace_root:ace_config" ]
 
     if (is_ohos_standard_system) {
@@ -159,7 +149,7 @@ ohos_source_set("preview_osal_source") {
         "frame_trace_adapter_impl.cpp",
         "resource_adapter_impl.cpp",
       ]
-      include_dirs += [ "//prebuilts/ace-toolkit/preview/rich/include/resmgr/resourcemanager/include" ]
+      include_dirs = [ "//prebuilts/ace-toolkit/preview/rich/include/resmgr/resourcemanager/include" ]
       if (platform == "windows") {
         defines += [ "NOGDI" ]
         libs = [ "//prebuilts/ace-toolkit/preview/rich/lib/windows/tv/libresourcemanager_win.lib" ]

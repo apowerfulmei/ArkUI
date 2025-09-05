@@ -15,11 +15,7 @@
 
 #include "core/components_ng/manager/drag_drop/drag_drop_behavior_reporter/drag_drop_behavior_reporter.h"
 
-#include "interfaces/inner_api/ace_kit/include/ui/base/geometry/point.h"
-
 #include "base/log/event_report.h"
-#include "core/common/reporter/reporter.h"
-#include "core/components_ng/manager/event/json_child_report.h"
 #include "core/pipeline_ng/pipeline_context.h"
 
 namespace OHOS::Ace::NG {
@@ -70,43 +66,6 @@ void DragDropBehaviorReporter::UpdateIsCrossing(CrossingEnd isCrossing)
     isCrossing_ = isCrossing;
 }
 
-void DragDropBehaviorReporter::UpdateStartPoint(Point startPoint)
-{
-    startPoint_ = startPoint;
-}
-
-void DragDropBehaviorReporter::UpdateEndPoint(Point endPoint)
-{
-    endPoint_ = endPoint;
-}
-
-void DragDropBehaviorReporter::UpdateFrameNodeStartId(int32_t startId)
-{
-    startId_ = startId;
-}
-
-void DragDropBehaviorReporter::UpdateFrameNodeDropId(int32_t dropId)
-{
-    dropId_ = dropId;
-}
-
-void DragDropBehaviorReporter::UpdateLongPressDurationStart(int64_t longPressDurationStart)
-{
-    if (longPressDurationStart == 0 || longPressDurationStart_ == 0) {
-        longPressDurationStart_ = longPressDurationStart;
-    }
-}
-
-void DragDropBehaviorReporter::UpdateLongPressDurationEnd(int64_t longPressDurationEnd)
-{
-    longPressDurationEnd_ = longPressDurationEnd;
-}
-
-void DragDropBehaviorReporter::UpdateDropResult(DropResult dropResult)
-{
-    dropResult_ = dropResult;
-}
-
 void DragDropBehaviorReporter::UpdateContainerId(int32_t containerId)
 {
     containerId_ = containerId;
@@ -123,13 +82,6 @@ void DragDropBehaviorReporter::Reset()
 }
 
 void DragDropBehaviorReporter::Submit(DragReporterPharse pharse, int32_t containerId)
-{
-    HandleBehaviorEventReport(pharse, containerId);
-    HandleUISessionReport(pharse, containerId);
-    Reset();
-}
-
-void DragDropBehaviorReporter::HandleBehaviorEventReport(DragReporterPharse pharse, int32_t containerId)
 {
     bool isStart = pharse == DragReporterPharse::DRAG_START;
     std::string dragBehavior = isStart ? "DRAG_START" : "DRAG_STOP";
@@ -156,25 +108,6 @@ void DragDropBehaviorReporter::HandleBehaviorEventReport(DragReporterPharse phar
             EventReport::ReportDragInfo(dragInfo);
         },
         TaskExecutor::TaskType::BACKGROUND, "ArkUIDragDropBehaviorReporter");
-}
-
-void DragDropBehaviorReporter::HandleUISessionReport(DragReporterPharse pharse, int32_t containerId)
-{
-    containerId_ = containerId_ == INSTANCE_ID_UNDEFINED ? containerId : containerId_;
-    auto container = Container::GetContainer(containerId_);
-    CHECK_NULL_VOID(container);
-    std::string hostName = container->GetBundleName();
-    int32_t convertToMs = 1000000;
-    int64_t longPressDuration = (longPressDurationEnd_ - longPressDurationStart_) / convertToMs;
-    DragJsonReport dragJsonReport;
-    dragJsonReport.SetStartId(startId_);
-    dragJsonReport.SetDropId(dropId_);
-    dragJsonReport.SetHostName(hostName);
-    dragJsonReport.SetActualDuration(longPressDuration);
-    dragJsonReport.SetStartPoint(startPoint_);
-    dragJsonReport.SetEndPoint(endPoint_);
-    dragJsonReport.SetDropResult(dropResult_);
-    dragJsonReport.SetDragReporterPharse(pharse);
-    Reporter::GetInstance().HandleUISessionReporting(dragJsonReport);
+    Reset();
 }
 } // namespace OHOS::Ace::NG

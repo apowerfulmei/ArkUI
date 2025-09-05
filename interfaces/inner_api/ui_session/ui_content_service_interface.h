@@ -17,14 +17,8 @@
 #define FOUNDATION_ACE_INTERFACE_UI_CONTENT_SERVICE_INTERFACE_H
 #include <iremote_broker.h>
 
-#include "ui/base/macros.h"
+#include "base/utils/macros.h"
 
-namespace OHOS {
-namespace Media {
-class PixelMap;
-class ImageSource;
-} // namespace Media
-} // namespace OHOS
 namespace OHOS::Ace {
 class ACE_FORCE_EXPORT IUiContentService : public OHOS::IRemoteBroker {
 public:
@@ -45,21 +39,6 @@ public:
         UNREGISTER_ROUTER_CHANGE_EVENT,
         UNREGISTER_COMPONENT_EVENT,
         UNREGISTER_WEB_UNFOCUS_EVENT,
-        RESET_ALL_TEXT,
-        RESET_TEXT_BY_ID,
-        GET_WEB_VIEW_LANGUAGE,
-        GET_WEB_TRANSLATE_TEXT,
-        CONTINUE_GET_WEB_TEXT,
-        SEND_TRANSLATE_RESULT,
-        SEND_TRANSLATE_RESULT_STR,
-        END_WEB_TRANSLATE,
-        GET_CURRENT_SHOWING_IMAGE,
-        GET_CURRENT_PAGE_NAME,
-        GET_VISIBLE_TREE,
-        SENDCOMMAND_ASYNC_EVENT,
-        SENDCOMMAND_EVENT,
-        SEND_COMMAND,
-        EXE_APP_AI_FUNCTION,
     };
 
     /**
@@ -67,7 +46,7 @@ public:
      * @return: result number
      */
     virtual int32_t GetInspectorTree(const std::function<void(std::string, int32_t, bool)>& eventCallback) = 0;
-    virtual int32_t GetVisibleInspectorTree(const std::function<void(std::string, int32_t, bool)>& eventCallback) = 0;
+
     /**
      * @description: define SA process and current process connect interface
      * @return: result number
@@ -106,30 +85,6 @@ public:
         const std::function<void(int64_t accessibilityId, const std::string& data)>& eventCallback) = 0;
 
     /**
-     * @description: define register a callback on SendCommand event occur to execute interface
-     * @return: result number
-     *          0: Node execution is successful.
-     */
-    virtual int32_t SendCommand(int32_t id, const std::string& command) = 0;
-
-    /**
-     * @description: define register a callback on SendCommand Async event occur to execute interface
-     * @return: result number
-     *          0: Node execution is successful.
-     *          10: SendCommand Pipeline context is null.
-     *          11: SendCommand Task executor is null.
-     *          12: Error occurred during self handling of SendCommand.
-     *          13: Failure due to no nodes.
-     */
-    virtual int32_t SendCommandAsync(int32_t id, const std::string& command) = 0;
-
-    /**
-     * @description: define register a callback on Send keycode command occur to execute interface
-     * @return: result number
-     */
-    virtual int32_t SendCommand(const std::string command) = 0;
-
-    /**
      * @description: define unregister the click event occur callback last register interface
      * @return: result number
      */
@@ -158,83 +113,6 @@ public:
      * @return: result number
      */
     virtual int32_t UnregisterWebUnfocusEventCallback() = 0;
-
-    /**
-     * @description:get web need translate text
-     * @return: result number
-     */
-    virtual int32_t GetWebViewTranslateText(
-        const std::string& data, const std::function<void(int32_t, std::string)>& eventCallback) = 0;
-
-    /**
-     * @description:send translate result by cloud service
-     * @return: result number
-     */
-    virtual int32_t SendTranslateResult(int32_t nodeId, std::vector<std::string> results, std::vector<int32_t> ids) = 0;
-
-    /**
-     * @description:send translate result by cloud service
-     * @return: result number
-     */
-    virtual int32_t SendTranslateResult(int32_t nodeId, std::string result) = 0;
-
-    /**
-     * @description:start continuity translate
-     * @return: result number
-     */
-    virtual int32_t StartWebViewTranslate(
-        const std::string& data, const std::function<void(int32_t, std::string)>& eventCallback) = 0;
-
-    /**
-     * @description:end continuity translate
-     * @return: result number
-     */
-    virtual int32_t EndWebViewTranslate() = 0;
-
-    /**
-     * @description:reset all components with translate
-     * @return: result number
-     */
-    virtual int32_t ResetTranslateTextAll() = 0;
-
-    /**
-     * @description:reset one component with translate by id
-     * @return: result number
-     */
-    virtual int32_t ResetTranslateText(int32_t nodeId) = 0;
-
-    /**
-     * @description:get web component current language
-     * @return: result number
-     */
-    virtual int32_t GetWebViewCurrentLanguage(const EventCallback& eventCallback) = 0;
-
-    /**
-     * @description:get web component current page name
-     * @return: result number
-     */
-    virtual int32_t GetCurrentPageName(const std::function<void(std::string)>& finishCallback) = 0;
-
-    /**
-     * @description:get all image with use imageComponents
-     * @return: result number
-     */
-    virtual int32_t GetCurrentImagesShowing(
-        const std::function<void(std::vector<std::pair<int32_t, std::shared_ptr<Media::PixelMap>>>)>&
-            finishCallback) = 0;
-
-    /* Not Used Ipc Interface*/
-    /**
-     * AI to judge if connect
-     */
-    virtual bool IsConnect() = 0;
-
-    /**
-     * @description: execute application AI function
-     * @return: result number
-     */
-    virtual int32_t ExeAppAIFunction(const std::string& funcName, const std::string& params,
-        const std::function<void(uint32_t)>& finishCallback) = 0;
 };
 class ACE_FORCE_EXPORT ReportService : public OHOS::IRemoteBroker {
 public:
@@ -250,11 +128,6 @@ public:
         REPORT_INSPECTOR_VALUE,
         REPORT_WEB_UNFOCUS_EVENT,
         SEND_BASE_INFO,
-        SEND_CURRENT_LANGUAGE,
-        SEND_TEXT,
-        SEND_IMAGES,
-        SEND_CURRENT_PAGE_NAME,
-        SEND_EXE_APP_AI_FUNCTION_RESULT,
     };
 
     /**
@@ -291,31 +164,6 @@ public:
      * @description: define send base info value to the proxy interface
      */
     virtual void SendBaseInfo(const std::string& data) = 0;
-
-    /**
-     * @description: define ui send text for cloud service interface
-     */
-    virtual void SendWebText(int32_t nodeId, std::string res) = 0;
-
-    /**
-     * @description: define ui send web component language for cloud service interface
-     */
-    virtual void SendCurrentLanguage(const std::string& data) = 0;
-
-    /**
-     * @description: define ui collect all pixelMap for sa service
-     */
-    virtual void SendShowingImage(std::vector<std::pair<int32_t, std::shared_ptr<Media::PixelMap>>> maps) = 0;
-
-    /**
-     * @description: define ui send page name for sa service
-     */
-    virtual void SendCurrentPageName(const std::string& data) = 0;
-
-    /**
-     * @description: define ui send execute application AI function result for sa service
-     */
-    virtual void SendExeAppAIFunctionResult(uint32_t result) = 0;
 };
 } // namespace OHOS::Ace
 #endif // FOUNDATION_ACE_INTERFACE_UI_CONTENT_SERVICE_INTERFACE_H

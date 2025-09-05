@@ -28,7 +28,7 @@
 
 namespace OHOS::Ace::Framework {
 class JSBaseNode : public AceType {
-    DECLARE_ACE_TYPE(JSBaseNode, AceType);
+    DECLARE_ACE_TYPE(JSBaseNode, AceType)
 public:
     JSBaseNode() = default;
     JSBaseNode(const NG::OptionalSizeF& size, NodeRenderType renderType, std::string surfaceId)
@@ -44,29 +44,15 @@ public:
     void BuildNode(const JSCallbackInfo& info);
     void ProccessNode(bool isSupportExportTexture, bool isSupportLazyBuild);
     void PostTouchEvent(const JSCallbackInfo& info);
-    void PostInputEvent(const JSCallbackInfo& info);
     void UpdateStart(const JSCallbackInfo& info);
     void UpdateEnd(const JSCallbackInfo& info);
-    void OnRecycleWithBindThis(const JSCallbackInfo& info);
-    void OnReuseWithBindThis(const JSCallbackInfo& info);
     void Dispose(const JSCallbackInfo&  /*info*/)
     {
         viewNode_.Reset();
-        realNode_.Reset();
     }
 
 private:
-    bool InitTouchEvent(const JSCallbackInfo& info, TouchEvent& touchEvent, bool isPostTouchEvent);
-    bool InitMouseEvent(const JSCallbackInfo& info, MouseEvent& mouseEvent);
-    bool InitAxisEvent(const JSCallbackInfo& info, AxisEvent& axisEvent);
-    bool GetTouches(const JSCallbackInfo& info, TouchEvent& touchEvent);
-    bool GetInputTouches(const JSCallbackInfo& info, TouchEvent& touchEvent);
-    bool ParamTouchEvent(const JSCallbackInfo& info, TouchEvent& touchEvent);
-    bool ParamMouseEvent(const JSCallbackInfo& info, MouseEvent& mouseEvent);
-    bool ParamAxisEvent(const JSCallbackInfo& info, AxisEvent& axisEvent);
-    bool GetChangedTouches(const JSCallbackInfo& info, TouchEvent& touchEvent);
     RefPtr<NG::FrameNode> viewNode_;
-    RefPtr<NG::UINode> realNode_;
     NG::OptionalSizeF size_;
     NodeRenderType renderType_ = NodeRenderType::RENDER_TYPE_DISPLAY;
     std::string surfaceId_;

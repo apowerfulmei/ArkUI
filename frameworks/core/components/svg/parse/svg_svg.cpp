@@ -14,8 +14,10 @@
  */
 
 #include "frameworks/core/components/svg/parse/svg_svg.h"
-#include "ui/base/referenced.h"
-#include "core/components/svg/parse/svg_node.h"
+
+#ifndef USE_ROSEN_DRAWING
+#include "include/pathops/SkPathOps.h"
+#endif
 
 #include "frameworks/core/components/svg/render_svg.h"
 
@@ -42,8 +44,18 @@ void SvgSvg::AppendChild(const RefPtr<SvgNode>& child)
     component_->AppendChild(child->GetComponent());
 }
 
-RefPtr<RenderNode> SvgSvg::InitializeRenderNode()
+RefPtr<RenderNode> SvgSvg::CreateRender(
+    const LayoutParam& layoutParam, const RefPtr<SvgBaseDeclaration>& parent, bool useBox)
 {
+    component_->Inherit(parent);
+    auto& declaration = component_->GetDeclaration();
+    auto href = declaration->GetFillState().GetHref();
+    if (!href.empty()) {
+        auto gradient = GetGradient(href);
+        if (gradient) {
+            declaration->SetGradient(gradient.value());
+        }
+    }
     auto renderNode = AceType::DynamicCast<RenderSvg>(component_->CreateRenderNode());
     if (!renderNode) {
         LOGE("create renderNode failed");
@@ -58,66 +70,21 @@ RefPtr<RenderNode> SvgSvg::InitializeRenderNode()
     }
 
     renderNode->Update(component_);
-    return renderNode;
-}
-
-bool SvgSvg::ProcessIteratively(const LayoutParam& layoutParam, std::stack<SvgCreateRenderInfo>& createRenderTaskSt,
-    SvgCreateRenderInfo& svgCreateRenderInfo)
-{
-    auto svgNode = svgCreateRenderInfo.svgNode_;
-    auto childIdx = svgCreateRenderInfo.childIndex_;
-    if (childIdx == static_cast<int32_t>(svgNode->GetChildren().size())) {
-        AfterChildrenProcessed(layoutParam, svgCreateRenderInfo);
-        return true;
-    }
-    ++svgCreateRenderInfo.childIndex_;
-    auto childNode = svgNode->GetChildren()[childIdx];
-    // If the child node does not use recursion for CreateRender
-    if (!childNode->IsCreateRenderRecursive()) {
-        auto childRender =
-            childNode->CreateRender(layoutParam, component_->GetDeclaration(), svgCreateRenderInfo.useBox_);
-        auto renderNode = svgCreateRenderInfo.renderNode_;
-        if (childRender && renderNode) {
+    for (const auto& child : children_) {
+        auto childRender = child->CreateRender(layoutParam, declaration, useBox);
+        if (childRender) {
             renderNode->AddChild(childRender, renderNode->GetChildren().size());
-            childNode->Update(childRender);
+            child->Update(childRender);
         }
-    } else {
-        createRenderTaskSt.emplace(
-            childNode, component_->GetDeclaration(), svgCreateRenderInfo.useBox_, svgCreateRenderInfo.renderNode_);
-    }
-    return false;
-}
-
-bool SvgSvg::BeforeChildrenProcessed(SvgCreateRenderInfo& svgCreateRenderInfo)
-{
-    auto parent = svgCreateRenderInfo.svgBaseDeclaration_;
-    component_->Inherit(parent);
-    auto& declaration = component_->GetDeclaration();
-    auto href = declaration->GetFillState().GetHref();
-    if (!href.empty()) {
-        auto gradient = GetGradient(href);
-        if (gradient) {
-            declaration->SetGradient(gradient.value());
-        }
-    }
-    svgCreateRenderInfo.renderNode_ = InitializeRenderNode();
-    return true;
-}
-
-void SvgSvg::AfterChildrenProcessed(const LayoutParam& layoutParam, SvgCreateRenderInfo& svgCreateRenderInfo)
-{
-    auto renderNode = DynamicCast<RenderSvg>(svgCreateRenderInfo.renderNode_);
-    if (!renderNode) {
-        return;
     }
     renderNode->MarkIsFixSize(true);
     renderNode->Layout(layoutParam);
-    if (!svgCreateRenderInfo.useBox_ || component_->GetDeclaration()->GetClipPathHref().empty()) {
+    if (!useBox || declaration->GetClipPathHref().empty()) {
         LOGW("svg of svg tag skip box create");
-        return;
+        return renderNode;
     }
 
-    auto boxComponent = CreateBoxComponent(layoutParam, component_->GetDeclaration()->GetClipPathHref());
+    auto boxComponent = CreateBoxComponent(layoutParam, declaration->GetClipPathHref());
     boxComponent->SetWidth(layoutParam.GetMaxSize().Width());
     boxComponent->SetHeight(layoutParam.GetMaxSize().Height());
     boxComponent->SetOverflow(Overflow::FORCE_CLIP);
@@ -126,44 +93,20 @@ void SvgSvg::AfterChildrenProcessed(const LayoutParam& layoutParam, SvgCreateRen
     renderBox->Update(boxComponent);
     renderBox->AddChild(renderNode);
     renderBox->Layout(layoutParam);
+    return renderBox;
 }
 
-RefPtr<RenderNode> SvgSvg::CreateRenderHelp(
-    const WeakPtr<SvgNode>& root, const LayoutParam& layoutParam, const RefPtr<SvgBaseDeclaration>& parent, bool useBox)
+#ifndef USE_ROSEN_DRAWING
+SkPath SvgSvg::AsPath(const Size& viewPort) const
 {
-    auto svgRoot = root.Upgrade();
-    if (!svgRoot) {
-        return nullptr;
+    SkPath path;
+    for (const auto& child : children_) {
+        const SkPath childPath = child->AsPath(viewPort);
+        Op(path, childPath, kUnion_SkPathOp, &path);
     }
-    std::stack<SvgCreateRenderInfo> createRenderTaskSt;
-    createRenderTaskSt.emplace(svgRoot, parent, useBox);
-    RefPtr<RenderNode> result = nullptr;
-    while (!createRenderTaskSt.empty()) {
-        auto& currentSvgCreateRenderInfo = createRenderTaskSt.top();
-        auto& svgNode = currentSvgCreateRenderInfo.svgNode_;
-        if (currentSvgCreateRenderInfo.childIndex_ == 0 &&
-            !svgNode->BeforeChildrenProcessed(currentSvgCreateRenderInfo)) {
-            createRenderTaskSt.pop();
-            continue;
-        }
-
-        if (svgNode->ProcessIteratively(layoutParam, createRenderTaskSt, currentSvgCreateRenderInfo)) {
-            if (createRenderTaskSt.size() == 1) {
-                // Set result if this is the root SVG node
-                result = currentSvgCreateRenderInfo.renderNode_;
-            }
-            createRenderTaskSt.pop();
-        }
-    }
-    return result;
+    return path;
 }
-
-RefPtr<RenderNode> SvgSvg::CreateRender(
-    const LayoutParam& layoutParam, const RefPtr<SvgBaseDeclaration>& parent, bool useBox)
-{
-    return CreateRenderHelp(WeakClaim(this), layoutParam, parent, useBox);
-}
-
+#else
 RSPath SvgSvg::AsPath(const Size& viewPort) const
 {
     RSPath path;
@@ -173,5 +116,6 @@ RSPath SvgSvg::AsPath(const Size& viewPort) const
     }
     return path;
 }
+#endif
 
 } // namespace OHOS::Ace

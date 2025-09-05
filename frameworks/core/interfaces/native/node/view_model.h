@@ -35,8 +35,6 @@ void AddChild(void* parentNode, void* childNode);
 
 void RemoveChild(void* parentNode, void* childNode);
 
-void RemoveChildMultiThread(void* parentNode, void* childNode);
-
 void InsertChildAt(void* parentNode, void* childNode, int32_t position);
 
 void InsertChildAfter(void* parentNode, void* childNode, void* siblingNode);
@@ -64,12 +62,5 @@ void SetAttachNodePtr(ArkUINodeHandle nodePtr, void* attachNode);
 void* GetAttachNodePtr(ArkUINodeHandle nodePtr);
 
 ArkUI_Bool IsBuilderNode(void* nodePtr);
-
-void* CreateCustomNode(ArkUI_CharPtr tag);
-
-void* GetOrCreateCustomNode(ArkUI_CharPtr tag);
-
-void* CreateCustomNodeByNodeId(ArkUI_CharPtr tag, ArkUI_Int32 nodeId);
-
 } // namespace OHOS::Ace::NG::ViewModel
 #endif

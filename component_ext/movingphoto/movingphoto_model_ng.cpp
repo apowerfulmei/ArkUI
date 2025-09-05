@@ -15,15 +15,17 @@
 
 #include "movingphoto_model_ng.h"
 #include "movingphoto_node.h"
+#include "movingphoto_layout_property.h"
+#include "movingphoto_pattern.h"
 
 #include "core/components_ng/base/view_stack_processor.h"
 #include "core/components_ng/pattern/image/image_pattern.h"
 #include "core/components_ng/pattern/linear_layout/linear_layout_pattern.h"
-#include "core/pipeline/pipeline_base.h"
 
 namespace OHOS::Ace::NG {
 
 namespace {
+    constexpr int32_t ERROR_CODE = -1;
 }
 
 void MovingPhotoModelNG::Create(const RefPtr<MovingPhotoController>& controller)
@@ -38,6 +40,14 @@ void MovingPhotoModelNG::Create(const RefPtr<MovingPhotoController>& controller)
     CHECK_NULL_VOID(movingPhotoNode);
     stack->Push(movingPhotoNode);
 
+    bool hasVideoNode = movingPhotoNode->HasVideoNode();
+    if (!hasVideoNode) {
+        auto videoId = movingPhotoNode->GetVideoId();
+        auto videoNode = FrameNode::GetOrCreateFrameNode(
+            V2::COLUMN_ETS_TAG, videoId, []() { return AceType::MakeRefPtr<LinearLayoutPattern>(true); });
+        CHECK_NULL_VOID(videoNode);
+        movingPhotoNode->AddChild(videoNode);
+    }
     bool hasImageNode = movingPhotoNode->HasImageNode();
     if (!hasImageNode) {
         auto imageId = movingPhotoNode->GetImageId();
@@ -46,28 +56,10 @@ void MovingPhotoModelNG::Create(const RefPtr<MovingPhotoController>& controller)
         CHECK_NULL_VOID(imageNode);
         movingPhotoNode->AddChild(imageNode);
     }
-
-    bool hasColumnNode = movingPhotoNode->HasColumnNode();
-    if (!hasColumnNode) {
-        auto columnId = movingPhotoNode->GetColumnId();
-        auto columnNode = FrameNode::GetOrCreateFrameNode(
-            V2::COLUMN_ETS_TAG, columnId, []() { return AceType::MakeRefPtr<LinearLayoutPattern>(true); });
-        CHECK_NULL_VOID(columnNode);
-        movingPhotoNode->AddChild(columnNode);
-        bool hasVideoNode = movingPhotoNode->HasVideoNode();
-        if (!hasVideoNode) {
-            auto videoId = movingPhotoNode->GetVideoId();
-            auto videoNode = FrameNode::GetOrCreateFrameNode(
-                V2::COLUMN_ETS_TAG, videoId, []() { return AceType::MakeRefPtr<LinearLayoutPattern>(true); });
-            CHECK_NULL_VOID(videoNode);
-            columnNode->AddChild(videoNode);
-        }
-    }
 }
 
 void MovingPhotoModelNG::SetImageSrc(const std::string& value)
 {
-    TAG_LOGI(AceLogTag::ACE_MOVING_PHOTO, "MovingPhoto SetImageSrc.");
     auto frameNode = ViewStackProcessor::GetInstance()->GetMainFrameNode();
     CHECK_NULL_VOID(frameNode);
     auto layoutProperty = AceType::DynamicCast<MovingPhotoLayoutProperty>(frameNode->GetLayoutProperty());
@@ -78,39 +70,34 @@ void MovingPhotoModelNG::SetImageSrc(const std::string& value)
     CHECK_NULL_VOID(dataProvider);
     auto movingPhotoPattern = AceType::DynamicCast<MovingPhotoPattern>(frameNode->GetPattern());
     CHECK_NULL_VOID(movingPhotoPattern);
+    bool updateVideo = true;
     if (layoutProperty->HasMovingPhotoUri()) {
         auto movingPhotoUri = layoutProperty->GetMovingPhotoUri().value();
-        if (movingPhotoUri == value) {
+        int64_t dateModified = dataProvider->GetMovingPhotoDateModified(value);
+        if (dateModified == ERROR_CODE) {
+            TAG_LOGW(AceLogTag::ACE_MOVING_PHOTO, "MovingPhotoDateModified return -1.");
+        }
+        int64_t currentDateModified = movingPhotoPattern->GetCurrentDateModified();
+        if (movingPhotoUri == value && dateModified == currentDateModified) {
             TAG_LOGW(AceLogTag::ACE_MOVING_PHOTO, "src not changed.");
             return;
         }
+        updateVideo = false;
+        movingPhotoPattern->UpdateCurrentDateModified(dateModified);
     }
     ACE_UPDATE_LAYOUT_PROPERTY(MovingPhotoLayoutProperty, MovingPhotoUri, value);
 
     std::string imageSrc = dataProvider->GetMovingPhotoImageUri(value);
+    imageSrc += "?date_modified=" + std::to_string(movingPhotoPattern->GetCurrentDateModified());
     ImageSourceInfo src;
     src.SetSrc(imageSrc);
     ACE_UPDATE_LAYOUT_PROPERTY(MovingPhotoLayoutProperty, ImageSourceInfo, src);
-
+    
+    if (!updateVideo) {
+        return;
+    }
     int32_t fd = dataProvider->ReadMovingPhotoVideo(value);
     ACE_UPDATE_LAYOUT_PROPERTY(MovingPhotoLayoutProperty, VideoSource, fd);
-    SetXmagePosition();
-}
-
-void MovingPhotoModelNG::SetHdrBrightness(float hdrBrightness)
-{
-    auto frameNode = ViewStackProcessor::GetInstance()->GetMainFrameNode();
-    CHECK_NULL_VOID(frameNode);
-    auto movingPhotoPattern = AceType::DynamicCast<MovingPhotoPattern>(frameNode->GetPattern());
-    movingPhotoPattern->SetHdrBrightness(hdrBrightness);
-}
-
-void MovingPhotoModelNG::SetEnableCameraPostprocessing(bool isEnabled)
-{
-    auto frameNode = ViewStackProcessor::GetInstance()->GetMainFrameNode();
-    CHECK_NULL_VOID(frameNode);
-    auto movingPhotoPattern = AceType::DynamicCast<MovingPhotoPattern>(frameNode->GetPattern());
-    movingPhotoPattern->SetEnableCameraPostprocessing(isEnabled);
 }
 
 void MovingPhotoModelNG::SetMuted(bool value)
@@ -180,15 +167,6 @@ void MovingPhotoModelNG::SetOnError(MovingPhotoEventFunc&& onError)
     eventHub->SetOnError(std::move(onError));
 }
 
-void MovingPhotoModelNG::SetOnPrepared(MovingPhotoEventFunc&& onPrepared)
-{
-    auto frameNode = ViewStackProcessor::GetInstance()->GetMainFrameNode();
-    CHECK_NULL_VOID(frameNode);
-    auto eventHub = frameNode->GetEventHub<MovingPhotoEventHub>();
-    CHECK_NULL_VOID(eventHub);
-    eventHub->SetOnPrepared(std::move(onPrepared));
-}
-
 void MovingPhotoModelNG::AutoPlayPeriod(int64_t startTime, int64_t endTime)
 {
     auto frameNode = ViewStackProcessor::GetInstance()->GetMainFrameNode();
@@ -216,24 +194,6 @@ void MovingPhotoModelNG::RepeatPlay(bool isRepeatPlay)
     movingPhotoPattern->RepeatPlay(isRepeatPlay);
 }
 
-void MovingPhotoModelNG::EnableAnalyzer(bool enabled)
-{
-    auto frameNode = ViewStackProcessor::GetInstance()->GetMainFrameNode();
-    CHECK_NULL_VOID(frameNode);
-    auto movingPhotoPattern = AceType::DynamicCast<MovingPhotoPattern>(frameNode->GetPattern());
-    CHECK_NULL_VOID(movingPhotoPattern);
-    movingPhotoPattern->EnableAnalyzer(enabled);
-}
-
-void MovingPhotoModelNG::SetImageAIOptions(void* options)
-{
-    auto frameNode = ViewStackProcessor::GetInstance()->GetMainFrameNode();
-    CHECK_NULL_VOID(frameNode);
-    auto movingPhotoPattern = AceType::DynamicCast<MovingPhotoPattern>(frameNode->GetPattern());
-    CHECK_NULL_VOID(movingPhotoPattern);
-    movingPhotoPattern->SetImageAIOptions(options);
-}
-
 void MovingPhotoModelNG::SetMovingPhotoFormat(MovingPhotoFormat format)
 {
     auto frameNode = ViewStackProcessor::GetInstance()->GetMainFrameNode();
@@ -243,15 +203,6 @@ void MovingPhotoModelNG::SetMovingPhotoFormat(MovingPhotoFormat format)
     movingPhotoPattern->SetMovingPhotoFormat(format);
 }
 
-void MovingPhotoModelNG::SetWaterMask(bool enabled)
-{
-    auto frameNode = ViewStackProcessor::GetInstance()->GetMainFrameNode();
-    CHECK_NULL_VOID(frameNode);
-    auto movingPhotoPattern = AceType::DynamicCast<MovingPhotoPattern>(frameNode->GetPattern());
-    CHECK_NULL_VOID(movingPhotoPattern);
-    movingPhotoPattern->SetWaterMask(enabled);
-}
-
 void MovingPhotoModelNG::SetDynamicRangeMode(DynamicRangeMode rangeMode)
 {
     auto frameNode = ViewStackProcessor::GetInstance()->GetMainFrameNode();
@@ -259,14 +210,5 @@ void MovingPhotoModelNG::SetDynamicRangeMode(DynamicRangeMode rangeMode)
     auto movingPhotoPattern = AceType::DynamicCast<MovingPhotoPattern>(frameNode->GetPattern());
     CHECK_NULL_VOID(movingPhotoPattern);
     movingPhotoPattern->SetDynamicRangeMode(rangeMode);
-}
-
-void MovingPhotoModelNG::SetXmagePosition()
-{
-    auto frameNode = ViewStackProcessor::GetInstance()->GetMainFrameNode();
-    CHECK_NULL_VOID(frameNode);
-    auto movingPhotoPattern = AceType::DynamicCast<MovingPhotoPattern>(frameNode->GetPattern());
-    CHECK_NULL_VOID(movingPhotoPattern);
-    movingPhotoPattern->SetXmagePosition();
 }
 } // namespace OHOS::Ace::NG

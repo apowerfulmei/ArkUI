@@ -33,8 +33,6 @@ public:
     static ArkUINativeModuleValue GetAllItems(ArkUIRuntimeCallInfo* runtimeCallInfo);
     static ArkUINativeModuleValue AttachNodeAdapter(ArkUIRuntimeCallInfo* runtimeCallInfo);
     static ArkUINativeModuleValue DetachNodeAdapter(ArkUIRuntimeCallInfo* runtimeCallInfo);
-    static ArkUINativeModuleValue FireArkUIObjectLifecycleCallback(ArkUIRuntimeCallInfo* runtimeCallInfo);
-    static ArkUINativeModuleValue GetNodeType(ArkUIRuntimeCallInfo* runtimeCallInfo);
 };
 
 } // namespace OHOS::Ace::NG

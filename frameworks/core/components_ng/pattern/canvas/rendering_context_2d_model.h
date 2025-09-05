@@ -20,20 +20,16 @@
 
 #include "base/geometry/dimension.h"
 #include "base/memory/ace_type.h"
-#include "core/common/container.h"
 #include "core/components/common/layout/constants.h"
 #include "core/components_ng/pattern/canvas/canvas_renderer_type.h"
 #include <stdint.h>
 
 namespace OHOS::Ace {
 class RenderingContext2DModel : public AceType {
-    DECLARE_ACE_TYPE(RenderingContext2DModel, AceType);
+    DECLARE_ACE_TYPE(RenderingContext2DModel, AceType)
 
 public:
-    RenderingContext2DModel()
-    {
-        apiVersion_ = Container::GetCurrentApiTargetVersion();
-    }
+    RenderingContext2DModel() = default;
     virtual ~RenderingContext2DModel() = default;
 
     virtual void SetPattern(RefPtr<AceType> pattern) = 0;
@@ -45,7 +41,6 @@ public:
     virtual void SetFontStyle(const FontStyle& fontStyle) = 0;
     virtual void SetFontFamilies(const std::vector<std::string>& families) = 0;
     virtual void SetFontSize(const Dimension& size) = 0;
-    virtual void SetLetterSpacing(const Dimension& letterSpacing) {};
     virtual std::vector<double> GetLineDash() = 0;
     virtual void SetFillGradient(const std::shared_ptr<Ace::Gradient>& gradient) = 0;
     virtual void SetFillPattern(const std::shared_ptr<Ace::Pattern>& pattern) = 0;
@@ -90,7 +85,6 @@ public:
     virtual void SetClipRuleForPath(const CanvasFillRule& fillRule) = 0;
     virtual void SetClipRuleForPath2D(const CanvasFillRule& fillRule, const RefPtr<CanvasPath2D>& path) = 0;
     virtual void AddRect(const Rect& rect) = 0;
-    virtual void AddRoundRect(const Rect& rect, const std::vector<double>& radii) {};
     virtual void BeginPath() = 0;
     virtual void ClosePath() = 0;
     virtual void Restore() = 0;
@@ -127,23 +121,11 @@ public:
         return param;
     }
 
-    virtual void SetTransform(std::shared_ptr<Ace::Pattern> pattern, const TransformParam& transform)
-    {
-        pattern->SetScaleX(transform.scaleX);
-        pattern->SetScaleY(transform.scaleY);
-        pattern->SetSkewX(transform.skewX);
-        pattern->SetSkewY(transform.skewY);
-        pattern->SetTranslateX(transform.translateX);
-        pattern->SetTranslateY(transform.translateY);
-    }
-
-protected:
-    int32_t apiVersion_ = 0;
     ACE_DISALLOW_COPY_AND_MOVE(RenderingContext2DModel);
 };
 
 class CanvasRenderingContext2DModel : public RenderingContext2DModel {
-    DECLARE_ACE_TYPE(CanvasRenderingContext2DModel, RenderingContext2DModel);
+    DECLARE_ACE_TYPE(CanvasRenderingContext2DModel, RenderingContext2DModel)
 
 public:
     CanvasRenderingContext2DModel() = default;
@@ -170,7 +152,7 @@ protected:
 };
 
 class OffscreenCanvasRenderingContext2DModel : public RenderingContext2DModel {
-    DECLARE_ACE_TYPE(OffscreenCanvasRenderingContext2DModel, RenderingContext2DModel);
+    DECLARE_ACE_TYPE(OffscreenCanvasRenderingContext2DModel, RenderingContext2DModel)
 
 public:
     OffscreenCanvasRenderingContext2DModel() = default;

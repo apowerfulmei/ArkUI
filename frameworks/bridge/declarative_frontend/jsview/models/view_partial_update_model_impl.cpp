@@ -15,9 +15,14 @@
 
 #include "bridge/declarative_frontend/jsview/models/view_partial_update_model_impl.h"
 
+#include "base/memory/ace_type.h"
+#include "base/utils/utils.h"
+#include "bridge/declarative_frontend/view_stack_processor.h"
 #include "core/components/grid_layout/grid_layout_item_element.h"
 #include "core/components/ifelse/if_else_element.h"
+#include "core/components_ng/base/view_full_update_model.h"
 #include "core/components_v2/common/element_proxy.h"
+#include "core/pipeline/base/component.h"
 
 namespace OHOS::Ace::Framework {
 
@@ -37,8 +42,7 @@ RefPtr<AceType> ViewPartialUpdateModelImpl::CreateNode(NodeInfoPU&& info)
 
     auto renderFunction = [renderFunc = std::move(info.renderFunc), updateFunc = std::move(info.updateFunc)](
                               const RefPtr<Component>& component) -> RefPtr<Component> {
-        bool isTimeout = false;
-        auto node = renderFunc ? renderFunc(0, isTimeout) : nullptr;
+        auto node = renderFunc ? renderFunc() : nullptr;
         if (updateFunc) {
             updateFunc();
         }

@@ -82,7 +82,6 @@ struct TextEditingValue {
 
 #if defined(IOS_PLATFORM)
     TextCompose compose;
-    bool unmarkText;
 #endif
 };
 

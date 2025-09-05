@@ -21,21 +21,29 @@
 #include "frameworks/bridge/declarative_frontend/jsview/models/column_model_impl.h"
 
 namespace OHOS::Ace {
+
+std::unique_ptr<ColumnModel> ColumnModel::instance_ = nullptr;
+std::mutex ColumnModel::mutex_;
+
 ColumnModel* ColumnModel::GetInstance()
 {
+    if (!instance_) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (!instance_) {
 #ifdef NG_BUILD
-    static NG::ColumnModelNG instance;
-    return &instance;
+            instance_.reset(new NG::ColumnModelNG());
 #else
-    if (Container::IsCurrentUseNewPipeline()) {
-        static NG::ColumnModelNG instance;
-        return &instance;
-    } else {
-        static Framework::ColumnModelImpl instance;
-        return &instance;
-    }
+            if (Container::IsCurrentUseNewPipeline()) {
+                instance_.reset(new NG::ColumnModelNG());
+            } else {
+                instance_.reset(new Framework::ColumnModelImpl());
+            }
 #endif
+        }
+    }
+    return instance_.get();
 }
+
 } // namespace OHOS::Ace
 
 namespace OHOS::Ace::Framework {
@@ -44,12 +52,11 @@ std::string JSColumn::inspectorTag_ = "";
 void JSColumn::Create(const JSCallbackInfo& info)
 {
     std::optional<CalcDimension> space;
-    RefPtr<ResourceObject> spaceResObj;
     if (info.Length() > 0 && info[0]->IsObject()) {
         JSRef<JSObject> obj = JSRef<JSObject>::Cast(info[0]);
         JSRef<JSVal> spaceVal = obj->GetProperty("space");
         CalcDimension value;
-        if (ParseJsDimensionVp(spaceVal, value, spaceResObj)) {
+        if (ParseJsDimensionVp(spaceVal, value)) {
             space = value.IsValid() ? value : Dimension();
         } else if (Container::GreatOrEqualAPIVersion(PlatformVersion::VERSION_TEN)) {
             space = Dimension();
@@ -64,11 +71,7 @@ void JSColumn::Create(const JSCallbackInfo& info)
             declaration = JSRef<JSObject>::Cast(useAlign)->Unwrap<HorizontalAlignDeclaration>();
         }
     }
-    if (SystemProperties::ConfigChangePerform() && spaceResObj) {
-        ColumnModel::GetInstance()->Create(spaceResObj, declaration, inspectorTag_);
-    } else {
-        ColumnModel::GetInstance()->Create(space, declaration, inspectorTag_);
-    }
+    ColumnModel::GetInstance()->Create(space, declaration, inspectorTag_);
 }
 
 void JSColumn::CreateWithWrap(const JSCallbackInfo& info)

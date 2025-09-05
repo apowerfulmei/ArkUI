@@ -49,11 +49,6 @@ public:
         return false;
     }
 
-    bool IsNeedPercent() const override
-    {
-        return true;
-    }
-
     RefPtr<PaintProperty> CreatePaintProperty() override
     {
         return MakeRefPtr<PaintProperty>();
@@ -91,18 +86,7 @@ public:
     }
 
     void DumpInfo() override;
-    void DumpInfo(std::unique_ptr<JsonValue>& json) override;
-    void DumpSimplifyInfo(std::shared_ptr<JsonValue>& json) override;
-    bool GetNeedCallBack()
-    {
-        return needCallBack_;
-    }
-
-    void SetNeedCallBack(bool needCallBack)
-    {
-        needCallBack_ = needCallBack;
-    }
-
+    void DumpSimplifyInfo(std::unique_ptr<JsonValue>& json) override;
     bool IsInHoverMode() const
     {
         return hasInHoverMode_;
@@ -144,7 +128,6 @@ private:
     bool isAppearCallback_ = false;
     RefPtr<DisplayInfo> displayInfo_;
     bool hasInHoverMode_ = false;
-    bool needCallBack_ = false;
     FoldStatus currentFoldStatus_ = FoldStatus::UNKNOWN;
     FoldStatus lastFoldStatus_ = FoldStatus::UNKNOWN;
     CancelableCallback<void()> foldStatusDelayTask_;

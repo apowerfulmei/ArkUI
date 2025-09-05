@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024-2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -67,10 +67,7 @@ public:
 
     bool OutOfBounds() const override;
 
-    float GetContentHeight() const override
-    {
-        return maxHeight_;
-    }
+    float GetContentHeight() const override;
 
     float CalcTargetPosition(int32_t idx, int32_t crossIdx) const override;
 
@@ -96,7 +93,6 @@ public:
     float BottomFinalPos(float viewHeight) const override;
 
     void Reset() override;
-    void ResetFooter() override;
 
     bool IsMisaligned() const override;
 
@@ -196,33 +192,6 @@ public:
         return (axis_ == Axis::VERTICAL ? margins_.back().bottom : margins_.back().right).value_or(0.0f);
     }
 
-    inline void CacheItemHeight(int32_t idx, float height)
-    {
-        heightSum_ -= idxToHeight_[idx];
-        idxToHeight_[idx] = height;
-        heightSum_ += height;
-    }
-    std::optional<float> GetCachedHeight(int32_t idx) const;
-
-    /**
-     * @brief estimate after performing a jump
-     * @param prevStart startIndex before jump
-     */
-    void EstimateTotalOffset(int32_t prevStart, int32_t startIdx);
-
-    float EstimateTotalHeight() const override;
-
-    bool EstimateVirtualTotalHeight(float average, float& virtualTotalHeight) const;
-
-    /**
-     * @brief If delta is large enough, convert it to a jump to improve layout performance.
-     *
-     * @param viewport main-axis length of the viewport
-     * @param itemCnt total FlowItem count
-     * @return true if delta is converted to jump
-     */
-    bool TryConvertLargeDeltaToJump(float viewport, int32_t itemCnt);
-
     /**
      * @brief prepare lanes in the current section.
      *
@@ -231,11 +200,7 @@ public:
      */
     void PrepareSectionPos(int32_t idx, bool fillBack);
 
-    bool IsAtTopWithDelta() override;
-    bool IsAtBottomWithDelta() override;
-
     void NotifyDataChange(int32_t index, int32_t count) override;
-    void NotifySectionChange(int32_t index) override;
     void UpdateLanesIndex(int32_t updateIdx);
     void InitSegmentsForKeepPositionMode(const std::vector<WaterFlowSections::Section>& sections,
         const std::vector<WaterFlowSections::Section>& prevSections, int32_t start) override;
@@ -247,24 +212,7 @@ public:
     const Lane* GetLane(int32_t itemIdx) const;
     Lane* GetMutableLane(int32_t itemIdx);
 
-    bool LaneOutOfRange(size_t laneIdx, int32_t section) const;
-
-    bool AtStartPos(int32_t startIdx) const
-    {
-        return startIdx == 0 || startIdx == Infinity<int32_t>();
-    }
-
-    float GetDistanceToTop(int32_t itemIdx, int32_t laneIdx, float mainGap) const;
-    float GetDistanceToBottom(int32_t itemIdx, int32_t laneIdx, float mainSize, float mainGap) const;
-    float GetCachedHeightInLanes(int32_t idx) const;
-    void SetHeightInLanes(int32_t idx, float mainHeight);
-    bool HaveRecordIdx(int32_t idx) const;
-    float CalcMaxHeight(int itemCnt);
-
-    void InvalidatedOffset() override
-    {
-        isPrevOffsetValid_ = false;
-    };
+    bool LaneOutOfBounds(size_t laneIdx, int32_t section) const;
 
     /**
      * @brief lanes in multiple sections.
@@ -283,7 +231,7 @@ public:
 
     std::vector<float> mainGap_; // update this at the end of a layout
 
-    // maximum content height encountered so far
+    // maximum content height encountered so far, mainly for comparing content and viewport height
     float maxHeight_ = 0.0f;
     float footerHeight_ = 0.0f;
 
@@ -315,38 +263,20 @@ private:
     bool AdjustLanes(const std::vector<WaterFlowSections::Section>& sections,
         const WaterFlowSections::Section& prevSection, int32_t start, int32_t prevSegIdx);
 
-    /**
-     * @param section index of section to estimate
-     * @param average item height
-     * @param bound item index boundary (inclusive)
-     */
-    float EstimateSectionHeight(uint32_t section, float average, int32_t startBound, int32_t endBound) const;
-
-    float GetAverageItemHeight() const;
-
     void ClearData();
 
     /**
      * @brief Sync state when there has no items in lanes.
      */
-    void SyncOnEmptyLanes(float mainSize);
-
-    /**
-     * @brief cache main-axis length of measured FlowItems.
-     */
-    std::unordered_map<int32_t, float> idxToHeight_;
-    mutable float heightSum_ = 0.0f; // cache to calculate average height
+    void SyncOnEmptyLanes();
 
     std::unique_ptr<decltype(lanes_)> savedLanes_; // temporarily store current lanes_ state in Cache Item operations.
 
+    /* cache */
     float startPos_ = 0.0f;
     float endPos_ = 0.0f;
 
     bool synced_ = false;
-    bool prevItemStart_ = false;
-    bool knowTotalHeight_ = false; // set to true when content end is reached. no longer need to estimate totalHeight
-
-    bool isPrevOffsetValid_ = true;
 
     struct ItemInfo;
 };

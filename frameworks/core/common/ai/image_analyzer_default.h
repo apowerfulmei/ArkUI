@@ -29,12 +29,8 @@ public:
     }
     void BuildNodeFunc(void* pixelMap, void* config, ImageAnalyzerInnerConfig* uiConfig,
         void** overlayData) override {}
-    void BuildNodeFunc(std::string uri, void* pixelMap, int frameTimestamp, void* config,
-        ImageAnalyzerInnerConfig* uiConfig, void** overlayData) override {}
     void UpdateImage(void** overlayData, void* pixelMap, void* config,
         ImageAnalyzerInnerConfig* uiConfig) override {}
-    void UpdateImage(void** overlayData, std::string uri, void* pixelMap, int frameTimestamp,
-        void* config, ImageAnalyzerInnerConfig* uiConfig) override {}
     void UpdateConfig(void** overlayData, void* config) override {}
     void UpdateInnerConfig(void** overlayData, ImageAnalyzerInnerConfig* config) override {}
     void Release(void** overlayData) override {}
@@ -42,7 +38,6 @@ public:
     void UpdateOverlayStatus(void** overlayData, ImageAnalyzerInnerConfig* config) override {}
     void UpdateOverlayActiveStatus(void** overlayData, bool status) override {}
     void UpdateAIButtonConfig(void** overlayData, AIButtonConfig* config) override {}
-    void UpdateKeyEvent(void** overlayData, void* keyEvent) override {}
 };
 } // namespace OHOS::Ace
 #endif // FOUNDATION_ACE_INTERFACE_INNERKITS_IMAGE_ANALYZER_DEFAULT_H

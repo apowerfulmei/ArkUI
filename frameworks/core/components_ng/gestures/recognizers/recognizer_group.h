@@ -147,8 +147,6 @@ public:
         disposal_ = GestureDisposal::NONE;
     }
 
-    void ForceCleanRecognizerWithGroup() override;
-
     void CleanRecognizerState() override;
 
     void SetIsPostEventResultRecursively(bool isPostEventResult)
@@ -203,8 +201,6 @@ public:
     {
         return false;
     }
-
-    virtual void CheckAndSetRecognizerCleanFlag(const RefPtr<NGGestureRecognizer>& recognizer) {}
 
 protected:
     void OnBeginGestureReferee(int32_t touchId, bool needUpdateChild = false) override;

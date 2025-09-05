@@ -14,11 +14,13 @@
  */
 
 #include "core/components_ng/pattern/toast/toast_accessibility_property.h"
+#include "base/log/log_wrapper.h"
 
 #if defined(OHOS_STANDARD_SYSTEM) and !defined(ACE_UNITTEST)
 #include "accessibility_element_info.h"
 #endif
 
+#include "base/utils/utils.h"
 #include "core/components_ng/base/frame_node.h"
 #include "core/components_ng/pattern/toast/toast_layout_property.h"
 
@@ -34,9 +36,9 @@ void ToastAccessibilityProperty::GetExtraElementInfo(Accessibility::ExtraElement
     auto toastProperty = frameNode->GetPaintProperty<ToastLayoutProperty>();
     CHECK_NULL_VOID(toastProperty);
 
-    auto toastSelectStatus = toastProperty->GetSelectStatus();
+    auto ToastSelectStatus = toastProperty->GetSelectStatus();
     extraElementInfo.SetExtraElementInfo(
-        "SideBarContainerStates", static_cast<int32_t>(toastSelectStatus));
+        "SideBarContainerStates", static_cast<int32_t>(ToastSelectStatus));
 #endif
 }
 } // namespace OHOS::Ace::NG

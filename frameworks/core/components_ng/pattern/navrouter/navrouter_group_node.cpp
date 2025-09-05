@@ -15,6 +15,8 @@
 
 #include "core/components_ng/pattern/navrouter/navrouter_group_node.h"
 
+#include "core/components_ng/pattern/linear_layout/linear_layout_pattern.h"
+#include "core/components_ng/pattern/navigation/nav_bar_node.h"
 #include "core/components_ng/pattern/navigation/navigation_pattern.h"
 
 namespace OHOS::Ace::NG {

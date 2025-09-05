@@ -19,20 +19,18 @@
 #include <functional>
 #include <memory>
 
-#include "render_service_client/core/modifier_ng/custom/rs_background_style_modifier.h"
+#include "render_service_client/core/modifier/rs_extended_modifier.h"
 
 #include "core/components_ng/render/adapter/rosen_modifier_adapter.h"
 
 namespace OHOS::Ace::NG {
-using RSBackgroundStyleModifier = Rosen::ModifierNG::RSBackgroundStyleModifier;
-using RSDrawingContext = Rosen::ModifierNG::RSDrawingContext;
-
-class BackgroundModifier : public RSBackgroundStyleModifier {
+class BackgroundModifier : public Rosen::RSBackgroundStyleModifier {
 public:
     BackgroundModifier() = default;
     ~BackgroundModifier() override = default;
 
-    void Draw(RSDrawingContext& context) const override
+#ifndef USE_ROSEN_DRAWING
+    void Draw(Rosen::RSDrawingContext& context) const override
     {
         auto host = host_.Upgrade();
         CHECK_NULL_VOID(host);
@@ -41,7 +39,40 @@ public:
         auto curHeight = curSize.Height();
         CHECK_NULL_VOID(pixelMap_);
         std::shared_ptr<Media::PixelMap> mediaPixelMap = pixelMap_->GetPixelMapSharedPtr();
-        CHECK_NULL_VOID(mediaPixelMap);
+        CHECK_NULL_VOID(context.canvas);
+        std::shared_ptr<SkCanvas> skCanvas { context.canvas, [](SkCanvas* /* unused */) {} };
+        auto* recordingCanvas = static_cast<Rosen::RSRecordingCanvas*>(skCanvas.get());
+        SkSamplingOptions samplingOptions;
+        SkPaint paint;
+
+        SizeF desSize(initialNodeWidth_, initialNodeHeight_);
+        SizeF srcSize(mediaPixelMap->GetWidth(), mediaPixelMap->GetHeight());
+        NG::OffsetF offset1 = Alignment::GetAlignPosition(srcSize, desSize, align_);
+        NG::OffsetF offset2 = Alignment::GetAlignPosition(desSize, srcSize, align_);
+        SkRect srcSKRect = SkRect::MakeXYWH(offset1.GetX(), offset1.GetY(), srcSize.Width(), srcSize.Height());
+        SkRect desSKRect = SkRect::MakeXYWH(offset2.GetX() * curWidth / initialNodeWidth_,
+            offset2.GetY() * curHeight / initialNodeHeight_, srcSize.Width() * curWidth / initialNodeWidth_,
+            srcSize.Height() * curHeight / initialNodeHeight_);
+        if (srcSize.Width() > desSize.Width()) {
+            srcSKRect.fRight = offset1.GetX() + desSize.Width();
+            desSKRect.fRight = curWidth;
+        }
+        if (srcSize.Height() > desSize.Height()) {
+            srcSKRect.fBottom = offset1.GetY() + desSize.Height();
+            desSKRect.fBottom = curHeight;
+        }
+        recordingCanvas->DrawPixelMapRect(mediaPixelMap, srcSKRect, desSKRect, samplingOptions, &paint);
+    }
+#else
+    void Draw(Rosen::RSDrawingContext& context) const override
+    {
+        auto host = host_.Upgrade();
+        CHECK_NULL_VOID(host);
+        auto curSize = host->GetGeometryNode()->GetFrameSize();
+        auto curWidth = curSize.Width();
+        auto curHeight = curSize.Height();
+        CHECK_NULL_VOID(pixelMap_);
+        std::shared_ptr<Media::PixelMap> mediaPixelMap = pixelMap_->GetPixelMapSharedPtr();
         CHECK_NULL_VOID(context.canvas);
         auto& recordingCanvas = static_cast<Rosen::ExtendRecordingCanvas&>(*context.canvas);
         RSSamplingOptions samplingOptions;
@@ -51,12 +82,13 @@ public:
         SizeF srcSize(mediaPixelMap->GetWidth(), mediaPixelMap->GetHeight());
         NG::OffsetF offset1 = Alignment::GetAlignPosition(srcSize, desSize, align_);
         NG::OffsetF offset2 = Alignment::GetAlignPosition(desSize, srcSize, align_);
-        RSRect srcRSRect =
-            RSRect(offset1.GetX(), offset1.GetY(), srcSize.Width() + offset1.GetX(), srcSize.Height() + offset1.GetY());
-        RSRect desRSRect =
-            RSRect(offset2.GetX() * curWidth / initialNodeWidth_, offset2.GetY() * curHeight / initialNodeHeight_,
-                srcSize.Width() * curWidth / initialNodeWidth_ + offset2.GetX() * curWidth / initialNodeWidth_,
-                srcSize.Height() * curHeight / initialNodeHeight_ + offset2.GetY() * curHeight / initialNodeHeight_);
+        RSRect srcRSRect = RSRect(offset1.GetX(), offset1.GetY(), srcSize.Width() + offset1.GetX(),
+            srcSize.Height() + offset1.GetY());
+        RSRect desRSRect = RSRect(offset2.GetX() * curWidth / initialNodeWidth_,
+            offset2.GetY() * curHeight / initialNodeHeight_,
+            srcSize.Width() * curWidth / initialNodeWidth_ + offset2.GetX() * curWidth / initialNodeWidth_,
+            srcSize.Height() * curHeight / initialNodeHeight_ +
+            offset2.GetY() * curHeight / initialNodeHeight_);
         if (srcSize.Width() > desSize.Width()) {
             srcRSRect.SetRight(offset1.GetX() + desSize.Width());
             desRSRect.SetRight(curWidth);
@@ -69,6 +101,7 @@ public:
         recordingCanvas.DrawPixelMapRect(mediaPixelMap, srcRSRect, desRSRect, samplingOptions);
         recordingCanvas.DetachBrush();
     }
+#endif
 
     void SetPixelMap(const RefPtr<PixelMap>& pixelMap)
     {
@@ -111,4 +144,5 @@ private:
     WeakPtr<FrameNode> host_;
 };
 } // namespace OHOS::Ace::NG
+
 #endif // FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_RENDER_ADAPTER_BACKGROUND_MODIFIER_H

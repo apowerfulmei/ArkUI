@@ -50,7 +50,6 @@ constexpr float SAFE_AREA_KEYBOARD = 500.0f;
 void ExpandSafeAreaTestNg::SetUpTestSuite()
 {
     TestNG::SetUpTestSuite();
-    MockPipelineContext::GetCurrent()->SetUseFlushUITasks(true);
 }
 
 void ExpandSafeAreaTestNg::TearDownTestSuite()
@@ -98,7 +97,7 @@ void ExpandSafeAreaTestNg::Create(const std::function<void()>& callback, bool fl
     }
     GetInstance();
     if (flushLayout) {
-        FlushUITasks(frameNode_);
+        FlushLayoutTask(frameNode_);
     }
 }
 
@@ -171,10 +170,10 @@ void ExpandSafeAreaTestNg::InitSafeArea(SafeAreaExpandOpts opts)
     // for tdd, we assume opt type in this function is used to update one specific type
     switch (opts.type) {
         case SAFE_AREA_TYPE_SYSTEM:
-            pipeline->UpdateSystemSafeArea(insets, false);
+            pipeline->UpdateSystemSafeArea(insets);
             break;
         case SAFE_AREA_TYPE_CUTOUT:
-            pipeline->UpdateCutoutSafeArea(insets, false);
+            pipeline->UpdateCutoutSafeArea(insets);
             break;
         case SAFE_AREA_TYPE_KEYBOARD:
             safeAreaManager->UpdateKeyboardOffset(SAFE_AREA_KEYBOARD);
@@ -200,7 +199,7 @@ SafeAreaInsets ExpandSafeAreaTestNg::GetSafeAreaInsets()
  * @tc.desc: Test SafeAreaManager top & bottom system safeArea.
  * @tc.type: FUNC
  */
-HWTEST_F(ExpandSafeAreaTestNg, Manager001, TestSize.Level0)
+HWTEST_F(ExpandSafeAreaTestNg, Manager001, TestSize.Level1)
 {
     AvoidConfig config { .isFullScreen = true };
     InitSafeAreaManager(config);

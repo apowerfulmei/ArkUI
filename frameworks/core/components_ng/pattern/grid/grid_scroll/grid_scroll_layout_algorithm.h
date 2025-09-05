@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2022-2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -35,14 +35,9 @@ public:
     void Measure(LayoutWrapper* layoutWrapper) override;
     void Layout(LayoutWrapper* layoutWrapper) override;
 
-    void SetCanOverScrollStart(bool canOverScroll)
+    void SetCanOverScroll(bool canOverScroll)
     {
-        canOverScrollStart_ = canOverScroll;
-    }
-
-    void SetCanOverScrollEnd(bool canOverScroll)
-    {
-        canOverScrollEnd_ = canOverScroll;
+        canOverScroll_ = canOverScroll;
     }
 
     void SetScrollSource(int32_t scrollSource)
@@ -61,9 +56,9 @@ public:
         enableSkipping_ = skip;
     }
 
-    std::unique_ptr<GridLayoutInfo>&& MoveInfoCopy()
+    GridLayoutInfo GetScrollGridLayoutInfo()
     {
-        return std::move(infoCopy_);
+        return scrollGridLayoutInfo_;
     }
 
     template<class T>
@@ -106,7 +101,6 @@ private:
     // fill end of viewport
     void FillBlankAtEnd(float mainSize, float crossSize, LayoutWrapper* layoutWrapper, float& mainLength);
     float FillNewLineBackward(float crossSize, float mainSize, LayoutWrapper* layoutWrapper, bool reverse);
-    void FillCurrentLine(float mainSize, float crossSize, LayoutWrapper* layoutWrapper);
 
     // Measure grid item which not exist in grid matrix already, need to place it and save to grid matrix.
     int32_t MeasureNewChild(const SizeF& frameSize, int32_t itemIndex, LayoutWrapper* layoutWrapper,
@@ -122,7 +116,7 @@ private:
 
     // Compote position of grid item in cross axis.
     float ComputeItemCrossPosition(int32_t crossStart) const;
-    virtual void LargeItemLineHeight(const RefPtr<LayoutWrapper>& itemWrapper);
+    virtual void LargeItemLineHeight(const RefPtr<LayoutWrapper>& itemWrapper, bool& hasNormalItem);
     // Find next valid cell when current is not valid.
     bool GetNextGrid(int32_t& curMain, int32_t& curCross, bool reverse) const;
     // Find a valid cell to place grid item and save to grid matrix.
@@ -142,7 +136,7 @@ private:
         float mainSize, SizeF idealSize, bool matchChildren);
     void UpdateOffsetOnHeightChangeDuringAnimation(LayoutWrapper* layoutWrapper, float mainSize);
 
-    virtual int32_t GetStartingItem(LayoutWrapper* layoutWrapper, int32_t currentIndex);
+    int32_t GetStartingItem(LayoutWrapper* layoutWrapper, int32_t currentIndex);
 
     OffsetF CalculateLargeItemOffset(
         OffsetF currOffset, int32_t itemIndex, int32_t currLineIndex, int32_t currentCrossIndex);
@@ -201,37 +195,6 @@ private:
      */
     void SyncPreload(LayoutWrapper* wrapper, int32_t cacheLineCnt, float crossSize, float mainSize);
 
-    virtual std::pair<int32_t, int32_t> CalculateCachedCount(LayoutWrapper* layoutWrapper, int32_t cachedCount)
-    {
-        return std::make_pair(cachedCount * crossCount_, cachedCount * crossCount_);
-    }
-
-    std::string GetReloadReasonStr(GridReloadReason reason)
-    {
-        switch (reason) {
-            case GridReloadReason::INIT:
-                return "init";
-            case GridReloadReason::CROSS_COUNT_CHANGE:
-                return "cross count change";
-            case GridReloadReason::DATA_RELOAD:
-                return "data reload";
-            case GridReloadReason::SCROLL_TO_INDEX:
-                return "scroll to index";
-            case GridReloadReason::SKIP_LARGE_OFFSET:
-                return "skip large offset";
-            default:
-                return "";
-        }
-    }
-
-    bool HasLayoutOptions(LayoutWrapper* layoutWrapper);
-
-    virtual void PreloadItems(LayoutWrapper* layoutWrapper);
-
-    void ClearUnlayoutedItems(LayoutWrapper* layoutWrapper);
-
-    void UpdateUnlayoutedItems();
-
 protected:
     uint32_t crossCount_ = 0;
     uint32_t mainCount_ = 0;
@@ -243,11 +206,6 @@ protected:
     int32_t currentItemColEnd_ = -1;
     float cellAveLength_ = -1.0f;
     float mainGap_ = 0;
-    float crossGap_ = 0;
-    std::map<int32_t, float> itemsCrossSize_; // grid item's size in cross axis.
-    std::list<GridPreloadItem> predictBuildList_;
-    LayoutConstraintF cachedChildConstraint_;
-    std::map<int32_t, float> unLayoutedItems_;
 
 private:
     /**
@@ -256,37 +214,33 @@ private:
      * @param line index of line to measure
      * updates @param mainLength by adding this line's measured height
      * updates @param endIdx with max item index in this line
-     * updates @param isScrollableSpringMotionRunning spring effect is runnning
      * @return false if line isn't recorded.
      */
-    bool MeasureExistingLine(
-        int32_t line, float& mainLength, int32_t& endIdx, bool isScrollableSpringMotionRunning = false);
-
-    float GetContentHeight(LayoutWrapper* layoutWrapper);
+    bool MeasureExistingLine(int32_t line, float& mainLength, int32_t& endIdx);
 
     LayoutWrapper* wrapper_;
     SizeF frameSize_;
     int32_t currentMainLineIndex_ = 0;        // it equals to row index in vertical grid
     int32_t moveToEndLineIndex_ = -1;         // place index in the last line when scroll to index after matrix
+    std::map<int32_t, float> itemsCrossSize_; // grid item's size in cross axis.
     Axis axis_ = Axis::VERTICAL;
 
+    float crossGap_ = 0;
     float crossPaddingOffset_ = 0;
     int32_t lastCross_ = 0;
-    int32_t cacheEnd_ = 0;
     bool isChildrenUpdated_ = false;
 
     bool expandSafeArea_ = false;
-    bool canOverScrollStart_ = false;
-    bool canOverScrollEnd_ = false;
-    bool enableSkipping_ = true;               // enables skipping lines on a large offset change.
-    bool isLayouted_ = true;
-    std::unique_ptr<GridLayoutInfo> infoCopy_; // legacy impl to save independent data for animation.
+    bool canOverScroll_ = false;
+    bool enableSkipping_ = true; // enables skipping lines on a large offset change.
+    GridLayoutInfo scrollGridLayoutInfo_;
 
     // Map structure: [index, crossPosition], store cross position of each item.
     std::map<int32_t, float> itemsCrossPosition_;
     int32_t scrollSource_ = SCROLL_FROM_NONE;
     OffsetF childFrameOffset_;
-    GridReloadReason reason_;
+    std::list<GridPreloadItem> predictBuildList_;
+    LayoutConstraintF cachedChildConstraint_;
 
     ACE_DISALLOW_COPY_AND_MOVE(GridScrollLayoutAlgorithm);
 };

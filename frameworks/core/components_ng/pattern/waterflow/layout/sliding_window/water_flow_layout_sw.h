@@ -31,30 +31,20 @@ public:
     void Measure(LayoutWrapper* wrapper) override;
     void Layout(LayoutWrapper* wrapper) override;
 
+    void SetCanOverScroll(bool value) override
+    {
+        overScroll_ = value;
+    }
+
     void StartCacheLayout() override;
     bool PreloadItem(LayoutWrapper* host, int32_t itemIdx, int64_t deadline) override;
     void EndCacheLayout() override;
-
-    void EnableSkip(bool value)
-    {
-        canSkip_ = value;
-    }
-
-    bool MeasureInNextFrame() const override
-    {
-        return info_->measureInNextFrame_;
-    }
 
 private:
     void Init(const SizeF& frameSize);
     /* init WaterFlow without Sections */
     void SingleInit(const SizeF& frameSize);
-    /**
-     * @brief check if any items have changed and require a re-layout
-     *
-     * @return item index to refill from. -1 if nothing changed
-     */
-    int32_t CheckReset();
+    void CheckReset();
 
     void MeasureOnOffset(float delta);
 
@@ -155,7 +145,7 @@ private:
      */
     void PostMeasureSelf(float selfCrossLen);
 
-    float MeasureChild(int32_t idx, size_t lane, bool forward = true) const;
+    float MeasureChild(const RefPtr<WaterFlowLayoutProperty>& props, int32_t idx, size_t lane) const;
 
     /**
      * @brief Fill cache items back to lanes_ to prepare for Layout phase.
@@ -201,9 +191,6 @@ private:
     // convert FlowItem's index to children node index.
     inline int32_t nodeIdx(int32_t idx) const;
 
-    void MeasureRemainingLazyChild(int32_t startIdx, int32_t endIdx, bool forward = true) override;
-    void MeasureLazyChild(const RefPtr<LayoutWrapper>& child, int32_t idx, size_t lane, bool forward) const;
-
     RefPtr<WaterFlowLayoutInfoSW> info_;
     RefPtr<WaterFlowSections> sections_;
 
@@ -211,7 +198,7 @@ private:
     float mainLen_ = 0.0f;
     std::optional<int64_t> cacheDeadline_; // cache layout deadline
 
-    bool canSkip_ = false; // try converting large delta to jump if true.
+    bool overScroll_ = true;
 };
 } // namespace OHOS::Ace::NG
 #endif // FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_PATTERN_WATERFLOW_WATER_FLOW_SW_LAYOUT_H

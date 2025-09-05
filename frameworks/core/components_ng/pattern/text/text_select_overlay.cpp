@@ -15,6 +15,12 @@
 
 #include "core/components_ng/pattern/text/text_select_overlay.h"
 
+#include <algorithm>
+#include <optional>
+
+#include "base/utils/utils.h"
+#include "core/components/text_overlay/text_overlay_theme.h"
+#include "core/components_ng/manager/select_content_overlay/select_content_overlay_manager.h"
 #include "core/components_ng/pattern/select_overlay/select_overlay_property.h"
 #include "core/components_ng/pattern/text/text_pattern.h"
 
@@ -25,13 +31,12 @@ constexpr float BOX_EPSILON = 0.5f;
 
 bool TextSelectOverlay::PreProcessOverlay(const OverlayRequest& request)
 {
-    auto pipeline = PipelineContext::GetCurrentContextSafelyWithCheck();
+    auto pipeline = PipelineContext::GetCurrentContextSafely();
     CHECK_NULL_RETURN(pipeline, false);
     auto textPattern = GetPattern<TextPattern>();
     CHECK_NULL_RETURN(textPattern, false);
     SetUsingMouse(textPattern->IsUsingMouse());
     SetEnableHandleLevel(true);
-    SetEnableSubWindowMenu(true);
     textPattern->CalculateHandleOffsetAndShowOverlay();
     selectTextUseTopHandle = true;
     CheckEnableContainerModal();
@@ -50,7 +55,6 @@ std::optional<SelectHandleInfo> TextSelectOverlay::GetFirstHandleInfo()
     localPaintRect.SetOffset(localPaintRect.GetOffset() - GetPaintOffsetWithoutTransform());
     handleInfo.localPaintRect = localPaintRect;
     SetTransformPaintInfo(handleInfo, localPaintRect);
-    handleInfo.forceDraw = !CheckSwitchToMode(HandleLevelMode::OVERLAY);
     return handleInfo;
 }
 
@@ -66,22 +70,23 @@ std::optional<SelectHandleInfo> TextSelectOverlay::GetSecondHandleInfo()
     localPaintRect.SetOffset(localPaintRect.GetOffset() - GetPaintOffsetWithoutTransform());
     handleInfo.localPaintRect = localPaintRect;
     SetTransformPaintInfo(handleInfo, localPaintRect);
-    handleInfo.forceDraw = !CheckSwitchToMode(HandleLevelMode::OVERLAY);
     return handleInfo;
 }
 
-RectF TextSelectOverlay::GetHandleLocalPaintRect(DragHandleIndex dragHandleIndex)
+RectF TextSelectOverlay::GetFirstHandleLocalPaintRect()
 {
     auto textPattern = GetPattern<TextPattern>();
     CHECK_NULL_RETURN(textPattern, RectF());
-    RectF localPaintRect;
-    if (dragHandleIndex == DragHandleIndex::FIRST) {
-        localPaintRect = textPattern->GetTextSelector().firstHandle;
-    } else if (dragHandleIndex == DragHandleIndex::SECOND) {
-        localPaintRect = textPattern->GetTextSelector().secondHandle;
-    } else { // dragHandleIndex::NONE
-        return RectF();
-    }
+    auto localPaintRect = textPattern->GetTextSelector().firstHandle;
+    localPaintRect.SetOffset(localPaintRect.GetOffset() - GetPaintOffsetWithoutTransform());
+    return localPaintRect;
+}
+
+RectF TextSelectOverlay::GetSecondHandleLocalPaintRect()
+{
+    auto textPattern = GetPattern<TextPattern>();
+    CHECK_NULL_RETURN(textPattern, RectF());
+    auto localPaintRect = textPattern->GetTextSelector().secondHandle;
     localPaintRect.SetOffset(localPaintRect.GetOffset() - GetPaintOffsetWithoutTransform());
     return localPaintRect;
 }
@@ -92,7 +97,13 @@ bool TextSelectOverlay::CheckAndAdjustHandle(RectF& paintRect)
     CHECK_NULL_RETURN(textPattern, false);
     auto host = textPattern->GetHost();
     CHECK_NULL_RETURN(host, false);
-    if (!GetRenderClipValue()) {
+    auto renderContext = host->GetRenderContext();
+    CHECK_NULL_RETURN(renderContext, false);
+    auto clip = false;
+    if (Container::LessThanAPITargetVersion(PlatformVersion::VERSION_TWELVE)) {
+        clip = true;
+    }
+    if (!renderContext->GetClipEdge().value_or(clip)) {
         if (handleLevelMode_ == HandleLevelMode::EMBED) {
             return true;
         }
@@ -138,7 +149,13 @@ bool TextSelectOverlay::CheckHandleVisible(const RectF& paintRect)
     CHECK_NULL_RETURN(textPattern, false);
     auto host = textPattern->GetHost();
     CHECK_NULL_RETURN(host, false);
-    if (!GetRenderClipValue()) {
+    auto renderContext = host->GetRenderContext();
+    CHECK_NULL_RETURN(renderContext, false);
+    auto clip = false;
+    if (Container::LessThanAPITargetVersion(PlatformVersion::VERSION_TWELVE)) {
+        clip = true;
+    }
+    if (!renderContext->GetClipEdge().value_or(clip)) {
         return true;
     }
     auto contentRect = textPattern->GetTextContentRect();
@@ -158,42 +175,28 @@ void TextSelectOverlay::OnResetTextSelection()
 
 void TextSelectOverlay::OnHandleMove(const RectF& handleRect, bool isFirst)
 {
-    if (!SelectOverlayIsOn()) {
-        return;
-    }
     auto textPattern = GetPattern<TextPattern>();
     CHECK_NULL_VOID(textPattern);
     auto host = textPattern->GetHost();
     CHECK_NULL_VOID(host);
+    auto renderContext = host->GetRenderContext();
+    CHECK_NULL_VOID(renderContext);
+    auto contentRect = textPattern->GetTextContentRect();
+    auto contentOffset = contentRect.GetOffset();
     auto localHandleOffset = handleRect.GetOffset();
     if (IsOverlayMode()) {
+        contentOffset = contentOffset + GetPaintOffsetWithoutTransform();
         localHandleOffset -= GetPaintOffsetWithoutTransform();
     }
     localHandleOffset.SetY(localHandleOffset.GetY() + handleRect.Height() / 2.0f);
-    if (textPattern->HasContent() && textPattern->GetOrCreateMagnifier()) {
-        textPattern->GetMagnifierController()->SetLocalOffset(localHandleOffset);
-    }
-    // the handle position is calculated based on the middle of the handle height.
-    auto handleOffset = GetHandleReferenceOffset(handleRect);
-    UpdateSelectorOnHandleMove(handleOffset, isFirst);
-    host->MarkDirtyNode(PROPERTY_UPDATE_RENDER);
-    auto overlayManager = GetManager<SelectContentOverlayManager>();
-    CHECK_NULL_VOID(overlayManager);
-    overlayManager->MarkInfoChange(DIRTY_SELECT_TEXT);
-}
-
-OffsetF TextSelectOverlay::GetHandleReferenceOffset(const RectF& handleRect)
-{
+    textPattern->GetMagnifierController()->SetLocalOffset(localHandleOffset);
     auto handleOffset = handleRect.GetOffset();
     handleOffset.SetY(handleOffset.GetY() + handleRect.Height() / 2.0f);
-    auto textPattern = GetPattern<TextPattern>();
-    CHECK_NULL_RETURN(textPattern, handleOffset);
-    auto contentRect = textPattern->GetTextContentRect();
-    auto contentOffset = contentRect.GetOffset();
-    if (IsOverlayMode()) {
-        contentOffset = contentOffset + GetPaintOffsetWithoutTransform();
+    auto clip = false;
+    if (Container::LessThanAPITargetVersion(PlatformVersion::VERSION_TWELVE)) {
+        clip = true;
     }
-    if (GetRenderClipValue()) {
+    if (renderContext->GetClipEdge().value_or(clip)) {
         handleOffset.SetX(
             std::clamp(handleOffset.GetX(), contentOffset.GetX(), contentOffset.GetX() + contentRect.Width()));
         handleOffset.SetY(
@@ -201,7 +204,12 @@ OffsetF TextSelectOverlay::GetHandleReferenceOffset(const RectF& handleRect)
     }
     auto textPaintOffset = contentOffset - OffsetF(0.0f, std::min(textPattern->GetBaselineOffset(), 0.0f));
     handleOffset -= textPaintOffset;
-    return handleOffset;
+    // the handle position is calculated based on the middle of the handle height.
+    UpdateSelectorOnHandleMove(handleOffset, isFirst);
+    host->MarkDirtyNode(PROPERTY_UPDATE_RENDER);
+    auto overlayManager = GetManager<SelectContentOverlayManager>();
+    CHECK_NULL_VOID(overlayManager);
+    overlayManager->MarkInfoChange(DIRTY_SELECT_TEXT);
 }
 
 void TextSelectOverlay::UpdateSelectorOnHandleMove(const OffsetF& handleOffset, bool isFirstHandle)
@@ -226,6 +234,7 @@ void TextSelectOverlay::OnHandleMoveDone(const RectF& rect, bool isFirst)
     if (textPattern->GetMagnifierController()) {
         textPattern->GetMagnifierController()->RemoveMagnifierFrameNode();
     }
+    textPattern->SetTextResponseType(TextResponseType::LONG_PRESS);
     auto textSelector = textPattern->GetTextSelector();
     textPattern->UpdateSelectionSpanType(textSelector.GetTextStart(), textSelector.GetTextEnd());
     textPattern->CalculateHandleOffsetAndShowOverlay();
@@ -234,18 +243,13 @@ void TextSelectOverlay::OnHandleMoveDone(const RectF& rect, bool isFirst)
     if (!textPattern->IsSelectedTypeChange()) {
         overlayManager->ShowOptionMenu();
     }
-    textPattern->UpdateAIMenuOptions();
     overlayManager->MarkInfoChange((isFirst ? DIRTY_FIRST_HANDLE : DIRTY_SECOND_HANDLE) | DIRTY_SELECT_AREA |
-                                   DIRTY_SELECT_TEXT | DIRTY_COPY_ALL_ITEM | DIRTY_AI_MENU_ITEM | DIRTY_ASK_CELIA);
+                                   DIRTY_SELECT_TEXT | DIRTY_COPY_ALL_ITEM);
     if (textPattern->CheckSelectedTypeChange()) {
         CloseOverlay(false, CloseReason::CLOSE_REASON_NORMAL);
         ProcessOverlay({ .animation = true });
     }
     overlayManager->SetHandleCircleIsShow(isFirst, true);
-    if (textPattern->GetTextSelector().SelectNothing()) {
-        TAG_LOGI(AceLogTag::ACE_TEXT, "Close the selectoverlay when nothing is selected.");
-        CloseOverlay(false, CloseReason::CLOSE_REASON_NORMAL);
-    }
     auto host = textPattern->GetHost();
     CHECK_NULL_VOID(host);
     host->MarkDirtyNode(PROPERTY_UPDATE_RENDER);
@@ -257,7 +261,7 @@ std::string TextSelectOverlay::GetSelectedText()
     CHECK_NULL_RETURN(textPattern, "");
     auto start = textPattern->GetTextSelector().GetTextStart();
     auto end = textPattern->GetTextSelector().GetTextEnd();
-    return UtfUtils::Str16DebugToStr8(textPattern->GetSelectedText(start, end));
+    return textPattern->GetSelectedText(start, end);
 }
 
 RectF TextSelectOverlay::GetSelectAreaFromRects(SelectRectsType pos)
@@ -282,14 +286,9 @@ RectF TextSelectOverlay::GetSelectAreaFromRects(SelectRectsType pos)
     }
     auto contentRect = pattern->GetTextContentRect();
     auto textRect = pattern->GetTextRect();
-    auto textContentRect = pattern->GetTextContentRect(true);
     res = MergeSelectedBoxes(selectRects, contentRect, textRect, textPaintOffset);
-    RectF visibleContentRect;
-    if (GetRenderClipValue() || LessOrEqual(textContentRect.Height(), contentRect.Height()) ||
-        !GetClipHandleViewPort(visibleContentRect)) {
-        visibleContentRect = RectF(contentRect.GetOffset() + textPaintOffset, contentRect.GetSize());
-        visibleContentRect = GetVisibleRect(pattern->GetHost(), visibleContentRect);
-    }
+    RectF visibleContentRect(contentRect.GetOffset() + textPaintOffset, contentRect.GetSize());
+    visibleContentRect = GetVisibleRect(pattern->GetHost(), visibleContentRect);
     auto intersectRect = res.IntersectRectT(visibleContentRect);
     intersectRect.SetWidth(std::max(intersectRect.Width(), 0.0f));
     intersectRect.SetHeight(std::max(intersectRect.Height(), 0.0f));
@@ -331,20 +330,12 @@ void TextSelectOverlay::OnUpdateMenuInfo(SelectMenuInfo& menuInfo, SelectOverlay
     menuInfo.showCopyAll = !textPattern->IsSelectAll();
     menuInfo.showCopy = !textPattern->GetTextSelector().SelectNothing();
     menuInfo.showTranslate = menuInfo.showCopy && textPattern->IsShowTranslate() && IsNeedMenuTranslate();
-    menuInfo.showSearch = menuInfo.showCopy && textPattern->IsShowSearch() && IsNeedMenuSearch();
-    menuInfo.showShare = menuInfo.showCopy && IsSupportMenuShare() && IsNeedMenuShare();
-    if (textPattern->IsShowAIMenuOption()) {
-        // do not support two selected ai entity, hence it's enough to pick first item to determine type
-        auto firstSpanItem = textPattern->GetAIItemOption().begin()->second;
-        menuInfo.aiMenuOptionType = firstSpanItem.type;
-    } else {
-        menuInfo.aiMenuOptionType = TextDataDetectType::INVALID;
+    if (dirtyFlag == DIRTY_COPY_ALL_ITEM) {
+        return;
     }
-    menuInfo.isAskCeliaEnabled = textPattern->IsAskCeliaEnabled();
     menuInfo.menuIsShow = IsShowMenu();
     menuInfo.showCut = false;
     menuInfo.showPaste = false;
-    menuInfo.hasOnPrepareMenuCallback = onPrepareMenuCallback_ ? true : false;
 }
 
 void TextSelectOverlay::OnUpdateSelectOverlayInfo(SelectOverlayInfo& overlayInfo, int32_t requestCode)
@@ -403,67 +394,14 @@ void TextSelectOverlay::OnMenuItemAction(OptionMenuActionId id, OptionMenuType t
         case OptionMenuActionId::TRANSLATE:
             HandleOnTranslate();
             break;
-        case OptionMenuActionId::SEARCH:
-            HandleOnSearch();
-            break;
-        case OptionMenuActionId::SHARE:
-            HandleOnShare();
-            break;
-        case OptionMenuActionId::ASK_CELIA:
-            textPattern->HandleOnAskCelia();
-            break;
         default:
             TAG_LOGI(AceLogTag::ACE_TEXT, "Unsupported menu option id %{public}d", id);
             break;
     }
-}
-
-void TextSelectOverlay::OnMenuItemAction(OptionMenuActionId id, OptionMenuType type, const std::string& labelInfo)
-{
-    auto textPattern = GetPattern<TextPattern>();
-    CHECK_NULL_VOID(textPattern);
-    if (labelInfo == "") {
-        OnMenuItemAction(id, type);
-        return;
-    }
-    switch (id) {
-        case OptionMenuActionId::AI_MENU_OPTION:
-            textPattern->HandleAIMenuOption(labelInfo);
-            break;
-        default:
-            TAG_LOGI(AceLogTag::ACE_TEXT, "Unsupported menu option id %{public}d", id);
-            break;
-    }
-}
-
-void TextSelectOverlay::IsAIMenuOptionChanged(SelectMenuInfo& menuInfo)
-{
-    auto textPattern = GetPattern<TextPattern>();
-    CHECK_NULL_VOID(textPattern);
-
-    auto oldIsShowAIMenuOption = textPattern->IsShowAIMenuOption();
-    auto oldIsShowAskCelia = textPattern->IsAskCeliaEnabled();
-    textPattern->UpdateAIMenuOptions();
-    menuInfo.isShowAIMenuOptionChanged =
-        oldIsShowAIMenuOption != textPattern->IsShowAIMenuOption() ||
-        oldIsShowAskCelia != textPattern->IsAskCeliaEnabled();
-
-    if (textPattern->IsShowAIMenuOption()) {
-        // do not support two selected ai entity, hence it's enough to pick first item to determine type
-        auto firstSpanItem = textPattern->GetAIItemOption().begin()->second; // null check
-        menuInfo.aiMenuOptionType = firstSpanItem.type;
-    } else {
-        menuInfo.aiMenuOptionType = TextDataDetectType::INVALID;
-    }
-    menuInfo.isAskCeliaEnabled = textPattern->IsAskCeliaEnabled();
 }
 
 void TextSelectOverlay::OnCloseOverlay(OptionMenuType menuType, CloseReason reason, RefPtr<OverlayInfo> info)
 {
-    auto isDragging = GetIsHandleDragging();
-    if (isDragging) {
-        TriggerScrollableParentToScroll(FindScrollableParent(), Offset(), true);
-    }
     BaseTextSelectOverlay::OnCloseOverlay(menuType, reason, info);
     auto textPattern = GetPattern<TextPattern>();
     CHECK_NULL_VOID(textPattern);
@@ -480,7 +418,7 @@ void TextSelectOverlay::OnHandleGlobalTouchEvent(SourceType sourceType, TouchTyp
 {
     auto textPattern = GetPattern<TextPattern>();
     CHECK_NULL_VOID(textPattern);
-    if (IsMouseClickDown(sourceType, touchType) && !touchInside) {
+    if (IsMouseClickDown(sourceType, touchType) && touchInside) {
         textPattern->ResetSelection();
     }
     BaseTextSelectOverlay::OnHandleGlobalTouchEvent(sourceType, touchType);
@@ -494,12 +432,13 @@ void TextSelectOverlay::OnAncestorNodeChanged(FrameNodeChangeInfoFlag flag)
         CHECK_NULL_VOID(textPattern);
         textPattern->UpdateParentGlobalOffset();
         textPattern->CalculateHandleOffsetAndShowOverlay();
-        UpdateViewPort();
         if (isDragging && isDraggingFirstHandle_) {
+            UpdateViewPort();
             UpdateSecondHandleOffset();
             return;
         }
         if (isDragging && !isDraggingFirstHandle_) {
+            UpdateViewPort();
             UpdateFirstHandleOffset();
             return;
         }
@@ -519,12 +458,7 @@ void TextSelectOverlay::OnHandleLevelModeChanged(HandleLevelMode mode)
         textPattern->CalculateHandleOffsetAndShowOverlay();
         UpdateAllHandlesOffset();
     }
-    if (mode == HandleLevelMode::OVERLAY) {
-        BaseTextSelectOverlay::OnHandleLevelModeChanged(mode);
-    } else {
-        BaseTextSelectOverlay::SetHandleLevelMode(mode);
-        BaseTextSelectOverlay::UpdateViewPort();
-    }
+    BaseTextSelectOverlay::OnHandleLevelModeChanged(mode);
 }
 
 void TextSelectOverlay::OnHandleMoveStart(const GestureEvent& event, bool isFirst)
@@ -539,7 +473,6 @@ void TextSelectOverlay::OnHandleMoveStart(const GestureEvent& event, bool isFirs
     manager->SetHandleCircleIsShow(isFirst, false);
     isDraggingFirstHandle_ = isFirst;
     hostPaintOffset_ = GetHotPaintOffset();
-    textPattern->SetupMagnifier();
 }
 
 void TextSelectOverlay::OnOverlayClick(const GestureEvent& event, bool isFirst)
@@ -555,42 +488,23 @@ void TextSelectOverlay::UpdateClipHandleViewPort(RectF& rect)
     CHECK_NULL_VOID(host);
     auto renderContext = host->GetRenderContext();
     CHECK_NULL_VOID(renderContext);
-    if (GetRenderClipValue()) {
+    if (renderContext->GetClipEdge().value_or(false)) {
         return;
     }
     auto clipNode = host->GetAncestorNodeOfFrame(true);
-    RefPtr<FrameNode> prevNode;
     while (clipNode) {
         renderContext = clipNode->GetRenderContext();
         CHECK_NULL_VOID(renderContext);
         if (renderContext->GetClipEdge().value_or(false)) {
             break;
         }
-        prevNode = clipNode;
         clipNode = clipNode->GetAncestorNodeOfFrame(true);
     }
-    if (clipNode) {
-        RectF visibleRect;
-        RectF frameRect;
-        clipNode->GetVisibleRect(visibleRect, frameRect);
-        if (GreatNotEqual(rect.Top(), visibleRect.Bottom()) || GreatNotEqual(rect.Left(), visibleRect.Right())) {
-            return;
-        }
-        rect.SetHeight(visibleRect.Bottom() - rect.Top());
-        rect.SetWidth(visibleRect.Right() - rect.Left());
-        return;
-    }
-    // root node.
-    if (prevNode) {
-        auto geoNode = prevNode->GetGeometryNode();
-        CHECK_NULL_VOID(geoNode);
-        RectF visibleRect = geoNode->GetFrameRect();
-        if (GreatNotEqual(rect.Top(), visibleRect.Height()) || GreatNotEqual(rect.Left(), visibleRect.Width())) {
-            return;
-        }
-        rect.SetHeight(visibleRect.Height() - rect.Top());
-        rect.SetWidth(visibleRect.Width() - rect.Left());
-    }
+    CHECK_NULL_VOID(clipNode);
+    RectF visibleRect;
+    RectF frameRect;
+    clipNode->GetVisibleRect(visibleRect, frameRect);
+    rect.SetHeight(visibleRect.Bottom() - rect.Top());
 }
 
 void TextSelectOverlay::TriggerScrollableParentToScroll(
@@ -630,7 +544,7 @@ const RefPtr<ScrollablePattern> TextSelectOverlay::FindScrollableParent()
     auto parent = host->GetAncestorNodeOfFrame(true);
     while (parent) {
         auto scrollablePattern = parent->GetPattern<ScrollablePattern>();
-        if (scrollablePattern && scrollablePattern->IsScrollable()) {
+        if (scrollablePattern) {
             return scrollablePattern;
         }
         parent = parent->GetAncestorNodeOfFrame(true);
@@ -661,78 +575,5 @@ bool TextSelectOverlay::AllowTranslate()
     auto textPattern = GetPattern<TextPattern>();
     CHECK_NULL_RETURN(textPattern, false);
     return !textPattern->GetTextSelector().SelectNothing();
-}
-
-bool TextSelectOverlay::AllowSearch()
-{
-    auto textPattern = GetPattern<TextPattern>();
-    CHECK_NULL_RETURN(textPattern, false);
-    return !textPattern->GetTextSelector().SelectNothing();
-}
-
-bool TextSelectOverlay::AllowShare()
-{
-    auto textPattern = GetPattern<TextPattern>();
-    CHECK_NULL_RETURN(textPattern, false);
-    return !textPattern->GetTextSelector().SelectNothing();
-}
-
-bool TextSelectOverlay::GetRenderClipValue() const
-{
-    auto defaultClipValue = Container::LessThanAPITargetVersion(PlatformVersion::VERSION_TWELVE);
-    auto pattern = GetPattern<Pattern>();
-    CHECK_NULL_RETURN(pattern, defaultClipValue);
-    auto host = pattern->GetHost();
-    CHECK_NULL_RETURN(host, defaultClipValue);
-    auto renderContext = host->GetRenderContext();
-    CHECK_NULL_RETURN(renderContext, defaultClipValue);
-    return renderContext->GetClipEdge().value_or(defaultClipValue);
-}
-
-std::optional<SelectOverlayInfo> TextSelectOverlay::GetSelectOverlayInfo()
-{
-    auto manager = GetManager<SelectContentOverlayManager>();
-    CHECK_NULL_RETURN(manager, std::optional<SelectOverlayInfo>());
-    return manager->GetSelectOverlayInfo();
-}
-
-bool TextSelectOverlay::ChangeSecondHandleHeight(const GestureEvent& event, bool isOverlayMode)
-{
-    if (isOverlayMode || CheckSwitchToMode(HandleLevelMode::OVERLAY)) {
-        return false;
-    }
-    auto secondHandleInfo = GetSecondHandleInfo();
-    CHECK_NULL_RETURN(secondHandleInfo, false);
-    auto handleRect = secondHandleInfo->localPaintRect;
-    auto height = handleRect.Height();
-    auto textPattern = GetPattern<TextPattern>();
-    CHECK_NULL_RETURN(textPattern, false);
-    textPattern->CalculateDefaultHandleHeight(height);
-    auto touchOffset = event.GetLocalLocation();
-    bool isTouchHandleCircle = GreatNotEqual(touchOffset.GetY(), handleRect.Bottom());
-    auto handleOffsetY =
-        isTouchHandleCircle ? handleRect.Bottom() - height : static_cast<float>(touchOffset.GetY()) - height / 2.0f;
-    auto secondHandle = textPattern->GetTextSelector().secondHandle;
-    secondHandle.SetTop(handleOffsetY + handleGlobalOffset_.GetY());
-    secondHandle.SetHeight(height);
-    textPattern->UpdateTextSelectorSecondHandle(secondHandle);
-    return true;
-}
-
-void TextSelectOverlay::GetVisibleDragViewHandles(RectF& first, RectF& second)
-{
-    auto selectOverlayInfo = GetSelectOverlayInfos();
-    CHECK_NULL_VOID(selectOverlayInfo);
-    RectF firstHandle;
-    RectF secondHandle;
-    if (!GetDragViewHandleRects(firstHandle, secondHandle)) {
-        return;
-    }
-    if (selectOverlayInfo->firstHandle.isShow) {
-        first = firstHandle;
-    }
-    if (selectOverlayInfo->secondHandle.isShow) {
-        second = secondHandle;
-    }
 }
 } // namespace OHOS::Ace::NG

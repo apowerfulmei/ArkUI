@@ -15,13 +15,11 @@
 
 #include "core/components_ng/pattern/data_panel/data_panel_layout_algorithm.h"
 
+#include "core/components_ng/layout/layout_wrapper.h"
 #include "core/pipeline_ng/pipeline_context.h"
 #include "core/components_ng/pattern/data_panel/data_panel_pattern.h"
 
 namespace OHOS::Ace::NG {
-namespace {
-constexpr float ZERO_MEASURE_CONTENT_SIZE = 0.0f;
-}
 DataPanelLayoutAlgorithm::DataPanelLayoutAlgorithm() = default;
 
 void DataPanelLayoutAlgorithm::OnReset() {}
@@ -34,18 +32,8 @@ std::optional<SizeF> DataPanelLayoutAlgorithm::MeasureContent(
     auto pattern = host->GetPattern<DataPanelPattern>();
     CHECK_NULL_RETURN(pattern, std::nullopt);
     if (pattern->UseContentModifier()) {
-        if (host->GreatOrEqualAPITargetVersion(PlatformVersion::VERSION_EIGHTEEN)) {
-            host->GetGeometryNode()->ResetContent();
-        } else {
-            host->GetGeometryNode()->Reset();
-        }
+        host->GetGeometryNode()->Reset();
         return std::nullopt;
-    }
-    auto layoutProperty = AceType::DynamicCast<LayoutProperty>(layoutWrapper->GetLayoutProperty());
-    CHECK_NULL_RETURN(layoutProperty, std::nullopt);
-    auto layoutPolicy = layoutProperty->GetLayoutPolicyProperty();
-    if (layoutPolicy.has_value() && (layoutPolicy->IsWrap() || layoutPolicy->IsFix())) {
-        return SizeF(ZERO_MEASURE_CONTENT_SIZE, ZERO_MEASURE_CONTENT_SIZE);
     }
     // 1.If user set the width and height, use the selfIdealSize.
     if (contentConstraint.selfIdealSize.IsValid()) {

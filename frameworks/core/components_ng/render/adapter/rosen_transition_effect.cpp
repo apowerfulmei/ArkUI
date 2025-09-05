@@ -282,8 +282,8 @@ RosenIdentityTransitionEffect::RosenIdentityTransitionEffect() : RosenTransition
     RosenTransitionEffect::SetAnimationOption(identityOption);
 }
 
-template<typename Modifier, RSPropertyType PropertyType, typename ValueType>
-void PropertyTransitionEffectTemplate<Modifier, PropertyType, ValueType>::SetIdentityValue(ValueType identityValue)
+template<typename Modifier, typename PropertyType>
+void PropertyTransitionEffectTemplate<Modifier, PropertyType>::SetIdentityValue(PropertyType identityValue)
 {
     identityValue_ = identityValue;
     if (!isActive_) {
@@ -291,8 +291,8 @@ void PropertyTransitionEffectTemplate<Modifier, PropertyType, ValueType>::SetIde
     }
 }
 
-template<typename Modifier, RSPropertyType PropertyType, typename ValueType>
-void PropertyTransitionEffectTemplate<Modifier, PropertyType, ValueType>::SetActiveValue(ValueType activeValue)
+template<typename Modifier, typename PropertyType>
+void PropertyTransitionEffectTemplate<Modifier, PropertyType>::SetActiveValue(PropertyType activeValue)
 {
     activeValue_ = activeValue;
     if (isActive_) {
@@ -300,8 +300,8 @@ void PropertyTransitionEffectTemplate<Modifier, PropertyType, ValueType>::SetAct
     }
 }
 
-template<typename Modifier, RSPropertyType PropertyType, typename ValueType>
-void PropertyTransitionEffectTemplate<Modifier, PropertyType, ValueType>::OnAttach(
+template<typename Modifier, typename PropertyType>
+void PropertyTransitionEffectTemplate<Modifier, PropertyType>::OnAttach(
     const RefPtr<RosenRenderContext>& context, bool activeTransition)
 {
     // record the current status
@@ -313,15 +313,14 @@ void PropertyTransitionEffectTemplate<Modifier, PropertyType, ValueType>::OnAtta
 
     // create the property corresponding to current status
     property_ =
-        std::make_shared<Rosen::RSAnimatableProperty<ValueType>>(activeTransition ? activeValue_ : identityValue_);
+        std::make_shared<Rosen::RSAnimatableProperty<PropertyType>>(activeTransition ? activeValue_ : identityValue_);
     // create the modifier and attach it to the context
-    modifier_ = std::make_shared<Modifier>();
-    modifier_->AttachProperty(PropertyType, property_);
+    modifier_ = std::make_shared<Modifier>(property_);
     context->AddModifier(modifier_);
 }
 
-template<typename Modifier, RSPropertyType PropertyType, typename ValueType>
-void PropertyTransitionEffectTemplate<Modifier, PropertyType, ValueType>::OnDetach(RosenRenderContext* context)
+template<typename Modifier, typename PropertyType>
+void PropertyTransitionEffectTemplate<Modifier, PropertyType>::OnDetach(RosenRenderContext* context)
 {
     // remove the modifier
     context->RemoveModifier(modifier_);

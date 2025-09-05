@@ -57,16 +57,6 @@ struct DragDataCore {
     bool hasCanceledAnimation = false;
     bool hasCoordinateCorrected = false;
     std::map<std::string, int64_t> summarys;
-    bool isDragDelay = false;
-    std::map<std::string, int64_t> detailedSummarys;
-    std::map<std::string, std::vector<int32_t>> summaryFormat;
-    int32_t version { 0 };
-    int64_t totalSize { -1 };
-};
-
-struct DragBundleInfo {
-    std::string bundleName;
-    bool isRemoteDev { false };
 };
 
 struct DragNotifyMsg {
@@ -75,7 +65,6 @@ struct DragNotifyMsg {
     int32_t targetPid = -1;
     DragRet result { DragRet::DRAG_FAIL };
     DragBehavior dragBehavior { DragBehavior::UNKNOWN };
-    bool isInnerAndOuterTriggerBothNeeded = true;
 };
 
 struct DragDropRet {

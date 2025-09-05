@@ -38,7 +38,10 @@ public:
         return false;
     }
 
-    void SetAction(const std::string& action);
+    void SetAction(const std::string& action)
+    {
+        formLinkInfo_.SetAction(action);
+    }
 
 private:
     void OnAttachToFrameNode() override;

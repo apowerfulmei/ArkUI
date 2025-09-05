@@ -15,6 +15,11 @@
 
 #include "bridge/cj_frontend/runtime/cj_runtime_delegate.h"
 
+#include <string>
+#include <utility>
+
+#include "base/log/log.h"
+#include "ffi_remote_data.h"
 #include "cj_environment.h"
 
 using namespace OHOS::Ace::Framework;
@@ -30,11 +35,6 @@ void* CJRuntimeDelegate::LoadCJLibrary(const char* dlName)
     return CJEnvironment::GetInstance()->LoadCJLibrary(dlName);
 }
 
-bool CJRuntimeDelegate::CheckLoadCJLibrary()
-{
-    return CJEnvironment::GetInstance()->CheckLoadCJLibrary();
-}
-
 void* CJRuntimeDelegate::GetUIScheduler()
 {
     return CJEnvironment::GetInstance()->GetUIScheduler();
@@ -45,22 +45,6 @@ void CJRuntimeDelegate::RegisterCJFuncs(AtCPackage funcs)
     if (!atCPackageLoaded_) {
         atCPackage_ = funcs;
         atCPackageLoaded_ = true;
-    }
-}
-
-void CJRuntimeDelegate::RegisterCJFuncsV2(void (*callback)(AtCPackageV2* cjFuncs))
-{
-    if (!atCPackageLoadedV2_) {
-        callback(&atCPackageV2_);
-        atCPackageLoadedV2_ = true;
-    }
-}
-
-void CJRuntimeDelegate::RegisterCJXCompCtrFuncs(AtCXComponentCallback funcs)
-{
-    if (!atCXcompCtrLoaded_) {
-        atCXcompCtr_ = funcs;
-        atCXcompCtrLoaded_ = true;
     }
 }
 

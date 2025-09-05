@@ -27,11 +27,13 @@
 #include "core/components_ng/pattern/text_field/text_field_foreground_modifier.h"
 #include "core/components_ng/pattern/text_field/text_field_layout_property.h"
 #include "core/components_ng/pattern/text_field/text_field_overlay_modifier.h"
+#include "core/components_ng/render/drawing.h"
 #include "core/components_ng/render/node_paint_method.h"
+#include "core/components_ng/render/paragraph.h"
 
 namespace OHOS::Ace::NG {
 class ACE_EXPORT TextFieldPaintMethod : public NodePaintMethod {
-    DECLARE_ACE_TYPE(TextFieldPaintMethod, NodePaintMethod);
+    DECLARE_ACE_TYPE(TextFieldPaintMethod, NodePaintMethod)
 public:
     TextFieldPaintMethod(const WeakPtr<Pattern>& pattern,
         const RefPtr<TextFieldOverlayModifier>& textFieldOverlayModifier,
@@ -56,19 +58,17 @@ public:
 
     void UpdateScrollBar();
     void SetShowUnderlineWidth();
-    void SetFloatingCursor();
 
 private:
     void UpdateTextStyleToModifier(
         const RefPtr<TextFieldLayoutProperty>& layoutProperty, const RefPtr<TextFieldTheme>& theme, bool isDisabled);
-    void DoTextFadeoutIfNeed(PaintWrapper* paintWrapper);
-
 private:
     WeakPtr<Pattern> pattern_;
     RefPtr<TextFieldOverlayModifier> textFieldOverlayModifier_;
     RefPtr<TextFieldContentModifier> textFieldContentModifier_;
     RefPtr<TextFieldForegroundModifier> textFieldForegroundModifier_;
     WeakPtr<ScrollBar> scrollBar_;
+
     ACE_DISALLOW_COPY_AND_MOVE(TextFieldPaintMethod);
 };
 

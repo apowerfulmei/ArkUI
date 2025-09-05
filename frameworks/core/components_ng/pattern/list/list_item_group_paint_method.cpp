@@ -18,12 +18,10 @@
 namespace OHOS::Ace::NG {
 void ListItemGroupPaintMethod::PaintDivider(PaintWrapper* paintWrapper, RSCanvas& canvas)
 {
-    if (!divider_.strokeWidth.IsValid() || divider_.strokeWidth.Unit() == DimensionUnit::PERCENT ||
-        GreatOrEqual(divider_.strokeWidth.ConvertToPx(), listContentSize_)) {
+    if (!divider_.strokeWidth.IsValid() || divider_.strokeWidth.Unit() == DimensionUnit::PERCENT) {
         return;
     }
     const auto& geometryNode = paintWrapper->GetGeometryNode();
-    CHECK_NULL_VOID(geometryNode);
     auto frameSize = geometryNode->GetPaddingSize();
     OffsetF paddingOffset = geometryNode->GetPaddingOffset() - geometryNode->GetFrameOffset();
     Axis axis = vertical_ ? Axis::HORIZONTAL : Axis::VERTICAL;
@@ -55,13 +53,13 @@ void ListItemGroupPaintMethod::PaintDivider(PaintWrapper* paintWrapper, RSCanvas
 void ListItemGroupPaintMethod::UpdateDividerList(const DividerGroupInfo& info,
     const DividerPainter& dividerPainter, RSCanvas& canvas)
 {
-    int32_t laneIdx = itemPosition_.begin()->first % info.lanes;
+    int32_t laneIdx = 0;
     bool isFirstItem = (itemPosition_.begin()->first == 0);
     std::list<int32_t> lastLineIndex;
     bool nextIsPressed = false;
     for (const auto& child : itemPosition_) {
-        auto nextId = itemPosition_.find(child.first - info.lanes);
-        nextIsPressed = (nextId == itemPosition_.end()) ? child.second.isPressed : nextId->second.isPressed;
+        auto nextId = child.first - info.lanes;
+        nextIsPressed = nextId < 0 ? child.second.isPressed : itemPosition_[nextId].isPressed;
         if (!isFirstItem && !(child.second.isPressed || nextIsPressed)) {
             DrawDivider(child.first, laneIdx, info, dividerPainter, canvas);
         }
@@ -73,15 +71,15 @@ void ListItemGroupPaintMethod::UpdateDividerList(const DividerGroupInfo& info,
         isFirstItem = isFirstItem ? laneIdx > 0 : false;
     }
     if (!lastLineIndex.empty() && *lastLineIndex.rbegin() < totalItemCount_ - 1) {
-        int32_t lastLineLaneIdx = 0;
+        int32_t laneIdx = 0;
         for (auto index : lastLineIndex) {
             if (index + info.lanes >= totalItemCount_) {
                 break;
             }
             if (!itemPosition_.at(index).isPressed) {
-                DrawLastLineDivider(index, lastLineLaneIdx, info, dividerPainter, canvas);
+                DrawLastLineDivider(index, laneIdx, info, dividerPainter, canvas);
             }
-            lastLineLaneIdx++;
+            laneIdx++;
         }
     }
 }

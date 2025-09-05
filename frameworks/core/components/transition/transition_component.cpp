@@ -16,6 +16,7 @@
 #include "core/components/transition/transition_component.h"
 
 #include "core/components/transition/transition_element.h"
+#include "core/components/tween/tween_component.h"
 
 namespace OHOS::Ace {
 namespace {

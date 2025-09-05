@@ -99,9 +99,7 @@ std::vector<std::string> Localization::GetMonths(bool isShortType, const std::st
 
 std::string Localization::GetLanguage()
 {
-    if (languageTag_.empty())
-        return "Chinese";
-    return languageTag_;
+    return "Chinese";
 }
 
 std::string Localization::GetLunarMonth(uint32_t month, bool isLeapMonth)

@@ -16,7 +16,13 @@
 #include "core/components_ng/pattern/tabs/tab_bar_modifier.h"
 
 #include "base/utils/utils.h"
+#include "core/components/tab_bar/tab_theme.h"
+#include "core/components_ng/base/modifier.h"
+#include "core/components_ng/base/view_stack_processor.h"
+#include "core/components_ng/pattern/tabs/tab_bar_paint_property.h"
+#include "core/components_ng/render/drawing.h"
 #include "core/components_ng/render/drawing_prop_convertor.h"
+#include "core/pipeline_ng/pipeline_context.h"
 
 namespace OHOS::Ace::NG {
 TabBarModifier::TabBarModifier()
@@ -101,7 +107,7 @@ void TabBarModifier::SetHasIndicator(bool hasIndicator)
 void TabBarModifier::PaintIndicator(DrawingContext& context)
 {
     auto& canvas = context.canvas;
-    auto pipelineContext = PipelineContext::GetCurrentContextSafelyWithCheck();
+    auto pipelineContext = PipelineContext::GetCurrentContext();
     CHECK_NULL_VOID(pipelineContext);
     auto tabTheme = pipelineContext->GetTheme<TabTheme>();
     CHECK_NULL_VOID(tabTheme);

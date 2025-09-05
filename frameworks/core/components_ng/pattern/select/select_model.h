@@ -20,7 +20,6 @@
 #include <string_view>
 
 #include "base/utils/macros.h"
-#include "core/common/resource/resource_object.h"
 #include "core/components/common/properties/color.h"
 #include "core/components_ng/base/symbol_modifier.h"
 #include "core/components_ng/pattern/select/select_event_hub.h"
@@ -28,24 +27,6 @@
 #include "core/components_ng/pattern/text/text_styles.h"
 
 namespace OHOS::Ace {
-namespace NG {
-struct MenuParam;
-}
-enum class SelectColorType {
-    FONT_COLOR,
-    BACKGROUND_COLOR,
-    SELECTED_OPTION_BG_COLOR,
-    SELECTED_OPTION_FONT_COLOR,
-    OPTION_BG_COLOR,
-    OPTION_FONT_COLOR,
-    MENU_BACKGROUND_COLOR
-};
-
-enum class SelectOptionType {
-    TEXT,
-    ICON
-};
-
 enum class ArrowPosition {
     END = 0,
     START,
@@ -62,21 +43,11 @@ struct MenuAlign {
     DimensionOffset offset = DimensionOffset(Dimension(0, DimensionUnit::VP), Dimension(0, DimensionUnit::VP));
 };
 
-enum class AvoidanceMode {
-    COVER_TARGET = 0,
-    AVOID_AROUND_TARGET,
-};
-
 struct SelectParam {
     std::string text;
     std::string icon;
     std::function<void(WeakPtr<NG::FrameNode>)> symbolIcon = nullptr;
     RefPtr<SymbolModifier> symbolModifier = nullptr;
-};
-
-struct SelectResObjParam {
-    RefPtr<ResourceObject> valueResObj = nullptr;
-    RefPtr<ResourceObject> iconResObj = nullptr;
 };
 
 class ACE_FORCE_EXPORT SelectModel {
@@ -118,7 +89,6 @@ public:
     virtual void SetSpace(const Dimension& value);
     virtual void SetArrowPosition(const ArrowPosition value);
     virtual void SetMenuAlign(const MenuAlign& menuAlign);
-    virtual void SetAvoidance(AvoidanceMode mode);
     virtual void SetSelectChangeEvent(NG::SelectChangeEvent&& selectChangeEvent);
     virtual void SetValueChangeEvent(NG::ValueChangeEvent&& valueChangeEvent);
     virtual void SetOptionWidth(const Dimension& value);
@@ -128,34 +98,9 @@ public:
     virtual void SetMenuBackgroundColor(const Color& color);
     virtual void SetMenuBackgroundBlurStyle(const BlurStyleOption& blurStyle);
     virtual void SetDivider(const NG::SelectDivider& divider);
-    virtual void SetDividerStyle(const NG::SelectDivider& divider, const DividerMode& mode);
     virtual void SetControlSize(const std::optional<ControlSize>& controlSize);
     virtual void SetLayoutDirection(TextDirection value);
     virtual ControlSize GetControlSize();
-    virtual void BackgroundColor(const Color& color) = 0;
-    virtual void ResetBackgroundColor() = 0;
-    virtual void ResetFontColor() {};
-    virtual void SetMenuOutline(const NG::MenuParam& menuParam);
-    virtual void SetTextModifierApply(const std::function<void(WeakPtr<NG::FrameNode>)>& textApply);
-    virtual void SetArrowModifierApply(const std::function<void(WeakPtr<NG::FrameNode>)>& arrowApply);
-    virtual void SetOptionTextModifier(const std::function<void(WeakPtr<NG::FrameNode>)>& optionApply);
-    virtual void SetSelectedOptionTextModifier(const std::function<void(WeakPtr<NG::FrameNode>)>& optionSelectedApply);
-    virtual void SetShowInSubWindow(bool isShowInSubWindow) = 0;
-    virtual void ResetShowInSubWindow() = 0;
-    virtual void SetShowDefaultSelectedIcon(bool show) = 0;
-    virtual void ResetShowDefaultSelectedIcon() = 0;
-    virtual void CreateWithColorResourceObj(
-        const RefPtr<ResourceObject>& resObj, const SelectColorType& selectColorType) {};
-    virtual void CreateWithValueIconResourceObj(const std::vector<SelectResObjParam>& resObjVec) {};
-    virtual void CreateWithIntegerResourceObj(const RefPtr<ResourceObject>& resObj) {};
-    virtual void CreateWithStringResourceObj(const RefPtr<ResourceObject>& resObj) {};
-    virtual void SetOptionFontColorByUser(bool isValidValue = true) {};
-    virtual void SetMenuBackgroundColorByUser(bool isValidValue = true) {};
-    virtual void SetFontColorByUser(bool isValidValue = true) {};
-    virtual void SetSelectedOptionFontColorByUser(bool isValidValue = true) {};
-    virtual void SetOptionBgColorByUser(bool isValidValue = true) {};
-    virtual void SetSelectedOptionBgColorByUser(bool isValidValue = true) {};
-
 private:
     static std::unique_ptr<SelectModel> instance_;
     static std::mutex mutex_;

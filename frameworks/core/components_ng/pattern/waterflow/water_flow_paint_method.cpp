@@ -15,6 +15,8 @@
 
 #include "core/components_ng/pattern/waterflow/water_flow_paint_method.h"
 
+#include "core/components_ng/pattern/scroll/inner/scroll_bar_overlay_modifier.h"
+
 namespace OHOS::Ace::NG {
 void WaterFlowPaintMethod::PaintEdgeEffect(PaintWrapper* paintWrapper, RSCanvas& canvas)
 {
@@ -39,7 +41,6 @@ void WaterFlowPaintMethod::UpdateContentModifier(PaintWrapper* paintWrapper)
 {
     CHECK_NULL_VOID(contentModifier_);
     auto renderContext = paintWrapper->GetRenderContext();
-    CHECK_NULL_VOID(renderContext);
     UpdateFadingGradient(renderContext);
     if (TryContentClip(paintWrapper)) {
         contentModifier_->SetClip(false);
@@ -47,11 +48,7 @@ void WaterFlowPaintMethod::UpdateContentModifier(PaintWrapper* paintWrapper)
     }
 
     const auto& geometryNode = paintWrapper->GetGeometryNode();
-    auto frameSize = renderContext->GetPaintRectWithoutTransform().GetSize();
-    auto& padding = geometryNode->GetPadding();
-    if (padding) {
-        frameSize.MinusPadding(*padding->left, *padding->right, *padding->top, *padding->bottom);
-    }
+    auto frameSize = geometryNode->GetPaddingSize();
     OffsetF paddingOffset = geometryNode->GetPaddingOffset() - geometryNode->GetFrameOffset();
     bool clip = !renderContext || renderContext->GetClipEdge().value_or(true);
     contentModifier_->SetClipOffset(paddingOffset);
@@ -70,12 +67,8 @@ void WaterFlowPaintMethod::UpdateOverlayModifier(PaintWrapper* paintWrapper)
         scrollBarOverlayModifier->SetPositionMode(scrollBar->GetPositionMode());
     }
     OffsetF fgOffset(scrollBar->GetActiveRect().Left(), scrollBar->GetActiveRect().Top());
-    auto selfAdjust = paintWrapper->GetGeometryNode()->GetSelfAdjust();
-    auto rect = scrollBar->GetActiveRect();
-    rect.SetTop(rect.Top() - selfAdjust.GetY());
-
     scrollBarOverlayModifier->StartBarAnimation(scrollBar->GetHoverAnimationType(),
-        scrollBar->GetOpacityAnimationType(), scrollBar->GetNeedAdaptAnimation(), rect);
+        scrollBar->GetOpacityAnimationType(), scrollBar->GetNeedAdaptAnimation(), scrollBar->GetActiveRect());
     scrollBar->SetHoverAnimationType(HoverAnimationType::NONE);
     scrollBarOverlayModifier->SetBarColor(scrollBar->GetForegroundColor());
     scrollBar->SetOpacityAnimationType(OpacityAnimationType::NONE);

@@ -15,6 +15,13 @@
 
 #include "core/components_ng/pattern/linear_split/linear_split_pattern.h"
 
+#include "base/memory/referenced.h"
+#include "base/mousestyle/mouse_style.h"
+#include "base/utils/utils.h"
+#include "core/common/container.h"
+#include "core/components_ng/event/input_event.h"
+#include "core/components_ng/pattern/linear_split/linear_split_model.h"
+#include "core/event/mouse_event.h"
 #include "core/pipeline_ng/pipeline_context.h"
 
 namespace OHOS::Ace::NG {
@@ -64,9 +71,7 @@ void LinearSplitPattern::InitPanEvent(const RefPtr<GestureEventHub>& gestureHub)
 
     PanDirection panDirection;
     panDirection.type = PanDirection::ALL;
-    PanDistanceMap distanceMap = { { SourceTool::UNKNOWN, DEFAULT_PAN_DISTANCE.ConvertToPx() },
-        { SourceTool::PEN, DEFAULT_PEN_PAN_DISTANCE.ConvertToPx() } };
-    gestureHub->AddPanEvent(panEvent_, panDirection, DEFAULT_PAN_FINGER, distanceMap);
+    gestureHub->AddPanEvent(panEvent_, panDirection, DEFAULT_PAN_FINGER, DEFAULT_PAN_DISTANCE);
 }
 
 void LinearSplitPattern::HandlePanStart(const GestureEvent& info)

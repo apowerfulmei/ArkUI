@@ -14,8 +14,9 @@
  */
 #include "frameworks/core/components_ng/pattern/waterflow/layout/water_flow_layout_utils.h"
 
+#include "base/utils/string_utils.h"
+#include "core/components_ng/layout/layout_wrapper.h"
 #include "core/components_ng/pattern/waterflow/water_flow_item_layout_property.h"
-#include "core/components_ng/property/measure_utils.h"
 namespace OHOS::Ace::NG {
 namespace {
 const std::string UNIT_AUTO = "auto";
@@ -72,19 +73,8 @@ LayoutConstraintF WaterFlowLayoutUtils::CreateChildConstraint(
         params.axis == Axis::VERTICAL ? SizeF(params.crossSize, itemMainSize) : SizeF(itemMainSize, params.crossSize);
 
     itemConstraint.maxSize = itemIdealSize;
-    itemConstraint.maxSize.SetMainSize(LayoutInfinity<float>(), params.axis);
+    itemConstraint.maxSize.SetMainSize(Infinity<float>(), params.axis);
     itemConstraint.percentReference = itemIdealSize;
-
-    if (child) {
-        auto childLayoutProperty = child->GetLayoutProperty();
-        if (childLayoutProperty) {
-            auto layoutPolicy = childLayoutProperty->GetLayoutPolicyProperty();
-            if (layoutPolicy.has_value() && ((params.axis == Axis::VERTICAL && layoutPolicy->IsWidthMatch()) ||
-                                                (params.axis == Axis::HORIZONTAL && layoutPolicy->IsHeightMatch()))) {
-                itemConstraint.parentIdealSize = OptionalSizeF(itemIdealSize);
-            }
-        }
-    }
 
     CHECK_NULL_RETURN(props->HasItemLayoutConstraint() && !params.haveUserDefSize, itemConstraint);
 
@@ -135,34 +125,11 @@ LayoutConstraintF WaterFlowLayoutUtils::CreateChildConstraint(
     return itemConstraint;
 }
 
-LayoutConstraintF WaterFlowLayoutUtils::CreateChildConstraint(const ConstraintParams& params,
-    const ViewPosReference& posRef, const RefPtr<WaterFlowLayoutProperty>& props, const RefPtr<LayoutWrapper>& child)
-{
-    auto itemConstraint = CreateChildConstraint(params, props, child);
-    itemConstraint.viewPosRef = posRef;
-    return itemConstraint;
-}
-
 std::pair<SizeF, bool> WaterFlowLayoutUtils::PreMeasureSelf(LayoutWrapper* wrapper, Axis axis)
 {
     const auto& props = wrapper->GetLayoutProperty();
     auto size = CreateIdealSize(props->GetLayoutConstraint().value(), axis, props->GetMeasureType(), true);
-    auto layoutPolicy = props->GetLayoutPolicyProperty();
-    auto isMainWrap = false;
-    if (layoutPolicy.has_value()) {
-        auto isVertical = axis == Axis::VERTICAL;
-        auto widthLayoutPolicy = layoutPolicy.value().widthLayoutPolicy_.value_or(LayoutCalPolicy::NO_MATCH);
-        auto heightLayoutPolicy = layoutPolicy.value().heightLayoutPolicy_.value_or(LayoutCalPolicy::NO_MATCH);
-        auto isMainFix = (isVertical ? heightLayoutPolicy : widthLayoutPolicy) == LayoutCalPolicy::FIX_AT_IDEAL_SIZE;
-        isMainWrap = (isVertical ? heightLayoutPolicy : widthLayoutPolicy) == LayoutCalPolicy::WRAP_CONTENT;
-        auto layoutPolicySize = ConstrainIdealSizeByLayoutPolicy(
-            props->GetLayoutConstraint().value(), widthLayoutPolicy, heightLayoutPolicy, axis);
-        size.UpdateIllegalSizeWithCheck(layoutPolicySize.ConvertToSizeT());
-        if (isMainFix) {
-            size.SetMainSize(LayoutInfinity<float>(), axis);
-        }
-    }
-    auto matchChildren = GreaterOrEqualToInfinity(GetMainAxisSize(size, axis)) || isMainWrap;
+    auto matchChildren = GreaterOrEqualToInfinity(GetMainAxisSize(size, axis));
     if (!matchChildren) {
         wrapper->GetGeometryNode()->SetFrameSize(size);
     }
@@ -180,9 +147,7 @@ float WaterFlowLayoutUtils::MeasureFooter(LayoutWrapper* wrapper, Axis axis)
     footer->GetLayoutProperty()->UpdateMeasureType(MeasureType::MATCH_CONTENT);
     footer->Measure(footerConstraint);
     auto itemSize = footer->GetGeometryNode()->GetMarginFrameSize();
-    auto footerSize = GetMainAxisSize(itemSize, axis);
-
-    return std::max(footerSize, 0.0f);
+    return GetMainAxisSize(itemSize, axis);
 }
 
 float WaterFlowLayoutUtils::GetUserDefHeight(const RefPtr<WaterFlowSections>& sections, int32_t seg, int32_t idx)
@@ -211,28 +176,5 @@ void WaterFlowLayoutUtils::UpdateItemIdealSize(const RefPtr<LayoutWrapper>& item
     }
     props->UpdateUserDefinedIdealSize(axis == Axis::VERTICAL ? CalcSize(crossSize, CalcLength(userHeight))
                                                              : CalcSize(CalcLength(userHeight), crossSize));
-}
-
-AdjustOffset WaterFlowLayoutUtils::GetAdjustOffset(const RefPtr<LayoutWrapper>& item)
-{
-    AdjustOffset pos {};
-    RefPtr<UINode> child = AceType::DynamicCast<FrameNode>(item);
-    do {
-        CHECK_NULL_RETURN(child, pos);
-        auto frameNode = AceType::DynamicCast<FrameNode>(child);
-        if (!frameNode) {
-            child = child->GetFirstChild();
-            continue;
-        }
-        if (!frameNode->GetLayoutProperty()->GetNeedLazyLayout()) {
-            return pos;
-        }
-        auto pattern = frameNode->GetPattern<LazyLayoutPattern>();
-        if (pattern) {
-            return pattern->GetAndResetAdjustOffset();
-        }
-        child = child->GetFirstChild();
-    } while (child);
-    return pos;
 }
 } // namespace OHOS::Ace::NG

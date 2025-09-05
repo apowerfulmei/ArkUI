@@ -15,7 +15,7 @@
 
 #include "core/components_ng/pattern/hyperlink/hyperlink_pattern.h"
 
-#include "base/utils/utf_helper.h"
+#include "base/json/json_util.h"
 #include "core/components/hyperlink/hyperlink_theme.h"
 #include "core/common/font_manager.h"
 #include "core/common/udmf/udmf_client.h"
@@ -53,7 +53,7 @@ void HyperlinkPattern::EnableDrag()
         auto hyperlinkLayoutProperty = host->GetLayoutProperty<HyperlinkLayoutProperty>();
         CHECK_NULL_RETURN(hyperlinkLayoutProperty, info);
         std::string address = hyperlinkLayoutProperty->GetAddress().value_or("");
-        std::string content = UtfUtils::Str16DebugToStr8(hyperlinkPattern->GetTextForDisplay());
+        std::string content = hyperlinkPattern->GetTextForDisplay();
         auto json = JsonUtil::Create(true);
         json->Put("url", address.c_str());
         json->Put("title", content.c_str());
@@ -134,11 +134,13 @@ void HyperlinkPattern::LinkToAddress()
     auto color = theme->GetTextColor();
     hyperlinkLayoutProperty->UpdateTextColor(
         hyperlinkLayoutProperty->GetColor().value_or(color).BlendColor(theme->GetTextLinkedColor()));
+    hyperlinkLayoutProperty->UpdateForegroundColor(
+        hyperlinkLayoutProperty->GetColor().value_or(color).BlendColor(theme->GetTextLinkedColor()));
     auto renderContext = host->GetRenderContext();
     CHECK_NULL_VOID(renderContext);
     renderContext->UpdateForegroundColor(
         hyperlinkLayoutProperty->GetColor().value_or(color).BlendColor(theme->GetTextLinkedColor()));
-    hyperlinkLayoutProperty->UpdateTextDecoration({theme->GetTextUnSelectedDecoration()});
+    hyperlinkLayoutProperty->UpdateTextDecoration(theme->GetTextUnSelectedDecoration());
     host->MarkDirtyNode(PROPERTY_UPDATE_RENDER);
     auto address = hyperlinkLayoutProperty->GetAddress().value_or("");
     pipeline->HyperlinkStartAbility(address);
@@ -174,17 +176,14 @@ void HyperlinkPattern::InitTouchEvent(const RefPtr<GestureEventHub>& gestureHub)
     if (onTouchEvent_) {
         return;
     }
-    auto touchAfterTask = [weak = WeakClaim(this)](const TouchEventInfo& info) {
-        auto hyperlinkPattern = weak.Upgrade();
-        CHECK_NULL_VOID(hyperlinkPattern);
-        if (info.IsPreventDefault() && !hyperlinkPattern->isTouchPreventDefault_) {
-            hyperlinkPattern->isTouchPreventDefault_ = info.IsPreventDefault();
-        }
-        hyperlinkPattern->OnTouchEvent(info);
+    auto touchTask = [weak = WeakClaim(this)](const TouchEventInfo& info) {
+        auto pattern = weak.Upgrade();
+        CHECK_NULL_VOID(pattern);
+        pattern->OnTouchEvent(info);
     };
     gestureHub->RemoveTouchEvent(onTouchEvent_);
-    onTouchEvent_ = MakeRefPtr<TouchEventImpl>(std::move(touchAfterTask));
-    gestureHub->AddTouchAfterEvent(onTouchEvent_);
+    onTouchEvent_ = MakeRefPtr<TouchEventImpl>(std::move(touchTask));
+    gestureHub->AddTouchEvent(onTouchEvent_);
 }
 
 void HyperlinkPattern::OnTouchEvent(const TouchEventInfo& info)
@@ -205,7 +204,7 @@ void HyperlinkPattern::OnTouchEvent(const TouchEventInfo& info)
     auto touchType = touchInfo.GetTouchType();
     auto color = theme->GetTextColor();
     if (touchType == TouchType::DOWN) {
-        hyperlinkLayoutProperty->UpdateTextDecoration({theme->GetTextSelectedDecoration()});
+        hyperlinkLayoutProperty->UpdateTextDecoration(theme->GetTextSelectedDecoration());
         if (isLinked_) {
             hyperlinkLayoutProperty->UpdateTextDecorationColor(
                 hyperlinkLayoutProperty->GetColor().value_or(color).BlendColor(theme->GetTextLinkedColor()));
@@ -214,14 +213,17 @@ void HyperlinkPattern::OnTouchEvent(const TouchEventInfo& info)
                 theme->GetTextTouchedColor()));
             hyperlinkLayoutProperty->UpdateTextDecorationColor(
                 hyperlinkLayoutProperty->GetColor().value_or(color).BlendColor(theme->GetTextTouchedColor()));
+            hyperlinkLayoutProperty->UpdateForegroundColor(
+                hyperlinkLayoutProperty->GetColor().value_or(color).BlendColor(theme->GetTextTouchedColor()));
             renderContext->UpdateForegroundColor(
                 hyperlinkLayoutProperty->GetColor().value_or(color).BlendColor(theme->GetTextTouchedColor()));
         }
         host->MarkDirtyNode(PROPERTY_UPDATE_RENDER);
     } else if (touchType == TouchType::UP) {
-        hyperlinkLayoutProperty->UpdateTextDecoration({theme->GetTextUnSelectedDecoration()});
+        hyperlinkLayoutProperty->UpdateTextDecoration(theme->GetTextUnSelectedDecoration());
         if (!isLinked_) {
             hyperlinkLayoutProperty->UpdateTextColor(hyperlinkLayoutProperty->GetColor().value_or(color));
+            hyperlinkLayoutProperty->UpdateForegroundColor(hyperlinkLayoutProperty->GetColor().value_or(color));
             renderContext->UpdateForegroundColor(hyperlinkLayoutProperty->GetColor().value_or(color));
         }
         host->MarkDirtyNode(PROPERTY_UPDATE_RENDER);
@@ -233,16 +235,13 @@ void HyperlinkPattern::InitClickEvent(const RefPtr<GestureEventHub>& gestureHub)
     if (clickListener_) {
         return;
     }
-    auto clickAfterCallback = [weak = WeakClaim(this)](GestureEvent& info) {
-        auto hyperlinkPattern = weak.Upgrade();
-        CHECK_NULL_VOID(hyperlinkPattern);
-        if (!info.IsPreventDefault() && !hyperlinkPattern->isTouchPreventDefault_) {
-            hyperlinkPattern->LinkToAddress();
-        }
-        hyperlinkPattern->isTouchPreventDefault_ = false;
+    auto clickCallback = [weak = WeakClaim(this)](GestureEvent& info) {
+        auto pattern = weak.Upgrade();
+        CHECK_NULL_VOID(pattern);
+        pattern->LinkToAddress();
     };
-    clickListener_ = MakeRefPtr<ClickEvent>(std::move(clickAfterCallback));
-    gestureHub->AddClickAfterEvent(clickListener_);
+    clickListener_ = MakeRefPtr<ClickEvent>(std::move(clickCallback));
+    gestureHub->AddClickEvent(clickListener_);
 }
 
 void HyperlinkPattern::InitOnKeyEvent(const RefPtr<FocusHub>& focusHub)
@@ -282,7 +281,7 @@ void HyperlinkPattern::OnHoverEvent(bool isHovered)
     if (isHovered) {
         pipeline->SetMouseStyleHoldNode(frameId);
         pipeline->ChangeMouseStyle(frameId, MouseFormat::HAND_POINTING);
-        hyperlinkLayoutProperty->UpdateTextDecoration({theme->GetTextSelectedDecoration()});
+        hyperlinkLayoutProperty->UpdateTextDecoration(theme->GetTextSelectedDecoration());
         if (isLinked_) {
             hyperlinkLayoutProperty->UpdateTextDecorationColor(
                 hyperlinkLayoutProperty->GetColor().value_or(color).BlendColor(theme->GetTextLinkedColor()));
@@ -293,7 +292,7 @@ void HyperlinkPattern::OnHoverEvent(bool isHovered)
     } else {
         pipeline->ChangeMouseStyle(frameId, MouseFormat::DEFAULT);
         pipeline->FreeMouseStyleHoldNode(frameId);
-        hyperlinkLayoutProperty->UpdateTextDecoration({theme->GetTextUnSelectedDecoration()});
+        hyperlinkLayoutProperty->UpdateTextDecoration(theme->GetTextUnSelectedDecoration());
         host->MarkDirtyNode(PROPERTY_UPDATE_RENDER);
     }
 }
@@ -306,64 +305,17 @@ void HyperlinkPattern::OnMouseEvent(MouseInfo& info)
     CHECK_NULL_VOID(frame);
     auto frameId = frame->GetId();
     TouchEvent touchEvent;
-    auto frameOffset = GetHostFrameOffset();
-    CHECK_NULL_VOID(frameOffset);
 
     if (frame->IsOutOfTouchTestRegion(
-        { static_cast<float>(info.GetLocalLocation().GetX()) + frameOffset->GetX(),
-            static_cast<float>(info.GetLocalLocation().GetY()) + frameOffset->GetY() },
+        { static_cast<float>(info.GetLocalLocation().GetX()) + GetHostFrameOffset()->GetX(),
+            static_cast<float>(info.GetLocalLocation().GetY()) + GetHostFrameOffset()->GetY() },
         touchEvent)) {
         pipeline->ChangeMouseStyle(frameId, MouseFormat::DEFAULT);
         pipeline->FreeMouseStyleHoldNode(frameId);
     } else {
         pipeline->SetMouseStyleHoldNode(frameId);
-        pipeline->ChangeMouseStyle(frameId, MouseFormat::HAND_POINTING, 0,
-            (info.GetAction() == MouseAction::WINDOW_LEAVE || info.GetAction() == MouseAction::CANCEL));
-    }
-}
-
-void HyperlinkPattern::UpdatePropertyImpl(const std::string& key, RefPtr<PropertyValueBase> value)
-{
-    auto frameNode = GetHost();
-    CHECK_NULL_VOID(frameNode);
-    auto property = frameNode->GetLayoutPropertyPtr<HyperlinkLayoutProperty>();
-    CHECK_NULL_VOID(property);
-    CHECK_NULL_VOID(value);
-    using Handler = std::function<void(HyperlinkLayoutProperty*, RefPtr<PropertyValueBase>)>;
-    const std::unordered_map<std::string, Handler> handlers = {
-        { "Color",
-            [node = WeakClaim(RawPtr((frameNode))), weak = WeakClaim(this)](
-                HyperlinkLayoutProperty* prop, RefPtr<PropertyValueBase> value) {
-                if (auto realValue = std::get_if<Color>(&(value->GetValue()))) {
-                    auto frameNode = node.Upgrade();
-                    CHECK_NULL_VOID(frameNode);
-                    prop->UpdateTextColor(*realValue);
-                    prop->UpdateColor(*realValue);
-                    ACE_UPDATE_NODE_RENDER_CONTEXT(ForegroundColor, *realValue, frameNode);
-                }
-            }
-        },
-        { "Content",
-            [](HyperlinkLayoutProperty* prop, RefPtr<PropertyValueBase> value) {
-                if (auto realValue = std::get_if<std::string>(&(value->GetValue()))) {
-                    prop->UpdateContent(*realValue);
-                }
-            }
-        },
-        { "Address",
-            [](HyperlinkLayoutProperty* prop, RefPtr<PropertyValueBase> value) {
-                if (auto realValue = std::get_if<std::string>(&(value->GetValue()))) {
-                    prop->UpdateAddress(*realValue);
-                }
-            }
-        },
-    };
-    auto it = handlers.find(key);
-    if (it != handlers.end()) {
-        it->second(property, value);
-    }
-    if (frameNode->GetRerenderable()) {
-        frameNode->MarkDirtyNode(PROPERTY_UPDATE_MEASURE_SELF);
+        pipeline->ChangeMouseStyle(
+            frameId, MouseFormat::HAND_POINTING, 0, info.GetAction() == MouseAction::WINDOW_LEAVE);
     }
 }
 } // namespace OHOS::Ace::NG

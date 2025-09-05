@@ -15,8 +15,19 @@
 
 #include "js_third_provider_interaction_operation.h"
 
+#include <algorithm>
+
+#include "accessibility_constants.h"
+#include "accessibility_event_info.h"
 #include "accessibility_system_ability_client.h"
 
+#include "adapter/ohos/entrance/ace_application_info.h"
+#include "adapter/ohos/entrance/ace_container.h"
+#include "base/log/ace_trace.h"
+#include "base/log/dump_log.h"
+#include "base/log/event_report.h"
+#include "base/log/log.h"
+#include "core/pipeline/pipeline_context.h"
 #include "core/pipeline_ng/pipeline_context.h"
 #include "js_third_provider_interaction_operation_utils.h"
 
@@ -144,19 +155,6 @@ bool CheckEventIgnoreHostOffset(
     }
     return ignoreHostOffset;
 }
-
-void RemoveKeysForClickAction(
-    int32_t action,
-    std::map<std::string, std::string>& args)
-{
-    auto aceAction = static_cast<ActionType>(action);
-    if (aceAction != ActionType::ACCESSIBILITY_ACTION_CLICK) {
-        return;
-    }
-
-    args.erase(ACTION_ARGU_CLICK_ENHANCE_DATA);
-    args.erase(ACTION_ARGU_CLICK_TIMESTAMP);
-}
 } // namespace
 
 JsThirdProviderInteractionOperation::JsThirdProviderInteractionOperation(
@@ -181,15 +179,10 @@ void JsThirdProviderInteractionOperation::Initialize()
     CHECK_NULL_VOID(provider);
 }
 
-RetError JsThirdProviderInteractionOperation::SearchElementInfoByAccessibilityId(
+void JsThirdProviderInteractionOperation::SearchElementInfoByAccessibilityId(
     const int64_t elementId, const int32_t requestId,
     Accessibility::AccessibilityElementOperatorCallback& callback, const int32_t mode)
 {
-    uint32_t realMode = mode;
-    if (realMode & static_cast<uint32_t>(PREFETCH_RECURSIVE_CHILDREN_REDUCED)) {
-        realMode &= ~static_cast<uint32_t>(PREFETCH_RECURSIVE_CHILDREN_REDUCED);
-        realMode |= static_cast<uint32_t>(PREFETCH_RECURSIVE_CHILDREN);
-    }
     // 1. Get real elementId
     int64_t splitElementId = AccessibilityElementInfo::UNDEFINED_ACCESSIBILITY_ID;
     int32_t splitTreeId = AccessibilityElementInfo::UNDEFINED_TREE_ID;
@@ -199,7 +192,7 @@ RetError JsThirdProviderInteractionOperation::SearchElementInfoByAccessibilityId
     // 2. FindAccessibilityNodeInfosById by provider
     std::list<Accessibility::AccessibilityElementInfo> infos;
     bool ret = FindAccessibilityNodeInfosByIdFromProvider(
-        splitElementId, realMode, requestId, infos);
+        splitElementId, mode, requestId, infos);
     if (!ret) {
         TAG_LOGW(AceLogTag::ACE_ACCESSIBILITY,
             "SearchElementInfoByAccessibilityId failed.");
@@ -208,7 +201,6 @@ RetError JsThirdProviderInteractionOperation::SearchElementInfoByAccessibilityId
 
     // 3. Return result
     SetSearchElementInfoByAccessibilityIdResult(callback, std::move(infos), requestId);
-    return RET_OK;
 }
 
 bool JsThirdProviderInteractionOperation::FindAccessibilityNodeInfosByIdFromProvider(
@@ -256,15 +248,6 @@ void JsThirdProviderInteractionOperation::SetSearchElementInfoByAccessibilityIdR
         }, TaskExecutor::TaskType::BACKGROUND, "SearchElementInfoByAccessibilityId");
 }
 
-void JsThirdProviderInteractionOperation::SearchElementInfoBySpecificProperty(const int64_t elementId,
-    const SpecificPropertyParam &param, const int32_t requestId,
-    AccessibilityElementOperatorCallback &callback)
-{
-    std::list<AccessibilityElementInfo> infos;
-    std::list<AccessibilityElementInfo> treeInfos;
-    callback.SetSearchElementInfoBySpecificPropertyResult(infos, treeInfos, requestId);
-}
-
 void JsThirdProviderInteractionOperation::SearchElementInfosByText(
     const int64_t elementId, const std::string& text, const int32_t requestId,
     Accessibility::AccessibilityElementOperatorCallback& callback)
@@ -287,12 +270,6 @@ void JsThirdProviderInteractionOperation::SearchElementInfosByText(
 
     // 3. Return result
     SetSearchElementInfoByTextResult(callback, std::move(infos), requestId);
-}
-
-void JsThirdProviderInteractionOperation::SearchDefaultFocusByWindowId(
-    const int32_t windowId, const int32_t requestId,
-    Accessibility::AccessibilityElementOperatorCallback& callback, const int32_t pageId)
-{
 }
 
 bool JsThirdProviderInteractionOperation::FindAccessibilityNodeInfosByTextFromProvider(
@@ -515,13 +492,10 @@ bool JsThirdProviderInteractionOperation::ExecuteActionFromProvider(
     int64_t elementId, const int32_t action,
     const std::map<std::string, std::string>& actionArguments, const int32_t requestId)
 {
-    auto actionFilteredArguments = actionArguments;
-    RemoveKeysForClickAction(action, actionFilteredArguments);
-
     auto provider = accessibilityProvider_.Upgrade();
     CHECK_NULL_RETURN(provider, false);
     int32_t code = provider->ExecuteAccessibilityAction(
-        elementId, action, requestId, actionFilteredArguments);
+        elementId, action, requestId, actionArguments);
     if (code != 0) {
         TAG_LOGW(AceLogTag::ACE_ACCESSIBILITY,
             "ExecuteActionFromProvider failed: %{public}d", code);
@@ -639,7 +613,7 @@ void JsThirdProviderInteractionOperation::GetHostRectTranslateInfo(NodeConfig& c
             config.offset = NG::OffsetT(left, top);
         }
     }
-    
+
     config.scaleX = finalScale.x;
     config.scaleY = finalScale.y;
 }
@@ -670,7 +644,7 @@ void JsThirdProviderInteractionOperation::SetChildTreeIdAndWinId(
 
 void JsThirdProviderInteractionOperation::SetBelongTreeId(const int32_t treeId)
 {
-    TAG_LOGD(AceLogTag::ACE_ACCESSIBILITY, "SetBelongTreeId treeId: %{public}d", treeId);
+    TAG_LOGI(AceLogTag::ACE_ACCESSIBILITY, "SetBelongTreeId treeId: %{public}d", treeId);
     belongTreeId_ = treeId;
 }
 
@@ -745,7 +719,7 @@ bool JsThirdProviderInteractionOperation::HandleEventByFramework(
             }
             break;
         default:
-            TAG_LOGI(AceLogTag::ACE_ACCESSIBILITY, "Unsupported eventType");
+            TAG_LOGW(AceLogTag::ACE_ACCESSIBILITY, "Invalid eventType");
     }
     return needSendEvent;
 }
@@ -819,7 +793,7 @@ void JsThirdProviderInteractionOperation::GetAccessibilityEventInfoFromNativeEve
 
 bool JsThirdProviderInteractionOperation::SendAccessibilitySyncEventToService(
     const OHOS::Accessibility::AccessibilityEventInfo& eventInfo,
-    [[maybe_unused]] void (*callback)(int32_t errorCode))
+    void (*callback)(int32_t errorCode))
 {
     auto jsAccessibilityManager = GetHandler().Upgrade();
     CHECK_NULL_RETURN(jsAccessibilityManager, false);
@@ -827,7 +801,7 @@ bool JsThirdProviderInteractionOperation::SendAccessibilitySyncEventToService(
     CHECK_NULL_RETURN(context, false);
     CHECK_NULL_RETURN(context->GetTaskExecutor(), false);
     context->GetTaskExecutor()->PostTask(
-        [jsMgr = jsAccessibilityManager_, eventInfo] () mutable {
+        [jsMgr = jsAccessibilityManager_, eventInfo, callback] () mutable {
             auto jsAccessibilityManager = jsMgr.Upgrade();
             if (jsAccessibilityManager == nullptr) {
                 return;

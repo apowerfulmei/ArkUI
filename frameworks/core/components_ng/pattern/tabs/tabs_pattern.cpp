@@ -37,7 +37,7 @@
 #include "core/components_ng/property/property.h"
 #include "core/components_v2/inspector/inspector_constants.h"
 #include "core/pipeline_ng/pipeline_context.h"
-#include "core/components_ng/pattern/tabs/tabs_node.h"
+
 namespace OHOS::Ace::NG {
 namespace {
 constexpr int32_t CHILDREN_MIN_SIZE = 2;
@@ -58,22 +58,22 @@ void TabsPattern::SetOnChangeEvent(std::function<void(const BaseEventInfo*)>&& e
 {
     auto tabsNode = AceType::DynamicCast<TabsNode>(GetHost());
     CHECK_NULL_VOID(tabsNode);
+    auto tabBarNode = AceType::DynamicCast<FrameNode>(tabsNode->GetTabBar());
+    CHECK_NULL_VOID(tabBarNode);
+    auto tabBarPattern = tabBarNode->GetPattern<TabBarPattern>();
+    CHECK_NULL_VOID(tabBarPattern);
     auto swiperNode = AceType::DynamicCast<FrameNode>(tabsNode->GetTabs());
     CHECK_NULL_VOID(swiperNode);
 
-    ChangeEventWithPreIndex changeEvent([weak = WeakClaim(this), jsEvent = std::move(event)](
+    ChangeEventWithPreIndex changeEvent([weak = WeakClaim(this), tabBarNode, tabBarPattern, jsEvent = std::move(event)](
                                             int32_t preIndex, int32_t currentIndex) {
         auto pattern = weak.Upgrade();
         CHECK_NULL_VOID(pattern);
-        auto tabsNode = AceType::DynamicCast<TabsNode>(pattern->GetHost());
-        CHECK_NULL_VOID(tabsNode);
-        auto tabBarNode = AceType::DynamicCast<FrameNode>(tabsNode->GetTabBar());
-        CHECK_NULL_VOID(tabBarNode);
-        auto tabBarPattern = tabBarNode->GetPattern<TabBarPattern>();
-        CHECK_NULL_VOID(tabBarPattern);
         if (tabBarPattern->IsMaskAnimationExecuted()) {
             return;
         }
+        auto tabsNode = AceType::DynamicCast<TabsNode>(tabBarNode->GetParent());
+        CHECK_NULL_VOID(tabsNode);
         auto tabsLayoutProperty = tabsNode->GetLayoutProperty<TabsLayoutProperty>();
         CHECK_NULL_VOID(tabsLayoutProperty);
         tabsLayoutProperty->UpdateIndex(currentIndex);
@@ -83,10 +83,8 @@ void TabsPattern::SetOnChangeEvent(std::function<void(const BaseEventInfo*)>&& e
         /* js callback */
         if (jsEvent && tabsNode->IsOnMainTree()) {
             pattern->RecordChangeEvent(currentIndex);
-            auto context = tabsNode->GetContext();
+            auto context = PipelineContext::GetCurrentContext();
             CHECK_NULL_VOID(context);
-            TAG_LOGI(
-                AceLogTag::ACE_TABS, "onChange preIndex:%{public}d, currentIndex:%{public}d", preIndex, currentIndex);
             context->AddAfterLayoutTask(
                 [currentIndex, jsEvent]() {
                     TabContentChangeEvent eventInfo(currentIndex);
@@ -145,7 +143,6 @@ void TabsPattern::RecordChangeEvent(int32_t index)
             .SetType(tabsNode->GetTag())
             .SetIndex(index)
             .SetText(tabBarText)
-            .SetHost(tabsNode)
             .SetDescription(tabsNode->GetAutoEventParamValue(""));
         Recorder::EventRecorder::Get().OnChange(std::move(builder));
         if (!inspectorId.empty()) {
@@ -220,31 +217,6 @@ void TabsPattern::SetAnimationEndEvent(AnimationEndEvent&& event)
     }
 }
 
-void TabsPattern::SetOnSelectedEvent(std::function<void(const BaseEventInfo*)>&& event)
-{
-    ChangeEvent selectedEvent([jsEvent = std::move(event)](int32_t index) {
-        /* js callback */
-        if (jsEvent) {
-            TabContentChangeEvent eventInfo(index);
-            jsEvent(&eventInfo);
-        }
-    });
-    if (selectedEvent_) {
-        (*selectedEvent_).swap(selectedEvent);
-    } else {
-        auto host = GetHost();
-        CHECK_NULL_VOID(host);
-        auto tabsNode = AceType::DynamicCast<TabsNode>(host);
-        CHECK_NULL_VOID(tabsNode);
-        auto swiperNode = AceType::DynamicCast<FrameNode>(tabsNode->GetTabs());
-        CHECK_NULL_VOID(swiperNode);
-        auto eventHub = swiperNode->GetEventHub<SwiperEventHub>();
-        CHECK_NULL_VOID(eventHub);
-        selectedEvent_ = std::make_shared<ChangeEvent>(std::move(selectedEvent));
-        eventHub->AddOnSlectedEvent(selectedEvent_);
-    }
-}
-
 void TabsPattern::OnUpdateShowDivider()
 {
     auto host = AceType::DynamicCast<TabsNode>(GetHost());
@@ -300,10 +272,25 @@ void TabsPattern::SetSwiperPaddingAndBorder()
 void TabsPattern::OnModifyDone()
 {
     Pattern::OnModifyDone();
+    auto tabsNode = AceType::DynamicCast<TabsNode>(GetHost());
+    CHECK_NULL_VOID(tabsNode);
+    auto tabBarNode = AceType::DynamicCast<FrameNode>(tabsNode->GetTabBar());
+    CHECK_NULL_VOID(tabBarNode);
+    auto tabBarPattern = tabBarNode->GetPattern<TabBarPattern>();
+    CHECK_NULL_VOID(tabBarPattern);
+    auto tabBarPaintProperty = tabBarPattern->GetPaintProperty<TabBarPaintProperty>();
+    if (tabBarPaintProperty->GetTabBarBlurStyle().has_value() &&
+        Container::GreatOrEqualAPIVersion(PlatformVersion::VERSION_ELEVEN)) {
+        auto tabBarRenderContext = tabBarNode->GetRenderContext();
+        CHECK_NULL_VOID(tabBarRenderContext);
+        BlurStyleOption styleOption;
+        styleOption.blurStyle = tabBarPaintProperty->GetTabBarBlurStyle().value();
+        tabBarRenderContext->UpdateBackBlurStyle(styleOption);
+    }
+
     UpdateSwiperDisableSwipe(isCustomAnimation_ ? true : isDisableSwipe_);
     SetSwiperPaddingAndBorder();
     InitFocusEvent();
-    InitAccessibilityZIndex();
 
     if (onChangeEvent_) {
         return;
@@ -331,18 +318,14 @@ void TabsPattern::SetOnIndexChangeEvent(std::function<void(const BaseEventInfo*)
 {
     auto tabsNode = AceType::DynamicCast<TabsNode>(GetHost());
     CHECK_NULL_VOID(tabsNode);
+    auto tabBarNode = AceType::DynamicCast<FrameNode>(tabsNode->GetTabBar());
+    CHECK_NULL_VOID(tabBarNode);
+    auto tabBarPattern = tabBarNode->GetPattern<TabBarPattern>();
+    CHECK_NULL_VOID(tabBarPattern);
     auto swiperNode = AceType::DynamicCast<FrameNode>(tabsNode->GetTabs());
     CHECK_NULL_VOID(swiperNode);
 
-    ChangeEvent changeEvent([weak = WeakClaim(this), jsEvent = std::move(event)](int32_t index) {
-        auto pattern = weak.Upgrade();
-        CHECK_NULL_VOID(pattern);
-        auto tabsNode = AceType::DynamicCast<TabsNode>(pattern->GetHost());
-        CHECK_NULL_VOID(tabsNode);
-        auto tabBarNode = AceType::DynamicCast<FrameNode>(tabsNode->GetTabBar());
-        CHECK_NULL_VOID(tabBarNode);
-        auto tabBarPattern = tabBarNode->GetPattern<TabBarPattern>();
-        CHECK_NULL_VOID(tabBarPattern);
+    ChangeEvent changeEvent([tabBarPattern, jsEvent = std::move(event)](int32_t index) {
         if (tabBarPattern->IsMaskAnimationExecuted()) {
             return;
         }
@@ -410,19 +393,7 @@ void TabsPattern::AddInnerOnGestureRecognizerJudgeBegin(GestureRecognizerJudgeFu
     auto targetComponent = swiperNode->GetTargetComponent().Upgrade();
     CHECK_NULL_VOID(targetComponent);
     targetComponent->SetOnGestureRecognizerJudgeBegin(std::move(gestureRecognizerJudgeFunc));
-    targetComponent->SetInnerNodeGestureRecognizerJudge(true);
-}
-
-void TabsPattern::RecoverInnerOnGestureRecognizerJudgeBegin()
-{
-    auto tabsNode = AceType::DynamicCast<TabsNode>(GetHost());
-    CHECK_NULL_VOID(tabsNode);
-    auto swiperNode = AceType::DynamicCast<FrameNode>(tabsNode->GetTabs());
-    CHECK_NULL_VOID(swiperNode);
-    auto targetComponent = swiperNode->GetTargetComponent().Upgrade();
-    CHECK_NULL_VOID(targetComponent);
-    targetComponent->SetOnGestureRecognizerJudgeBegin(nullptr);
-    targetComponent->SetInnerNodeGestureRecognizerJudge(false);
+    targetComponent->SetInnerNodeGestureRecognizerJudge();
 }
 
 ScopeFocusAlgorithm TabsPattern::GetScopeFocusAlgorithm()
@@ -569,33 +540,6 @@ RefPtr<FocusHub> TabsPattern::GetCurrentFocusNode(FocusIntension intension)
     return nullptr;
 }
 
-void TabsPattern::InitAccessibilityZIndex()
-{
-    auto tabsNode = AceType::DynamicCast<TabsNode>(GetHost());
-    CHECK_NULL_VOID(tabsNode);
-    auto tabsLayoutProperty = GetLayoutProperty<TabsLayoutProperty>();
-    CHECK_NULL_VOID(tabsLayoutProperty);
-    BarPosition barPosition = tabsLayoutProperty->GetTabBarPositionValue(BarPosition::START);
-    if (barPosition != barPosition_) {
-        auto swiperNode = AceType::DynamicCast<FrameNode>(tabsNode->GetTabs());
-        CHECK_NULL_VOID(swiperNode);
-        auto tabBarNode = AceType::DynamicCast<FrameNode>(tabsNode->GetTabBar());
-        CHECK_NULL_VOID(tabBarNode);
-        auto swiperAccessibilityProperty = swiperNode->GetAccessibilityProperty<NG::AccessibilityProperty>();
-        CHECK_NULL_VOID(swiperAccessibilityProperty);
-        auto tabBarAccessibilityProperty = tabBarNode->GetAccessibilityProperty<NG::AccessibilityProperty>();
-        CHECK_NULL_VOID(tabBarAccessibilityProperty);
-        if (barPosition == BarPosition::START) {
-            swiperAccessibilityProperty->SetAccessibilityZIndex(1);
-            tabBarAccessibilityProperty->SetAccessibilityZIndex(0);
-        } else {
-            swiperAccessibilityProperty->SetAccessibilityZIndex(0);
-            tabBarAccessibilityProperty->SetAccessibilityZIndex(1);
-        }
-        barPosition_ = barPosition;
-    }
-}
-
 void TabsPattern::BeforeCreateLayoutWrapper()
 {
     auto tabsNode = AceType::DynamicCast<TabsNode>(GetHost());
@@ -619,7 +563,6 @@ void TabsPattern::BeforeCreateLayoutWrapper()
         }
         if (!parent) {
             auto willShowIndex = tabsLayoutProperty->GetIndex().value_or(0);
-            swiperPattern->FireSelectedEvent(-1, willShowIndex);
             swiperPattern->FireWillShowEvent(willShowIndex);
         }
         isInit_ = false;
@@ -628,7 +571,6 @@ void TabsPattern::BeforeCreateLayoutWrapper()
     auto childrenUpdated = swiperNode->GetChildrenUpdated() != -1;
     if (childrenUpdated) {
         HandleChildrenUpdated(swiperNode, tabBarNode);
-
         auto tabBarPattern = tabBarNode->GetPattern<TabBarPattern>();
         CHECK_NULL_VOID(tabBarPattern);
         auto index = tabsLayoutProperty->GetIndexValue(0);
@@ -657,9 +599,10 @@ void TabsPattern::UpdateIndex(const RefPtr<FrameNode>& tabsNode, const RefPtr<Fr
     if (index >= tabContentNum) {
         index = 0;
     }
+    SetLastWeakFocusNode(tabsNode, tabBarNode, tabsLayoutProperty, index);
     if (!tabsLayoutProperty->GetIndex().has_value()) {
         UpdateSelectedState(swiperNode, tabBarPattern, tabsLayoutProperty, index);
-        tabsLayoutProperty->UpdateIndex(indexSetByUser < 0 ? 0 : indexSetByUser);
+        tabsLayoutProperty->UpdateIndex(indexSetByUser);
     } else {
         auto preIndex = tabsLayoutProperty->GetIndex().value();
         if (preIndex == index || index < 0) {
@@ -674,6 +617,29 @@ void TabsPattern::UpdateIndex(const RefPtr<FrameNode>& tabsNode, const RefPtr<Fr
         AceAsyncTraceBeginCommercial(0, APP_TABS_NO_ANIMATION_SWITCH);
         tabBarPattern->SetMaskAnimationByCreate(true);
         UpdateSelectedState(swiperNode, tabBarPattern, tabsLayoutProperty, index);
+    }
+}
+
+void TabsPattern::SetLastWeakFocusNode(const RefPtr<FrameNode>& tabsNode, const RefPtr<FrameNode>& tabBarNode,
+    const RefPtr<TabsLayoutProperty>& tabsLayoutProperty, int32_t index)
+{
+    auto tabsFocusNode = tabsNode->GetFocusHub();
+    CHECK_NULL_VOID(tabsFocusNode);
+    auto tabBarFocusNode = tabBarNode->GetFocusHub();
+    CHECK_NULL_VOID(tabBarFocusNode);
+    if (!tabsFocusNode->IsCurrentFocus() && !tabsFocusNode->GetLastWeakFocusNode().Upgrade()) {
+        auto tabBarPosition = tabsLayoutProperty->GetTabBarPosition().value_or(BarPosition::START);
+        if (tabBarPosition == BarPosition::START) {
+            tabsFocusNode->SetLastWeakFocusNode(AceType::WeakClaim(AceType::RawPtr(tabBarFocusNode)));
+        }
+        if (!tabBarFocusNode->IsCurrentFocus() && !tabBarFocusNode->GetLastWeakFocusNode().Upgrade()) {
+            auto childNode = AceType::DynamicCast<FrameNode>(tabBarNode->GetChildAtIndex(index));
+            CHECK_NULL_VOID(childNode);
+            auto childFocusNode = childNode->GetFocusHub();
+            CHECK_NULL_VOID(childFocusNode);
+            childFocusNode->SetFocusDependence(FocusDependence::SELF);
+            tabBarFocusNode->SetLastWeakFocusNode(AceType::WeakClaim(AceType::RawPtr(childFocusNode)));
+        }
     }
 }
 
@@ -727,10 +693,6 @@ void TabsPattern::HandleChildrenUpdated(const RefPtr<FrameNode>& swiperNode, con
             stack.push(child);
         }
     }
-
-    auto tabBarPattern = tabBarNode->GetPattern<TabBarPattern>();
-    CHECK_NULL_VOID(tabBarPattern);
-    tabBarPattern->AdjustTabBarInfo();
 }
 
 /**
@@ -751,7 +713,6 @@ void TabsPattern::UpdateSelectedState(const RefPtr<FrameNode>& swiperNode, const
         index = 0;
     }
     tabBarPattern->UpdateIndicator(index);
-    tabBarPattern->ResetIndicatorAnimationState();
     tabBarPattern->UpdateSubTabBoard(index);
     tabBarPattern->UpdateTextColorAndFontWeight(index);
     tabBarPattern->AdjustSymbolStats(index);
@@ -765,60 +726,5 @@ void TabsPattern::UpdateSelectedState(const RefPtr<FrameNode>& swiperNode, const
         swiperLayoutProperty->UpdateIndex(index);
     }
     tabsLayoutProperty->UpdateIndex(index);
-}
-
-void TabsPattern::SetOnUnselectedEvent(std::function<void(const BaseEventInfo*)>&& event)
-{
-    ChangeEvent unselectedEvent([jsEvent = std::move(event)](int32_t index) {
-        /* js callback */
-        if (jsEvent) {
-            TabContentChangeEvent eventInfo(index);
-            jsEvent(&eventInfo);
-        }
-    });
-    if (unselectedEvent_) {
-        (*unselectedEvent_).swap(unselectedEvent);
-    } else {
-        auto host = GetHost();
-        CHECK_NULL_VOID(host);
-        auto tabsNode = AceType::DynamicCast<TabsNode>(host);
-        CHECK_NULL_VOID(tabsNode);
-        auto swiperNode = AceType::DynamicCast<FrameNode>(tabsNode->GetTabs());
-        CHECK_NULL_VOID(swiperNode);
-        auto eventHub = swiperNode->GetEventHub<SwiperEventHub>();
-        CHECK_NULL_VOID(eventHub);
-        unselectedEvent_ = std::make_shared<ChangeEvent>(std::move(unselectedEvent));
-        eventHub->AddOnUnselectedEvent(unselectedEvent_);
-    }
-}
-
-void TabsPattern::OnColorModeChange(uint32_t colorMode)
-{
-    CHECK_NULL_VOID(SystemProperties::ConfigChangePerform());
-    Pattern::OnColorModeChange(colorMode);
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    auto tabsNode = AceType::DynamicCast<TabsNode>(host);
-    CHECK_NULL_VOID(tabsNode);
-    auto tabBarNode = AceType::DynamicCast<FrameNode>(tabsNode->GetTabBar());
-    CHECK_NULL_VOID(tabBarNode);
-    auto pipeline = host->GetContextWithCheck();
-    CHECK_NULL_VOID(pipeline);
-    auto theme = pipeline->GetTheme<TabTheme>();
-    CHECK_NULL_VOID(theme);
-    auto tabsLayoutProperty = tabsNode->GetLayoutProperty<TabsLayoutProperty>();
-    CHECK_NULL_VOID(tabsLayoutProperty);
-
-    if (!tabsLayoutProperty->HasDividerColorSetByUser() ||
-        (tabsLayoutProperty->HasDividerColorSetByUser() && !tabsLayoutProperty->GetDividerColorSetByUserValue())) {
-        auto currentDivider = tabsLayoutProperty->GetDivider().value_or(TabsItemDivider());
-        currentDivider.color = theme->GetDividerColor();
-        auto dividerFrameNode = AceType::DynamicCast<FrameNode>(tabsNode->GetDivider());
-        CHECK_NULL_VOID(dividerFrameNode);
-        auto dividerRenderProperty = dividerFrameNode->GetPaintProperty<DividerRenderProperty>();
-        CHECK_NULL_VOID(dividerRenderProperty);
-        dividerRenderProperty->UpdateDividerColor(currentDivider.color);
-    }
-    tabBarNode->MarkDirtyNode(PROPERTY_UPDATE_MEASURE);
 }
 } // namespace OHOS::Ace::NG

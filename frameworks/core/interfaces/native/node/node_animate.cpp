@@ -14,19 +14,23 @@
  */
 
 #include "core/interfaces/native/node/node_animate.h"
-#include "ui/animation/animation_constants.h"
 
 #include "base/error/error_code.h"
+#include "base/memory/ace_type.h"
+#include "base/utils/utils.h"
 #include "core/animation/animation_pub.h"
+#include "core/animation/curve_animation.h"
 #include "core/animation/spring_curve.h"
-#include "core/animation/keyframe_animation.h"
 #include "core/common/ace_engine.h"
+#include "core/common/container.h"
+#include "core/common/container_scope.h"
 #include "core/components_ng/base/view_stack_model.h"
 #include "core/components_ng/base/view_stack_processor.h"
 
 namespace OHOS::Ace::NG::ViewAnimate {
 namespace {
 constexpr int32_t MAX_FLUSH_COUNT = 2;
+int32_t g_animationCount = 0;
 
 const std::vector<OHOS::Ace::RefPtr<OHOS::Ace::Curve>> CURVES_LIST = {
     OHOS::Ace::Curves::LINEAR,
@@ -74,7 +78,7 @@ void PrintNodeAnimationInfo(const AnimationOption& option,
                 option.GetDuration());
         } else {
             TAG_LOGI(AceLogTag::ACE_ANIMATION,
-                "nodeAnimate:%{public}s iteration is infinite."
+                "nodeAnimate:%{public}s iteration is infinite, remember to stop it."
                 "duration:%{public}d, curve:%{public}s",
                 animationInterfaceName,
                 option.GetDuration(), option.GetCurve()->ToString().c_str());
@@ -131,8 +135,6 @@ void AnimateToInner(ArkUIContext* context, AnimationOption& option, const std::f
         option.GetIteration());
     PrintNodeAnimationInfo(
         option, immediately ? AnimationInterface::ANIMATE_TO_IMMEDIATELY : AnimationInterface::ANIMATE_TO, count);
-    option.SetAnimationInterface(
-        immediately ? AnimationInterface::ANIMATE_TO_IMMEDIATELY : AnimationInterface::ANIMATE_TO);
     if (!ViewStackModel::GetInstance()->IsEmptyStack()) {
         TAG_LOGW(AceLogTag::ACE_ANIMATION,
             "node_animate:when call animateTo, node stack is not empty, not suitable for animateTo."
@@ -140,8 +142,7 @@ void AnimateToInner(ArkUIContext* context, AnimationOption& option, const std::f
     }
     NG::ScopedViewStackProcessor scopedProcessor;
     auto triggerId = context->id;
-    AceEngine::Get().NotifyContainersOrderly([triggerId, &option,
-        multiInstanceEnabled = SystemProperties::GetMultiInstanceEnabled()](const RefPtr<Container>& container) {
+    AceEngine::Get().NotifyContainersOrderly([triggerId, option](const RefPtr<Container>& container) {
         auto context = container->GetPipelineContext();
         if (!context) {
             // pa container do not have pipeline context.
@@ -159,21 +160,17 @@ void AnimateToInner(ArkUIContext* context, AnimationOption& option, const std::f
             return;
         }
         context->PrepareOpenImplicitAnimation();
-        if (multiInstanceEnabled) {
-            AnimationUtils::OpenImplicitAnimation(option, option.GetCurve(), nullptr, context);
-        }
     });
     pipelineContext->PrepareOpenImplicitAnimation();
     FlushDirtyNodesWhenExist(pipelineContext, option,
         immediately ? AnimationInterface::ANIMATE_TO_IMMEDIATELY : AnimationInterface::ANIMATE_TO);
-    pipelineContext->StartImplicitAnimation(option, option.GetCurve(), onFinishFunc, count);
+    pipelineContext->StartImplicitAnimation(option, option.GetCurve(), onFinishFunc);
     auto previousOption = pipelineContext->GetSyncAnimationOption();
     pipelineContext->SetSyncAnimationOption(option);
     // Execute the function.
     animateToFunc();
     pipelineContext->FlushOnceVsyncTask();
-    AceEngine::Get().NotifyContainersOrderly([triggerId,
-        multiInstanceEnabled = SystemProperties::GetMultiInstanceEnabled()](const RefPtr<Container>& container) {
+    AceEngine::Get().NotifyContainersOrderly([triggerId](const RefPtr<Container>& container) {
         auto context = container->GetPipelineContext();
         if (!context) {
             // pa container do not have pipeline context.
@@ -191,9 +188,6 @@ void AnimateToInner(ArkUIContext* context, AnimationOption& option, const std::f
             return;
         }
         context->PrepareCloseImplicitAnimation();
-        if (multiInstanceEnabled) {
-            AnimationUtils::CloseImplicitAnimation(context);
-        }
     });
     pipelineContext->CloseImplicitAnimation();
     pipelineContext->SetSyncAnimationOption(previousOption);
@@ -237,7 +231,7 @@ void AnimateTo(ArkUIContext* context, ArkUIAnimateOption option, void (*event)(v
     std::optional<int32_t> count;
     std::function<void()> onFinishEvent;
     if (option.onFinishCallback) {
-        count = GetAnimationFinishCount();
+        count = g_animationCount++;
         onFinishEvent = [option, count]() {
             ACE_SCOPED_TRACE("nodeAnimate:onFinish[cnt:%d]", count.value());
             TAG_LOGI(AceLogTag::ACE_ANIMATION, "nodeAnimate:animateTo finish, cnt:%{public}d", count.value());
@@ -249,8 +243,8 @@ void AnimateTo(ArkUIContext* context, ArkUIAnimateOption option, void (*event)(v
     AnimateToInner(context, animationOption, onEvent, onFinishEvent, count, false);
 }
 
-void StartKeyframeAnimation(const RefPtr<PipelineBase>& pipelineContext, AnimationOption& option,
-    ArkUIKeyframeAnimateOption* animateOption, const std::optional<int32_t>& count)
+void StartKeyframeAnimation(const RefPtr<PipelineBase>& pipelineContext,
+    AnimationOption& option, ArkUIKeyframeAnimateOption* animateOption)
 {
     // flush build and flush ui tasks before open animation closure.
     pipelineContext->FlushBuild();
@@ -262,7 +256,7 @@ void StartKeyframeAnimation(const RefPtr<PipelineBase>& pipelineContext, Animati
     FlushDirtyNodesWhenExist(pipelineContext, option, AnimationInterface::KEYFRAME_ANIMATE_TO);
 
     // start KeyframeAnimation.
-    pipelineContext->StartImplicitAnimation(option, option.GetCurve(), option.GetOnFinishEvent(), count);
+    pipelineContext->StartImplicitAnimation(option, option.GetCurve(), option.GetOnFinishEvent());
     for (int32_t i = 0; i < animateOption->keyframeSize; i++) {
         auto keyframe = animateOption->keyframes[i];
         if (!keyframe.event) {
@@ -297,9 +291,7 @@ void KeyframeAnimateTo(ArkUIContext* context, ArkUIKeyframeAnimateOption* animat
     CHECK_NULL_VOID(pipelineContext);
 
     AnimationOption option;
-    std::optional<int32_t> count;
     if (animateOption->onFinish) {
-        count = GetAnimationFinishCount();
         auto onFinishEvent = [onFinish = animateOption->onFinish, userData = animateOption->userData,
                                  id = context->id]() {
             ContainerScope scope(id);
@@ -307,8 +299,10 @@ void KeyframeAnimateTo(ArkUIContext* context, ArkUIKeyframeAnimateOption* animat
         };
         option.SetOnFinishEvent(onFinishEvent);
     }
+
     option.SetDelay(animateOption->delay);
     option.SetIteration(animateOption->iterations);
+
     int duration = 0;
     for (int32_t i = 0; i < animateOption->keyframeSize; i++) {
         duration += animateOption->keyframes[i].duration;
@@ -316,16 +310,6 @@ void KeyframeAnimateTo(ArkUIContext* context, ArkUIKeyframeAnimateOption* animat
     option.SetDuration(duration);
     // actual curve is in keyframe, this curve will not be effective
     option.SetCurve(Curves::EASE_IN_OUT);
-    if (animateOption->expectedFrameRateRange) {
-        auto fRRmin = animateOption->expectedFrameRateRange->min;
-        auto fRRmax = animateOption->expectedFrameRateRange->max;
-        auto fRRExpected = animateOption->expectedFrameRateRange->expected;
-        RefPtr<FrameRateRange> frameRateRange =
-            AceType::MakeRefPtr<FrameRateRange>(fRRmin, fRRmax, fRRExpected);
-        TAG_LOGD(AceLogTag::ACE_ANIMATION, "[nodeAnimate:keyframe] SetExpectedFrameRateRange"
-            "{%{public}d, %{public}d, %{public}d}", fRRmin, fRRmax, fRRExpected);
-        option.SetFrameRateRange(frameRateRange);
-    }
     AceScopedTrace trace("nodeAnimate:KeyframeAnimateTo iteration:%d, delay:%d",
                          option.GetIteration(), option.GetDelay());
     PrintNodeAnimationInfo(option, AnimationInterface::KEYFRAME_ANIMATE_TO, std::nullopt);
@@ -335,9 +319,8 @@ void KeyframeAnimateTo(ArkUIContext* context, ArkUIKeyframeAnimateOption* animat
             "param is [duration:%{public}d, delay:%{public}d, iteration:%{public}d]",
             option.GetDuration(), option.GetDelay(), option.GetIteration());
     }
-    option.SetAnimationInterface(AnimationInterface::KEYFRAME_ANIMATE_TO);
     NG::ScopedViewStackProcessor scopedProcessor;
-    StartKeyframeAnimation(pipelineContext, option, animateOption, count);
+    StartKeyframeAnimation(pipelineContext, option, animateOption);
     pipelineContext->FlushAfterLayoutCallbackInImplicitAnimationTask();
 }
 

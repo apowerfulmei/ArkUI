@@ -55,11 +55,6 @@ public:
         isLimitFingerCount_ = limitFingerCount;
     }
 
-    bool GetLimitFingerCount() const
-    {
-        return isLimitFingerCount_;
-    }
-
     bool CheckLimitFinger()
     {
         if (isLimitFingerCount_) {
@@ -84,7 +79,6 @@ public:
         disposal_ = GestureDisposal::NONE;
         lastPointEvent_.reset();
         backupTouchPointsForSucceedBlock_.reset();
-        preventBegin_ = false;
     }
 
     void CleanRecognizerState() override;
@@ -140,7 +134,6 @@ protected:
         refereeState_ = RefereeState::READY;
         disposal_ = GestureDisposal::NONE;
         backupTouchPointsForSucceedBlock_.reset();
-        preventBegin_ = false;
     }
 
     bool IsNeedResetStatus();

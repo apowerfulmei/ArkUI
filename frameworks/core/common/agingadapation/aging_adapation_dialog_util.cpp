@@ -12,20 +12,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "base/utils/utf_helper.h"
 #include "core/common/agingadapation/aging_adapation_dialog_util.h"
 
 #include "core/common/agingadapation/aging_adapation_dialog_theme.h"
 #include "core/components_ng/pattern/text/text_pattern.h"
 namespace OHOS::Ace::NG {
-RefPtr<FrameNode> AgingAdapationDialogUtil::ShowLongPressDialog(
-    const std::string& message, ImageSourceInfo& imageSourceInfo, int32_t themeScopeId)
-{
-    return ShowLongPressDialog(UtfUtils::Str8ToStr16(message), imageSourceInfo, themeScopeId);
-}
 
 RefPtr<FrameNode> AgingAdapationDialogUtil::ShowLongPressDialog(
-    const std::u16string& message, ImageSourceInfo& imageSourceInfo, int32_t themeScopeId)
+    const std::string& message, ImageSourceInfo& imageSourceInfo)
 {
     RefPtr<FrameNode> columnNode = FrameNode::CreateFrameNode(V2::COLUMN_ETS_TAG,
         ElementRegister::GetInstance()->MakeUniqueId(), AceType::MakeRefPtr<LinearLayoutPattern>(true));
@@ -33,7 +27,7 @@ RefPtr<FrameNode> AgingAdapationDialogUtil::ShowLongPressDialog(
     if (imageSourceInfo.IsValid()) {
         auto context = PipelineBase::GetCurrentContext();
         CHECK_NULL_RETURN(context, nullptr);
-        auto dialogTheme = context->GetTheme<AgingAdapationDialogTheme>(themeScopeId);
+        auto dialogTheme = context->GetTheme<AgingAdapationDialogTheme>();
         CHECK_NULL_RETURN(dialogTheme, nullptr);
         auto color = dialogTheme->GetDialogIconColor();
         imageSourceInfo.SetFillColor(Color(color.GetValue()));
@@ -61,7 +55,7 @@ RefPtr<FrameNode> AgingAdapationDialogUtil::ShowLongPressDialog(
             imageLayoutProperty->UpdateMargin(imageMargin);
             imageNode->MountToParent(columnNode);
             imageNode->MarkModifyDone();
-            return CreateCustomDialog(columnNode, themeScopeId);
+            return CreateCustomDialog(columnNode);
         }
         imageMargin.top = CalcLength(dialogTheme->GetDialogPropertyTop());
         imageMargin.bottom = CalcLength(dialogTheme->GetDialogPropertyBottom());
@@ -69,24 +63,16 @@ RefPtr<FrameNode> AgingAdapationDialogUtil::ShowLongPressDialog(
         imageNode->MountToParent(columnNode);
         imageNode->MarkModifyDone();
     }
-    CreateDialogTextNode(columnNode, message, themeScopeId);
-    return CreateCustomDialog(columnNode, themeScopeId);
+    CreateDialogTextNode(columnNode, message);
+    return CreateCustomDialog(columnNode);
 }
 
 RefPtr<FrameNode> AgingAdapationDialogUtil::ShowLongPressDialog(
-    const std::string& message, const RefPtr<FrameNode>& iconNode, bool isWithDialogTheme)
+    const std::string& message, const RefPtr<FrameNode>& iconNode)
 {
-    return ShowLongPressDialog(UtfUtils::Str8ToStr16(message), iconNode, isWithDialogTheme);
-}
-
-RefPtr<FrameNode> AgingAdapationDialogUtil::ShowLongPressDialog(
-    const std::u16string& message, const RefPtr<FrameNode>& iconNode, bool isWithDialogTheme)
-{
-    CHECK_NULL_RETURN(iconNode, nullptr);
-    int32_t themeScopeId = iconNode->GetThemeScopeId();
     auto context = PipelineBase::GetCurrentContext();
     CHECK_NULL_RETURN(context, nullptr);
-    auto dialogTheme = context->GetTheme<AgingAdapationDialogTheme>(themeScopeId);
+    auto dialogTheme = context->GetTheme<AgingAdapationDialogTheme>();
     CHECK_NULL_RETURN(dialogTheme, nullptr);
     auto srcLayoutProperty = iconNode->GetLayoutProperty<TextLayoutProperty>();
     CHECK_NULL_RETURN(srcLayoutProperty, nullptr);
@@ -99,9 +85,8 @@ RefPtr<FrameNode> AgingAdapationDialogUtil::ShowLongPressDialog(
     symbolProperty->UpdateFontSize(dialogTheme->GetIdealSize());
     symbolProperty->UpdateSymbolSourceInfo(srcLayoutProperty->GetSymbolSourceInfoValue());
     auto symbolColorList = srcLayoutProperty->GetSymbolColorListValue({});
-    (symbolColorList.empty() || isWithDialogTheme)
-        ? symbolProperty->UpdateSymbolColorList({ dialogTheme->GetDialogIconColor() })
-        : symbolProperty->UpdateSymbolColorList(symbolColorList);
+    symbolColorList.empty() ? symbolProperty->UpdateSymbolColorList({ dialogTheme->GetDialogIconColor() })
+                            : symbolProperty->UpdateSymbolColorList(symbolColorList);
     auto fontWeight = srcLayoutProperty->GetFontWeightValue(FontWeight::NORMAL);
     symbolProperty->UpdateFontWeight(fontWeight);
     auto renderStrategy = srcLayoutProperty->GetSymbolRenderingStrategyValue(0);
@@ -122,48 +107,23 @@ RefPtr<FrameNode> AgingAdapationDialogUtil::ShowLongPressDialog(
         symbolProperty->UpdateMargin(symbolMargin);
         symbolNode->MountToParent(columnNode);
         symbolNode->MarkModifyDone();
-        return CreateCustomDialog(columnNode, themeScopeId);
+        return CreateCustomDialog(columnNode);
     }
     symbolMargin.top = CalcLength(dialogTheme->GetDialogPropertyTop());
     symbolMargin.bottom = CalcLength(dialogTheme->GetDialogPropertyBottom());
     symbolProperty->UpdateMargin(symbolMargin);
     symbolNode->MountToParent(columnNode);
     symbolNode->MarkModifyDone();
-    CreateDialogTextNode(columnNode, message, themeScopeId);
-    return CreateCustomDialog(columnNode, themeScopeId);
+    CreateDialogTextNode(columnNode, message);
+    return CreateCustomDialog(columnNode);
 }
 
-RefPtr<FrameNode> AgingAdapationDialogUtil::ShowLongPressDialog(const std::u16string& message)
-{
-    int32_t themeScopeId = 0;
-    auto context = PipelineBase::GetCurrentContext();
-    CHECK_NULL_RETURN(context, nullptr);
-    auto dialogTheme = context->GetTheme<AgingAdapationDialogTheme>(themeScopeId);
-    CHECK_NULL_RETURN(dialogTheme, nullptr);
-    RefPtr<FrameNode> columnNode = FrameNode::CreateFrameNode(V2::COLUMN_ETS_TAG,
-        ElementRegister::GetInstance()->MakeUniqueId(), AceType::MakeRefPtr<LinearLayoutPattern>(true));
-    Dimension dialogHeight;
-    if (message.empty()) {
-        float scale = context->GetFontScale();
-        if (NearEqual(scale, dialogTheme->GetBigFontSizeScale()) ||
-            NearEqual(scale, dialogTheme->GetLargeFontSizeScale())) {
-            dialogHeight = Dimension(dialogTheme->GetBigDialogWidth(), DimensionUnit::VP);
-        } else if (NearEqual(scale, dialogTheme->GetMaxFontSizeScale())) {
-            dialogHeight = Dimension(dialogTheme->GetMaxDialogWidth(), DimensionUnit::VP);
-        }
-        return CreateCustomDialog(columnNode, themeScopeId);
-    }
-    CreateDialogTextNode(columnNode, message, themeScopeId);
-    return CreateCustomDialog(columnNode, themeScopeId);
-}
-
-RefPtr<FrameNode> AgingAdapationDialogUtil::CreateCustomDialog(
-    const RefPtr<FrameNode>& columnNode, int32_t themeScopeId)
+RefPtr<FrameNode> AgingAdapationDialogUtil::CreateCustomDialog(const RefPtr<FrameNode>& columnNode)
 {
     CHECK_NULL_RETURN(columnNode, nullptr);
     auto context = PipelineBase::GetCurrentContext();
     CHECK_NULL_RETURN(context, nullptr);
-    auto dialogTheme = context->GetTheme<AgingAdapationDialogTheme>(themeScopeId);
+    auto dialogTheme = context->GetTheme<AgingAdapationDialogTheme>();
     CHECK_NULL_RETURN(dialogTheme, nullptr);
     DialogProperties dialogProperties;
     dialogProperties.alignment = DialogAlignment::CENTER;
@@ -194,13 +154,12 @@ RefPtr<FrameNode> AgingAdapationDialogUtil::CreateCustomDialog(
     return overlayManager->ShowDialogWithNode(dialogProperties, columnNode, isRightToLeft);
 }
 
-void AgingAdapationDialogUtil::CreateDialogTextNode(
-    const RefPtr<FrameNode>& columnNode, const std::u16string& message, int32_t themeScopeId)
+void AgingAdapationDialogUtil::CreateDialogTextNode(const RefPtr<FrameNode>& columnNode, const std::string& message)
 {
     CHECK_NULL_VOID(columnNode);
     auto context = PipelineBase::GetCurrentContext();
     CHECK_NULL_VOID(context);
-    auto dialogTheme = context->GetTheme<AgingAdapationDialogTheme>(themeScopeId);
+    auto dialogTheme = context->GetTheme<AgingAdapationDialogTheme>();
     CHECK_NULL_VOID(dialogTheme);
     auto textNode = FrameNode::CreateFrameNode(
         V2::TEXT_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(), AceType::MakeRefPtr<TextPattern>());

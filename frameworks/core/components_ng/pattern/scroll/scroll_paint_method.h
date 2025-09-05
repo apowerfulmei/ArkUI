@@ -17,8 +17,6 @@
 #define FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_PATTERN_SCROLL_SCROLL_PAINT_METHOD_H
 
 #include "core/components_ng/pattern/scroll/inner/scroll_bar.h"
-#include "core/components_ng/pattern/scroll/inner/scroll_bar_2d.h"
-#include "core/components_ng/pattern/scroll/inner/scroll_bar_2d_painter.h"
 #include "core/components_ng/pattern/scroll/scroll_content_modifier.h"
 #include "core/components_ng/pattern/scroll/scroll_edge_effect.h"
 #include "core/components_ng/pattern/scrollable/scrollable_paint_method.h"
@@ -26,7 +24,7 @@
 namespace OHOS::Ace::NG {
 
 class ScrollPaintMethod : public ScrollablePaintMethod {
-    DECLARE_ACE_TYPE(ScrollPaintMethod, ScrollablePaintMethod);
+    DECLARE_ACE_TYPE(ScrollPaintMethod, ScrollablePaintMethod)
 
 public:
     ScrollPaintMethod() = default;
@@ -38,11 +36,6 @@ public:
     void SetScrollBar(WeakPtr<ScrollBar>&& scrollBar)
     {
         scrollBar_ = scrollBar;
-    }
-
-    RefPtr<ScrollBar> GetScrollBar()
-    {
-        return scrollBar_.Upgrade();
     }
 
     void SetEdgeEffect(WeakPtr<ScrollEdgeEffect>&& edgeEffect)
@@ -57,9 +50,6 @@ public:
 
     RefPtr<Modifier> GetOverlayModifier(PaintWrapper* paintWrapper) override
     {
-        if (auto scrollBar2d = scrollBar2d_.Upgrade()) {
-            return scrollBar2d->GetPainter();
-        }
         return scrollBarOverlayModifier_.Upgrade();
     }
 
@@ -84,19 +74,6 @@ private:
     WeakPtr<ScrollBar> scrollBar_;
     WeakPtr<ScrollEdgeEffect> edgeEffect_;
     WeakPtr<ScrollBarOverlayModifier> scrollBarOverlayModifier_;
-
-    /* ============================= Free Scroll Enhancements ============================= */
-public:
-    void Set2DPainter(const WeakPtr<ScrollBar2D>& scrollBar)
-    {
-        scrollBar2d_ = scrollBar;
-    }
-
-private:
-    void UpdateOverlayModifier2d(PaintWrapper* paintWrapper);
-
-    WeakPtr<ScrollBar2D> scrollBar2d_;
-    /* ============================================================================== */
 };
 } // namespace OHOS::Ace::NG
 

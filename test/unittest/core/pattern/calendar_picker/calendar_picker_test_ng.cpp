@@ -154,7 +154,7 @@ RefPtr<FrameNode> CalendarPickerTestNg::CalendarDialogShow(RefPtr<FrameNode> ent
  * @tc.desc: Create Calendar Picker Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerModelNGTest001, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerModelNGTest001, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. Create Calendar Picker
@@ -230,7 +230,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerModelNGTest001, TestSize.Level0)
  * @tc.desc: SetTextStyle Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerModelNGTest002, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerModelNGTest002, TestSize.Level1)
 {
     CalendarSettingData settingData;
     CalendarPickerModelNG calendarPickerModel;
@@ -249,7 +249,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerModelNGTest002, TestSize.Level0)
  * @tc.desc: SetTextStyle Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerModelNGTest003, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerModelNGTest003, TestSize.Level1)
 {
     CalendarSettingData settingData;
     CalendarPickerModelNG calendarPickerModel;
@@ -271,7 +271,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerModelNGTest003, TestSize.Level0)
  * @tc.desc: Create Calendar Picker Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerModelNGTest004, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerModelNGTest004, TestSize.Level1)
 {
     const std::string language = "false";
     const std::string countryOrRegion = "";
@@ -298,15 +298,15 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerModelNGTest004, TestSize.Level0)
     pickerPattern->SetDate(json->ToString());
     auto yearTextNode = calendarPickerModel.GetYearNode(AceType::RawPtr(frameNode));
     auto yearTextLayoutProperty = yearTextNode->GetLayoutProperty<TextLayoutProperty>();
-    EXPECT_EQ(yearTextLayoutProperty->GetContentValue(), u"2000");
+    EXPECT_EQ(yearTextLayoutProperty->GetContentValue(), "2000");
 
     auto monthTextNode = calendarPickerModel.GetMonthNode(AceType::RawPtr(frameNode));
     auto monthTextLayoutProperty = monthTextNode->GetLayoutProperty<TextLayoutProperty>();
-    EXPECT_EQ(monthTextLayoutProperty->GetContentValue(), u"02");
+    EXPECT_EQ(monthTextLayoutProperty->GetContentValue(), "02");
 
     auto dayTextNode = calendarPickerModel.GetDayNode(AceType::RawPtr(frameNode));
     auto dayTextLayoutProperty = dayTextNode->GetLayoutProperty<TextLayoutProperty>();
-    EXPECT_EQ(dayTextLayoutProperty->GetContentValue(), u"29");
+    EXPECT_EQ(dayTextLayoutProperty->GetContentValue(), "29");
 }
 
 /**
@@ -314,7 +314,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerModelNGTest004, TestSize.Level0)
  * @tc.desc: Create Calendar Picker Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerModelNGTest005, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerModelNGTest005, TestSize.Level1)
 {
     const std::string language = "zh";
     const std::string countryOrRegion = "";
@@ -342,15 +342,15 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerModelNGTest005, TestSize.Level0)
 
     auto yearTextNode = calendarPickerModel.GetYearNode(AceType::RawPtr(frameNode));
     auto yearTextLayoutProperty = yearTextNode->GetLayoutProperty<TextLayoutProperty>();
-    EXPECT_EQ(yearTextLayoutProperty->GetContentValue(), u"2000");
+    EXPECT_EQ(yearTextLayoutProperty->GetContentValue(), "2000");
 
     auto monthTextNode = calendarPickerModel.GetMonthNode(AceType::RawPtr(frameNode));
     auto monthTextLayoutProperty = monthTextNode->GetLayoutProperty<TextLayoutProperty>();
-    EXPECT_EQ(monthTextLayoutProperty->GetContentValue(), u"02");
+    EXPECT_EQ(monthTextLayoutProperty->GetContentValue(), "02");
 
     auto dayTextNode = calendarPickerModel.GetDayNode(AceType::RawPtr(frameNode));
     auto dayTextLayoutProperty = dayTextNode->GetLayoutProperty<TextLayoutProperty>();
-    EXPECT_EQ(dayTextLayoutProperty->GetContentValue(), u"29");
+    EXPECT_EQ(dayTextLayoutProperty->GetContentValue(), "29");
 }
 
 /**
@@ -358,7 +358,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerModelNGTest005, TestSize.Level0)
  * @tc.desc: Create Calendar Picker Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerModelNGTest006, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerModelNGTest006, TestSize.Level1)
 {
     const std::string language = "ug";
     const std::string countryOrRegion = "";
@@ -386,15 +386,15 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerModelNGTest006, TestSize.Level0)
 
     auto yearTextNode = calendarPickerModel.GetYearNode(AceType::RawPtr(frameNode));
     auto yearTextLayoutProperty = yearTextNode->GetLayoutProperty<TextLayoutProperty>();
-    EXPECT_EQ(yearTextLayoutProperty->GetContentValue(), u"2000");
+    EXPECT_EQ(yearTextLayoutProperty->GetContentValue(), "2000");
 
     auto monthTextNode = calendarPickerModel.GetMonthNode(AceType::RawPtr(frameNode));
     auto monthTextLayoutProperty = monthTextNode->GetLayoutProperty<TextLayoutProperty>();
-    EXPECT_EQ(monthTextLayoutProperty->GetContentValue(), u"02");
+    EXPECT_EQ(monthTextLayoutProperty->GetContentValue(), "02");
 
     auto dayTextNode = calendarPickerModel.GetDayNode(AceType::RawPtr(frameNode));
     auto dayTextLayoutProperty = dayTextNode->GetLayoutProperty<TextLayoutProperty>();
-    EXPECT_EQ(dayTextLayoutProperty->GetContentValue(), u"29");
+    EXPECT_EQ(dayTextLayoutProperty->GetContentValue(), "29");
 }
 
 /**
@@ -402,7 +402,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerModelNGTest006, TestSize.Level0)
  * @tc.desc: HandleFocusEvent Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest001, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest001, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -472,7 +472,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest001, TestSize.Level0)
  * @tc.desc: HandleKeyEvent Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest002, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest002, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -518,7 +518,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest002, TestSize.Level0)
  * @tc.desc: HandleBlurEvent Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest003, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest003, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -540,7 +540,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest003, TestSize.Level0)
  * @tc.desc: HandleTaskCallback Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest004, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest004, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -561,7 +561,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest004, TestSize.Level0)
  * @tc.desc: HandleKeyEvent Number Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest005, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest005, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -596,7 +596,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest005, TestSize.Level0)
  * @tc.desc: IsDialogShow Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest006, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest006, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -624,7 +624,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest006, TestSize.Level0)
  * @tc.desc: SetCalendarEdgeAlign Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest007, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest007, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -664,7 +664,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest007, TestSize.Level0)
  * @tc.desc: hoverCallback Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest008, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest008, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -686,7 +686,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest008, TestSize.Level0)
  * @tc.desc: HandleBlurEvent Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest010, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest010, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -708,7 +708,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest010, TestSize.Level0)
  * @tc.desc: HandleBlurEvent Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest011, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest011, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -735,7 +735,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest011, TestSize.Level0)
  * @tc.desc: HandleFocusEvent Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest012, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest012, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -791,7 +791,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest012, TestSize.Level0)
  * @tc.desc: HandleYearKeyEvent Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest013, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest013, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -833,7 +833,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest013, TestSize.Level0)
  * @tc.desc: HandleYearKeyEvent Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest014, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest014, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -860,7 +860,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest014, TestSize.Level0)
  * @tc.desc: HandleYearKeyEvent Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest015, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest015, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -887,7 +887,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest015, TestSize.Level0)
  * @tc.desc: HandleMonthKeyEvent Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest016, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest016, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -937,7 +937,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest016, TestSize.Level0)
  * @tc.desc: HandleMonthKeyEvent Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest017, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest017, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -964,7 +964,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest017, TestSize.Level0)
  * @tc.desc: HandleDayKeyEvent Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest018, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest018, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -1005,7 +1005,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest018, TestSize.Level0)
  * @tc.desc: HandleDayKeyEvent Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest019, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest019, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -1032,7 +1032,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest019, TestSize.Level0)
  * @tc.desc: HandleNumberKeyEvent Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest020, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest020, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -1063,7 +1063,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest020, TestSize.Level0)
  * @tc.desc: HandleTaskCallback Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest021, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest021, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -1103,7 +1103,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest021, TestSize.Level0)
  * @tc.desc: HandleTaskCallback Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest022, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest022, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -1132,7 +1132,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest022, TestSize.Level0)
  * @tc.desc: HandleTextHoverEvent Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest023, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest023, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -1163,7 +1163,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest023, TestSize.Level0)
  * @tc.desc: HandleAddButtonClick Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest024, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest024, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -1205,7 +1205,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest024, TestSize.Level0)
  * @tc.desc: HandleAddButtonClick Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest025, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest025, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -1236,7 +1236,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest025, TestSize.Level0)
  * @tc.desc: HandleAddButtonClick Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest026, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest026, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -1267,7 +1267,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest026, TestSize.Level0)
  * @tc.desc: HandleAddButtonClick Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest027, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest027, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -1298,7 +1298,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest027, TestSize.Level0)
  * @tc.desc: HandleSubButtonClick Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest028, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest028, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -1329,7 +1329,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest028, TestSize.Level0)
  * @tc.desc: HandleSubButtonClick Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest029, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest029, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -1360,7 +1360,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest029, TestSize.Level0)
  * @tc.desc: HandleSubButtonClick Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest030, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest030, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -1391,7 +1391,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest030, TestSize.Level0)
  * @tc.desc: HandleSubButtonClick Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest031, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest031, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -1422,7 +1422,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest031, TestSize.Level0)
  * @tc.desc: HandleSubButtonClick Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest032, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest032, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -1453,7 +1453,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest032, TestSize.Level0)
  * @tc.desc: HandleSubButtonClick Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest033, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest033, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -1484,7 +1484,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest033, TestSize.Level0)
  * @tc.desc: HandleSubButtonClick Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest034, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest034, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -1508,7 +1508,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest034, TestSize.Level0)
  * @tc.desc: CalculateDialogOffset Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest035, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest035, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -1528,11 +1528,26 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest035, TestSize.Level0)
 }
 
 /**
+ * @tc.name: CalendarPickerPatternTest036
+ * @tc.desc: GetEntryDateInfo Function Test
+ * @tc.type: FUNC
+ */
+HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest036, TestSize.Level1)
+{
+    auto pickerPattern = AceType::MakeRefPtr<CalendarPickerPattern>();
+
+    const std::string info = " ";
+    pickerPattern->GetEntryDateInfo();
+    pickerPattern->SetDate(info);
+    pickerPattern->FlushTextStyle();
+}
+
+/**
  * @tc.name: CalendarPickerPatternTest037
  * @tc.desc: HandleAddButtonClick Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest037, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest037, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -1563,7 +1578,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest037, TestSize.Level0)
  * @tc.desc: HandleAddButtonClick Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest038, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest038, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -1594,7 +1609,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest038, TestSize.Level0)
  * @tc.desc: HandleAddButtonClick Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest039, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest039, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -1625,7 +1640,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest039, TestSize.Level0)
  * @tc.desc: HandleSubButtonClick Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest040, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest040, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -1656,7 +1671,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest040, TestSize.Level0)
  * @tc.desc: HandleSubButtonClick Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest041, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest041, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -1687,7 +1702,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest041, TestSize.Level0)
  * @tc.desc: HandleSubButtonClick Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest042, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest042, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -1718,7 +1733,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest042, TestSize.Level0)
  * @tc.desc: blurTask Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest043, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest043, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -1743,7 +1758,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest043, TestSize.Level0)
  * @tc.desc: blurTask Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest044, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest044, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -1767,7 +1782,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest044, TestSize.Level0)
  * @tc.desc: PostTaskToUI Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest045, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest045, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -1792,7 +1807,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest045, TestSize.Level0)
  * @tc.desc: OnWindowSizeChanged Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest046, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest046, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -1812,7 +1827,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest046, TestSize.Level0)
  * @tc.desc: HandleFocusEvent Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest047, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest047, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -1837,7 +1852,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest047, TestSize.Level0)
  * @tc.desc: HandleButtonTouchEvent Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest048, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest048, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -1857,7 +1872,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest048, TestSize.Level0)
  * @tc.desc: ShowDialog Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest049, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest049, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -1877,7 +1892,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest049, TestSize.Level0)
  * @tc.desc: InitDateIndex Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest050, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest050, TestSize.Level1)
 {
     const std::string language = "false";
     const std::string countryOrRegion = "";
@@ -1906,7 +1921,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest050, TestSize.Level0)
  * @tc.desc: InitDateIndex Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest051, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest051, TestSize.Level1)
 {
     const std::string language = "zh";
     const std::string countryOrRegion = "";
@@ -1936,7 +1951,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest051, TestSize.Level0)
  * @tc.desc: InitDateIndex Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest052, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest052, TestSize.Level1)
 {
     const std::string language = "ug";
     const std::string countryOrRegion = "";
@@ -1962,183 +1977,11 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest052, TestSize.Level0)
 }
 
 /**
- * @tc.name: CalendarPickerPatternTest053
- * @tc.desc: Test for SetStartDateWithNode and GetStartDateWithNode
- * @tc.type: FUNC
- */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest053, TestSize.Level0)
-{
-    CreateCalendarPicker();
-
-    RefPtr<UINode> element = ViewStackProcessor::GetInstance()->Finish();
-    ASSERT_NE(element, nullptr);
-    EXPECT_EQ(element->GetTag(), V2::CALENDAR_PICKER_ETS_TAG);
-
-    auto frameNode = AceType::DynamicCast<FrameNode>(element);
-    ASSERT_NE(frameNode, nullptr);
-    auto pickerPattern = frameNode->GetPattern<CalendarPickerPattern>();
-    ASSERT_NE(pickerPattern, nullptr);
-
-    uint32_t startYear = 2024;
-    uint32_t startMonth = 1;
-    uint32_t startDay = 8;
-    CalendarPickerModelNG::SetStartDateWithNode(Referenced::RawPtr(frameNode), startYear, startMonth, startDay);
-    auto startPickDate = CalendarPickerModelNG::GetStartDateWithNode(Referenced::RawPtr(frameNode));
-    EXPECT_EQ(startPickDate.GetYear(), startYear);
-    EXPECT_EQ(startPickDate.GetMonth(), startMonth);
-    EXPECT_EQ(startPickDate.GetDay(), startDay);
-   
-    startDay = 40;
-    CalendarPickerModelNG::SetStartDateWithNode(Referenced::RawPtr(frameNode), startYear, startMonth, startDay);
-    startPickDate = CalendarPickerModelNG::GetStartDateWithNode(Referenced::RawPtr(frameNode));
-    EXPECT_EQ(startPickDate.GetYear(), 0);
-    EXPECT_EQ(startPickDate.GetMonth(), 0);
-    EXPECT_EQ(startPickDate.GetDay(), 0);
-
-    startDay = -1;
-    CalendarPickerModelNG::SetStartDateWithNode(Referenced::RawPtr(frameNode), startYear, startMonth, startDay);
-    startPickDate = CalendarPickerModelNG::GetStartDateWithNode(Referenced::RawPtr(frameNode));
-    EXPECT_EQ(startPickDate.GetYear(), 0);
-    EXPECT_EQ(startPickDate.GetMonth(), 0);
-    EXPECT_EQ(startPickDate.GetDay(), 0);
-}
-
-/**
- * @tc.name: CalendarPickerPatternTest054
- * @tc.desc: Test for SetEndDateWithNode and GetEndDateWithNode
- * @tc.type: FUNC
- */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest054, TestSize.Level0)
-{
-    CreateCalendarPicker();
-
-    RefPtr<UINode> element = ViewStackProcessor::GetInstance()->Finish();
-    ASSERT_NE(element, nullptr);
-    EXPECT_EQ(element->GetTag(), V2::CALENDAR_PICKER_ETS_TAG);
-
-    auto frameNode = AceType::DynamicCast<FrameNode>(element);
-    ASSERT_NE(frameNode, nullptr);
-    auto pickerPattern = frameNode->GetPattern<CalendarPickerPattern>();
-    ASSERT_NE(pickerPattern, nullptr);
-
-    uint32_t startYear = 2024;
-    uint32_t startMonth = 1;
-    uint32_t startDay = 8;
-    CalendarPickerModelNG::SetStartDateWithNode(Referenced::RawPtr(frameNode), startYear, startMonth, startDay);
-    auto startPickDate = CalendarPickerModelNG::GetStartDateWithNode(Referenced::RawPtr(frameNode));
-    EXPECT_EQ(startPickDate.GetYear(), startYear);
-    EXPECT_EQ(startPickDate.GetMonth(), startMonth);
-    EXPECT_EQ(startPickDate.GetDay(), startDay);
-   
-    uint32_t endYear = 2024;
-    uint32_t endMonth = 1;
-    uint32_t endDay = 7;
-    CalendarPickerModelNG::SetEndDateWithNode(Referenced::RawPtr(frameNode), endYear, endMonth, endDay);
-    auto endPickDate = CalendarPickerModelNG::GetEndDateWithNode(Referenced::RawPtr(frameNode));
-    EXPECT_EQ(endPickDate.GetYear(), 0);
-    EXPECT_EQ(endPickDate.GetMonth(), 0);
-    EXPECT_EQ(endPickDate.GetDay(), 0);
-    
-    endDay = 9;
-    CalendarPickerModelNG::SetEndDateWithNode(Referenced::RawPtr(frameNode), endYear, endMonth, endDay);
-    endPickDate = CalendarPickerModelNG::GetEndDateWithNode(Referenced::RawPtr(frameNode));
-    EXPECT_EQ(endPickDate.GetYear(), endYear);
-    EXPECT_EQ(endPickDate.GetMonth(), endMonth);
-    EXPECT_EQ(endPickDate.GetDay(), endDay);
-
-    endDay = 40;
-    CalendarPickerModelNG::SetEndDateWithNode(Referenced::RawPtr(frameNode), endYear, endMonth, endDay);
-    endPickDate = CalendarPickerModelNG::GetEndDateWithNode(Referenced::RawPtr(frameNode));
-    EXPECT_EQ(endPickDate.GetYear(), 0);
-    EXPECT_EQ(endPickDate.GetMonth(), 0);
-    EXPECT_EQ(endPickDate.GetDay(), 0);
-
-    endDay = -1;
-    CalendarPickerModelNG::SetEndDateWithNode(Referenced::RawPtr(frameNode), endYear, endMonth, endDay);
-    endPickDate = CalendarPickerModelNG::GetEndDateWithNode(Referenced::RawPtr(frameNode));
-    EXPECT_EQ(endPickDate.GetYear(), 0);
-    EXPECT_EQ(endPickDate.GetMonth(), 0);
-    EXPECT_EQ(endPickDate.GetDay(), 0);
-}
-
-/**
- * @tc.name: CalendarPickerPatternTest055
- * @tc.desc: Test for SetMarkToday and GetMarkToday
- * @tc.type: FUNC
- */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest055, TestSize.Level0)
-{
-    /**
-     * @tc.steps: step1. create calendar frameNode.
-     */
-    CreateCalendarPicker();
-
-    RefPtr<UINode> element = ViewStackProcessor::GetInstance()->Finish();
-    ASSERT_NE(element, nullptr);
-    EXPECT_EQ(element->GetTag(), V2::CALENDAR_PICKER_ETS_TAG);
-
-    auto frameNode = AceType::DynamicCast<FrameNode>(element);
-    ASSERT_NE(frameNode, nullptr);
-    auto pickerPattern = frameNode->GetPattern<CalendarPickerPattern>();
-    ASSERT_NE(pickerPattern, nullptr);
-    /**
-     * @tc.steps: step2. call SetMarkToday.
-     * @tc.desc: set markToday.
-     * @tc.expected: GetMarkToday equals markToday.
-     */
-    bool markToday = true;
-    CalendarPickerModelNG::SetMarkToday(Referenced::RawPtr(frameNode), markToday);
-    EXPECT_EQ(CalendarPickerModelNG::GetMarkToday(Referenced::RawPtr(frameNode)), markToday);
-}
-
-/**
- * @tc.name: CalendarPickerPatternTest056
- * @tc.desc: Test for SetDisabledDateRange and GetDisabledDateRange
- * @tc.type: FUNC
- */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerPatternTest056, TestSize.Level0)
-{
-    CreateCalendarPicker();
-
-    RefPtr<UINode> element = ViewStackProcessor::GetInstance()->Finish();
-    ASSERT_NE(element, nullptr);
-    EXPECT_EQ(element->GetTag(), V2::CALENDAR_PICKER_ETS_TAG);
-
-    auto frameNode = AceType::DynamicCast<FrameNode>(element);
-    ASSERT_NE(frameNode, nullptr);
-    auto pickerPattern = frameNode->GetPattern<CalendarPickerPattern>();
-    ASSERT_NE(pickerPattern, nullptr);
-    /**
-     * @tc.steps: step2. call SetDisabledDateRange.
-     * @tc.desc: set disabledDateRange is empty.
-     * @tc.expected: GetDisabledDateRange is empty.
-     */
-    std::vector<std::pair<PickerDate, PickerDate>> disabledDateRange;
-    CalendarPickerModelNG::SetDisabledDateRange(Referenced::RawPtr(frameNode), disabledDateRange);
-    EXPECT_EQ(CalendarPickerModelNG::GetDisabledDateRange(Referenced::RawPtr(frameNode)), "");
-    /**
-     * @tc.steps: step2. call SetDisabledDateRange.
-     * @tc.desc: set disabledDateRange.
-     * @tc.expected: GetDisabledDateRange equals disabledDateRange.
-     */
-    std::pair<PickerDate, PickerDate> pair;
-    PickerDate defaultDate;
-    pair.first = defaultDate;
-    pair.second = defaultDate;
-    disabledDateRange.emplace_back(pair);
-    CalendarPickerModelNG::SetDisabledDateRange(Referenced::RawPtr(frameNode), disabledDateRange);
-    std::string ret = std::to_string(pair.first.GetYear()) + "-" + std::to_string(pair.first.GetMonth()) + "-" +
-                      std::to_string(pair.first.GetDay()) + "," + std::to_string(pair.second.GetYear()) + "-" +
-                      std::to_string(pair.second.GetMonth()) + "-" + std::to_string(pair.second.GetDay());
-    EXPECT_EQ(CalendarPickerModelNG::GetDisabledDateRange(Referenced::RawPtr(frameNode)), ret);
-}
-
-/**
  * @tc.name: CalendarDialogViewTest001
  * @tc.desc: Calendar Dialog Show Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarDialogViewTest001, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarDialogViewTest001, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -2172,7 +2015,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarDialogViewTest001, TestSize.Level0)
  * @tc.desc: Create Calendar Dialog Without EntryNode Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarDialogViewTest002, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarDialogViewTest002, TestSize.Level1)
 {
     CalendarDialogView calendarDialogView;
     CalendarSettingData settingData;
@@ -2214,7 +2057,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarDialogViewTest002, TestSize.Level0)
  * @tc.desc: SetDialogChange Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarDialogViewTest003, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarDialogViewTest003, TestSize.Level1)
 {
     int32_t calendarNodeId = ElementRegister::GetInstance()->MakeUniqueId();
     auto calendarNode = FrameNode::GetOrCreateFrameNode(
@@ -2230,7 +2073,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarDialogViewTest003, TestSize.Level0)
  * @tc.desc: callback Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarDialogViewTest004, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarDialogViewTest004, TestSize.Level1)
 {
     CalendarDialogView calendarDialogView;
     CalendarSettingData settingData;
@@ -2267,7 +2110,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarDialogViewTest004, TestSize.Level0)
  * @tc.desc: clickCallback Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarDialogViewTest005, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarDialogViewTest005, TestSize.Level1)
 {
     int32_t calendarNodeId = ElementRegister::GetInstance()->MakeUniqueId();
     auto calendarNode = FrameNode::GetOrCreateFrameNode(
@@ -2289,7 +2132,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarDialogViewTest005, TestSize.Level0)
  * @tc.desc: OnSelectedChangeEvent Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarDialogViewTest006, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarDialogViewTest006, TestSize.Level1)
 {
     CreateCalendarPicker();
     auto* stack = ViewStackProcessor::GetInstance();
@@ -2326,7 +2169,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarDialogViewTest006, TestSize.Level0)
  * @tc.desc: OnSelectedChangeEvent Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarDialogViewTest007, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarDialogViewTest007, TestSize.Level1)
 {
     CreateCalendarPicker();
     auto* stack = ViewStackProcessor::GetInstance();
@@ -2359,7 +2202,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarDialogViewTest007, TestSize.Level0)
  * @tc.desc: Show Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarDialogViewTest008, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarDialogViewTest008, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. mock PlatformVersion VERSION_ELEVEN.
@@ -2392,60 +2235,11 @@ HWTEST_F(CalendarPickerTestNg, CalendarDialogViewTest008, TestSize.Level0)
      */
     auto contentNode = AceType::DynamicCast<FrameNode>(dialogNode->GetFirstChild());
     ASSERT_NE(contentNode, nullptr);
-    RefPtr<CalendarTheme> theme = MockPipelineContext::GetCurrent()->GetTheme<CalendarTheme>();
-    ASSERT_NE(theme, nullptr);
     /**
      * @tc.steps: step5. test dialogNode's RenderContext's BackBlurStyle value.
-     * @tc.expected: equal static_cast<BlurStyle>(theme->GetCalendarPickerDialogBlurStyle()).
+     * @tc.expected: equal COMPONENT_ULTRA_THICK.
      */
-    EXPECT_EQ(contentNode->GetRenderContext()->GetBackBlurStyle()->blurStyle,
-        static_cast<BlurStyle>(theme->GetCalendarPickerDialogBlurStyle()));
-}
-
-/**
- * @tc.name: CalendarDialogViewTest009
- * @tc.desc: Show Function Test
- * @tc.type: FUNC
- */
-HWTEST_F(CalendarPickerTestNg, CalendarDialogViewTest009, TestSize.Level0)
-{
-    /**
-     * @tc.steps: step1. mock PlatformVersion VERSION_ELEVEN.
-     * @tc.expected: mock successfully.
-     */
-    MockPipelineContext::GetCurrent()->SetMinPlatformVersion(static_cast<int32_t>(PlatformVersion::VERSION_ELEVEN));
-    /**
-     * @tc.steps: step2. create dialogNodeProps.
-     * @tc.expected: the dialogNodeProps created successfully.
-     */
-    CalendarSettingData settingData;
-    DialogProperties properties;
-    properties.alignment = DialogAlignment::BOTTOM;
-    properties.customStyle = true;
-    properties.offset = DimensionOffset(Offset(0, -1.0f));
-    properties.backgroundBlurStyle = static_cast<int32_t>(BlurStyle::REGULAR);
-    auto selectedDate = PickerDate(2000, 1, 1);
-    settingData.selectedDate = selectedDate;
-    settingData.dayRadius = TEST_SETTING_RADIUS;
-    std::map<std::string, NG::DialogEvent> dialogEvent;
-    std::map<std::string, NG::DialogGestureEvent> dialogCancelEvent;
-    /**
-     * @tc.steps: step3. execute CalendarDialogView::Show.
-     * @tc.expected: show successfully.
-     */
-    std::vector<ButtonInfo> buttonInfos;
-    auto dialogNode = CalendarDialogView::Show(properties, settingData, buttonInfos, dialogEvent, dialogCancelEvent);
-    /**
-     * @tc.steps: step4. get dialogNode's grandsonNode.
-     * @tc.expected: getNode successfully.
-     */
-    auto contentNode = AceType::DynamicCast<FrameNode>(dialogNode->GetFirstChild());
-    ASSERT_NE(contentNode, nullptr);
-    /**
-     * @tc.steps: step5. test dialogNode's RenderContext's BackBlurStyle value.
-     * @tc.expected: equal REGULAR.
-     */
-    EXPECT_EQ(contentNode->GetRenderContext()->GetBackBlurStyle()->blurStyle, BlurStyle::REGULAR);
+    EXPECT_EQ(contentNode->GetRenderContext()->GetBackBlurStyle()->blurStyle, BlurStyle::COMPONENT_ULTRA_THICK);
 }
 
 /**
@@ -2453,7 +2247,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarDialogViewTest009, TestSize.Level0)
  * @tc.desc: SetChangeEvent Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerEventHubTest001, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerEventHubTest001, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -2488,7 +2282,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerEventHubTest001, TestSize.Level0)
  * @tc.desc: HandleKeyEvent Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest001, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest001, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -2544,7 +2338,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest001, TestSize.Level0)
  * @tc.desc: HandleKeyEvent Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest002, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest002, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -2599,7 +2393,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest002, TestSize.Level0)
  * @tc.desc: AddHotZoneRect Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest003, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest003, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -2625,7 +2419,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest003, TestSize.Level0)
  * @tc.desc: HandleEntryChange Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest004, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest004, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -2665,7 +2459,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest004, TestSize.Level0)
  * @tc.desc: IsAtomicNode Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest005, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest005, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -2692,7 +2486,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest005, TestSize.Level0)
  * @tc.desc: HandleEntryLayoutChange Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest006, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest006, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -2719,7 +2513,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest006, TestSize.Level0)
  * @tc.desc: GetEntryNode & GetDialogOffset Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest007, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest007, TestSize.Level1)
 {
     CreateCalendarPicker();
     auto* stack = ViewStackProcessor::GetInstance();
@@ -2786,7 +2580,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest008, TestSize.Level1)
     eventHub->ProcessOnKeyEventInternal(keyEventTwo);
     dialogPattern->isFocused_ = true;
     dialogPattern->isCalendarFirstFocused_ = false;
-    dialogPattern->focusAreaID_ = 2;
+    dialogPattern->focusAreaID_ = 1;
     eventHub->ProcessOnKeyEventInternal(keyEventTwo);
     EXPECT_TRUE(dialogPattern->isCalendarFirstFocused_);
 
@@ -2794,14 +2588,14 @@ HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest008, TestSize.Level1)
     eventHub->ProcessOnKeyEventInternal(keyEventTwo);
     dialogPattern->isFocused_ = false;
     dialogPattern->isCalendarFirstFocused_ = false;
-    dialogPattern->focusAreaID_ = 2;
+    dialogPattern->focusAreaID_ = 1;
     eventHub->ProcessOnKeyEventInternal(keyEventTwo1);
 
     KeyEvent keyEventTwo2(KeyCode::KEY_TAB, KeyAction::UP);
     eventHub->ProcessOnKeyEventInternal(keyEventTwo);
     dialogPattern->isFocused_ = true;
     dialogPattern->isCalendarFirstFocused_ = true;
-    dialogPattern->focusAreaID_ = 2;
+    dialogPattern->focusAreaID_ = 1;
     eventHub->ProcessOnKeyEventInternal(keyEventTwo2);
 
     KeyEvent keyEventTwo3(KeyCode::KEY_TAB, KeyAction::UP);
@@ -2834,7 +2628,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest008, TestSize.Level1)
  * @tc.desc: getInnerPaintRectCallback Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest009, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest009, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -2855,11 +2649,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest009, TestSize.Level0)
     auto eventHub = calendarDialogNode->GetOrCreateFocusHub();
     ASSERT_NE(eventHub, nullptr);
 
-    auto context = PipelineContext::GetCurrentContext();
-    ASSERT_NE(context, nullptr);
-    auto focusManager = context->GetOrCreateFocusManager();
-    ASSERT_NE(focusManager, nullptr);
-    focusManager->isFocusActive_ = true;
+    PipelineContext::GetCurrentContext()->isFocusActive_ = true;
     eventHub->focusType_ = FocusType::NODE;
     eventHub->focusStyleType_ = FocusStyleType::CUSTOM_REGION;
     eventHub->PaintFocusState();
@@ -2870,7 +2660,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest009, TestSize.Level0)
  * @tc.desc: event Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest010, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest010, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -2903,7 +2693,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest010, TestSize.Level0)
  * @tc.desc: InitOnTouchEvent Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest011, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest011, TestSize.Level1)
 {
     CreateCalendarPicker();
     auto* stack = ViewStackProcessor::GetInstance();
@@ -2945,7 +2735,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest011, TestSize.Level0)
  * @tc.desc: HandleKeyEvent Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest012, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest012, TestSize.Level1)
 {
     CreateCalendarPicker();
     auto* stack = ViewStackProcessor::GetInstance();
@@ -2971,13 +2761,13 @@ HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest012, TestSize.Level0)
     EXPECT_FALSE(dialogPattern->HandleKeyEvent(keyEventOne));
 
     KeyEvent keyEventLeftOne(KeyCode::KEY_DPAD_LEFT, KeyAction::DOWN);
-    dialogPattern->focusAreaID_ = 3;
+    dialogPattern->focusAreaID_ = 2;
     dialogPattern->focusAreaChildID_ = 2;
     dialogPattern->HandleKeyEvent(keyEventLeftOne);
     EXPECT_EQ(dialogPattern->focusAreaChildID_, 0);
 
     KeyEvent keyEventLeftTwo(KeyCode::KEY_DPAD_LEFT, KeyAction::DOWN);
-    dialogPattern->focusAreaID_ = 3;
+    dialogPattern->focusAreaID_ = 2;
     dialogPattern->focusAreaChildID_ = 3;
     dialogPattern->HandleKeyEvent(keyEventLeftTwo);
     EXPECT_EQ(dialogPattern->focusAreaChildID_, 2);
@@ -2995,7 +2785,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest012, TestSize.Level0)
     EXPECT_EQ(dialogPattern->focusAreaChildID_, 3);
 
     KeyEvent keyEventEnter(KeyCode::KEY_ENTER, KeyAction::DOWN);
-    dialogPattern->focusAreaID_ = 3;
+    dialogPattern->focusAreaID_ = 2;
     EXPECT_FALSE(dialogPattern->HandleKeyEvent(keyEventEnter));
 
     KeyEvent keyEventCall(KeyCode::KEY_CALL, KeyAction::DOWN);
@@ -3082,7 +2872,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest013, TestSize.Level1)
  * @tc.desc: HandleTabKeyEvent & UpdateSwiperNodeFocusedDay Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest014, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest014, TestSize.Level1)
 {
     CreateCalendarPicker();
     auto* stack = ViewStackProcessor::GetInstance();
@@ -3146,7 +2936,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest014, TestSize.Level0)
  * @tc.desc: PaintNonCurrentMonthFocusState Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest015, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest015, TestSize.Level1)
 {
     CreateCalendarPicker();
     auto* stack = ViewStackProcessor::GetInstance();
@@ -3182,7 +2972,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest015, TestSize.Level0)
  * @tc.desc: GetInnerFocusPaintRect Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest016, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest016, TestSize.Level1)
 {
     CreateCalendarPicker();
     auto* stack = ViewStackProcessor::GetInstance();
@@ -3213,7 +3003,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest016, TestSize.Level0)
  * @tc.desc: ChangeEntryState Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest017, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest017, TestSize.Level1)
 {
     CreateCalendarPicker();
     auto* stack = ViewStackProcessor::GetInstance();
@@ -3252,7 +3042,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest017, TestSize.Level0)
  * @tc.desc: HandleTitleArrowsClickEvent Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest018, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest018, TestSize.Level1)
 {
     CalendarDialogView calendarDialogView;
     CalendarSettingData settingData;
@@ -3289,12 +3079,12 @@ HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest018, TestSize.Level0)
  * @tc.desc: OnDirtyLayoutWrapperSwap Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest019, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest019, TestSize.Level1)
 {
     auto dialogPattern = AceType::MakeRefPtr<CalendarDialogPattern>();
 
-    EXPECT_TRUE(dialogPattern->OnDirtyLayoutWrapperSwap(nullptr, true, true));
-    EXPECT_TRUE(dialogPattern->OnDirtyLayoutWrapperSwap(nullptr, true, true));
+    dialogPattern->OnDirtyLayoutWrapperSwap(nullptr, true, true);
+    dialogPattern->OnDirtyLayoutWrapperSwap(nullptr, true, true);
 }
 
 /**
@@ -3302,7 +3092,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest019, TestSize.Level0)
  * @tc.desc: GetNextMonth Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest020, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest020, TestSize.Level1)
 {
     CreateCalendarPicker();
     auto* stack = ViewStackProcessor::GetInstance();
@@ -3334,7 +3124,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest020, TestSize.Level0)
  * @tc.desc: GetLastMonth Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest021, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest021, TestSize.Level1)
 {
     CreateCalendarPicker();
     auto* stack = ViewStackProcessor::GetInstance();
@@ -3366,7 +3156,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest021, TestSize.Level0)
  * @tc.desc: HandleTitleArrowsClickEvent Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest022, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest022, TestSize.Level1)
 {
     CalendarDialogView calendarDialogView;
     CalendarSettingData settingData;
@@ -3403,7 +3193,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest022, TestSize.Level0)
  * @tc.desc: mouseCallback Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest023, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest023, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -3436,7 +3226,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest023, TestSize.Level0)
  * @tc.desc: hoverCallback Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest024, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest024, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -3465,7 +3255,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest024, TestSize.Level0)
  * @tc.desc: HandleEntryNodeHoverEvent Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest025, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest025, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -3492,7 +3282,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest025, TestSize.Level0)
  * @tc.desc: blurTask Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest026, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest026, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -3522,7 +3312,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest026, TestSize.Level0)
  * @tc.desc: hoverCallback Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest027, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest027, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -3551,7 +3341,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest027, TestSize.Level0)
  * @tc.desc: UpdateDialogBackgroundColor Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest028, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest028, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. CreateCalendarPicker.
@@ -3608,7 +3398,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarDialogPatternTest028, TestSize.Level0)
  * @tc.desc: CalendarPicker TextDirection Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerTextDirectionTest001, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerTextDirectionTest001, TestSize.Level1)
 {
     AceApplicationInfo::GetInstance().isRightToLeft_ = true;
     CreateCalendarPicker();
@@ -3630,7 +3420,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerTextDirectionTest001, TestSize.Leve
  * @tc.desc: Calendar Picker LayoutProperty  Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerLayoutPropertyTest001, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerLayoutPropertyTest001, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -3656,7 +3446,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerLayoutPropertyTest001, TestSize.Lev
  * @tc.desc: CalendarPicker LayoutAlgorithm Measure Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerLayoutPropertyTest002, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerLayoutPropertyTest002, TestSize.Level1)
 {
     CreateCalendarPicker();
 
@@ -3903,7 +3693,7 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerLayoutAlgorithmTest002, TestSize.Le
  * @tc.desc: Test UpdateButtonStyle.
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarPickerUpdateButtonStyles001, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarPickerUpdateButtonStyles001, TestSize.Level1)
 {
     std::vector<ButtonInfo> buttonInfos;
     ButtonInfo info1;
@@ -3951,14 +3741,10 @@ HWTEST_F(CalendarPickerTestNg, CalendarPickerUpdateButtonStyles001, TestSize.Lev
  * @tc.desc: Show Function Test
  * @tc.type: FUNC
  */
-HWTEST_F(CalendarPickerTestNg, CalendarDialogViewTest0050, TestSize.Level0)
+HWTEST_F(CalendarPickerTestNg, CalendarDialogViewTest0050, TestSize.Level1)
 {
-    auto themeManager = AceType::MakeRefPtr<MockThemeManager>();
-    ASSERT_NE(themeManager, nullptr);
-    MockPipelineContext::GetCurrent()->SetThemeManager(themeManager);
-    auto calendarTheme = AceType::MakeRefPtr<CalendarTheme>();
-    ASSERT_NE(calendarTheme, nullptr);
-    EXPECT_CALL(*themeManager, GetTheme(_)).WillRepeatedly(Return(calendarTheme));
+    CalendarPickerTestNg::SetUpTestCase();
+
     CalendarDialogView calendarDialogView;
     CalendarSettingData settingData;
     DialogProperties properties;
@@ -3968,9 +3754,6 @@ HWTEST_F(CalendarPickerTestNg, CalendarDialogViewTest0050, TestSize.Level0)
     auto selectedDate = PickerDate(2000, 1, 1);
     settingData.selectedDate = selectedDate;
     settingData.dayRadius = TEST_SETTING_RADIUS;
-    auto entryColumn = FrameNode::CreateFrameNode(V2::COLUMN_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(),
-        AceType::MakeRefPtr<CalendarDialogPattern>());
-    settingData.entryNode = AceType::WeakClaim(AceType::RawPtr(entryColumn));
     std::map<std::string, NG::DialogEvent> dialogEvent;
     std::map<std::string, NG::DialogGestureEvent> dialogCancelEvent;
 
@@ -3980,81 +3763,6 @@ HWTEST_F(CalendarPickerTestNg, CalendarDialogViewTest0050, TestSize.Level0)
     buttonInfos.push_back(info1);
 
     auto dialogNode = calendarDialogView.Show(properties, settingData, buttonInfos, dialogEvent, dialogCancelEvent);
-    auto contentColumn = FrameNode::CreateFrameNode(V2::COLUMN_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(),
-        AceType::MakeRefPtr<CalendarDialogPattern>());
-    calendarDialogView.OperationsToPattern(contentColumn, settingData, properties, buttonInfos);
-    auto pattern = contentColumn->GetPattern<CalendarDialogPattern>();
-    ASSERT_NE(pattern->entryNode_.Upgrade(), nullptr);
-}
-
-/**
- * @tc.name: CalendarDialogViewUpdateButtonDefaultFocus001
- * @tc.desc: Test UpdateButtonDefaultFocus.
- * @tc.type: FUNC
- */
-HWTEST_F(CalendarPickerTestNg, CalendarDialogViewUpdateButtonDefaultFocus001, TestSize.Level0)
-{
-    std::vector<ButtonInfo> buttonInfos;
-    ButtonInfo info1;
-    info1.isPrimary = true;
-    info1.isAcceptButton = true;
-    buttonInfos.push_back(info1);
-
-    auto buttonNode = FrameNode::GetOrCreateFrameNode(V2::BUTTON_ETS_TAG,
-        ElementRegister::GetInstance()->MakeUniqueId(), []() { return AceType::MakeRefPtr<ButtonPattern>(); });
-    ASSERT_NE(buttonNode, nullptr);
-
-    CalendarDialogView::UpdateButtonDefaultFocus(buttonInfos, buttonNode, true);
-    auto focusHub = buttonNode->GetOrCreateFocusHub();
-    ASSERT_NE(focusHub, nullptr);
-    EXPECT_EQ(focusHub->IsDefaultFocus(), true);
-}
-
-/**
- * @tc.name: CalendarDialogViewUpdateButtonDefaultFocus002
- * @tc.desc: Test UpdateButtonDefaultFocus.
- * @tc.type: FUNC
- */
-HWTEST_F(CalendarPickerTestNg, CalendarDialogViewUpdateButtonDefaultFocus002, TestSize.Level0)
-{
-    std::vector<ButtonInfo> buttonInfos;
-    ButtonInfo info1;
-    info1.isPrimary = true;
-    buttonInfos.push_back(info1);
-
-    auto buttonNode = FrameNode::GetOrCreateFrameNode(V2::BUTTON_ETS_TAG,
-        ElementRegister::GetInstance()->MakeUniqueId(), []() { return AceType::MakeRefPtr<ButtonPattern>(); });
-    ASSERT_NE(buttonNode, nullptr);
-
-    CalendarDialogView::UpdateButtonDefaultFocus(buttonInfos, buttonNode, false);
-    auto focusHub = buttonNode->GetOrCreateFocusHub();
-    ASSERT_NE(focusHub, nullptr);
-    EXPECT_EQ(focusHub->IsDefaultFocus(), true);
-}
-
-/**
- * @tc.name: CalendarDialogViewUpdateButtonDefaultFocus003
- * @tc.desc: Test UpdateButtonDefaultFocus.
- * @tc.type: FUNC
- */
-HWTEST_F(CalendarPickerTestNg, CalendarDialogViewUpdateButtonDefaultFocus003, TestSize.Level0)
-{
-    std::vector<ButtonInfo> buttonInfos;
-    ButtonInfo info1;
-    info1.isPrimary = true;
-    info1.isAcceptButton = true;
-    buttonInfos.push_back(info1);
-
-    ButtonInfo info2;
-    buttonInfos.push_back(info2);
-
-    auto buttonNode = FrameNode::GetOrCreateFrameNode(V2::BUTTON_ETS_TAG,
-        ElementRegister::GetInstance()->MakeUniqueId(), []() { return AceType::MakeRefPtr<ButtonPattern>(); });
-    ASSERT_NE(buttonNode, nullptr);
-
-    CalendarDialogView::UpdateButtonDefaultFocus(buttonInfos, buttonNode, true);
-    auto focusHub = buttonNode->GetOrCreateFocusHub();
-    ASSERT_NE(focusHub, nullptr);
-    EXPECT_EQ(focusHub->IsDefaultFocus(), true);
+    ASSERT_NE(dialogNode, nullptr);
 }
 } // namespace OHOS::Ace::NG

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -26,28 +26,7 @@
 #include "core/components_ng/property/gradient_property.h"
 
 namespace OHOS::Ace {
-enum class JsProgressResourceType {
-    COLOR,
-    LSStrokeWidth,
-    LSSweepingEffect,
-    LSStrokeRadius,
-    SmoothEffect,
-    RingStrokeWidth,
-    RingShadow,
-    RingStatus,
-    RingSweepingEffect,
-    CapsuleBorderWidth,
-    CapsuleBorderColor,
-    CapsuleSweepingEffect,
-    ShowDefaultPercentage,
-    FontColor,
-    BackgroundColor,
-    FontSize,
-    FontWeight,
-    PSStrokeWidth,
-    PSScaleWidth,
-    Text,
-};
+
 class ACE_FORCE_EXPORT ProgressModel {
 public:
     static ProgressModel* GetInstance();
@@ -56,25 +35,20 @@ public:
     virtual void Create(double min, double value, double cachedValue, double max, NG::ProgressType type) = 0;
     virtual void SetValue(double value) = 0;
     virtual void SetColor(const Color& value) = 0;
-    virtual void ResetColor() = 0;
     virtual void SetBackgroundColor(const Color& value) = 0;
-    virtual void ResetBackgroundColor() = 0;
     virtual void SetStrokeWidth(const Dimension& value) = 0;
     virtual void SetScaleCount(int32_t value) = 0;
     virtual void SetScaleWidth(const Dimension& value) = 0;
     virtual void SetBorderColor(const Color& value) = 0;
-    virtual void ResetBorderColor() = 0;
     virtual void SetBorderWidth(const Dimension& value) = 0;
     virtual void SetFontSize(const Dimension& value) = 0;
     virtual void SetFontColor(const Color& value) = 0;
-    virtual void ResetFontColor() = 0;
     virtual void SetText(const std::optional<std::string>& value) = 0;
     virtual void SetItalicFontStyle(const Ace::FontStyle& value) = 0;
     virtual void SetFontWeight(const FontWeight& value) = 0;
     virtual void SetFontFamily(const std::vector<std::string>& value) = 0;
     virtual void SetSweepingEffect(bool value) = 0;
     virtual void SetGradientColor(const NG::Gradient& value) = 0;
-    virtual void ResetGradientColor() = 0;
     virtual void SetPaintShadow(bool value) = 0;
     virtual void SetProgressStatus(NG::ProgressStatus value) = 0;
     virtual void SetShowText(bool value) = 0;
@@ -83,12 +57,6 @@ public:
     virtual void SetSmoothEffect(bool value) = 0;
     virtual void SetStrokeRadius(const Dimension& value) {}
     virtual void ResetStrokeRadius() {}
-    virtual void SetBorderRadius(const Dimension& value) {}
-    virtual void ResetBorderRadius() {}
-    virtual void CreateWithResourceObj(JsProgressResourceType jsResourceType, const RefPtr<ResourceObject>& resObj) = 0;
-    virtual void SetCapsuleStyleFontColor(bool value) = 0;
-    virtual void SetCapsuleStyle(bool value) = 0;
-    virtual void SetGradientColorByUser(bool value) = 0;
 
 private:
     static std::unique_ptr<ProgressModel> instance_;

@@ -13,14 +13,16 @@
  * limitations under the License.
  */
 
-#include "base/utils/utf_helper.h"
 #include "core/components_ng/pattern/text/text_layout_property.h"
+
+#include "base/utils/string_utils.h"
+#include "core/components/common/properties/text_style.h"
+#include "core/components_ng/base/inspector_filter.h"
 
 namespace OHOS::Ace::NG {
 namespace {
 constexpr float MINFONTSCALE = 0.85f;
 constexpr float MAXFONTSCALE = 3.20f;
-constexpr Dimension DEFAULT_MARQUEE_STEP_VP = 4.0_vp;
 static const std::array<std::string, 6> TEXT_BASE_LINE_TO_STRING = {
     "textBaseline.ALPHABETIC",
     "textBaseline.IDEOGRAPHIC",
@@ -71,65 +73,16 @@ std::string TextLayoutProperty::GetCopyOptionString() const
     return copyOptionString;
 }
 
-std::string TextLayoutProperty::GetTextMarqueeOptionsString() const
-{
-    auto jsonValue = JsonUtil::Create(true);
-
-    jsonValue->Put("start", GetTextMarqueeStart().value_or(true));
-    jsonValue->Put("step",
-        StringUtils::DoubleToString(GetTextMarqueeStep().value_or(DEFAULT_MARQUEE_STEP_VP.ConvertToPx())).c_str());
-    jsonValue->Put("loop", std::to_string(GetTextMarqueeLoop().value_or(-1)).c_str());
-    jsonValue->Put(
-        "direction", GetTextMarqueeDirection().value_or(MarqueeDirection::DEFAULT) == MarqueeDirection::DEFAULT
-                         ? "MarqueeDirection.DEFAULT"
-                         : "MarqueeDirection.DEFAULT_REVERSE");
-    jsonValue->Put("delay", std::to_string(GetTextMarqueeDelay().value_or(0)).c_str());
-    jsonValue->Put("fadeout", GetTextMarqueeFadeout().value_or(false));
-    jsonValue->Put(
-        "startPolicy", GetTextMarqueeStartPolicy().value_or(MarqueeStartPolicy::DEFAULT) == MarqueeStartPolicy::DEFAULT
-                           ? "MarqueeStartPolicy.DEFAULT"
-                           : "MarqueeStartPolicy.ON_FOCUS");
-
-    return jsonValue->ToString();
-}
-
-void TextLayoutProperty::UpdateMarqueeOptionsFromJson(const std::unique_ptr<JsonValue>& json)
-{
-    UpdateTextMarqueeStart(json->GetBool("start"));
-    UpdateTextMarqueeStep(json->GetDouble("step"));
-    UpdateTextMarqueeLoop(json->GetInt("loop"));
-    UpdateTextMarqueeDirection(V2::ConvertWrapStringToMarqueeDirection(json->GetString("direction")));
-    UpdateTextMarqueeDelay(json->GetInt("delay"));
-    UpdateTextMarqueeFadeout(json->GetBool("fadeout"));
-    UpdateTextMarqueeStartPolicy(V2::ConvertWrapStringToMarqueeStartPolicy(json->GetString("startPolicy")));
-}
-
 void TextLayoutProperty::ToJsonValue(std::unique_ptr<JsonValue>& json, const InspectorFilter& filter) const
 {
     LayoutProperty::ToJsonValue(json, filter);
+    json->PutFixedAttr("content", GetContent().value_or("").c_str(), filter, FIXED_ATTR_CONTENT);
     /* no fixed attr below, just return */
     if (filter.IsFastFilter()) {
         return;
     }
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    auto themeScopeId = host->GetThemeScopeId();
-    auto context = host->GetContext();
-    CHECK_NULL_VOID(context);
-    auto theme = context->GetTheme<TextTheme>(themeScopeId);
-    auto defaultColor = theme ? theme->GetTextStyle().GetTextColor() : Color::BLACK;
-    /* distinguish SymbolGlyph font color list and Text font color in "fontColor" */
-    if (host->GetTag() == V2::SYMBOL_ETS_TAG) {
-        const std::optional<std::vector<Color>>& colorListOptional = GetSymbolColorList();
-        if (colorListOptional.has_value()) {
-            json->PutExtAttr("fontColor", StringUtils::SymbolColorListToString(colorListOptional.value())
-                .c_str(), filter);
-        } else {
-            json->PutExtAttr("fontColor", StringUtils::SymbolColorListToString(std::vector<Color>()).c_str(), filter);
-        }
-    } else {
-        json->PutExtAttr("fontColor", GetTextColor().value_or(defaultColor).ColorToString().c_str(), filter);
-    }
+    json->PutExtAttr("fontColor",
+        GetForegroundColor().value_or(GetTextColor().value_or(Color::BLACK)).ColorToString().c_str(), filter);
     json->PutExtAttr("fontStyle", GetFontStyleInJson(GetItalicFontStyle()).c_str(), filter);
     json->PutExtAttr("fontWeight", GetFontWeightInJson(GetFontWeight()).c_str(), filter);
     json->PutExtAttr("fontFamily", GetFontFamilyInJson(GetFontFamily()).c_str(), filter);
@@ -138,10 +91,9 @@ void TextLayoutProperty::ToJsonValue(std::unique_ptr<JsonValue>& json, const Ins
     json->PutExtAttr("effectStrategy", GetSymbolEffectStrategyInJson(GetSymbolEffectStrategy()).c_str(), filter);
     json->Put("symbolEffect", GetSymbolEffectOptionsInJson(
         GetSymbolEffectOptions().value_or(SymbolEffectOptions())).c_str());
-    json->PutExtAttr("symbolShadow", GetSymbolShadowInJson(GetSymbolShadow()), filter);
 
     auto jsonDecoration = JsonUtil::Create(true);
-    std::string type = V2::ConvertWrapTextDecorationToStirng(GetTextDecorationFirst());
+    std::string type = V2::ConvertWrapTextDecorationToStirng(GetTextDecoration().value_or(TextDecoration::NONE));
     jsonDecoration->Put("type", type.c_str());
     jsonDecoration->Put("color", GetTextDecorationColor().value_or(Color::BLACK).ColorToString().c_str());
     std::string style =
@@ -162,14 +114,9 @@ void TextLayoutProperty::ToJsonValue(std::unique_ptr<JsonValue>& json, const Ins
         std::to_string(static_cast<int32_t>(GetBaselineOffset().value_or(0.0_vp).Value())).c_str(), filter);
     json->PutExtAttr("textAlign",
         V2::ConvertWrapTextAlignToString(GetTextAlign().value_or(TextAlign::START)).c_str(), filter);
-    json->PutExtAttr("textVerticalAlign", V2::ConvertWrapTextVerticalAlignToString(
-        GetTextVerticalAlign().value_or(TextVerticalAlign::BASELINE)).c_str(), filter);
     json->PutExtAttr("textOverflow",
         V2::ConvertWrapTextOverflowToString(GetTextOverflow().value_or(TextOverflow::CLIP)).c_str(), filter);
     json->PutExtAttr("maxLines", std::to_string(GetMaxLines().value_or(UINT32_MAX)).c_str(), filter);
-    json->PutExtAttr("enableAutoSpacing", std::to_string(GetEnableAutoSpacing().value_or(false)).c_str(), filter);
-    json->PutExtAttr("textContentAlign", V2::ConvertWrapTextContentAlignToString(
-        GetTextContentAlign().value_or(TextContentAlign::TOP)).c_str(), filter);
 
     auto shadow = GetTextShadow().value_or(std::vector<Shadow> { Shadow() });
     // Determines if there are multiple textShadows
@@ -186,22 +133,11 @@ void TextLayoutProperty::ToJsonValue(std::unique_ptr<JsonValue>& json, const Ins
         V2::ConvertEllipsisModeToString(GetEllipsisMode().value_or(EllipsisMode::TAIL)).c_str(), filter);
     json->PutExtAttr("textSelectable", V2::ConvertWrapTextSelectableToString(
         GetTextSelectableMode().value_or(TextSelectableMode::SELECTABLE_UNFOCUSABLE)).c_str(), filter);
-    json->PutExtAttr("marqueeOptions", GetTextMarqueeOptionsString().c_str(), filter);
-    json->PutExtAttr("privacySensitive", host ? host->IsPrivacySensitive() : false, filter);
-    json->PutExtAttr("minFontScale", std::to_string(GetMinFontScale().value_or(MINFONTSCALE)).c_str(), filter);
-    json->PutExtAttr("maxFontScale", std::to_string(GetMaxFontScale().value_or(MAXFONTSCALE)).c_str(), filter);
-    json->PutExtAttr("lineSpacing", GetLineSpacing().value_or(0.0_vp).ToString().c_str(), filter);
-    json->PutExtAttr("onlyBetweenLines", GetIsOnlyBetweenLines().value_or(false) ? "true" : "false", filter);
-    json->PutExtAttr("optimizeTrailingSpace", GetOptimizeTrailingSpace().value_or(false) ? "true" : "false", filter);
-
-    if (GetTextEffectStrategyValue(TextEffectStrategy::NONE) != TextEffectStrategy::NONE) {
-        auto jsonNumericTransiton = JsonUtil::Create(true);
-        std::string direction = StringUtils::ToString(GetTextFlipDirectionValue(TextFlipDirection::DOWN));
-        std::string enableBlur = GetTextFlipEnableBlurValue(false) ? "true" : "false";
-        jsonNumericTransiton->Put("flipDirection", direction.c_str());
-        jsonNumericTransiton->Put("enableBlur", enableBlur.c_str());
-        json->PutExtAttr("numericTextTransitionOptions", jsonNumericTransiton->ToString().c_str(), filter);
-    }
+    auto host = GetHost();
+    CHECK_NULL_VOID(host);
+    json->PutExtAttr("privacySensitive", host->IsPrivacySensitive(), filter);
+    json->PutExtAttr("minFontSacle", std::to_string(GetMinFontScale().value_or(MINFONTSCALE)).c_str(), filter);
+    json->PutExtAttr("maxFontSacle", std::to_string(GetMaxFontScale().value_or(MAXFONTSCALE)).c_str(), filter);
 }
 
 void TextLayoutProperty::FromJson(const std::unique_ptr<JsonValue>& json)
@@ -211,10 +147,8 @@ void TextLayoutProperty::FromJson(const std::unique_ptr<JsonValue>& json)
     UpdateTextColor(Color::ColorFromString(json->GetString("fontColor")));
     UpdateFontWeight(V2::ConvertWrapStringToFontWeight(json->GetString("fontWeight")));
     UpdateTextAlign(V2::ConvertWrapStringToTextAlign(json->GetString("textAlign")));
-    UpdateTextVerticalAlign(V2::ConvertWrapStringToTextVerticalAlign(json->GetString("textAlign")));
     UpdateTextOverflow(V2::ConvertWrapStringToTextOverflow(json->GetString("textOverflow")));
     UpdateMaxLines(StringUtils::StringToUint(json->GetString("maxLines")));
-    UpdateMarqueeOptionsFromJson(json->GetObject("marqueeOptions"));
     LayoutProperty::FromJson(json);
 }
 } // namespace OHOS::Ace::NG

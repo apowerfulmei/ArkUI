@@ -13,30 +13,18 @@
 
 import("//foundation/arkui/ace_engine/test/unittest/ace_unittest.gni")
 
-ace_unittest("avoid_info_manager_test_ng") {
-  type = "new"
-  module_output = "manager"
-  sources = [ "avoid_info_manager_test_ng.cpp" ]
-}
-
 ace_unittest("drag_animation_helper_test_ng") {
   type = "new"
   module_output = "manager"
   sources = [ "drag_animation_helper_test_ng.cpp" ]
 }
 
-ace_unittest("drag_drop_controller_func_wrapper_test_ng") {
-  type = "new"
-  module_output = "manager"
-  sources = [ "drag_drop_controller_func_wrapper_test_ng.cpp" ]
-}
-
 ace_unittest("drag_drop_func_wrapper_test_ng") {
   type = "new"
   module_output = "manager"
   sources = [
-    "./drag_drop/drag_drop_func_wrapper_test_ng_base.cpp",
-    "./drag_drop/drag_drop_func_wrapper_test_ng_coverage.cpp",
+    "drag_drop_func_wrapper_test_ng.cpp",
+    "drag_drop_func_wrapper_test_ng_coverage.cpp",
   ]
 }
 
@@ -46,30 +34,14 @@ ace_unittest("drag_drop_manager_test_ng") {
   sources = [
     "drag_drop_manager_test_ng.cpp",
     "drag_drop_manager_test_ng_coverage.cpp",
-    "drag_drop_manager_test_ng_property_config.cpp",
-    "drag_drop_manager_test_ng_plus.cpp",
-  ]
-}
-
-ace_unittest("drag_drop_initiating_state_test_ng") {
-  type = "new"
-  module_output = "manager"
-  sources = [
-    "./drag_drop/drag_drop_initiating_handler_test_ng.cpp",
-    "./drag_drop/drag_drop_initiating_state_base_test_ng.cpp",
-    "./drag_drop/drag_drop_initiating_state_idle_test_ng.cpp",
-    "./drag_drop/drag_drop_initiating_state_lifting_test_ng.cpp",
-    "./drag_drop/drag_drop_initiating_state_machine_test_ng.cpp",
-    "./drag_drop/drag_drop_initiating_state_moving_test_ng.cpp",
-    "./drag_drop/drag_drop_initiating_state_press_test_ng.cpp",
-    "./drag_drop/drag_drop_initiating_state_ready_test_ng.cpp",
+    "drag_drop_manager_test_ng_new.cpp",
   ]
 }
 
 ace_unittest("drag_drop_report_test_ng") {
   type = "new"
   module_output = "manager"
-  sources = [ "./drag_drop/drag_drop_report_test_ng.cpp" ]
+  sources = [ "drag_drop_report_test_ng.cpp" ]
 }
 
 ace_unittest("drag_drop_proxy_test_ng") {
@@ -84,12 +56,6 @@ ace_unittest("full_screen_manager_test_ng") {
   sources = [ "full_screen_manager_test_ng.cpp" ]
 }
 
-ace_unittest("json_report_test_ng") {
-  type = "new"
-  module_output = "manager"
-  sources = [ "json_report_test_ng.cpp" ]
-}
-
 ace_unittest("post_event_manager_test_ng") {
   type = "new"
   module_output = "manager"
@@ -99,10 +65,7 @@ ace_unittest("post_event_manager_test_ng") {
 ace_unittest("select_overlay_manager_test_ng") {
   type = "new"
   module_output = "manager"
-  sources = [
-    "select_overlay_manager_test_ng.cpp",
-    "select_overlay_manager_testtwo_ng.cpp",
-  ]
+  sources = [ "select_overlay_manager_test_ng.cpp" ]
 }
 
 ace_unittest("select_overlay_proxy_test_ng") {
@@ -123,12 +86,6 @@ ace_unittest("display_sync_manager_test_ng") {
   sources = [ "display_sync_manager_test.cpp" ]
 }
 
-ace_unittest("force_split_manager_test_ng") {
-  type = "new"
-  module_output = "manager"
-  sources = [ "force_split_manager_test_ng.cpp" ]
-}
-
 ace_unittest("frame_rate_manager_test_ng") {
   type = "new"
   module_output = "manager"
@@ -147,79 +104,29 @@ ace_unittest("focus_view_test_ng") {
   sources = [ "focus_view_test_ng.cpp" ]
 }
 
-ace_unittest("scroll_adjust_manager_test_ng") {
-  type = "new"
-  module_output = "manager"
-  sources = [ "scroll_adjust_manager_test_ng.cpp" ]
-}
-
 ace_unittest("safe_area_manager_test_ng") {
   type = "new"
   module_output = "manager"
   sources = [ "safe_area_manager_test_ng.cpp" ]
 }
 
-ace_unittest("navigation_manager_test_ng") {
-  type = "new"
-  module_output = "manager"
-  sources = [
-    "$ace_root/test/unittest/core/pattern/navigation/mock_navigation_stack.cpp",
-    "navigation_manager_test_ng.cpp",
-  ]
-}
-
-ace_unittest("drag_drop_behavior_reporter_test_ng") {
-  type = "new"
-  module_output = "manager"
-  sources = [ "./drag_drop/drag_drop_behavior_reporter_test_ng.cpp" ]
-}
-
-ace_unittest("theme_manager_test_ng") {
-  type = "new"
-  module_output = "manager"
-  sources = [
-    "$ace_root/frameworks/core/components/checkable/checkable_theme.cpp",
-    "$ace_root/frameworks/core/components/dialog/dialog_theme.cpp",
-    "$ace_root/frameworks/core/components/picker/picker_theme.cpp",
-    "$ace_root/frameworks/core/components/theme/app_theme.cpp",
-    "$ace_root/frameworks/core/components/theme/theme_manager_impl.cpp",
-    "theme_manager_test_ng.cpp",
-  ]
-}
-
-ace_unittest("drag_drop_spring_loading_test_ng") {
-  type = "new"
-  module_output = "manager"
-  sources = [ "./drag_drop/drag_drop_spring_loading_test_ng.cpp" ]
-}
-
 group("core_manager_unittest") {
   testonly = true
   deps = [
-    ":avoid_info_manager_test_ng",
     ":display_sync_manager_test_ng",
     ":drag_animation_helper_test_ng",
-    ":drag_drop_behavior_reporter_test_ng",
-    ":drag_drop_controller_func_wrapper_test_ng",
     ":drag_drop_func_wrapper_test_ng",
-    ":drag_drop_initiating_state_test_ng",
     ":drag_drop_manager_test_ng",
     ":drag_drop_proxy_test_ng",
     ":drag_drop_report_test_ng",
-    ":drag_drop_spring_loading_test_ng",
     ":focus_manager_test_ng",
     ":focus_view_test_ng",
-    ":force_split_manager_test_ng",
     ":frame_rate_manager_test_ng",
     ":full_screen_manager_test_ng",
-    ":json_report_test_ng",
-    ":navigation_manager_test_ng",
     ":post_event_manager_test_ng",
     ":safe_area_manager_test_ng",
     ":select_overlay_manager_test_ng",
     ":select_overlay_proxy_test_ng",
     ":shared_overlay_manager_test_ng",
-    ":theme_manager_test_ng",
-    ":scroll_adjust_manager_test_ng",
   ]
 }

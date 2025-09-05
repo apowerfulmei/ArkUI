@@ -15,8 +15,6 @@
 
 #include "core/accessibility/native_interface_accessibility_provider.h"
 
-#include "base/log/log.h"
-
 using namespace OHOS::Ace;
 namespace {
 constexpr int32_t SEND_EVENT_FAILED = -1;
@@ -67,6 +65,7 @@ bool CheckProviderCallback(ArkUI_AccessibilityProviderCallbacks* callbacks)
 
     return result;
 }
+
 bool CheckProviderCallbackWithInstance(ArkUI_AccessibilityProviderCallbacksWithInstance* callbacks)
 {
     if (callbacks == nullptr) {
@@ -172,6 +171,7 @@ int32_t ArkUI_AccessibilityProvider::FindAccessibilityNodeInfosById(
     if (!accessibilityElementInfoList->CopyAccessibilityElementInfo(infos)) {
         ret = AccessibilityProviderOperatorErrorCode::COPY_FAILED;
     }
+
     return ret;
 }
 
@@ -195,6 +195,7 @@ int32_t ArkUI_AccessibilityProvider::FindAccessibilityNodeInfosByText(
     if (!accessibilityElementInfoList->CopyAccessibilityElementInfo(infos)) {
         ret = AccessibilityProviderOperatorErrorCode::COPY_FAILED;
     }
+
     return ret;
 }
 

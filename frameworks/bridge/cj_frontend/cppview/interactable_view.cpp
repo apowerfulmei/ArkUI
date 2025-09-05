@@ -16,6 +16,7 @@
 #include "bridge/cj_frontend/cppview/interactable_view.h"
 
 #include "core/components_ng/base/view_abstract_model.h"
+#include "core/event/ace_event_handler.h"
 
 namespace OHOS::Ace::Framework {
 

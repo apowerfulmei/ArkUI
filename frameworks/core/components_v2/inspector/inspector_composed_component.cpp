@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2021-2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -15,6 +15,10 @@
 
 #include "core/components_v2/inspector/inspector_composed_component.h"
 
+#include <unordered_map>
+
+#include "base/utils/string_utils.h"
+#include "core/common/container.h"
 #include "core/components_v2/inspector/actionsheetdialog_composed_element.h"
 #include "core/components_v2/inspector/alertdialog_composed_element.h"
 #include "core/components_v2/inspector/badge_composed_element.h"
@@ -42,6 +46,7 @@
 #include "core/components_v2/inspector/image_animator_composed_element.h"
 #include "core/components_v2/inspector/image_composed_element.h"
 #include "core/components_v2/inspector/indexer_composed_element.h"
+#include "core/components_v2/inspector/inspector_constants.h"
 #include "core/components_v2/inspector/list_composed_element.h"
 #include "core/components_v2/inspector/list_item_composed_element.h"
 #include "core/components_v2/inspector/list_item_group_composed_element.h"
@@ -92,6 +97,7 @@
 #include "core/components_v2/inspector/water_flow_composed_element.h"
 #include "core/components_v2/inspector/water_flow_item_composed_element.h"
 #include "core/components_v2/inspector/wrap_composed_element.h"
+#include "core/pipeline/base/composed_element.h"
 
 namespace OHOS::Ace::V2 {
 
@@ -244,6 +250,8 @@ const std::unordered_map<std::string, CreateElementFunc> CREATE_ELEMENT_MAP {
         [](const std::string& id) { return AceType::MakeRefPtr<V2::RelativeContainerComposedElement>(id); } },
     { MOVING_PHOTO_COMPONENT_TAG,
         [](const std::string& id) { return AceType::MakeRefPtr<V2::InspectorComposedElement>(id); } },
+    { ANALOGCLOCK_COMPONENT_TAG,
+        [](const std::string& id) { return AceType::MakeRefPtr<V2::InspectorComposedElement>(id); } },
 };
 
 } // namespace
@@ -312,6 +320,7 @@ const std::unordered_map<std::string, std::string> COMPONENT_TAG_TO_ETS_TAG_MAP 
     { GRIDCONTAINER_COMPONENT_TAG, GRIDCONTAINER_ETS_TAG },
     { GRID_COL_COMPONENT_TAG, GRID_COL_ETS_TAG },
     { GRID_ROW_COMPONENT_TAG, GRID_ROW_ETS_TAG },
+    { INDEXER_COMPONENT_TAG, INDEXER_ETS_TAG },
     { MENU_COMPONENT_TAG, MENU_ETS_TAG },
     { MENU_TAG, MENU_ETS_TAG },
     { TEXTAREA_COMPONENT_TAG, TEXTAREA_ETS_TAG },
@@ -341,16 +350,13 @@ const std::unordered_map<std::string, std::string> COMPONENT_TAG_TO_ETS_TAG_MAP 
     { PASTE_BUTTON_COMPONENT_TAG, PASTE_BUTTON_ETS_TAG },
     { SAVE_BUTTON_COMPONENT_TAG, SAVE_BUTTON_ETS_TAG },
     { PARTICLE_COMPONENT_TAG, PARTICLE_ETS_TAG },
+    { CONTAINER_SPAN_COMPONENT_TAG, CONTAINER_SPAN_ETS_TAG },
     { SYMBOL_COMPONENT_TAG, SYMBOL_ETS_TAG },
     { SYMBOL_SPAN_COMPONENT_TAG, SYMBOL_SPAN_ETS_TAG },
     { ISOLATED_COMPONENT_TAG, ISOLATED_COMPONENT_ETS_TAG },
-    { CONTAINER_SPAN_COMPONENT_TAG, CONTAINER_SPAN_ETS_TAG },
     { EMBEDDED_COMPONENT_TAG, EMBEDDED_COMPONENT_ETS_TAG },
     { MOVING_PHOTO_COMPONENT_TAG, MOVING_PHOTO_ETS_TAG },
-    { ARC_LIST_COMPONENT_TAG, ARC_LIST_ETS_TAG },
-    { ARC_LIST_ITEM_COMPONENT_TAG, ARC_LIST_ITEM_ETS_TAG },
-    { ARC_SCROLL_BAR_COMPONENT_TAG, ARC_SCROLL_BAR_ETS_TAG },
-	{ ARC_INDEXER_COMPONENT_TAG, ARC_INDEXER_ETS_TAG },
+    {ANALOGCLOCK_COMPONENT_TAG, ANALOGCLOCK_ETS_TAG},
 };
 
 thread_local int32_t InspectorComposedComponent::composedElementId_ = 1;

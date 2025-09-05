@@ -17,6 +17,8 @@
 
 #include <dlfcn.h>
 
+#include "base/log/log.h"
+#include "base/log/log_wrapper.h"
 #include "base/utils/utils.h"
 
 namespace OHOS::Ace {

@@ -15,10 +15,19 @@
 
 #include "core/components_ng/pattern/badge/badge_layout_algorithm.h"
 
+#include "base/geometry/dimension.h"
+#include "base/utils/utils.h"
+#include "core/common/ace_application_info.h"
+#include "core/common/container.h"
 #include "core/components/badge/badge_theme.h"
+#include "core/components/common/layout/constants.h"
+#include "core/components_ng/base/frame_node.h"
+#include "core/components_ng/layout/layout_algorithm.h"
 #include "core/components_ng/pattern/badge/badge_layout_property.h"
 #include "core/components_ng/pattern/text/text_layout_property.h"
+#include "core/components_ng/property/layout_constraint.h"
 #include "core/components_ng/property/measure_utils.h"
+#include "core/pipeline/pipeline_base.h"
 
 namespace OHOS::Ace::NG {
 namespace {
@@ -94,10 +103,8 @@ void BadgeLayoutAlgorithm::Measure(LayoutWrapper* layoutWrapper)
         }
     }
     
-    if (layoutProperty->GetBadgeCount().has_value()) {
-        textLayoutProperty->UpdateLayoutDirection(TextDirection::LTR);
-    }
     textLayoutProperty->UpdateFontSize(Dimension(fontSizeInit, DimensionUnit::VP));
+    textLayoutProperty->UpdateTextColorFlagByUser(true);
     auto circleSize = std::make_optional(Dimension(badgeSizeInit, DimensionUnit::VP));
     auto badgeCircleDiameter = Dimension(badgeSizeInit, DimensionUnit::VP).ConvertToPx();
 
@@ -109,8 +116,9 @@ void BadgeLayoutAlgorithm::Measure(LayoutWrapper* layoutWrapper)
     auto badgeHeight = badgeCircleDiameter;
     auto countLimit =
         layoutProperty->HasBadgeMaxCount() ? layoutProperty->GetBadgeMaxCountValue() : badgeTheme->GetMaxCount();
+    auto badgeCircleRadius = badgeCircleDiameter / 2;
 
-    std::u16string textData;
+    std::string textData;
     if (textLayoutProperty->HasContent()) {
         textData = textLayoutProperty->GetContentValue();
     }
@@ -124,6 +132,7 @@ void BadgeLayoutAlgorithm::Measure(LayoutWrapper* layoutWrapper)
                 badgeCircleDiameter = std::max(static_cast<double>(textSize.Height()), badgeCircleDiameter);
                 badgeHeight = std::max(badgeCircleDiameter, badgeHeight);
             }
+            badgeCircleRadius = badgeCircleDiameter / 2;
             badgeWidth = badgeCircleDiameter;
         } else if (textData.size() > 1 || messageCount > static_cast<size_t>(countLimit)) {
             if (hasFontSize_) {
@@ -135,6 +144,7 @@ void BadgeLayoutAlgorithm::Measure(LayoutWrapper* layoutWrapper)
             }
             badgeWidth = textSize.Width() + badgeTheme->GetNumericalBadgePadding().ConvertToPx() * 2;
             badgeWidth = badgeCircleDiameter > badgeWidth ? badgeCircleDiameter : badgeWidth;
+            badgeCircleRadius = badgeCircleDiameter / 2;
         }
     }
     if (LessOrEqual(circleSize->ConvertToPx(), 0)) {
@@ -192,15 +202,14 @@ static OffsetF GetTextDataOffset(const RefPtr<BadgeLayoutProperty> layoutPropert
     return textOffset;
 }
 
-static OffsetF GetTextOffsetByPosition(const RefPtr<BadgeLayoutProperty> layoutProperty,
-                                       const RefPtr<GeometryNode>&geometryNode)
+static void LayoutIsPositionXy(const RefPtr<BadgeLayoutProperty> layoutProperty,
+                               const RefPtr<GeometryNode>&geometryNode, OffsetF& textOffset)
 {
     auto offset = geometryNode->GetFrameOffset();
     auto badgePositionX = layoutProperty->GetBadgePositionX();
     auto badgePositionY = layoutProperty->GetBadgePositionY();
-    OffsetF textOffset =
+    textOffset =
         OffsetF(offset.GetX() + badgePositionX->ConvertToPx(), offset.GetY() + badgePositionY->ConvertToPx());
-    return textOffset;
 }
 
 void BadgeLayoutAlgorithm::Layout(LayoutWrapper* layoutWrapper)
@@ -259,7 +268,7 @@ void BadgeLayoutAlgorithm::Layout(LayoutWrapper* layoutWrapper)
     auto textGeometryNode = textWrapper->GetGeometryNode();
     CHECK_NULL_VOID(textGeometryNode);
 
-    std::u16string textData;
+    std::string textData;
     if (textLayoutProperty->HasContent()) {
         textData = textLayoutProperty->GetContentValue();
     }
@@ -300,9 +309,9 @@ void BadgeLayoutAlgorithm::Layout(LayoutWrapper* layoutWrapper)
     OffsetF textOffset;
     if (layoutProperty->GetIsPositionXy().has_value() && !layoutProperty->GetIsPositionXy().value()) {
         textOffset = GetTextDataOffset(layoutProperty, badgeCircleDiameter, badgeCircleRadius,
-            geometryNode, textData == u" ");
+            geometryNode, textData == " ");
     } else {
-        textOffset = GetTextOffsetByPosition(layoutProperty, geometryNode);
+        LayoutIsPositionXy(layoutProperty, geometryNode, textOffset);
     }
     if (Container::GreatOrEqualAPIVersion(PlatformVersion::VERSION_TEN)) {
         textGeometryNode->SetMarginFrameOffset(textOffset - geometryNode->GetFrameOffset());
@@ -340,41 +349,24 @@ void BadgeLayoutAlgorithm::PerformMeasureSelf(LayoutWrapper* layoutWrapper)
     const auto& maxSize = layoutConstraint->maxSize;
     const auto& padding = layoutWrapper->GetLayoutProperty()->CreatePaddingAndBorder();
     OptionalSizeF frameSize;
-
-    auto layoutProperty = AceType::DynamicCast<LayoutProperty>(layoutWrapper->GetLayoutProperty());
-    CHECK_NULL_VOID(layoutProperty);
-    auto layoutPolicy = layoutProperty->GetLayoutPolicyProperty();
-    frameSize.UpdateSizeWithCheck(layoutConstraint->selfIdealSize);
-    if (frameSize.IsValid()) {
-        layoutWrapper->GetGeometryNode()->SetFrameSize(frameSize.ConvertToSizeT());
-        return;
-    }
-    // use the last child size.
-    auto host = layoutWrapper->GetHostNode();
-    CHECK_NULL_VOID(host);
-    auto children = host->GetChildren();
-    auto childrenSize = children.size();
-    auto childFrame =
-        layoutWrapper->GetOrCreateChildByIndex(childrenSize - 2)->GetGeometryNode()->GetMarginFrameSize();
-    AddPaddingToSize(padding, childFrame);
-    frameSize.UpdateIllegalSizeWithCheck(childFrame);
-    frameSize.Constrain(minSize, maxSize);
-    frameSize.UpdateIllegalSizeWithCheck(SizeF { 0.0f, 0.0f });
-
-    if (layoutPolicy.has_value()) {
-        if (layoutPolicy->IsWidthMatch()) {
-            frameSize.SetWidth(layoutConstraint->parentIdealSize.Width().value());
+    do {
+        // Use idea size first if it is valid.
+        frameSize.UpdateSizeWithCheck(layoutConstraint->selfIdealSize);
+        if (frameSize.IsValid()) {
+            break;
         }
-        if (layoutPolicy->IsWidthFix()) {
-            frameSize.SetWidth(childFrame.Width());
-        }
-        if (layoutPolicy->IsHeightMatch()) {
-            frameSize.SetHeight(layoutConstraint->parentIdealSize.Height().value());
-        }
-        if (layoutPolicy->IsHeightFix()) {
-            frameSize.SetHeight(childFrame.Height());
-        }
-    }
+        // use the last child size.
+        auto host = layoutWrapper->GetHostNode();
+        CHECK_NULL_VOID(host);
+        auto children = host->GetChildren();
+        auto childrenSize = children.size();
+        auto childFrame =
+            layoutWrapper->GetOrCreateChildByIndex(childrenSize - 2)->GetGeometryNode()->GetMarginFrameSize();
+        AddPaddingToSize(padding, childFrame);
+        frameSize.UpdateIllegalSizeWithCheck(childFrame);
+        frameSize.Constrain(minSize, maxSize);
+        frameSize.UpdateIllegalSizeWithCheck(SizeF { 0.0f, 0.0f });
+    } while (false);
 
     layoutWrapper->GetGeometryNode()->SetFrameSize(frameSize.ConvertToSizeT());
 }

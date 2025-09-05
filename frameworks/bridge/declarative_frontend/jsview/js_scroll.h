@@ -51,13 +51,6 @@ public:
     static void SetScrollSnap(const JSCallbackInfo& args);
     static void SetEnablePaging(const JSCallbackInfo& args);
     static void SetInitialOffset(const JSCallbackInfo& args);
-    static void SetMaxZoomScale(const JSCallbackInfo& args);
-    static void SetMinZoomScale(const JSCallbackInfo& args);
-    static void SetZoomScale(const JSCallbackInfo& args);
-    static void SetEnableBouncesZoom(const JSCallbackInfo& args);
-    static void OnDidZoomCallback(const JSCallbackInfo& args);
-    static void OnZoomStartCallback(const JSCallbackInfo& args);
-    static void OnZoomStopCallback(const JSCallbackInfo& args);
 };
 
 } // namespace OHOS::Ace::Framework

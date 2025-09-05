@@ -14,15 +14,15 @@
  */
 #include "core/components_ng/pattern/scrollable/scrollable_utils.h"
 
-#include "core/components_ng/syntax/if_else_node.h"
+#include "core/components_ng/syntax/for_each_base_node.h"
 #include "core/components_ng/syntax/lazy_for_each_node.h"
+#include "core/pipeline_ng/pipeline_context.h"
 namespace OHOS::Ace::NG {
 namespace {
 Dimension FOCUS_SCROLL_MARGIN = 5.0_vp;
 std::vector<RefPtr<ForEachBaseNode>> GetForEachNodes(RefPtr<FrameNode>& host)
 {
     std::vector<RefPtr<ForEachBaseNode>> foreachNodes;
-    CHECK_NULL_RETURN(host, foreachNodes);
     for (const auto& child : host->GetChildren()) {
         if (!AceType::InstanceOf<ForEachBaseNode>(child)) {
             continue;
@@ -106,19 +106,6 @@ void RecycleItemsByIndex(
 }
 } // namespace
 
-void ScrollableUtils::DisableLazyForEachBuildCache(const RefPtr<UINode>& node)
-{
-    CHECK_NULL_VOID(node);
-    for (const auto& child : node->GetChildren()) {
-        auto lazyNode = AceType::DynamicCast<LazyForEachNode>(child);
-        if (lazyNode) {
-            lazyNode->EnablePreBuild(false);
-        } else if (AceType::InstanceOf<IfElseNode>(child)) {
-            DisableLazyForEachBuildCache(child);
-        }
-    }
-}
-
 float ScrollableUtils::CheckHeightExpansion(const RefPtr<LayoutProperty>& layoutProps, Axis axis)
 {
     float expandHeight = 0.0f;
@@ -126,7 +113,7 @@ float ScrollableUtils::CheckHeightExpansion(const RefPtr<LayoutProperty>& layout
     bool canExpand = axis == Axis::VERTICAL && safeAreaOpts && (safeAreaOpts->edges & SAFE_AREA_EDGE_BOTTOM) &&
                      (safeAreaOpts->type & SAFE_AREA_TYPE_SYSTEM);
     if (canExpand) {
-        auto pipeline = PipelineContext::GetCurrentContextSafelyWithCheck();
+        auto pipeline = PipelineContext::GetCurrentContext();
         CHECK_NULL_RETURN(pipeline, {});
         auto safeArea = pipeline->GetSafeArea();
         expandHeight = safeArea.bottom_.Length();
@@ -167,17 +154,18 @@ void ScrollableUtils::RecycleItemsOutOfBoundary(
 float ScrollableUtils::GetMoveOffset(
     const RefPtr<FrameNode>& parentFrameNode,
     const RefPtr<FrameNode>& curFrameNode,
-    const MoveOffsetParam& param)
+    bool isVertical,
+    float contentStartOffset,
+    float contentEndOffset)
 {
     constexpr float notMove = 0.0f;
     CHECK_NULL_RETURN(parentFrameNode, notMove);
     CHECK_NULL_RETURN(curFrameNode, notMove);
     auto parentGeometryNode = parentFrameNode->GetGeometryNode();
     CHECK_NULL_RETURN(parentGeometryNode, notMove);
-    auto parentFrameSize = parentGeometryNode->GetPaddingSize();
-    auto parentPaddingOffset = parentGeometryNode->GetPaddingOffset(true) - parentGeometryNode->GetFrameOffset();
+    auto parentFrameSize = parentGeometryNode->GetFrameSize();
     auto curFrameOffsetToWindow = curFrameNode->GetTransformRelativeOffset();
-    auto parentFrameOffsetToWindow = parentFrameNode->GetTransformRelativeOffset() + parentPaddingOffset;
+    auto parentFrameOffsetToWindow = parentFrameNode->GetTransformRelativeOffset();
     auto offsetToTarFrame = curFrameOffsetToWindow - parentFrameOffsetToWindow;
     auto curGeometry = curFrameNode->GetGeometryNode();
     CHECK_NULL_RETURN(curGeometry, notMove);
@@ -190,15 +178,14 @@ float ScrollableUtils::GetMoveOffset(
         parentFrameOffsetToWindow.ToString().c_str(), parentFrameSize.ToString().c_str(), offsetToTarFrame.GetX(),
         offsetToTarFrame.GetY());
 
-    float diffToTarFrame = param.isVertical ? offsetToTarFrame.GetY() : offsetToTarFrame.GetX();
+    float diffToTarFrame = isVertical ? offsetToTarFrame.GetY() : offsetToTarFrame.GetX();
     if (NearZero(diffToTarFrame)) {
         return notMove;
     }
-    float focusMargin = param.noNeedMargin ? 0 : static_cast<float>(FOCUS_SCROLL_MARGIN.ConvertToPx());
-    float curFrameLength = param.isVertical ? curFrameSize.Height() : curFrameSize.Width();
-    float parentFrameLength = param.isVertical ? parentFrameSize.Height() : parentFrameSize.Width();
-    float focusMarginStart = std::max(focusMargin, param.contentStartOffset);
-    float focusMarginEnd = std::max(focusMargin, param.contentEndOffset);
+    float curFrameLength = isVertical ? curFrameSize.Height() : curFrameSize.Width();
+    float parentFrameLength = isVertical ? parentFrameSize.Height() : parentFrameSize.Width();
+    float focusMarginStart = std::max(static_cast<float>(FOCUS_SCROLL_MARGIN.ConvertToPx()), contentStartOffset);
+    float focusMarginEnd = std::max(static_cast<float>(FOCUS_SCROLL_MARGIN.ConvertToPx()), contentEndOffset);
 
     bool totallyShow = LessOrEqual(curFrameLength + focusMarginStart + focusMarginEnd, (parentFrameLength));
     float startAlignOffset = -diffToTarFrame + focusMarginStart;

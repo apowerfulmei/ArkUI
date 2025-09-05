@@ -35,8 +35,8 @@ class SwitchModifier : public ContentModifier {
     DECLARE_ACE_TYPE(SwitchModifier, ContentModifier);
 
 public:
-    SwitchModifier(const SizeF& size, const OffsetF& offset, float pointOffset, bool isSelect,
-        const Color& boardColor, const Color& pointColor, float dragOffsetX);
+    SwitchModifier(const SizeF& size, const OffsetF& offset, float pointOffset, bool isSelect, const Color& boardColor,
+        float dragOffsetX);
     ~SwitchModifier() override = default;
 
     void onDraw(DrawingContext& context) override
@@ -48,13 +48,45 @@ public:
         PaintSwitch(canvas, offset_->Get(), size_->Get());
     }
 
-    void UpdateAnimatableProperty(const RefPtr<FrameNode>& host)
+    void UpdateAnimatableProperty()
     {
-        CHECK_NULL_VOID(host);
-        SetSwitchBoardColor(host);
+        switch (touchHoverType_) {
+            case TouchHoverAnimationType::HOVER:
+                SetBoardColor(LinearColor(hoverColor_), hoverDuration_, Curves::FRICTION);
+                break;
+            case TouchHoverAnimationType::PRESS_TO_HOVER:
+                SetBoardColor(LinearColor(hoverColor_), hoverToTouchDuration_, Curves::SHARP);
+                break;
+            case TouchHoverAnimationType::NONE:
+                SetBoardColor(LinearColor(hoverColor_.BlendOpacity(0)), hoverDuration_, Curves::FRICTION);
+                break;
+            case TouchHoverAnimationType::HOVER_TO_PRESS:
+                SetBoardColor(LinearColor(clickEffectColor_), hoverToTouchDuration_, Curves::SHARP);
+                break;
+            case TouchHoverAnimationType::PRESS:
+                SetBoardColor(LinearColor(clickEffectColor_), hoverDuration_, Curves::FRICTION);
+                break;
+            default:
+                break;
+        }
         if (!actualSize_.IsPositive()) {
             return;
         }
+        AnimationOption colorOption = AnimationOption();
+        colorOption.SetDuration(colorAnimationDuration_);
+        colorOption.SetCurve(Curves::FAST_OUT_SLOW_IN);
+        AnimationUtils::Animate(colorOption, [&]() {
+            animatableBoardColor_->Set(isSelect_->Get() ? LinearColor(userActiveColor_) : LinearColor(inactiveColor_));
+        });
+        UpdatePointOffsetAnimation();
+    }
+
+    void UpdatePointOffsetAnimation()
+    {
+        AnimationOption pointOption = AnimationOption();
+        pointOption.SetDuration(pointAnimationDuration_);
+        pointOption.SetCurve(Curves::FAST_OUT_SLOW_IN);
+        float newPointOffset = 0.0f;
         bool isRtl = direction_ == TextDirection::AUTO ? AceApplicationInfo::GetInstance().IsRightToLeft()
                                                        : direction_ == TextDirection::RTL;
         auto offsetNotRtl = GreatOrEqual(actualSize_.Width(), actualSize_.Height())
@@ -63,21 +95,7 @@ public:
         auto offsetIsRtl = GreatOrEqual(actualSize_.Width(), actualSize_.Height())
                                ? (isSelect_->Get() ? 0.0f : actualSize_.Width() - actualSize_.Height())
                                : (isSelect_->Get() ? actualTrackRadius_ : actualSize_.Width() - actualTrackRadius_);
-        if (!isCancelAnimation_ || !isFocusOrBlur_) {
-            AnimationOption colorOption = AnimationOption();
-            colorOption.SetDuration(colorAnimationDuration_);
-            colorOption.SetCurve(Curves::FAST_OUT_SLOW_IN);
-            AnimationUtils::Animate(colorOption, [&]() {
-                animatableBoardColor_->Set(isSelect_->Get() ?
-                    LinearColor(userActiveColor_) : LinearColor(inactiveColor_));
-            }, nullptr, nullptr, host->GetContextRefPtr());
-        }
-        AnimationOption pointOption = AnimationOption();
-        pointOption.SetDuration(pointAnimationDuration_);
-        pointOption.SetCurve(Curves::FAST_OUT_SLOW_IN);
-        float newPointOffset = 0.0f;
         if (!isDragEvent_) {
-            FixPointOffset();
             if (isRtl) {
                 newPointOffset = offsetIsRtl;
             } else {
@@ -92,63 +110,23 @@ public:
                     actualSize_.Width() - actualTrackRadius_);
             }
         }
-        AnimationUtils::Animate(
-            pointOption, [&]() { pointOffset_->Set(newPointOffset); }, nullptr, nullptr, host->GetContextRefPtr());
+        AnimationUtils::Animate(pointOption, [&]() { pointOffset_->Set(newPointOffset); });
     }
 
-    void SetSwitchBoardColor(const RefPtr<FrameNode>& host)
+    void SetBoardColor(LinearColor color, int32_t duratuion, const RefPtr<CubicCurve>& curve)
     {
-        switch (touchHoverType_) {
-            case TouchHoverAnimationType::HOVER:
-                SetBoardColor(LinearColor(hoverColor_), hoverDuration_, Curves::FRICTION, host);
-                break;
-            case TouchHoverAnimationType::PRESS_TO_HOVER:
-                SetBoardColor(LinearColor(hoverColor_), hoverToTouchDuration_, Curves::SHARP, host);
-                break;
-            case TouchHoverAnimationType::NONE:
-                SetBoardColor(LinearColor(hoverColor_.BlendOpacity(0)), hoverDuration_, Curves::FRICTION, host);
-                break;
-            case TouchHoverAnimationType::HOVER_TO_PRESS:
-                SetBoardColor(LinearColor(clickEffectColor_), hoverToTouchDuration_, Curves::SHARP, host);
-                break;
-            case TouchHoverAnimationType::PRESS:
-                SetBoardColor(LinearColor(clickEffectColor_), hoverDuration_, Curves::FRICTION, host);
-                break;
-            case TouchHoverAnimationType::FOCUS:
-                SetBoardColor(LinearColor(focusColor_), hoverDuration_, Curves::FRICTION, host);
-                break;
-            default:
-                break;
-        }
-    }
-
-    void SetBoardColor(
-        LinearColor color, int32_t duration, const RefPtr<CubicCurve>& curve, const RefPtr<FrameNode>& host)
-    {
-        CHECK_NULL_VOID(host);
         if (animateTouchHoverColor_) {
             AnimationOption option = AnimationOption();
-            option.SetDuration(duration);
+            option.SetDuration(duratuion);
             option.SetCurve(curve);
-            AnimationUtils::Animate(
-                option, [&]() { animateTouchHoverColor_->Set(color); }, nullptr, nullptr, host->GetContextRefPtr());
+            AnimationUtils::Animate(option, [&]() { animateTouchHoverColor_->Set(color); });
         }
     }
 
-    void SetBoardColor(Color color)
-    {
-        if (animatableBoardColor_) {
-            animatableBoardColor_->Set(LinearColor(color));
-        }
-    }
-
-    void InitializeParam(int32_t themeScopeId);
+    void InitializeParam();
     void PaintSwitch(RSCanvas& canvas, const OffsetF& contentOffset, const SizeF& contentSize);
     float GetSwitchWidth(const SizeF& contentSize) const;
     float CalcActualWidth(float width, float height, double actualGap, double defaultWidthGap);
-    void DrawFocusBoard(RSCanvas& canvas, const OffsetF& offset);
-    void DrawRectCircle(RSCanvas& canvas, const OffsetF& contentOffset,
-        const SizeF& contentSize, const double& actualGap);
 
     void SetUserActiveColor(const Color& color)
     {
@@ -158,8 +136,14 @@ public:
 
     void SetPointColor(const Color& color)
     {
-        hasPointColor_ = true;
         animatePointColor_->Set(LinearColor(color));
+    }
+
+    void SetEnabled(bool enabled)
+    {
+        if (enabled_) {
+            enabled_->Set(enabled);
+        }
     }
 
     void SetIsHover(bool isHover)
@@ -174,25 +158,6 @@ public:
         if (isSelect_) {
             isSelect_->Set(isSelect);
         }
-    }
-
-    void SetIsFocused(bool isFocused)
-    {
-        if (isFocused_) {
-            isFocused_->Set(isFocused);
-        }
-    }
-
-    void SetIsOn(bool isOn)
-    {
-        if (isOn_) {
-            isOn_->Set(isOn);
-        }
-    }
-
-    void SetFocusPointColor(Color color)
-    {
-        pointColor_ = color;
     }
 
     void SetHotZoneOffset(OffsetF& hotZoneOffset)
@@ -221,9 +186,6 @@ public:
 
     void SetSize(SizeF& size)
     {
-        if (actualSize_ != size) {
-            isSizeChange_ = true;
-        }
         actualSize_ = size;
         if (size_) {
             size_->Set(size);
@@ -297,30 +259,17 @@ public:
         actualTrackRadius_ = borderRadius;
     }
 
-    void SetIsFocusOrBlur(bool isFocusOrBlur)
-    {
-        isFocusOrBlur_ = isFocusOrBlur;
-    }
-
 private:
-    void FixPointOffset();
     float actualWidth_ = 0.0f;
     float actualHeight_ = 0.0f;
     float pointRadius_ = 0.0f;
     const Dimension radiusGap_ = 2.0_vp;
     Color clickEffectColor_;
     Color hoverColor_;
-    Color focusColor_;
     Color activeColor_;
     Color inactiveColor_;
     Color userActiveColor_;
-    Color pointColorUnchecked_;
-    Color pointColor_;
-    Color focusBoardColor_;
     Dimension hoverRadius_ = 8.0_vp;
-    Dimension focusRadius_ = 8.0_vp;
-    bool isUseDiffPointColor_ = false;
-    bool isCancelAnimation_ = false;
     float hoverDuration_ = 0.0f;
     float hoverToTouchDuration_ = 0.0f;
     float touchDuration_ = 0.0f;
@@ -329,9 +278,6 @@ private:
     bool isDragEvent_ = false;
     bool isFirstCreated_ = true;
     bool showHoverEffect_ = true;
-    bool isFocusOrBlur_ = false;
-    bool isSizeChange_ = false;
-    bool isSelectChange_ = false;
     float actualTrackRadius_ = 0.0f;
 
     OffsetF hotZoneOffset_;
@@ -347,11 +293,9 @@ private:
     RefPtr<PropertyFloat> dragOffsetX_;
     RefPtr<PropertyBool> isSelect_;
     RefPtr<PropertyBool> isHover_;
-    RefPtr<PropertyBool> isFocused_;
-    RefPtr<PropertyBool> isOn_;
-    bool hasPointColor_ = false;
     RefPtr<AnimatablePropertyOffsetF> offset_;
     RefPtr<AnimatablePropertySizeF> size_;
+    RefPtr<PropertyBool> enabled_;
     RefPtr<PropertyBool> useContentModifier_;
     RefPtr<PropertyFloat> animatePointRadius_;
     RefPtr<PropertyFloat> animateTrackRadius_;

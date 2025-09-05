@@ -15,8 +15,13 @@
 
 #include "core/components_ng/pattern/security_component/security_component_probe.h"
 
+#include "base/log/ace_scoring_log.h"
+#include "base/memory/ace_type.h"
 #include "core/components_ng/pattern/security_component/security_component_handler.h"
 #include "core/components_ng/pattern/security_component/security_component_log.h"
+#include "core/components_v2/inspector/inspector_constants.h"
+#include "core/pipeline/base/element_register.h"
+#include "core/pipeline_ng/pipeline_context.h"
 
 namespace OHOS::Ace::NG {
 namespace {
@@ -67,8 +72,7 @@ int32_t SecurityComponentProbe::GetComponentInfo(int32_t nodeId, std::string& co
                 return;
             }
             Security::SecurityComponent::SecCompType scType;
-            std::string message;
-            if (!SecurityComponentHandler::InitButtonInfo(compInfoStr, node, scType, message)) {
+            if (!SecurityComponentHandler::InitButtonInfo(compInfoStr, node, scType)) {
                 SC_LOG_WARN("node init info failed.");
                 taskRes = -1;
                 return;

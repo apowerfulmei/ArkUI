@@ -16,7 +16,6 @@
 #ifndef FOUNDATION_ACE_FRAMEWORKS_CORE_EVENT_TIME_EVENT_PROXY_H
 #define FOUNDATION_ACE_FRAMEWORKS_CORE_EVENT_TIME_EVENT_PROXY_H
 
-#include <memory>
 #include <mutex>
 #include <set>
 
@@ -38,7 +37,7 @@ public:
      * @brief Get the singleton instance of TimeEventProxy.
      * @return The singleton instance of TimeEventProxy.
      */
-    static TimeEventProxy* GetInstance();
+    ACE_FORCE_EXPORT static TimeEventProxy* GetInstance();
 
     /**
      * @brief Register a time event listener.

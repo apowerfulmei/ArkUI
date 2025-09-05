@@ -28,7 +28,7 @@
 
 namespace OHOS::Ace::NG {
 
-using RenderFunction = std::function<RefPtr<UINode>(int64_t, bool&)>;
+using RenderFunction = std::function<RefPtr<UINode>()>;
 
 // CustomNodeLayoutAlgorithm acts as the underlying @component view.
 class ACE_EXPORT CustomNodeLayoutAlgorithm : public BoxLayoutAlgorithm {

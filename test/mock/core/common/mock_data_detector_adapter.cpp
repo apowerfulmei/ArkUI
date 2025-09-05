@@ -20,7 +20,7 @@ void DataDetectorAdapter::SetTextDetectTypes(const std::string& types)
 {
     textDetectTypes_ = types;
 }
-bool DataDetectorAdapter::ParseOriText(const std::unique_ptr<JsonValue>& entityJson, std::u16string& text)
+bool DataDetectorAdapter::ParseOriText(const std::unique_ptr<JsonValue>& entityJson, std::string& text)
 {
     return false;
 }
@@ -29,21 +29,10 @@ void DataDetectorAdapter::ParseAIJson(
     const std::unique_ptr<JsonValue>& jsonValue, TextDataDetectType type, int32_t startPos) {}
 void DataDetectorAdapter::StartAITask() {}
 
-bool DataDetectorAdapter::ShowAIEntityMenu(
-    const AISpan& aiSpan, const NG::RectF& aiRect, const RefPtr<NG::FrameNode>& targetNode, AIMenuInfo info)
+bool DataDetectorAdapter::ShowAIEntityMenu(const AISpan& aiSpan, const NG::RectF& aiRect,
+    const RefPtr<NG::FrameNode>& targetNode, bool isShowCopy, bool isShowSelectText)
 {
     return true;
-}
-
-bool DataDetectorAdapter::GetAiEntityMenuOptions(const AISpan& aiSpan, const RefPtr<NG::FrameNode>& targetNode,
-    AIMenuInfo info, std::vector<std::pair<std::string, std::function<void()>>>& menuOptions)
-{
-    return false;
-}
-RefPtr<NG::FrameNode> DataDetectorAdapter::CreateAIEntityMenu(
-    const AISpan& aiSpan, const RefPtr<NG::FrameNode>& targetNode, AIMenuInfo info)
-{
-    return nullptr;
 }
 
 void DataDetectorAdapter::ResponseBestMatchItem(const AISpan& aiSpan) {}

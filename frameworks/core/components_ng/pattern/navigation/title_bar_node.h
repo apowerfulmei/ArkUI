@@ -23,7 +23,7 @@
 namespace OHOS::Ace::NG {
 
 class ACE_EXPORT TitleBarNode : public FrameNode {
-    DECLARE_ACE_TYPE(TitleBarNode, FrameNode);
+    DECLARE_ACE_TYPE(TitleBarNode, FrameNode)
 public:
     TitleBarNode(const std::string& tag, int32_t nodeId);
     TitleBarNode(const std::string& tag, int32_t nodeId, const RefPtr<Pattern>& pattern)
@@ -45,16 +45,6 @@ public:
     const RefPtr<UINode>& GetBackButton() const
     {
         return backButton_;
-    }
-
-    void SetCustomBackButton(const RefPtr<UINode>& button)
-    {
-        customBackButton_ = button;
-    }
-
-    const RefPtr<UINode>& GetCustomBackButton() const
-    {
-        return customBackButton_;
     }
 
     void SetTitle(const RefPtr<UINode>& title)
@@ -102,37 +92,12 @@ public:
 
     void MarkIsInitialTitle(bool isInitialTitle);
 
-    void SetUseContainerModalTitleHeight(bool use)
-    {
-        useContainerModalTitleHeight_ = use;
-    }
-    bool UseContainerModalTitleHeight() const
-    {
-        return useContainerModalTitleHeight_;
-    }
-    void SetNeedAvoidContainerModal(bool need)
-    {
-        needAvoidContainerModal_ = need;
-    }
-    bool NeedAvoidContainerModal() const
-    {
-        return needAvoidContainerModal_;
-    }
-    void ToJsonValue(std::unique_ptr<JsonValue>& json, const InspectorFilter& filter) const override;
-
-    void OnAttachToMainTree(bool recursive) override;
-    void OnDetachFromMainTree(bool recursive, PipelineContext* context) override;
-
 private:
     RefPtr<UINode> backButton_;
-    RefPtr<UINode> customBackButton_;
     RefPtr<UINode> title_;
     RefPtr<UINode> subtitle_;
     RefPtr<UINode> menu_;
     std::string innerChildId_;
-    bool needAvoidContainerModal_ = false;
-    bool useContainerModalTitleHeight_ = false;
-    int32_t menuBarChangeListenerId_ = -1;
 };
 
 } // namespace OHOS::Ace::NG

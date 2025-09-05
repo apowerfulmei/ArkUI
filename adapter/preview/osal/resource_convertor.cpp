@@ -82,7 +82,6 @@ std::shared_ptr<Global::Resource::ResConfig> ConvertConfigToGlobal(const Resourc
     newResCfg->SetDeviceType(ConvertDeviceTypeToGlobal(config.GetDeviceType()));
     newResCfg->SetDirection(ConvertDirectionToGlobal(config.GetOrientation()));
     newResCfg->SetScreenDensity(config.GetDensity());
-    newResCfg->SetColorMode(ConvertColorModeToGlobal(config.GetColorMode()));
     return newResCfg;
 }
 

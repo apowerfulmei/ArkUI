@@ -27,21 +27,29 @@
 #endif
 
 namespace OHOS::Ace {
+
+std::unique_ptr<VideoModel> VideoModel::instance_ = nullptr;
+std::mutex VideoModel::mutex_;
+
 VideoModel* VideoModel::GetInstance()
 {
+    if (!instance_) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (!instance_) {
 #ifdef NG_BUILD
-    static NG::VideoModelNG instance;
-    return &instance;
+            instance_.reset(new NG::VideoModelNG());
 #else
-    if (Container::IsCurrentUseNewPipeline()) {
-        static NG::VideoModelNG instance;
-        return &instance;
-    } else {
-        static Framework::VideoModelImpl instance;
-        return &instance;
-    }
+            if (Container::IsCurrentUseNewPipeline()) {
+                instance_.reset(new NG::VideoModelNG());
+            } else {
+                instance_.reset(new Framework::VideoModelImpl());
+            }
 #endif
+        }
+    }
+    return instance_.get();
 }
+
 } // namespace OHOS::Ace
 
 namespace OHOS::Ace::Framework {
@@ -53,7 +61,6 @@ void JSVideo::Create(const JSCallbackInfo& info)
     }
     JSRef<JSObject> videoObj = JSRef<JSObject>::Cast(info[0]);
     JSRef<JSVal> srcValue = videoObj->GetProperty("src");
-    JSRef<JSVal> posterOptionsValue = videoObj->GetProperty("posterOptions");
     JSRef<JSVal> previewUriValue = videoObj->GetProperty("previewUri");
     JSRef<JSVal> currentProgressRateValue = videoObj->GetProperty("currentProgressRate");
 
@@ -75,10 +82,6 @@ void JSVideo::Create(const JSCallbackInfo& info)
     int32_t resId = 0;
     ParseJsMediaWithBundleName(srcValue, src, bundleNameSrc, moduleNameSrc, resId);
     VideoModel::GetInstance()->SetSrc(src, bundleNameSrc, moduleNameSrc);
-
-    bool showFirstFrame = false;
-    ParseJsPosterOptions(posterOptionsValue, showFirstFrame);
-    VideoModel::GetInstance()->SetShowFirstFrame(showFirstFrame);
 
     // Parse the rate, if it is invalid, set it as 1.0.
     double currentProgressRate = 1.0;
@@ -123,16 +126,6 @@ void JSVideo::ParseImageAIOptions(const JSRef<JSVal>& jsValue)
     ScopeRAII scope(reinterpret_cast<napi_env>(nativeEngine));
     napi_value optionsValue = nativeEngine->ValueToNapiValue(valueWrapper);
     VideoModel::GetInstance()->SetImageAIOptions(optionsValue);
-}
-
-bool JSVideo::ParseJsPosterOptions(const JSRef<JSVal>& jsValue, bool& result)
-{
-    if (!jsValue->IsObject()) {
-        return false;
-    }
-    JSRef<JSObject> jsObj = JSRef<JSObject>::Cast(jsValue);
-    JSRef<JSVal> showFirstFrame = jsObj->GetProperty("showFirstFrame");
-    return ParseJsBool(showFirstFrame, result);
 }
 
 void JSVideo::JsMuted(const JSCallbackInfo& info)
@@ -381,7 +374,7 @@ void JSVideo::JsOnError(const JSCallbackInfo& info)
         JAVASCRIPT_EXECUTION_SCOPE_WITH_CHECK(execCtx);
         ACE_SCORING_EVENT("Video.onError");
         PipelineContext::SetCallBackNode(node);
-        std::vector<std::string> keys = { "code", "name", "message" };
+        std::vector<std::string> keys = { "error" };
         func->Execute(keys, param);
     };
     VideoModel::GetInstance()->SetOnError(std::move(onError));

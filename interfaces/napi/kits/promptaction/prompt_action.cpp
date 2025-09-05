@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2023-2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -14,32 +14,29 @@
  */
 
 #include "prompt_action.h"
-#include "prompt_controller.h"
+
+#include <cstddef>
+#include <memory>
+#include <string>
 
 #include "interfaces/napi/kits/utils/napi_utils.h"
+#include "base/i18n/localization.h"
+#include "base/log/log_wrapper.h"
 #include "base/subwindow/subwindow_manager.h"
+#include "base/utils/system_properties.h"
 #include "bridge/common/utils/engine_helper.h"
 #include "core/common/ace_engine.h"
+#include "core/components/common/properties/shadow.h"
 #include "core/components/theme/shadow_theme.h"
-#include "core/components/toast/toast_theme.h"
-#include "core/components/button/button_theme.h"
-#include "core/components_ng/pattern/overlay/level_order.h"
+#include "core/components_ng/pattern/toast/toast_layout_property.h"
 
 namespace OHOS::Ace::Napi {
 namespace {
 const int32_t SHOW_DIALOG_BUTTON_NUM_MAX = -1;
 const int32_t SHOW_ACTION_MENU_BUTTON_NUM_MAX = 6;
 const int32_t CUSTOM_DIALOG_PARAM_NUM = 2;
-const int32_t BG_BLUR_STYLE_MAX_INDEX = 13;
+const int32_t BG_BLUR_STYLE_MAX_INDEX = 12;
 const int32_t PROMPTACTION_VALID_PRIMARY_BUTTON_NUM = 1;
-const int32_t OPEN_CUSTOM_DIALOG_WITH_CONTROLLER_PARAM_TOTAL = 3;
-const int32_t OPEN_CUSTOM_DIALOG_WITH_CONTROLLER_PARAM_MAND_COUNT = 2;
-const int32_t OPEN_CUSTOM_DIALOG_WITH_CONTROLLER_PARAM_INDEX_CONTROLLER = 1;
-const int32_t OPEN_CUSTOM_DIALOG_WITH_CONTROLLER_PARAM_INDEX_OPTIONS = 2;
-const int32_t PRESENT_CUSTOM_DIALOG_PARAM_TOTAL = 3;
-const int32_t PRESENT_CUSTOM_DIALOG_PARAM_MAND_COUNT = 1;
-const int32_t PRESENT_CUSTOM_DIALOG_PARAM_INDEX_CONTROLLER = 1;
-const int32_t PRESENT_CUSTOM_DIALOG_PARAM_INDEX_OPTIONS = 2;
 constexpr char DEFAULT_FONT_COLOR_STRING_VALUE[] = "#ff007dff";
 constexpr float DEFAULT_AVOID_DISTANCE = 16.0f;
 const std::vector<DialogAlignment> DIALOG_ALIGNMENT = { DialogAlignment::TOP, DialogAlignment::CENTER,
@@ -67,14 +64,14 @@ bool ContainerIsService()
     return containerId >= MIN_PA_SERVICE_ID || containerId < 0;
 }
 
-bool ContainerIsSceneBoard()
+bool ContainerIsScenceBoard()
 {
     auto container = Container::CurrentSafely();
     if (!container) {
         container = Container::GetActive();
     }
 
-    return container && container->IsSceneBoardWindow();
+    return container && container->IsScenceBoardWindow();
 }
 #endif
 } // namespace
@@ -241,12 +238,12 @@ void GetToastBackgroundBlurStyle(napi_env env,
 
 bool GetShadowFromTheme(ShadowStyle shadowStyle, Shadow& shadow)
 {
+    auto colorMode = SystemProperties::GetColorMode();
     if (shadowStyle == ShadowStyle::None) {
         return true;
     }
     auto container = Container::CurrentSafelyWithCheck();
     CHECK_NULL_RETURN(container, false);
-    auto colorMode = container->GetColorMode();
     auto pipelineContext = container->GetPipelineContext();
     CHECK_NULL_RETURN(pipelineContext, false);
     auto shadowTheme = pipelineContext->GetTheme<ShadowTheme>();
@@ -327,28 +324,17 @@ void GetToastObjectShadow(napi_env env, napi_value shadowNApi, Shadow& shadowPro
     shadowProps.SetIsFilled(isFilled);
 }
 
-ShadowStyle GetToastDefaultShadowStyle()
-{
-    auto shadowStyle = ShadowStyle::OuterDefaultMD;
-    auto container = Container::Current();
-    CHECK_NULL_RETURN(container, shadowStyle);
-    auto pipelineContext = container->GetPipelineContext();
-    CHECK_NULL_RETURN(pipelineContext, shadowStyle);
-    auto toastTheme = pipelineContext->GetTheme<ToastTheme>();
-    CHECK_NULL_RETURN(toastTheme, shadowStyle);
-    return toastTheme->GetToastShadowStyle();
-}
-
 void GetToastShadow(napi_env env, napi_value shadowNApi, std::optional<Shadow>& shadow, bool& isTypeStyleShadow)
 {
     Shadow shadowProps;
     napi_valuetype valueType = napi_undefined;
     napi_typeof(env, shadowNApi, &valueType);
+    GetShadowFromTheme(ShadowStyle::OuterDefaultMD, shadowProps);
     if (valueType == napi_number) {
         int32_t num = 0;
         napi_get_value_int32(env, shadowNApi, &num);
         auto style = static_cast<ShadowStyle>(num);
-        CHECK_EQUAL_VOID(GetShadowFromTheme(style, shadowProps), false);
+        GetShadowFromTheme(style, shadowProps);
     } else if (valueType == napi_object) {
         napi_value offsetXApi = nullptr;
         napi_value offsetYApi = nullptr;
@@ -382,9 +368,6 @@ void GetToastShadow(napi_env env, napi_value shadowNApi, std::optional<Shadow>& 
         }
         GetToastObjectShadow(env, shadowNApi, shadowProps);
         isTypeStyleShadow = false;
-    } else {
-        auto shadowStyle = GetToastDefaultShadowStyle();
-        CHECK_EQUAL_VOID(GetShadowFromTheme(shadowStyle, shadowProps), false);
     }
     shadow = shadowProps;
 }
@@ -474,10 +457,10 @@ bool GetToastParams(napi_env env, napi_value argv, NG::ToastInfo& toastInfo)
     return true;
 }
 
-bool ShowToast(napi_env env, NG::ToastInfo& toastInfo, std::function<void(int32_t)>& toastCallback)
+bool ShowToast(napi_env env, NG::ToastInfo& toastInfo)
 {
 #ifdef OHOS_STANDARD_SYSTEM
-    if ((SystemProperties::GetExtSurfaceEnabled() || !ContainerIsService()) && !ContainerIsSceneBoard() &&
+    if ((SystemProperties::GetExtSurfaceEnabled() || !ContainerIsService()) && !ContainerIsScenceBoard() &&
         toastInfo.showMode == NG::ToastShowMode::DEFAULT) {
         auto delegate = EngineHelper::GetCurrentDelegateSafely();
         if (!delegate) {
@@ -485,10 +468,10 @@ bool ShowToast(napi_env env, NG::ToastInfo& toastInfo, std::function<void(int32_
             return false;
         }
         TAG_LOGD(AceLogTag::ACE_DIALOG, "before delegate show toast");
-        delegate->ShowToast(toastInfo, std::move(toastCallback));
+        delegate->ShowToast(toastInfo);
     } else if (SubwindowManager::GetInstance() != nullptr) {
         TAG_LOGD(AceLogTag::ACE_DIALOG, "before subwindow manager show toast");
-        SubwindowManager::GetInstance()->ShowToast(toastInfo, std::move(toastCallback));
+        SubwindowManager::GetInstance()->ShowToast(toastInfo);
     }
 #else
     auto delegate = EngineHelper::GetCurrentDelegateSafely();
@@ -498,10 +481,10 @@ bool ShowToast(napi_env env, NG::ToastInfo& toastInfo, std::function<void(int32_
     }
     if (toastInfo.showMode == NG::ToastShowMode::DEFAULT) {
         TAG_LOGD(AceLogTag::ACE_DIALOG, "before delegate show toast");
-        delegate->ShowToast(toastInfo, std::move(toastCallback));
+        delegate->ShowToast(toastInfo);
     } else if (SubwindowManager::GetInstance() != nullptr) {
         TAG_LOGD(AceLogTag::ACE_DIALOG, "before subwindow manager show toast");
-        SubwindowManager::GetInstance()->ShowToast(toastInfo, std::move(toastCallback));
+        SubwindowManager::GetInstance()->ShowToast(toastInfo);
     }
 #endif
     return true;
@@ -520,115 +503,11 @@ napi_value JSPromptShowToast(napi_env env, napi_callback_info info)
         NapiThrow(env, "The number of parameters must be equal to 1.", ERROR_CODE_PARAM_INVALID);
         return nullptr;
     }
-    int32_t alignment = -1;
-    auto pipelineContext = PipelineBase::GetCurrentContext();
-    if (pipelineContext) {
-        auto toastTheme = pipelineContext->GetTheme<ToastTheme>();
-        if (toastTheme) {
-            alignment = toastTheme->GetAlign();
-        }
-    }
-    auto toastInfo = NG::ToastInfo { .duration = -1, .showMode = NG::ToastShowMode::DEFAULT, .alignment = alignment };
-
-    if (!GetToastParams(env, argv, toastInfo)) {
-        return nullptr;
-    }
-    std::function<void(int32_t)> toastCallback = nullptr;
-    ShowToast(env, toastInfo, toastCallback);
-    return nullptr;
-}
-
-napi_value JSPromptOpenToast(napi_env env, napi_callback_info info)
-{
-    TAG_LOGD(AceLogTag::ACE_DIALOG, "open toast enter");
-    size_t requireArgc = 1;
-    size_t argc = 1;
-    napi_value argv = nullptr;
-    napi_value thisVar = nullptr;
-    void* data = nullptr;
-    napi_get_cb_info(env, info, &argc, &argv, &thisVar, &data);
-    if (argc != requireArgc) {
-        NapiThrow(env, "The number of parameters must be equal to 1.", ERROR_CODE_PARAM_INVALID);
-        return nullptr;
-    }
     auto toastInfo = NG::ToastInfo { .duration = -1, .showMode = NG::ToastShowMode::DEFAULT, .alignment = -1 };
     if (!GetToastParams(env, argv, toastInfo)) {
         return nullptr;
     }
-    napi_deferred deferred;
-    napi_value result;
-    napi_create_promise(env, &deferred, &result);
-    std::function<void(int32_t)> toastCallback = nullptr;
-    toastCallback = [env, deferred](int32_t toastId) mutable {
-        napi_value napiToastId = nullptr;
-        napi_create_int32(env, toastId, &napiToastId);
-        napi_resolve_deferred(env, deferred, napiToastId);
-    };
-    if (ShowToast(env, toastInfo, toastCallback)) {
-        return result;
-    }
-    return nullptr;
-}
-
-void CloseToast(napi_env env, int32_t toastId, NG::ToastShowMode showMode)
-{
-    std::function<void(int32_t)> toastCloseCallback = nullptr;
-    toastCloseCallback = [env](int32_t errorCode) mutable {
-        if (errorCode != ERROR_CODE_NO_ERROR) {
-            NapiThrow(env, "", errorCode);
-        }
-    };
-#ifdef OHOS_STANDARD_SYSTEM
-    if ((SystemProperties::GetExtSurfaceEnabled() || !ContainerIsService()) && !ContainerIsSceneBoard() &&
-        showMode == NG::ToastShowMode::DEFAULT) {
-        auto delegate = EngineHelper::GetCurrentDelegateSafely();
-        if (delegate) {
-            delegate->CloseToast(toastId, std::move(toastCloseCallback));
-        } else {
-            NapiThrow(env, "Can not get delegate.", ERROR_CODE_INTERNAL_ERROR);
-        }
-    } else if (SubwindowManager::GetInstance() != nullptr) {
-        SubwindowManager::GetInstance()->CloseToast(toastId, showMode, std::move(toastCloseCallback));
-    }
-#else
-    auto delegate = EngineHelper::GetCurrentDelegateSafely();
-    if (!delegate) {
-        NapiThrow(env, "UI execution context not found.", ERROR_CODE_INTERNAL_ERROR);
-    }
-    if (showMode == NG::ToastShowMode::DEFAULT) {
-        delegate->CloseToast(toastId, std::move(toastCloseCallback));
-    } else if (SubwindowManager::GetInstance() != nullptr) {
-        SubwindowManager::GetInstance()->CloseToast(toastId, showMode, std::move(toastCloseCallback));
-    }
-#endif
-}
-
-napi_value JSPromptCloseToast(napi_env env, napi_callback_info info)
-{
-    TAG_LOGD(AceLogTag::ACE_DIALOG, "closeToast enter");
-    size_t argc = 1;
-    napi_value args[1];
-    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
-    if (argc != 1) {
-        NapiThrow(env, "The number of parameters is incorrect.", ERROR_CODE_PARAM_INVALID);
-        return nullptr;
-    }
-    int32_t id = -1;
-    napi_get_value_int32(env, args[0], &id);
-    if (id < 0 || id > INT32_MAX) {
-        NapiThrow(env, "The toastId is invalid.", ERROR_CODE_PARAM_INVALID);
-        return nullptr;
-    }
-    int32_t showModeVal = static_cast<int32_t>(static_cast<uint32_t>(id) & 0b111);
-    int32_t toastId =
-        static_cast<int32_t>(static_cast<uint32_t>(id) >>
-                             3); // 3 : Move 3 bits to the right to get toastId, and the last 3 bits are the showMode
-    if (toastId < 0 || showModeVal < 0 || showModeVal > static_cast<int32_t>(NG::ToastShowMode::SYSTEM_TOP_MOST)) {
-        NapiThrow(env, "", ERROR_CODE_TOAST_NOT_FOUND);
-        return nullptr;
-    }
-    auto showMode = static_cast<NG::ToastShowMode>(showModeVal);
-    CloseToast(env, toastId, showMode);
+    ShowToast(env, toastInfo);
     return nullptr;
 }
 
@@ -647,8 +526,6 @@ struct PromptAsyncContext {
     napi_value onWillDismiss = nullptr;
     napi_value backgroundColorApi = nullptr;
     napi_value backgroundBlurStyleApi = nullptr;
-    napi_value blurStyleOptionApi = nullptr;
-    napi_value effectOptionApi = nullptr;
     napi_value enableHoverMode = nullptr;
     napi_value hoverModeAreaApi = nullptr;
     napi_value borderWidthApi = nullptr;
@@ -665,8 +542,6 @@ struct PromptAsyncContext {
     napi_value onWillAppear = nullptr;
     napi_value onWillDisappear = nullptr;
     napi_value transitionApi = nullptr;
-    napi_value dialogTransitionApi = nullptr;
-    napi_value maskTransitionApi = nullptr;
     napi_ref callbackSuccess = nullptr;
     napi_ref callbackCancel = nullptr;
     napi_ref callbackComplete = nullptr;
@@ -674,6 +549,7 @@ struct PromptAsyncContext {
     std::string messageString;
     std::vector<ButtonInfo> buttons;
     bool autoCancelBool = true;
+    bool enableHoverModeBool = false;
     bool showInSubWindowBool = false;
     bool isModalBool = true;
     std::set<std::string> callbacks;
@@ -695,11 +571,9 @@ struct PromptAsyncContext {
     napi_ref onWillDisappearRef = nullptr;
     napi_value keyboardAvoidModeApi = nullptr;
     napi_value keyboardAvoidDistanceApi = nullptr;
-    napi_value levelOrderApi = nullptr;
     napi_value dialogLevelModeApi = nullptr;
     napi_value dialogLevelUniqueId = nullptr;
     napi_value dialogImmersiveModeApi = nullptr;
-    napi_value focusableApi = nullptr;
 };
 
 void DeleteContextAndThrowError(
@@ -810,15 +684,7 @@ bool ParseButtonsPara(napi_env env, std::shared_ptr<PromptAsyncContext>& context
         return false;
     }
     if (isShowActionMenu) {
-        std::string buttonCancelText = "Cancel";
-        auto pipeline = PipelineBase::GetCurrentContextSafelyWithCheck();
-        if (pipeline) {
-            auto theme = pipeline->GetTheme<ButtonTheme>();
-            if (theme) {
-                buttonCancelText = theme->GetCancelText();
-            }
-        }
-        ButtonInfo buttonInfo = { .text = buttonCancelText,
+        ButtonInfo buttonInfo = { .text = Localization::GetInstance()->GetEntryLetters("common.cancel"),
             .textColor = "", .isPrimary = primaryButtonNum == 0 ? true : false};
         context->buttons.emplace_back(buttonInfo);
     }
@@ -856,10 +722,6 @@ void GetNapiDialogProps(napi_env env, const std::shared_ptr<PromptAsyncContext>&
     }
 
     // parse maskRect
-    DimensionRect rect;
-    rect.SetOffset(DimensionOffset(CalcDimension(0, DimensionUnit::VP), CalcDimension(0, DimensionUnit::VP)));
-    rect.SetSize(DimensionSize(CalcDimension(1, DimensionUnit::PERCENT), CalcDimension(1, DimensionUnit::PERCENT)));
-    maskRect = rect;
     napi_typeof(env, asyncContext->maskRectApi, &valueType);
     if (valueType == napi_object) {
         napi_value xApi = nullptr;
@@ -884,8 +746,7 @@ void GetNapiDialogProps(napi_env env, const std::shared_ptr<PromptAsyncContext>&
 }
 
 void GetNapiBlurStyleAndHoverModeProps(napi_env env, const std::shared_ptr<PromptAsyncContext>& asyncContext,
-    std::optional<int32_t>& backgroundBlurStyle, std::optional<HoverModeAreaType>& hoverModeArea,
-    std::optional<bool>& enableHoverMode)
+    std::optional<int32_t>& backgroundBlurStyle, std::optional<HoverModeAreaType>& hoverModeArea)
 {
     TAG_LOGD(AceLogTag::ACE_DIALOG, "get napi dialog backgroundBlurStyle and hoverModeArea props enter");
     napi_valuetype blurStyleValueType = napi_undefined;
@@ -899,14 +760,6 @@ void GetNapiBlurStyleAndHoverModeProps(napi_env env, const std::shared_ptr<Promp
         }
     }
 
-    napi_valuetype enableHoverModeValueType = napi_undefined;
-    napi_typeof(env, asyncContext->enableHoverMode, &enableHoverModeValueType);
-    if (enableHoverModeValueType == napi_boolean) {
-        bool enableHoverModeBool = false;
-        napi_get_value_bool(env, asyncContext->enableHoverMode, &enableHoverModeBool);
-        enableHoverMode = enableHoverModeBool;
-    }
-
     napi_valuetype hoverModeValueType = napi_undefined;
     napi_typeof(env, asyncContext->hoverModeAreaApi, &hoverModeValueType);
     if (hoverModeValueType == napi_number) {
@@ -915,42 +768,6 @@ void GetNapiBlurStyleAndHoverModeProps(napi_env env, const std::shared_ptr<Promp
         if (num >= 0 && num < static_cast<int32_t>(HOVER_MODE_AREA_TYPE.size())) {
             hoverModeArea = HOVER_MODE_AREA_TYPE[num];
         }
-    }
-}
-
-void GetBackgroundBlurStyleOption(napi_env env, const std::shared_ptr<PromptAsyncContext>& asyncContext,
-    std::optional<BlurStyleOption>& blurStyleOption)
-{
-    napi_valuetype valueType = napi_undefined;
-    napi_typeof(env, asyncContext->blurStyleOptionApi, &valueType);
-    if (valueType == napi_object) {
-        BlurStyleOption styleOption;
-        auto delegate = EngineHelper::GetCurrentDelegateSafely();
-        if (delegate) {
-            delegate->GetBackgroundBlurStyleOption(asyncContext->blurStyleOptionApi, styleOption);
-        }
-        if (!blurStyleOption.has_value()) {
-            blurStyleOption.emplace();
-        }
-        blurStyleOption.value() = styleOption;
-    }
-}
-
-void GetBackgroundEffect(
-    napi_env env, const std::shared_ptr<PromptAsyncContext>& asyncContext, std::optional<EffectOption>& effectOption)
-{
-    napi_valuetype valueType = napi_undefined;
-    napi_typeof(env, asyncContext->effectOptionApi, &valueType);
-    if (valueType == napi_object) {
-        EffectOption styleOption;
-        auto delegate = EngineHelper::GetCurrentDelegateSafely();
-        if (delegate) {
-            delegate->GetBackgroundEffect(asyncContext->effectOptionApi, styleOption);
-        }
-        if (!effectOption.has_value()) {
-            effectOption.emplace();
-        }
-        effectOption.value() = styleOption;
     }
 }
 
@@ -1221,7 +1038,6 @@ std::optional<Shadow> GetShadowProps(napi_env env, const std::shared_ptr<PromptA
         bool isRtl = AceApplicationInfo::GetInstance().IsRightToLeft();
         if (ParseResourceParam(env, offsetXApi, recv)) {
             auto resourceWrapper = CreateResourceWrapper(recv);
-            CHECK_NULL_RETURN(resourceWrapper, std::nullopt);
             auto offsetX = resourceWrapper->GetDimension(recv.resId);
             double xValue = isRtl ? offsetX.Value() * (-1) : offsetX.Value();
             shadow.SetOffsetX(xValue);
@@ -1234,7 +1050,6 @@ std::optional<Shadow> GetShadowProps(napi_env env, const std::shared_ptr<PromptA
         }
         if (ParseResourceParam(env, offsetYApi, recv)) {
             auto resourceWrapper = CreateResourceWrapper(recv);
-            CHECK_NULL_RETURN(resourceWrapper, std::nullopt);
             auto offsetY = resourceWrapper->GetDimension(recv.resId);
             shadow.SetOffsetY(offsetY.Value());
         } else {
@@ -1358,6 +1173,10 @@ void GetNapiNamedBoolProperties(napi_env env, std::shared_ptr<PromptAsyncContext
     if (valueType == napi_boolean) {
         napi_get_value_bool(env, asyncContext->autoCancel, &asyncContext->autoCancelBool);
     }
+    napi_typeof(env, asyncContext->enableHoverMode, &valueType);
+    if (valueType == napi_boolean) {
+        napi_get_value_bool(env, asyncContext->enableHoverMode, &asyncContext->enableHoverModeBool);
+    }
     napi_typeof(env, asyncContext->showInSubWindow, &valueType);
     if (valueType == napi_boolean) {
         napi_get_value_bool(env, asyncContext->showInSubWindow, &asyncContext->showInSubWindowBool);
@@ -1377,8 +1196,6 @@ void GetNapiNamedProperties(napi_env env, napi_value* argv, size_t index,
         napi_get_named_property(env, argv[index], "builder", &asyncContext->builder);
         napi_get_named_property(env, argv[index], "backgroundColor", &asyncContext->backgroundColorApi);
         napi_get_named_property(env, argv[index], "backgroundBlurStyle", &asyncContext->backgroundBlurStyleApi);
-        napi_get_named_property(env, argv[index], "backgroundBlurStyleOptions", &asyncContext->blurStyleOptionApi);
-        napi_get_named_property(env, argv[index], "backgroundEffect", &asyncContext->effectOptionApi);
         napi_get_named_property(env, argv[index], "hoverModeArea", &asyncContext->hoverModeAreaApi);
         napi_get_named_property(env, argv[index], "cornerRadius", &asyncContext->borderRadiusApi);
         napi_get_named_property(env, argv[index], "borderWidth", &asyncContext->borderWidthApi);
@@ -1402,8 +1219,6 @@ void GetNapiNamedProperties(napi_env env, napi_value* argv, size_t index,
     napi_get_named_property(env, argv[index], "autoCancel", &asyncContext->autoCancel);
     napi_get_named_property(env, argv[index], "maskColor", &asyncContext->maskColorApi);
     napi_get_named_property(env, argv[index], "transition", &asyncContext->transitionApi);
-    napi_get_named_property(env, argv[index], "dialogTransition", &asyncContext->dialogTransitionApi);
-    napi_get_named_property(env, argv[index], "maskTransition", &asyncContext->maskTransitionApi);
     napi_get_named_property(env, argv[index], "onWillDismiss", &asyncContext->onWillDismiss);
     napi_get_named_property(env, argv[index], "onDidAppear", &asyncContext->onDidAppear);
     napi_get_named_property(env, argv[index], "onDidDisappear", &asyncContext->onDidDisappear);
@@ -1411,11 +1226,9 @@ void GetNapiNamedProperties(napi_env env, napi_value* argv, size_t index,
     napi_get_named_property(env, argv[index], "onWillDisappear", &asyncContext->onWillDisappear);
     napi_get_named_property(env, argv[index], "keyboardAvoidMode", &asyncContext->keyboardAvoidModeApi);
     napi_get_named_property(env, argv[index], "keyboardAvoidDistance", &asyncContext->keyboardAvoidDistanceApi);
-    napi_get_named_property(env, argv[index], "levelOrder", &asyncContext->levelOrderApi);
     napi_get_named_property(env, argv[index], "levelMode", &asyncContext->dialogLevelModeApi);
     napi_get_named_property(env, argv[index], "levelUniqueId", &asyncContext->dialogLevelUniqueId);
     napi_get_named_property(env, argv[index], "immersiveMode", &asyncContext->dialogImmersiveModeApi);
-    napi_get_named_property(env, argv[index], "focusable", &asyncContext->focusableApi);
 
     GetNapiNamedBoolProperties(env, asyncContext);
 }
@@ -1509,78 +1322,6 @@ void UpdatePromptAlignment(DialogAlignment& alignment)
     }
 }
 
-std::optional<double> GetLevelOrderParam(napi_env env, const std::shared_ptr<PromptAsyncContext>& asyncContext)
-{
-    if (asyncContext->showInSubWindowBool) {
-        return std::nullopt;
-    }
-
-    napi_value levelOrderApi = asyncContext->levelOrderApi;
-    NG::LevelOrder* levelOrder = nullptr;
-    if (levelOrderApi) {
-        napi_unwrap(env, levelOrderApi, reinterpret_cast<void**>(&levelOrder));
-    }
-
-    if (levelOrder) {
-        return std::make_optional(levelOrder->GetOrder());
-    }
-    return std::nullopt;
-}
-
-PromptDialogAttr GetDialogLifeCycleCallback(napi_env env, const std::shared_ptr<PromptAsyncContext>& asyncContext)
-{
-    auto onDidAppear = [env = asyncContext->env, onDidAppearRef = asyncContext->onDidAppearRef]() {
-        if (onDidAppearRef) {
-            napi_handle_scope scope = nullptr;
-            napi_open_handle_scope(env, &scope);
-            napi_value onDidAppearFunc = nullptr;
-            napi_get_reference_value(env, onDidAppearRef, &onDidAppearFunc);
-            napi_call_function(env, nullptr, onDidAppearFunc, 0, nullptr, nullptr);
-            napi_delete_reference(env, onDidAppearRef);
-            napi_close_handle_scope(env, scope);
-        }
-    };
-    auto onDidDisappear = [env = asyncContext->env, onDidDisappearRef = asyncContext->onDidDisappearRef]() {
-        if (onDidDisappearRef) {
-            napi_handle_scope scope = nullptr;
-            napi_open_handle_scope(env, &scope);
-            napi_value onDidDisappearFunc = nullptr;
-            napi_get_reference_value(env, onDidDisappearRef, &onDidDisappearFunc);
-            napi_call_function(env, nullptr, onDidDisappearFunc, 0, nullptr, nullptr);
-            napi_delete_reference(env, onDidDisappearRef);
-            napi_close_handle_scope(env, scope);
-        }
-    };
-    auto onWillAppear = [env = asyncContext->env, onWillAppearRef = asyncContext->onWillAppearRef]() {
-        if (onWillAppearRef) {
-            napi_handle_scope scope = nullptr;
-            napi_open_handle_scope(env, &scope);
-            napi_value onWillAppearFunc = nullptr;
-            napi_get_reference_value(env, onWillAppearRef, &onWillAppearFunc);
-            napi_call_function(env, nullptr, onWillAppearFunc, 0, nullptr, nullptr);
-            napi_delete_reference(env, onWillAppearRef);
-            napi_close_handle_scope(env, scope);
-        }
-    };
-    auto onWillDisappear = [env = asyncContext->env, onWillDisappearRef = asyncContext->onWillDisappearRef]() {
-        if (onWillDisappearRef) {
-            napi_handle_scope scope = nullptr;
-            napi_open_handle_scope(env, &scope);
-            napi_value onWillDisappearFunc = nullptr;
-            napi_get_reference_value(env, onWillDisappearRef, &onWillDisappearFunc);
-            napi_call_function(env, nullptr, onWillDisappearFunc, 0, nullptr, nullptr);
-            napi_delete_reference(env, onWillDisappearRef);
-            napi_close_handle_scope(env, scope);
-        }
-    };
-    PromptDialogAttr promptDialogAttr = {
-        .onDidAppear =  std::move(onDidAppear),
-        .onDidDisappear = std::move(onDidDisappear),
-        .onWillAppear = std::move(onWillAppear),
-        .onWillDisappear = std::move(onWillDisappear) };
-    return promptDialogAttr;
-}
-
 napi_value JSPromptShowDialog(napi_env env, napi_callback_info info)
 {
     TAG_LOGD(AceLogTag::ACE_DIALOG, "js prompt show dialog enter");
@@ -1614,14 +1355,10 @@ napi_value JSPromptShowDialog(napi_env env, napi_callback_info info)
     std::optional<Shadow> shadowProps;
     std::optional<Color> backgroundColor;
     std::optional<int32_t> backgroundBlurStyle;
-    std::optional<BlurStyleOption> blurStyleOption;
-    std::optional<EffectOption> effectOption;
     std::optional<HoverModeAreaType> hoverModeArea;
-    std::optional<bool> enableHoverMode;
     LevelMode dialogLevelMode = LevelMode::OVERLAY;
     int32_t dialogLevelUniqueId = -1;
     ImmersiveMode dialogImmersiveMode = ImmersiveMode::DEFAULT;
-    PromptDialogAttr lifeCycleAttr = {};
     for (size_t i = 0; i < argc; i++) {
         napi_valuetype valueType = napi_undefined;
         napi_typeof(env, argv[i], &valueType);
@@ -1642,28 +1379,23 @@ napi_value JSPromptShowDialog(napi_env env, napi_callback_info info)
             napi_get_named_property(env, argv[0], "shadow", &asyncContext->shadowApi);
             napi_get_named_property(env, argv[0], "backgroundColor", &asyncContext->backgroundColorApi);
             napi_get_named_property(env, argv[0], "backgroundBlurStyle", &asyncContext->backgroundBlurStyleApi);
-            napi_get_named_property(env, argv[0], "backgroundBlurStyleOptions", &asyncContext->blurStyleOptionApi);
-            napi_get_named_property(env, argv[0], "backgroundEffect", &asyncContext->effectOptionApi);
             napi_get_named_property(env, argv[0], "enableHoverMode", &asyncContext->enableHoverMode);
             napi_get_named_property(env, argv[0], "hoverModeArea", &asyncContext->hoverModeAreaApi);
-            napi_get_named_property(env, argv[0], "levelOrder", &asyncContext->levelOrderApi);
             napi_get_named_property(env, argv[0], "levelMode", &asyncContext->dialogLevelModeApi);
             napi_get_named_property(env, argv[0], "levelUniqueId", &asyncContext->dialogLevelUniqueId);
             napi_get_named_property(env, argv[0], "immersiveMode", &asyncContext->dialogImmersiveModeApi);
-            napi_get_named_property(env, argv[0], "onDidAppear", &asyncContext->onDidAppear);
-            napi_get_named_property(env, argv[0], "onDidDisappear", &asyncContext->onDidDisappear);
-            napi_get_named_property(env, argv[0], "onWillAppear", &asyncContext->onWillAppear);
-            napi_get_named_property(env, argv[0], "onWillDisappear", &asyncContext->onWillDisappear);
             GetNapiString(env, asyncContext->titleNApi, asyncContext->titleString, valueType);
             GetNapiString(env, asyncContext->messageNApi, asyncContext->messageString, valueType);
             GetNapiDialogProps(env, asyncContext, alignment, offset, maskRect);
             backgroundColor = GetColorProps(env, asyncContext->backgroundColorApi);
             shadowProps = GetShadowProps(env, asyncContext);
-            GetNapiBlurStyleAndHoverModeProps(env, asyncContext, backgroundBlurStyle, hoverModeArea, enableHoverMode);
-            GetBackgroundBlurStyleOption(env, asyncContext, blurStyleOption);
-            GetBackgroundEffect(env, asyncContext, effectOption);
+            GetNapiBlurStyleAndHoverModeProps(env, asyncContext, backgroundBlurStyle, hoverModeArea);
             if (!ParseButtonsPara(env, asyncContext, SHOW_DIALOG_BUTTON_NUM_MAX, false)) {
                 return nullptr;
+            }
+            napi_typeof(env, asyncContext->enableHoverMode, &valueType);
+            if (valueType == napi_boolean) {
+                napi_get_value_bool(env, asyncContext->enableHoverMode, &asyncContext->enableHoverModeBool);
             }
             napi_typeof(env, asyncContext->autoCancel, &valueType);
             if (valueType == napi_boolean) {
@@ -1678,23 +1410,6 @@ napi_value JSPromptShowDialog(napi_env env, napi_callback_info info)
                 napi_get_value_bool(env, asyncContext->isModal, &asyncContext->isModalBool);
             }
             GetDialogLevelModeAndUniqueId(env, asyncContext, dialogLevelMode, dialogLevelUniqueId, dialogImmersiveMode);
-            napi_typeof(env, asyncContext->onDidAppear, &valueType);
-            if (valueType == napi_function) {
-                napi_create_reference(env, asyncContext->onDidAppear, 1, &asyncContext->onDidAppearRef);
-            }
-            napi_typeof(env, asyncContext->onDidDisappear, &valueType);
-            if (valueType == napi_function) {
-                napi_create_reference(env, asyncContext->onDidDisappear, 1, &asyncContext->onDidDisappearRef);
-            }
-            napi_typeof(env, asyncContext->onWillAppear, &valueType);
-            if (valueType == napi_function) {
-                napi_create_reference(env, asyncContext->onWillAppear, 1, &asyncContext->onWillAppearRef);
-            }
-            napi_typeof(env, asyncContext->onWillDisappear, &valueType);
-            if (valueType == napi_function) {
-                napi_create_reference(env, asyncContext->onWillDisappear, 1, &asyncContext->onWillDisappearRef);
-            }
-            lifeCycleAttr = GetDialogLifeCycleCallback(env, asyncContext);
         } else if (valueType == napi_function) {
             napi_create_reference(env, argv[i], 1, &asyncContext->callbackRef);
         } else {
@@ -1819,22 +1534,15 @@ napi_value JSPromptShowDialog(napi_env env, napi_callback_info info)
         .autoCancel = asyncContext->autoCancelBool,
         .showInSubWindow = asyncContext->showInSubWindowBool,
         .isModal = asyncContext->isModalBool,
-        .enableHoverMode = enableHoverMode,
+        .enableHoverMode = asyncContext->enableHoverModeBool,
         .alignment = alignment,
         .offset = offset,
         .maskRect = maskRect,
         .backgroundColor = backgroundColor,
         .backgroundBlurStyle = backgroundBlurStyle,
-        .blurStyleOption = blurStyleOption,
-        .effectOption = effectOption,
         .shadow = shadowProps,
         .hoverModeArea = hoverModeArea,
         .onLanguageChange = onLanguageChange,
-        .levelOrder = GetLevelOrderParam(asyncContext->env, asyncContext),
-        .onDidAppear = lifeCycleAttr.onDidAppear,
-        .onDidDisappear = lifeCycleAttr.onDidDisappear,
-        .onWillAppear = lifeCycleAttr.onWillAppear,
-        .onWillDisappear = lifeCycleAttr.onWillDisappear,
         .dialogLevelMode = dialogLevelMode,
         .dialogLevelUniqueId = dialogLevelUniqueId,
         .dialogImmersiveMode = dialogImmersiveMode,
@@ -1900,85 +1608,6 @@ napi_value JSPromptShowDialog(napi_env env, napi_callback_info info)
     return result;
 }
 
-void CreateActionMenuLifeCycleCallback(napi_env env, const std::shared_ptr<PromptAsyncContext>& asyncContext)
-{
-    napi_valuetype valueType = napi_undefined;
-    napi_typeof(env, asyncContext->onDidAppear, &valueType);
-    if (valueType == napi_function) {
-        napi_create_reference(env, asyncContext->onDidAppear, 1, &asyncContext->onDidAppearRef);
-    }
-    napi_typeof(env, asyncContext->onDidDisappear, &valueType);
-    if (valueType == napi_function) {
-        napi_create_reference(env, asyncContext->onDidDisappear, 1, &asyncContext->onDidDisappearRef);
-    }
-    napi_typeof(env, asyncContext->onWillAppear, &valueType);
-    if (valueType == napi_function) {
-        napi_create_reference(env, asyncContext->onWillAppear, 1, &asyncContext->onWillAppearRef);
-    }
-    napi_typeof(env, asyncContext->onWillDisappear, &valueType);
-    if (valueType == napi_function) {
-        napi_create_reference(env, asyncContext->onWillDisappear, 1, &asyncContext->onWillDisappearRef);
-    }
-}
-
-void GetActionMenuAppearLifeCycleCallback(napi_env env,
-    const std::shared_ptr<PromptAsyncContext>& asyncContext, PromptDialogAttr& promptDialogAttr)
-{
-    auto onDidAppear = [env = asyncContext->env, onDidAppearRef = asyncContext->onDidAppearRef]() {
-        if (onDidAppearRef) {
-            napi_handle_scope scope = nullptr;
-            napi_open_handle_scope(env, &scope);
-            napi_value onDidAppearFunc = nullptr;
-            napi_get_reference_value(env, onDidAppearRef, &onDidAppearFunc);
-            napi_call_function(env, nullptr, onDidAppearFunc, 0, nullptr, nullptr);
-            napi_delete_reference(env, onDidAppearRef);
-            napi_close_handle_scope(env, scope);
-        }
-    };
-    auto onWillAppear = [env = asyncContext->env, onWillAppearRef = asyncContext->onWillAppearRef]() {
-        if (onWillAppearRef) {
-            napi_handle_scope scope = nullptr;
-            napi_open_handle_scope(env, &scope);
-            napi_value onWillAppearFunc = nullptr;
-            napi_get_reference_value(env, onWillAppearRef, &onWillAppearFunc);
-            napi_call_function(env, nullptr, onWillAppearFunc, 0, nullptr, nullptr);
-            napi_delete_reference(env, onWillAppearRef);
-            napi_close_handle_scope(env, scope);
-        }
-    };
-    promptDialogAttr.onDidAppear = std::move(onDidAppear);
-    promptDialogAttr.onWillAppear = std::move(onWillAppear);
-}
-
-void GetActionMenuDisappearLifeCycleCallback(napi_env env,
-    const std::shared_ptr<PromptAsyncContext>& asyncContext, PromptDialogAttr& promptDialogAttr)
-{
-    auto onDidDisappear = [env = asyncContext->env, onDidDisappearRef = asyncContext->onDidDisappearRef]() {
-        if (onDidDisappearRef) {
-            napi_handle_scope scope = nullptr;
-            napi_open_handle_scope(env, &scope);
-            napi_value onDidDisappearFunc = nullptr;
-            napi_get_reference_value(env, onDidDisappearRef, &onDidDisappearFunc);
-            napi_call_function(env, nullptr, onDidDisappearFunc, 0, nullptr, nullptr);
-            napi_delete_reference(env, onDidDisappearRef);
-            napi_close_handle_scope(env, scope);
-        }
-    };
-    auto onWillDisappear = [env = asyncContext->env, onWillDisappearRef = asyncContext->onWillDisappearRef]() {
-        if (onWillDisappearRef) {
-            napi_handle_scope scope = nullptr;
-            napi_open_handle_scope(env, &scope);
-            napi_value onWillDisappearFunc = nullptr;
-            napi_get_reference_value(env, onWillDisappearRef, &onWillDisappearFunc);
-            napi_call_function(env, nullptr, onWillDisappearFunc, 0, nullptr, nullptr);
-            napi_delete_reference(env, onWillDisappearRef);
-            napi_close_handle_scope(env, scope);
-        }
-    };
-    promptDialogAttr.onDidDisappear = std::move(onDidDisappear);
-    promptDialogAttr.onWillDisappear = std::move(onWillDisappear);
-}
-
 napi_value JSPromptShowActionMenu(napi_env env, napi_callback_info info)
 {
     TAG_LOGD(AceLogTag::ACE_DIALOG, "js prompt show action menu enter");
@@ -2008,8 +1637,6 @@ napi_value JSPromptShowActionMenu(napi_env env, napi_callback_info info)
     LevelMode dialogLevelMode = LevelMode::OVERLAY;
     int32_t dialogLevelUniqueId = -1;
     ImmersiveMode dialogImmersiveMode = ImmersiveMode::DEFAULT;
-
-    PromptDialogAttr lifeCycleAttr;
     for (size_t i = 0; i < argc; i++) {
         napi_valuetype valueType = napi_undefined;
         napi_typeof(env, argv[i], &valueType);
@@ -2018,14 +1645,6 @@ napi_value JSPromptShowActionMenu(napi_env env, napi_callback_info info)
                 DeleteContextAndThrowError(env, asyncContext, "The type of parameters is incorrect.");
                 return nullptr;
             }
-
-            napi_get_named_property(env, argv[0], "onDidAppear", &asyncContext->onDidAppear);
-            napi_get_named_property(env, argv[0], "onDidDisappear", &asyncContext->onDidDisappear);
-            napi_get_named_property(env, argv[0], "onWillAppear", &asyncContext->onWillAppear);
-            napi_get_named_property(env, argv[0], "onWillDisappear", &asyncContext->onWillDisappear);
-            CreateActionMenuLifeCycleCallback(env, asyncContext);
-            GetActionMenuAppearLifeCycleCallback(env, asyncContext, lifeCycleAttr);
-            GetActionMenuDisappearLifeCycleCallback(env, asyncContext, lifeCycleAttr);
             napi_get_named_property(env, argv[0], "title", &asyncContext->titleNApi);
             napi_get_named_property(env, argv[0], "showInSubWindow", &asyncContext->showInSubWindow);
             napi_get_named_property(env, argv[0], "isModal", &asyncContext->isModal);
@@ -2137,19 +1756,10 @@ napi_value JSPromptShowActionMenu(napi_env env, napi_callback_info info)
         asyncContext = nullptr;
     };
 
-    DimensionRect rect;
-    rect.SetOffset(DimensionOffset(CalcDimension(0, DimensionUnit::VP), CalcDimension(0, DimensionUnit::VP)));
-    rect.SetSize(DimensionSize(CalcDimension(1, DimensionUnit::PERCENT), CalcDimension(1, DimensionUnit::PERCENT)));
-
     PromptDialogAttr promptDialogAttr = {
         .title = asyncContext->titleString,
         .showInSubWindow = asyncContext->showInSubWindowBool,
         .isModal = asyncContext->isModalBool,
-        .maskRect = rect,
-        .onDidAppear = std::move(lifeCycleAttr.onDidAppear),
-        .onDidDisappear = std::move(lifeCycleAttr.onDidDisappear),
-        .onWillAppear = std::move(lifeCycleAttr.onWillAppear),
-        .onWillDisappear = std::move(lifeCycleAttr.onWillDisappear),
         .dialogLevelMode = dialogLevelMode,
         .dialogLevelUniqueId = dialogLevelUniqueId,
         .dialogImmersiveMode = dialogImmersiveMode,
@@ -2213,41 +1823,18 @@ napi_value JSPromptShowActionMenu(napi_env env, napi_callback_info info)
 
 napi_value JSRemoveCustomDialog(napi_env env, napi_callback_info info)
 {
-    size_t argc = 1;
-    napi_value argv = nullptr;
-    napi_value thisVar = nullptr;
-    void* data = nullptr;
-    napi_get_cb_info(env, info, &argc, &argv, &thisVar, &data);
-    int32_t instanceId = Container::CurrentIdSafely();
-    if (data) {
-        int32_t* instanceIdPtr = reinterpret_cast<int32_t*>(data);
-        instanceId = *instanceIdPtr;
-    }
     auto delegate = EngineHelper::GetCurrentDelegateSafely();
     if (delegate) {
-        delegate->RemoveCustomDialog(instanceId);
+        delegate->RemoveCustomDialog();
     }
     return nullptr;
 }
 
-void ParseDialogReleaseCallback(std::shared_ptr<PromptAsyncContext>& asyncContext,
-    std::function<void()>& onWillDismissRelease)
-{
-    onWillDismissRelease = [env = asyncContext->env, onWillDismissRef = asyncContext->onWillDismissRef]() {
-        if (onWillDismissRef) {
-            napi_handle_scope scope = nullptr;
-            napi_open_handle_scope(env, &scope);
-            napi_delete_reference(env, onWillDismissRef);
-            napi_close_handle_scope(env, scope);
-        }
-    };
-}
-
 void ParseDialogCallback(std::shared_ptr<PromptAsyncContext>& asyncContext,
-    std::function<void(const int32_t& info, const int32_t& instanceId)>& onWillDismiss)
+    std::function<void(const int32_t& info)>& onWillDismiss)
 {
     onWillDismiss = [env = asyncContext->env, onWillDismissRef = asyncContext->onWillDismissRef]
-        (const int32_t& info, const int32_t& instanceId) {
+        (const int32_t& info) {
         if (onWillDismissRef) {
             napi_handle_scope scope = nullptr;
             napi_open_handle_scope(env, &scope);
@@ -2257,23 +1844,9 @@ void ParseDialogCallback(std::shared_ptr<PromptAsyncContext>& asyncContext,
             napi_value paramObj = nullptr;
             napi_create_object(env, &paramObj);
 
-            int32_t* id = new int32_t(instanceId);
-            napi_create_function(env, "dismiss", strlen("dismiss"), JSRemoveCustomDialog, id, &funcValue);
+            napi_create_function(env, "dismiss", strlen("dismiss"), JSRemoveCustomDialog, nullptr, &funcValue);
             napi_set_named_property(env, paramObj, "dismiss", funcValue);
-            napi_status status = napi_add_finalizer(
-                env, funcValue, id,
-                [](napi_env env, void* data, void* hint) {
-                    int32_t* id = reinterpret_cast<int32_t*>(data);
-                    CHECK_NULL_VOID(id);
-                    delete id;
-                },
-                nullptr, nullptr);
-            if (status != napi_ok) {
-                delete id;
-                LOGE("Fail to add the finalizer method for instanceId.");
-                napi_close_handle_scope(env, scope);
-                return;
-            }
+
             napi_create_int32(env, info, &value);
             napi_set_named_property(env, paramObj, "reason", value);
             napi_get_reference_value(env, onWillDismissRef, &onWillDismissFunc);
@@ -2281,6 +1854,60 @@ void ParseDialogCallback(std::shared_ptr<PromptAsyncContext>& asyncContext,
             napi_close_handle_scope(env, scope);
         }
     };
+}
+
+PromptDialogAttr GetDialogLifeCycleCallback(napi_env env, const std::shared_ptr<PromptAsyncContext>& asyncContext)
+{
+    auto onDidAppear = [env = asyncContext->env, onDidAppearRef = asyncContext->onDidAppearRef]() {
+        if (onDidAppearRef) {
+            napi_handle_scope scope = nullptr;
+            napi_open_handle_scope(env, &scope);
+            napi_value onDidAppearFunc = nullptr;
+            napi_get_reference_value(env, onDidAppearRef, &onDidAppearFunc);
+            napi_call_function(env, nullptr, onDidAppearFunc, 0, nullptr, nullptr);
+            napi_delete_reference(env, onDidAppearRef);
+            napi_close_handle_scope(env, scope);
+        }
+    };
+    auto onDidDisappear = [env = asyncContext->env, onDidDisappearRef = asyncContext->onDidDisappearRef]() {
+        if (onDidDisappearRef) {
+            napi_handle_scope scope = nullptr;
+            napi_open_handle_scope(env, &scope);
+            napi_value onDidDisappearFunc = nullptr;
+            napi_get_reference_value(env, onDidDisappearRef, &onDidDisappearFunc);
+            napi_call_function(env, nullptr, onDidDisappearFunc, 0, nullptr, nullptr);
+            napi_delete_reference(env, onDidDisappearRef);
+            napi_close_handle_scope(env, scope);
+        }
+    };
+    auto onWillAppear = [env = asyncContext->env, onWillAppearRef = asyncContext->onWillAppearRef]() {
+        if (onWillAppearRef) {
+            napi_handle_scope scope = nullptr;
+            napi_open_handle_scope(env, &scope);
+            napi_value onWillAppearFunc = nullptr;
+            napi_get_reference_value(env, onWillAppearRef, &onWillAppearFunc);
+            napi_call_function(env, nullptr, onWillAppearFunc, 0, nullptr, nullptr);
+            napi_delete_reference(env, onWillAppearRef);
+            napi_close_handle_scope(env, scope);
+        }
+    };
+    auto onWillDisappear = [env = asyncContext->env, onWillDisappearRef = asyncContext->onWillDisappearRef]() {
+        if (onWillDisappearRef) {
+            napi_handle_scope scope = nullptr;
+            napi_open_handle_scope(env, &scope);
+            napi_value onWillDisappearFunc = nullptr;
+            napi_get_reference_value(env, onWillDisappearRef, &onWillDisappearFunc);
+            napi_call_function(env, nullptr, onWillDisappearFunc, 0, nullptr, nullptr);
+            napi_delete_reference(env, onWillDisappearRef);
+            napi_close_handle_scope(env, scope);
+        }
+    };
+    PromptDialogAttr promptDialogAttr = {
+        .onDidAppear =  std::move(onDidAppear),
+        .onDidDisappear = std::move(onDidDisappear),
+        .onWillAppear = std::move(onWillAppear),
+        .onWillDisappear = std::move(onWillDisappear) };
+    return promptDialogAttr;
 }
 
 void ParseBorderColorAndStyle(napi_env env, const std::shared_ptr<PromptAsyncContext>& asyncContext,
@@ -2317,36 +1944,6 @@ RefPtr<NG::ChainedTransitionEffect> GetTransitionProps(
     return transitionEffect;
 }
 
-RefPtr<NG::ChainedTransitionEffect> GetDialogTransitionProps(
-    napi_env env, const std::shared_ptr<PromptAsyncContext>& asyncContext)
-{
-    RefPtr<NG::ChainedTransitionEffect> dialogTransitionEffect = nullptr;
-    auto delegate = EngineHelper::GetCurrentDelegateSafely();
-    if (delegate) {
-        napi_valuetype valueType = napi_undefined;
-        napi_typeof(env, asyncContext->dialogTransitionApi, &valueType);
-        if (valueType == napi_object) {
-            dialogTransitionEffect = delegate->GetTransitionEffect(asyncContext->dialogTransitionApi);
-        }
-    }
-    return dialogTransitionEffect;
-}
-
-RefPtr<NG::ChainedTransitionEffect> GetMaskTransitionProps(
-    napi_env env, const std::shared_ptr<PromptAsyncContext>& asyncContext)
-{
-    RefPtr<NG::ChainedTransitionEffect> maskTransitionEffect = nullptr;
-    auto delegate = EngineHelper::GetCurrentDelegateSafely();
-    if (delegate) {
-        napi_valuetype valueType = napi_undefined;
-        napi_typeof(env, asyncContext->maskTransitionApi, &valueType);
-        if (valueType == napi_object) {
-            maskTransitionEffect = delegate->GetTransitionEffect(asyncContext->maskTransitionApi);
-        }
-    }
-    return maskTransitionEffect;
-}
-
 std::function<void()> GetCustomBuilder(napi_env env, const std::shared_ptr<PromptAsyncContext>& asyncContext)
 {
     auto builder = [env = asyncContext->env, builderRef = asyncContext->builderRef]() {
@@ -2360,50 +1957,16 @@ std::function<void()> GetCustomBuilder(napi_env env, const std::shared_ptr<Promp
     return builder;
 }
 
-std::function<void(const int32_t& dialogId)> GetCustomBuilderWithId(
-    napi_env env, const std::shared_ptr<PromptAsyncContext>& asyncContext)
-{
-    auto builder = [env = asyncContext->env, builderRef = asyncContext->builderRef](const int32_t dialogId) {
-        if (builderRef) {
-            napi_value builderFunc = nullptr;
-            napi_get_reference_value(env, builderRef, &builderFunc);
-            napi_value dialogIdArg = nullptr;
-            napi_create_int32(env, dialogId, &dialogIdArg);
-            napi_call_function(env, nullptr, builderFunc, 1, &dialogIdArg, nullptr);
-            napi_delete_reference(env, builderRef);
-        }
-    };
-    return builder;
-}
-
-bool GetFocusableParam(napi_env env, const std::shared_ptr<PromptAsyncContext>& asyncContext)
-{
-    bool focusable = true;
-    napi_valuetype valueType = napi_undefined;
-    napi_typeof(env, asyncContext->focusableApi, &valueType);
-    if (valueType != napi_boolean) {
-        return focusable;
-    }
-
-    napi_get_value_bool(env, asyncContext->focusableApi, &focusable);
-    return focusable;
-}
-
 PromptDialogAttr GetPromptActionDialog(napi_env env, const std::shared_ptr<PromptAsyncContext>& asyncContext,
-    std::function<void(const int32_t& info, const int32_t& instanceId)> onWillDismiss)
+    std::function<void(const int32_t& info)> onWillDismiss)
 {
     std::optional<DialogAlignment> alignment;
     std::optional<DimensionOffset> offset;
     std::optional<DimensionRect> maskRect;
     std::optional<int32_t> backgroundBlurStyle;
     std::optional<HoverModeAreaType> hoverModeArea;
-    std::optional<BlurStyleOption> blurStyleOption;
-    std::optional<EffectOption> effectOption;
-    std::optional<bool> enableHoverMode;
     GetNapiDialogProps(env, asyncContext, alignment, offset, maskRect);
-    GetNapiBlurStyleAndHoverModeProps(env, asyncContext, backgroundBlurStyle, hoverModeArea, enableHoverMode);
-    GetBackgroundBlurStyleOption(env, asyncContext, blurStyleOption);
-    GetBackgroundEffect(env, asyncContext, effectOption);
+    GetNapiBlurStyleAndHoverModeProps(env, asyncContext, backgroundBlurStyle, hoverModeArea);
     auto borderWidthProps = GetBorderWidthProps(env, asyncContext);
     std::optional<NG::BorderColorProperty> borderColorProps;
     std::optional<NG::BorderStyleProperty> borderStyleProps;
@@ -2413,8 +1976,6 @@ PromptDialogAttr GetPromptActionDialog(napi_env env, const std::shared_ptr<Promp
     auto* nodePtr = reinterpret_cast<OHOS::Ace::NG::UINode*>(asyncContext->nativePtr);
     auto maskColorProps = GetColorProps(env, asyncContext->maskColorApi);
     auto transitionEffectProps = GetTransitionProps(env, asyncContext);
-    auto dialogTransitionEffectProps = GetDialogTransitionProps(env, asyncContext);
-    auto maskTransitionEffectProps = GetMaskTransitionProps(env, asyncContext);
     PromptDialogAttr lifeCycleAttr = GetDialogLifeCycleCallback(env, asyncContext);
     int32_t mode = GetDialogKeyboardAvoidMode(env, asyncContext->keyboardAvoidModeApi);
     LevelMode dialogLevelMode = LevelMode::OVERLAY;
@@ -2424,7 +1985,7 @@ PromptDialogAttr GetPromptActionDialog(napi_env env, const std::shared_ptr<Promp
     PromptDialogAttr promptDialogAttr = { .autoCancel = asyncContext->autoCancelBool,
         .showInSubWindow = asyncContext->showInSubWindowBool,
         .isModal = asyncContext->isModalBool,
-        .enableHoverMode = enableHoverMode,
+        .enableHoverMode = asyncContext->enableHoverModeBool,
         .customBuilder = std::move(builder),
         .customOnWillDismiss = std::move(onWillDismiss),
         .alignment = alignment,
@@ -2432,8 +1993,6 @@ PromptDialogAttr GetPromptActionDialog(napi_env env, const std::shared_ptr<Promp
         .maskRect = maskRect,
         .backgroundColor = backgroundColorProps,
         .backgroundBlurStyle = backgroundBlurStyle,
-        .blurStyleOption = blurStyleOption,
-        .effectOption = effectOption,
         .borderWidth = borderWidthProps,
         .borderColor = borderColorProps,
         .borderStyle = borderStyleProps,
@@ -2445,19 +2004,15 @@ PromptDialogAttr GetPromptActionDialog(napi_env env, const std::shared_ptr<Promp
         .contentNode = AceType::WeakClaim(nodePtr),
         .maskColor = maskColorProps,
         .transitionEffect = transitionEffectProps,
-        .dialogTransitionEffect = dialogTransitionEffectProps,
-        .maskTransitionEffect = maskTransitionEffectProps,
         .onDidAppear = lifeCycleAttr.onDidAppear,
         .onDidDisappear = lifeCycleAttr.onDidDisappear,
         .onWillAppear = lifeCycleAttr.onWillAppear,
         .onWillDisappear = lifeCycleAttr.onWillDisappear,
         .keyboardAvoidMode = KEYBOARD_AVOID_MODE[mode],
         .keyboardAvoidDistance = GetKeyboardAvoidDistanceProps(env, asyncContext),
-        .levelOrder = GetLevelOrderParam(env, asyncContext),
-        .focusable = GetFocusableParam(env, asyncContext),
         .dialogLevelMode = dialogLevelMode,
         .dialogLevelUniqueId = dialogLevelUniqueId,
-        .dialogImmersiveMode = dialogImmersiveMode,
+        .dialogImmersiveMode = dialogImmersiveMode
     };
     return promptDialogAttr;
 }
@@ -2598,7 +2153,6 @@ void ParseCustomDialogIdCallback(std::shared_ptr<PromptAsyncContext>& asyncConte
 void OpenCustomDialog(napi_env env, std::shared_ptr<PromptAsyncContext>& asyncContext,
     PromptDialogAttr& promptDialogAttr, std::function<void(int32_t)>& openCallback)
 {
-    promptDialogAttr.isUserCreatedDialog = true;
 #ifdef OHOS_STANDARD_SYSTEM
     // NG
     if (SystemProperties::GetExtSurfaceEnabled() || !ContainerIsService()) {
@@ -2627,7 +2181,6 @@ void OpenCustomDialog(napi_env env, std::shared_ptr<PromptAsyncContext>& asyncCo
 
 napi_value JSPromptOpenCustomDialog(napi_env env, napi_callback_info info)
 {
-    TAG_LOGD(AceLogTag::ACE_DIALOG, "openCustomDialog enter");
     size_t argc = 2;
     napi_value argv[2] = { nullptr };
     napi_get_cb_info(env, info, &argc, argv, nullptr, nullptr);
@@ -2647,15 +2200,12 @@ napi_value JSPromptOpenCustomDialog(napi_env env, napi_callback_info info)
     napi_value result = nullptr;
     napi_create_promise(env, &asyncContext->deferred, &result);
 
-    std::function<void(const int32_t& info, const int32_t& instanceId)> onWillDismiss = nullptr;
-    std::function<void()> onWillDismissRelease = nullptr;
+    std::function<void(const int32_t& info)> onWillDismiss = nullptr;
     if (asyncContext->onWillDismissRef) {
         ParseDialogCallback(asyncContext, onWillDismiss);
-        ParseDialogReleaseCallback(asyncContext, onWillDismissRelease);
     }
     std::function<void(int32_t)> openCallback = nullptr;
     PromptDialogAttr promptDialogAttr = GetPromptActionDialog(env, asyncContext, onWillDismiss);
-    promptDialogAttr.customOnWillDismissRelease = std::move(onWillDismissRelease);
     if (!asyncContext->builderRef) {
         ParseCustomDialogContentCallback(asyncContext, openCallback);
         promptDialogAttr.customStyle = true;
@@ -2666,223 +2216,6 @@ napi_value JSPromptOpenCustomDialog(napi_env env, napi_callback_info info)
 
     OpenCustomDialog(env, asyncContext, promptDialogAttr, openCallback);
 
-    return result;
-}
-
-void ParseBaseDialogOptionsEvent(napi_env env, napi_value arg, std::shared_ptr<PromptAsyncContext>& asyncContext)
-{
-    napi_get_named_property(env, arg, "onWillDismiss", &asyncContext->onWillDismiss);
-    napi_valuetype valueType = napi_undefined;
-    napi_typeof(env, asyncContext->onWillDismiss, &valueType);
-    if (valueType == napi_function) {
-        napi_create_reference(env, asyncContext->onWillDismiss, 1, &asyncContext->onWillDismissRef);
-    }
-    napi_get_named_property(env, arg, "onDidAppear", &asyncContext->onDidAppear);
-    napi_typeof(env, asyncContext->onDidAppear, &valueType);
-    if (valueType == napi_function) {
-        napi_create_reference(env, asyncContext->onDidAppear, 1, &asyncContext->onDidAppearRef);
-    }
-    napi_get_named_property(env, arg, "onDidDisappear", &asyncContext->onDidDisappear);
-    napi_typeof(env, asyncContext->onDidDisappear, &valueType);
-    if (valueType == napi_function) {
-        napi_create_reference(env, asyncContext->onDidDisappear, 1, &asyncContext->onDidDisappearRef);
-    }
-    napi_get_named_property(env, arg, "onWillAppear", &asyncContext->onWillAppear);
-    napi_typeof(env, asyncContext->onWillAppear, &valueType);
-    if (valueType == napi_function) {
-        napi_create_reference(env, asyncContext->onWillAppear, 1, &asyncContext->onWillAppearRef);
-    }
-    napi_get_named_property(env, arg, "onWillDisappear", &asyncContext->onWillDisappear);
-    napi_typeof(env, asyncContext->onWillDisappear, &valueType);
-    if (valueType == napi_function) {
-        napi_create_reference(env, asyncContext->onWillDisappear, 1, &asyncContext->onWillDisappearRef);
-    }
-}
-
-void ParseBaseDialogOptions(napi_env env, napi_value arg, std::shared_ptr<PromptAsyncContext>& asyncContext)
-{
-    napi_get_named_property(env, arg, "maskRect", &asyncContext->maskRectApi);
-    napi_get_named_property(env, arg, "alignment", &asyncContext->alignmentApi);
-    napi_get_named_property(env, arg, "offset", &asyncContext->offsetApi);
-    napi_get_named_property(env, arg, "showInSubWindow", &asyncContext->showInSubWindow);
-    napi_valuetype valueType = napi_undefined;
-    napi_typeof(env, asyncContext->showInSubWindow, &valueType);
-    if (valueType == napi_boolean) {
-        napi_get_value_bool(env, asyncContext->showInSubWindow, &asyncContext->showInSubWindowBool);
-    }
-    napi_get_named_property(env, arg, "isModal", &asyncContext->isModal);
-    napi_typeof(env, asyncContext->isModal, &valueType);
-    if (valueType == napi_boolean) {
-        napi_get_value_bool(env, asyncContext->isModal, &asyncContext->isModalBool);
-    }
-    napi_get_named_property(env, arg, "autoCancel", &asyncContext->autoCancel);
-    napi_typeof(env, asyncContext->autoCancel, &valueType);
-    if (valueType == napi_boolean) {
-        napi_get_value_bool(env, asyncContext->autoCancel, &asyncContext->autoCancelBool);
-    }
-    napi_get_named_property(env, arg, "transition", &asyncContext->transitionApi);
-    napi_get_named_property(env, arg, "dialogTransition", &asyncContext->dialogTransitionApi);
-    napi_get_named_property(env, arg, "maskTransition", &asyncContext->maskTransitionApi);
-    napi_get_named_property(env, arg, "maskColor", &asyncContext->maskColorApi);
-    napi_get_named_property(env, arg, "keyboardAvoidMode", &asyncContext->keyboardAvoidModeApi);
-    napi_get_named_property(env, arg, "keyboardAvoidDistance", &asyncContext->keyboardAvoidDistanceApi);
-    napi_get_named_property(env, arg, "enableHoverMode", &asyncContext->enableHoverMode);
-    napi_get_named_property(env, arg, "hoverModeArea", &asyncContext->hoverModeAreaApi);
-    napi_get_named_property(env, arg, "levelOrder", &asyncContext->levelOrderApi);
-    napi_get_named_property(env, arg, "backgroundBlurStyleOptions", &asyncContext->blurStyleOptionApi);
-    napi_get_named_property(env, arg, "backgroundEffect", &asyncContext->effectOptionApi);
-    napi_get_named_property(env, arg, "levelMode", &asyncContext->dialogLevelModeApi);
-    napi_get_named_property(env, arg, "levelUniqueId", &asyncContext->dialogLevelUniqueId);
-    napi_get_named_property(env, arg, "immersiveMode", &asyncContext->dialogImmersiveModeApi);
-    napi_get_named_property(env, arg, "focusable", &asyncContext->focusableApi);
-
-    ParseBaseDialogOptionsEvent(env, arg, asyncContext);
-}
-
-std::function<void(RefPtr<NG::FrameNode> dialogNode)> GetDialogCallback(PromptDialogController* controller)
-{
-    auto builder = [controller](RefPtr<NG::FrameNode> dialogNode) {
-        if (controller) {
-            controller->SetNode(dialogNode);
-        }
-    };
-    return builder;
-}
-
-napi_value JSPromptOpenCustomDialogWithController(napi_env env, napi_callback_info info)
-{
-    TAG_LOGD(AceLogTag::ACE_DIALOG, "openCustomDialogWithController enter");
-    size_t argc = OPEN_CUSTOM_DIALOG_WITH_CONTROLLER_PARAM_TOTAL;
-    napi_value argv[OPEN_CUSTOM_DIALOG_WITH_CONTROLLER_PARAM_TOTAL] = { nullptr };
-    napi_get_cb_info(env, info, &argc, argv, nullptr, nullptr);
-    if (argc < OPEN_CUSTOM_DIALOG_WITH_CONTROLLER_PARAM_MAND_COUNT
-        || argc > OPEN_CUSTOM_DIALOG_WITH_CONTROLLER_PARAM_TOTAL) {
-        NapiThrow(env, "The number of parameters must be between 2 and 3.", ERROR_CODE_PARAM_INVALID);
-        return nullptr;
-    }
-
-    for (size_t i = 0; i < argc; i++) {
-        napi_valuetype valueType = napi_undefined;
-        napi_typeof(env, argv[i], &valueType);
-        if (valueType != napi_object) {
-            NapiThrow(env, "The type of parameters is incorrect.", ERROR_CODE_PARAM_INVALID);
-            return nullptr;
-        }
-    }
-
-    auto asyncContext = std::make_shared<PromptAsyncContext>();
-    asyncContext->env = env;
-    asyncContext->instanceId = Container::CurrentIdSafely();
-    auto nodeResult = napi_get_named_property(env, argv[0], "nodePtr_", &asyncContext->frameNodePtr);
-    if (nodeResult != napi_ok) {
-        NapiThrow(env, "The type of parameters is incorrect.", ERROR_CODE_PARAM_INVALID);
-        return nullptr;
-    }
-    napi_get_value_external(env, asyncContext->frameNodePtr, &asyncContext->nativePtr);
-
-    PromptDialogController* controller = nullptr;
-    napi_unwrap(env, argv[OPEN_CUSTOM_DIALOG_WITH_CONTROLLER_PARAM_INDEX_CONTROLLER], (void**)&controller);
-    if (!controller) {
-        NapiThrow(env, "The type of parameters is incorrect.", ERROR_CODE_PARAM_INVALID);
-        return nullptr;
-    }
-
-    if (argc > OPEN_CUSTOM_DIALOG_WITH_CONTROLLER_PARAM_INDEX_OPTIONS) {
-        ParseBaseDialogOptions(env, argv[OPEN_CUSTOM_DIALOG_WITH_CONTROLLER_PARAM_INDEX_OPTIONS], asyncContext);
-    }
-
-    napi_value result = nullptr;
-    napi_create_promise(env, &asyncContext->deferred, &result);
-
-    std::function<void(const int32_t& info, const int32_t& instanceId)> onWillDismiss = nullptr;
-    std::function<void()> onWillDismissRelease = nullptr;
-    if (asyncContext->onWillDismissRef) {
-        ParseDialogCallback(asyncContext, onWillDismiss);
-        ParseDialogReleaseCallback(asyncContext, onWillDismissRelease);
-    }
-
-    PromptDialogAttr promptDialogAttr = GetPromptActionDialog(env, asyncContext, onWillDismiss);
-    promptDialogAttr.customStyle = true;
-    promptDialogAttr.customBuilder = nullptr;
-    promptDialogAttr.dialogCallback = GetDialogCallback(controller);
-    promptDialogAttr.customOnWillDismissRelease = std::move(onWillDismissRelease);
-
-    std::function<void(int32_t)> openCallback = nullptr;
-    ParseCustomDialogContentCallback(asyncContext, openCallback);
-    OpenCustomDialog(env, asyncContext, promptDialogAttr, openCallback);
-    return result;
-}
-
-void ParseDialogOptions(napi_env env, napi_value arg, std::shared_ptr<PromptAsyncContext>& asyncContext)
-{
-    ParseBaseDialogOptions(env, arg, asyncContext);
-    napi_get_named_property(env, arg, "backgroundColor", &asyncContext->backgroundColorApi);
-    napi_get_named_property(env, arg, "cornerRadius", &asyncContext->borderRadiusApi);
-    napi_get_named_property(env, arg, "width", &asyncContext->widthApi);
-    napi_get_named_property(env, arg, "height", &asyncContext->heightApi);
-    napi_get_named_property(env, arg, "borderWidth", &asyncContext->borderWidthApi);
-    napi_get_named_property(env, arg, "borderColor", &asyncContext->borderColorApi);
-    napi_get_named_property(env, arg, "borderStyle", &asyncContext->borderStyleApi);
-    napi_get_named_property(env, arg, "shadow", &asyncContext->shadowApi);
-    napi_get_named_property(env, arg, "backgroundBlurStyle", &asyncContext->backgroundBlurStyleApi);
-}
-
-napi_value JSPromptPresentCustomDialog(napi_env env, napi_callback_info info)
-{
-    TAG_LOGD(AceLogTag::ACE_DIALOG, "presentCustomDialog enter");
-    size_t argc = PRESENT_CUSTOM_DIALOG_PARAM_TOTAL;
-    napi_value argv[PRESENT_CUSTOM_DIALOG_PARAM_TOTAL] = { nullptr };
-    napi_get_cb_info(env, info, &argc, argv, nullptr, nullptr);
-    if (argc < PRESENT_CUSTOM_DIALOG_PARAM_MAND_COUNT || argc > PRESENT_CUSTOM_DIALOG_PARAM_TOTAL) {
-        NapiThrow(env, "The number of parameters must be between 1 and 3.", ERROR_CODE_PARAM_INVALID);
-        return nullptr;
-    }
-
-    napi_valuetype paramTypes[PRESENT_CUSTOM_DIALOG_PARAM_TOTAL] = { napi_function, napi_object, napi_object };
-    for (size_t i = 0; i < argc; i++) {
-        napi_valuetype valueType = napi_undefined;
-        napi_typeof(env, argv[i], &valueType);
-        if (valueType != paramTypes[i]) {
-            NapiThrow(env, "The type of parameters is incorrect.", ERROR_CODE_PARAM_INVALID);
-            return nullptr;
-        }
-    }
-
-    auto asyncContext = std::make_shared<PromptAsyncContext>();
-    asyncContext->env = env;
-    asyncContext->instanceId = Container::CurrentIdSafely();
-    napi_create_reference(env, argv[0], 1, &asyncContext->builderRef);
-
-    PromptDialogController* controller = nullptr;
-    if (argc > PRESENT_CUSTOM_DIALOG_PARAM_INDEX_CONTROLLER) {
-        napi_unwrap(env, argv[PRESENT_CUSTOM_DIALOG_PARAM_INDEX_CONTROLLER], (void**)&controller);
-    }
-
-    if (argc > PRESENT_CUSTOM_DIALOG_PARAM_INDEX_OPTIONS) {
-        ParseDialogOptions(env, argv[PRESENT_CUSTOM_DIALOG_PARAM_INDEX_OPTIONS], asyncContext);
-    }
-
-    napi_value result = nullptr;
-    napi_create_promise(env, &asyncContext->deferred, &result);
-
-    std::function<void(const int32_t& info, const int32_t& instanceId)> onWillDismiss = nullptr;
-    std::function<void()> onWillDismissRelease = nullptr;
-    if (asyncContext->onWillDismissRef) {
-        ParseDialogCallback(asyncContext, onWillDismiss);
-        ParseDialogReleaseCallback(asyncContext, onWillDismissRelease);
-    }
-
-    PromptDialogAttr promptDialogAttr = GetPromptActionDialog(env, asyncContext, onWillDismiss);
-    auto builder = GetCustomBuilderWithId(env, asyncContext);
-    promptDialogAttr.customBuilderWithId = std::move(builder);
-    promptDialogAttr.customOnWillDismissRelease = std::move(onWillDismissRelease);
-    if (controller) {
-        promptDialogAttr.dialogCallback = GetDialogCallback(controller);
-    }
-
-    std::function<void(int32_t)> openCallback = nullptr;
-    ParseCustomDialogIdCallback(asyncContext, openCallback);
-    OpenCustomDialog(env, asyncContext, promptDialogAttr, openCallback);
     return result;
 }
 
@@ -2931,7 +2264,6 @@ void CloseCustomDialog(napi_env env, std::shared_ptr<PromptAsyncContext>& asyncC
 
 napi_value JSPromptCloseCustomDialog(napi_env env, napi_callback_info info)
 {
-    TAG_LOGD(AceLogTag::ACE_DIALOG, "closeCustomDialog enter");
     size_t argc = 1;
     napi_value argv[1] = { 0 };
     int32_t dialogId = -1;
@@ -3016,7 +2348,6 @@ void UpdateCustomDialog(napi_env env, std::shared_ptr<PromptAsyncContext>& async
 
 napi_value JSPromptUpdateCustomDialog(napi_env env, napi_callback_info info)
 {
-    TAG_LOGD(AceLogTag::ACE_DIALOG, "updateCustomDialog enter");
     size_t argc = CUSTOM_DIALOG_PARAM_NUM;
     napi_value argv[CUSTOM_DIALOG_PARAM_NUM] = { nullptr };
     WeakPtr<NG::UINode> nodeWk;

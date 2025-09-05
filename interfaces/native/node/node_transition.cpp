@@ -15,6 +15,7 @@
 
 #include "node_transition.h"
 
+#include "native_type.h"
 
 #include "base/utils/utils.h"
 

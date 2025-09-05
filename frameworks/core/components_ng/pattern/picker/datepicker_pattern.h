@@ -20,11 +20,9 @@
 
 #include "core/components/common/layout/constants.h"
 #include "core/components/picker/picker_data.h"
-#include "core/components/theme/app_theme.h"
 #include "core/components/picker/picker_theme.h"
 #include "core/components_ng/base/frame_node.h"
 #include "core/components_ng/event/event_hub.h"
-#include "core/components_ng/pattern/button/button_layout_property.h"
 #include "core/components_ng/pattern/linear_layout/linear_layout_pattern.h"
 #include "core/components_ng/pattern/pattern.h"
 #include "core/components_ng/pattern/picker/datepicker_accessibility_property.h"
@@ -39,8 +37,6 @@ namespace OHOS::Ace::NG {
 class InspectorFilter;
 namespace {
 const Dimension FOCUS_PAINT_WIDTH = 2.0_vp;
-constexpr Dimension PICKER_DIALOG_MARGIN_FORM_EDGE = 24.0_vp;
-constexpr Dimension PICKER_MARGIN_FROM_TITLE_AND_BUTTON = 8.0_vp;
 }
 
 class DatePickerPattern : public LinearLayoutPattern {
@@ -50,16 +46,6 @@ public:
     DatePickerPattern() : LinearLayoutPattern(false) {};
 
     ~DatePickerPattern() override = default;
-
-    void BeforeCreateLayoutWrapper() override;
-
-    void OnColorModeChange(uint32_t colorMode) override
-    {
-        LinearLayoutPattern::OnColorModeChange(colorMode);
-        auto host = GetHost();
-        CHECK_NULL_VOID(host);
-        host->MarkModifyDone();
-    }
 
     bool IsAtomicNode() const override
     {
@@ -104,35 +90,21 @@ public:
         weakButtonCancel_ = buttonCancelNode;
     }
 
-    void SetNextPrevButtonNode(WeakPtr<FrameNode> nextPrevButtonNode)
-    {
-        nextPrevButtonNode_ = nextPrevButtonNode;
-    }
-
-    void SetIsNext(bool isNext)
-    {
-        isNext_ = isNext;
-    }
-
     void SetLunarSwitchTextNode(WeakPtr<FrameNode> lunarSwitchTextNode)
     {
         weakLunarSwitchText_ = lunarSwitchTextNode;
     }
 
-    void SetLunarSwitchCheckbox(WeakPtr<FrameNode> lunarSwitchCheckbox)
+    void OnFontConfigurationUpdate() override
     {
-        weakLunarSwitchCheckbox_ = lunarSwitchCheckbox;
+        if (closeDialogEvent_) {
+            closeDialogEvent_();
+        }
     }
-
-    void OnFontConfigurationUpdate() override;
-
-    void OnFontScaleConfigurationUpdate() override;
 
     void OnLanguageConfigurationUpdate() override;
 
     void OnColorConfigurationUpdate() override;
-
-    bool OnThemeScopeUpdate(int32_t themeScopeId) override;
 
     void SetChangeCallback(ColumnChangeCallback&& value);
 
@@ -172,10 +144,6 @@ public:
     void HandleAddLunarDayChange(uint32_t index);
 
     void HandleSolarDayChange(bool isAdd, uint32_t index);
-
-    void IncreaseLinkageYearMonth(PickerDate& date);
-
-    void ReduceLinkageYearMonth(PickerDate& date);
 
     void HandleSolarMonthDaysChange(bool isAdd, uint32_t index);
 
@@ -226,24 +194,13 @@ public:
 
     void SetShowLunar(bool value)
     {
+        isForceUpdate_ = value != lunar_;
         lunar_ = value;
     }
 
     bool IsShowLunar() const
     {
         return lunar_;
-    }
-
-    void SetCanLoop(bool value)
-    {
-        isLoop_ = value;
-    }
-
-    bool GetCanLoop() const
-    {
-        auto datePickerRowLayoutProperty = GetLayoutProperty<DataPickerRowLayoutProperty>();
-        CHECK_NULL_RETURN(datePickerRowLayoutProperty, isLoop_);
-        return datePickerRowLayoutProperty->GetCanLoopValue(true);
     }
 
     void SetShowMonthDaysFlag(bool value)
@@ -364,7 +321,6 @@ public:
 
     void SetDateOrder(std::string dateOrder)
     {
-        isDateOrderChange_ = dateOrder != dateOrder_;
         dateOrder_ = dateOrder;
     }
 
@@ -462,17 +418,6 @@ public:
     const PickerDate& GetEndDateSolar()
     {
         return endDateSolar_;
-    }
-
-    void SetMode(const DatePickerMode& value)
-    {
-        isForceUpdate_ = value != datePickerMode_;
-        datePickerMode_ = value;
-    }
-
-    const DatePickerMode& GetMode()
-    {
-        return datePickerMode_;
     }
 
     void AdjustSolarDate(PickerDate& date, const PickerDate& start, const PickerDate& end) const
@@ -632,8 +577,6 @@ public:
 
     static const std::string& GetLunarDay(uint32_t day);
 
-    const std::string GetText();
-
     FocusPattern GetFocusPattern() const override
     {
         auto pipeline = PipelineBase::GetCurrentContext();
@@ -643,34 +586,11 @@ public:
         auto focusColor = pickerTheme->GetFocusColor();
         FocusPaintParam focusPaintParams;
         focusPaintParams.SetPaintColor(focusColor);
+        focusPaintParams.SetPaintWidth(FOCUS_PAINT_WIDTH);
         return { FocusType::NODE, true, FocusStyleType::CUSTOM_REGION, focusPaintParams };
     }
 
-    void SetCurrentFocusKeyID(int32_t value)
-    {
-        focusKeyID_ = value;
-    }
-
-    int32_t GetCurrentFocusKeyID()
-    {
-        return focusKeyID_;
-    }
-
-    void SetCurrentPage(uint32_t value)
-    {
-        currentPage_ = value;
-    }
-
-    uint32_t GetCurrentPage()
-    {
-        return currentPage_;
-    }
-
-    bool NeedAdaptForAging();
-
     void ShowTitle(int32_t titleId);
-    std::string GetVisibleColumnsText();
-    void GetColumnText(const RefPtr<FrameNode>& columnNode, std::string& result);
     void ToJsonValue(std::unique_ptr<JsonValue>& json, const InspectorFilter& filter) const override;
     void SetContentRowNode(RefPtr<FrameNode>& contentRowNode)
     {
@@ -779,36 +699,10 @@ public:
         return paintDividerSpacing_;
     }
 
-    static bool ReportDateChangeEvent(int32_t nodeId, const std::string& compName,
-        const std::string& eventName, const std::string& eventData);
-
     void SetUserDefinedOpacity(double opacity)
     {
         curOpacity_ = opacity;
     }
-
-    void SetEnableHapticFeedback(bool value)
-    {
-        if (isEnableHaptic_ != value) {
-            isHapticChanged_ = true;
-        }
-        isEnableHaptic_ = value;
-    }
-
-    bool GetEnableHapticFeedback() const
-    {
-        return isEnableHaptic_;
-    }
-
-    void ColumnPatternInitHapticController();
-    void ColumnPatternInitHapticController(const RefPtr<FrameNode>& columnNode);
-    void ColumnPatternStopHaptic();
-
-    void SetDigitalCrownSensitivity(int32_t crownSensitivity);
-    void UpdateUserSetSelectColor();
-    void UpdateDisappearTextStyle(const PickerTextStyle& textStyle);
-    void UpdateNormalTextStyle(const PickerTextStyle& textStyle);
-    void UpdateSelectedTextStyle(const PickerTextStyle& textStyle);
 
 private:
     void OnModifyDone() override;
@@ -821,16 +715,6 @@ private:
     void InitOnKeyEvent(const RefPtr<FocusHub>& focusHub);
     bool OnKeyEvent(const KeyEvent& event);
     bool HandleDirectionKey(KeyCode code);
-    void InitFocusEvent();
-    void InitSelectorProps();
-    void HandleFocusEvent();
-    void HandleBlurEvent();
-    void AddIsFocusActiveUpdateEvent();
-    void RemoveIsFocusActiveUpdateEvent();
-    void GetInnerFocusButtonPaintRect(RoundRect& paintRect, float focusButtonXOffset);
-    void UpdateFocusButtonState();
-    void SetHaveFocus(bool haveFocus);
-    void UpdateColumnButtonStyles(const RefPtr<FrameNode>& columnNode, bool haveFocus, bool needMarkDirty);
     PickerDate GetCurrentDateByMonthDaysColumn() const;
     PickerDate GetCurrentDateByYearMonthDayColumn() const;
     void OrderCurrentDateByYearMonthDayColumn(
@@ -840,45 +724,16 @@ private:
     void FillLunarMonthDaysOptions(const LunarDate& current, RefPtr<FrameNode>& monthDaysColumn);
     void AdjustSolarStartEndDate();
     void AdjustLunarStartEndDate();
-    void UpdateButtonMargin(
-        const RefPtr<FrameNode>& buttonNode, const RefPtr<DialogTheme>& dialogTheme, const bool isConfirmOrNextNode);
-    void UpdateButtonNode(const RefPtr<FrameNode>& buttonNode, const bool isConfirmNode);
-    void ShowColumnByDatePickMode();
-    void UpdateStackPropVisibility(const RefPtr<FrameNode>& stackNode,
-        const VisibleType visibleType, const int32_t weight);
-    void ClearFocus();
-    void SetDefaultFocus();
-    void AdjustFocusBoxOffset(double& centerX);
-    bool IsCircle();
-    bool CurrentIsLunar();
-#ifdef SUPPORT_DIGITAL_CROWN
-    void InitOnCrownEvent(const RefPtr<FocusHub>& focusHub);
-    bool OnCrownEvent(const CrownEvent& event);
-#endif
-    void InitFocusKeyEvent();
     void FlushChildNodes();
-    void UpdateLunarSwitch();
-    void UpdateDateOrder();
-    void UpdateDialogAgingButton(const RefPtr<FrameNode>& buttonNode, bool isNext);
-    Dimension ConvertFontScaleValue(const Dimension& fontSizeValue);
-
-    void UpdateTextStyleCommon(
-        const PickerTextStyle& textStyle,
-        const TextStyle& defaultTextStyle,
-        std::function<void(const Color&)> updateTextColorFunc,
-        std::function<void(const Dimension&)> updateFontSizeFunc,
-        std::function<void(const std::vector<std::string>&)> updateFontFamilyFunc);
 
     RefPtr<ClickEvent> clickEventListener_;
     bool enabled_ = true;
     int32_t focusKeyID_ = 0;
-    uint32_t currentPage_ = 0;
     std::map<WeakPtr<FrameNode>, std::vector<PickerDateF>> options_;
     uint32_t showCount_ = 0;
     std::string dateOrder_ = "";
     std::vector<WeakPtr<FrameNode>> datePickerColumns_;
     bool lunar_ = false;
-    bool isLoop_ = true;
     bool showMonthDays_ = false;
     bool showTime_ = false;
     bool showLunarSwitch_ = false;
@@ -894,20 +749,12 @@ private:
     double resizePickerItemHeight_ = 0.0;
     bool resizeFlag_ = false;
     bool isShowInDialog_ = false;
-    bool focusEventInitialized_ = false;
-    bool haveFocus_ = false;
-    bool useButtonFocusArea_ = false;
-    Dimension selectorItemRadius_ = 8.0_vp;
-    std::function<void(bool)> isFocusActiveUpdateEvent_;
     EventMarker OnDialogAccept_;
     EventMarker OnDialogCancel_;
     EventMarker OnDialogChange_;
     WeakPtr<FrameNode> weakButtonConfirm_;
     WeakPtr<FrameNode> weakButtonCancel_;
     WeakPtr<FrameNode> weakLunarSwitchText_;
-    WeakPtr<FrameNode> weakLunarSwitchCheckbox_;
-    WeakPtr<FrameNode> nextPrevButtonNode_;
-    bool isNext_ = true;
     PickerDate startDateSolar_ = PickerDate(1970, 1, 1); // default start date is 1970-1-1 from FA document.
     LunarDate startDateLunar_;
     PickerDate endDateSolar_ = PickerDate(2100, 12, 31); // default end date is 2100-12-31 from FA document.
@@ -933,14 +780,7 @@ private:
     bool isPicker_ = false;
     bool isFiredDateChange_ = false;
     bool isForceUpdate_ = false;
-    bool isDateOrderChange_ = false;
     std::optional<std::string> firedDateStr_;
-    void CalcLeftTotalColumnWidth(const RefPtr<FrameNode>& host, float &leftTotalColumnWidth, float childSize);
-    bool CheckFocusID(int32_t childSize);
-    bool ParseDirectionKey(RefPtr<DatePickerColumnPattern>& pattern, KeyCode& code, uint32_t totalOptionCount,
-                          int32_t childSize);
-    bool ReportDateChangeEvent(const std::string& compName,
-        const std::string& eventName, const std::string& eventData);
 
     bool hasUserDefinedDisappearFontFamily_ = false;
     bool hasUserDefinedNormalFontFamily_ = false;
@@ -953,16 +793,8 @@ private:
     float paintDividerSpacing_ = 1.0f;
     PickerTextProperties textProperties_;
     double curOpacity_ = 1.0;
-    DatePickerMode datePickerMode_ = DatePickerMode::DATE;
-    bool isFocus_ = true;
-    bool isEnableHaptic_ = true;
-    bool isHapticChanged_ = true;
 
     ACE_DISALLOW_COPY_AND_MOVE(DatePickerPattern);
-    std::string selectedColumnId_;
-    bool lastTimeIsLuanar_ = true;
-    bool isFirstTimeSetFocus_ = true;
-    bool isDirectionSetByAr = false;
 };
 } // namespace OHOS::Ace::NG
 

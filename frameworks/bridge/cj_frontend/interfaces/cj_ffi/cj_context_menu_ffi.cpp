@@ -15,9 +15,10 @@
 
 #include "bridge/cj_frontend/interfaces/cj_ffi/cj_context_menu_ffi.h"
 
+#include "base/subwindow/subwindow.h"
 #include "base/subwindow/subwindow_manager.h"
+#include "bridge/common/utils/engine_helper.h"
 #include "core/common/container.h"
-#include "core/pipeline_ng/pipeline_context.h"
 
 using namespace OHOS::Ace;
 

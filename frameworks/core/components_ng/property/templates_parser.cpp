@@ -17,6 +17,8 @@
 
 #include <regex>
 
+#include "base/utils/string_utils.h"
+#include "base/utils/utils.h"
 #include "core/pipeline/pipeline_base.h"
 
 namespace OHOS::Ace::NG {
@@ -67,7 +69,7 @@ double ConvertVirtualSize(const std::string& val, const DimensionUnit& unit, dou
             ret = ret / FULL_PERCENT * size;
             break;
         case DimensionUnit::VP: {
-            auto pipelineContext = PipelineBase::GetCurrentContextSafelyWithCheck();
+            auto pipelineContext = PipelineBase::GetCurrentContext();
             if (pipelineContext) {
                 ret = pipelineContext->NormalizeToPx(Dimension(ret, DimensionUnit::VP));
             } else {
@@ -492,16 +494,14 @@ std::pair<std::vector<double>, double> ParseArgsWithAutoStretch(const std::strin
 std::pair<std::vector<double>, double> ParseTemplateArgs(
     const std::string& args, double size, double gap, int32_t childrenCount)
 {
-    if (args.find(REPEAT_PREFIX) != std::string::npos) {
-        if (args.find(UNIT_AUTO_FILL) != std::string::npos) {
-            return ParseArgsWithAutoFill(args, size, gap, childrenCount);
-        }
-        if (args.find(UNIT_AUTO_FIT) != std::string::npos) {
-            return ParseArgsWithAutoFit(args, size, gap, childrenCount);
-        }
-        if (args.find(UNIT_AUTO_STRETCH) != std::string::npos) {
-            return ParseArgsWithAutoStretch(args, size, gap);
-        }
+    if (args.find(REPEAT_PREFIX) != std::string::npos && args.find(UNIT_AUTO_FILL) != std::string::npos) {
+        return ParseArgsWithAutoFill(args, size, gap, childrenCount);
+    }
+    if (args.find(REPEAT_PREFIX) != std::string::npos && args.find(UNIT_AUTO_FIT) != std::string::npos) {
+        return ParseArgsWithAutoFit(args, size, gap, childrenCount);
+    }
+    if (args.find(REPEAT_PREFIX) != std::string::npos && args.find(UNIT_AUTO_STRETCH) != std::string::npos) {
+        return ParseArgsWithAutoStretch(args, size, gap);
     }
     return NG::ParseArgsWithoutAutoFill(args, size, gap);
 }

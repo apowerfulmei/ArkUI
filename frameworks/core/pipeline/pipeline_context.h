@@ -47,7 +47,6 @@
 #include "core/components/page/page_component.h"
 #include "core/components/text_overlay/text_overlay_manager.h"
 #include "core/components/theme/theme_manager.h"
-#include "core/components_ng/event/visible_ratio_callback.h"
 #include "core/event/event_trigger.h"
 #include "core/gestures/gesture_info.h"
 #include "core/image/image_cache.h"
@@ -91,6 +90,13 @@ struct WindowBlurInfo {
     WindowBlurStyle style_;
     RRect innerRect_;
     std::vector<RRect> coords_;
+};
+
+struct VisibleCallbackInfo {
+    VisibleRatioCallback callback;
+    double visibleRatio = 1.0;
+    bool isCurrentVisible = false;
+    uint32_t period = 0;
 };
 
 using OnRouterChangeCallback = bool (*)(const std::string currentRouterPath);
@@ -151,7 +157,7 @@ public:
 
     bool ClearInvisiblePages(const std::function<void()>& listener = nullptr);
 
-    bool CallRouterBackToPopPage(bool* isUserAccept = nullptr) override;
+    bool CallRouterBackToPopPage() override;
 
     void SetSinglePageId(int32_t pageId);
 
@@ -801,9 +807,11 @@ public:
         SetRootSizeWithWidthHeight(width, height, offset);
     }
 
+    void SetContainerWindow(bool isShow) override;
+
     void SetAppTitle(const std::string& title) override;
     void SetAppIcon(const RefPtr<PixelMap>& icon) override;
-    void FlushMessages(std::function<void()> callback = nullptr) override;
+    void FlushMessages() override;
 
     bool IsDensityChanged() const override
     {
@@ -820,13 +828,9 @@ public:
         isNeedReloadDensity_ = isNeedReloadDensity;
     }
 
-    void SetVsyncListener(const std::function<void()>& vsync)
-    {
-        vsyncListener_ = vsync;
-    }
 protected:
     bool OnDumpInfo(const std::vector<std::string>& params) const override;
-    void FlushVsync(uint64_t nanoTimestamp, uint64_t frameCount) override;
+    void FlushVsync(uint64_t nanoTimestamp, uint32_t frameCount) override;
     void FlushPipelineWithoutAnimation() override;
     void DispatchDisplaySync(uint64_t nanoTimestamp) override;
     void FlushAnimation(uint64_t nanoTimestamp) override;
@@ -863,7 +867,6 @@ private:
     void CreateTouchEventOnZoom(const AxisEvent& event);
     void HandleVisibleAreaChangeEvent();
     void FlushTouchEvents();
-    bool OnKeyEvent(const NonPointerEvent& nonPointerEvent);
 
     template<typename T>
     struct NodeCompare {
@@ -1026,7 +1029,6 @@ private:
 
     std::vector<RectCallback> rectCallbackList_;
     std::list<TouchEvent> touchEvents_;
-    std::function<void()> vsyncListener_;
 
     ACE_DISALLOW_COPY_AND_MOVE(PipelineContext);
 };

@@ -23,12 +23,11 @@
 #include "core/components_ng/property/property.h"
 
 namespace OHOS::Ace::NG {
-class FrameNode;
 class InspectorFilter;
 
 // PaintProperty are used to set render properties.
 class PaintProperty : public Property {
-    DECLARE_ACE_TYPE(PaintProperty, Property);
+    DECLARE_ACE_TYPE(PaintProperty, Property)
 
 public:
     PaintProperty() = default;
@@ -45,20 +44,12 @@ public:
 
     virtual void ToJsonValue(std::unique_ptr<JsonValue>& json, const InspectorFilter& filter) const {}
 
-    virtual void ToTreeJson(std::unique_ptr<JsonValue>& json, const InspectorConfig& config) const {}
-
     virtual void FromJson(const std::unique_ptr<JsonValue>& json) {}
-
-    void SetHost(const WeakPtr<FrameNode>& host);
-    RefPtr<FrameNode> GetHost() const;
-    void UpdatePaintPropertyHost(const PaintProperty* renderProperty);
 
 protected:
     void UpdatePaintProperty(const PaintProperty* renderProperty) {}
 
     ACE_DISALLOW_COPY_AND_MOVE(PaintProperty);
-
-    WeakPtr<FrameNode> host_;
 };
 } // namespace OHOS::Ace::NG
 

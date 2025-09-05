@@ -19,7 +19,6 @@
 #include <optional>
 #include <vector>
 
-#include "base/geometry/dimension.h"
 #include "base/geometry/ng/size_t.h"
 #include "base/memory/referenced.h"
 #include "base/utils/utils.h"
@@ -29,9 +28,6 @@
 #include "core/components_ng/pattern/menu/menu_layout_property.h"
 #include "core/components_ng/pattern/menu/menu_paint_method.h"
 #include "core/components_ng/pattern/menu/menu_paint_property.h"
-#include "core/components_ng/pattern/menu/menu_theme.h"
-#include "core/components_ng/pattern/menu/wrapper/menu_wrapper_paint_method.h"
-#include "core/components_ng/pattern/menu/wrapper/menu_wrapper_paint_property.h"
 #include "core/components_ng/pattern/pattern.h"
 #include "core/components_ng/pattern/select/select_model.h"
 #include "core/components_ng/property/border_property.h"
@@ -39,9 +35,6 @@
 
 constexpr int32_t DEFAULT_CLICK_DISTANCE = 15;
 constexpr uint32_t MAX_SEARCH_DEPTH = 5;
-constexpr double MENU_ANIMATION_MAX_SCALE = 1.0f;
-constexpr double MENU_ANIMATION_MIN_OPACITY = 0.0f;
-constexpr double MENU_ANIMATION_MAX_OPACITY = 1.0f;
 namespace OHOS::Ace::NG {
 
 struct SelectProperties {
@@ -57,13 +50,6 @@ struct MenuItemInfo {
     OffsetF originOffset = OffsetF();
     OffsetF endOffset = OffsetF();
     bool isFindTargetId = false;
-};
-
-struct PreviewMenuAnimationInfo {
-    BorderRadiusProperty borderRadius = BorderRadiusProperty(Dimension(-1.0f));
-
-    // for hoverScale animation
-    float clipRate = -1.0f;
 };
 
 class MenuPattern : public Pattern, public FocusView {
@@ -88,36 +74,6 @@ public:
     std::list<int32_t> GetRouteOfFirstScope() override
     {
         return { 0, 0 };
-    }
-
-    bool IsEnableMatchParent() override
-    {
-        return IsMultiMenu();
-    }
-
-    bool IsEnableChildrenMatchParent() override
-    {
-        return IsMultiMenu();
-    }
-
-    bool IsEnableFix() override
-    {
-        return IsMultiMenu();
-    }
-
-    bool ChildPreMeasureHelperEnabled() override
-    {
-        return true;
-    }
-
-    bool PostponedTaskForIgnoreEnabled() override
-    {
-        return true;
-    }
-
-    bool IsEnabledContentForFixIdeal()
-    {
-        return IsMultiMenu();
     }
 
     bool IsFocusViewLegal() override
@@ -308,24 +264,6 @@ public:
         return options_;
     }
 
-    std::vector<RefPtr<FrameNode>>& GetEmbeddedMenuItems()
-    {
-        return embeddedMenuItems_;
-    }
-
-    void AddEmbeddedMenuItem(const RefPtr<FrameNode>& menuItem)
-    {
-        embeddedMenuItems_.emplace_back(menuItem);
-    }
-
-    void RemoveEmbeddedMenuItem(const RefPtr<FrameNode>& menuItem)
-    {
-        auto iter = std::find(embeddedMenuItems_.begin(), embeddedMenuItems_.end(), menuItem);
-        if (iter != embeddedMenuItems_.end()) {
-            embeddedMenuItems_.erase(iter);
-        }
-    }
-
     void RemoveParentHoverStyle();
 
     void UpdateSelectParam(const std::vector<SelectParam>& params);
@@ -335,13 +273,7 @@ public:
         needHideAfterTouch_ = needHideAfterTouch;
     }
 
-    void HideMenu(const HideMenuType& reason)
-    {
-        HideMenu(false, OffsetF(), reason);
-    }
-
-    void HideMenu(bool isMenuOnTouch = false, OffsetF position = OffsetF(),
-        const HideMenuType& reason = HideMenuType::NORMAL) const;
+    void HideMenu(bool isMenuOnTouch = false, OffsetF position = OffsetF()) const;
 
     bool HideStackExpandMenu(const OffsetF& position) const;
 
@@ -350,7 +282,6 @@ public:
     void MountOption(const RefPtr<FrameNode>& option);
 
     void RemoveOption();
-    RefPtr<FrameNode> DuplicateMenuNode(const RefPtr<FrameNode>& menuNode, const MenuParam& menuParam);
 
     RefPtr<FrameNode> GetMenuColumn() const;
 
@@ -385,8 +316,7 @@ public:
     RefPtr<FrameNode> GetMenuWrapper() const;
     RefPtr<FrameNode> GetFirstInnerMenu() const;
     void DumpInfo() override;
-    void DumpSimplifyInfo(std::shared_ptr<JsonValue>& json) override {}
-    void DumpInfo(std::unique_ptr<JsonValue>& json) override;
+
     void SetFirstShow()
     {
         isFirstShow_ = true;
@@ -429,9 +359,9 @@ public:
         return hasAnimation_;
     }
 
-    void SetSubMenuShow(bool subMenuShowed)
+    void SetSubMenuShow()
     {
-        isSubMenuShow_ = subMenuShowed;
+        isSubMenuShow_ = true;
     }
 
     void SetMenuShow()
@@ -515,7 +445,7 @@ public:
     }
 
     void ShowMenuDisappearAnimation();
-    void ShowStackMenuDisappearAnimation(const RefPtr<FrameNode>& menuNode,
+    void ShowStackExpandDisappearAnimation(const RefPtr<FrameNode>& menuNode,
         const RefPtr<FrameNode>& subMenuNode, AnimationOption& option) const;
 
     void SetBuilderFunc(SelectMakeCallback&& makeFunc)
@@ -549,20 +479,6 @@ public:
         }
     }
 
-    ShadowStyle GetMenuDefaultShadowStyle()
-    {
-        auto shadowStyle = ShadowStyle::OuterDefaultMD;
-
-        auto host = GetHost();
-        CHECK_NULL_RETURN(host, shadowStyle);
-        auto pipeline = host->GetContextRefPtr();
-        CHECK_NULL_RETURN(pipeline, shadowStyle);
-        auto menuTheme = pipeline->GetTheme<MenuTheme>();
-        CHECK_NULL_RETURN(menuTheme, shadowStyle);
-        shadowStyle = menuTheme->GetMenuShadowStyle();
-        return shadowStyle;
-    }
-
     bool GetShadowFromTheme(ShadowStyle shadowStyle, Shadow& shadow);
 
     bool UseContentModifier()
@@ -583,6 +499,7 @@ public:
     {
         lastSelectedItem_ = lastSelectedItem;
     }
+
     void UpdateLastPosition(std::optional<OffsetF> lastPosition)
     {
         lastPosition_ = lastPosition;
@@ -625,100 +542,8 @@ public:
         return menuWindowRect_;
     }
 
-    void SetMenuLayoutParam(const PreviewMenuParam& layoutParam)
-    {
-        layoutParam_ = layoutParam;
-    }
-
-    PreviewMenuParam GetMenuLayoutParam() const
-    {
-        return layoutParam_;
-    }
-
-    OffsetF GetPreviewMenuDisappearPosition()
-    {
-        return disappearOffset_;
-    }
-
-    void UpdateMenuPathParams(std::optional<MenuPathParams> pathParams);
-
-    std::optional<MenuPathParams> GetMenuPathParams()
-    {
-        return pathParams_;
-    }
-
-    void SetCustomNode(WeakPtr<UINode> customNode)
-    {
-        customNode_ = customNode;
-    }
-
-    RefPtr<UINode> GetCustomNode() const
-    {
-        return customNode_.Upgrade();
-    }
-
-    void UpdateSelectOptionTextByIndex(int32_t index, const std::string& text);
-    void UpdateSelectOptionIconByIndex(int32_t index, const std::string& icon);
-
-    void InitPreviewMenuAnimationInfo(const RefPtr<MenuTheme>& menuTheme);
-
-    float GetSelectMenuWidthFromTheme() const;
-
-    bool IsSelectOverlayDefaultModeRightClickMenu();
-    void RemoveLastNodeDivider(const RefPtr<UINode>& lastNode);
-    void UpdateMenuItemDivider();
-    void UpdateDividerProperty(const RefPtr<FrameNode>& dividerNode, const std::optional<V2::ItemDivider>& divider);
-    RefPtr<FrameNode> GetFirstMenuItem();
-    RefPtr<FrameNode> GetLastMenuItem();
-    std::pair<float, float> GetPreviewPositionY();
-
-    float GetTranslateYForStack()
-    {
-        return translateYForStack_;
-    }
-
-    void SetTranslateYForStack(float tmp)
-    {
-        translateYForStack_ = tmp;
-    }
-
-    float GetOriginMenuYForStack()
-    {
-        return originMenuYForStack_;
-    }
-
-    void SetOriginMenuYForStack(float tmp)
-    {
-        originMenuYForStack_ = tmp;
-    }
-
-    float GetOriginPreviewYForStack()
-    {
-        return originPreviewYForStack_;
-    }
-
-    void SetOriginPreviewYForStack(float tmp)
-    {
-        originPreviewYForStack_ = tmp;
-    }
-
-    void SetDisableMenuBgColorByUser(bool ret = false)
-    {
-        isDisableMenuBgColorByUser_ = ret;
-    }
-
-    void SetSubMenuDepth(int32_t depth)
-    {
-        subMenuDepth_ = depth;
-    }
-
-    int32_t GetSubMenuDepth() const
-    {
-        return subMenuDepth_;
-    }
-
 protected:
-    void UpdateMenuItemChildren(const RefPtr<UINode>& host, RefPtr<UINode>& previousNode);
+    void UpdateMenuItemChildren(RefPtr<UINode>& host);
     void SetMenuAttribute(RefPtr<FrameNode>& host);
     void SetAccessibilityAction();
     void SetType(MenuType value)
@@ -733,18 +558,8 @@ protected:
     virtual void UpdateBorderRadius(const RefPtr<FrameNode>& menuNode, const BorderRadiusProperty& borderRadius);
 
 private:
-    void UpdateMenuDividerWithMode(const RefPtr<UINode>& previousNode, const RefPtr<UINode>& currentNode,
-        const RefPtr<MenuLayoutProperty>& property, int32_t& index);
-    void AddGroupHeaderDivider(RefPtr<UINode>& previousNode, const RefPtr<UINode>& currentNode,
-        const RefPtr<MenuLayoutProperty>& property, int32_t& index);
-    void AddGroupFooterDivider(RefPtr<UINode>& previousNode, const RefPtr<UINode>& currentNode,
-        const RefPtr<MenuLayoutProperty>& property, int32_t& index);
     void OnAttachToFrameNode() override;
-    int32_t RegisterHalfFoldHover(const RefPtr<FrameNode>& menuNode);
     void OnDetachFromFrameNode(FrameNode* frameNode) override;
-    void OnDetachFromMainTree() override;
-    void ResetThemeByInnerMenuCount();
-
     void RegisterOnTouch();
     void OnTouchEvent(const TouchEventInfo& info);
     bool OnDirtyLayoutWrapperSwap(const RefPtr<LayoutWrapper>& dirty, const DirtySwapConfig& config) override;
@@ -755,54 +570,30 @@ private:
     void CopyMenuAttr(const RefPtr<FrameNode>& menuNode) const;
 
     void RegisterOnKeyEvent(const RefPtr<FocusHub>& focusHub);
-    bool OnKeyEvent(const KeyEvent& event);
+    bool OnKeyEvent(const KeyEvent& event) const;
 
     void DisableTabInMenu();
 
     Offset GetTransformCenter() const;
-    OffsetF GetPreviewMenuAnimationOffset(const OffsetF& previewCenter, const SizeF& previewSize, float scale) const;
     void ShowPreviewMenuAnimation();
-    void ShowPreviewPositionAnimation(AnimationOption& option, int32_t delay);
-    void ShowPreviewMenuScaleAnimation(const RefPtr<MenuTheme>& menuTheme, AnimationOption& option, int32_t delay);
+    void ShowPreviewMenuScaleAnimation();
     void ShowMenuAppearAnimation();
-    void ShowStackMenuAppearAnimation();
-    std::pair<OffsetF, OffsetF> GetMenuOffset(const RefPtr<FrameNode>& mainMenu,
-        const RefPtr<FrameNode>& subMenu, bool isNeedRestoreNodeId = false) const;
-    MenuItemInfo GetInnerMenuOffset(const RefPtr<UINode>& child, const RefPtr<FrameNode>& subMenu,
-        bool isNeedRestoreNodeId) const;
-    MenuItemInfo GetMenuItemInfo(const RefPtr<UINode>& child, const RefPtr<FrameNode>& subMenu,
-        bool isNeedRestoreNodeId) const;
-    std::vector<RefPtr<RenderContext>> GetOtherMenuItemContext(const RefPtr<FrameNode>& subMenuNode) const;
+    void ShowStackExpandMenu();
+    std::pair<OffsetF, OffsetF> GetMenuOffset(const RefPtr<FrameNode>& outterMenu,
+        bool isNeedRestoreNodeId = false) const;
+    MenuItemInfo GetInnerMenuOffset(const RefPtr<UINode>& child, bool isNeedRestoreNodeId) const;
+    MenuItemInfo GetMenuItemInfo(const RefPtr<UINode>& child, bool isNeedRestoreNodeId) const;
     void ShowArrowRotateAnimation() const;
-    void ShowArrowReverseRotateAnimation() const;
-    RefPtr<FrameNode> GetArrowNode(const RefPtr<FrameNode>& host) const; // arrowNode in subMenu
+    RefPtr<FrameNode> GetImageNode(const RefPtr<FrameNode>& host) const;
 
     void InitPanEvent(const RefPtr<GestureEventHub>& gestureHub);
     void HandleDragEnd(float offsetX, float offsetY, float velocity);
     void HandleScrollDragEnd(float offsetX, float offsetY, float velocity);
-    RefPtr<UINode> GetSyntaxNode(const RefPtr<UINode>& parent);
     RefPtr<UINode> GetForEachMenuItem(const RefPtr<UINode>& parent, bool next);
     RefPtr<UINode> GetOutsideForEachMenuItem(const RefPtr<UINode>& forEachNode, bool next);
-    RefPtr<UINode> GetIfElseMenuItem(const RefPtr<UINode>& parent, bool next);
-    void HandleNextPressed(const RefPtr<UINode>& parent, int32_t index, bool press, bool hover);
-    void HandlePrevPressed(const RefPtr<UINode>& parent, int32_t index, bool press);
-    void SetMenuBackGroundStyle(const RefPtr<FrameNode>& menuNode, const MenuParam& menuParam);
-    void UpdateMenuBorderAndBackgroundBlur();
 
     RefPtr<FrameNode> BuildContentModifierNode(int index);
     bool IsMenuScrollable() const;
-    void UpdateClipPath(const RefPtr<LayoutWrapper>& dirty);
-    RefPtr<FrameNode> GetTitleContentNode(const RefPtr<FrameNode>& subMenuNode) const;
-    void ShowStackSubMenuAnimation(const RefPtr<FrameNode>& mainMenu, const RefPtr<FrameNode>& subMenuNode);
-    void ShowStackMainMenuAnimation(const RefPtr<FrameNode>& mainMenu, const RefPtr<FrameNode>& subMenuNode,
-        const RefPtr<FrameNode>& menuWrapper);
-    void ShowStackMainMenuOpacityAnimation(const RefPtr<FrameNode>& mainMenu);
-    void ShowStackSubMenuDisappearAnimation(const RefPtr<FrameNode>& menuNode,
-        const RefPtr<FrameNode>& subMenuNode) const;
-    void ShowStackMainMenuDisappearOpacityAnimation(const RefPtr<FrameNode>& menuNode,
-        AnimationOption& option) const;
-    void ShowStackMainMenuDisappearAnimation(const RefPtr<FrameNode>& menuNode,
-        const RefPtr<FrameNode>& subMenuNode, AnimationOption& option) const;
 
     RefPtr<ClickEvent> onClick_;
     RefPtr<TouchEventImpl> onTouch_;
@@ -817,8 +608,7 @@ private:
     RefPtr<FrameNode> parentMenuItem_;
     RefPtr<FrameNode> showedSubMenu_;
     std::vector<RefPtr<FrameNode>> options_;
-    std::optional<int32_t> foldStatusChangedCallbackId_;
-    std::optional<int32_t> halfFoldHoverCallbackId_;
+    std::optional<int32_t> foldDisplayModeChangedCallbackId_;
 
     bool isSelectMenu_ = false;
     MenuPreviewMode previewMode_ = MenuPreviewMode::NONE;
@@ -835,9 +625,7 @@ private:
     std::optional<Placement> lastPlacement_;
     OffsetF originOffset_;
     OffsetF endOffset_;
-    OffsetF disappearOffset_;
     OffsetF previewOriginOffset_;
-    OffsetF statusOriginOffset_;
     RectF previewRect_;
     SizeF previewIdealSize_;
 
@@ -851,20 +639,10 @@ private:
     bool expandDisplay_ = false;
     RefPtr<FrameNode> lastSelectedItem_ = nullptr;
     bool isEmbedded_ = false;
-    std::vector<RefPtr<FrameNode>> embeddedMenuItems_;
     bool isStackSubmenu_ = false;
     bool isNeedDivider_ = false;
     Rect menuWindowRect_;
-    PreviewMenuParam layoutParam_;
-    WeakPtr<UINode> customNode_ = nullptr;
-    std::optional<MenuPathParams> pathParams_ = std::nullopt;
-    float translateYForStack_ = 0.0f;
-    float originMenuYForStack_ = 0.0f;
-    float originPreviewYForStack_ = 0.0f;
-    bool isDisableMenuBgColorByUser_ = false;
 
-    // only used for Side sub menu
-    int32_t subMenuDepth_ = 0;
     ACE_DISALLOW_COPY_AND_MOVE(MenuPattern);
 };
 
@@ -877,9 +655,6 @@ public:
     ~InnerMenuPattern() override = default;
     void OnModifyDone() override;
     void BeforeCreateLayoutWrapper() override;
-    bool isHalfFoldStatus_ = false;
-
-    void RecordItemsAndGroups();
 
     const std::list<WeakPtr<UINode>>& GetItemsAndGroups() const
     {
@@ -893,11 +668,12 @@ private:
     void ApplyDesktopMenuTheme();
     void ApplyMultiMenuTheme();
 
-    void InitDefaultBorder(const RefPtr<FrameNode>& host);
+    void RecordItemsAndGroups();
 
     // Record menu's items and groups at first level,
     // use for group header and footer padding
     std::list<WeakPtr<UINode>> itemsAndGroups_;
+
     ACE_DISALLOW_COPY_AND_MOVE(InnerMenuPattern);
 };
 } // namespace OHOS::Ace::NG

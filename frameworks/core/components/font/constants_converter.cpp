@@ -14,17 +14,19 @@
  */
 
 #include "constants_converter.h"
-#include <cstdint>
 
+#ifndef USE_GRAPHIC_TEXT_GINE
+#include "txt/font_style.h"
+#include "txt/font_weight.h"
+#include "txt/paragraph_style.h"
+#include "txt/text_decoration.h"
+#else
 #include "rosen_text/hm_symbol_txt.h"
 #include "rosen_text/typography_create.h"
 #include "rosen_text/typography_style.h"
+#endif
 
 #include "base/i18n/localization.h"
-#include "core/components_ng/render/drawing.h"
-#include "core/components_ng/render/adapter/drawing_decoration_painter.h"
-#include "base/geometry/ng/rect_t.h"
-#include "draw/color.h"
 
 namespace OHOS::Ace::Constants {
 namespace {
@@ -36,16 +38,54 @@ constexpr float MAX_FONT_WEIGHT = 900.0f;
 constexpr int32_t SCALE_EFFECT = 2;
 constexpr int32_t NONE_EFFECT = 0;
 constexpr float ORIGINAL_LINE_HEIGHT_SCALE = 1.0f;
-constexpr float DEFAULT_STROKE_WIDTH = 0.0f;
-const std::string DEFAULT_SYMBOL_FONTFAMILY = "HM Symbol";
-struct LineSpaceAndHeightInfo {
-    double lineHeightScale = 0.0;
-    double lineSpacingScale = 0.0;
-    bool lineHeightOnly = false;
-    bool lineSpacingOnly = false;
-};
 } // namespace
 
+#ifndef USE_GRAPHIC_TEXT_GINE
+txt::FontWeight ConvertTxtFontWeight(FontWeight fontWeight)
+{
+    txt::FontWeight convertValue;
+    switch (fontWeight) {
+        case FontWeight::W100:
+        case FontWeight::LIGHTER:
+            convertValue = txt::FontWeight::w100;
+            break;
+        case FontWeight::W200:
+            convertValue = txt::FontWeight::w200;
+            break;
+        case FontWeight::W300:
+            convertValue = txt::FontWeight::w300;
+            break;
+        case FontWeight::W400:
+        case FontWeight::NORMAL:
+        case FontWeight::REGULAR:
+            convertValue = txt::FontWeight::w400;
+            break;
+        case FontWeight::W500:
+        case FontWeight::MEDIUM:
+            convertValue = txt::FontWeight::w500;
+            break;
+        case FontWeight::W600:
+            convertValue = txt::FontWeight::w600;
+            break;
+        case FontWeight::W700:
+        case FontWeight::BOLD:
+            convertValue = txt::FontWeight::w700;
+            break;
+        case FontWeight::W800:
+            convertValue = txt::FontWeight::w800;
+            break;
+        case FontWeight::W900:
+        case FontWeight::BOLDER:
+            convertValue = txt::FontWeight::w900;
+            break;
+        default:
+            TAG_LOGW(AceLogTag::ACE_FONT, "FontWeight set error! use default FontWeight.");
+            convertValue = txt::FontWeight::w400;
+            break;
+    }
+    return convertValue;
+}
+#else
 Rosen::FontWeight ConvertTxtFontWeight(FontWeight fontWeight)
 {
     Rosen::FontWeight convertValue;
@@ -90,25 +130,27 @@ Rosen::FontWeight ConvertTxtFontWeight(FontWeight fontWeight)
     }
     return convertValue;
 }
+#endif
 
-Rosen::SymbolType ConvertTxtSymbolType(SymbolType symbolType)
+#ifndef USE_GRAPHIC_TEXT_GINE
+txt::FontStyle ConvertTxtFontStyle(FontStyle fontStyle)
 {
-    Rosen::SymbolType txtSymbolType;
-    switch (symbolType) {
-        case SymbolType::SYSTEM:
-            txtSymbolType = Rosen::SymbolType::SYSTEM;
+    txt::FontStyle convertValue;
+    switch (fontStyle) {
+        case FontStyle::NORMAL:
+            convertValue = txt::FontStyle::normal;
             break;
-        case SymbolType::CUSTOM:
-            txtSymbolType = Rosen::SymbolType::CUSTOM;
+        case FontStyle::ITALIC:
+            convertValue = txt::FontStyle::italic;
             break;
         default:
-            LOGE("SymbolType setting error! Now using default SymbolType.");
-            txtSymbolType = Rosen::SymbolType::SYSTEM;
+            TAG_LOGW(AceLogTag::ACE_FONT, "FontStyle set error! use default FontStyle");
+            convertValue = txt::FontStyle::normal;
             break;
     }
-    return txtSymbolType;
+    return convertValue;
 }
-
+#else
 Rosen::FontStyle ConvertTxtFontStyle(FontStyle fontStyle)
 {
     Rosen::FontStyle convertValue;
@@ -126,28 +168,26 @@ Rosen::FontStyle ConvertTxtFontStyle(FontStyle fontStyle)
     }
     return convertValue;
 }
+#endif
 
-Rosen::TextBadgeType ConvertTxtBadgeType(SuperscriptStyle superscript)
+#ifndef USE_GRAPHIC_TEXT_GINE
+txt::TextBaseline ConvertTxtTextBaseline(TextBaseline textBaseline)
 {
-    Rosen::TextBadgeType convertValue;
-    switch (superscript) {
-        case SuperscriptStyle::NORMAL:
-            convertValue = Rosen::TextBadgeType::BADGE_NONE;
+    txt::TextBaseline convertValue;
+    switch (textBaseline) {
+        case TextBaseline::ALPHABETIC:
+            convertValue = txt::TextBaseline::kAlphabetic;
             break;
-        case SuperscriptStyle::SUPERSCRIPT:
-            convertValue = Rosen::TextBadgeType::SUPERSCRIPT;
-            break;
-        case SuperscriptStyle::SUBSCRIPT:
-            convertValue = Rosen::TextBadgeType::SUBSCRIPT;
+        case TextBaseline::IDEOGRAPHIC:
+            convertValue = txt::TextBaseline::kIdeographic;
             break;
         default:
-            TAG_LOGW(AceLogTag::ACE_FONT, "TextBadgeType setting error! Now using default TextBadgeType");
-            convertValue = Rosen::TextBadgeType::BADGE_NONE;
+            convertValue = txt::TextBaseline::kAlphabetic;
             break;
     }
     return convertValue;
 }
-
+#else
 Rosen::TextBaseline ConvertTxtTextBaseline(TextBaseline textBaseline)
 {
     Rosen::TextBaseline convertValue;
@@ -164,7 +204,39 @@ Rosen::TextBaseline ConvertTxtTextBaseline(TextBaseline textBaseline)
     }
     return convertValue;
 }
+#endif
 
+#ifndef USE_GRAPHIC_TEXT_GINE
+txt::TextAlign ConvertTxtTextAlign(TextAlign textAlign)
+{
+    txt::TextAlign convertValue;
+    switch (textAlign) {
+        case TextAlign::LEFT:
+            convertValue = txt::TextAlign::left;
+            break;
+        case TextAlign::RIGHT:
+            convertValue = txt::TextAlign::right;
+            break;
+        case TextAlign::CENTER:
+            convertValue = txt::TextAlign::center;
+            break;
+        case TextAlign::JUSTIFY:
+            convertValue = txt::TextAlign::justify;
+            break;
+        case TextAlign::START:
+            convertValue = txt::TextAlign::start;
+            break;
+        case TextAlign::END:
+            convertValue = txt::TextAlign::end;
+            break;
+        default:
+            TAG_LOGW(AceLogTag::ACE_FONT, "TextAlign set error! use default TextAlign");
+            convertValue = txt::TextAlign::start;
+            break;
+    }
+    return convertValue;
+}
+#else
 Rosen::TextAlign ConvertTxtTextAlign(TextAlign textAlign)
 {
     Rosen::TextAlign convertValue;
@@ -194,32 +266,29 @@ Rosen::TextAlign ConvertTxtTextAlign(TextAlign textAlign)
     }
     return convertValue;
 }
+#endif
 
-Rosen::TextVerticalAlign ConvertTxtTextVerticalAlign(TextVerticalAlign textVerticalAlign)
+#ifndef USE_GRAPHIC_TEXT_GINE
+txt::Paragraph::RectHeightStyle ConvertTxtRectHeightStyle(RectHeightStyle heightStyle)
 {
-    Rosen::TextVerticalAlign convertValue;
-    switch (textVerticalAlign) {
-        case TextVerticalAlign::BASELINE:
-            convertValue = Rosen::TextVerticalAlign::BASELINE;
-            break;
-        case TextVerticalAlign::BOTTOM:
-            convertValue = Rosen::TextVerticalAlign::BOTTOM;
-            break;
-        case TextVerticalAlign::CENTER:
-            convertValue = Rosen::TextVerticalAlign::CENTER;
-            break;
-        case TextVerticalAlign::TOP:
-            convertValue = Rosen::TextVerticalAlign::TOP;
-            break;
+    switch (heightStyle) {
+        case RectHeightStyle::TIGHT:
+            return txt::Paragraph::RectHeightStyle::kTight;
+        case RectHeightStyle::MAX:
+            return txt::Paragraph::RectHeightStyle::kMax;
+        case RectHeightStyle::INCLUDE_LINE_SPACE_MIDDLE:
+            return txt::Paragraph::RectHeightStyle::kIncludeLineSpacingMiddle;
+        case RectHeightStyle::INCLUDE_LINE_SPACE_TOP:
+            return txt::Paragraph::RectHeightStyle::kIncludeLineSpacingTop;
+        case RectHeightStyle::INCLUDE_LINE_SPACE_BOTTOM:
+            return txt::Paragraph::RectHeightStyle::kIncludeLineSpacingBottom;
+        case RectHeightStyle::STRUT:
+            return txt::Paragraph::RectHeightStyle::kStrut;
         default:
-            TAG_LOGW(AceLogTag::ACE_FONT,
-                "TextVerticalAlign setting error! Now using default TextVerticalAlign");
-            convertValue = Rosen::TextVerticalAlign::BASELINE;
-            break;
+            return txt::Paragraph::RectHeightStyle::kTight;
     }
-    return convertValue;
 }
-
+#else
 Rosen::TextRectHeightStyle ConvertTxtRectHeightStyle(RectHeightStyle heightStyle)
 {
     switch (heightStyle) {
@@ -239,7 +308,21 @@ Rosen::TextRectHeightStyle ConvertTxtRectHeightStyle(RectHeightStyle heightStyle
             return Rosen::TextRectHeightStyle::TIGHT;
     }
 }
+#endif
 
+#ifndef USE_GRAPHIC_TEXT_GINE
+txt::Paragraph::RectWidthStyle ConvertTxtRectWidthStyle(RectWidthStyle widthStyle)
+{
+    switch (widthStyle) {
+        case RectWidthStyle::TIGHT:
+            return txt::Paragraph::RectWidthStyle::kTight;
+        case RectWidthStyle::MAX:
+            return txt::Paragraph::RectWidthStyle::kMax;
+        default:
+            return txt::Paragraph::RectWidthStyle::kTight;
+    }
+}
+#else
 Rosen::TextRectWidthStyle ConvertTxtRectWidthStyle(RectWidthStyle widthStyle)
 {
     switch (widthStyle) {
@@ -251,20 +334,41 @@ Rosen::TextRectWidthStyle ConvertTxtRectWidthStyle(RectWidthStyle widthStyle)
             return Rosen::TextRectWidthStyle::TIGHT;
     }
 }
+#endif
 
+#ifndef USE_GRAPHIC_TEXT_GINE
+txt::TextDirection ConvertTxtTextDirection(TextDirection textDirection)
+#else
 Rosen::TextDirection ConvertTxtTextDirection(TextDirection textDirection)
+#endif
 {
+#ifndef USE_GRAPHIC_TEXT_GINE
+    txt::TextDirection convertValue;
+#else
     Rosen::TextDirection convertValue;
+#endif
     switch (textDirection) {
         case TextDirection::RTL:
+#ifndef USE_GRAPHIC_TEXT_GINE
+            convertValue = txt::TextDirection::rtl;
+#else
             convertValue = Rosen::TextDirection::RTL;
+#endif
             break;
         case TextDirection::LTR:
+#ifndef USE_GRAPHIC_TEXT_GINE
+            convertValue = txt::TextDirection::ltr;
+#else
             convertValue = Rosen::TextDirection::LTR;
+#endif
             break;
         default:
             TAG_LOGW(AceLogTag::ACE_FONT, "TextDirection setting error! Now using default TextDirection");
+#ifndef USE_GRAPHIC_TEXT_GINE
+            convertValue = txt::TextDirection::ltr;
+#else
             convertValue = Rosen::TextDirection::LTR;
+#endif
             break;
     }
     return convertValue;
@@ -275,34 +379,80 @@ SkColor ConvertSkColor(Color color)
     return color.GetValue();
 }
 
-Rosen::TextDecoration ConvertTxtTextDecoration(const std::vector<TextDecoration>& textDecorations)
+#ifndef USE_GRAPHIC_TEXT_GINE
+txt::TextDecoration ConvertTxtTextDecoration(TextDecoration textDecoration)
 {
-    Rosen::TextDecoration convertValue = Rosen::TextDecoration::NONE;
-    for (TextDecoration textDecoration : textDecorations) {
-        switch (textDecoration) {
-            case TextDecoration::NONE:
-                convertValue = static_cast<Rosen::TextDecoration>(
-                    static_cast<uint32_t>(convertValue) | static_cast<uint32_t>(Rosen::TextDecoration::NONE));
-                break;
-            case TextDecoration::UNDERLINE:
-                convertValue = static_cast<Rosen::TextDecoration>(
-                    static_cast<uint32_t>(convertValue) | static_cast<uint32_t>(Rosen::TextDecoration::UNDERLINE));
-                break;
-            case TextDecoration::OVERLINE:
-                convertValue = static_cast<Rosen::TextDecoration>(
-                    static_cast<uint32_t>(convertValue) | static_cast<uint32_t>(Rosen::TextDecoration::OVERLINE));
-                break;
-            case TextDecoration::LINE_THROUGH:
-                convertValue = static_cast<Rosen::TextDecoration>(
-                    static_cast<uint32_t>(convertValue) | static_cast<uint32_t>(Rosen::TextDecoration::LINE_THROUGH));
-                break;
-            default:
-                TAG_LOGW(AceLogTag::ACE_FONT, "TextDecoration setting error! Now using default TextDecoration");
-                break;
-        }
+    txt::TextDecoration convertValue = txt::TextDecoration::kNone;
+    switch (textDecoration) {
+        case TextDecoration::NONE:
+            convertValue = txt::TextDecoration::kNone;
+            break;
+        case TextDecoration::UNDERLINE:
+            convertValue = txt::TextDecoration::kUnderline;
+            break;
+        case TextDecoration::OVERLINE:
+            convertValue = txt::TextDecoration::kOverline;
+            break;
+        case TextDecoration::LINE_THROUGH:
+            convertValue = txt::TextDecoration::kLineThrough;
+            break;
+        default:
+            TAG_LOGW(AceLogTag::ACE_FONT, "TextDecoration set error! use default TextDecoration");
+            break;
     }
     return convertValue;
 }
+#else
+Rosen::TextDecoration ConvertTxtTextDecoration(TextDecoration textDecoration)
+{
+    Rosen::TextDecoration convertValue = Rosen::TextDecoration::NONE;
+    switch (textDecoration) {
+        case TextDecoration::NONE:
+            convertValue = Rosen::TextDecoration::NONE;
+            break;
+        case TextDecoration::UNDERLINE:
+            convertValue = Rosen::TextDecoration::UNDERLINE;
+            break;
+        case TextDecoration::OVERLINE:
+            convertValue = Rosen::TextDecoration::OVERLINE;
+            break;
+        case TextDecoration::LINE_THROUGH:
+            convertValue = Rosen::TextDecoration::LINE_THROUGH;
+            break;
+        default:
+            TAG_LOGW(AceLogTag::ACE_FONT, "TextDecoration setting error! Now using default TextDecoration");
+            break;
+    }
+    return convertValue;
+}
+#endif
+#ifndef USE_GRAPHIC_TEXT_GINE
+txt::TextDecorationStyle ConvertTxtTextDecorationStyle(TextDecorationStyle textDecorationStyle)
+{
+    txt::TextDecorationStyle convertValue = txt::TextDecorationStyle::kSolid;
+    switch (textDecorationStyle) {
+        case TextDecorationStyle::SOLID:
+            convertValue = txt::TextDecorationStyle::kSolid;
+            break;
+        case TextDecorationStyle::DOUBLE:
+            convertValue = txt::TextDecorationStyle::kDouble;
+            break;
+        case TextDecorationStyle::DOTTED:
+            convertValue = txt::TextDecorationStyle::kDotted;
+            break;
+        case TextDecorationStyle::DASHED:
+            convertValue = txt::TextDecorationStyle::kDashed;
+            break;
+        case TextDecorationStyle::WAVY:
+            convertValue = txt::TextDecorationStyle::kWavy;
+            break;
+        default:
+            TAG_LOGW(AceLogTag::ACE_FONT, "TextDecorationStyle set error! use default TextDecorationStyle");
+            break;
+    }
+    return convertValue;
+}
+#else
 Rosen::TextDecorationStyle ConvertTxtTextDecorationStyle(TextDecorationStyle textDecorationStyle)
 {
     Rosen::TextDecorationStyle convertValue = Rosen::TextDecorationStyle::SOLID;
@@ -328,7 +478,150 @@ Rosen::TextDecorationStyle ConvertTxtTextDecorationStyle(TextDecorationStyle tex
     }
     return convertValue;
 }
+#endif
 
+#ifndef USE_GRAPHIC_TEXT_GINE
+void ConvertTxtStyle(const TextStyle& textStyle, const WeakPtr<PipelineBase>& context, txt::TextStyle& txtStyle)
+{
+    txtStyle.color = ConvertSkColor(textStyle.GetTextColor());
+    txtStyle.font_weight = ConvertTxtFontWeight(textStyle.GetFontWeight());
+    auto fontWeightValue = (static_cast<int32_t>(
+            ConvertTxtFontWeight(textStyle.GetFontWeight())) + 1) * DEFAULT_MULTIPLE;
+    auto pipelineContext = context.Upgrade();
+    if (pipelineContext) {
+        fontWeightValue = fontWeightValue * pipelineContext->GetFontWeightScale();
+    }
+    if (textStyle.GetEnableVariableFontWeight()) {
+        fontWeightValue = textStyle.GetVariableFontWeight();
+        if (LessNotEqual(fontWeightValue, MIN_FONT_WEIGHT) || GreatNotEqual(fontWeightValue, MAX_FONT_WEIGHT)) {
+            fontWeightValue = DEFAULT_FONT_WEIGHT;
+        }
+    }
+    txtStyle.fontVariations.SetAxisValue(FONTWEIGHT, fontWeightValue);
+    // Font size must be px when transferring to txt::TextStyle
+    if (pipelineContext) {
+        txtStyle.font_size = pipelineContext->NormalizeToPx(textStyle.GetFontSize());
+        if (textStyle.IsAllowScale() && textStyle.GetFontSize().Unit() == DimensionUnit::FP) {
+            txtStyle.font_size =
+                pipelineContext->NormalizeToPx(textStyle.GetFontSize() * pipelineContext->GetFontScale());
+        }
+    } else {
+        txtStyle.font_size = textStyle.GetFontSize().Value();
+    }
+    txtStyle.font_style = ConvertTxtFontStyle(textStyle.GetFontStyle());
+
+    if (textStyle.GetWordSpacing().Unit() == DimensionUnit::PERCENT) {
+        txtStyle.word_spacing = textStyle.GetWordSpacing().Value() * txtStyle.font_size;
+    } else {
+        if (pipelineContext) {
+            txtStyle.word_spacing = pipelineContext->NormalizeToPx(textStyle.GetWordSpacing());
+        } else {
+            txtStyle.word_spacing = textStyle.GetWordSpacing().Value();
+        }
+    }
+    if (pipelineContext) {
+        txtStyle.letter_spacing = pipelineContext->NormalizeToPx(textStyle.GetLetterSpacing());
+    }
+    txtStyle.text_baseline = ConvertTxtTextBaseline(textStyle.GetTextBaseline());
+    txtStyle.decoration = ConvertTxtTextDecoration(textStyle.GetTextDecoration());
+    txtStyle.decoration_style = ConvertTxtTextDecorationStyle(textStyle.GetTextDecorationStyle());
+    txtStyle.decoration_color = ConvertSkColor(textStyle.GetTextDecorationColor());
+    txtStyle.font_families = textStyle.GetFontFamilies();
+    txtStyle.locale = Localization::GetInstance()->GetFontLocale();
+    txtStyle.half_leading = textStyle.GetHalfLeading();
+
+    for (auto& spanShadow : textStyle.GetTextShadows()) {
+        txt::TextShadow txtShadow;
+        txtShadow.color = spanShadow.GetColor().GetValue();
+#ifndef USE_ROSEN_DRAWING
+        txtShadow.offset.fX = static_cast<SkScalar>(spanShadow.GetOffset().GetX());
+        txtShadow.offset.fY = static_cast<SkScalar>(spanShadow.GetOffset().GetY());
+#else
+        txtShadow.offset.SetX(static_cast<SkScalar>(spanShadow.GetOffset().GetX()));
+        txtShadow.offset.SetY(static_cast<SkScalar>(spanShadow.GetOffset().GetY()));
+#endif
+        txtShadow.blur_sigma = spanShadow.GetBlurRadius();
+
+        txtStyle.text_shadows.emplace_back(txtShadow);
+    }
+
+    if (textStyle.GetLineHeight().Unit() == DimensionUnit::PERCENT) {
+        txtStyle.has_height_override = true;
+        txtStyle.height = textStyle.GetLineHeight().Value();
+    } else {
+        double fontSize = txtStyle.font_size;
+        double lineHeight = textStyle.GetLineHeight().Value();
+        if (pipelineContext) {
+            lineHeight = pipelineContext->NormalizeToPx(textStyle.GetLineHeight());
+        }
+        txtStyle.has_height_override = textStyle.HasHeightOverride();
+        if (!NearEqual(lineHeight, fontSize) && (lineHeight > 0.0) && (!NearZero(fontSize))) {
+            txtStyle.height = lineHeight / fontSize;
+        } else {
+            txtStyle.height = 1;
+            static const int32_t BEGIN_VERSION = 6;
+            auto isBeginVersion = pipelineContext && pipelineContext->GetMinPlatformVersion() >= BEGIN_VERSION;
+            if (NearZero(lineHeight) || (!isBeginVersion && NearEqual(lineHeight, fontSize))) {
+                txtStyle.has_height_override = false;
+            }
+        }
+    }
+
+    // set font variant
+    auto fontFeatures = textStyle.GetFontFeatures();
+    if (!fontFeatures.empty()) {
+        txt::FontFeatures features;
+        for (auto iter = fontFeatures.begin(); iter != fontFeatures.end(); ++iter) {
+            features.SetFeature(iter->first, iter->second);
+        }
+        txtStyle.font_features = features;
+    }
+}
+
+void ConvertTxtStyle(const TextStyle& textStyle, txt::TextStyle& txtStyle) {}
+
+void ConvertSymbolTxtStyle(const TextStyle& textStyle, txt::TextStyle& txtStyle)
+{
+    if (!textStyle.isSymbolGlyph_) {
+        return;
+    }
+
+    txtStyle.isSymbolGlyph = true;
+    const std::vector<Color>& symbolColor = textStyle.GetSymbolColorList();
+    std::vector<Rosen::Drawing::Color> symbolColors;
+    for (size_t i = 0; i < symbolColor.size(); i++) {
+        symbolColors.emplace_back(ConvertSkColor(symbolColor[i]));
+    }
+    txtStyle.symbol.SetRenderColor(symbolColors);
+    txtStyle.symbol.SetRenderMode(textStyle.GetRenderStrategy());
+    if (textStyle.GetSymbolEffectOptions().has_value()) {
+        auto options = textStyle.GetSymbolEffectOptions().value();
+        auto effectType = options.GetEffectType();
+        txtStyle.symbol.SetSymbolEffect(static_cast<uint32_t>(effectType));
+        if (effectType == SymbolEffectType::HIERARCHICAL && options.GetFillStyle().has_value()) {
+            txtStyle.symbol.SetAnimationMode(static_cast<uint16_t>(options.GetFillStyle().value()));
+        } else {
+            if (options.GetScopeType().has_value()) {
+                txtStyle.symbol.SetAnimationMode(static_cast<uint16_t>(options.GetScopeType().value()));
+            }
+        }
+        if (options.GetCommonSubType().has_value()) {
+            auto commonType = static_cast<uint16_t>(options.GetCommonSubType().value());
+            txtStyle.symbol.SetCommonSubType(commonType == 1 ? Rosen::Drawing::DrawingCommonSubType::UP
+                                                             : Rosen::Drawing::DrawingCommonSubType::DOWN);
+        }
+        txtStyle.symbol.SetAnimationStart(options.GetIsTxtActive());
+    } else {
+        auto effectStrategy = textStyle.GetEffectStrategy();
+        if (effectStrategy < NONE_EFFECT || effectStrategy > SCALE_EFFECT) {
+            effectStrategy = NONE_EFFECT;
+        }
+        txtStyle.symbol.SetSymbolEffect(effectStrategy);
+        txtStyle.symbol.SetAnimationStart(true);
+    }
+    txtStyle.fontFamilies.push_back("HM Symbol");
+}
+#else
 double NormalizeToPx(const Dimension& dimension)
 {
     if ((dimension.Unit() == DimensionUnit::VP) || (dimension.Unit() == DimensionUnit::FP)) {
@@ -419,98 +712,10 @@ void ConvertTxtStyle(const TextStyle& textStyle, Rosen::TextStyle& txtStyle)
     txtStyle.backgroundRect.rightBottomRadius = radiusConverter(radius->radiusBottomRight);
 }
 
-// ConvertTxtStyle helper for LineSpacing and LineHeight etc
-void ConvertSpacingAndHeigh(
-    const TextStyle& textStyle, const WeakPtr<PipelineBase>& context, Rosen::TextStyle& txtStyle,
-    LineSpaceAndHeightInfo& info)
-{
-    auto pipelineContext = context.Upgrade();
-    if (textStyle.GetLineHeight().Unit() == DimensionUnit::PERCENT) {
-        info.lineHeightOnly = true;
-        info.lineHeightScale = textStyle.GetLineHeight().Value();
-    } else {
-        double fontSize = txtStyle.fontSize;
-        double lineHeight = textStyle.GetLineHeight().Value();
-        if (pipelineContext) {
-            lineHeight = textStyle.GetLineHeight().ConvertToPxDistribute(
-                textStyle.GetMinFontScale(), textStyle.GetMaxFontScale(), textStyle.IsAllowScale());
-        }
-        info.lineHeightOnly = textStyle.HasHeightOverride();
-        if (!NearEqual(lineHeight, fontSize) && (lineHeight > 0.0) && (!NearZero(fontSize))) {
-            info.lineHeightScale = lineHeight / fontSize;
-        } else {
-            info.lineHeightScale = 1;
-            static const int32_t beginVersion = 6;
-            auto isBeginVersion = pipelineContext && pipelineContext->GetMinPlatformVersion() >= beginVersion;
-            if (NearZero(lineHeight) || (!isBeginVersion && NearEqual(lineHeight, fontSize))) {
-                info.lineHeightOnly = false;
-            }
-        }
-    }
-    if (textStyle.GetLineSpacing().Unit() == DimensionUnit::PERCENT) {
-        info.lineSpacingOnly = true;
-        info.lineSpacingScale = textStyle.GetLineSpacing().Value();
-    } else {
-        double fontSize = txtStyle.fontSize;
-        double lineSpacing = textStyle.GetLineSpacing().Value();
-        if (pipelineContext) {
-            lineSpacing = textStyle.GetLineSpacing().ConvertToPxDistribute(
-                textStyle.GetMinFontScale(), textStyle.GetMaxFontScale(), textStyle.IsAllowScale());
-        }
-        info.lineSpacingOnly = true;
-        if (!NearEqual(lineSpacing, fontSize) && (lineSpacing > 0.0) && (!NearZero(fontSize))) {
-            info.lineSpacingScale = lineSpacing / fontSize;
-        } else {
-            info.lineSpacingScale = 1;
-            if (NearZero(lineSpacing)) {
-                info.lineSpacingOnly = false;
-            }
-        }
-    }
-}
-
-void ConvertGradiantColor(
-    const TextStyle& textStyle, const WeakPtr<PipelineBase>& context, Rosen::TextStyle& txtStyle,
-    OHOS::Ace::FontForegroudGradiantColor & gradiantColor)
-{
-    RSBrush brush;
-    std::vector<Rosen::Drawing::PointF> points = {
-        Rosen::Drawing::PointF(gradiantColor.points[0].GetX(), gradiantColor.points[0].GetY()),
-        Rosen::Drawing::PointF(gradiantColor.points[1].GetX(), gradiantColor.points[1].GetY())
-    };
-    std::vector<RSColorQuad> colors;
-    std::vector<RSScalar> pos;
-    for (size_t i = 0; i < gradiantColor.colors.size(); i++) {
-        colors.push_back(ConvertSkColor(gradiantColor.colors[i]));
-        // IsValid ensures colors and scalars are same size
-        pos.push_back(gradiantColor.scalars[i]);
-    }
-    brush.SetShaderEffect(
-        RSShaderEffect::CreateLinearGradient(points.at(0), points.at(1), colors, pos, RSTileMode::CLAMP));
-    if (txtStyle.foregroundBrush) {
-        txtStyle.foregroundBrush->SetShaderEffect(
-            RSShaderEffect::CreateLinearGradient(points.at(0), points.at(1), colors, pos, RSTileMode::CLAMP));
-    } else {
-        txtStyle.foregroundBrush = brush;
-    }
-}
-
-template<typename Bitmap1, typename Bitmap2>
-inline void ConvertBitmap(const Bitmap1& source, Bitmap2& destination)
-{
-    const auto size = std::min(source.size(), destination.size());
-    for (size_t i = 0; i < size; ++i) {
-        destination.set(i, source.test(i));
-    }
-}
-
 void ConvertTxtStyle(const TextStyle& textStyle, const WeakPtr<PipelineBase>& context, Rosen::TextStyle& txtStyle)
 {
-    ConvertBitmap(textStyle.GetReLayoutTextStyleBitmap(), txtStyle.relayoutChangeBitmap);
-    txtStyle.textStyleUid  = static_cast<unsigned long>(textStyle.GetTextStyleUid());
     txtStyle.color = ConvertSkColor(textStyle.GetTextColor());
     txtStyle.fontWeight = ConvertTxtFontWeight(textStyle.GetFontWeight());
-    txtStyle.symbol.SetSymbolType(ConvertTxtSymbolType(textStyle.GetSymbolType()));
     auto fontWeightValue = (static_cast<int32_t>(
             ConvertTxtFontWeight(textStyle.GetFontWeight())) + 1) * DEFAULT_MULTIPLE;
     auto pipelineContext = context.Upgrade();
@@ -528,7 +733,6 @@ void ConvertTxtStyle(const TextStyle& textStyle, const WeakPtr<PipelineBase>& co
     txtStyle.fontSize = textStyle.GetFontSize().ConvertToPxDistribute(
         textStyle.GetMinFontScale(), textStyle.GetMaxFontScale(), textStyle.IsAllowScale());
     txtStyle.fontStyle = ConvertTxtFontStyle(textStyle.GetFontStyle());
-    txtStyle.badgeType = ConvertTxtBadgeType(textStyle.GetSuperscript());
 
     if (textStyle.GetWordSpacing().Unit() == DimensionUnit::PERCENT) {
         txtStyle.wordSpacing = textStyle.GetWordSpacing().Value() * txtStyle.fontSize;
@@ -553,29 +757,9 @@ void ConvertTxtStyle(const TextStyle& textStyle, const WeakPtr<PipelineBase>& co
     txtStyle.decoration = ConvertTxtTextDecoration(textStyle.GetTextDecoration());
     txtStyle.decorationColor = ConvertSkColor(textStyle.GetTextDecorationColor());
     txtStyle.decorationStyle = ConvertTxtTextDecorationStyle(textStyle.GetTextDecorationStyle());
-    txtStyle.decorationThicknessScale = static_cast<double>(textStyle.GetLineThicknessScale());
     txtStyle.locale = Localization::GetInstance()->GetFontLocale();
     txtStyle.halfLeading = textStyle.GetHalfLeading();
 
-    if (textStyle.GetStrokeWidth().Value() != DEFAULT_STROKE_WIDTH) {
-        RSPen pen;
-        pen.SetWidth(std::abs(textStyle.GetStrokeWidth().ConvertToPxDistribute(
-            textStyle.GetMinFontScale(), textStyle.GetMaxFontScale(), textStyle.IsAllowScale())));
-        pen.SetColor(textStyle.GetStrokeColor().GetValue());
-        txtStyle.foregroundPen = pen;
-    }
-    if (textStyle.GetStrokeWidth().Value() < DEFAULT_STROKE_WIDTH) {
-        RSBrush brush;
-        brush.SetColor(textStyle.GetTextColor().GetValue());
-        txtStyle.foregroundBrush = brush;
-    }
-    if (textStyle.GetColorShaderStyle().has_value() && textStyle.GetStrokeWidth().Value() == DEFAULT_STROKE_WIDTH) {
-        RSBrush brush;
-        auto shaderEffect =
-            RSRecordingShaderEffect::CreateColorShader(textStyle.GetColorShaderStyle().value().GetValue());
-        brush.SetShaderEffect(shaderEffect);
-        txtStyle.foregroundBrush = brush;
-    }
     for (auto& spanShadow : textStyle.GetTextShadows()) {
         Rosen::TextShadow txtShadow;
         txtShadow.color = spanShadow.GetColor().GetValue();
@@ -585,15 +769,60 @@ void ConvertTxtStyle(const TextStyle& textStyle, const WeakPtr<PipelineBase>& co
         txtStyle.shadows.emplace_back(txtShadow);
     }
 
-    LineSpaceAndHeightInfo info;
-    ConvertSpacingAndHeigh(textStyle, context, txtStyle, info);
-    txtStyle.heightOnly = info.lineHeightOnly || info.lineSpacingOnly;
-    if (info.lineHeightOnly && info.lineSpacingOnly) {
-        txtStyle.heightScale = info.lineHeightScale + info.lineSpacingScale;
-    } else if (info.lineHeightOnly && !info.lineSpacingOnly) {
-        txtStyle.heightScale = info.lineHeightScale;
-    } else if (!info.lineHeightOnly && info.lineSpacingOnly) {
-        txtStyle.heightScale = ORIGINAL_LINE_HEIGHT_SCALE + info.lineSpacingScale;
+    double lineHeightScale = 0.0;
+    double lineSpacingScale = 0.0;
+    bool lineHeightOnly = false;
+    bool lineSpacingOnly = false;
+    if (textStyle.GetLineHeight().Unit() == DimensionUnit::PERCENT) {
+        lineHeightOnly = true;
+        lineHeightScale = textStyle.GetLineHeight().Value();
+    } else {
+        double fontSize = txtStyle.fontSize;
+        double lineHeight = textStyle.GetLineHeight().Value();
+        if (pipelineContext) {
+            lineHeight = textStyle.GetLineHeight().ConvertToPxDistribute(
+                textStyle.GetMinFontScale(), textStyle.GetMaxFontScale(), textStyle.IsAllowScale());
+        }
+        lineHeightOnly = textStyle.HasHeightOverride();
+        if (!NearEqual(lineHeight, fontSize) && (lineHeight > 0.0) && (!NearZero(fontSize))) {
+            lineHeightScale = lineHeight / fontSize;
+        } else {
+            lineHeightScale = 1;
+            static const int32_t BEGIN_VERSION = 6;
+            auto isBeginVersion = pipelineContext && pipelineContext->GetMinPlatformVersion() >= BEGIN_VERSION;
+            if (NearZero(lineHeight) || (!isBeginVersion && NearEqual(lineHeight, fontSize))) {
+                lineHeightOnly = false;
+            }
+        }
+    }
+    if (textStyle.GetLineSpacing().Unit() == DimensionUnit::PERCENT) {
+        lineSpacingOnly = true;
+        lineSpacingScale = textStyle.GetLineSpacing().Value();
+    } else {
+        double fontSize = txtStyle.fontSize;
+        double lineSpacing = textStyle.GetLineSpacing().Value();
+        if (pipelineContext) {
+            lineSpacing = textStyle.GetLineSpacing().ConvertToPxDistribute(
+                textStyle.GetMinFontScale(), textStyle.GetMaxFontScale(), textStyle.IsAllowScale());
+        }
+        lineSpacingOnly = true;
+        if (!NearEqual(lineSpacing, fontSize) && (lineSpacing > 0.0) && (!NearZero(fontSize))) {
+            lineSpacingScale = lineSpacing / fontSize;
+        } else {
+            lineSpacingScale = 1;
+            if (NearZero(lineSpacing)) {
+                lineSpacingOnly = false;
+            }
+        }
+    }
+
+    txtStyle.heightOnly = lineHeightOnly || lineSpacingOnly;
+    if (lineHeightOnly && lineSpacingOnly) {
+        txtStyle.heightScale = lineHeightScale + lineSpacingScale;
+    } else if (lineHeightOnly && !lineSpacingOnly) {
+        txtStyle.heightScale = lineHeightScale;
+    } else if (!lineHeightOnly && lineSpacingOnly) {
+        txtStyle.heightScale = ORIGINAL_LINE_HEIGHT_SCALE + lineSpacingScale;
     } else {
         txtStyle.heightScale = 1;
     }
@@ -607,12 +836,6 @@ void ConvertTxtStyle(const TextStyle& textStyle, const WeakPtr<PipelineBase>& co
         }
         txtStyle.fontFeatures = features;
     }
-
-    auto gradiantColor = textStyle.GetFontForegroudGradiantColor().value_or(FontForegroudGradiantColor());
-    if (gradiantColor.IsValid()) {
-        ConvertGradiantColor(textStyle, context, txtStyle, gradiantColor);
-    }
-
     auto textBackgroundStyle = textStyle.GetTextBackgroundStyle();
     CHECK_NULL_VOID(textBackgroundStyle.has_value());
     txtStyle.styleId = textBackgroundStyle->groupId;
@@ -633,85 +856,6 @@ void ConvertTxtStyle(const TextStyle& textStyle, const WeakPtr<PipelineBase>& co
     txtStyle.backgroundRect.rightBottomRadius = radiusConverter(radius->radiusBottomRight);
 }
 
-NG::Gradient ToGradient(const Gradient& gradient)
-{
-    NG::Gradient retGradient;
-    retGradient.CreateGradientWithType(static_cast<NG::GradientType>(gradient.GetType()));
-    if (gradient.GetType() == GradientType::LINEAR) {
-        auto angle = gradient.GetLinearGradient().angle;
-        if (angle.has_value()) {
-            retGradient.GetLinearGradient()->angle = CalcDimension(angle.value());
-        }
-        auto linearX = gradient.GetLinearGradient().linearX;
-        if (linearX.has_value()) {
-            retGradient.GetLinearGradient()->linearX = static_cast<NG::GradientDirection>(linearX.value());
-        }
-        auto linearY = gradient.GetLinearGradient().linearY;
-        if (linearY.has_value()) {
-            retGradient.GetLinearGradient()->linearY = static_cast<NG::GradientDirection>(linearY.value());
-        }
-    }
-    if (gradient.GetType() == GradientType::RADIAL) {
-        auto radialCenterX = gradient.GetRadialGradient().radialCenterX;
-        if (radialCenterX.has_value()) {
-            retGradient.GetRadialGradient()->radialCenterX = CalcDimension(radialCenterX.value());
-        }
-        auto radialCenterY = gradient.GetRadialGradient().radialCenterY;
-        if (radialCenterY.has_value()) {
-            retGradient.GetRadialGradient()->radialCenterY = CalcDimension(radialCenterY.value());
-        }
-        auto radialVerticalSize = gradient.GetRadialGradient().radialVerticalSize;
-        if (radialVerticalSize.has_value()) {
-            retGradient.GetRadialGradient()->radialVerticalSize = CalcDimension(radialVerticalSize.value());
-        }
-        auto radialHorizontalSize = gradient.GetRadialGradient().radialHorizontalSize;
-        if (radialHorizontalSize.has_value()) {
-            retGradient.GetRadialGradient()->radialHorizontalSize = CalcDimension(radialHorizontalSize.value());
-        }
-    }
-    retGradient.SetRepeat(gradient.GetRepeat());
-    const auto& colorStops = gradient.GetColors();
-    for (const auto& item : colorStops) {
-        NG::GradientColor gradientColor;
-        gradientColor.SetColor(item.GetColor());
-        gradientColor.SetHasValue(item.GetHasValue());
-        gradientColor.SetDimension(item.GetDimension());
-        retGradient.AddColor(gradientColor);
-    }
-    return retGradient;
-}
-
-void ConvertForegroundPaint(const TextStyle& textStyle, double width, double height, Rosen::TextStyle& txtStyle)
-{
-    if (!textStyle.GetGradient().has_value() || textStyle.GetStrokeWidth().Value() != DEFAULT_STROKE_WIDTH) {
-        return;
-    }
-    txtStyle.textStyleUid = static_cast<unsigned long>(textStyle.GetTextStyleUid());
-    ConvertBitmap(textStyle.GetReLayoutTextStyleBitmap(), txtStyle.relayoutChangeBitmap);
-    auto gradient = textStyle.GetGradient().value();
-    GradientType type = gradient.GetType();
-    if (type != GradientType::LINEAR && type != GradientType::RADIAL) {
-        return;
-    }
-    RSBrush brush;
-    auto shaderEffect =
-        NG::DrawingDecorationPainter::CreateGradientShader(ToGradient(gradient), NG::SizeF(width, height));
-    brush.SetShaderEffect(shaderEffect);
-    txtStyle.foregroundBrush = brush;
-}
-
-Rosen::SymbolColor ConvertToNativeSymbolColor(const std::vector<SymbolGradient>& intermediate)
-{
-    Rosen::SymbolColor symbolColor;
-    for (const auto& grad : intermediate) {
-        auto nativeGradient = CreateNativeGradient(grad);
-        symbolColor.colorType = static_cast<Rosen::SymbolColorType>(grad.gradientType);
-        symbolColor.gradients.push_back(nativeGradient);
-    }
-
-    return symbolColor;
-}
-
 void ConvertSymbolTxtStyle(const TextStyle& textStyle, Rosen::TextStyle& txtStyle)
 {
     if (!textStyle.isSymbolGlyph_) {
@@ -726,13 +870,6 @@ void ConvertSymbolTxtStyle(const TextStyle& textStyle, Rosen::TextStyle& txtStyl
         symbolColors.emplace_back(ConvertSkColor(symbolColor[i]));
     }
     txtStyle.symbol.SetRenderColor(symbolColors);
-
-    if (auto intermediateStyle = textStyle.GetShaderStyle(); !intermediateStyle.empty()) {
-        txtStyle.symbol.SetSymbolColor(ConvertToNativeSymbolColor(intermediateStyle));
-    }
-
-    txtStyle.symbol.SetSymbolShadow(ConvertToNativeSymbolShadow(textStyle.GetSymbolShadow()));
-
     if (textStyle.GetSymbolEffectOptions().has_value()) {
         auto options = textStyle.GetSymbolEffectOptions().value();
         auto effectType = options.GetEffectType();
@@ -758,13 +895,21 @@ void ConvertSymbolTxtStyle(const TextStyle& textStyle, Rosen::TextStyle& txtStyl
         txtStyle.symbol.SetSymbolEffect(effectStrategyValue);
         txtStyle.symbol.SetAnimationStart(true);
     }
-    if (txtStyle.symbol.GetSymbolType() != Rosen::SymbolType::CUSTOM) {
-        txtStyle.fontFamilies.push_back(DEFAULT_SYMBOL_FONTFAMILY);
-    }
-    txtStyle.symbol.SetSymbolBitmap(textStyle.GetReLayoutSymbolStyleBitmap());
-    txtStyle.symbol.SetSymbolUid(textStyle.GetSymbolUid());
+    txtStyle.fontFamilies.push_back("HM Symbol");
 }
+#endif
 
+#ifndef USE_GRAPHIC_TEXT_GINE
+Rect ConvertSkRect(SkRect skRect)
+{
+    Rect result;
+    result.SetLeft(skRect.fLeft);
+    result.SetTop(skRect.fTop);
+    result.SetWidth(skRect.width());
+    result.SetHeight(skRect.height());
+    return result;
+}
+#else
 Rect ConvertSkRect(const Rosen::Drawing::RectF& skRect)
 {
     Rect result;
@@ -774,7 +919,38 @@ Rect ConvertSkRect(const Rosen::Drawing::RectF& skRect)
     result.SetHeight(skRect.GetHeight());
     return result;
 }
+#endif
 
+#ifndef USE_GRAPHIC_TEXT_GINE
+txt::PlaceholderAlignment ConvertPlaceholderAlignment(PlaceholderAlignment textDecoration)
+{
+    txt::PlaceholderAlignment convertValue = txt::PlaceholderAlignment::kBaseline;
+    switch (textDecoration) {
+        case PlaceholderAlignment::BASELINE:
+            convertValue = txt::PlaceholderAlignment::kBaseline;
+            break;
+        case PlaceholderAlignment::ABOVEBASELINE:
+            convertValue = txt::PlaceholderAlignment::kAboveBaseline;
+            break;
+        case PlaceholderAlignment::BELOWBASELINE:
+            convertValue = txt::PlaceholderAlignment::kBelowBaseline;
+            break;
+        case PlaceholderAlignment::TOP:
+            convertValue = txt::PlaceholderAlignment::kTop;
+            break;
+        case PlaceholderAlignment::BOTTOM:
+            convertValue = txt::PlaceholderAlignment::kBottom;
+            break;
+        case PlaceholderAlignment::MIDDLE:
+            convertValue = txt::PlaceholderAlignment::kMiddle;
+            break;
+        default:
+            TAG_LOGW(AceLogTag::ACE_FONT, "PlaceholderAlignment set error! use default PlaceholderAlignment");
+            break;
+    }
+    return convertValue;
+}
+#else
 Rosen::PlaceholderVerticalAlignment ConvertPlaceholderAlignment(PlaceholderAlignment textDecoration)
 {
     Rosen::PlaceholderVerticalAlignment convertValue = Rosen::PlaceholderVerticalAlignment::OFFSET_AT_BASELINE;
@@ -797,95 +973,33 @@ Rosen::PlaceholderVerticalAlignment ConvertPlaceholderAlignment(PlaceholderAlign
         case PlaceholderAlignment::MIDDLE:
             convertValue = Rosen::PlaceholderVerticalAlignment::CENTER_OF_ROW_BOX;
             break;
-        case PlaceholderAlignment::FOLLOW_PARAGRAPH:
-            convertValue = Rosen::PlaceholderVerticalAlignment::FOLLOW_PARAGRAPH;
-            break;
         default:
             TAG_LOGW(AceLogTag::ACE_FONT, "PlaceholderAlignment setting error! Now using default PlaceholderAlignment");
             break;
     }
     return convertValue;
 }
+#endif
 
+#ifndef USE_GRAPHIC_TEXT_GINE
+void ConvertPlaceholderRun(const PlaceholderRun& span, txt::PlaceholderRun& txtSpan)
+#else
 void ConvertPlaceholderRun(const PlaceholderRun& span, Rosen::PlaceholderSpan& txtSpan)
+#endif
 {
     txtSpan.width = span.width;
     txtSpan.height = span.height;
     txtSpan.alignment = ConvertPlaceholderAlignment(span.alignment);
     txtSpan.baseline = ConvertTxtTextBaseline(span.baseline);
+#ifndef USE_GRAPHIC_TEXT_GINE
+    txtSpan.baseline_offset = span.baseline_offset;
+#else
     txtSpan.baselineOffset = span.baseline_offset;
+#endif
 }
 
 float GetVariableFontWeight(FontWeight fontWeight)
 {
     return (static_cast<int32_t>(ConvertTxtFontWeight(fontWeight)) + 1) * DEFAULT_MULTIPLE;
-}
-
-std::optional<Rosen::SymbolShadow> ConvertToNativeSymbolShadow(const SymbolShadow& shadow)
-{
-    if (shadow.IsDefault()) {
-        return std::nullopt;
-    }
-    Rosen::SymbolShadow rosenShadow;
-
-    rosenShadow.color = ConvertSkColor(shadow.color);
-
-    rosenShadow.offset = Rosen::Drawing::Point(
-        shadow.offset.first,
-        shadow.offset.second);
-
-    rosenShadow.blurRadius = shadow.radius;
-
-    return rosenShadow;
-}
-
-std::shared_ptr<Rosen::SymbolGradient> CreateNativeGradient(const SymbolGradient& grad)
-{
-    switch (grad.type) {
-        case SymbolGradientType::COLOR_SHADER: {
-            auto gradient = std::make_shared<Rosen::SymbolGradient>();
-            gradient->SetColors(ConvertColors(grad.symbolColor));
-            return gradient;
-        }
-        case SymbolGradientType::LINEAR_GRADIENT: {
-            auto gradient = std::make_shared<Rosen::SymbolLineGradient>(grad.angle.value_or(0.0f));
-            gradient->SetColors(ConvertColors(grad.symbolColor));
-            gradient->SetPositions(grad.symbolOpacities);
-            gradient->SetTileMode(grad.repeating ?
-                Rosen::Drawing::TileMode::REPEAT : Rosen::Drawing::TileMode::CLAMP);
-            return gradient;
-        }
-        case SymbolGradientType::RADIAL_GRADIENT: {
-            auto getCoord = [](const std::optional<Dimension>& dim) {
-                if (!dim) return Dimension(0.0).ConvertToPx();
-                return dim->Unit() == DimensionUnit::PERCENT ? dim->Value() : dim->ConvertToPx();
-            };
-            Rosen::Drawing::Point centerPt(
-                static_cast<float>(getCoord(grad.radialCenterX)),
-                static_cast<float>(getCoord(grad.radialCenterY))
-            );
-            auto gradient = std::make_shared<Rosen::SymbolRadialGradient>
-                            (centerPt, grad.radius.value_or(Dimension(0.0)).Value());
-            if (grad.radius.has_value() && grad.radius.value().Unit() != DimensionUnit::PERCENT) {
-                gradient->SetRadius(static_cast<float>(grad.radius.value().ConvertToPx()));
-            }
-            gradient->SetColors(ConvertColors(grad.symbolColor));
-            gradient->SetPositions(grad.symbolOpacities);
-            gradient->SetTileMode(grad.repeating ?
-                Rosen::Drawing::TileMode::REPEAT : Rosen::Drawing::TileMode::CLAMP);
-            return gradient;
-        }
-        default:
-            return nullptr;
-    }
-}
-
-std::vector<Rosen::Drawing::ColorQuad> ConvertColors(const std::vector<Color>& colors)
-{
-    std::vector<Rosen::Drawing::ColorQuad> symbolColors;
-    for (const auto& color : colors) {
-        symbolColors.emplace_back(ConvertSkColor(color));
-    }
-    return symbolColors;
 }
 } // namespace OHOS::Ace::Constants

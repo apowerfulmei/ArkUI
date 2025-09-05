@@ -32,7 +32,11 @@ public:
     virtual void Create();
     virtual void SetBarrier(const std::vector<BarrierInfo>& barrierInfo) = 0;
     virtual void SetGuideline(const std::vector<GuidelineInfo>& guidelineInfo) = 0;
-    virtual void ResetResObj(const std::string& key) {};
+private:
+    static std::unique_ptr<RelativeContainerModel> instance_;
+    static std::mutex mutex_;
 };
+
 } // namespace OHOS::Ace
+
 #endif // FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_PATTERNS_RELATIVE_CONTAINER_RELATIVE_CONTAINER_MODEL_H

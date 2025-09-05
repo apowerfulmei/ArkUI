@@ -35,9 +35,7 @@ constexpr int32_t MAX_DATA_LENGTH = 100;
 
 std::string GetPageUrlByNode(const RefPtr<NG::FrameNode>& node);
 
-std::string GetPageUrlByContainerId(const int32_t containerId);
-
-std::string GetCurrentPageUrl();
+const std::string GetCurrentPageUrl();
 
 using NodeDataContainer = std::unordered_map<std::string, std::unordered_map<std::string, std::string>>;
 

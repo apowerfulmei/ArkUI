@@ -18,7 +18,6 @@
 
 #include "base/geometry/dimension.h"
 #include "core/components/common/properties/color.h"
-#include "core/components/common/properties/decoration.h"
 #include "core/components/theme/theme.h"
 #include "core/components/theme/theme_constants.h"
 #include "core/components/theme/theme_constants_defines.h"
@@ -49,7 +48,6 @@ constexpr Color DEFAULT_CALENDAR_NONCURRENT_MONTH_DAY_COLOR = Color(0xff555e6b);
 constexpr Color DEFAULT_CALENDAR_NONCURRENT_MONTH_LUNAR_COLOR = Color(0xff555e6b);
 constexpr Color DEFAULT_CALENDAR_FOCUS_AREA_BACKGROUND_COLOR = Color(0xff5ea1ff);
 constexpr Color DEFAULT_CALENDAR_BLUR_AREA_BACKGROUND_COLOR = Color(0xffffffff);
-constexpr float DEFAULT_CALENDAR_DISABLED_OPACITY = 0.4f;
 } // namespace
 
 struct CalendarThemeStructure {
@@ -63,11 +61,6 @@ struct CalendarThemeStructure {
     std::string friday;
     std::string saturday;
     std::string sunday;
-    std::string nextYear;
-    std::string nextMonth;
-    std::string preYear;
-    std::string preMonth;
-    std::string today;
     Color weekColor;
     Color dayColor;
     Color lunarColor;
@@ -143,11 +136,11 @@ public:
 
         RefPtr<CalendarTheme> Build(const RefPtr<ThemeConstants>& themeConstants) const
         {
-            RefPtr<CalendarTheme> theme = AceType::MakeRefPtr<CalendarTheme>();
+            RefPtr<CalendarTheme> theme = AceType::Claim(new CalendarTheme());
             if (!themeConstants) {
                 return theme;
             }
-            theme = AceType::MakeRefPtr<CalendarTheme>();
+            theme = AceType::Claim(new CalendarTheme());
             ParseNewPattern(themeConstants, theme);
             ParsePattern(themeConstants, theme);
             return theme;
@@ -197,8 +190,10 @@ public:
                 return;
             }
             // Normal theme
-            theme->calendarTheme_.dayColor = pattern->GetAttr<Color>(CALENDAR_DAY_COLOR, DEFAULT_CALENDAR_DAY_COLOR);
-            theme->calendarTheme_.weekColor = pattern->GetAttr<Color>(CALENDAR_WEEK_COLOR, DEFAULT_CALENDAR_WEEK_COLOR);
+            theme->calendarTheme_.dayColor =
+                pattern->GetAttr<Color>(CALENDAR_DAY_COLOR, DEFAULT_CALENDAR_DAY_COLOR);
+            theme->calendarTheme_.weekColor =
+                pattern->GetAttr<Color>(CALENDAR_WEEK_COLOR, DEFAULT_CALENDAR_WEEK_COLOR);
             theme->calendarTheme_.lunarColor =
                 pattern->GetAttr<Color>(CALENDAR_LUNAR_COLOR, DEFAULT_CALENDAR_LUNAR_COLOR);
             theme->calendarTheme_.weekendDayColor =
@@ -212,7 +207,8 @@ public:
             theme->calendarTheme_.todayColor =
                 pattern->GetAttr<Color>(CALENDAR_TODAY_DAY_UNFOCUS_COLOR, DEFAULT_CALENDAR_TODAY_DAY_UNFOCUS_COLOR);
             theme->calendarTheme_.todayLunarColor =
-                pattern->GetAttr<Color>(CALENDAR_TODAY_LUNAR_UNFOCUS_COLOR, DEFAULT_CALENDAR_TODAY_LUNAR_UNFOCUS_COLOR);
+                pattern->GetAttr<Color>(CALENDAR_TODAY_LUNAR_UNFOCUS_COLOR,
+                                        DEFAULT_CALENDAR_TODAY_LUNAR_UNFOCUS_COLOR);
             theme->calendarTheme_.workDayMarkColor =
                 pattern->GetAttr<Color>(CALENDAR_WORK_MARK_COLOR, DEFAULT_CALENDAR_WORK_MARK_COLOR);
             theme->calendarTheme_.offDayMarkColor =
@@ -236,11 +232,6 @@ public:
             theme->calendarTheme_.friday = pattern->GetAttr<std::string>("calendar_picker_fri", "");
             theme->calendarTheme_.saturday = pattern->GetAttr<std::string>("calendar_picker_sat", "");
             theme->calendarTheme_.sunday = pattern->GetAttr<std::string>("calendar_picker_sun", "");
-            theme->calendarTheme_.nextYear = pattern->GetAttr<std::string>("general_next_year", "");
-            theme->calendarTheme_.nextMonth = pattern->GetAttr<std::string>("general_next_month", "");
-            theme->calendarTheme_.preYear = pattern->GetAttr<std::string>("general_pre_year", "");
-            theme->calendarTheme_.preMonth = pattern->GetAttr<std::string>("general_pre_month", "");
-            theme->calendarTheme_.today = pattern->GetAttr<std::string>("general_today", "");
         }
 
         void ParseCalenderPickerFirstPart(const RefPtr<ThemeConstants>& themeConstants,
@@ -263,10 +254,8 @@ public:
                 pattern->GetAttr<double>("calendar_picker_attribute_alpha_content_primary", 0.0));
             theme->textNonCurrentMonthColor_ = currentMonthColor.BlendOpacity(
                 pattern->GetAttr<double>("calendar_picker_attribute_alpha_content_tertiary", 0.0));
-            Color textSelectedDayColor = pattern->GetAttr<Color>("calendar_picker_text_selected_day_color", Color());
-            theme->textSelectedDayColor_ = textSelectedDayColor;
-            theme->textNonCurrentMonthTodayColor_ = textSelectedDayColor.BlendOpacity(
-                pattern->GetAttr<double>("interactive_disable", DEFAULT_CALENDAR_DISABLED_OPACITY));
+            theme->textSelectedDayColor_ = pattern->GetAttr<Color>(
+                "calendar_picker_text_selected_day_color", Color());
             theme->textCurrentDayColor_ = pattern->GetAttr<Color>("calendar_picker_text_current_day_color", Color());
             theme->backgroundKeyFocusedColor_ = pattern->GetAttr<Color>(
                 "calendar_picker_background_key_focused_color", Color());
@@ -275,8 +264,6 @@ public:
             theme->dialogButtonBackgroundColor_ = pattern->GetAttr<Color>(
                 "calendar_picker_dialog_button_bg_color", Color());
             theme->backgroundSelectedTodayColor_ = backgroundSelectedTodayColor;
-            theme->backgroundDisabledMarkTodayColor_ = backgroundSelectedTodayColor.BlendOpacity(
-                pattern->GetAttr<double>("interactive_disable", DEFAULT_CALENDAR_DISABLED_OPACITY));
             theme->backgroundSelectedNotTodayColor_ = backgroundSelectedTodayColor.BlendOpacity(
                 pattern->GetAttr<double>("calendar_picker_attribute_alpha_highlight_bg", 0.0));
             theme->backgroundHoverColor_ = pattern->GetAttr<Color>("calendar_picker_background_hover_color", Color());
@@ -360,8 +347,6 @@ public:
                 "calendar_day_key_focused_pen_width", 0.0_vp);
             theme->entryFontSize_ = pattern->GetAttr<Dimension>("calendar_picker_entry_font_size", 0.0_fp);
             theme->dialogBorderRadius_ = pattern->GetAttr<Dimension>("calendar_picker_dialog_border_radius", 0.0_vp);
-            theme->calendarPickerDialogBlurStyle_ = pattern->GetAttr<int>(
-                "calendar_picker_dialog_background_blur_style", static_cast<int>(BlurStyle::COMPONENT_ULTRA_THICK));
         }
 
         void ParsePattern(const RefPtr<ThemeConstants>& themeConstants, const RefPtr<CalendarTheme>& theme) const
@@ -740,11 +725,6 @@ public:
         return textNonCurrentMonthColor_;
     }
 
-    const Color& GetTextNonCurrentMonthTodayColor() const
-    {
-        return textNonCurrentMonthTodayColor_;
-    }
-
     const Color& GetTextSelectedDayColor() const
     {
         return textSelectedDayColor_;
@@ -763,11 +743,6 @@ public:
     const Color& GetBackgroundSelectedTodayColor() const
     {
         return backgroundSelectedTodayColor_;
-    }
-
-    const Color& GetBackgroundDisabledMarkTodayColor() const
-    {
-        return backgroundDisabledMarkTodayColor_;
     }
 
     const Color& GetBackgroundSelectedNotTodayColor() const
@@ -819,12 +794,6 @@ public:
     {
         return calendarPickerLargerScale_;
     }
-
-    int GetCalendarPickerDialogBlurStyle() const
-    {
-        return calendarPickerDialogBlurStyle_;
-    }
-    
 protected:
     CalendarTheme() = default;
 
@@ -838,12 +807,10 @@ private:
     Color calendarTitleFontColor_;
     Color textCurrentMonthColor_;
     Color textNonCurrentMonthColor_;
-    Color textNonCurrentMonthTodayColor_;
     Color textSelectedDayColor_;
     Color textCurrentDayColor_;
     Color backgroundKeyFocusedColor_;
     Color backgroundSelectedTodayColor_;
-    Color backgroundDisabledMarkTodayColor_;
     Color backgroundSelectedNotTodayColor_;
     Color backgroundHoverColor_;
     Color backgroundPressColor_;
@@ -891,7 +858,6 @@ private:
     bool isDividerTransparent_ = false;
     double calendarPickerLargeScale_ = 0.0;
     double calendarPickerLargerScale_ = 0.0;
-    int calendarPickerDialogBlurStyle_ = static_cast<int>(BlurStyle::COMPONENT_ULTRA_THICK);
 };
 
 } // namespace OHOS::Ace

@@ -24,7 +24,6 @@
 #include <string>
 #include <type_traits>
 
-#include "base/image/image_defines.h"
 #include "base/memory/ace_type.h"
 #include "base/resource/data_ability_helper.h"
 #include "base/utils/noncopyable.h"
@@ -55,14 +54,13 @@ private:
 };
 
 class DataProviderManagerInterface : public AceType {
-    DECLARE_ACE_TYPE(DataProviderManagerInterface, AceType);
+    DECLARE_ACE_TYPE(DataProviderManagerInterface, AceType)
 
 public:
     DataProviderManagerInterface() = default;
     ~DataProviderManagerInterface() override = default;
 
-    virtual std::unique_ptr<DataProviderRes> GetDataProviderResFromUri(
-        const std::string& uriStr, ImageErrorInfo& errorInfo) = 0;
+    virtual std::unique_ptr<DataProviderRes> GetDataProviderResFromUri(const std::string& uriStr) = 0;
     virtual void* GetDataProviderThumbnailResFromUri(const std::string& uriStr) = 0;
     virtual int32_t GetDataProviderFile(const std::string& uriStr, const std::string& mode) = 0;
 
@@ -71,13 +69,12 @@ public:
 
 using DataProviderImpl = std::function<std::unique_ptr<DataProviderRes>(const std::string& uriStr)>;
 class DataProviderManager : public DataProviderManagerInterface {
-    DECLARE_ACE_TYPE(DataProviderManager, DataProviderManagerInterface);
+    DECLARE_ACE_TYPE(DataProviderManager, DataProviderManagerInterface)
 public:
     explicit DataProviderManager(DataProviderImpl dataProvider) : platformImpl_(std::move(dataProvider)) {}
     ~DataProviderManager() override = default;
 
-    std::unique_ptr<DataProviderRes> GetDataProviderResFromUri(
-        const std::string& uriStr, ImageErrorInfo& errorInfo) override;
+    std::unique_ptr<DataProviderRes> GetDataProviderResFromUri(const std::string& uriStr) override;
     void* GetDataProviderThumbnailResFromUri(const std::string& /* uriStr */) override
     {
         return nullptr;
@@ -95,7 +92,7 @@ private:
 
 using DataAbilityHelperImpl = std::function<RefPtr<DataAbilityHelper>()>;
 class ACE_FORCE_EXPORT DataProviderManagerStandard : public DataProviderManagerInterface {
-    DECLARE_ACE_TYPE(DataProviderManagerStandard, DataProviderManagerInterface);
+    DECLARE_ACE_TYPE(DataProviderManagerStandard, DataProviderManagerInterface)
 
 public:
     explicit DataProviderManagerStandard(DataAbilityHelperImpl dataAbilityHelperImpl)
@@ -104,17 +101,13 @@ public:
 
     ~DataProviderManagerStandard() override = default;
 
-    std::unique_ptr<DataProviderRes> GetDataProviderResFromUri(
-        const std::string& uriStr, ImageErrorInfo& errorInfo) override;
+    std::unique_ptr<DataProviderRes> GetDataProviderResFromUri(const std::string& uriStr) override;
     void* GetDataProviderThumbnailResFromUri(const std::string& uriStr) override;
 
     int32_t GetDataProviderFile(const std::string& uriStr, const std::string& mode) override;
     int32_t ReadMovingPhotoVideo(const std::string &uri);
     std::string GetMovingPhotoImageUri(const std::string& uri);
     int64_t GetMovingPhotoDateModified(const std::string& uri);
-    int64_t GetMovingPhotoCoverPosition(const std::string& columnName, const std::string& value,
-        std::vector<std::string>& columns);
-    std::string GetMovingPhotoImagePath(const std::string& uri);
 
 private:
     void InitHelper();

@@ -15,10 +15,15 @@
 
 #include "span_to_html.h"
 
+#include <cstdint>
+#include <string>
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "base/image/file_uri_helper.h"
 #include "base/image/image_packer.h"
+#include "base/utils/macros.h"
+#include "core/components_v2/inspector/utils.h"
 #include "core/text/html_utils.h"
 
 namespace OHOS::Ace {
@@ -70,18 +75,6 @@ std::string SpanToHtml::FontWeightToHtml(const std::optional<FontWeight>& value)
     return ToHtmlStyleFormat("font-weight", index < 0 ? "normal" : table[index].value);
 }
 
-std::string SpanToHtml::StrokeWidthToHtml(const std::optional<Dimension>& value)
-{
-    return ToHtmlStyleFormat("stroke-width", DimensionToString(value.value_or(TEXT_DEFAULT_STROKE_WIDTH)));
-}
-
-std::string SpanToHtml::StrokeColorToHtml(const std::optional<Color>& value)
-{
-    auto color = value.value_or(Color::BLACK).ColorToString();
-    ToHtmlColor(color);
-    return ToHtmlStyleFormat("stroke-color", color);
-}
-
 void SpanToHtml::ToHtmlColor(std::string& color)
 {
     if (color.length() < COLOR_MIN_LENGHT) {
@@ -103,40 +96,12 @@ std::string SpanToHtml::ColorToHtml(const std::optional<Color>& value)
     return ToHtmlStyleFormat("color", color);
 }
 
-std::string SpanToHtml::BackgroundColorToHtml(const std::optional<TextBackgroundStyle>& value)
-{
-    if (!value.has_value()) {
-        return "";
-    }
-
-    const auto& backgroundStyle = value.value();
-    if (!backgroundStyle.backgroundColor.has_value()) {
-        return "";
-    }
-
-    auto color = backgroundStyle.backgroundColor.value().ColorToString();
-    ToHtmlColor(color);
-    return ToHtmlStyleFormat("background-color", color);
-}
-
 std::string SpanToHtml::FontFamilyToHtml(const std::optional<std::vector<std::string>>& value)
 {
     return ToHtmlStyleFormat("font-family", GetFontFamilyInJson(value));
 }
 
-std::string SpanToHtml::FontSuperscriptToHtml(const std::optional<SuperscriptStyle>& value)
-{
-    static const LinearEnumMapNode<SuperscriptStyle, std::string> table[] = {
-        { SuperscriptStyle::SUPERSCRIPT, "superscript" },
-        { SuperscriptStyle::SUBSCRIPT, "subscript" },
-        { SuperscriptStyle::NORMAL, "normal" },
-    };
-
-    auto index = BinarySearchFindIndex(table, ArraySize(table), value.value_or(SuperscriptStyle::NORMAL));
-    return ToHtmlStyleFormat("font-superscript", index < 0 ? "normal" : table[index].value);
-}
-
-std::string SpanToHtml::TextDecorationToHtml(const std::vector<TextDecoration>& decorations)
+std::string SpanToHtml::TextDecorationToHtml(TextDecoration decoration)
 {
     static const LinearEnumMapNode<TextDecoration, std::string> decorationTable[] = {
         { TextDecoration::NONE, "none" },
@@ -146,17 +111,12 @@ std::string SpanToHtml::TextDecorationToHtml(const std::vector<TextDecoration>& 
         { TextDecoration::INHERIT, "inherit" },
     };
 
-    std::string style;
-    for (TextDecoration decoration : decorations) {
-        auto index = BinarySearchFindIndex(decorationTable, ArraySize(decorationTable), decoration);
-        if (index < 0) {
-            continue;
-        }
-        style += decorationTable[index].value + " ";
+    auto index = BinarySearchFindIndex(decorationTable, ArraySize(decorationTable), decoration);
+    if (index < 0) {
+        return "";
     }
-    style.pop_back();
 
-    return ToHtmlStyleFormat("text-decoration-line", style);
+    return ToHtmlStyleFormat("text-decoration-line", decorationTable[index].value);
 }
 
 std::string SpanToHtml::TextDecorationStyleToHtml(TextDecorationStyle decorationStyle)
@@ -199,11 +159,10 @@ std::string SpanToHtml::ToHtml(const std::string& key, const std::optional<Dimen
     return ToHtmlStyleFormat(key, DimensionToString(value));
 }
 
-std::string SpanToHtml::DecorationToHtml(const NG::FontStyle& fontStyle)
+std::string SpanToHtml::DeclarationToHtml(const NG::FontStyle& fontStyle)
 {
-    auto types = fontStyle.GetTextDecoration().value_or(
-        std::vector<TextDecoration>({TextDecoration::NONE}));
-    if (!V2::IsValidTextDecorations(types)) {
+    auto type = fontStyle.GetTextDecoration().value_or(TextDecoration::NONE);
+    if (type == TextDecoration::NONE) {
         return "";
     }
     std::string html;
@@ -213,7 +172,7 @@ std::string SpanToHtml::DecorationToHtml(const NG::FontStyle& fontStyle)
         ToHtmlColor(htmlColor);
         html += ToHtmlStyleFormat("text-decoration-color", htmlColor);
     }
-    html += TextDecorationToHtml(types);
+    html += TextDecorationToHtml(type);
     auto style = fontStyle.GetTextDecorationStyle();
     if (style) {
         html += TextDecorationStyleToHtml(*style);
@@ -490,48 +449,11 @@ std::string SpanToHtml::NormalStyleToHtml(
     style += FontWeightToHtml(fontStyle.GetFontWeight());
     style += ColorToHtml(fontStyle.GetTextColor());
     style += FontFamilyToHtml(fontStyle.GetFontFamily());
-    style += StrokeWidthToHtml(fontStyle.GetStrokeWidth());
-    style += StrokeColorToHtml(fontStyle.GetStrokeColor());
-    style += FontSuperscriptToHtml(fontStyle.GetSuperscript());
-    style += DecorationToHtml(fontStyle);
+    style += DeclarationToHtml(fontStyle);
     style += ToHtml("vertical-align", textLineStyle.GetBaselineOffset());
     style += ToHtml("line-height", textLineStyle.GetLineHeight());
     style += ToHtml("letter-spacing", fontStyle.GetLetterSpacing());
     style += ToHtml(fontStyle.GetTextShadow());
-    if (style.empty()) {
-        return "";
-    }
-    return "style=\"" + style + "\"";
-}
-
-std::string SpanToHtml::NormalStyleToHtml(const RefPtr<NG::SpanItem>& item)
-{
-    if (!item || !item->fontStyle || !item->textLineStyle) {
-        return "";
-    }
-
-    const auto& fontStyle = *item->fontStyle;
-    const auto& textLineStyle = *item->textLineStyle;
-
-    std::string style = FontSizeToHtml(fontStyle.GetFontSize());
-    style += FontStyleToHtml(fontStyle.GetItalicFontStyle());
-    style += FontWeightToHtml(fontStyle.GetFontWeight());
-    style += ColorToHtml(fontStyle.GetTextColor());
-    style += FontFamilyToHtml(fontStyle.GetFontFamily());
-    style += StrokeWidthToHtml(fontStyle.GetStrokeWidth());
-    style += StrokeColorToHtml(fontStyle.GetStrokeColor());
-    style += FontSuperscriptToHtml(fontStyle.GetSuperscript());
-    style += DecorationToHtml(fontStyle);
-    style += ToHtml("vertical-align", textLineStyle.GetBaselineOffset());
-    style += ToHtml("line-height", textLineStyle.GetLineHeight());
-    style += ToHtml("letter-spacing", fontStyle.GetLetterSpacing());
-    style += ToHtml(fontStyle.GetTextShadow());
-
-    // Add backgroundStyle parsing
-    if (item->backgroundStyle) {
-        style += BackgroundColorToHtml(item->backgroundStyle);
-    }
-
     if (style.empty()) {
         return "";
     }
@@ -556,26 +478,6 @@ std::string SpanToHtml::ToHtml(const std::optional<OHOS::Ace::TextAlign>& object
     }
 
     return ToHtmlStyleFormat("text-align", table[index].value);
-}
-
-std::string SpanToHtml::ToHtml(const std::optional<OHOS::Ace::TextVerticalAlign>& object)
-{
-    if (!object.has_value()) {
-        return "";
-    }
-
-    static const LinearEnumMapNode<TextVerticalAlign, std::string> table[] = {
-        { TextVerticalAlign::BASELINE, "baseline" },
-        { TextVerticalAlign::BOTTOM, "bottom" },
-        { TextVerticalAlign::CENTER, "middle" },
-        { TextVerticalAlign::TOP, "top" },
-    };
-    auto index = BinarySearchFindIndex(table, ArraySize(table), *object);
-    if (index < 0) {
-        return "";
-    }
-
-    return ToHtmlStyleFormat("vertical-align", table[index].value);
 }
 
 std::string SpanToHtml::ToHtml(const std::optional<OHOS::Ace::WordBreak>& object)
@@ -634,7 +536,6 @@ std::string SpanToHtml::LeadingMarginToHtml(const OHOS::Ace::NG::TextLineStyle& 
 std::string SpanToHtml::ParagraphStyleToHtml(const OHOS::Ace::NG::TextLineStyle& textLineStyle)
 {
     auto details = ToHtml(textLineStyle.GetTextAlign());
-    details += ToHtml(textLineStyle.GetTextVerticalAlign());
     details += ToHtml("text-indent", textLineStyle.GetTextIndent());
     details += ToHtml(textLineStyle.GetWordBreak());
     details += ToHtml(textLineStyle.GetTextOverflow());
@@ -656,34 +557,28 @@ std::string SpanToHtml::ToHtml(const SpanString& spanString)
             out += "<p " + paragraphStyle + ">";
             newLine = false;
         }
-        std::string str = "";
-        if (item->spanItemType == SpanItemType::NORMAL) {
+        if (item->spanItemType == OHOS::Ace::NG::SpanItemType::NORMAL) {
             if (paragrapStart == 0) {
-                paragrapStart = str.length();
+                paragrapStart = out.length();
             }
-            if (item->backgroundStyle) {
-                str += "<span " + NormalStyleToHtml(item) + ">";
-            } else {
-                str += "<span " + NormalStyleToHtml(*item->fontStyle, *item->textLineStyle) + ">";
-            }
-            auto content = UtfUtils::Str16DebugToStr8(item->GetSpanContent());
+            out += "<span " + NormalStyleToHtml(*item->fontStyle, *item->textLineStyle) + ">";
+            auto content = item->GetSpanContent();
             auto wContent = StringUtils::ToWstring(content);
             if (wContent.back() == L'\n') {
                 if (newLine) {
-                    str.insert(paragrapStart, "<p>");
+                    out.insert(paragrapStart, "<p>");
                     paragrapStart = 0;
                 }
                 content.pop_back();
-                str += WrapWithAnchorIfNeeded(item, content) + "</span>";
-                str += "</p>";
+                out += content + "</span>";
+                out += "</p>";
                 newLine = true;
             } else {
-                str += WrapWithAnchorIfNeeded(item, content) + "</span>";
+                out += content + "</span>";
             }
-        } else if (item->spanItemType == SpanItemType::IMAGE) {
-            str += ImageToHtml(item);
+        } else if (item->spanItemType == OHOS::Ace::NG::SpanItemType::IMAGE) {
+            out += ImageToHtml(item);
         }
-        out += str;
     }
 
     if (!newLine) {
@@ -700,119 +595,10 @@ std::string SpanToHtml::ToHtml(std::vector<uint8_t>& values)
     return ToHtml(*spanString);
 }
 
-void SpanToHtml::HandleSingleSpanItemHtml(const RefPtr<NG::SpanItem>& item, std::string& out,
-    size_t& paragraphStart, bool& newLine)
-{
-    auto paragraphStyle = ParagraphStyleToHtml(*item->textLineStyle);
-    if (newLine && !paragraphStyle.empty()) {
-        out += "<p " + paragraphStyle + ">";
-        newLine = false;
-    }
-    std::string str = "";
-    if (item->spanItemType == SpanItemType::NORMAL) {
-        if (paragraphStart == 0) {
-            paragraphStart = str.length();
-        }
-        if (item->backgroundStyle) {
-            str += "<span " + NormalStyleToHtml(item) + ">";
-        } else {
-            str += "<span " + NormalStyleToHtml(*item->fontStyle, *item->textLineStyle) + ">";
-        }
-        auto content = UtfUtils::Str16DebugToStr8(item->GetSpanContent());
-        auto wContent = StringUtils::ToWstring(content);
-        if (wContent.back() == L'\n') {
-            if (newLine) {
-                str.insert(paragraphStart, "<p>");
-                paragraphStart = 0;
-            }
-            content.pop_back();
-            str += WrapWithAnchorIfNeeded(item, content) + "</span>";
-            str += "</p>";
-            newLine = true;
-        } else {
-            str += WrapWithAnchorIfNeeded(item, content) + "</span>";
-        }
-    } else if (item->spanItemType == SpanItemType::IMAGE) {
-        str += ImageToHtml(item);
-    }
-    out += str;
-}
-
-std::string SpanToHtml::ToHtml(const std::list<RefPtr<SpanItem>>& spanItems)
-{
-    bool newLine = true;
-    size_t paragraphStart = 0;
-    std::string out = "<div >";
-    for (const auto& item : spanItems) {
-        HandleSingleSpanItemHtml(item, out, paragraphStart, newLine);
-    }
-    if (!newLine) {
-        out += "</p>";
-    }
-    out += "</div>";
-    return out;
-}
-
-std::string SpanToHtml::ToHtmlForNormalType(const NG::FontStyle& fontStyle,
-    const NG::TextLineStyle& textLineStyle, const std::u16string& contentStr)
-{
-    bool newLine = true;
-    size_t paragraphStart = 0;
-    std::string out = "<div >";
-    auto paragraphStyle = ParagraphStyleToHtml(textLineStyle);
-    if (newLine && !paragraphStyle.empty()) {
-        out += "<p " + paragraphStyle + ">";
-        newLine = false;
-    }
-    if (paragraphStart == 0) {
-        paragraphStart = out.length();
-    }
-    out += "<span " + NormalStyleToHtml(fontStyle, textLineStyle) + ">";
-    auto content = UtfUtils::Str16DebugToStr8(contentStr);
-    auto wContent = StringUtils::ToWstring(content);
-    if (wContent.back() == L'\n') {
-        if (newLine) {
-            out.insert(paragraphStart, "<p>");
-            paragraphStart = 0;
-        }
-        content.pop_back();
-        out += content + "</span>";
-        out += "</p>";
-        newLine = true;
-    } else {
-        out += content + "</span>";
-    }
-    if (!newLine) {
-        out += "</p>";
-    }
-    out += "</div>";
-    return out;
-}
-
 std::string HtmlUtils::ToHtml(const SpanString* str)
 {
-    const std::string html = SpanToHtml::ToHtml(*str);
+    SpanToHtml sth;
+    const std::string html = sth.ToHtml(*str);
     return html;
-}
-
-std::string HtmlUtils::ToHtml(const std::list<RefPtr<NG::SpanItem>>& spanItems)
-{
-    const std::string html = SpanToHtml::ToHtml(spanItems);
-    return html;
-}
-
-std::string HtmlUtils::ToHtmlForNormalType(const NG::FontStyle& fontStyle,
-    const NG::TextLineStyle& textLineStyle, const std::u16string& contentStr)
-{
-    const std::string html = SpanToHtml::ToHtmlForNormalType(fontStyle, textLineStyle, contentStr);
-    return html;
-}
-std::string SpanToHtml::WrapWithAnchorIfNeeded(const RefPtr<NG::SpanItem>& item, const std::string& content)
-{
-    if (item->urlAddress) {
-        std::string href = UtfUtils::Str16DebugToStr8(item->urlAddress.value_or(std::u16string(u"")));
-        return "<a href=\"" + href + "\">" + content + "</a>";
-    }
-    return content;
 }
 } // namespace OHOS::Ace

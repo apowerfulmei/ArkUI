@@ -135,6 +135,7 @@ RefPtr<Component> ContainerModalComponent::BuildContent()
     contentBox->SetBackDecoration(contentDecoration);
 
     auto clip = AceType::MakeRefPtr<ClipComponent>(contentBox);
+    clip->SetClipRadius(Radius(CONTAINER_INNER_RADIUS));
     clip->SetFlexWeight(1.0);
     return clip;
 }
@@ -212,6 +213,7 @@ void ContainerModalComponent::BuildInnerChild()
     Border outerBorder;
     outerBorder.SetBorderRadius(Radius(CONTAINER_OUTER_RADIUS));
     outerBorder.SetColor(CONTAINER_BORDER_COLOR);
+    outerBorder.SetWidth(CONTAINER_BORDER_WIDTH);
     auto containerDecoration = AceType::MakeRefPtr<Decoration>();
     containerDecoration->SetBackgroundColor(CONTAINER_BACKGROUND_COLOR);
     containerDecoration->SetBorder(outerBorder);
@@ -325,17 +327,17 @@ std::list<RefPtr<Component>> ContainerModalComponent::BuildTitleChildren(bool is
     auto rightPadding = SystemProperties::GetDeviceAccess() ? TITLE_ELEMENT_MARGIN_HORIZONTAL_ACCESS_DEVICE
                                                             : TITLE_ELEMENT_MARGIN_HORIZONTAL;
     if (!hideSplit_) {
-        titleChildren.emplace_back(SetPadding(titleLeftSplitButton, ZERO_PADDING_ALL, rightPadding));
+        titleChildren.emplace_back(SetPadding(titleLeftSplitButton, ZERO_PADDING, rightPadding));
     }
     if (!hideMaximize_) {
         titleChildren.emplace_back(
-            SetPadding(titleMaximizeRecoverButton, ZERO_PADDING_ALL, rightPadding));
+            SetPadding(titleMaximizeRecoverButton, ZERO_PADDING, rightPadding));
     }
     if (!hideMinimize_) {
-        titleChildren.emplace_back(SetPadding(titleMinimizeButton, ZERO_PADDING_ALL, rightPadding));
+        titleChildren.emplace_back(SetPadding(titleMinimizeButton, ZERO_PADDING, rightPadding));
     }
     if (!hideClose_) {
-        titleChildren.emplace_back(SetPadding(titleCloseButton, ZERO_PADDING_ALL, TITLE_PADDING_END));
+        titleChildren.emplace_back(SetPadding(titleCloseButton, ZERO_PADDING, TITLE_PADDING_END));
     }
     return titleChildren;
 }

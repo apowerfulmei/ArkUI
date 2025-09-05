@@ -30,7 +30,6 @@ enum class DragEventType {
     MOVE,
     DROP,
     START,
-    PULL_CANCEL,
 };
 
 enum class DragType {

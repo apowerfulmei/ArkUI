@@ -17,6 +17,8 @@
 
 #include <sys/time.h>
 
+#include "base/utils/utils.h"
+#include "core/components_ng/base/frame_node.h"
 #include "core/components_ng/pattern/text_picker/textpicker_column_pattern.h"
 
 namespace OHOS::Ace::NG {
@@ -91,7 +93,6 @@ void TextPickerTossAnimationController::StartSpringMotion()
     auto offset = column->GetOffset();
     auto speed = column->GetMainVelocity() / VELOCTY_TRANS;
     auto renderContext = columnNode->GetRenderContext();
-    auto context = columnNode->GetContextRefPtr();
     CHECK_NULL_VOID(renderContext);
     auto springCurve = UpdatePlayAnimationValue();
     CHECK_NULL_VOID(springCurve);
@@ -129,7 +130,7 @@ void TextPickerTossAnimationController::StartSpringMotion()
             CHECK_NULL_VOID(ref);
             ref->property_->Set(ref->end_);
         },
-        finishCallback, nullptr, context);
+        finishCallback);
 }
 
 void TextPickerTossAnimationController::StopTossAnimation()
@@ -144,13 +145,11 @@ void TextPickerTossAnimationController::StopTossAnimation()
     option.SetCurve(Curves::LINEAR);
     option.SetDuration(0);
     option.SetDelay(0);
-    auto columnNode = column->GetHost();
-    auto context = columnNode? columnNode->GetContextRefPtr(): nullptr;
     AnimationUtils::Animate(option, [weak]() {
         auto ref = weak.Upgrade();
         ref->isManualStopToss_ = true;
         ref->property_->Set(0.0);
-    }, nullptr, nullptr, context);
+    });
 }
 
 RefPtr<Curve> TextPickerTossAnimationController::UpdatePlayAnimationValue()
@@ -163,7 +162,7 @@ RefPtr<Curve> TextPickerTossAnimationController::UpdatePlayAnimationValue()
 
 double TextPickerTossAnimationController::GetCurrentTime() const
 {
-    struct timeval tv {};
+    struct timeval tv = { 0 };
     int result = gettimeofday(&tv, nullptr);
     if (result != 0) {
         return 0.0;

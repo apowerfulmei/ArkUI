@@ -15,44 +15,38 @@
 
 #include "core/common/layout_inspector.h"
 
-#ifdef USE_NEW_SKIA
-#include "include/core/SkPixmap.h"
-#include "include/core/SkData.h"
-#include "include/encode/SkPngEncoder.h"
-#include "src/base/SkBase64.h"
-#else
-#include "include/utils/SkBase64.h"
-#endif
+#include <mutex>
+#include <string>
 
 #include "include/core/SkImage.h"
 #include "include/core/SkString.h"
+#include "include/core/SkColorSpace.h"
+#include "include/utils/SkBase64.h"
 
-#include "connect_server_manager.h"
+#include "wm/window.h"
 
 #include "adapter/ohos/osal/pixel_map_ohos.h"
-#include "adapter/ohos/entrance/rs_adapter.h"
+#include "adapter/ohos/entrance/ace_container.h"
 #include "adapter/ohos/entrance/subwindow/subwindow_ohos.h"
-#include "base/log/ace_checker.h"
 #include "base/subwindow/subwindow_manager.h"
 #include "base/thread/background_task_executor.h"
-#include "base/websocket/websocket_manager.h"
+#include "base/utils/utils.h"
+#include "base/json/json_util.h"
+#include "base/utils/system_properties.h"
 #include "core/common/ace_engine.h"
 #include "core/common/connect_server_manager.h"
-#include "core/components_ng/render/adapter/component_snapshot.h"
-#include "core/components_ng/render/adapter/rosen_render_context.h"
+#include "core/common/container.h"
+#include "core/common/container_scope.h"
+#include "core/components_ng/base/inspector.h"
 #include "core/components_v2/inspector/inspector.h"
-#include "render_service_client/core/pipeline/rs_node_map.h"
+#include "core/pipeline_ng/pipeline_context.h"
+#include "dm/display_manager.h"
+#include "foundation/ability/ability_runtime/frameworks/native/runtime/connect_server_manager.h"
+
 namespace OHOS::Ace {
 
 namespace {
-constexpr size_t SNAP_PARTITION_SIZE = 100;
-constexpr int64_t FIND_RSNODE_ERROR = -1;
-constexpr int32_t UI_TREE = 0;
-constexpr int32_t THREE_DIMENSIONS_TREE = 1;
-constexpr int32_t QUERY_ABILITY = 2;
-#ifndef USE_NEW_SKIA
-constexpr int32_t PNG_ENCODE_QUALITY = 100;
-#endif
+
 sk_sp<SkColorSpace> ColorSpaceToSkColorSpace(const RefPtr<PixelMap>& pixmap)
 {
     return SkColorSpace::MakeSRGB();
@@ -129,16 +123,11 @@ const OHOS::sptr<OHOS::Rosen::Window> GetWindow(int32_t containerId)
 }
 } // namespace
 
-static std::vector<std::string> inspectorAbilities = {"3DLayers"};
 constexpr static char RECNODE_SELFID[] = "selfId";
 constexpr static char RECNODE_NODEID[] = "nodeID";
-constexpr static char RECNODE_PARENTID[] = "parentID";
 constexpr static char RECNODE_NAME[] = "value";
 constexpr static char RECNODE_DEBUGLINE[] = "debugLine";
 constexpr static char RECNODE_CHILDREN[] = "RSNode";
-constexpr static char ARK_DEBUGGER_LIB_PATH[] = "libark_connect_inspector.z.so";
-static constexpr char START_PERFORMANCE_CHECK_MESSAGE[] = "StartArkPerformanceCheck";
-static constexpr char END_PERFORMANCE_CHECK_MESSAGE[] = "EndArkPerformanceCheck";
 
 bool LayoutInspector::stateProfilerStatus_ = false;
 bool LayoutInspector::layoutInspectorStatus_ = false;
@@ -148,9 +137,6 @@ ProfilerStatusCallback LayoutInspector::jsStateProfilerStatusCallback_ = nullptr
 RsProfilerNodeMountCallback LayoutInspector::rsProfilerNodeMountCallback_ = nullptr;
 const char PNG_TAG[] = "png";
 NG::InspectorTreeMap LayoutInspector::recNodeInfos_;
-std::once_flag LayoutInspector::loadFlag;
-void* LayoutInspector::handlerConnectServerSo = nullptr;
-LayoutInspector::SetArkUICallback LayoutInspector::setArkUICallback = nullptr;
 
 void LayoutInspector::SupportInspector()
 {
@@ -170,7 +156,7 @@ void LayoutInspector::SupportInspector()
 
     auto sendTask = [treeJsonStr, jsonSnapshotStr = message->ToString(), container]() {
         if (container->IsUseStageModel()) {
-            WebSocketManager::SendInspector(treeJsonStr, jsonSnapshotStr);
+            OHOS::AbilityRuntime::ConnectServerManager::Get().SendInspector(treeJsonStr, jsonSnapshotStr);
         } else {
             OHOS::Ace::ConnectServerManager::Get().SendInspector(treeJsonStr, jsonSnapshotStr);
         }
@@ -211,9 +197,9 @@ void LayoutInspector::SetRsProfilerNodeMountCallback(RsProfilerNodeMountCallback
     rsProfilerNodeMountCallback_ = callback;
 }
 
-void LayoutInspector::SendMessage(const std::string& message)
+void LayoutInspector::SendStateProfilerMessage(const std::string& message)
 {
-    WebSocketManager::SendMessage(message);
+    OHOS::AbilityRuntime::ConnectServerManager::Get().SendArkUIStateProfilerMessage(message);
 }
 
 void LayoutInspector::SetStateProfilerStatus(bool status)
@@ -229,7 +215,8 @@ void LayoutInspector::ConnectServerCallback()
     TAG_LOGD(AceLogTag::ACE_LAYOUT_INSPECTOR, "connect server callback isStage:%{public}d", isUseStageModel_);
     if (isUseStageModel_) {
         TAG_LOGD(AceLogTag::ACE_LAYOUT_INSPECTOR, "connect server, reset callback.");
-        WebSocketManager::SetRecordCallback(LayoutInspector::HandleStartRecord, LayoutInspector::HandleStopRecord);
+        OHOS::AbilityRuntime::ConnectServerManager::Get().SetRecordCallback(
+            LayoutInspector::HandleStartRecord, LayoutInspector::HandleStopRecord);
     }
 }
 
@@ -239,35 +226,34 @@ void LayoutInspector::SetCallback(int32_t instanceId)
     auto container = AceEngine::Get().GetContainer(instanceId);
     CHECK_NULL_VOID(container);
     if (container->IsUseStageModel()) {
-        WebSocketManager::SetProfilerCallBack([](bool status) { return SetStateProfilerStatus(status); });
-        WebSocketManager::SetSwitchCallback(
-            [](int32_t containerId) { return CreateLayoutInfo(containerId); }, instanceId);
-        WebSocketManager::SetRecordCallback(LayoutInspector::HandleStartRecord, LayoutInspector::HandleStopRecord);
-        WebSocketManager::RegisterConnectServerCallback(LayoutInspector::ConnectServerCallback);
+        OHOS::AbilityRuntime::ConnectServerManager::Get().SetLayoutInspectorCallback(
+            [](int32_t containerId) { return CreateLayoutInfo(containerId); },
+            [](bool status) { return SetStatus(status); });
+        OHOS::AbilityRuntime::ConnectServerManager::Get().SetRecordCallback(
+            LayoutInspector::HandleStartRecord, LayoutInspector::HandleStopRecord);
+        OHOS::AbilityRuntime::ConnectServerManager::Get().RegistConnectServerCallback(
+            LayoutInspector::ConnectServerCallback);
         isUseStageModel_ = true;
-        RegisterConnectCallback();
     } else {
         OHOS::Ace::ConnectServerManager::Get().SetLayoutInspectorCallback(
-            [](int32_t containerId) { return CreateLayoutInfo(containerId); });
+            [](int32_t containerId) { return CreateLayoutInfo(containerId); },
+            [](bool status) { return SetStatus(status); });
         isUseStageModel_ = false;
     }
 
-    SendInstanceMessageCallBack sendInstanceMessageCallBack = [](int32_t id) {
-        WebSocketManager::SetProfilerCallBack(
-            [](bool status) { return SetStateProfilerStatus(status); });
-        WebSocketManager::SetSwitchCallback([](int32_t containerId) { return CreateLayoutInfo(containerId); }, id);
-    };
-    WebSocketManager::RegisterSendInstanceMessageCallback(sendInstanceMessageCallBack);
+    OHOS::AbilityRuntime::ConnectServerManager::Get().SetStateProfilerCallback(
+        [](bool status) { return SetStateProfilerStatus(status); });
 }
 
-void LayoutInspector::CreateContainerLayoutInfo(RefPtr<Container>& container)
+void LayoutInspector::CreateLayoutInfo(int32_t containerId)
 {
+    auto container = Container::GetFoucsed();
     CHECK_NULL_VOID(container);
     if (container->IsDynamicRender()) {
         container = Container::CurrentSafely();
         CHECK_NULL_VOID(container);
     }
-    int32_t containerId = container->GetInstanceId();
+    containerId = container->GetInstanceId();
     ContainerScope socpe(containerId);
     auto context = PipelineContext::GetCurrentContext();
     CHECK_NULL_VOID(context);
@@ -279,7 +265,7 @@ void LayoutInspector::CreateContainerLayoutInfo(RefPtr<Container>& container)
         CHECK_NULL_VOID(message);
         auto sendResultTask = [treeJsonStr = std::move(treeJson), jsonSnapshotStr = message->ToString(), container]() {
             if (container->IsUseStageModel()) {
-                WebSocketManager::SendInspector(treeJsonStr, jsonSnapshotStr);
+                OHOS::AbilityRuntime::ConnectServerManager::Get().SendInspector(treeJsonStr, jsonSnapshotStr);
             } else {
                 OHOS::Ace::ConnectServerManager::Get().SendInspector(treeJsonStr, jsonSnapshotStr);
             }
@@ -288,76 +274,6 @@ void LayoutInspector::CreateContainerLayoutInfo(RefPtr<Container>& container)
     };
     context->GetTaskExecutor()->PostTask(
         std::move(getInspectorTask), TaskExecutor::TaskType::UI, "ArkUIGetInspectorTreeJson");
-}
-
-void LayoutInspector::CreateContainer3DLayoutInfo(RefPtr<Container>& container)
-{
-    CHECK_NULL_VOID(container);
-    if (container->IsDynamicRender()) {
-        container = Container::CurrentSafely();
-        CHECK_NULL_VOID(container);
-    }
-    int32_t containerId = container->GetInstanceId();
-    ContainerScope scope(containerId);
-    auto pipelineContext = container->GetPipelineContext();
-    CHECK_NULL_VOID(pipelineContext);
-    auto ngPipeline = AceType::DynamicCast<NG::PipelineContext>(pipelineContext);
-    CHECK_NULL_VOID(ngPipeline);
-    auto getInspectorTask = [containerId, weakPipeline = AceType::WeakClaim(AceType::RawPtr(ngPipeline))]() {
-        std::string treeJson;
-        GetInspectorTreeJsonStr(treeJson, containerId);
-        auto sendJsonTreeTask = [treeJsonStr = std::move(treeJson)]() {
-            WebSocketManager::SendMessage(treeJsonStr);
-        };
-        BackgroundTaskExecutor::GetInstance().PostTask(std::move(sendJsonTreeTask));
-
-        auto pipeline = weakPipeline.Upgrade();
-        CHECK_NULL_VOID(pipeline);
-        auto root = pipeline->GetRootElement();
-        CHECK_NULL_VOID(root);
-        Get3DSnapshotJson(root);
-    };
-    pipelineContext->GetTaskExecutor()->PostTask(
-        std::move(getInspectorTask), TaskExecutor::TaskType::UI, "ArkUIGetInspector3DTreeJson");
-}
-
-void LayoutInspector::CreateLayoutInfo(int32_t containerId)
-{
-    auto container = Container::GetFocused();
-    return CreateContainerLayoutInfo(container);
-}
-
-void LayoutInspector::CreateLayoutInfoByWinId(uint32_t windId)
-{
-    auto container = Container::GetByWindowId(windId);
-    if (container) {
-        TAG_LOGD(AceLogTag::ACE_LAYOUT_INSPECTOR, "start get container %{public}d info", container->GetInstanceId());
-    }
-    return CreateContainerLayoutInfo(container);
-}
-
-void LayoutInspector::SendInspctorAbilities()
-{
-    auto jsonRoot = JsonUtil::Create(true);
-    jsonRoot->Put("type", "inspectorAbilities");
-    auto contentArray = JsonUtil::CreateArray(true);
-    for (size_t i = 0; i < inspectorAbilities.size(); ++i) {
-        contentArray->Put(std::to_string(i).c_str(), inspectorAbilities[i].c_str());
-    }
-    jsonRoot->PutRef("content", std::move(contentArray));
-    auto sendInspctorAbilitiesTask = [abilitiesJsonStr = jsonRoot->ToString()]() {
-        WebSocketManager::SendMessage(abilitiesJsonStr);
-    };
-    BackgroundTaskExecutor::GetInstance().PostTask(std::move(sendInspctorAbilitiesTask));
-}
-
-void LayoutInspector::Create3DLayoutInfoByWinId(uint32_t windId)
-{
-    auto container = Container::GetByWindowId(windId);
-    if (container) {
-        TAG_LOGD(AceLogTag::ACE_LAYOUT_INSPECTOR, "start get container %{public}d info", container->GetInstanceId());
-    }
-    return CreateContainer3DLayoutInfo(container);
 }
 
 void LayoutInspector::GetInspectorTreeJsonStr(std::string& treeJsonStr, int32_t containerId)
@@ -381,132 +297,6 @@ void LayoutInspector::GetInspectorTreeJsonStr(std::string& treeJsonStr, int32_t 
 #endif
 }
 
-void LayoutInspector::BuildInfoForIDE(uint64_t id, const std::shared_ptr<Media::PixelMap>& pixelMap,
-    std::unique_ptr<JsonValue>& message)
-{
-    CHECK_NULL_VOID(pixelMap);
-    auto acePixelMap = AceType::MakeRefPtr<PixelMapOhos>(pixelMap);
-    auto imageInfo = MakeSkImageInfoFromPixelMap(acePixelMap);
-    SkPixmap imagePixmap(
-        imageInfo, reinterpret_cast<const void*>(acePixelMap->GetPixels()), acePixelMap->GetRowBytes());
-    sk_sp<SkImage> image;
-#ifdef USE_NEW_SKIA
-    image = SkImages::RasterFromPixmap(imagePixmap, &PixelMap::ReleaseProc, PixelMap::GetReleaseContext(acePixelMap));
-    CHECK_NULL_VOID(image);
-    auto data = image->refEncodedData();
-    if (!data) {
-        data = SkPngEncoder::Encode(nullptr, image.get(), {});
-    }
-#else
-    image = SkImage::MakeFromRaster(imagePixmap, &PixelMap::ReleaseProc, PixelMap::GetReleaseContext(acePixelMap));
-    CHECK_NULL_VOID(image);
-    auto data = image->encodeToData(SkEncodedImageFormat::kPNG, PNG_ENCODE_QUALITY);
-#endif
-    CHECK_NULL_VOID(data);
-    auto defaultDisplay = Rosen::DisplayManager::GetInstance().GetDefaultDisplay();
-    CHECK_NULL_VOID(defaultDisplay);
-    auto deviceDpi = defaultDisplay->GetDpi();
-    auto deviceWidth = defaultDisplay->GetWidth();
-    auto deviceHeight = defaultDisplay->GetHeight();
-    message->Put("$ID", RsNodeIdToFrameNodeId(id));
-    message->Put("format", PNG_TAG);
-    message->Put("width", (*pixelMap).GetWidth());
-    message->Put("height", (*pixelMap).GetHeight());
-    message->Put("deviceWidth", deviceWidth);
-    message->Put("deviceHeight", deviceHeight);
-    message->Put("deviceDpi", deviceDpi);
-    int32_t encodeLength = static_cast<int32_t>(SkBase64::Encode(data->data(), data->size(), nullptr));
-    message->Put("size", data->size());
-    SkString info(encodeLength);
-#ifdef USE_NEW_SKIA
-    SkBase64::Encode(data->data(), data->size(), info.data());
-#else
-    SkBase64::Encode(data->data(), data->size(), info.writable_str());
-#endif
-    message->Put("pixelMapBase64", info.c_str());
-}
-
-int64_t LayoutInspector::RsNodeIdToFrameNodeId(uint64_t rsNodeId)
-{
-    auto context = PipelineContext::GetCurrentContext();
-    auto rsUIContext = RsAdapter::GetRSUIContext(context);
-    auto rsNode = rsUIContext ? rsUIContext->GetNodeMap().GetNode(rsNodeId)
-                    : Rosen::RSNodeMap::Instance().GetNode(rsNodeId);
-    if (rsNode == nullptr) {
-        return FIND_RSNODE_ERROR;
-    }
-    return rsNode->GetFrameNodeId();
-}
-
-std::vector<PixelMapPair> LayoutInspector::Filter3DSnapshot(const std::vector<PixelMapPair>& snapinfos)
-{
-    std::vector<PixelMapPair> infos;
-    for (const auto& snapInfo : snapinfos) {
-        if (snapInfo.second) {
-            infos.emplace_back(snapInfo);
-        }
-    }
-    return infos;
-}
-
-void LayoutInspector::SendEmpty3DSnapJson()
-{
-    TAG_LOGI(AceLogTag::ACE_LAYOUT_INSPECTOR, "SendEmpty3DSnapJson");
-    auto message = JsonUtil::Create(true);
-    CHECK_NULL_VOID(message);
-    auto contentMessage = JsonUtil::CreateArray(true);
-    CHECK_NULL_VOID(contentMessage);
-    message->Put("type", "3DLayers");
-    message->Put("totalParts", 1);
-    message->Put("partNum", 1);
-    message->Put("LayersCount", 0);
-    message->PutRef("content", std::move(contentMessage));
-    auto sendTask = [jsonSnapshotStr = message->ToString()]() {
-        WebSocketManager::SendMessage(jsonSnapshotStr);
-    };
-    BackgroundTaskExecutor::GetInstance().PostTask(std::move(sendTask));
-}
-
-void LayoutInspector::Get3DSnapshotJson(const RefPtr<NG::FrameNode>& node)
-{
-    std::vector<PixelMapPair> snapInfos = NG::ComponentSnapshot::GetSoloNode(node);
-    TAG_LOGI(AceLogTag::ACE_LAYOUT_INSPECTOR, "3d snapInfos size:%{public}zu", snapInfos.size());
-    auto filterSnapInfos = Filter3DSnapshot(snapInfos);
-    TAG_LOGI(AceLogTag::ACE_LAYOUT_INSPECTOR, "3d snapInfos after filter size:%{public}zu", filterSnapInfos.size());
-    if (filterSnapInfos.empty()) {
-        SendEmpty3DSnapJson();
-        return;
-    }
-    size_t totalParts = (filterSnapInfos.size() + SNAP_PARTITION_SIZE - 1) / SNAP_PARTITION_SIZE;
-    int partNum = 1;
-    for (size_t i = 0; i < filterSnapInfos.size(); i += SNAP_PARTITION_SIZE) {
-        auto message = JsonUtil::Create(true);
-        CHECK_NULL_VOID(message);
-        auto contentMessage = JsonUtil::CreateArray(true);
-        CHECK_NULL_VOID(contentMessage);
-        message->Put("type", "3DLayers");
-        message->Put("totalParts", totalParts);
-        message->Put("partNum", partNum++);
-        message->Put("LayersCount", filterSnapInfos.size());
-
-        for (size_t j = i; j < i + SNAP_PARTITION_SIZE && j < filterSnapInfos.size(); j++) {
-            auto snapInfo = filterSnapInfos[j];
-            auto snapPixelMap = snapInfo.second;
-            if (snapPixelMap) {
-                auto snapInfoJson = JsonUtil::Create(true);
-                BuildInfoForIDE(snapInfo.first, snapPixelMap, snapInfoJson);
-                contentMessage->PutRef(std::move(snapInfoJson));
-            }
-        }
-
-        message->PutRef("content", std::move(contentMessage));
-        auto sendTask = [jsonSnapshotStr = message->ToString()]() {
-                WebSocketManager::SendMessage(jsonSnapshotStr);
-            };
-        BackgroundTaskExecutor::GetInstance().PostTask(std::move(sendTask));
-    }
-}
-
 void LayoutInspector::GetSnapshotJson(int32_t containerId, std::unique_ptr<JsonValue>& message)
 {
     auto container = AceEngine::Get().GetContainer(containerId);
@@ -521,18 +311,9 @@ void LayoutInspector::GetSnapshotJson(int32_t containerId, std::unique_ptr<JsonV
     SkPixmap imagePixmap(
         imageInfo, reinterpret_cast<const void*>(acePixelMap->GetPixels()), acePixelMap->GetRowBytes());
     sk_sp<SkImage> image;
-#ifdef USE_NEW_SKIA
-    image = SkImages::RasterFromPixmap(imagePixmap, &PixelMap::ReleaseProc, PixelMap::GetReleaseContext(acePixelMap));
-    CHECK_NULL_VOID(image);
-    auto data = image->refEncodedData();
-    if (!data) {
-        data = SkPngEncoder::Encode(nullptr, image.get(), {});
-    }
-#else
     image = SkImage::MakeFromRaster(imagePixmap, &PixelMap::ReleaseProc, PixelMap::GetReleaseContext(acePixelMap));
     CHECK_NULL_VOID(image);
     auto data = image->encodeToData(SkEncodedImageFormat::kPNG, 100);
-#endif
     CHECK_NULL_VOID(data);
     auto defaultDisplay = Rosen::DisplayManager::GetInstance().GetDefaultDisplay();
     CHECK_NULL_VOID(defaultDisplay);
@@ -551,69 +332,8 @@ void LayoutInspector::GetSnapshotJson(int32_t containerId, std::unique_ptr<JsonV
     int32_t encodeLength = static_cast<int32_t>(SkBase64::Encode(data->data(), data->size(), nullptr));
     message->Put("size", data->size());
     SkString info(encodeLength);
-#ifdef USE_NEW_SKIA
-    SkBase64::Encode(data->data(), data->size(), info.data());
-#else
     SkBase64::Encode(data->data(), data->size(), info.writable_str());
-#endif
     message->Put("pixelMapBase64", info.c_str());
-}
-
-void LayoutInspector::RegisterConnectCallback()
-{
-    std::call_once(loadFlag, []() {
-        handlerConnectServerSo = dlopen(ARK_DEBUGGER_LIB_PATH, RTLD_NOLOAD | RTLD_NOW);
-        if (handlerConnectServerSo == nullptr) {
-            handlerConnectServerSo = dlopen(ARK_DEBUGGER_LIB_PATH, RTLD_NOW);
-            if (handlerConnectServerSo == nullptr) {
-                TAG_LOGE(AceLogTag::ACE_LAYOUT_INSPECTOR, "null handlerConnectServerSo: %{public}s", dlerror());
-                return;
-            }
-        }
-
-        setArkUICallback = reinterpret_cast<SetArkUICallback>(dlsym(handlerConnectServerSo, "SetArkUICallback"));
-        if (setArkUICallback == nullptr) {
-            TAG_LOGE(AceLogTag::ACE_LAYOUT_INSPECTOR, "null setArkUICallback: %{public}s", dlerror());
-            return;
-        }
-    });
-
-    if (setArkUICallback != nullptr) {
-        setArkUICallback([](const char* message) { ProcessMessages(message); });
-    }
-}
-
-std::pair<uint32_t, int32_t> LayoutInspector::ProcessMessages(const std::string& message)
-{
-    if (message.find(START_PERFORMANCE_CHECK_MESSAGE, 0) != std::string::npos) {
-        TAG_LOGI(AceLogTag::ACE_LAYOUT_INSPECTOR, "performance check start");
-        AceChecker::SetPerformanceCheckStatus(true, message);
-    } else if (message.find(END_PERFORMANCE_CHECK_MESSAGE, 0) != std::string::npos) {
-        TAG_LOGI(AceLogTag::ACE_LAYOUT_INSPECTOR, "performance check end");
-        AceChecker::SetPerformanceCheckStatus(false, message);
-    }
-    auto windowResult = NG::Inspector::ParseWindowIdFromMsg(message);
-    uint32_t windowId = windowResult.first;
-    if (windowId == OHOS::Ace::NG::INVALID_WINDOW_ID && windowResult.second != QUERY_ABILITY) {
-        TAG_LOGE(AceLogTag::ACE_LAYOUT_INSPECTOR, "input message: %{public}s", message.c_str());
-        return windowResult;
-    }
-
-    switch (windowResult.second) {
-        case UI_TREE:
-            CreateLayoutInfoByWinId(windowId);
-            break;
-        case THREE_DIMENSIONS_TREE:
-            Create3DLayoutInfoByWinId(windowId);
-            break;
-        case QUERY_ABILITY:
-            SendInspctorAbilities();
-            break;
-        default:
-            TAG_LOGE(AceLogTag::ACE_LAYOUT_INSPECTOR, "unsupport message: %{public}s", message.c_str());
-            break;
-    }
-    return windowResult;
 }
 
 void LayoutInspector::HandleStopRecord()
@@ -626,7 +346,6 @@ void LayoutInspector::HandleStopRecord()
         if (uiNode.second != nullptr) {
             auto jsonNode = JsonUtil::Create(true);
             jsonNode->Put(RECNODE_NODEID, std::to_string(uiNode.second->GetSelfId()).c_str());
-            jsonNode->Put(RECNODE_PARENTID, uiNode.second->GetParentId());
             jsonNode->Put(RECNODE_SELFID, uiNode.second->GetNodeId());
             jsonNode->Put(RECNODE_NAME, uiNode.second->GetName().c_str());
             jsonNode->Put(RECNODE_DEBUGLINE, uiNode.second->GetDebugLine().c_str());
@@ -640,7 +359,7 @@ void LayoutInspector::HandleStopRecord()
     }
     std::string arrayJsonStr = jsonRoot->ToString();
     auto sendResultTask = [arrayJsonStr]() {
-        WebSocketManager::SetRecordResults(arrayJsonStr);
+        OHOS::AbilityRuntime::ConnectServerManager::Get().SetRecordResults(arrayJsonStr);
     };
     BackgroundTaskExecutor::GetInstance().PostTask(std::move(sendResultTask));
 }
@@ -651,7 +370,7 @@ void LayoutInspector::HandleStartRecord()
     std::unique_lock<std::mutex> lock(recMutex_);
     SetRsProfilerNodeMountCallback(LayoutInspector::HandleInnerCallback);
     lock.unlock();
-    auto container = Container::GetFocused();
+    auto container = Container::GetFoucsed();
     CHECK_NULL_VOID(container);
     if (container->IsDynamicRender()) {
         container = Container::CurrentSafely();
@@ -690,7 +409,6 @@ void LayoutInspector::HandleInnerCallback(FrameNodeInfo node)
     recNode->SetNodeId(node.frameNodeId);
     recNode->SetName(node.nodeType);
     recNode->SetDebugLine(node.debugline);
-    recNode->SetParentId(node.parentNodeId);
     std::lock_guard<std::mutex> lock(recMutex_);
     recNodeInfos_.emplace(node.rsNodeId, recNode);
 }

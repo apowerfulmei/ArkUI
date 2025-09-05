@@ -19,8 +19,6 @@
 
 #include "core/pipeline/base/rosen_render_context.h"
 
-#include "core/pipeline/base/rs_node_adapter.h"
-
 namespace OHOS::Ace {
 
 void RosenRenderRoot::Paint(RenderContext& context, const Offset& offset)
@@ -66,10 +64,7 @@ void RosenRenderRoot::FinishRender(const std::unique_ptr<DrawDelegate>& delegate
 
 std::shared_ptr<RSNode> RosenRenderRoot::CreateRSNode() const
 {
-    if (!SystemProperties::GetMultiInstanceEnabled()) {
-        return OHOS::Rosen::RSRootNode::Create();
-    }
-    return RsNodeAdapter::CreateRootNode();
+    return OHOS::Rosen::RSRootNode::Create();
 }
 
 } // namespace OHOS::Ace

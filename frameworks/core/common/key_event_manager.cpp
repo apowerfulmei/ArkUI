@@ -15,7 +15,6 @@
 #include "key_event_manager.h"
 
 #include "base/input_manager/input_manager.h"
-#include "base/ressched/ressched_report.h"
 #include "core/common/container.h"
 #include "core/components_ng/base/frame_node.h"
 #include "core/components_ng/pattern/overlay/sheet_manager.h"
@@ -115,37 +114,29 @@ uint8_t KeyEventManager::GetKeyboardShortcutKeys(const std::vector<ModifierKey>&
     return keyValue;
 }
 
-bool KeyEventManager::IsSystemKeyboardShortcut(const KeyEvent& event)
+bool KeyEventManager::IsSystemKeyboardShortcut(const std::string& value, uint8_t keys)
 {
-    static std::vector<HotKey> systemHotKeys;
-    static std::once_flag initFlag;
-
-    std::call_once(initFlag, []() {
-        std::vector<HotKey> initHotKeys;
-        InputManager::GetSystemHotkeys(systemHotKeys);
-    });
-    if (systemHotKeys.empty()) {
+    if (value.size() != 1) {
         return false;
     }
 
-    for (const auto& [prekey, finalkey] : systemHotKeys) {
-        if (static_cast<int32_t>(event.code) != finalkey || (event.pressedCodes.size() != prekey.size() + 1)) {
-            continue;
-        }
-        bool matchPreKey = std::all_of(event.pressedCodes.begin(), event.pressedCodes.end(),
-            [&prekeySet = prekey, keycode = event.code](const KeyCode& item) {
-                return (item == keycode) ? true : prekeySet.count(static_cast<int32_t>(item)) != 0;
-            });
-        if (matchPreKey) {
-            TAG_LOGI(AceLogTag::ACE_KEYBOARD, "Match system hot key. Cannot trigger keyboard shortcut.");
-            return true;
-        }
+    const std::set<char> forbidValue{'X', 'Y', 'Z', 'A', 'C', 'V'};
+    auto c = std::toupper(value.front());
+    if (forbidValue.count(c) == 0) {
+        return false;
     }
-    return false;
+
+    if (keys == CtrlKeysBit::CTRL) {
+        return true;
+    }
+    return (keys == (CTRL ^ SHIFT)) && (c == 'Z');
 }
 
 bool KeyEventManager::IsSameKeyboardShortcutNode(const std::string& value, uint8_t keys)
 {
+    if (IsSystemKeyboardShortcut(value, keys)) {
+        return true;
+    }
     for (auto& weakNode : keyboardShortcutNode_) {
         auto frameNode = weakNode.Upgrade();
         if (!frameNode) {
@@ -347,7 +338,7 @@ void AddKeyboardShortcutKeys(
     }
     // single key
     if (keys == CtrlKeysBit::CTRL || keys == CtrlKeysBit::SHIFT || keys == CtrlKeysBit::ALT) {
-        TAG_LOGD(AceLogTag::ACE_KEYBOARD, "AddKeyboardShortcutKeys single key");
+        TAG_LOGI(AceLogTag::ACE_KEYBOARD, "AddKeyboardShortcutKeys single key");
         AddKeyboardShortcutSingleKey(keys, keyCodes, permutation);
     }
     // double keys
@@ -430,9 +421,6 @@ bool KeyEventManager::DispatchKeyboardShortcut(const KeyEvent& event)
     if (event.action != KeyAction::DOWN) {
         return false;
     }
-    if (keyboardShortcutNode_.empty() || IsSystemKeyboardShortcut(event)) {
-        return false;
-    }
     for (auto& node : keyboardShortcutNode_) {
         auto frameNode = node.Upgrade();
         if (!frameNode || !(frameNode->IsActive())) {
@@ -457,7 +445,7 @@ void KeyEventManager::DelKeyboardShortcutNode(int32_t nodeId)
     while (iter != keyboardShortcutNode_.end()) {
         auto frameNode = (*iter).Upgrade();
         if (!frameNode) {
-            iter = keyboardShortcutNode_.erase(iter);
+            keyboardShortcutNode_.erase(iter++);
             continue;
         }
         if (frameNode->GetId() == nodeId) {
@@ -472,8 +460,8 @@ bool KeyEventManager::DispatchTabIndexEventNG(const KeyEvent& event, const RefPt
 {
     CHECK_NULL_RETURN(mainView, false);
     TAG_LOGD(AceLogTag::ACE_FOCUS,
-        "Dispatch tab index event: code:%{private}d/action:%{public}d on node: %{public}s/%{public}d.", event.code,
-        event.action, mainView->GetTag().c_str(), mainView->GetId());
+        "Dispatch tab index event: code:" SEC_PLD(%{private}d) "/action:%{public}d on node: %{public}s/%{public}d.",
+        SEC_PARAM(event.code), event.action, mainView->GetTag().c_str(), mainView->GetId());
     auto mainViewFocusHub = mainView->GetFocusHub();
     CHECK_NULL_RETURN(mainViewFocusHub, false);
     if (mainViewFocusHub->HandleFocusByTabIndex(event)) {
@@ -487,17 +475,10 @@ bool KeyEventManager::DispatchTabIndexEventNG(const KeyEvent& event, const RefPt
 
 bool KeyEventManager::DispatchKeyEventNG(const KeyEvent& event, const RefPtr<FrameNode>& focusNode)
 {
-    if (!focusNode) {
-        TAG_LOGD(AceLogTag::ACE_FOCUS,
-            "Cannot dispatch key event: code:" SEC_PLD(%{private}d)
-            "/action:%{public}d/isPreIme:%{public}d on node: nullptr",
-            SEC_PARAM(event.code), event.action, event.isPreIme);
-        return false;
-    }
+    CHECK_NULL_RETURN(focusNode, false);
     TAG_LOGD(AceLogTag::ACE_FOCUS,
-        "Dispatch key event: code:" SEC_PLD(%{private}d)
-        "/action:%{public}d/isPreIme:%{public}d on node: %{public}s/%{public}d.",
-        SEC_PARAM(event.code), event.action, event.isPreIme, focusNode->GetTag().c_str(), focusNode->GetId());
+        "Dispatch key event: code:" SEC_PLD(%{private}d) "/action:%{public}d on node: %{public}s/%{public}d.",
+        SEC_PARAM(event.code), event.action, focusNode->GetTag().c_str(), focusNode->GetId());
     isKeyConsumed_ = false;
     auto focusNodeHub = focusNode->GetFocusHub();
     CHECK_NULL_RETURN(focusNodeHub, false);
@@ -507,8 +488,8 @@ bool KeyEventManager::DispatchKeyEventNG(const KeyEvent& event, const RefPtr<Fra
         return true;
     }
     if (!isKeyConsumed_) {
-        TAG_LOGD(AceLogTag::ACE_FOCUS, "Focus system do not handled the key event: code:"
-            SEC_PLD(%{private}d) "/action:%{public}d", SEC_PARAM(event.code), event.action);
+        TAG_LOGD(AceLogTag::ACE_FOCUS, "Focus system do not handled the key event: code:" SEC_PLD(%{private}d)
+            "/action:%{public}d", SEC_PARAM(event.code), event.action);
     }
     return isKeyConsumed_;
 }
@@ -527,7 +508,6 @@ bool KeyEventManager::OnKeyEvent(const KeyEvent& event)
 
     // onKeyPreIme
     if (event.isPreIme) {
-        ResSchedReport::GetInstance().OnKeyEvent(event);
         if (TriggerKeyEventDispatch(event)) {
             return true;
         }
@@ -543,6 +523,9 @@ bool KeyEventManager::OnKeyEvent(const KeyEvent& event)
     if (event.code == KeyCode::KEY_ESCAPE) {
         auto dragDropMgr = GetDragDropManager(GetInstanceId());
         if (dragDropMgr && dragDropMgr->IsMSDPDragging()) {
+            dragDropMgr->SetIsDragCancel(true);
+            dragDropMgr->OnDragEnd(DragPointerEvent(0, 0), "");
+            dragDropMgr->SetIsDragCancel(false);
             return true;
         }
     }
@@ -552,24 +535,22 @@ bool KeyEventManager::OnKeyEvent(const KeyEvent& event)
         return true;
     }
 
-    return RemoveOverlayByESC(event);
+    // process exit overlay
+    if (event.code == KeyCode::KEY_ESCAPE && event.action == KeyAction::DOWN) {
+        auto overlayManager = GetOverlayManager(GetInstanceId());
+        CHECK_NULL_RETURN(overlayManager, false);
+        auto currentContainer = Container::Current();
+        CHECK_NULL_RETURN(currentContainer, false);
+        if (currentContainer->IsSubContainer() || currentContainer->IsDialogContainer()) {
+            return overlayManager->RemoveOverlayInSubwindow();
+        } else {
+            return overlayManager->RemoveOverlay(false) || SheetManager::GetInstance().RemoveSheetByESC();
+        }
+    }
+    return false;
 }
 
 bool KeyEventManager::OnFocusAxisEvent(const FocusAxisEvent& event)
-{
-    auto container = Container::GetContainer(GetInstanceId());
-    CHECK_NULL_RETURN(container, false);
-    auto pipeline = DynamicCast<NG::PipelineContext>(container->GetPipelineContext());
-    CHECK_NULL_RETURN(pipeline, false);
-    auto rootNode = pipeline->GetRootElement();
-    CHECK_NULL_RETURN(rootNode, false);
-    auto focusNodeHub = rootNode->GetFocusHub();
-    CHECK_NULL_RETURN(focusNodeHub, false);
-    focusNodeHub->HandleEvent(event);
-    return true;
-}
-
-bool KeyEventManager::OnCrownEvent(const CrownEvent& event)
 {
     auto container = Container::GetContainer(GetInstanceId());
     CHECK_NULL_RETURN(container, false);
@@ -598,7 +579,7 @@ bool KeyEventManager::TriggerKeyEventDispatch(const KeyEvent& event)
     } else if (DispatchTabKey(event, curFocusView)) {
         return true;
     }
-    return DispatchKeyEventNG(event, curEntryFocusViewFrame) || isTabJustTriggerOnKeyEvent_;
+    return DispatchKeyEventNG(event, curEntryFocusViewFrame);
 }
 
 bool KeyEventManager::IsSkipShortcutAndFocusMove()
@@ -616,11 +597,24 @@ bool KeyEventManager::IsSkipShortcutAndFocusMove()
 
 bool KeyEventManager::DispatchTabKey(const KeyEvent& event, const RefPtr<FocusView>& curFocusView)
 {
-    auto focusManager = GetFocusManager(GetInstanceId());
-    CHECK_NULL_RETURN(focusManager, false);
-    isTabJustTriggerOnKeyEvent_ = focusManager->HandleKeyForExtendOrActivateFocus(event, curFocusView);
     auto curEntryFocusView = curFocusView ? curFocusView->GetEntryFocusView() : nullptr;
     auto curEntryFocusViewFrame = curEntryFocusView ? curEntryFocusView->GetFrameNode() : nullptr;
+    auto isKeyTabDown = event.action == KeyAction::DOWN && event.IsKey({ KeyCode::KEY_TAB });
+    auto isViewRootScopeFocused = curFocusView ? curFocusView->GetIsViewRootScopeFocused() : true;
+    bool isTabJustTriggerOnKeyEvent = false;
+
+    if (isKeyTabDown && isViewRootScopeFocused && curFocusView) {
+        // Current focused on the view root scope. Tab key used to extend focus.
+        // If return true. This tab key will just trigger onKeyEvent process.
+        isTabJustTriggerOnKeyEvent = curFocusView->TriggerFocusMove();
+    }
+
+    auto pipeline = GetPipelineContext(GetInstanceId());
+    CHECK_NULL_RETURN(pipeline, false);
+    // Tab key set focus state from inactive to active.
+    // If return true. This tab key will just trigger onKeyEvent process.
+    bool isHandleFocusActive = isKeyTabDown && pipeline->SetIsFocusActive(true);
+    isTabJustTriggerOnKeyEvent_ = isTabJustTriggerOnKeyEvent || isHandleFocusActive;
     if (DispatchTabIndexEventNG(event, curEntryFocusViewFrame)) {
         return true;
     }
@@ -642,25 +636,6 @@ void KeyEventManager::ReDispatch(KeyEvent& keyEvent)
     if (DispatchTabKey(keyEvent, curFocusView)) {
         return;
     }
-    if (DispatchKeyEventNG(keyEvent, curEntryFocusViewFrame)) {
-        return;
-    }
-    RemoveOverlayByESC(keyEvent);
-}
-
-bool KeyEventManager::RemoveOverlayByESC(const KeyEvent& keyEvent)
-{
-    if (keyEvent.code == KeyCode::KEY_ESCAPE && keyEvent.action == KeyAction::DOWN) {
-        auto overlayManager = GetOverlayManager(GetInstanceId());
-        CHECK_NULL_RETURN(overlayManager, false);
-        auto currentContainer = Container::Current();
-        CHECK_NULL_RETURN(currentContainer, false);
-        if (currentContainer->IsSubContainer() || currentContainer->IsDialogContainer()) {
-            return overlayManager->RemoveOverlayInSubwindow();
-        } else {
-            return overlayManager->RemoveOverlay(false) || SheetManager::GetInstance().RemoveSheetByESC();
-        }
-    }
-    return false;
+    DispatchKeyEventNG(keyEvent, curEntryFocusViewFrame);
 }
 } // namespace OHOS::Ace::NG

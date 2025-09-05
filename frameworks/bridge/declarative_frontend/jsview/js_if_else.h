@@ -18,7 +18,6 @@
 
 #include "bridge/declarative_frontend/engine/bindings.h"
 #include "bridge/declarative_frontend/engine/js_ref_ptr.h"
-#include "core/components_ng/base/view_stack_model.h"
 #include "core/components_ng/syntax/if_else_model.h"
 
 namespace OHOS::Ace::Framework {
@@ -34,9 +33,6 @@ public:
 
     static void Pop()
     {
-        if (ViewStackModel::GetInstance()->IsPrebuilding()) {
-            return ViewStackModel::GetInstance()->PushPrebuildCompCmd("[JSIfElse][pop]", &JSIfElse::Pop);
-        }
         IfElseModel::GetInstance()->Pop();
     }
 
@@ -48,8 +44,6 @@ public:
     }
 
     static void CanRetake(const JSCallbackInfo& info);
-
-    static void GetRetakenElmtIds(const JSCallbackInfo& info);
 };
 
 } // namespace OHOS::Ace::Framework

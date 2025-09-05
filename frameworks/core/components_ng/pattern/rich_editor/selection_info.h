@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2021-2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -21,16 +21,15 @@
 #include "base/geometry/offset.h"
 #include "base/image/pixel_map.h"
 #include "base/memory/ace_type.h"
-#include "base/memory/referenced.h"
 #include "core/common/resource/resource_object.h"
 #include "core/components/common/properties/color.h"
 #include "core/components/common/properties/text_style.h"
 #include "core/event/ace_events.h"
 #include "core/event/axis_event.h"
-
 namespace OHOS::Ace::NG {
 struct SpanItem;
 }
+
 namespace OHOS::Ace {
 namespace {
 Color DEFAULT_SYMBOL_COLOR = Color::BLACK;
@@ -71,7 +70,6 @@ struct SpanPosition {
 struct SymbolSpanStyle {
     double fontSize = 0.0;
     double lineHeight = 0.0;
-    bool halfLeading = false;
     double letterSpacing = 0.0;
     double lineSpacing = 0.0;
     std::string symbolColor;
@@ -126,27 +124,20 @@ struct TextStyleResult {
     std::string fontColor;
     double fontSize = 0.0;
     double lineHeight = 0.0;
-    bool halfLeading = false;
     double letterSpacing = 0.0;
     double lineSpacing = 0.0;
-    bool optimizeTrailingSpace = false;
-    std::optional<Dimension> paragraphSpacing;
-    std::optional<int32_t> textVerticalAlign;
     int32_t fontStyle = 0;
     int32_t fontWeight = 0;
     FONT_FEATURES_LIST fontFeature;
     std::string fontFamily;
     int32_t decorationType = 0;
-    std::vector<TextDecoration> decorationTypes;
     std::string decorationColor;
     int32_t decorationStyle = 0;
-    int32_t textAlign = 0;
     int32_t wordBreak = static_cast<int32_t>(WordBreak::BREAK_WORD);
     int32_t lineBreakStrategy = static_cast<int32_t>(LineBreakStrategy::GREEDY);
+    int32_t textAlign = 0;
     std::string leadingMarginSize[2] = { "0.00px", "0.00px" };
     std::vector<Shadow> textShadows;
-    std::optional<TextBackgroundStyle> textBackgroundStyle;
-    float lineThicknessScale = 1.0f;
 };
 
 struct ImageStyleResult {
@@ -161,9 +152,8 @@ struct ResultObject {
     SpanPosition spanPosition;
     SelectSpanType type = SelectSpanType::TYPESPAN;
     int32_t offsetInSpan[2] = { 0, 0 };
-    std::u16string valueString;
-    std::u16string previewText;
-    std::u16string urlAddress;
+    std::string valueString;
+    std::string previewText;
     RefPtr<PixelMap> valuePixelMap;
     TextStyleResult textStyle;
     ImageStyleResult imageStyle;
@@ -188,11 +178,6 @@ public:
     ~SelectionInfo() = default;
 
     Selection GetSelection() const
-    {
-        return selection_;
-    }
-
-    Selection& GetSelectionRef()
     {
         return selection_;
     }
@@ -249,9 +234,6 @@ struct ParagraphInfo {
     int32_t textAlign = 0;
     int32_t wordBreak = static_cast<int32_t>(WordBreak::BREAK_WORD);
     int32_t lineBreakStrategy = static_cast<int32_t>(LineBreakStrategy::GREEDY);
-    // unit of paragraphSpacing is fp
-    std::optional<double> paragraphSpacing;
-    std::optional<int32_t> textVerticalAlign;
 
     std::pair<int32_t, int32_t> range;
 };

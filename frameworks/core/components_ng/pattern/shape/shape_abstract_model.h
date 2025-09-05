@@ -20,7 +20,6 @@
 #include <mutex>
 
 #include "base/geometry/dimension.h"
-#include "core/common/resource/resource_object.h"
 #include "core/components/common/properties/color.h"
 
 namespace OHOS::Ace {
@@ -30,7 +29,6 @@ public:
     virtual ~ShapeAbstractModel() = default;
     virtual void SetStroke(const Color& color);
     virtual void SetFill(const Color& color);
-    virtual void SetForegroundColor(const Color& color);
     virtual void SetStrokeDashOffset(const Ace::Dimension& dashOffset);
     virtual void SetStrokeLineCap(int lineCapStyle);
     virtual void SetStrokeLineJoin(int lineJoinStyle);
@@ -39,11 +37,13 @@ public:
     virtual void SetFillOpacity(double opacity);
     virtual void SetStrokeWidth(const Ace::Dimension& lineWidth);
     virtual void SetStrokeDashArray(const std::vector<Ace::Dimension>& dashArray);
-    virtual void SetStrokeDashArray(
-        const std::vector<Ace::Dimension>& segments, const std::vector<RefPtr<ResourceObject>>& resObjArray) {};
     virtual void SetAntiAlias(bool antiAlias);
     virtual void SetWidth(Dimension& width);
     virtual void SetHeight(Dimension& height);
+
+private:
+    static std::unique_ptr<ShapeAbstractModel> instance_;
+    static std::mutex mutex_;
 };
 } // namespace OHOS::Ace
 #endif // FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_PATTERN_SHAPE_ABSTRACT_MODEL_H

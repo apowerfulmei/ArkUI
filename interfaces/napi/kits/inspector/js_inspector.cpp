@@ -14,6 +14,13 @@
  */
 #include "js_inspector.h"
 
+#include <algorithm>
+
+#include "napi/native_common.h"
+#include "napi/native_node_api.h"
+
+#include "base/memory/referenced.h"
+
 namespace OHOS::Ace::Napi {
 namespace {
 constexpr size_t STR_BUFFER_SIZE = 1024;
@@ -50,14 +57,11 @@ static size_t ParseArgs(
     napi_get_value_string_utf8(env, argv[0], type, STR_BUFFER_SIZE, &len);
     NAPI_ASSERT_BASE(env, len < STR_BUFFER_SIZE, "condition string too long", 0);
     NAPI_ASSERT_BASE(
-        env, (strcmp("layout", type) == 0 || strcmp("draw", type) == 0 || strcmp("drawChildren", type) == 0),
-        "type mismatch('layout' or 'draw')", 0);
+        env, (strcmp("layout", type) == 0 || strcmp("draw", type) == 0), "type mismatch('layout' or 'draw')", 0);
     if (strcmp("layout", type) == 0) {
         calloutType = CalloutType::LAYOUTCALLOUT;
     } else if (strcmp("draw", type) == 0) {
         calloutType = CalloutType::DRAWCALLOUT;
-    } else if (strcmp("drawChildren", type) == 0) {
-        calloutType = CalloutType::DRAWCHILDRENCALLOUT;
     } else {
         calloutType = CalloutType::UNKNOW;
     }
@@ -104,17 +108,8 @@ std::list<napi_ref>::iterator ComponentObserver::FindCbList(napi_env env, napi_v
             napi_strict_equals(env, refItem, cb, &result);
             return result;
         });
-    } else if (calloutType == CalloutType::DRAWCALLOUT) {
-        return std::find_if(cbDrawList_.begin(), cbDrawList_.end(), [env, cb](const napi_ref& item) -> bool {
-            bool result = false;
-            napi_value refItem;
-            napi_get_reference_value(env, item, &refItem);
-            napi_strict_equals(env, refItem, cb, &result);
-            return result;
-        });
     } else {
-        return std::find_if(cbDrawChildrenList_.begin(),
-            cbDrawChildrenList_.end(), [env, cb](const napi_ref& item) -> bool {
+        return std::find_if(cbDrawList_.begin(), cbDrawList_.end(), [env, cb](const napi_ref& item) -> bool {
             bool result = false;
             napi_value refItem;
             napi_get_reference_value(env, item, &refItem);
@@ -184,8 +179,6 @@ void ComponentObserver::FunctionOn(napi_env& env, napi_value result, const char*
             observer->AddCallbackToList(cb, observer->cbLayoutList_, calloutType, env, scope);
         } else if (calloutType == CalloutType::DRAWCALLOUT) {
             observer->AddCallbackToList(cb, observer->cbDrawList_, calloutType, env, scope);
-        } else if (calloutType == CalloutType::DRAWCHILDRENCALLOUT) {
-            observer->AddCallbackToList(cb, observer->cbDrawChildrenList_, calloutType, env, scope);
         }
         return nullptr;
     };
@@ -213,8 +206,6 @@ void ComponentObserver::FunctionOff(napi_env& env, napi_value result, const char
             observer->DeleteCallbackFromList(argc, observer->cbLayoutList_, calloutType, cb, env);
         } else if (calloutType == CalloutType::DRAWCALLOUT) {
             observer->DeleteCallbackFromList(argc, observer->cbDrawList_, calloutType, cb, env);
-        } else if (calloutType == CalloutType::DRAWCHILDRENCALLOUT) {
-            observer->DeleteCallbackFromList(argc, observer->cbDrawChildrenList_, calloutType, cb, env);
         }
         napi_close_handle_scope(env, scope);
         return nullptr;
@@ -261,19 +252,14 @@ void ComponentObserver::Destroy(napi_env env)
     for (auto& drawitem : cbDrawList_) {
         napi_delete_reference(env, drawitem);
     }
-    for (auto& drawChildrenitem : cbDrawChildrenList_) {
-        napi_delete_reference(env, drawChildrenitem);
-    }
     cbLayoutList_.clear();
     cbDrawList_.clear();
-    cbDrawChildrenList_.clear();
     auto jsEngine = weakEngine_.Upgrade();
     if (!jsEngine) {
         return;
     }
     jsEngine->UnregisterLayoutInspectorCallback(layoutEvent_, componentId_);
     jsEngine->UnregisterDrawInspectorCallback(drawEvent_, componentId_);
-    jsEngine->UnregisterDrawChildrenInspectorCallback(drawChildrenEvent_, componentId_);
 }
 
 void ComponentObserver::Initialize(napi_env env, napi_value thisVar)
@@ -314,25 +300,22 @@ static napi_value JSCreateComponentObserver(napi_env env, napi_callback_info inf
     ComponentObserver* observer = new ComponentObserver(componentIdStr);
     napi_value result = nullptr;
     observer->NapiSerializer(env, result);
-    if (!result) {
-        delete observer;
-        return nullptr;
-    }
     auto layoutCallback = [observer, env]() { observer->callUserFunction(env, observer->cbLayoutList_); };
     observer->layoutEvent_ = AceType::MakeRefPtr<InspectorEvent>(std::move(layoutCallback));
 
     auto drawCallback = [observer, env]() { observer->callUserFunction(env, observer->cbDrawList_); };
     observer->drawEvent_ = AceType::MakeRefPtr<InspectorEvent>(std::move(drawCallback));
-    auto drawChildrenCallback = [observer, env]() { observer->callUserFunction(env, observer->cbDrawChildrenList_); };
-    observer->drawChildrenEvent_ = AceType::MakeRefPtr<InspectorEvent>(std::move(drawChildrenCallback));
     jsEngine->RegisterLayoutInspectorCallback(observer->layoutEvent_, observer->componentId_);
     jsEngine->RegisterDrawInspectorCallback(observer->drawEvent_, observer->componentId_);
-    jsEngine->RegisterDrawChildrenInspectorCallback(observer->drawChildrenEvent_, observer->componentId_);
     observer->SetEngine(jsEngine);
 #if defined(PREVIEW)
     layoutCallback();
     drawCallback();
 #endif
+    if (!result) {
+        delete observer;
+        return nullptr;
+    }
     return result;
 }
 

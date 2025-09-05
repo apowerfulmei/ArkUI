@@ -22,7 +22,7 @@
 
 namespace OHOS::Ace {
 AvgPoint ResampleAlgo::GetAvgPoint(const std::vector<PointerEvent>&& events,
-    CoordinateType coordinateType)
+    bool isScreen)
 {
     float avgX = 0.0f;
     float avgY = 0.0f;
@@ -31,21 +31,12 @@ AvgPoint ResampleAlgo::GetAvgPoint(const std::vector<PointerEvent>&& events,
     uint64_t lastTime = 0;
     for (auto iter = events.begin(); iter != events.end(); iter++) {
         if (lastTime == 0 || static_cast<uint64_t>(iter->time.time_since_epoch().count()) != lastTime) {
-            switch (coordinateType) {
-                case CoordinateType::NORMAL:
-                    avgX += iter->x;
-                    avgY += iter->y;
-                    break;
-                case CoordinateType::SCREEN:
-                    avgX += iter->screenX;
-                    avgY += iter->screenY;
-                    break;
-                case CoordinateType::GLOBALDISPLAY:
-                    avgX += iter->globalDisplayX;
-                    avgY += iter->globalDisplayY;
-                    break;
-                default:
-                    break;
+            if (!isScreen) {
+                avgX += iter->x;
+                avgY += iter->y;
+            } else {
+                avgX += iter->screenX;
+                avgY += iter->screenY;
             }
             avgTime += static_cast<uint64_t>(iter->time.time_since_epoch().count());
             i++;
@@ -107,7 +98,7 @@ ResamplePoint ResampleAlgo::LinearInterpolation(const AvgPoint& history, const A
 
 ResamplePoint ResampleAlgo::GetResampleCoord(const std::vector<PointerEvent>&& history,
     const std::vector<PointerEvent>&& current, uint64_t nanoTimeStamp,
-    CoordinateType coordinateType)
+    bool isScreen)
 {
     if (history.empty() || current.empty()) {
         return {};
@@ -131,8 +122,8 @@ ResamplePoint ResampleAlgo::GetResampleCoord(const std::vector<PointerEvent>&& h
             0.0f
         };
     }
-    auto historyPoint = GetAvgPoint(std::move(history), coordinateType);
-    auto currentPoint = GetAvgPoint(std::move(current), coordinateType);
+    auto historyPoint = GetAvgPoint(std::move(history), isScreen);
+    auto currentPoint = GetAvgPoint(std::move(current), isScreen);
     return LinearInterpolation(historyPoint, currentPoint, nanoTimeStamp);
 }
 
@@ -217,8 +208,6 @@ bool ResampleAlgo::GetResamplePointerEvent(std::vector<T>& events,
     resample.y = Lerp(iter->y, nextIter->y, alpha);
     resample.screenX = Lerp(iter->screenX, nextIter->screenX, alpha);
     resample.screenY = Lerp(iter->screenY, nextIter->screenY, alpha);
-    resample.globalDisplayX = Lerp(iter->globalDisplayX, nextIter->globalDisplayX, alpha);
-    resample.globalDisplayY = Lerp(iter->globalDisplayY, nextIter->globalDisplayY, alpha);
     std::chrono::nanoseconds nanoseconds(resampleTime);
     resample.time = TimeStamp(nanoseconds);
     slope.inputXDeltaSlope = (nextIter->x - iter->x) / delta;

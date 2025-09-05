@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2021-2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -54,14 +54,13 @@ ACE_EXPORT extern const char ATTRS_COMMON_ENABLE[];
 ACE_EXPORT extern const char ATTRS_COMMON_ZINDEX[];
 
 // root view
-ACE_FORCE_EXPORT extern const char ROOT_ETS_TAG[];
+ACE_EXPORT extern const char ROOT_ETS_TAG[];
 // stage view
-ACE_FORCE_EXPORT extern const char STAGE_ETS_TAG[];
+ACE_EXPORT extern const char STAGE_ETS_TAG[];
 // page view
-ACE_FORCE_EXPORT extern const char PAGE_ETS_TAG[];
+ACE_EXPORT extern const char PAGE_ETS_TAG[];
 // overlay view
 ACE_EXPORT extern const char OVERLAY_ETS_TAG[];
-ACE_EXPORT extern const char ORDER_OVERLAY_ETS_TAG[];
 // container modal view (title bar)
 ACE_EXPORT extern const char CONTAINER_MODAL_ETS_TAG[];
 
@@ -80,8 +79,6 @@ ACE_EXPORT extern const char JS_SYNTAX_ITEM_ETS_TAG[];
 ACE_EXPORT extern const char JS_REPEAT_ETS_TAG[];
 // js if else node
 ACE_EXPORT extern const char JS_IF_ELSE_ETS_TAG[];
-// js with theme node
-ACE_EXPORT extern const char JS_WITH_THEME_ETS_TAG[];
 // js node slot node
 ACE_EXPORT extern const char JS_NODE_SLOT_ETS_TAG[];
 // js toast node
@@ -105,7 +102,6 @@ ACE_EXPORT extern const char TEXT_ATTRS_MAX_LINES[];
 // rich editor
 ACE_EXPORT extern const char RICH_EDITOR_ETS_TAG[];
 ACE_EXPORT extern const char RICH_EDITOR_DRAG_ETS_TAG[];
-ACE_EXPORT extern const char RICH_EDITOR_CONTENT_ETS_TAG[];
 
 // stack
 ACE_EXPORT extern const char STACK_COMPONENT_TAG[];
@@ -154,8 +150,6 @@ ACE_EXPORT extern const char BACK_BUTTON_ETS_TAG[];
 ACE_EXPORT extern const char BACK_BUTTON_IMAGE_ETS_TAG[];
 ACE_EXPORT extern const char NAVBAR_CONTENT_ETS_TAG[];
 ACE_EXPORT extern const char NAVBAR_ETS_TAG[];
-ACE_EXPORT extern const char SPLIT_PLACEHOLDER_CONTENT_ETS_TAG[];
-ACE_EXPORT extern const char PRIMARY_CONTENT_NODE_ETS_TAG[];
 
 // navRouter view
 ACE_EXPORT extern const char NAVROUTER_VIEW_ETS_TAG[];
@@ -307,11 +301,7 @@ ACE_EXPORT extern const char BUTTON_ETS_TAG[];
 ACE_EXPORT extern const char RECYCLE_VIEW_ETS_TAG[];
 
 // common
-#ifdef ACE_STATIC
-ACE_FORCE_EXPORT extern const char COMMON_VIEW_ETS_TAG[];
-#else
 ACE_EXPORT extern const char COMMON_VIEW_ETS_TAG[];
-#endif
 // option
 ACE_EXPORT extern const char OPTION_COMPONENT_TAG[];
 ACE_EXPORT extern const char OPTION_ETS_TAG[];
@@ -363,12 +353,6 @@ ACE_EXPORT extern const char FORM_ETS_TAG[];
 ACE_EXPORT extern const char FORM_LINK_TAG[];
 ACE_EXPORT extern const char FORM_LINK_ETS_TAG[];
 
-// formButton
-#ifdef FORM_BUTTON_COMPONENT_SUPPORT
-ACE_EXPORT extern const char FORM_BUTTON_TAG[];
-ACE_EXPORT extern const char FORM_BUTTON_ETS_TAG[];
-#endif
-
 // PluginComponent
 ACE_EXPORT extern const char PLUGIN_COMPONENT_TAG[];
 ACE_EXPORT extern const char PLUGIN_ETS_TAG[];
@@ -419,12 +403,6 @@ ACE_EXPORT extern const char STEPPER_ETS_TAG[];
 ACE_EXPORT extern const char STEPPER_ITEM_COMPONENT_TAG[];
 ACE_EXPORT extern const char STEPPER_ITEM_ETS_TAG[];
 
-// toolbar
-ACE_EXPORT extern const char TOOLBAR_ETS_TAG[];
-
-// toolbaritem
-ACE_EXPORT extern const char TOOLBARITEM_ETS_TAG[];
-
 // scrollBar
 ACE_EXPORT extern const char SCROLL_BAR_COMPONENT_TAG[];
 ACE_EXPORT extern const char SCROLL_BAR_ETS_TAG[];
@@ -474,7 +452,6 @@ ACE_EXPORT extern const char MENU_ITEM_ETS_TAG[];
 ACE_EXPORT extern const char MENU_ITEM_GROUP_ETS_TAG[];
 ACE_EXPORT extern const char MENU_WRAPPER_ETS_TAG[];
 ACE_EXPORT extern const char MENU_PREVIEW_ETS_TAG[];
-ACE_EXPORT extern const char MENU_DIVIDER_TAG[];
 
 // textarea
 ACE_EXPORT extern const char TEXTAREA_COMPONENT_TAG[];
@@ -618,21 +595,17 @@ ACE_EXPORT extern const char PARTICLE_ETS_TAG[];
 // SelectOverlay
 ACE_EXPORT extern const char SELECT_OVERLAY_ETS_TAG[];
 
+// ContainerSpan
+ACE_EXPORT extern const char CONTAINER_SPAN_COMPONENT_TAG[];
+ACE_EXPORT extern const char CONTAINER_SPAN_ETS_TAG[];
+
 // Symbol
 ACE_EXPORT extern const char SYMBOL_COMPONENT_TAG[];
 ACE_EXPORT extern const char SYMBOL_ETS_TAG[];
 
-// IsolatedComponent
+// DynamicComponent
 ACE_EXPORT extern const char ISOLATED_COMPONENT_TAG[];
 ACE_EXPORT extern const char ISOLATED_COMPONENT_ETS_TAG[];
-
-// DynamicComponent
-ACE_EXPORT extern const char DYNAMIC_COMPONENT_TAG[];
-ACE_EXPORT extern const char DYNAMIC_COMPONENT_ETS_TAG[];
-
-// ContainerSpan
-ACE_EXPORT extern const char CONTAINER_SPAN_COMPONENT_TAG[];
-ACE_EXPORT extern const char CONTAINER_SPAN_ETS_TAG[];
 
 //RenderNode
 ACE_EXPORT extern const char RENDER_NODE_ETS_TAG[];
@@ -650,36 +623,8 @@ ACE_FORCE_EXPORT extern const char MOVING_PHOTO_ETS_TAG[];
 // CustomSpanNode
 ACE_EXPORT extern const char CUSTOM_SPAN_NODE_ETS_TAG[];
 
-// LinearIndicator
-ACE_EXPORT extern const char LINEARINDICATOR_COMPONENT_TAG[];
-ACE_EXPORT extern const char LINEARINDICATOR_ETS_TAG[];
-
-// ArcList
-ACE_EXPORT extern const char ARC_LIST_COMPONENT_TAG[];
-ACE_EXPORT extern const char ARC_LIST_ETS_TAG[];
-
-// ArcListItem
-ACE_EXPORT extern const char ARC_LIST_ITEM_COMPONENT_TAG[];
-ACE_EXPORT extern const char ARC_LIST_ITEM_ETS_TAG[];
-
-// ArcScrollBar
-ACE_EXPORT extern const char ARC_SCROLL_BAR_COMPONENT_TAG[];
-ACE_EXPORT extern const char ARC_SCROLL_BAR_ETS_TAG[];
-
-// ArcAlphabetIndexer
-ACE_EXPORT extern const char ARC_INDEXER_COMPONENT_TAG[];
-ACE_EXPORT extern const char ARC_INDEXER_ETS_TAG[];
-
-// Magnifier
-ACE_EXPORT extern const char MAGNIFIER_TAG[];
-
-// AccessibilityFocusPaintNode
-ACE_EXPORT extern const char ACCESSIBILITY_FOCUS_PAINT_NODE_TAG[];
-
-// LazyVGridLayout
-ACE_EXPORT extern const char LAZY_V_GRID_LAYOUT_ETS_TAG[];
-
-// UndefinedNode
-ACE_EXPORT extern const char UNDEFINED_NODE_ETS_TAG[];
+// AnalogClock
+ACE_EXPORT extern const char ANALOGCLOCK_COMPONENT_TAG[];
+ACE_FORCE_EXPORT extern const char ANALOGCLOCK_ETS_TAG[];
 } // namespace OHOS::Ace::V2
 #endif // FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_V2_INSPECTOR_INSPECTOR_CONSTANTS_H

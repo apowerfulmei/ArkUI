@@ -56,9 +56,8 @@ struct FilterProperty {
 };
 
 class CustomPaintPaintMethod : public NodePaintMethod {
-    DECLARE_ACE_TYPE(CustomPaintPaintMethod, NodePaintMethod);
+    DECLARE_ACE_TYPE(CustomPaintPaintMethod, NodePaintMethod)
 public:
-    CustomPaintPaintMethod();
     ~CustomPaintPaintMethod() override = default;
 
     RefPtr<Modifier> GetContentModifier(PaintWrapper* paintWrapper) override
@@ -85,7 +84,6 @@ public:
     void Arc(const ArcParam& param);
     void ArcTo(const ArcToParam& param);
     void AddRect(const Rect& rect);
-    void AddRoundRect(const Rect& rect, const std::vector<double>& radii);
     void Ellipse(const EllipseParam& param);
     void BezierCurveTo(const BezierCurveParam& param);
     void QuadraticCurveTo(const QuadraticCurveParam& param);
@@ -254,12 +252,6 @@ public:
         state_.strokeState.SetFontSize(size);
     }
 
-    void SetLetterSpacing(const Dimension& letterSpacing)
-    {
-        state_.fillState.SetLetterSpacing(letterSpacing);
-        state_.strokeState.SetLetterSpacing(letterSpacing);
-    }
-
     void SetFontStyle(OHOS::Ace::FontStyle style)
     {
         state_.fillState.SetFontStyle(style);
@@ -292,7 +284,6 @@ public:
     void FillText(const std::string& text, double x, double y, std::optional<double> maxWidth);
     void StrokeText(const std::string& text, double x, double y, std::optional<double> maxWidth);
     TextMetrics MeasureTextMetrics(const std::string& text, const PaintState& state);
-    void SetTransform(std::shared_ptr<Ace::Pattern> pattern, const TransformParam& transform);
     void SetDensity(double density)
     {
         density_ = density;
@@ -311,8 +302,7 @@ protected:
     void UpdateStrokeShadowParagraph(const std::string& text, const RSPen* pen, const RSParagraphStyle& style);
     void InitPaintBlend(RSBrush& brush);
     void InitPaintBlend(RSPen& pen);
-    std::shared_ptr<RSShaderEffect> MakeConicGradient(
-        const Ace::Gradient& gradient, const std::shared_ptr<RSColorSpace>& colorSpace);
+    std::shared_ptr<RSShaderEffect> MakeConicGradient(RSBrush* brush, const Ace::Gradient& gradient);
 
     void Path2DFill();
     void Path2DStroke();
@@ -325,7 +315,6 @@ protected:
     void Path2DArc(const PathArgs& args);
     void Path2DArcTo(const PathArgs& args);
     void Path2DRect(const PathArgs& args);
-    void Path2DRoundRect(const PathArgs& args);
     void Path2DEllipse(const PathArgs& args);
     void Path2DBezierCurveTo(const PathArgs& args);
     void Path2DQuadraticCurveTo(const PathArgs& args);
@@ -375,7 +364,6 @@ protected:
     virtual void ConvertTxtStyle(const TextStyle& textStyle, Rosen::TextStyle& txtStyle) = 0;
 #endif
     void ResetStates();
-    virtual TextDirection GetSystemDirection() = 0;
     void DrawImageInternal(const Ace::CanvasImage& canvasImage, const std::shared_ptr<RSImage>& image);
 
     // PaintHolder includes fillState, strokeState, globalState and shadow for save
@@ -394,8 +382,6 @@ protected:
 
     WeakPtr<PipelineBase> context_;
 
-    bool isPathChanged_ = true;
-    bool isPath2dChanged_ = true;
     RSPath rsPath_;
     RSPath rsPath2d_;
     RSBrush imageBrush_;
@@ -429,7 +415,6 @@ protected:
     std::shared_ptr<RSImageFilter> blurFilter_ = RSImageFilter::CreateBlurImageFilter(0, 0, RSTileMode::DECAL, nullptr);
     std::vector<std::shared_ptr<RSColorFilter>> saveColorFilter_;
     std::vector<std::shared_ptr<RSImageFilter>> saveBlurFilter_;
-    int32_t apiVersion_ = 0;
 };
 } // namespace OHOS::Ace::NG
 

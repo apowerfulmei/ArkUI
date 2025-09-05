@@ -42,14 +42,6 @@ void StepperPattern::OnModifyDone()
 
     auto swiperEventHub = swiperNode->GetEventHub<SwiperEventHub>();
     CHECK_NULL_VOID(swiperEventHub);
-    auto stepperLayoutProperty = hostNode->GetLayoutProperty();
-    auto layoutPolicy = stepperLayoutProperty->GetLayoutPolicyProperty();
-    if (layoutPolicy.has_value()) {
-        swiperNode->GetLayoutProperty()->UpdateLayoutPolicyProperty(
-            layoutPolicy.value().widthLayoutPolicy_.value_or(LayoutCalPolicy::NO_MATCH), true);
-        swiperNode->GetLayoutProperty()->UpdateLayoutPolicyProperty(
-            layoutPolicy.value().heightLayoutPolicy_.value_or(LayoutCalPolicy::NO_MATCH), false);
-    }
     maxIndex_ = TotalCount();
     if (index_ > maxIndex_) {
         index_ = 0;
@@ -222,8 +214,7 @@ void StepperPattern::UpdateLeftButtonNode(int32_t index)
     auto stepperItemNode = DynamicCast<FrameNode>(swiperNode->GetChildAtIndex(static_cast<int32_t>(index)));
     CHECK_NULL_VOID(stepperItemNode);
     auto stepperItemLayoutProperty = stepperItemNode->GetLayoutProperty<StepperItemLayoutProperty>();
-    auto theme = GetTheme();
-    auto buttonBackText = theme ? theme->GetStepperBack() : "";
+    auto buttonBackText = Localization::GetInstance()->GetEntryLetters("stepper.back");
     auto leftLabel = stepperItemLayoutProperty->GetLeftLabel().value_or(buttonBackText);
     textNode->GetLayoutProperty<TextLayoutProperty>()->UpdateContent(leftLabel);
 
@@ -246,26 +237,24 @@ void StepperPattern::CreateRightButtonNode(int32_t index)
     auto swiperNode = hostNode->GetChildAtIndex(hostNode->GetChildIndexById(hostNode->GetSwiperId()));
     auto stepperItemNode = DynamicCast<FrameNode>(swiperNode->GetChildAtIndex(static_cast<int32_t>(index)));
     CHECK_NULL_VOID(stepperItemNode);
-    auto theme = GetTheme();
-    CHECK_NULL_VOID(theme);
     auto labelStatus =
         stepperItemNode->GetLayoutProperty<StepperItemLayoutProperty>()->GetLabelStatus().value_or("normal");
     if (labelStatus == "normal") {
         if (index == maxIndex_) {
-            CreateArrowlessRightButtonNode(index, false, theme->GetStepperStart());
+            CreateArrowlessRightButtonNode(index, false, Localization::GetInstance()->GetEntryLetters("stepper.start"));
         } else {
             CreateArrowRightButtonNode(index, false);
         }
     } else if (labelStatus == "disabled") {
         if (index == maxIndex_) {
-            CreateArrowlessRightButtonNode(index, true, theme->GetStepperStart());
+            CreateArrowlessRightButtonNode(index, true, Localization::GetInstance()->GetEntryLetters("stepper.start"));
         } else {
             CreateArrowRightButtonNode(index, true);
         }
     } else if (labelStatus == "waiting") {
         CreateWaitingRightButtonNode();
     } else if (labelStatus == "skip") {
-        CreateArrowlessRightButtonNode(index, false, theme->GetStepperSkip());
+        CreateArrowlessRightButtonNode(index, false, Localization::GetInstance()->GetEntryLetters("stepper.skip"));
     }
 }
 
@@ -279,7 +268,7 @@ void StepperPattern::CreateArrowRightButtonNode(int32_t index, bool isDisabled)
     auto swiperNode = hostNode->GetChildAtIndex(hostNode->GetChildIndexById(hostNode->GetSwiperId()));
     auto stepperItemNode = DynamicCast<FrameNode>(swiperNode->GetChildAtIndex(static_cast<int32_t>(index)));
     CHECK_NULL_VOID(stepperItemNode);
-    auto buttonNextText = stepperTheme->GetStepperNext();
+    auto buttonNextText = Localization::GetInstance()->GetEntryLetters("stepper.next");
     auto rightLabel =
         stepperItemNode->GetLayoutProperty<StepperItemLayoutProperty>()->GetRightLabel().value_or(buttonNextText);
     // Create or get buttonNode

@@ -33,9 +33,7 @@ public:
     bool UpdateCurrentOffset(float delta, int32_t source) override;
     bool IsScrollable() const override;
     bool IsAtTop() const override;
-    bool IsAtBottom(bool considerRepeat = false) const override;
-    bool IsAtTopWithDelta() const override;
-    bool IsAtBottomWithDelta() const override;
+    bool IsAtBottom() const override;
     bool IsReverse() const override;
     bool IsVerticalReverse() const;
     bool hasFooter()
@@ -84,16 +82,6 @@ public:
 
     void ResetLayoutInfo();
 
-    bool GetItemStart() const
-    {
-        return layoutInfo_->itemStart_;
-    }
-
-    bool GetItemEnd() const
-    {
-        return layoutInfo_->itemEnd_;
-    }
-
     int32_t GetBeginIndex() const
     {
         return layoutInfo_->startIndex_;
@@ -106,7 +94,7 @@ public:
 
     int32_t GetChildrenCount() const;
 
-    double GetTotalOffset() const override
+    float GetTotalOffset() const override
     {
         return -layoutInfo_->Offset();
     }
@@ -164,8 +152,6 @@ public:
     void OnSectionChanged(int32_t start);
 
     void DumpAdvanceInfo() override;
-    void GetEventDumpInfo() override;
-    void GetEventDumpInfo(std::unique_ptr<JsonValue>& json) override;
 
     void SetPreloadList(std::list<int32_t>&& preload)
     {
@@ -218,19 +204,6 @@ public:
 
     SizeF GetChildrenExpandedSize() override;
 
-    bool OnAttachAdapter(const RefPtr<FrameNode>& node, const RefPtr<UINode>& child) override
-    {
-        node->AddChild(child);
-        return true;
-    }
-
-    void InvalidatedOffset()
-    {
-        layoutInfo_->InvalidatedOffset();
-    }
-
-    void OnColorModeChange(uint32_t colorMode) override;
-
 private:
     DisplayMode GetDefaultScrollBarDisplayMode() const override
     {
@@ -249,10 +222,9 @@ private:
     void OnScrollEndCallback() override;
     bool ScrollToTargetIndex(int32_t index);
     bool NeedRender();
-    void FireOnReachStart(const OnReachEvent& onReachStart, const OnReachEvent& onJSFrameNodeReachStart) override;
-    void FireOnReachEnd(const OnReachEvent& onReachEnd, const OnReachEvent& onJSFrameNodeReachEnd) override;
+    void FireOnReachStart(const OnReachEvent& onReachStart) override;
+    void FireOnReachEnd(const OnReachEvent& onReachEnd) override;
     void FireOnScrollIndex(bool indexChanged, const ScrollIndexFunc& onScrollIndex);
-    void DumpInfoAddSections();
 
     /**
      * @param step FocusStep
@@ -265,7 +237,7 @@ private:
     RefPtr<WaterFlowLayoutInfoBase> layoutInfo_ = WaterFlowLayoutInfoBase::Create(LayoutMode::TOP_DOWN);
     RefPtr<WaterFlowSections> sections_;
 
-    double prevOffset_ = 0.0;
+    float prevOffset_ = 0.0f;
     SizeF lastSize_;
     std::pair<int32_t, int32_t> itemRange_ = { -1, -1 };
     WeakPtr<UINode> footer_;

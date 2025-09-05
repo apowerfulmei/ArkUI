@@ -18,22 +18,19 @@
 
 #include "pixel_map.h"
 
+#include "base/geometry/rect.h"
 #include "base/image/pixel_map.h"
 
 namespace OHOS::Ace {
 
 class PixelMapOhos : public PixelMap {
-    DECLARE_ACE_TYPE(PixelMapOhos, PixelMap);
+    DECLARE_ACE_TYPE(PixelMapOhos, PixelMap)
 
 public:
     explicit PixelMapOhos(std::shared_ptr<Media::PixelMap> pixmap) : pixmap_(std::move(pixmap)) {}
     ~PixelMapOhos() override = default;
     static PixelFormat PixelFormatConverter(Media::PixelFormat pixelFormat);
-    static Media::PixelFormat ConvertToMediaPixelFormat(Ace::PixelFormat pixelFormat);
     static AlphaType AlphaTypeConverter(Media::AlphaType alphaType);
-    static Media::AlphaType ConvertToMediaAlphaType(Ace::AlphaType alphaType);
-    static AllocatorType AllocatorTypeConverter(Media::AllocatorType allocatorType);
-    static Media::ScaleMode ConvertToMediaScaleMode(Ace::ScaleMode scaleMode);
     int32_t GetWidth() const override;
     int32_t GetHeight() const override;
     bool GetPixelsVec(std::vector<uint8_t>& data) const override;
@@ -43,8 +40,6 @@ public:
     int32_t GetRowStride() const override;
     int32_t GetRowBytes() const override;
     int32_t GetByteCount() const override;
-    AllocatorType GetAllocatorType() const override;
-    bool IsHdr() const override;
     void* GetPixelManager() const override;
     void* GetRawPixelMapPtr() const override;
     std::string GetId() override;
@@ -56,9 +51,6 @@ public:
     void SavePixelMapToFile(const std::string& dst) const override;
     RefPtr<PixelMap> GetCropPixelMap(const Rect& srcRect) override;
     bool EncodeTlv(std::vector<uint8_t>& buff) override;
-    uint32_t WritePixels(const WritePixelsOptions& opts) override;
-    uint32_t GetInnerColorGamut() const override;
-    void SetMemoryName(std::string pixelMapName) const override;
 
 private:
     std::shared_ptr<Media::PixelMap> pixmap_;

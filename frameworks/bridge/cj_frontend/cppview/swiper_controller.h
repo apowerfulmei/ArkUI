@@ -32,7 +32,6 @@ public:
     void FinishAnimation();
     void FinishAnimationWithCallback(const std::function<void()>& callback);
     void SetController(const RefPtr<SwiperController>& controller);
-    void ChangeIndex(int32_t index, bool useAnimation);
 private:
     RefPtr<SwiperController> controller_;
 };

@@ -47,8 +47,6 @@ struct SingleSegmentGradientInfo {
     bool isDrawShadow = false;
     float drawStartDegree = 0.0f;
     float drawSweepDegree = 0.0f;
-    float lastStartDegree = 0.0f;
-    float lastSweepDegree = 0.0f;
     float offsetDegree = 0.0f;
     float shadowRadius = 0.0f;
     ColorStopArray colorStopArray;
@@ -69,7 +67,6 @@ public:
         AttachProperty(indicatorChange_);
         AttachProperty(gaugeTypeValue_);
         AttachProperty(isShowIndicator_);
-        AttachProperty(gaugeUpdate_);
 
         AttachProperty(shadowRadiusFloat_);
         AttachProperty(shadowOffsetXFloat_);
@@ -94,7 +91,6 @@ public:
 
 private:
     void InitProperty();
-    void InitPropertyColors(RefPtr<GaugePaintProperty>& paintProperty);
     void UpdateProperty(RefPtr<GaugePaintProperty>& paintProperty);
     
     void PaintCircularAndIndicator(RSCanvas& canvas);
@@ -125,18 +121,13 @@ private:
     void DrawSingleSegmentGradient(RSCanvas& canvas, RenderRingInfo& data,
         RefPtr<GaugePaintProperty>& paintProperty, SingleSegmentGradientInfo& info,
         size_t index);
-    void DrawSingleSegmentGradientExtend(RSCanvas& canvas, RenderRingInfo& data,
-        RefPtr<GaugePaintProperty>& paintProperty, SingleSegmentGradientInfo& info, size_t index);
-    void DrawSegmentGradient(RSCanvas& canvas, RSBrush& brush, RenderRingInfo& data,
-        RefPtr<GaugePaintProperty>& paintProperty, SingleSegmentGradientInfo& info, bool isFirst, float startDegree,
-        float sweepDegree);
     void DrawHighLight(RSCanvas& canvas, RenderRingInfo& data, float drawStartDegree);
     void CalculateStartAndSweepDegree(RefPtr<GaugePaintProperty>& paintProperty, RenderRingInfo& data);
     float GetOffsetDegree(RenderRingInfo& data, float oppositeSide);
     void CreateDefaultColor(std::vector<RSColorQuad>& colors, std::vector<float>& pos);
     void CreateDefaultTrianglePath(float pathStartVertexX, float pathStartVertexY, float radius, RSPath& path);
     WeakPtr<Pattern> pattern_;
-    void GetDrawPath(RSPath& path, RenderRingInfo& data, float startAngle, float sweepAngle, bool isFirst);
+    void GetDrawPath(RSPath& path, RenderRingInfo& data, float startAngle, float sweepAngle);
 
     RefPtr<AnimatablePropertyFloat> value_;
     RefPtr<AnimatablePropertyFloat> min_;
@@ -157,7 +148,6 @@ private:
     RefPtr<PropertyBool> isShowIndicator_;
     RefPtr<PropertyBool> useContentModifier_;
     RefPtr<PropertyBool> indicatorChange_;
-    RefPtr<PropertyBool> gaugeUpdate_;
     ACE_DISALLOW_COPY_AND_MOVE(GaugeModifier);
 };
 } // namespace OHOS::Ace::NG

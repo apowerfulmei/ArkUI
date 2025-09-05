@@ -31,16 +31,12 @@ ArkUINativeModuleValue LoadingProgressBridge::SetColor(ArkUIRuntimeCallInfo* run
     CHECK_NULL_RETURN(vm, panda::NativePointerRef::New(vm, nullptr));
     Local<JSValueRef> nodeArg = runtimeCallInfo->GetCallArgRef(NUM_0);
     Local<JSValueRef> colorArg = runtimeCallInfo->GetCallArgRef(NUM_1);
-    CHECK_NULL_RETURN(nodeArg->IsNativePointer(vm), panda::JSValueRef::Undefined(vm));
     auto nativeNode = nodePtr(nodeArg->ToNativePointer(vm)->Value());
     Color color;
-    RefPtr<ResourceObject> colorResObj;
-    auto nodeInfo = ArkTSUtils::MakeNativeNodeInfo(nativeNode);
-    if (!ArkTSUtils::ParseJsColorAlpha(vm, colorArg, color, colorResObj, nodeInfo)) {
+    if (!ArkTSUtils::ParseJsColorAlpha(vm, colorArg, color)) {
         GetArkUINodeModifiers()->getLoadingProgressModifier()->resetColor(nativeNode);
     } else {
-        auto colorRawPtr = AceType::RawPtr(colorResObj);
-        GetArkUINodeModifiers()->getLoadingProgressModifier()->setColorPtr(nativeNode, color.GetValue(), colorRawPtr);
+        GetArkUINodeModifiers()->getLoadingProgressModifier()->setColor(nativeNode, color.GetValue());
     }
     return panda::JSValueRef::Undefined(vm);
 }
@@ -50,7 +46,6 @@ ArkUINativeModuleValue LoadingProgressBridge::ResetColor(ArkUIRuntimeCallInfo* r
     EcmaVM* vm = runtimeCallInfo->GetVM();
     CHECK_NULL_RETURN(vm, panda::NativePointerRef::New(vm, nullptr));
     Local<JSValueRef> nodeArg = runtimeCallInfo->GetCallArgRef(NUM_0);
-    CHECK_NULL_RETURN(nodeArg->IsNativePointer(vm), panda::JSValueRef::Undefined(vm));
     auto nativeNode = nodePtr(nodeArg->ToNativePointer(vm)->Value());
     GetArkUINodeModifiers()->getLoadingProgressModifier()->resetColor(nativeNode);
     return panda::JSValueRef::Undefined(vm);
@@ -62,7 +57,6 @@ ArkUINativeModuleValue LoadingProgressBridge::SetEnableLoading(ArkUIRuntimeCallI
     CHECK_NULL_RETURN(vm, panda::NativePointerRef::New(vm, nullptr));
     Local<JSValueRef> nodeArg = runtimeCallInfo->GetCallArgRef(NUM_0);
     Local<JSValueRef> enableLoadingArg = runtimeCallInfo->GetCallArgRef(NUM_1);
-    CHECK_NULL_RETURN(nodeArg->IsNativePointer(vm), panda::JSValueRef::Undefined(vm));
     auto nativeNode = nodePtr(nodeArg->ToNativePointer(vm)->Value());
     bool boolValue = enableLoadingArg->ToBoolean(vm)->Value();
     GetArkUINodeModifiers()->getLoadingProgressModifier()->setEnableLoading(nativeNode, boolValue);
@@ -74,7 +68,6 @@ ArkUINativeModuleValue LoadingProgressBridge::ResetEnableLoading(ArkUIRuntimeCal
     EcmaVM* vm = runtimeCallInfo->GetVM();
     CHECK_NULL_RETURN(vm, panda::NativePointerRef::New(vm, nullptr));
     Local<JSValueRef> nodeArg = runtimeCallInfo->GetCallArgRef(NUM_0);
-    CHECK_NULL_RETURN(nodeArg->IsNativePointer(vm), panda::JSValueRef::Undefined(vm));
     auto nativeNode = nodePtr(nodeArg->ToNativePointer(vm)->Value());
     GetArkUINodeModifiers()->getLoadingProgressModifier()->resetEnableLoading(nativeNode);
     return panda::JSValueRef::Undefined(vm);
@@ -86,24 +79,20 @@ ArkUINativeModuleValue LoadingProgressBridge::SetForegroundColor(ArkUIRuntimeCal
     CHECK_NULL_RETURN(vm, panda::NativePointerRef::New(vm, nullptr));
     Local<JSValueRef> nodeArg = runtimeCallInfo->GetCallArgRef(0);
     auto colorArg = runtimeCallInfo->GetCallArgRef(1);
-    CHECK_NULL_RETURN(nodeArg->IsNativePointer(vm), panda::JSValueRef::Undefined(vm));
     auto nativeNode = nodePtr(nodeArg->ToNativePointer(vm)->Value());
 
     ForegroundColorStrategy strategy;
     if (ArkTSUtils::ParseJsColorStrategy(vm, colorArg, strategy)) {
         auto strategyInt = static_cast<uint32_t>(ForegroundColorStrategy::INVERT);
-        GetArkUINodeModifiers()->getCommonModifier()->setForegroundColor(nativeNode, false, strategyInt, nullptr);
+        GetArkUINodeModifiers()->getCommonModifier()->setForegroundColor(nativeNode, false, strategyInt);
         return panda::JSValueRef::Undefined(vm);
     }
     Color foregroundColor;
-    RefPtr<ResourceObject> foregroundColorResObj;
-    auto nodeInfo = ArkTSUtils::MakeNativeNodeInfo(nativeNode);
-    if (!ArkTSUtils::ParseJsColorAlpha(vm, colorArg, foregroundColor, foregroundColorResObj, nodeInfo)) {
+    if (!ArkTSUtils::ParseJsColorAlpha(vm, colorArg, foregroundColor)) {
         GetArkUINodeModifiers()->getLoadingProgressModifier()->resetForegroundColor(nativeNode);
     } else {
-        auto foregroundColorRawPtr = AceType::RawPtr(foregroundColorResObj);
-        GetArkUINodeModifiers()->getLoadingProgressModifier()->setForegroundColorPtr(
-            nativeNode, foregroundColor.GetValue(), foregroundColorRawPtr);
+        GetArkUINodeModifiers()->getLoadingProgressModifier()->setForegroundColor(
+            nativeNode, foregroundColor.GetValue());
     }
     return panda::JSValueRef::Undefined(vm);
 }
@@ -112,7 +101,6 @@ ArkUINativeModuleValue LoadingProgressBridge::ResetForegroundColor(ArkUIRuntimeC
 {
     EcmaVM* vm = runtimeCallInfo->GetVM();
     Local<JSValueRef> nodeArg = runtimeCallInfo->GetCallArgRef(0);
-    CHECK_NULL_RETURN(nodeArg->IsNativePointer(vm), panda::JSValueRef::Undefined(vm));
     auto nativeNode = nodePtr(nodeArg->ToNativePointer(vm)->Value());
     CHECK_NULL_RETURN(vm, panda::NativePointerRef::New(vm, nullptr));
     GetArkUINodeModifiers()->getLoadingProgressModifier()->resetForegroundColor(nativeNode);
@@ -125,7 +113,6 @@ ArkUINativeModuleValue LoadingProgressBridge::SetContentModifierBuilder(ArkUIRun
     CHECK_NULL_RETURN(vm, panda::NativePointerRef::New(vm, nullptr));
     Local<JSValueRef> firstArg = runtimeCallInfo->GetCallArgRef(0);
     Local<JSValueRef> secondArg = runtimeCallInfo->GetCallArgRef(1);
-    CHECK_NULL_RETURN(firstArg->IsNativePointer(vm), panda::JSValueRef::Undefined(vm));
     auto* frameNode = reinterpret_cast<FrameNode*>(firstArg->ToNativePointer(vm)->Value());
     if (!secondArg->IsObject(vm)) {
         LoadingProgressModelNG::SetBuilderFunc(frameNode, nullptr);
@@ -159,7 +146,6 @@ ArkUINativeModuleValue LoadingProgressBridge::SetContentModifierBuilder(ArkUIRun
             panda::Local<panda::JSValueRef> nodeptr =
                 resultObj->Get(vm, panda::StringRef::NewFromUtf8(vm, LOADINGPROGRESS_NODEPTR_OF_UINODE));
             CHECK_EQUAL_RETURN(nodeptr.IsEmpty() || nodeptr->IsUndefined() || nodeptr->IsNull(), true, nullptr);
-            CHECK_NULL_RETURN(nodeptr->IsNativePointer(vm), nullptr);
             auto* frameNode = reinterpret_cast<FrameNode*>(nodeptr->ToNativePointer(vm)->Value());
             CHECK_NULL_RETURN(frameNode, nullptr);
             return AceType::Claim(frameNode);

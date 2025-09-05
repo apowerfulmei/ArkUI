@@ -42,7 +42,7 @@ public:
         ~Builder() = default;
         RefPtr<IndexerTheme> Build(const RefPtr<ThemeConstants>& themeConstants)
         {
-            RefPtr<IndexerTheme> theme = AceType::MakeRefPtr<IndexerTheme>();
+            RefPtr<IndexerTheme> theme = AceType::Claim(new IndexerTheme());
             if (!themeConstants) {
                 LOGE("Build AppTheme error, themeConstants is null!");
                 return theme;
@@ -52,10 +52,6 @@ public:
         }
     };
 
-    const Color& GetIndexerBackgroundColor() const
-    {
-        return indexerBackgroundColor_;
-    }
     const Color& GetDefaultTextColor() const
     {
         return defaultTextColor_;
@@ -80,13 +76,9 @@ public:
     {
         return popupSeparateColor_;
     }
-    const Color& GetSelectedBackgroundColor() const
+    const Color& GetSeclectedBackgroundColor() const
     {
         return selectedBackgroundColor_;
-    }
-    const Color& GetSelectedBackgroundColorArc() const
-    {
-        return selectedBackgroundColorArc_;
     }
     const Dimension& GetPopupAreaSize() const
     {
@@ -160,22 +152,6 @@ public:
     {
         return popupTitleBackground_;
     }
-    const std::string& GetAccessibilityExpand() const
-    {
-        return accessibilityExpand_;
-    }
-    const std::string& GetAccessibilityExpanded() const
-    {
-        return accessibilityExpanded_;
-    }
-    const std::string& GetAccessibilityCollapse() const
-    {
-        return accessibilityCollapse_;
-    }
-    const std::string& GetAccessibilityCollapsed() const
-    {
-        return accessibilityCollapsed_;
-    }
     const Color& GetPopupUnclickedBgAreaColor() const
     {
         return popupUnclickedBgAreaColor_;
@@ -188,13 +164,11 @@ public:
 protected:
     IndexerTheme() = default;
 
-    Color indexerBackgroundColor_;
     Color defaultTextColor_;
     Color selectedTextColor_;
     Color popupTextColor_;
     Dimension popupTextSize_;
     Color selectedBackgroundColor_;
-    Color selectedBackgroundColorArc_;
     Color popupBackgroundColor_;
     Color popupSeparateColor_;
     Color popupSelectedTextColor_;
@@ -216,20 +190,13 @@ protected:
     Color popupClickedBgAreaColor_;
     Color popupTitleBackground_;
     Color popupUnclickedBgAreaColor_;
-    std::string accessibilityExpand_;
-    std::string accessibilityExpanded_;
-    std::string accessibilityCollapse_;
-    std::string accessibilityCollapsed_;
 
 private:
     static void ParseColorAttributes(const RefPtr<ThemeStyle>& indexerPattern, const RefPtr<IndexerTheme>& theme)
     {
-        theme->indexerBackgroundColor_ = indexerPattern->GetAttr<Color>("indexer_bar_color", Color(0xff262626));
         theme->defaultTextColor_ = indexerPattern->GetAttr<Color>("default_text_color", Color(DEFAULT_TEXT_COLOR));
         theme->selectedTextColor_ = indexerPattern->GetAttr<Color>("selected_text_color", Color(SELECT_TEXT_COLOR));
         theme->popupTextColor_ = indexerPattern->GetAttr<Color>("popup_text_color", Color(POPUP_TEXT_COLOR));
-        theme->selectedBackgroundColorArc_ =
-            indexerPattern->GetAttr<Color>("selected_background_color_arc", Color(SELECT_BACKGROUD_COLOR_ARC));
         theme->selectedBackgroundColor_ =
             indexerPattern->GetAttr<Color>("selected_background_color", Color(SELECT_BACKGROUD_COLOR)).ChangeOpacity(
                 indexerPattern->GetAttr<double>("selected_background_color_opacity", SELECT_BACKGROUND_OPACITY));
@@ -298,10 +265,6 @@ private:
         ParseColorAttributes(indexerPattern, theme);
         ParseDimensionAttributes(indexerPattern, theme);
         ParseTextStyleAttributes(indexerPattern, theme);
-        theme->accessibilityExpand_ = indexerPattern->GetAttr<std::string>("filter_accessibility_expand", "");
-        theme->accessibilityCollapsed_ = indexerPattern->GetAttr<std::string>("filter_accessibility_expanded", "");
-        theme->accessibilityExpanded_ = indexerPattern->GetAttr<std::string>("filter_accessibility_collapse", "");
-        theme->accessibilityCollapse_ = indexerPattern->GetAttr<std::string>("filter_accessibility_collapsed", "");
         if (Container::GreatOrEqualAPITargetVersion(PlatformVersion::VERSION_TWELVE)) {
             theme->popupBackgroundColor_ = indexerPattern->GetAttr<Color>(
                 "popup_background_color_api_twelve", Color(POPUP_BACKGROUND_COLOR_API_TWELVE));
@@ -337,7 +300,6 @@ private:
     static constexpr uint32_t POPUP_TEXT_COLOR = 0xff007dff;
     static constexpr float POPUP_TEXT_SIZE = 24.0;
     static constexpr uint32_t SELECT_BACKGROUD_COLOR = 0x33007dff;
-    static constexpr uint32_t SELECT_BACKGROUD_COLOR_ARC = 0xFF1F71FF;
     static constexpr uint32_t POPUP_BACKGROUND_COLOR = 0xffffffff;
     static constexpr uint32_t POPUP_SEPARATOR_COLOR = 0x33182431;
     static constexpr float POPUP_AREA_SIZE = 56.0f;

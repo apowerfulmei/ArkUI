@@ -15,8 +15,12 @@
 
 #include "core/components_ng/pattern/stepper/stepper_model_ng.h"
 
+#include "base/i18n/localization.h"
+#include "core/components_ng/base/view_stack_processor.h"
 #include "core/components_ng/pattern/stepper/stepper_node.h"
+#include "core/components_ng/pattern/stepper/stepper_pattern.h"
 #include "core/components_ng/pattern/swiper/swiper_pattern.h"
+#include "core/components_v2/inspector/inspector_constants.h"
 
 namespace OHOS::Ace::NG {
 
@@ -57,25 +61,9 @@ void StepperModelNG::SetOnFinish(RoutineCallbackEvent&& eventOnFinish)
     eventHub->SetFinishEvent(std::move(eventOnFinish));
 }
 
-void StepperModelNG::SetOnFinish(FrameNode* frameNode, RoutineCallbackEvent&& eventOnFinish)
-{
-    CHECK_NULL_VOID(frameNode);
-    auto eventHub = frameNode->GetEventHub<StepperEventHub>();
-    CHECK_NULL_VOID(eventHub);
-    eventHub->SetFinishEvent(std::move(eventOnFinish));
-}
-
 void StepperModelNG::SetOnSkip(RoutineCallbackEvent&& eventOnSkip)
 {
     auto frameNode = ViewStackProcessor::GetInstance()->GetMainFrameNode();
-    CHECK_NULL_VOID(frameNode);
-    auto eventHub = frameNode->GetEventHub<StepperEventHub>();
-    CHECK_NULL_VOID(eventHub);
-    eventHub->SetSkipEvent(std::move(eventOnSkip));
-}
-
-void StepperModelNG::SetOnSkip(FrameNode* frameNode, RoutineCallbackEvent&& eventOnSkip)
-{
     CHECK_NULL_VOID(frameNode);
     auto eventHub = frameNode->GetEventHub<StepperEventHub>();
     CHECK_NULL_VOID(eventHub);
@@ -91,14 +79,6 @@ void StepperModelNG::SetOnChange(IndexCallbackEvent&& eventOnChange)
     eventHub->SetChangeEvent(std::move(eventOnChange));
 }
 
-void StepperModelNG::SetOnChange(FrameNode* frameNode, IndexCallbackEvent&& eventOnChange)
-{
-    CHECK_NULL_VOID(frameNode);
-    auto eventHub = frameNode->GetEventHub<StepperEventHub>();
-    CHECK_NULL_VOID(eventHub);
-    eventHub->SetChangeEvent(std::move(eventOnChange));
-}
-
 void StepperModelNG::SetOnNext(IndexCallbackEvent&& eventOnNext)
 {
     auto frameNode = ViewStackProcessor::GetInstance()->GetMainFrameNode();
@@ -108,25 +88,9 @@ void StepperModelNG::SetOnNext(IndexCallbackEvent&& eventOnNext)
     eventHub->SetNextEvent(std::move(eventOnNext));
 }
 
-void StepperModelNG::SetOnNext(FrameNode* frameNode, IndexCallbackEvent&& eventOnNext)
-{
-    CHECK_NULL_VOID(frameNode);
-    auto eventHub = frameNode->GetEventHub<StepperEventHub>();
-    CHECK_NULL_VOID(eventHub);
-    eventHub->SetNextEvent(std::move(eventOnNext));
-}
-
 void StepperModelNG::SetOnPrevious(IndexCallbackEvent&& eventOnPrevious)
 {
     auto frameNode = ViewStackProcessor::GetInstance()->GetMainFrameNode();
-    CHECK_NULL_VOID(frameNode);
-    auto eventHub = frameNode->GetEventHub<StepperEventHub>();
-    CHECK_NULL_VOID(eventHub);
-    eventHub->SetPreviousEvent(std::move(eventOnPrevious));
-}
-
-void StepperModelNG::SetOnPrevious(FrameNode* frameNode, IndexCallbackEvent&& eventOnPrevious)
-{
     CHECK_NULL_VOID(frameNode);
     auto eventHub = frameNode->GetEventHub<StepperEventHub>();
     CHECK_NULL_VOID(eventHub);

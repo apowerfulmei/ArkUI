@@ -14,8 +14,13 @@
  */
 #include "core/interfaces/native/node/column_split_modifier.h"
 
-#include "core/common/resource/resource_parse_utils.h"
+#include <optional>
+
+#include "core/components/common/layout/constants.h"
+#include "core/components_ng/base/frame_node.h"
+#include "core/components_ng/pattern/linear_split/linear_split_model.h"
 #include "core/components_ng/pattern/linear_split/linear_split_model_ng.h"
+#include "core/pipeline/base/element_register.h"
 
 namespace OHOS::Ace::NG {
 constexpr bool DEFAULT_COLUMN_SPLIT_RESIZABLE = false;
@@ -36,24 +41,13 @@ void ResetColumnSplitResizable(ArkUINodeHandle node)
 }
 
 void SetColumnSplitDivider(ArkUINodeHandle node, ArkUI_Float32 stVal, int32_t stUnit,
-    ArkUI_Float32 endVal, int32_t endUnit, void* startMarginRawPtr, void* endMarginRawPtr)
+    ArkUI_Float32 endVal, int32_t endUnit)
 {
     auto *frameNode = reinterpret_cast<FrameNode *>(node);
     CHECK_NULL_VOID(frameNode);
-    LinearSplitModelNG::ResetResObj(frameNode, "columnSplit.divider");
     Dimension startMarginDimension(stVal, static_cast<DimensionUnit>(stUnit));
     Dimension endMarginDimension(endVal, static_cast<DimensionUnit>(endUnit));
-    ColumnSplitDivider divider = { startMarginDimension, endMarginDimension };
-    if (SystemProperties::ConfigChangePerform() && startMarginRawPtr) {
-        auto* start = reinterpret_cast<ResourceObject*>(startMarginRawPtr);
-        auto startResObj = AceType::Claim(start);
-        LinearSplitModelNG::RegisterResObj(startResObj, divider, "columnSplit.divider.startMargin");
-    }
-    if (SystemProperties::ConfigChangePerform() && endMarginRawPtr) {
-        auto* end = reinterpret_cast<ResourceObject*>(endMarginRawPtr);
-        auto endResObj = AceType::Claim(end);
-        LinearSplitModelNG::RegisterResObj(endResObj, divider, "columnSplit.divider.endMargin");
-    }
+    ItemDivider divider = { startMarginDimension, endMarginDimension };
     LinearSplitModelNG::SetDivider(frameNode, SplitType::COLUMN_SPLIT, divider);
 }
 
@@ -61,34 +55,21 @@ void ResetColumnSplitDivider(ArkUINodeHandle node)
 {
     auto *frameNode = reinterpret_cast<FrameNode *>(node);
     CHECK_NULL_VOID(frameNode);
-    LinearSplitModelNG::ResetResObj(frameNode, "columnSplit.divider");
     LinearSplitModelNG::SetDivider(frameNode, SplitType::COLUMN_SPLIT, { DEFAULT_DIVIDER_START, DEFAULT_DIVIDER_END });
 }
 
 namespace NodeModifier {
 const ArkUIColumnSplitModifier* GetColumnSplitModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
-    static const ArkUIColumnSplitModifier modifier = {
-        .setColumnSplitDivider = SetColumnSplitDivider,
-        .resetColumnSplitDivider = ResetColumnSplitDivider,
-        .setColumnSplitResizable = SetColumnSplitResizable,
-        .resetColumnSplitResizable = ResetColumnSplitResizable,
-    };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
+    static const ArkUIColumnSplitModifier modifier = { SetColumnSplitDivider, ResetColumnSplitDivider,
+                                                       SetColumnSplitResizable, ResetColumnSplitResizable };
     return &modifier;
 }
 
 const CJUIColumnSplitModifier* GetCJUIColumnSplitModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
-    static const CJUIColumnSplitModifier modifier = {
-        .setColumnSplitDivider = SetColumnSplitDivider,
-        .resetColumnSplitDivider = ResetColumnSplitDivider,
-        .setColumnSplitResizable = SetColumnSplitResizable,
-        .resetColumnSplitResizable = ResetColumnSplitResizable,
-    };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
+    static const CJUIColumnSplitModifier modifier = { SetColumnSplitDivider, ResetColumnSplitDivider,
+        SetColumnSplitResizable, ResetColumnSplitResizable };
     return &modifier;
 }
 }

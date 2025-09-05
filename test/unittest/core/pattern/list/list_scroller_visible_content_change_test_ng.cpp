@@ -14,11 +14,15 @@
  */
 
 #include "list_test_ng.h"
-#include "test/mock/core/render/mock_render_context.h"
-#include "test/unittest/core/pattern/scrollable/scrollable_test_utils.h"
 
 namespace OHOS::Ace::NG {
-class ListScrollVisibleContentChangeTestNg : public ListTestNg {};
+
+namespace {
+} // namespace
+
+class ListScrollVisibleContentChangeTestNg : public ListTestNg {
+public:
+};
 
 /**
  * @tc.name: OnScrollVisibleContentChange001
@@ -39,7 +43,7 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange001, 
     ListModelNG model = CreateList();
     model.SetOnScrollVisibleContentChange(onVisibleChange);
     CreateGroupWithSetting(5, V2::ListItemGroupStyle::NONE);
-    CreateDone();
+    CreateDone(frameNode_);
     ListItemIndex startExpect = { 0, 2 };
     ListItemIndex endExpect = { 1, 1, 0 };
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
@@ -50,7 +54,8 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange001, 
      * @tc.cases: indexChanged == startChanged == endChanged == false
      * @tc.expected: startExpect.index = 0
      */
-    ScrollTo(10);
+    pattern_->ScrollTo(10);
+    FlushLayoutTask(frameNode_);
     EXPECT_EQ(pattern_->GetTotalOffset(), 10);
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
     EXPECT_TRUE(IsEqual(endInfo, endExpect));
@@ -60,7 +65,8 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange001, 
      * @tc.cases: indexChanged == startChanged == endChanged == false
      * @tc.expected: startExpect.indexInGroup = 0
      */
-    ScrollTo(20);
+    pattern_->ScrollTo(20);
+    FlushLayoutTask(frameNode_);
     EXPECT_EQ(pattern_->GetTotalOffset(), 20);
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
     EXPECT_TRUE(IsEqual(endInfo, endExpect));
@@ -71,7 +77,8 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange001, 
      * @tc.expected: endExpect.indexInGroup = 0
      */
     endExpect = { 1, 1, 0 };
-    ScrollTo(30);
+    pattern_->ScrollTo(30);
+    FlushLayoutTask(frameNode_);
     EXPECT_EQ(pattern_->GetTotalOffset(), 30);
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
     EXPECT_TRUE(IsEqual(endInfo, endExpect));
@@ -80,7 +87,8 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange001, 
      * @tc.steps: step4. scroll to 40
      * @tc.expected: endExpect.index = 1
      */
-    ScrollTo(40);
+    pattern_->ScrollTo(40);
+    FlushLayoutTask(frameNode_);
     EXPECT_EQ(pattern_->GetTotalOffset(), 40);
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
     EXPECT_TRUE(IsEqual(endInfo, endExpect));
@@ -105,7 +113,7 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange002, 
     ListModelNG model = CreateList();
     model.SetOnScrollVisibleContentChange(onVisibleChange);
     CreateGroupWithSetting(5, V2::ListItemGroupStyle::NONE);
-    CreateDone();
+    CreateDone(frameNode_);
     ListItemIndex startExpect = { 0, 2 };
     ListItemIndex endExpect = { 1, 1, 0 };
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
@@ -116,7 +124,8 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange002, 
      * @tc.cases: indexChanged == startChanged == endChanged == false
      * @tc.expected: startExpect.index = 0
      */
-    ScrollTo(20);
+    pattern_->ScrollTo(20);
+    FlushLayoutTask(frameNode_);
     EXPECT_EQ(pattern_->GetTotalOffset(), 20);
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
     EXPECT_TRUE(IsEqual(endInfo, endExpect));
@@ -126,7 +135,8 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange002, 
      * @tc.cases: startChanged == indexChanged == endChanged == false
      * @tc.expected: startExpect.indexInGroup = -1
      */
-    ScrollTo(40);
+    pattern_->ScrollTo(40);
+    FlushLayoutTask(frameNode_);
     EXPECT_EQ(pattern_->GetTotalOffset(), 40);
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
     EXPECT_TRUE(IsEqual(endInfo, endExpect));
@@ -138,7 +148,8 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange002, 
      */
     startExpect = { 0, 1, 0 };
     endExpect = { 1, 1, 0 };
-    ScrollTo(60);
+    pattern_->ScrollTo(60);
+    FlushLayoutTask(frameNode_);
     EXPECT_EQ(pattern_->GetTotalOffset(), 60);
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
     EXPECT_TRUE(IsEqual(endInfo, endExpect));
@@ -148,7 +159,8 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange002, 
      * @tc.expected: endExpect.index = 1
      */
     endExpect = { 1, 1, 1 };
-    ScrollTo(80);
+    pattern_->ScrollTo(80);
+    FlushLayoutTask(frameNode_);
     EXPECT_EQ(pattern_->GetTotalOffset(), 80);
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
     EXPECT_TRUE(IsEqual(endInfo, endExpect));
@@ -173,7 +185,7 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange003, 
     ListModelNG model = CreateList();
     model.SetOnScrollVisibleContentChange(onVisibleChange);
     CreateGroupWithSetting(5, V2::ListItemGroupStyle::NONE);
-    CreateDone();
+    CreateDone(frameNode_);
     ListItemIndex startExpect = { 0, 2 };
     ListItemIndex endExpect = { 1, 1, 0 };
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
@@ -184,7 +196,8 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange003, 
      * @tc.cases: indexChanged == startChanged == endChanged == false
      * @tc.expected: startExpect.index = 0
      */
-    ScrollTo(30);
+    pattern_->ScrollTo(30);
+    FlushLayoutTask(frameNode_);
     EXPECT_EQ(pattern_->GetTotalOffset(), 30);
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
     EXPECT_TRUE(IsEqual(endInfo, endExpect));
@@ -195,7 +208,8 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange003, 
      * @tc.expected: startExpect.indexInGroup = 0
      */
     startExpect = { 0, 1, 0 };
-    ScrollTo(60);
+    pattern_->ScrollTo(60);
+    FlushLayoutTask(frameNode_);
     EXPECT_EQ(pattern_->GetTotalOffset(), 60);
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
     EXPECT_TRUE(IsEqual(endInfo, endExpect));
@@ -206,7 +220,8 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange003, 
      * @tc.expected: endExpect.indexInGroup = 1
      */
     endExpect = { 1, 1, 1 };
-    ScrollTo(90);
+    pattern_->ScrollTo(90);
+    FlushLayoutTask(frameNode_);
     EXPECT_EQ(pattern_->GetTotalOffset(), 90);
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
     EXPECT_TRUE(IsEqual(endInfo, endExpect));
@@ -216,7 +231,8 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange003, 
      * @tc.expected: endExpect.index = 1
      */
     endExpect = { 1, 1, 1 };
-    ScrollTo(120);
+    pattern_->ScrollTo(120);
+    FlushLayoutTask(frameNode_);
     EXPECT_EQ(pattern_->GetTotalOffset(), 120);
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
     EXPECT_TRUE(IsEqual(endInfo, endExpect));
@@ -241,7 +257,7 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange004, 
     ListModelNG model = CreateList();
     model.SetOnScrollVisibleContentChange(onVisibleChange);
     CreateGroupWithSetting(5, V2::ListItemGroupStyle::NONE);
-    CreateDone();
+    CreateDone(frameNode_);
     ListItemIndex startExpect = { 0, 2 };
     ListItemIndex endExpect = { 1, 1, 0 };
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
@@ -252,7 +268,8 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange004, 
      * @tc.cases: indexChanged == startChanged == endChanged == false
      * @tc.expected: startExpect.index = 0
      */
-    ScrollTo(40);
+    pattern_->ScrollTo(40);
+    FlushLayoutTask(frameNode_);
     EXPECT_EQ(pattern_->GetTotalOffset(), 40);
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
     EXPECT_TRUE(IsEqual(endInfo, endExpect));
@@ -264,7 +281,8 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange004, 
      */
     startExpect = { 0, 1, 0 };
     endExpect = { 1, 1, 1 };
-    ScrollTo(80);
+    pattern_->ScrollTo(80);
+    FlushLayoutTask(frameNode_);
     EXPECT_EQ(pattern_->GetTotalOffset(), 80);
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
     EXPECT_TRUE(IsEqual(endInfo, endExpect));
@@ -274,7 +292,8 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange004, 
      * @tc.cases: endChanged == indexChanged == startChanged == false
      * @tc.expected: endExpect.indexInGroup = 1
      */
-    ScrollTo(120);
+    pattern_->ScrollTo(120);
+    FlushLayoutTask(frameNode_);
     EXPECT_EQ(pattern_->GetTotalOffset(), 120);
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
     EXPECT_TRUE(IsEqual(endInfo, endExpect));
@@ -284,7 +303,8 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange004, 
      * @tc.expected: endExpect.index = 1
      */
     startExpect = { 0, 1, 1 };
-    ScrollTo(160);
+    pattern_->ScrollTo(160);
+    FlushLayoutTask(frameNode_);
     EXPECT_EQ(pattern_->GetTotalOffset(), 160);
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
     EXPECT_TRUE(IsEqual(endInfo, endExpect));
@@ -309,7 +329,7 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange005, 
     ListModelNG model = CreateList();
     model.SetOnScrollVisibleContentChange(onVisibleChange);
     CreateGroupWithSetting(5, V2::ListItemGroupStyle::NONE);
-    CreateDone();
+    CreateDone(frameNode_);
     ListItemIndex startExpect = { 0, 2 };
     ListItemIndex endExpect = { 1, 1, 0 };
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
@@ -321,7 +341,8 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange005, 
      * @tc.expected: startExpect.index = 0
      */
     startExpect = { 0, 1, 0 };
-    ScrollTo(50);
+    pattern_->ScrollTo(50);
+    FlushLayoutTask(frameNode_);
     EXPECT_EQ(pattern_->GetTotalOffset(), 50);
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
     EXPECT_TRUE(IsEqual(endInfo, endExpect));
@@ -332,7 +353,8 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange005, 
      * @tc.expected: startExpect.indexInGroup = 0
      */
     endExpect = { 1, 1, 1 };
-    ScrollTo(100);
+    pattern_->ScrollTo(100);
+    FlushLayoutTask(frameNode_);
     EXPECT_EQ(pattern_->GetTotalOffset(), 100);
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
     EXPECT_TRUE(IsEqual(endInfo, endExpect));
@@ -342,7 +364,8 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange005, 
      * @tc.cases: endChanged == indexChanged == startChanged == false
      * @tc.expected: endExpect.indexInGroup = 1
      */
-    ScrollTo(150);
+    pattern_->ScrollTo(150);
+    FlushLayoutTask(frameNode_);
     EXPECT_EQ(pattern_->GetTotalOffset(), 150);
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
     EXPECT_TRUE(IsEqual(endInfo, endExpect));
@@ -353,7 +376,8 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange005, 
      */
     startExpect = { 0, 1, 1 };
     endExpect = { 1, 3, -1 };
-    ScrollTo(200);
+    pattern_->ScrollTo(200);
+    FlushLayoutTask(frameNode_);
     EXPECT_EQ(pattern_->GetTotalOffset(), 200);
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
     EXPECT_TRUE(IsEqual(endInfo, endExpect));
@@ -378,7 +402,7 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange006, 
     ListModelNG model = CreateList();
     model.SetOnScrollVisibleContentChange(onVisibleChange);
     CreateGroupWithSetting(5, V2::ListItemGroupStyle::NONE);
-    CreateDone();
+    CreateDone(frameNode_);
     ListItemIndex startExpect = { 0, 2 };
     ListItemIndex endExpect = { 1, 1, 0 };
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
@@ -390,7 +414,8 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange006, 
      * @tc.expected: startExpect.index = 0
      */
     startExpect = { 0, 1, 0 };
-    ScrollTo(60);
+    pattern_->ScrollTo(60);
+    FlushLayoutTask(frameNode_);
     EXPECT_EQ(pattern_->GetTotalOffset(), 60);
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
     EXPECT_TRUE(IsEqual(endInfo, endExpect));
@@ -401,7 +426,8 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange006, 
      * @tc.expected: startExpect.indexInGroup = 0
      */
     endExpect = { 1, 1, 1 };
-    ScrollTo(120);
+    pattern_->ScrollTo(120);
+    FlushLayoutTask(frameNode_);
     EXPECT_EQ(pattern_->GetTotalOffset(), 120);
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
     EXPECT_TRUE(IsEqual(endInfo, endExpect));
@@ -413,7 +439,8 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange006, 
      */
     startExpect = { 0, 1, 1 };
     endExpect = { 1, 3, -1 };
-    ScrollTo(180);
+    pattern_->ScrollTo(180);
+    FlushLayoutTask(frameNode_);
     EXPECT_EQ(pattern_->GetTotalOffset(), 180);
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
     EXPECT_TRUE(IsEqual(endInfo, endExpect));
@@ -423,7 +450,8 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange006, 
      * @tc.expected: endExpect.index = 1
      */
     endExpect = { 2, 2, -1 };
-    ScrollTo(240);
+    pattern_->ScrollTo(240);
+    FlushLayoutTask(frameNode_);
     EXPECT_EQ(pattern_->GetTotalOffset(), 240);
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
     EXPECT_TRUE(IsEqual(endInfo, endExpect));
@@ -448,7 +476,7 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange007, 
     ListModelNG model = CreateList();
     model.SetOnScrollVisibleContentChange(onVisibleChange);
     CreateGroupWithSetting(5, V2::ListItemGroupStyle::NONE);
-    CreateDone();
+    CreateDone(frameNode_);
     ListItemIndex startExpect = { 0, 2 };
     ListItemIndex endExpect = { 1, 1, 0 };
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
@@ -456,7 +484,7 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange007, 
 
     startExpect = { 0, 1, 0 };
     endExpect = { 1, 1, 1 };
-    ScrollTo(ITEM_MAIN_SIZE);
+    ScrollTo(ITEM_HEIGHT);
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
     EXPECT_TRUE(IsEqual(endInfo, endExpect));
 
@@ -467,7 +495,8 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange007, 
      */
     startExpect = { 0, 2, -1 };
     endExpect = { 1, 1, 0 };
-    ScrollTo(10);
+    pattern_->ScrollTo(10);
+    FlushLayoutTask(frameNode_);
     EXPECT_EQ(pattern_->GetTotalOffset(), 10);
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
     EXPECT_TRUE(IsEqual(endInfo, endExpect));
@@ -477,7 +506,8 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange007, 
      * @tc.cases: startChanged == indexChanged == endChanged == false
      * @tc.expected: startExpect.indexInGroup = -1
      */
-    ScrollTo(20);
+    pattern_->ScrollTo(20);
+    FlushLayoutTask(frameNode_);
     EXPECT_EQ(pattern_->GetTotalOffset(), 20);
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
     EXPECT_TRUE(IsEqual(endInfo, endExpect));
@@ -487,7 +517,8 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange007, 
      * @tc.cases: startChanged == endChanged == indexChanged == false
      * @tc.expected: endExpect.indexInGroup = 0
      */
-    ScrollTo(30);
+    pattern_->ScrollTo(30);
+    FlushLayoutTask(frameNode_);
     EXPECT_EQ(pattern_->GetTotalOffset(), 30);
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
     EXPECT_TRUE(IsEqual(endInfo, endExpect));
@@ -496,7 +527,8 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange007, 
      * @tc.steps: step4. scroll to 40
      * @tc.expected: endExpect.index = 1
      */
-    ScrollTo(40);
+    pattern_->ScrollTo(40);
+    FlushLayoutTask(frameNode_);
     EXPECT_EQ(pattern_->GetTotalOffset(), 40);
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
     EXPECT_TRUE(IsEqual(endInfo, endExpect));
@@ -521,15 +553,15 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange008, 
     ListModelNG model = CreateList();
     model.SetOnScrollVisibleContentChange(onVisibleChange);
     CreateGroupWithSetting(5, V2::ListItemGroupStyle::NONE);
-    CreateDone();
+    CreateDone(frameNode_);
     ListItemIndex startExpect = { 0, 2 };
     ListItemIndex endExpect = { 1, 1, 0 };
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
     EXPECT_TRUE(IsEqual(endInfo, endExpect));
 
-    startExpect = { 0, 1, 0 };
+    startExpect = { 0, 1, 0};
     endExpect = { 1, 1, 1 };
-    ScrollTo(ITEM_MAIN_SIZE);
+    ScrollTo(ITEM_HEIGHT);
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
     EXPECT_TRUE(IsEqual(endInfo, endExpect));
 
@@ -538,9 +570,10 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange008, 
      * @tc.cases: startChanged == endChanged == true and indexChanged == false
      * @tc.expected: startExpect.index = 0
      */
-    startExpect = { 0, 2, -1 };
+    startExpect = { 0, 2, -1};
     endExpect = { 1, 1, 0 };
-    ScrollTo(20);
+    pattern_->ScrollTo(20);
+    FlushLayoutTask(frameNode_);
     EXPECT_EQ(pattern_->GetTotalOffset(), 20);
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
     EXPECT_TRUE(IsEqual(endInfo, endExpect));
@@ -550,7 +583,8 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange008, 
      * @tc.cases: startChanged == indexChanged == endChanged == false
      * @tc.expected: startExpect.indexInGroup = -1
      */
-    ScrollTo(40);
+    pattern_->ScrollTo(40);
+    FlushLayoutTask(frameNode_);
     EXPECT_EQ(pattern_->GetTotalOffset(), 40);
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
     EXPECT_TRUE(IsEqual(endInfo, endExpect));
@@ -560,8 +594,9 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange008, 
      * @tc.cases: startChanged == true and indexChanged == endChanged == false
      * @tc.expected: endExpect.indexInGroup = 0
      */
-    startExpect = { 0, 1, 0 };
-    ScrollTo(60);
+    startExpect = { 0, 1, 0};
+    pattern_->ScrollTo(60);
+    FlushLayoutTask(frameNode_);
     EXPECT_EQ(pattern_->GetTotalOffset(), 60);
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
     EXPECT_TRUE(IsEqual(endInfo, endExpect));
@@ -571,7 +606,8 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange008, 
      * @tc.expected: endExpect.index = 1
      */
     endExpect = { 1, 1, 1 };
-    ScrollTo(80);
+    pattern_->ScrollTo(80);
+    FlushLayoutTask(frameNode_);
     EXPECT_EQ(pattern_->GetTotalOffset(), 80);
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
     EXPECT_TRUE(IsEqual(endInfo, endExpect));
@@ -596,7 +632,7 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange009, 
     ListModelNG model = CreateList();
     model.SetOnScrollVisibleContentChange(onVisibleChange);
     CreateGroupWithSetting(5, V2::ListItemGroupStyle::NONE);
-    CreateDone();
+    CreateDone(frameNode_);
     ListItemIndex startExpect = { 0, 2 };
     ListItemIndex endExpect = { 1, 1, 0 };
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
@@ -604,7 +640,7 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange009, 
 
     startExpect = { 0, 1, 0 };
     endExpect = { 1, 1, 1 };
-    ScrollTo(ITEM_MAIN_SIZE);
+    ScrollTo(ITEM_HEIGHT);
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
     EXPECT_TRUE(IsEqual(endInfo, endExpect));
 
@@ -615,7 +651,8 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange009, 
      */
     startExpect = { 0, 2, -1 };
     endExpect = { 1, 1, 0 };
-    ScrollTo(30);
+    pattern_->ScrollTo(30);
+    FlushLayoutTask(frameNode_);
     EXPECT_EQ(pattern_->GetTotalOffset(), 30);
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
     EXPECT_TRUE(IsEqual(endInfo, endExpect));
@@ -626,7 +663,8 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange009, 
      * @tc.expected: startExpect.indexInGroup = 0
      */
     startExpect = { 0, 1, 0 };
-    ScrollTo(60);
+    pattern_->ScrollTo(60);
+    FlushLayoutTask(frameNode_);
     EXPECT_EQ(pattern_->GetTotalOffset(), 60);
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
     EXPECT_TRUE(IsEqual(endInfo, endExpect));
@@ -637,7 +675,8 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange009, 
      * @tc.expected: endExpect.indexInGroup = 1
      */
     endExpect = { 1, 1, 1 };
-    ScrollTo(90);
+    pattern_->ScrollTo(90);
+    FlushLayoutTask(frameNode_);
     EXPECT_EQ(pattern_->GetTotalOffset(), 90);
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
     EXPECT_TRUE(IsEqual(endInfo, endExpect));
@@ -647,7 +686,8 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange009, 
      * @tc.expected: endExpect.index = 1
      */
     endExpect = { 1, 1, 1 };
-    ScrollTo(120);
+    pattern_->ScrollTo(120);
+    FlushLayoutTask(frameNode_);
     EXPECT_EQ(pattern_->GetTotalOffset(), 120);
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
     EXPECT_TRUE(IsEqual(endInfo, endExpect));
@@ -672,7 +712,7 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange010, 
     ListModelNG model = CreateList();
     model.SetOnScrollVisibleContentChange(onVisibleChange);
     CreateGroupWithSetting(5, V2::ListItemGroupStyle::NONE);
-    CreateDone();
+    CreateDone(frameNode_);
     ListItemIndex startExpect = { 0, 2 };
     ListItemIndex endExpect = { 1, 1, 0 };
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
@@ -680,7 +720,7 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange010, 
 
     startExpect = { 0, 1, 0 };
     endExpect = { 1, 1, 1 };
-    ScrollTo(ITEM_MAIN_SIZE);
+    ScrollTo(ITEM_HEIGHT);
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
     EXPECT_TRUE(IsEqual(endInfo, endExpect));
 
@@ -691,7 +731,8 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange010, 
      */
     startExpect = { 0, 2, -1 };
     endExpect = { 1, 1, 0 };
-    ScrollTo(40);
+    pattern_->ScrollTo(40);
+    FlushLayoutTask(frameNode_);
     EXPECT_EQ(pattern_->GetTotalOffset(), 40);
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
     EXPECT_TRUE(IsEqual(endInfo, endExpect));
@@ -703,7 +744,8 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange010, 
      */
     startExpect = { 0, 1, 0 };
     endExpect = { 1, 1, 1 };
-    ScrollTo(80);
+    pattern_->ScrollTo(80);
+    FlushLayoutTask(frameNode_);
     EXPECT_EQ(pattern_->GetTotalOffset(), 80);
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
     EXPECT_TRUE(IsEqual(endInfo, endExpect));
@@ -713,7 +755,8 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange010, 
      * @tc.cases: endChanged == indexChanged == startChanged == false
      * @tc.expected: endExpect.indexInGroup = 1
      */
-    ScrollTo(120);
+    pattern_->ScrollTo(120);
+    FlushLayoutTask(frameNode_);
     EXPECT_EQ(pattern_->GetTotalOffset(), 120);
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
     EXPECT_TRUE(IsEqual(endInfo, endExpect));
@@ -723,7 +766,8 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange010, 
      * @tc.expected: endExpect.index = 1
      */
     startExpect = { 0, 1, 1 };
-    ScrollTo(160);
+    pattern_->ScrollTo(160);
+    FlushLayoutTask(frameNode_);
     EXPECT_EQ(pattern_->GetTotalOffset(), 160);
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
     EXPECT_TRUE(IsEqual(endInfo, endExpect));
@@ -748,15 +792,15 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange011, 
     ListModelNG model = CreateList();
     model.SetOnScrollVisibleContentChange(onVisibleChange);
     CreateGroupWithSetting(5, V2::ListItemGroupStyle::NONE);
-    CreateDone();
+    CreateDone(frameNode_);
     ListItemIndex startExpect = { 0, 2 };
     ListItemIndex endExpect = { 1, 1, 0 };
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
     EXPECT_TRUE(IsEqual(endInfo, endExpect));
 
-    startExpect = { 0, 1, 0 };
+    startExpect = { 0, 1, 0};
     endExpect = { 1, 1, 1 };
-    ScrollTo(ITEM_MAIN_SIZE);
+    ScrollTo(ITEM_HEIGHT);
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
     EXPECT_TRUE(IsEqual(endInfo, endExpect));
 
@@ -766,7 +810,8 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange011, 
      * @tc.expected: startExpect.index = 0
      */
     endExpect = { 1, 1, 0 };
-    ScrollTo(50);
+    pattern_->ScrollTo(50);
+    FlushLayoutTask(frameNode_);
     EXPECT_EQ(pattern_->GetTotalOffset(), 50);
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
     EXPECT_TRUE(IsEqual(endInfo, endExpect));
@@ -777,7 +822,8 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange011, 
      * @tc.expected: startExpect.indexInGroup = 0
      */
     endExpect = { 1, 1, 1 };
-    ScrollTo(100);
+    pattern_->ScrollTo(100);
+    FlushLayoutTask(frameNode_);
     EXPECT_EQ(pattern_->GetTotalOffset(), 100);
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
     EXPECT_TRUE(IsEqual(endInfo, endExpect));
@@ -787,7 +833,8 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange011, 
      * @tc.cases: endChanged == indexChanged == startChanged == false
      * @tc.expected: endExpect.indexInGroup = 1
      */
-    ScrollTo(150);
+    pattern_->ScrollTo(150);
+    FlushLayoutTask(frameNode_);
     EXPECT_EQ(pattern_->GetTotalOffset(), 150);
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
     EXPECT_TRUE(IsEqual(endInfo, endExpect));
@@ -798,7 +845,8 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange011, 
      */
     startExpect = { 0, 1, 1 };
     endExpect = { 1, 3, -1 };
-    ScrollTo(200);
+    pattern_->ScrollTo(200);
+    FlushLayoutTask(frameNode_);
     EXPECT_EQ(pattern_->GetTotalOffset(), 200);
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
     EXPECT_TRUE(IsEqual(endInfo, endExpect));
@@ -823,15 +871,15 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange012, 
     ListModelNG model = CreateList();
     model.SetOnScrollVisibleContentChange(onVisibleChange);
     CreateGroupWithSetting(5, V2::ListItemGroupStyle::NONE);
-    CreateDone();
+    CreateDone(frameNode_);
     ListItemIndex startExpect = { 0, 2 };
     ListItemIndex endExpect = { 1, 1, 0 };
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
     EXPECT_TRUE(IsEqual(endInfo, endExpect));
 
-    startExpect = { 0, 1, 0 };
+    startExpect = { 0, 1, 0};
     endExpect = { 1, 1, 1 };
-    ScrollTo(ITEM_MAIN_SIZE);
+    ScrollTo(ITEM_HEIGHT);
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
     EXPECT_TRUE(IsEqual(endInfo, endExpect));
 
@@ -841,7 +889,8 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange012, 
      * @tc.expected: startExpect.index = 0
      */
     endExpect = { 1, 1, 0 };
-    ScrollTo(60);
+    pattern_->ScrollTo(60);
+    FlushLayoutTask(frameNode_);
     EXPECT_EQ(pattern_->GetTotalOffset(), 60);
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
     EXPECT_TRUE(IsEqual(endInfo, endExpect));
@@ -852,7 +901,8 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange012, 
      * @tc.expected: startExpect.indexInGroup = 0
      */
     endExpect = { 1, 1, 1 };
-    ScrollTo(120);
+    pattern_->ScrollTo(120);
+    FlushLayoutTask(frameNode_);
     EXPECT_EQ(pattern_->GetTotalOffset(), 120);
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
     EXPECT_TRUE(IsEqual(endInfo, endExpect));
@@ -864,7 +914,8 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange012, 
      */
     startExpect = { 0, 1, 1 };
     endExpect = { 1, 3, -1 };
-    ScrollTo(180);
+    pattern_->ScrollTo(180);
+    FlushLayoutTask(frameNode_);
     EXPECT_EQ(pattern_->GetTotalOffset(), 180);
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
     EXPECT_TRUE(IsEqual(endInfo, endExpect));
@@ -874,57 +925,11 @@ HWTEST_F(ListScrollVisibleContentChangeTestNg, OnScrollVisibleContentChange012, 
      * @tc.expected: endExpect.index = 1
      */
     endExpect = { 2, 2, -1 };
-    ScrollTo(240);
+    pattern_->ScrollTo(240);
+    FlushLayoutTask(frameNode_);
     EXPECT_EQ(pattern_->GetTotalOffset(), 240);
     EXPECT_TRUE(IsEqual(startInfo, startExpect));
     EXPECT_TRUE(IsEqual(endInfo, endExpect));
 }
 
-/**
- * @tc.name: ContentClip001
- * @tc.desc: Test ContentClip
- * @tc.type: FUNC
- */
-HWTEST_F(ListScrollVisibleContentChangeTestNg, ContentClip001, TestSize.Level1)
-{
-    ListModelNG model = CreateList();
-    CreateGroupWithSetting(5, V2::ListItemGroupStyle::NONE);
-    CreateDone();
-
-    paintProperty_->UpdateContentClip({ ContentClipMode::DEFAULT, nullptr });
-    auto ctx = AceType::DynamicCast<MockRenderContext>(frameNode_->GetRenderContext());
-    ASSERT_TRUE(ctx);
-    EXPECT_CALL(*ctx, SetContentClip(ClipRectEq(frameNode_->GetGeometryNode()->GetPaddingRect()))).Times(1);
-    FlushUITasks();
-
-    paintProperty_->UpdateContentClip({ ContentClipMode::BOUNDARY, nullptr });
-    EXPECT_CALL(*ctx, SetContentClip(ClipRectEq(frameNode_->GetGeometryNode()->GetFrameRect()))).Times(1);
-    FlushUITasks();
-}
-
-/**
- * @tc.name: ContentClip002
- * @tc.desc: Test ContentClip
- * @tc.type: FUNC
- */
-HWTEST_F(ListScrollVisibleContentChangeTestNg, ContentClip002, TestSize.Level1)
-{
-    ListModelNG model = CreateList();
-    CreateGroupWithSetting(5, V2::ListItemGroupStyle::NONE);
-    CreateDone();
-
-    PaddingProperty padding;
-    padding.top = CalcLength(100);
-    padding.bottom = CalcLength(100);
-    layoutProperty_->UpdatePadding(padding);
-    auto ctx = AceType::DynamicCast<MockRenderContext>(frameNode_->GetRenderContext());
-    ASSERT_TRUE(ctx);
-    EXPECT_CALL(*ctx, SetContentClip(ClipRectEq(RectF(0, 100, WIDTH, HEIGHT - 200)))).Times(1);
-    FlushUITasks();
-
-    PaddingProperty padding0;
-    layoutProperty_->UpdatePadding(padding0);
-    EXPECT_CALL(*ctx, ResetContentClip()).Times(1);
-    FlushUITasks();
-}
 } // namespace OHOS::Ace::NG

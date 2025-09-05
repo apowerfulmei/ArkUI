@@ -24,9 +24,8 @@ class JSScrollable {
 public:
     static EdgeEffect ParseEdgeEffect(const JSRef<JSVal>& jsValue, EdgeEffect defaultValue);
     static bool ParseAlwaysEnable(const JSRef<JSVal>& jsValue, bool defaultValue);
-    static EffectEdge ParseEffectEdge(const JSRef<JSVal>& jsValue);
     static DisplayMode ParseDisplayMode(const JSCallbackInfo& info, DisplayMode defaultValue);
-    static std::string ParseBarColor(const JSCallbackInfo& info, RefPtr<ResourceObject>& resObj);
+    static std::string ParseBarColor(const JSCallbackInfo& info);
     static std::string ParseBarWidth(const JSCallbackInfo& info);
 
     static void JsClip(const JSCallbackInfo& info);

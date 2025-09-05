@@ -20,7 +20,6 @@
 #include "core/components_ng/property/accessibility_property.h"
 
 namespace OHOS::Ace::NG {
-const std::string BUTTON = "2";
 class ToggleButtonAccessibilityProperty : public AccessibilityProperty {
     DECLARE_ACE_TYPE(ToggleButtonAccessibilityProperty, AccessibilityProperty);
 
@@ -33,7 +32,10 @@ public:
 
     bool IsChecked() const override;
 
-    void GetExtraElementInfo(Accessibility::ExtraElementInfo& extraElementInfo) override;
+    std::string GetHintText() const override
+    {
+        return V2::BUTTON_ETS_TAG;
+    }
 
 private:
     ACE_DISALLOW_COPY_AND_MOVE(ToggleButtonAccessibilityProperty);

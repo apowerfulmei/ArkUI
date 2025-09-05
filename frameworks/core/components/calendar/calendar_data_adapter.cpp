@@ -166,8 +166,7 @@ void CalendarDataAdapter::RequestData(const CalendarDataRequest& request)
               }
               dataAdapter->RequestNextData();
             },
-            TaskExecutor::TaskType::UI, "ArkUICalendarRequestData",
-            TaskExecutor::GetPriorityTypeWithCheck(PriorityType::IMMEDIATE));
+            TaskExecutor::TaskType::UI, "ArkUICalendarRequestData");
         return;
     }
     if (SystemProperties::GetDeviceType() == DeviceType::TV || type_ == CalendarType::NORMAL) {
@@ -237,7 +236,7 @@ void CalendarDataAdapter::SaveCacheData(const CalendarDataRequest& request, cons
             }
             outFile.write(reinterpret_cast<const char*>(result.c_str()), result.size());
         },
-        "ArkUICalendarSaveCacheData", TaskExecutor::GetPriorityTypeWithCheck(PriorityType::IMMEDIATE));
+        "ArkUICalendarSaveCacheData");
 }
 
 void CalendarDataAdapter::ParseCardCalendarData(const std::string& source)
@@ -397,8 +396,7 @@ void CalendarDataAdapter::RequestDataInWatch(const CalendarDataRequest& request)
                 dataAdapter->NotifyDataChanged(result, request.indexOfContainer);
                 dataAdapter->RequestNextData();
             },
-            TaskExecutor::TaskType::UI, "ArkUICalendarRequestDataInWatch",
-            TaskExecutor::GetPriorityTypeWithCheck(PriorityType::IMMEDIATE));
+            TaskExecutor::TaskType::UI, "ArkUICalendarRequestDataInWatch");
     }
 }
 

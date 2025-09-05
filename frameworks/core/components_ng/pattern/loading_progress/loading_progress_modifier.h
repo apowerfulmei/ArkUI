@@ -17,12 +17,10 @@
 #define FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_PATTERNS_LOADING_PROGRESS_LOADING_PROGRESS_MODIFIER_H
 
 #include "base/memory/ace_type.h"
-#include "core/common/container.h"
 #include "core/components/common/properties/color.h"
 #include "core/components_ng/base/modifier.h"
 #include "core/components_ng/pattern/loading_progress/loading_progress_base.h"
 #include "core/components_ng/pattern/loading_progress/loading_progress_owner.h"
-#include "core/components_ng/pattern/pattern.h"
 #include "core/components_ng/pattern/refresh/refresh_animation_state.h"
 #include "core/components_ng/property/property.h"
 #include "core/components_ng/render/animation_utils.h"
@@ -33,8 +31,7 @@ class LoadingProgressModifier : public ContentModifier {
     DECLARE_ACE_TYPE(LoadingProgressModifier, ContentModifier);
 
 public:
-    explicit LoadingProgressModifier(LoadingProgressOwner loadingProgressOwner = LoadingProgressOwner::SELF,
-        const WeakPtr<Pattern>& pattern = nullptr);
+    explicit LoadingProgressModifier(LoadingProgressOwner loadingProgressOwner = LoadingProgressOwner::SELF);
     ~LoadingProgressModifier() override = default;
     void onDraw(DrawingContext& context) override;
     void DrawOrbit(DrawingContext& canvas, const CometParam& cometParam, float orbitRadius, float date);
@@ -100,26 +97,11 @@ public:
         useContentModifier_->Set(useContentModifier);
     }
 
-    void SetForegroundColorParseFailed(bool isForegroundColorParseFailed)
-    {
-        isForegroundColorParseFailed_ = isForegroundColorParseFailed;
-    }
-
-    bool GetForegroundColorParseFailed() const
-    {
-        return isForegroundColorParseFailed_;
-    }
-
 private:
     void AdjustMatrix(RSCamera3D& camera, RSMatrix& matrix);
     float GetCurentCometOpacity(float baseOpacity, uint32_t index, uint32_t totalNumber);
     float GetCurentCometAngle(float baseAngle, uint32_t index, uint32_t totalNumber);
     uint32_t GetCometNumber();
-    inline bool IsDynamicComponent()
-    {
-        auto container = Container::Current();
-        return container && container->IsDynamicRender();
-    }
     // no Animatable
     RefPtr<PropertyBool> enableLoading_;
     RefPtr<PropertyOffsetF> offset_;
@@ -133,12 +115,10 @@ private:
     RefPtr<AnimatablePropertyFloat> cometTailLen_;
     RefPtr<AnimatablePropertyFloat> sizeScale_;
     RefPtr<PropertyBool> useContentModifier_;
-    WeakPtr<Pattern> pattern_;
 
     LoadingProgressOwner loadingProgressOwner_;
     bool isLoading_ = false;
     bool isVisible_ = false;
-    bool isForegroundColorParseFailed_ = false;
     float recycleSizeScale_ = 1.0f;
     ACE_DISALLOW_COPY_AND_MOVE(LoadingProgressModifier);
 };

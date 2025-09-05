@@ -26,7 +26,6 @@ struct MenuOptionsParam {
     std::optional<std::string> labelInfo;
     std::string id;
     std::function<void(const std::string&)> action;
-    std::optional<uint32_t> symbolId;
 
     // Used for the display of the first options extra-long.
     bool isFirstOption = false;
@@ -43,6 +42,7 @@ struct MenuOptionsParam {
         return result;
     }
 };
+
 struct MenuItemParam {
     MenuOptionsParam menuOptionsParam;
     int32_t start = -1;
@@ -60,8 +60,8 @@ struct MenuItemParam {
         return result;
     }
 };
+
 using OnCreateMenuCallback = std::function<std::vector<MenuOptionsParam>(const std::vector<NG::MenuItemParam>&)>;
 using OnMenuItemClickCallback = std::function<bool(const NG::MenuItemParam&)>;
-using OnPrepareMenuCallback = std::function<std::vector<MenuOptionsParam>(const std::vector<NG::MenuItemParam>&)>;
 } // namespace OHOS::Ace::NG
 #endif // FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_DECLARATION_NAVIGATION_NAVIGATION_DECLARATION_H

@@ -18,12 +18,11 @@
 
 #include "movingphoto_pattern.h"
 #include "core/components_ng/base/frame_node.h"
-#include "core/pipeline/base/element_register.h"
 
 namespace OHOS::Ace::NG {
 
 constexpr int32_t VIDEO_NODE_INDEX = 0;
-constexpr int32_t IMAGE_NODE_INDEX = 0;
+constexpr int32_t IMAGE_NODE_INDEX = 1;
 
 class ACE_EXPORT MovingPhotoNode : public FrameNode {
     DECLARE_ACE_TYPE(MovingPhotoNode, FrameNode);
@@ -63,9 +62,9 @@ public:
         return videoId_.value();
     }
 
-    RefPtr<UINode> GetVideo(int32_t index)
+    RefPtr<UINode> GetVideo()
     {
-        return GetChildAtIndex(index)->GetChildAtIndex(VIDEO_NODE_INDEX);
+        return GetChildAtIndex(VIDEO_NODE_INDEX);
     }
 
     bool HasVideoNode()
@@ -73,28 +72,9 @@ public:
         return videoId_.has_value();
     }
 
-    int32_t GetColumnId()
-    {
-        if (!columnId_.has_value()) {
-            columnId_ = ElementRegister::GetInstance()->MakeUniqueId();
-        }
-        return columnId_.value();
-    }
-
-    RefPtr<UINode> GetColumn(int32_t index)
-    {
-        return GetChildAtIndex(index);
-    }
-
-    bool HasColumnNode()
-    {
-        return columnId_.has_value();
-    }
-
 private:
     std::optional<int32_t> imageId_;
     std::optional<int32_t> videoId_;
-    std::optional<int32_t> columnId_;
 };
 } // namespace OHOS::Ace::NG
 #endif // COMPONENT_EXT_MOVING_PHOTO_MOVING_PHOTO_NODE_H

@@ -16,8 +16,12 @@
 #include "mouse_style_ohos.h"
 
 #include "input_manager.h"
+#include "pointer_style.h"
 #include "struct_multimodal.h"
 
+#include "base/log/log_wrapper.h"
+#include "base/utils/linear_map.h"
+#include "base/utils/utils.h"
 #include "core/common/container.h"
 
 namespace OHOS::Ace {
@@ -30,16 +34,10 @@ RefPtr<MouseStyle> MouseStyle::CreateMouseStyle()
 bool MouseStyleOhos::SetPointerStyle(int32_t windowId, MouseFormat pointerStyle) const
 {
     auto container = Container::Current();
-    if (!container) {
-        TAG_LOGW(AceLogTag::ACE_MOUSE, "SetPointerStyle container is null!");
-        return false;
-    }
+    CHECK_NULL_RETURN(container, false);
     auto isUIExtension = container->IsUIExtensionWindow() && pointerStyle != MouseFormat::DEFAULT;
     auto inputManager = MMI::InputManager::GetInstance();
-    if (!inputManager) {
-        TAG_LOGW(AceLogTag::ACE_MOUSE, "SetPointerStyle inputManager is null!");
-        return false;
-    }
+    CHECK_NULL_RETURN(inputManager, false);
     static const LinearEnumMapNode<MouseFormat, int32_t> mouseFormatMap[] = {
         { MouseFormat::DEFAULT, MMI::DEFAULT },
         { MouseFormat::EAST, MMI::EAST },
@@ -93,11 +91,11 @@ bool MouseStyleOhos::SetPointerStyle(int32_t windowId, MouseFormat pointerStyle)
     }
     MMI::PointerStyle style;
     style.id = MMIPointStyle;
-    TAG_LOGD(AceLogTag::ACE_MOUSE, "SetPointerStyle windowId=%{public}d style=%{public}d isUIExtension=%{public}d",
+    TAG_LOGI(AceLogTag::ACE_MOUSE, "SetPointerStyle windowId=%{public}d style=%{public}d isUIExtension=%{public}d",
         windowId, static_cast<int32_t>(pointerStyle), isUIExtension);
     int32_t setResult = inputManager->SetPointerStyle(windowId, style, isUIExtension);
     if (setResult == -1) {
-        TAG_LOGW(AceLogTag::ACE_MOUSE, "SetPointerStyle result is false");
+        LOGW("SetPointerStyle result is false");
         return false;
     }
     return true;
@@ -113,7 +111,7 @@ int32_t MouseStyleOhos::GetPointerStyle(int32_t windowId, int32_t& pointerStyle)
     MMI::PointerStyle style;
     int32_t getResult = inputManager->GetPointerStyle(windowId, style, isUIExtension);
     if (getResult == -1) {
-        TAG_LOGW(AceLogTag::ACE_MOUSE, "GetPointerStyle result is false");
+        LOGW("GetPointerStyle result is false");
         return -1;
     }
     pointerStyle = style.id;
@@ -140,14 +138,7 @@ void MouseStyleOhos::SetCustomCursor(
     CHECK_NULL_VOID(inputManager);
     CHECK_NULL_VOID(pixelMap);
 
-    MMI::CustomCursor cursor;
-    cursor.pixelMap = pixelMap.get();
-    cursor.focusX = focusX;
-    cursor.focusY = focusY;
-
-    MMI::CursorOptions options;
-    TAG_LOGI(AceLogTag::ACE_WEB, "set custom cursor start");
-    int32_t status = inputManager->SetCustomCursor(windowId, cursor, options);
+    int32_t status = inputManager->SetCustomCursor(windowId, static_cast<void*>(pixelMap.get()), focusX, focusY);
     if (status != 0) {
         TAG_LOGE(AceLogTag::ACE_WEB, "set custom cursor failed %{public}u", status);
         return;

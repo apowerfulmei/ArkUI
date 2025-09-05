@@ -15,7 +15,8 @@
 
 #include "core/components_ng/pattern/dialog/dialog_accessibility_property.h"
 
-#include "core/components_ng/property/accessibility_property_helper.h"
+#include "base/utils/utils.h"
+#include "core/components_ng/base/frame_node.h"
 #include "core/components_ng/pattern/dialog/dialog_pattern.h"
 
 namespace OHOS::Ace::NG {
@@ -28,14 +29,5 @@ std::string DialogAccessibilityProperty::GetText() const
     std::string title = dialogPattern->GetTitle();
     std::string message = dialogPattern->GetMessage();
     return title.append(message);
-}
-
-void DialogAccessibilityProperty::GetExtraElementInfo(Accessibility::ExtraElementInfo& extraElementInfo)
-{
-    auto frameNode = host_.Upgrade();
-    CHECK_NULL_VOID(frameNode);
-    auto dialogProperty = frameNode->GetLayoutProperty<DialogLayoutProperty>();
-    CHECK_NULL_VOID(dialogProperty);
-    extraElementInfo.SetExtraElementInfo("isModal", dialogProperty->GetIsModal().value_or(true));
 }
 } // namespace OHOS::Ace::NG

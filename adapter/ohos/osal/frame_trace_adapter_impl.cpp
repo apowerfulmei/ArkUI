@@ -15,9 +15,12 @@
 
 #include "frame_trace_adapter_impl.h"
 
-#include "base/log/log_wrapper.h"
+#include <unistd.h>
+
 #include "frame_trace.h"
 #include "parameters.h"
+
+#include "base/log/log_wrapper.h"
 
 namespace OHOS::Ace {
 

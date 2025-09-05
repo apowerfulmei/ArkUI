@@ -127,7 +127,6 @@ void JSRectShape::SetRadiusWithArrayValue(const RefPtr<ShapeRect>& shapeRect, co
             SetRadiusValue(shapeRect, radiusXYValue, radiusXYValue, i);
             continue;
         }
-        
         JSRef<JSArray> radiusArray = JSRef<JSArray>::Cast(radiusItem);
         if (radiusArray->Length() != LENGTH_RADIUS_ARRAY) {
             break;

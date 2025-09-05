@@ -15,8 +15,6 @@
 
 #include "frameworks/bridge/declarative_frontend/engine/functions/js_on_area_change_function.h"
 
-#include "frameworks/bridge/declarative_frontend/engine/js_types.h"
-
 #include "base/geometry/ng/offset_t.h"
 #include "base/geometry/offset.h"
 #include "base/log/log.h"
@@ -53,7 +51,6 @@ JSRef<JSObject> CreateAreaObject(const Rect& rect, const Offset& origin)
 void JsOnAreaChangeFunction::Execute(
     const Rect& oldRect, const Offset& oldOrigin, const Rect& rect, const Offset& origin)
 {
-    panda::JsiFastNativeScope fastNativeScope(jsFunction_->GetEcmaVM());
     auto oldArea = CreateAreaObject<Rect, Offset>(oldRect, oldOrigin);
     auto area = CreateAreaObject<Rect, Offset>(rect, origin);
     JSRef<JSVal> params[2];
@@ -65,7 +62,6 @@ void JsOnAreaChangeFunction::Execute(
 void JsOnAreaChangeFunction::Execute(
     const NG::RectF& oldRect, const NG::OffsetF& oldOrigin, const NG::RectF& rect, const NG::OffsetF& origin)
 {
-    panda::JsiFastNativeScope fastNativeScope(jsFunction_->GetEcmaVM());
     auto oldArea = CreateAreaObject<NG::RectF, NG::OffsetF>(oldRect, oldOrigin);
     auto area = CreateAreaObject<NG::RectF, NG::OffsetF>(rect, origin);
     JSRef<JSVal> params[2];

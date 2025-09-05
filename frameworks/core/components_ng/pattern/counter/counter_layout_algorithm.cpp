@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -15,10 +15,11 @@
 
 #include "core/components_ng/pattern/counter/counter_layout_algorithm.h"
 
+#include "base/utils/utils.h"
 #include "core/components/counter/counter_theme.h"
+#include "core/components_ng/layout/layout_wrapper.h"
+#include "core/pipeline/pipeline_base.h"
 #include "core/components_ng/pattern/button/button_pattern.h"
-#include "core/components_ng/pattern/text/text_pattern.h"
-#include "core/components_ng/property/measure_utils.h"
 
 namespace OHOS::Ace::NG {
 namespace {
@@ -28,21 +29,12 @@ constexpr int32_t ADD_BUTTON = 2;
 constexpr int32_t SUB_TEXT = 0;
 constexpr int32_t ADD_TEXT = 0;
 } // namespace
-static bool checkLayoutPolicy(const std::optional<NG::LayoutPolicyProperty> layoutPolicy)
-{
-    if (layoutPolicy.has_value()) {
-        return layoutPolicy->widthLayoutPolicy_ != LayoutCalPolicy::NO_MATCH ||
-               layoutPolicy->heightLayoutPolicy_ != LayoutCalPolicy::NO_MATCH;
-    }
-    return false;
-}
 
 void CounterLayoutAlgorithm::Measure(LayoutWrapper* layoutWrapper)
 {
     // counter measure
     auto layoutProperty = layoutWrapper->GetLayoutProperty();
     CHECK_NULL_VOID(layoutProperty);
-    auto layoutPolicy = layoutProperty->GetLayoutPolicyProperty();
     auto constraint = layoutProperty->GetLayoutConstraint();
     auto geometryNode = layoutWrapper->GetGeometryNode();
     CHECK_NULL_VOID(geometryNode);
@@ -52,94 +44,20 @@ void CounterLayoutAlgorithm::Measure(LayoutWrapper* layoutWrapper)
                               : std::min(constraint->percentReference.Width(), constraint->maxSize.Width()));
     frameSize.SetWidth(std::max(frameWidthMax, constraint->minSize.Width()));
     auto frameHeightMax = ((constraint->selfIdealSize.Height().has_value())
-                               ? std::min(constraint->selfIdealSize.Height().value(), constraint->maxSize.Height())
-                               : std::min(constraint->percentReference.Height(), constraint->maxSize.Height()));
+                              ? std::min(constraint->selfIdealSize.Height().value(), constraint->maxSize.Height())
+                              : std::min(constraint->percentReference.Height(), constraint->maxSize.Height()));
     frameSize.SetHeight(std::max(frameHeightMax, constraint->minSize.Height()));
-    bool checkSizeFlag = false;
-    if (layoutPolicy.has_value()) {
-        if (layoutPolicy->IsWidthMatch()) {
-            frameSize.SetWidth(constraint->parentIdealSize.Width().value());
-            checkSizeFlag = true;
-        }
-        if (layoutPolicy->IsHeightMatch()) {
-            frameSize.SetHeight(constraint->parentIdealSize.Height().value());
-            checkSizeFlag = true;
-        }
-    }
+    geometryNode->SetFrameSize(frameSize);
     SizeF selfContentSize(frameSize.Width(), frameSize.Height());
     const auto& padding = layoutProperty->CreatePaddingWithoutBorder();
     MinusPaddingToSize(padding, selfContentSize);
-    if (checkSizeFlag || !checkLayoutPolicy(layoutPolicy)) {
-        geometryNode->SetFrameSize(frameSize);
-        geometryNode->SetContentSize(selfContentSize);
-    }
-
+    geometryNode->SetContentSize(selfContentSize);
+    // sub button measure
     auto pipeline = PipelineBase::GetCurrentContext();
     CHECK_NULL_VOID(pipeline);
-    auto frameNode = layoutWrapper->GetHostNode();
-    CHECK_NULL_VOID(frameNode);
-    auto counterTheme = pipeline->GetTheme<CounterTheme>(frameNode->GetThemeScopeId());
+    auto counterTheme = pipeline->GetTheme<CounterTheme>();
     CHECK_NULL_VOID(counterTheme);
     auto buttonWidth = counterTheme->GetControlWidth().ConvertToPx();
-    auto layoutConstraint = layoutProperty->CreateChildConstraint();
-
-    // content measure
-    auto contentWrapper = layoutWrapper->GetOrCreateChildByIndex(CONTENT);
-    CHECK_NULL_VOID(contentWrapper);
-    auto contentGeometryNode = contentWrapper->GetGeometryNode();
-    CHECK_NULL_VOID(contentGeometryNode);
-    auto contentLayoutProperty = contentWrapper->GetLayoutProperty();
-    CHECK_NULL_VOID(contentLayoutProperty);
-    CalcSize contentSize;
-    if (checkLayoutPolicy(layoutPolicy)) {
-        if (layoutPolicy->IsWidthFix()) {
-            layoutConstraint.maxSize.SetWidth(std::numeric_limits<float>::max());
-            contentLayoutProperty->ClearUserDefinedIdealSize(true, false);
-        } else if (layoutPolicy->IsWidthWrap()) {
-            layoutConstraint.maxSize.SetWidth(constraint->parentIdealSize.Width().value() - 2 * buttonWidth);
-            contentLayoutProperty->ClearUserDefinedIdealSize(true, false);
-        } else if (layoutPolicy->IsWidthMatch()) {
-            layoutConstraint.maxSize.SetWidth(constraint->parentIdealSize.Width().value() - 2 * buttonWidth);
-            contentSize.SetWidth(CalcLength(selfContentSize.Width() - 2 * buttonWidth));
-            contentLayoutProperty->UpdateUserDefinedIdealSize(contentSize);
-        } else {
-            contentSize.SetWidth(CalcLength(selfContentSize.Width() - 2 * buttonWidth));
-        }
-        if (layoutPolicy->IsHeightFix()) {
-            layoutConstraint.maxSize.SetHeight(std::numeric_limits<float>::max());
-            contentLayoutProperty->ClearUserDefinedIdealSize(false, true);
-        } else if (layoutPolicy->IsHeightWrap()) {
-            layoutConstraint.maxSize.SetHeight(constraint->parentIdealSize.Height().value());
-            contentLayoutProperty->ClearUserDefinedIdealSize(false, true);
-        } else if (layoutPolicy->IsHeightMatch()) {
-            layoutConstraint.maxSize.SetHeight(constraint->parentIdealSize.Height().value());
-            contentSize.SetHeight(CalcLength(selfContentSize.Height()));
-            contentLayoutProperty->UpdateUserDefinedIdealSize(contentSize);
-        } else {
-            contentSize.SetHeight(CalcLength(selfContentSize.Height()));
-        }
-        checkSizeFlag = true;
-    } else {
-        contentSize.SetWidth(CalcLength(selfContentSize.Width() - 2 * buttonWidth));
-        contentSize.SetHeight(CalcLength(selfContentSize.Height()));
-        contentLayoutProperty->UpdateUserDefinedIdealSize(contentSize);
-    }
-    contentWrapper->Measure(layoutConstraint);
-    auto contentSizeRes = contentWrapper->GetGeometryNode()->GetFrameSize();
-    selfContentSize.SetWidth(contentSizeRes.Width() + 2 * buttonWidth);
-    selfContentSize.SetHeight(contentSizeRes.Height());
-    if (checkSizeFlag) {
-        geometryNode->SetFrameSize(selfContentSize);
-        geometryNode->SetContentSize(selfContentSize);
-    }
-
-    // sub button measure
-    auto counterRenderContext = frameNode->GetRenderContext();
-    CHECK_NULL_VOID(counterRenderContext);
-    Color textColor = counterRenderContext->GetForegroundColor().has_value()
-                          ? counterRenderContext->GetForegroundColorValue()
-                          : counterTheme->GetContentTextStyle().GetTextColor();
-
     auto subButtonWrapper = layoutWrapper->GetOrCreateChildByIndex(SUB_BUTTON);
     CHECK_NULL_VOID(subButtonWrapper);
     auto subButtonGeometryNode = subButtonWrapper->GetGeometryNode();
@@ -167,15 +85,21 @@ void CounterLayoutAlgorithm::Measure(LayoutWrapper* layoutWrapper)
     auto subButtonTextLayoutProperty = subButtonTextWrapper->GetLayoutProperty();
     CHECK_NULL_VOID(subButtonTextLayoutProperty);
     subButtonTextLayoutProperty->UpdateUserDefinedIdealSize(subButtonSize);
+    auto layoutConstraint = layoutProperty->CreateChildConstraint();
     subButtonWrapper->Measure(layoutConstraint);
 
-    auto subButtonHostNode = subButtonWrapper->GetHostNode();
-    CHECK_NULL_VOID(subButtonHostNode);
-    auto subButtonRenderContext = subButtonHostNode->GetRenderContext();
-    CHECK_NULL_VOID(subButtonRenderContext);
-    subButtonRenderContext->UpdateBackgroundColor(Color::TRANSPARENT);
-    auto subTextNode = AceType::DynamicCast<FrameNode>(subButtonHostNode->GetChildren().front());
-    UpdateTextColor(subTextNode, textColor);
+    // content measure
+    auto contentWrapper = layoutWrapper->GetOrCreateChildByIndex(CONTENT);
+    CHECK_NULL_VOID(contentWrapper);
+    auto contentGeometryNode = contentWrapper->GetGeometryNode();
+    CHECK_NULL_VOID(contentGeometryNode);
+    auto contentLayoutProperty = contentWrapper->GetLayoutProperty();
+    CHECK_NULL_VOID(contentLayoutProperty);
+    CalcSize contentSize;
+    contentSize.SetWidth(CalcLength(selfContentSize.Width() - 2 * buttonWidth));
+    contentSize.SetHeight(CalcLength(selfContentSize.Height()));
+    contentLayoutProperty->UpdateUserDefinedIdealSize(contentSize);
+    contentWrapper->Measure(layoutConstraint);
 
     // add button measure
     auto addButtonWrapper = layoutWrapper->GetOrCreateChildByIndex(ADD_BUTTON);
@@ -201,14 +125,6 @@ void CounterLayoutAlgorithm::Measure(LayoutWrapper* layoutWrapper)
     addButtonTextLayoutProperty->UpdateUserDefinedIdealSize(addButtonSize);
     addButtonLayoutProperty->UpdateUserDefinedIdealSize(addButtonSize);
     addButtonWrapper->Measure(layoutConstraint);
-
-    auto addButtonHostNode = addButtonWrapper->GetHostNode();
-    CHECK_NULL_VOID(addButtonHostNode);
-    auto addButtonRenderContext = addButtonHostNode->GetRenderContext();
-    CHECK_NULL_VOID(addButtonRenderContext);
-    addButtonRenderContext->UpdateBackgroundColor(Color::TRANSPARENT);
-    auto addTextNode = AceType::DynamicCast<FrameNode>(addButtonHostNode->GetChildren().front());
-    UpdateTextColor(addTextNode, textColor);
 }
 
 static void LayoutItem(LayoutWrapper* layoutWrapper, int32_t leftButton, int32_t rightButton)
@@ -263,19 +179,4 @@ void CounterLayoutAlgorithm::Layout(LayoutWrapper* layoutWrapper)
     }
 }
 
-void CounterLayoutAlgorithm::UpdateTextColor(const RefPtr<FrameNode>& frameNode, const Color& value)
-{
-    CHECK_NULL_VOID(frameNode);
-    auto textLayoutProperty = frameNode->GetLayoutProperty<TextLayoutProperty>();
-    CHECK_NULL_VOID(textLayoutProperty);
-    textLayoutProperty->UpdateTextColorByRender(value);
-    auto renderContext = frameNode->GetRenderContext();
-    CHECK_NULL_VOID(renderContext);
-    renderContext->UpdateForegroundColor(value);
-    renderContext->ResetForegroundColorStrategy();
-    renderContext->UpdateForegroundColorFlag(true);
-    auto textPattern = frameNode->GetPattern<TextPattern>();
-    CHECK_NULL_VOID(textPattern);
-    textPattern->UpdateFontColor(value);
-}
 } // namespace OHOS::Ace::NG

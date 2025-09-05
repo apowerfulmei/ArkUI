@@ -36,9 +36,6 @@
 #include "core/components/form/resource/form_utils.h"
 #endif
 
-namespace OHOS::Rosen {
-    class RSUIContext;
-}
 namespace OHOS::Ace {
 class FormCallbackClient;
 class FormSurfaceCallbackClient;
@@ -46,10 +43,6 @@ class FormManagerDelegate : public FormManagerResource {
     DECLARE_ACE_TYPE(FormManagerDelegate, FormManagerResource);
 
 public:
-#ifdef OHOS_STANDARD_SYSTEM
-    void SetParamForWant(const RequestFormInfo& info);
-    void SetParamForWant(const RequestFormInfo& info, const AppExecFwk::FormInfo& formInfo);
-#endif
     using onFormAcquiredCallbackForJava =
         std::function<void(int64_t, const std::string&, const std::string&, const std::string&)>;
     using OnFormUpdateCallbackForJava = std::function<void(int64_t, const std::string&)>;
@@ -59,7 +52,7 @@ public:
     using OnFormUpdateCallback =
         std::function<void(int64_t, const std::string&, const std::map<std::string, sptr<AppExecFwk::FormAshmem>>&)>;
     using OnFormLinkInfoUpdateCallback = std::function<void(const std::vector<std::string>&)>;
-    using OnGetRectRelativeToWindowCallback = std::function<void(AccessibilityParentRectInfo& parentRectInfo)>;
+    using OnGetRectRelativeToWindowCallback = std::function<void(int32_t&, int32_t&)>;
     using OnFormErrorCallback = std::function<void(const std::string&, const std::string&)>;
     using OnFormUninstallCallback = std::function<void(int64_t)>;
     using OnFormSurfaceNodeCallback = std::function<void(const std::shared_ptr<Rosen::RSSurfaceNode>&,
@@ -70,8 +63,6 @@ public:
     using UnTrustFormCallback = std::function<void()>;
     using SnapshotCallback = std::function<void(const uint32_t&)>;
     using EnableFormCallback = std::function<void(const bool enable)>;
-    using LockFormCallback = std::function<void(const bool lock)>;
-    using UpdateFormDoneCallback = std::function<void(const int64_t formId)>;
 
     enum class State : char {
         WAITINGFORSIZE,
@@ -116,13 +107,11 @@ public:
     void AddFormSurfaceChangeCallback(OnFormSurfaceChangeCallback&& callback);
     void AddFormSurfaceDetachCallback(OnFormSurfaceDetachCallback&& callback);
     void AddFormLinkInfoUpdateCallback(OnFormLinkInfoUpdateCallback&& callback);
-    void AddGetRectRelativeToWindowCallback(OnGetRectRelativeToWindowCallback&& callback);
+    void AddGetRectRelativeToWindowCallback(OnGetRectRelativeToWindowCallback && callback);
     void AddActionEventHandle(const ActionEventHandle& callback);
     void AddUnTrustFormCallback(const UnTrustFormCallback& callback);
     void AddSnapshotCallback(SnapshotCallback&& callback);
     void AddEnableFormCallback(EnableFormCallback&& callback);
-    void AddLockFormCallback(LockFormCallback&& callback);
-    void AddFormUpdateDoneCallback(UpdateFormDoneCallback&& callback);
     void OnActionEventHandle(const std::string& action);
     void SetAllowUpdate(bool allowUpdate);
     void OnActionEvent(const std::string& action);
@@ -132,8 +121,7 @@ public:
     void RegisterRenderDelegateEvent();
     void OnFormError(const std::string& code, const std::string& msg);
     void OnFormLinkInfoUpdate(const std::vector<std::string>& formLinkInfos);
-    void OnGetRectRelativeToWindow(AccessibilityParentRectInfo& parentRectInfo);
-    void OnFormUpdateDone(const int64_t formId);
+    void OnGetRectRelativeToWindow(int32_t &top, int32_t &left);
     void ReleaseRenderer();
     void SetObscured(bool isObscured);
     void OnAccessibilityTransferHoverEvent(float pointX, float pointY, int32_t sourceType,
@@ -142,17 +130,12 @@ public:
     void OnAccessibilityChildTreeDeregister();
     void OnAccessibilityDumpChildInfo(const std::vector<std::string>& params, std::vector<std::string>& info);
     bool CheckFormBundleForbidden(const std::string& bundleName);
-    void NotifyFormDump(const std::vector<std::string>& params, std::vector<std::string>& info);
-    void SetRSUIContext(std::shared_ptr<Rosen::RSUIContext> &rsUIContext);
-    void SetMultiInstanceFlag(bool isMultiInstanceEnable);
-    bool IsFormBundleExempt(int64_t formId);
-    bool IsFormBundleProtected(const std::string &bundleName, int64_t formId);
 #ifdef OHOS_STANDARD_SYSTEM
     void ProcessFormUpdate(const AppExecFwk::FormJsInfo& formJsInfo);
     void ProcessFormUninstall(const int64_t formId);
     void OnDeathReceived();
     void SetFormUtils(const std::shared_ptr<FormUtils>& formUtils);
-    int32_t OnSurfaceCreate(const AppExecFwk::FormJsInfo& formInfo,
+    void OnSurfaceCreate(const AppExecFwk::FormJsInfo& formInfo,
         const std::shared_ptr<Rosen::RSSurfaceNode>& rsSurfaceNode, const AAFwk::Want& want);
     void OnFormSurfaceChange(float width, float height, float borderWidth = 0.0);
     void OnFormSurfaceDetach();
@@ -163,13 +146,8 @@ public:
         const std::string& cardName, AppExecFwk::FormInfo& formInfo);
     void ProcessRecycleForm();
     void ProcessEnableForm(bool enable);
-    void ProcessLockForm(bool lock);
 #endif
     void HandleCachedClickEvents();
-    std::mutex& GetRecycleMutex()
-    {
-        return this->recycleMutex_;
-    }
 
 private:
     void CreatePlatformResource(const WeakPtr<PipelineBase>& context, const RequestFormInfo& info);
@@ -186,7 +164,6 @@ private:
     void HandleSnapshotCallback(const uint32_t& delayTime);
     bool ParseAction(const std::string& action, const std::string& type, AAFwk::Want& want);
     void HandleEnableFormCallback(const bool enable);
-    void HandleLockFormCallback(bool lock);
     void SetGestureInnerFlag();
     void CheckWhetherSurfaceChangeFailed();
 
@@ -205,25 +182,17 @@ private:
     UnTrustFormCallback unTrustFormCallback_;
     SnapshotCallback snapshotCallback_;
     EnableFormCallback enableFormCallback_;
-    LockFormCallback lockFormCallback_;
-    UpdateFormDoneCallback updateFormDoneCallback_;
 
     State state_ { State::WAITINGFORSIZE };
     bool isDynamic_ = true;
-    std::mutex accessibilityChildTreeRegisterMutex_;
     std::mutex recycleMutex_;
     std::mutex surfaceChangeFailedRecordMutex_;
     RecycleStatus recycleStatus_ = RecycleStatus::RECOVERED;
     std::vector<std::shared_ptr<MMI::PointerEvent>> pointerEventCache_;
     NotifySurfaceChangeFailedRecord notifySurfaceChangeFailedRecord_;
-    std::shared_ptr<Rosen::RSUIContext> rsUIContext_ = nullptr;
-    bool isMultiInstanceEnable_ = false;
 #ifdef OHOS_STANDARD_SYSTEM
-    void OnRouterActionEvent(const std::string& action);
-    void OnCallActionEvent(const std::string& action);
     int64_t runningCardId_ = -1;
     std::string runningCompId_;
-    std::mutex wantCacheMutex_;
     AAFwk::Want wantCache_;
     bool hasCreated_ = false;
     std::shared_ptr<FormCallbackClient> formCallbackClient_;

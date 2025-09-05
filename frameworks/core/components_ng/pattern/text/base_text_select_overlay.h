@@ -23,7 +23,6 @@
 #include "base/memory/referenced.h"
 #include "core/components_ng/manager/select_content_overlay/select_overlay_callback.h"
 #include "core/components_ng/manager/select_content_overlay/select_overlay_holder.h"
-#include "core/components_ng/pattern/scrollable/scrollable_paint_property.h"
 #include "core/components_ng/pattern/select_overlay/select_overlay_property.h"
 #include "core/components_ng/pattern/text/text_base.h"
 #include "core/components_ng/pattern/text/text_menu_extension.h"
@@ -38,8 +37,6 @@ struct OverlayRequest {
     bool hideHandleLine = false;
     int32_t requestCode = 0;
 };
-
-enum class DragHandleIndex { NONE, FIRST, SECOND };
 
 class BaseTextSelectOverlay : public SelectOverlayHolder, public SelectOverlayCallback {
     DECLARE_ACE_TYPE(BaseTextSelectOverlay, SelectOverlayHolder, SelectOverlayCallback);
@@ -91,9 +88,9 @@ public:
     void HideMenu(bool noAnimation = false);
     void DisableMenu();
     void EnableMenu();
-    virtual void UpdateAllHandlesOffset();
-    virtual void UpdateFirstHandleOffset();
-    virtual void UpdateSecondHandleOffset();
+    void UpdateAllHandlesOffset();
+    void UpdateFirstHandleOffset();
+    void UpdateSecondHandleOffset();
     void UpdateViewPort();
     bool IsShowMouseMenu();
     bool IsCurrentMenuVisibile();
@@ -153,7 +150,7 @@ public:
     }
 
     // common virtual methods.
-    virtual RectF GetVisibleContentRect(bool isGlobal = false);
+    virtual RectF GetVisibleContentRect();
     virtual bool CheckHandleVisible(const RectF& paintRect) = 0;
 
     virtual std::vector<std::string> GetPasteMimeTypes()
@@ -191,8 +188,8 @@ public:
     bool IsPointInRect(const OffsetF& point, const OffsetF& leftBottom, const OffsetF& rightBottom,
         const OffsetF& rightTop, const OffsetF& leftTop);
 
-    void OnSelectionMenuOptionsUpdate(const NG::OnCreateMenuCallback&& onCreateMenuCallback,
-        const NG::OnMenuItemClickCallback&& onMenuItemClick, const NG::OnPrepareMenuCallback&& onPrepareMenuCallback);
+    void OnSelectionMenuOptionsUpdate(
+        const NG::OnCreateMenuCallback&& onCreateMenuCallback, const NG::OnMenuItemClickCallback&& onMenuItemClick);
 
     void OnCreateMenuCallbackUpdate(const NG::OnCreateMenuCallback&& onCreateMenuCallback)
     {
@@ -202,11 +199,6 @@ public:
     void OnMenuItemClickCallbackUpdate(const NG::OnMenuItemClickCallback&& onMenuItemClick)
     {
         onMenuItemClick_ = onMenuItemClick;
-    }
-
-    void OnPrepareMenuCallbackUpdate(const NG::OnPrepareMenuCallback&& onPrepareMenuCallback)
-    {
-        onPrepareMenuCallback_ = onPrepareMenuCallback;
     }
 
     float GetHandleDiameter();
@@ -230,12 +222,10 @@ public:
     void OnHandleMoveStart(const GestureEvent& event, bool isFirst) override
     {
         isHandleDragging_ = true;
-        dragHandleIndex_ = isFirst ? DragHandleIndex::FIRST : DragHandleIndex::SECOND;
     }
     void OnHandleMoveDone(const RectF& rect, bool isFirst) override
     {
         isHandleDragging_ = false;
-        dragHandleIndex_ = DragHandleIndex::NONE;
     }
     bool GetIsHandleDragging()
     {
@@ -243,34 +233,21 @@ public:
     }
     bool IsTouchAtHandle(const TouchEventInfo& info);
     bool IsClickAtHandle(const GestureEvent& info);
-    bool HasUnsupportedTransform(bool checkScale = false);
-    bool CheckUnsupportedTransformMatrix(const RefPtr<RenderContext> context, bool checkScale);
+    bool HasUnsupportedTransform();
     bool CheckSwitchToMode(HandleLevelMode mode) override;
 
     void OnUpdateOnCreateMenuCallback(SelectOverlayInfo& selectInfo)
     {
         selectInfo.onCreateCallback.onCreateMenuCallback = onCreateMenuCallback_;
         selectInfo.onCreateCallback.onMenuItemClick = onMenuItemClick_;
-        selectInfo.onCreateCallback.onPrepareMenuCallback = onPrepareMenuCallback_;
         auto textRange = [weak = GetHostTextBase()](int32_t& start, int32_t& end) {
             auto pattern = weak.Upgrade();
             CHECK_NULL_VOID(pattern);
             pattern->GetSelectIndex(start, end);
         };
         selectInfo.onCreateCallback.textRangeCallback = textRange;
-        if (onPrepareMenuCallback_) {
-            auto beforeOnPrepareMenu = [weak = WeakClaim(this)]() {
-                auto overlay = weak.Upgrade();
-                CHECK_NULL_VOID(overlay);
-                overlay->BeforeOnPrepareMenu();
-            };
-            selectInfo.onCreateCallback.beforeOnPrepareMenuCallback = beforeOnPrepareMenu;
-        } else {
-            selectInfo.onCreateCallback.beforeOnPrepareMenuCallback = nullptr;
-        }
     }
-    bool GetClipHandleViewPort(RectF& rect);
-    bool CalculateClippedRect(RectF& rect);
+
     void MarkOverlayDirty();
     void OnHandleMarkInfoChange(const std::shared_ptr<SelectOverlayInfo> info, SelectOverlayDirtyFlag flag) override;
     void UpdateHandleColor();
@@ -278,53 +255,16 @@ public:
     {
         return std::nullopt;
     }
-    void AddAvoidKeyboardCallback(bool isCustomKeyboard);
-    void RemoveAvoidKeyboardCallback();
 
     bool IsEnableContainerModal() override
     {
         return enableContainerModal_;
     }
-    bool IsHiddenHandle();
 
-    bool IsHandleVisible(bool isFirst);
     void SetMenuTranslateIsSupport(bool menuTranslateIsSupport)
     {
         menuTranslateIsSupport_ = menuTranslateIsSupport;
     }
-    void SetIsSupportMenuSearch(bool isSupportMenuSearch)
-    {
-        isSupportMenuSearch_ = isSupportMenuSearch;
-    }
-    void SetEnableSubWindowMenu(bool enableSubWindowMenu)
-    {
-        enableSubWindowMenu_ = enableSubWindowMenu;
-    }
-    void UpdateMenuOnWindowSizeChanged(WindowSizeChangeReason type);
-
-    bool GetIsHostNodeEnableSubWindowMenu() const override
-    {
-        return isHostNodeEnableSubWindowMenu_;
-    }
-
-    void SetIsHostNodeEnableSubWindowMenu(bool enable)
-    {
-        isHostNodeEnableSubWindowMenu_ = enable;
-    }
-
-    std::optional<SelectOverlayInfo> GetSelectOverlayInfos()
-    {
-        auto manager = GetManager<SelectContentOverlayManager>();
-        CHECK_NULL_RETURN(manager, std::optional<SelectOverlayInfo>());
-        return manager->GetSelectOverlayInfo();
-    }
-    virtual void BeforeOnPrepareMenu() {}
-    virtual bool ChangeSecondHandleHeight(const GestureEvent& event, bool isOverlayMode)
-    {
-        return false;
-    }
-    bool GetDragViewHandleRects(RectF& firstRect, RectF& secondRect);
-    void UpdateIsSingleHandle(bool isSingleHandle);
 
 protected:
     RectF MergeSelectedBoxes(
@@ -342,7 +282,8 @@ protected:
     RectF ConvertPaintInfoToRect(const SelectHandlePaintInfo& paintInfo);
     void SetTransformPaintInfo(SelectHandleInfo& handleInfo, const RectF& localHandleRect);
     bool CheckHandleCanPaintInHost(const RectF& firstRect, const RectF& secondRect);
-    virtual RectF GetHandleLocalPaintRect(DragHandleIndex dragHandleIndex);
+    virtual RectF GetFirstHandleLocalPaintRect();
+    virtual RectF GetSecondHandleLocalPaintRect();
     virtual void CalcHandleLevelMode(const RectF& firstLocalPaintRect, const RectF& secondLocalPaintRect);
     bool IsAncestorNodeStartAnimation(FrameNodeChangeInfoFlag flag);
     bool IsAncestorNodeGeometryChange(FrameNodeChangeInfoFlag flag);
@@ -362,40 +303,23 @@ protected:
     {
         originalMenuIsShow_ = IsCurrentMenuVisibile();
     }
-    virtual void UpdateMenuWhileAncestorNodeChanged(
-        bool shouldHideMenu, bool shouldShowMenu, FrameNodeChangeInfoFlag extraFlag);
+    virtual void UpdateMenuWhileAncestorNodeChanged(bool shouldHideMenu, bool shouldShowMenu);
+    bool GetClipHandleViewPort(RectF& rect);
+    bool CalculateClippedRect(RectF& rect);
     virtual void UpdateClipHandleViewPort(RectF& rect) {};
-    static bool GetFrameNodeContentRect(const RefPtr<FrameNode>& node, RectF& rect);
-    static bool GetScrollableClipContentRect(const RefPtr<FrameNode>& node, RectF& rect);
-    static std::pair<ContentClipMode, std::optional<ContentClip>> GetScrollableClipInfo(const RefPtr<FrameNode>& node);
+    bool GetFrameNodeContentRect(const RefPtr<FrameNode>& node, RectF& rect);
     virtual bool IsClipHandleWithViewPort()
     {
         return false;
     }
     void ApplySelectAreaWithKeyboard(RectF& selectArea);
-    bool IsHandleInParentSafeAreaPadding();
-    bool IsHandleInParentSafeAreaPadding(const RectF& firstRect, const RectF& secondRect);
-    bool CheckHandleIsInSafeAreaPadding(const RefPtr<FrameNode>& node, const RectF& handle);
     void CheckEnableContainerModal()
     {
         enableContainerModal_ = true;
     }
     bool IsNeedMenuTranslate();
     void HandleOnTranslate();
-    bool IsNeedMenuSearch();
-    void HandleOnSearch();
     virtual bool AllowTranslate()
-    {
-        return false;
-    }
-    virtual bool AllowSearch()
-    {
-        return false;
-    }
-    bool IsSupportMenuShare();
-    bool IsNeedMenuShare();
-    void HandleOnShare();
-    virtual bool AllowShare()
     {
         return false;
     }
@@ -404,9 +328,7 @@ protected:
     HandleLevelMode handleLevelMode_ = HandleLevelMode::OVERLAY;
     OnCreateMenuCallback onCreateMenuCallback_;
     OnMenuItemClickCallback onMenuItemClick_;
-    OnPrepareMenuCallback onPrepareMenuCallback_;
     bool isHandleMoving_ = false;
-    DragHandleIndex dragHandleIndex_ = DragHandleIndex::NONE;
     RectF ConvertWindowToScreenDomain(RectF rect);
     EdgeF ConvertWindowToScreenDomain(EdgeF edge);
     std::string GetTranslateParamRectStr(RectF rect, EdgeF rectLeftTop, EdgeF rectRightBottom);
@@ -419,8 +341,6 @@ private:
     bool IsPointsInRegion(const std::vector<PointF>& points, const RectF& regionRect);
     bool CheckAndUpdateHostGlobalPaintRect();
     bool CheckHasTransformMatrix(const RefPtr<RenderContext>& context);
-    bool IsEnableSelectionMenu();
-    bool NeedsProcessMenuOnWinChange();
     bool isHandleDragging_ = false;
     bool isSingleHandle_ = false;
     bool isShowPaste_ = false;
@@ -437,15 +357,6 @@ private:
     bool originalMenuIsShow_ = true;
     bool enableContainerModal_ = false;
     bool menuTranslateIsSupport_ = false;
-    bool isSupportMenuSearch_ = false;
-    bool enableSubWindowMenu_ = false;
-    /**
-     * Whether the host node supports show menu in subwindow.
-     * In certain scenarios, such as the autofill scenario:
-     * the menu window may conflict with the autofill window.
-     */
-    bool isHostNodeEnableSubWindowMenu_ = true;
-    bool isSuperFoldDisplayDevice_ = false;
 };
 
 } // namespace OHOS::Ace::NG

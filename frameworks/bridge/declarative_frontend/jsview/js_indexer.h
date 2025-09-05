@@ -20,22 +20,12 @@
 #include "bridge/declarative_frontend/jsview/js_container_base.h"
 
 namespace OHOS::Ace::Framework {
-struct IndexerTextStyle {
-    std::optional<Dimension> fontSize;
-    std::optional<FontWeight> fontWeight;
-    std::optional<std::vector<std::string>> fontFamily;
-    std::optional<FontStyle> fontStyle;
-    RefPtr<ResourceObject> fontSizeResObj;
-    RefPtr<ResourceObject> fontFamilyResObj;
-};
 class JSIndexer : public JSContainerBase {
 public:
     static void ParseIndexerSelectedObject(
         const JSCallbackInfo& info, const JSRef<JSVal>& changeEventVal, bool isMethodProp);
     static void JSBind(BindingTarget globalObj);
     static void Create(const JSCallbackInfo& args);
-    static void CreateArc(const JSCallbackInfo& args);
-    static void Create(const JSCallbackInfo& args, bool isArc);
     static void JsOnSelected(const JSCallbackInfo& args);
     static void SetColor(const JSCallbackInfo& args);
     static void SetSelectedColor(const JSCallbackInfo& args);
@@ -46,7 +36,9 @@ public:
     static void SetSelectedFont(const JSCallbackInfo& args);
     static void SetFont(const JSCallbackInfo& args);
     static void SetPopupFont(const JSCallbackInfo& args);
-    static void GetFontContent(const JSCallbackInfo& args, IndexerTextStyle& textStyle);
+    static void GetFontContent(const JSCallbackInfo& args, std::optional<Dimension>& fontSize,
+        std::optional<FontWeight>& fontWeight, std::optional<std::vector<std::string>>& fontFamily,
+        std::optional<FontStyle>& fontStyle);
     static void SetItemSize(const JSCallbackInfo& args);
     static void SetAlignStyle(const JSCallbackInfo& args);
     static void SetSelected(const JSCallbackInfo& args);

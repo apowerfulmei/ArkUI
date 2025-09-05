@@ -23,7 +23,6 @@
 #include "base/utils/type_definition.h"
 #include "core/components_ng/gestures/recognizers/multi_fingers_recognizer.h"
 #include "core/event/touch_event.h"
-#include "core/components_ng/event/event_constants.h"
 
 namespace OHOS::Ace::NG {
 
@@ -55,26 +54,6 @@ public:
 
     virtual RefPtr<GestureSnapshot> Dump() const override;
 
-    void SetDirection(SwipeDirection direction)
-    {
-        direction_ = direction;
-    }
-
-    void SetSpeed(double speed)
-    {
-        speed_ = speed;
-    }
-
-    SwipeDirection GetDirection() const
-    {
-        return direction_;
-    }
-
-    double GetSpeed() const
-    {
-        return speed_;
-    }
-
 private:
     void HandleTouchDownEvent(const TouchEvent& event) override;
     void HandleTouchUpEvent(const TouchEvent& event) override;
@@ -88,10 +67,8 @@ private:
 
     void OnResetStatus() override;
 
-    void SendCallbackMsg(const std::unique_ptr<GestureEventFunc>& callback, GestureCallbackType type);
-    void HandleReports(const GestureEvent& info, GestureCallbackType type) override;
+    void SendCallbackMsg(const std::unique_ptr<GestureEventFunc>& callback);
     GestureJudgeResult TriggerGestureJudgeCallback();
-    void UpdateGestureEventInfo(std::shared_ptr<SwipeGestureEvent>& info);
 
     bool CheckAngle(double angle);
 

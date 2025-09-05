@@ -191,10 +191,6 @@ void RosenRenderSurface::Disconnect() const
 void RosenRenderSurface::RegisterSurface() const
 {
     CHECK_NULL_VOID(producerSurface_);
-    const std::string usage = GetBufferUsage();
-    producerSurface_->SetBufferName(usage);
-    const std::string bufferTypeLeak = GetBufferTypeLeak();
-    producerSurface_->SetBufferTypeLeak(bufferTypeLeak);
     auto* surfaceUtils = SurfaceUtils::GetInstance();
     CHECK_NULL_VOID(surfaceUtils);
     auto ret = surfaceUtils->Add(producerSurface_->GetUniqueId(), producerSurface_);
@@ -340,6 +336,7 @@ void RosenRenderSurface::DrawBuffer(int32_t width, int32_t height)
         rosenRenderContext->SyncGeometryProperties(keyBoardAvoidRect);
         isNeedSyncGeometryProperties_ = false;
     }
+    rosenRenderContext->StartRecording();
     auto rsNode = rosenRenderContext->GetRSNode();
     CHECK_NULL_VOID(rsNode);
     rsNode->DrawOnNode(
@@ -364,6 +361,7 @@ void RosenRenderSurface::DrawBuffer(int32_t width, int32_t height)
             recordingCanvas->DrawSurfaceBuffer(info);
 #endif
         });
+    rosenRenderContext->StopRecordingIfNeeded();
 #endif
 }
 
@@ -374,12 +372,9 @@ bool RosenRenderSurface::CompareBufferSize(
     int32_t bufferWidth = surfaceNode->buffer_->GetSurfaceBufferWidth();
     int32_t bufferHeight = surfaceNode->buffer_->GetSurfaceBufferHeight();
     auto pipeline = AceType::DynamicCast<NG::PipelineContext>(PipelineBase::GetCurrentContext());
-    CHECK_NULL_RETURN(pipeline, true);
-    ACE_SCOPED_TRACE("Web CompareBufferSize (width %d, height %d, bufferWidth %d, bufferHeight %d)"
-                     " pipeline freeze status = %d",
-        width, height, bufferWidth, bufferHeight, pipeline->IsFreezeFlushMessage());
-    if (bufferWidth > SIZE_LIMIT || bufferHeight > SIZE_LIMIT ||
-        (abs(height - bufferHeight) < PERMITTED_DIFFERENCE && abs(width - bufferWidth) < PERMITTED_DIFFERENCE)) {
+
+    if (bufferWidth > SIZE_LIMIT || bufferHeight > SIZE_LIMIT
+        || (abs(height - bufferHeight) < PERMITTED_DIFFERENCE && abs(width - bufferWidth) < PERMITTED_DIFFERENCE)) {
         failTimes_ = 0;
     } else {
         failTimes_++;
@@ -432,11 +427,8 @@ void RosenRenderSurface::ConsumeWebBuffer()
             orgin_.SetX(stepStear * ADJUST_WEB_DRAW_LENGTH);
         }
     }
-    LOGD("ConsumeWebBuffer x : %{public}f, y : %{public}f, width : %{public}d, height : %{public}d", orgin_.GetX(),
-        orgin_.GetY(), bufferWidth, bufferHeight);
-    ACE_SCOPED_TRACE("RosenRenderSurface::ConsumeWebBuffer, bufferWidth %d, bufferHeight %d, orign_x %f, orign_y %f",
-        bufferWidth, bufferHeight, orgin_.GetX(), orgin_.GetY());
-
+    LOGD("ConsumeWebBuffer x : %{public}f, y : %{public}f, width : %{public}d, height : %{public}d",
+        orgin_.GetX(), orgin_.GetY(), bufferWidth, bufferHeight);
     std::shared_ptr<SurfaceBufferNode> surfaceNode = nullptr;
     {
         std::lock_guard<std::mutex> lock(surfaceNodeMutex_);
@@ -584,11 +576,8 @@ void RosenRenderSurface::DrawBufferForXComponent(
     ACE_SCOPED_TRACE("DrawXComponentBuffer[id:%u][sendTimes:%d][uid:%" PRIu64 "]", surfaceNode->bufferId_,
         surfaceNode->sendTimes_, uid);
     auto& recordingCanvas = static_cast<RSRecordingCanvas&>(canvas);
-    auto transform = surfaceNode->buffer_ == nullptr
-        ? GraphicTransformType::GRAPHIC_ROTATE_NONE
-        : surfaceNode->buffer_->GetSurfaceBufferTransform();
     Rosen::DrawingSurfaceBufferInfo info { surfaceNode->buffer_, offsetX, offsetY, static_cast<int32_t>(width),
-        static_cast<int32_t>(height), getpid(), GetUniqueIdNum(), surfaceNode->acquireFence_, transform };
+        static_cast<int32_t>(height), getpid(), GetUniqueIdNum(), surfaceNode->acquireFence_ };
     recordingCanvas.DrawSurfaceBuffer(info);
 #endif
 }
@@ -617,8 +606,7 @@ void RosenRenderSurface::RegisterBufferCallback()
 #endif
 }
 
-#ifdef OHOS_PLATFORM
-void RosenRenderSurface::ReleaseSurfaceBufferById(uint32_t bufferId, sptr<SyncFence> fence)
+void RosenRenderSurface::ReleaseSurfaceBufferById(uint32_t bufferId)
 {
     std::lock_guard<std::mutex> lock(surfaceNodeMutex_);
     auto iter = buffersToDraw_.begin();
@@ -632,7 +620,6 @@ void RosenRenderSurface::ReleaseSurfaceBufferById(uint32_t bufferId, sptr<SyncFe
             ACE_SCOPED_TRACE(
                 "ReleaseXComponentBuffer[id:%u][sendTimes:%d][isLast:%d]", bufferId, surfaceNode->sendTimes_, isLast);
             if (--surfaceNode->sendTimes_ <= 0 && !isLast) {
-                surfaceNode->releaseFence_ = fence;
                 consumerSurface_->ReleaseBuffer(surfaceNode->buffer_, surfaceNode->releaseFence_);
                 buffersToDraw_.erase(iter);
             }
@@ -642,7 +629,6 @@ void RosenRenderSurface::ReleaseSurfaceBufferById(uint32_t bufferId, sptr<SyncFe
         }
     }
 }
-#endif
 
 void RosenRenderSurface::SetIsUniRender(bool isUniRender)
 {
@@ -750,20 +736,16 @@ void DrawBufferListener::OnBufferAvailable()
 #ifdef OHOS_PLATFORM
 void XComponentSurfaceBufferCallback::OnFinish(const Rosen::FinishCallbackRet& ret)
 {
-    ACE_SCOPED_TRACE("SurfaceBufferCallback::OnFinish[uid:%" PRIu64 "][size:%zu] isUniRender:[%d]", ret.uid,
-        ret.surfaceBufferIds.size(), ret.isUniRender);
+    ACE_SCOPED_TRACE(
+        "SurfaceBufferCallback::OnFinish[uid:%" PRIu64 "][size:%zu]", ret.uid, ret.surfaceBufferIds.size());
     auto renderSurface = renderSurface_.Upgrade();
     CHECK_NULL_VOID(renderSurface);
     if (ret.uid != renderSurface->GetUniqueIdNum()) {
         return;
     }
     if (ret.isUniRender) {
-        auto surfaceBufferIds = ret.surfaceBufferIds;
-        auto releaseFences = ret.releaseFences;
-        auto idIter = surfaceBufferIds.begin();
-        auto fenceIter = releaseFences.begin();
-        for (; idIter != surfaceBufferIds.end() && fenceIter != releaseFences.end(); ++idIter, ++fenceIter) {
-            renderSurface->ReleaseSurfaceBufferById(*idIter, *fenceIter);
+        for (const auto& bufferId : ret.surfaceBufferIds) {
+            renderSurface->ReleaseSurfaceBufferById(bufferId);
         }
     } else {
         renderSurface->ReleaseSurfaceBufferForRT(ret);

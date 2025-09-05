@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -22,7 +22,6 @@
 #include "core/components/common/properties/color.h"
 #include "core/components/common/properties/text_style.h"
 #include "core/components/text_clock/text_clock_controller.h"
-#include "core/common/resource/resource_object.h"
 
 namespace OHOS::Ace {
 class ACE_FORCE_EXPORT TextClockModel {
@@ -36,7 +35,6 @@ public:
     virtual void SetOnDateChange(std::function<void(const std::string)>&& onChange) = 0;
     virtual void SetFontSize(const Dimension& value) = 0;
     virtual void SetTextColor(const Color& value) = 0;
-    virtual void ResetTextColor() = 0;
     virtual void SetItalicFontStyle(Ace::FontStyle value) = 0;
     virtual void SetFontWeight(FontWeight value) = 0;
     virtual void SetFontFamily(const std::vector<std::string>& value) = 0;
@@ -44,13 +42,7 @@ public:
     virtual void SetFontFeature(const std::list<std::pair<std::string, int32_t>>& value) = 0;
     virtual void InitFontDefault(const TextStyle& textStyle) = 0;
     virtual void SetDateTimeOptions(const ZeroPrefixType& hourType) {};
-    virtual void CreateWithTextColorResourceObj(const RefPtr<ResourceObject>& resObj) = 0;
-    virtual void CreateWithFontSizeResourceObj(const RefPtr<ResourceObject>& resObj) = 0;
-    virtual void CreateWithFontFamilyResourceObj(const RefPtr<ResourceObject>& resObj) = 0;
-    virtual void CreateWithFontWeightResourceObj(const RefPtr<ResourceObject>& resObj) = 0;
-    virtual void CreateWithFormatResourceObj(const RefPtr<ResourceObject>& resObj) = 0;
-    virtual void RemoveResObjByKey(const std::string& key) = 0;
-
+    
 private:
     static std::unique_ptr<TextClockModel> instance_;
     static std::mutex mutex_;

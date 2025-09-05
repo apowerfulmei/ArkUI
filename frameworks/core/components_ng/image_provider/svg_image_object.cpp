@@ -15,17 +15,17 @@
 
 #include "core/components_ng/image_provider/svg_image_object.h"
 
-#include "core/components_ng/image_provider/drawing_image_data.h"
+#include "core/components_ng/image_provider/adapter/rosen/drawing_image_data.h"
 #include "core/components_ng/image_provider/image_loading_context.h"
+#include "core/components_ng/image_provider/image_utils.h"
 #include "core/components_ng/render/adapter/svg_canvas_image.h"
+#include "core/components_ng/render/canvas_image.h"
 
 namespace OHOS::Ace::NG {
-RefPtr<SvgImageObject> SvgImageObject::Create(
-    const ImageSourceInfo& src, ImageErrorInfo& errorInfo, const RefPtr<ImageData>& data)
+RefPtr<SvgImageObject> SvgImageObject::Create(const ImageSourceInfo& src, const RefPtr<ImageData>& data)
 {
     auto obj = AceType::MakeRefPtr<SvgImageObject>(src, SizeF());
     if (!obj->MakeSvgDom(data, src)) {
-        errorInfo = { ImageErrorCode::BUILD_IMAGE_MAKE_SVG_DOM_FAILED, "make svg dom failed." };
         return nullptr;
     }
     return obj;
@@ -42,12 +42,10 @@ std::string SvgImageObject::GetDumpInfo()
     return svgDomBase_->GetDumpInfo();
 }
 
-void SvgImageObject::MakeCanvasImage(
-    const WeakPtr<ImageLoadingContext>& ctxWp, const SizeF& /*resizeTarget*/, bool /*forceResize*/, bool /*syncLoad*/)
+void SvgImageObject::MakeCanvasImage(const RefPtr<ImageLoadingContext>& ctx, const SizeF& /*resizeTarget*/,
+    bool /*forceResize*/, bool /*syncLoad*/, bool /*loadInVipChannel*/)
 {
     CHECK_NULL_VOID(GetSVGDom());
-    auto ctx = ctxWp.Upgrade();
-    CHECK_NULL_VOID(ctx);
     // just set svgDom to canvasImage
     auto canvasImage = MakeRefPtr<SvgCanvasImage>(GetSVGDom());
     ctx->SuccessCallback(canvasImage);
@@ -62,7 +60,9 @@ bool SvgImageObject::MakeSvgDom(const RefPtr<ImageData>& data, const ImageSource
     CHECK_NULL_RETURN(svgDomBase_, false);
     imageSize_ = svgDomBase_->GetContainerSize();
     if (imageSize_.IsNonPositive()) {
-        TAG_LOGI(AceLogTag::ACE_IMAGE, "No intrinsic size for %{private}s, size required.", src.ToString().c_str());
+        TAG_LOGI(AceLogTag::ACE_IMAGE,
+            "[Engine Log] [Image] %{private}s doesn't have an intrinsic size. The developer must set a size for it.",
+            GetSourceInfo().ToString().c_str());
     }
     return true;
 }

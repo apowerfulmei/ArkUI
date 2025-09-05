@@ -21,9 +21,12 @@
 #include "base/image/image_source.h"
 #include "base/log/dump_log.h"
 #include "base/thread/background_task_executor.h"
+#include "base/utils/utils.h"
 #include "core/image/image_loader.h"
 
-#include "core/components_ng/image_provider/drawing_image_data.h"
+#ifdef USE_ROSEN_DRAWING
+#include "core/components_ng/image_provider/adapter/rosen/drawing_image_data.h"
+#endif
 
 namespace OHOS::Ace {
 ImageFileCache::ImageFileCache() = default;
@@ -35,9 +38,7 @@ const std::string CONVERT_ASTC_FORMAT = "image/astc/4*4";
 const std::string SLASH = "/";
 const std::string BACKSLASH = "\\";
 const mode_t CHOWN_RW_UG = 0660;
-const mode_t DIRECTORY_PERMISSION = 0700;
 const std::string SVG_FORMAT = "image/svg+xml";
-const std::string IMAGE_FILE_CACHE_DIR = "image_file_cache";
 
 bool EndsWith(const std::string& str, const std::string& substr)
 {
@@ -66,21 +67,7 @@ void ImageFileCache::SetImageCacheFilePath(const std::string& cacheFilePath)
 {
     std::unique_lock<std::shared_mutex> lock(cacheFilePathMutex_);
     if (cacheFilePath_.empty()) {
-        cacheFilePath_ = cacheFilePath + SLASH + IMAGE_FILE_CACHE_DIR;
-#ifndef WINDOWS_PLATFORM
-        if (mkdir(cacheFilePath_.c_str(), DIRECTORY_PERMISSION)) {
-#else
-        if (mkdir(cacheFilePath_.c_str())) {
-#endif
-            TAG_LOGW(AceLogTag::ACE_IMAGE, "mkdir cache file path failed.");
-            return;
-        }
-#ifndef WINDOWS_PLATFORM
-        if (chmod(cacheFilePath_.c_str(), DIRECTORY_PERMISSION) != 0) {
-            TAG_LOGW(AceLogTag::ACE_IMAGE, "mkdir cache file path chmod failed.");
-            return;
-        }
-#endif
+        cacheFilePath_ = cacheFilePath;
     }
 }
 
@@ -127,7 +114,7 @@ bool ImageFileCache::WriteFile(const std::string& url, const void* const data, s
     }
     outFile.write(reinterpret_cast<const char*>(data), size);
     TAG_LOGI(
-        AceLogTag::ACE_IMAGE, "WriteImage:%{private}s %{private}s", url.c_str(), writeFilePath.c_str());
+        AceLogTag::ACE_IMAGE, "write image cache: %{private}s %{private}s", url.c_str(), writeFilePath.c_str());
 #ifndef WINDOWS_PLATFORM
     if (chmod(writeFilePath.c_str(), CHOWN_RW_UG) != 0) {
         TAG_LOGW(AceLogTag::ACE_IMAGE, "write image cache chmod failed: %{private}s %{private}s",
@@ -167,10 +154,13 @@ RefPtr<NG::ImageData> ImageFileCache::GetDataFromCacheFile(const std::string& ur
     if (filePath == "") {
         return nullptr;
     }
-    NG::ImageLoadResultInfo errorInfo;
     auto cacheFileLoader = AceType::MakeRefPtr<FileImageLoader>();
-    auto rsData = cacheFileLoader->LoadImageData(ImageSourceInfo(std::string("file:/").append(filePath)), errorInfo);
+    auto rsData = cacheFileLoader->LoadImageData(ImageSourceInfo(std::string("file:/").append(filePath)));
+#ifndef USE_ROSEN_DRAWING
+    return NG::ImageData::MakeFromDataWrapper(&rsData);
+#else
     return AceType::MakeRefPtr<NG::DrawingImageData>(rsData);
+#endif
 }
 
 void ImageFileCache::SaveCacheInner(const std::string& cacheKey, const std::string& suffix, size_t cacheSize,
@@ -278,12 +268,12 @@ void ImageFileCache::ConvertToAstcAndWriteToFile(const std::string& fileCacheKey
     ACE_FUNCTION_TRACE();
     RefPtr<ImageSource> imageSource = ImageSource::Create(filePath);
     if (!imageSource || imageSource->GetFrameCount() != 1) {
-        TAG_LOGI(AceLogTag::ACE_IMAGE, "Image frame count is not 1, will not convert to astc. %{private}s",
+        TAG_LOGI(AceLogTag::ACE_IMAGE, "Image frame count is not 1, will not convert to astc. %{public}s",
             fileCacheKey.c_str());
         return;
     }
     if (imageSource->GetEncodedFormat() == SVG_FORMAT) {
-        TAG_LOGI(AceLogTag::ACE_IMAGE, "Image is svg, will not convert to astc. %{private}s",
+        TAG_LOGI(AceLogTag::ACE_IMAGE, "Image is svg, will not convert to astc. %{public}s",
             fileCacheKey.c_str());
         return;
     }
@@ -291,10 +281,9 @@ void ImageFileCache::ConvertToAstcAndWriteToFile(const std::string& fileCacheKey
     RefPtr<ImagePacker> imagePacker = ImagePacker::Create();
     PackOption option;
     option.format = CONVERT_ASTC_FORMAT;
-    uint32_t errorCode = 0;
-    auto pixelMap = imageSource->CreatePixelMap({ -1, -1 }, errorCode);
+    auto pixelMap = imageSource->CreatePixelMap({-1, -1});
     if (pixelMap == nullptr) {
-        TAG_LOGW(AceLogTag::ACE_IMAGE, "Get pixel map failed, will not convert to astc. %{private}s",
+        TAG_LOGW(AceLogTag::ACE_IMAGE, "Get pixel map failed, will not convert to astc. %{public}s",
             fileCacheKey.c_str());
         return;
     }
@@ -305,12 +294,12 @@ void ImageFileCache::ConvertToAstcAndWriteToFile(const std::string& fileCacheKey
     imagePacker->AddImage(*pixelMap);
     int64_t packedSize = 0;
     if (imagePacker->FinalizePacking(packedSize)) {
-        TAG_LOGW(AceLogTag::ACE_IMAGE, "convert to astc failed. %{private}s", fileCacheKey.c_str());
+        TAG_LOGW(AceLogTag::ACE_IMAGE, "convert to astc failed. %{public}s", fileCacheKey.c_str());
         return;
     }
 #if !defined(WINDOWS_PLATFORM) && !defined(ACE_UNITTEST)
     if (chmod(astcFilePath.c_str(), CHOWN_RW_UG) != 0) {
-        TAG_LOGW(AceLogTag::ACE_IMAGE, "convert to astc chmod failed: %{private}s %{private}s",
+        TAG_LOGW(AceLogTag::ACE_IMAGE, "convert to astc chmod failed: %{public}s %{private}s",
             url.c_str(), astcFilePath.c_str());
     }
 #endif
@@ -327,7 +316,7 @@ void ImageFileCache::ConvertToAstcAndWriteToFile(const std::string& fileCacheKey
     }
     // remove the old file before convert
     ClearCacheFile(removeVector);
-    TAG_LOGI(AceLogTag::ACE_IMAGE, "write astc cache: %{private}s %{private}s", url.c_str(), astcFilePath.c_str());
+    TAG_LOGI(AceLogTag::ACE_IMAGE, "write image astc cache: %{public}s %{private}s", url.c_str(), astcFilePath.c_str());
 }
 
 void ImageFileCache::ClearCacheFile(const std::vector<std::string>& removeFiles)

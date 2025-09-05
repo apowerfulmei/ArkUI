@@ -67,8 +67,7 @@ void RosenRenderList::PaintChild(const RefPtr<RenderNode>& child, RenderContext&
 
 void RosenRenderList::PaintStickyItem(RenderContext& context, const Offset& offset)
 {
-    bool watchMode = SystemProperties::GetDeviceType() == DeviceType::WATCH ||
-                     SystemProperties::GetDeviceType() == DeviceType::WEARABLE;
+    bool watchMode = SystemProperties::GetDeviceType() == DeviceType::WATCH;
     RefPtr<RenderNode> stickyItem = GetStickyItem();
     if (stickyItem) {
         RefPtr<RenderListItem> listItem = RenderListItem::GetRenderListItem(stickyItem);

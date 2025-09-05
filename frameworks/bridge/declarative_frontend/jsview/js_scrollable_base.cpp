@@ -65,10 +65,7 @@ void JSScrollableBase::JsOnWillScroll(const JSCallbackInfo& args)
 
 void JSScrollableBase::JsOnDidScroll(const JSCallbackInfo& args)
 {
-    if (args.Length() <= 0) {
-        return;
-    }
-    if (args[0]->IsFunction()) {
+    if (args.Length() > 0 && args[0]->IsFunction()) {
         auto onScroll = [execCtx = args.GetExecutionContext(), func = JSRef<JSFunc>::Cast(args[0])](
                             const CalcDimension& scrollOffset, const ScrollState& scrollState) {
             JAVASCRIPT_EXECUTION_SCOPE_WITH_CHECK(execCtx);
@@ -76,8 +73,6 @@ void JSScrollableBase::JsOnDidScroll(const JSCallbackInfo& args)
             func->Call(JSRef<JSObject>(), params.size(), params.data());
         };
         NG::ScrollableModelNG::SetOnDidScroll(std::move(onScroll));
-    } else {
-        NG::ScrollableModelNG::SetOnDidScroll(nullptr);
     }
 }
 
@@ -98,24 +93,6 @@ void JSScrollableBase::SetFadingEdge(const JSCallbackInfo& info)
     NG::ScrollableModelNG::SetFadingEdge(fadingEdge, fadingEdgeLength);
 }
 
-void JSScrollableBase::SetDigitalCrownSensitivity(const JSCallbackInfo& info)
-{
-#ifdef SUPPORT_DIGITAL_CROWN
-    if (info.Length() < 1 || info[0]->IsNull() || !info[0]->IsNumber()) {
-        NG::ScrollableModelNG::SetDigitalCrownSensitivity(
-            static_cast<CrownSensitivity>(static_cast<int32_t>(CrownSensitivity::MEDIUM)));
-        return;
-    }
-    auto sensitivity = info[0]->ToNumber<int32_t>();
-    if (sensitivity < 0 || sensitivity > static_cast<int32_t>(CrownSensitivity::HIGH)) {
-        NG::ScrollableModelNG::SetDigitalCrownSensitivity(
-            static_cast<CrownSensitivity>(static_cast<int32_t>(CrownSensitivity::MEDIUM)));
-        return;
-    }
-    NG::ScrollableModelNG::SetDigitalCrownSensitivity(static_cast<CrownSensitivity>(sensitivity));
-#endif
-}
-
 void JSScrollableBase::JSBind(BindingTarget globalObj)
 {
     MethodOptions opt = MethodOptions::NONE;
@@ -125,8 +102,6 @@ void JSScrollableBase::JSBind(BindingTarget globalObj)
     JSClass<JSScrollableBase>::StaticMethod("onDidScroll", &JSScrollableBase::JsOnDidScroll);
     JSClass<JSScrollableBase>::StaticMethod("fadingEdge", &JSScrollableBase::SetFadingEdge);
     JSClass<JSScrollableBase>::StaticMethod("clipContent", &JSScrollableBase::JSClipContent);
-    JSClass<JSScrollableBase>::StaticMethod("digitalCrownSensitivity", &JSScrollableBase::SetDigitalCrownSensitivity);
-    JSClass<JSScrollableBase>::StaticMethod("scrollBarMargin", &JSScrollableBase::SetScrollBarMargin);
     JSClass<JSScrollableBase>::StaticMethod("backToTop", &JSScrollableBase::JSBackToTop);
     JSClass<JSScrollableBase>::InheritAndBind<JSContainerBase>(globalObj);
 }
@@ -154,48 +129,8 @@ void JSScrollableBase::JSClipContent(const JSCallbackInfo& info)
     NG::ScrollableModelNG::SetContentClip(NG::ContentClipMode::DEFAULT, nullptr);
 }
 
-void JSScrollableBase::SetScrollBarMargin(const JSCallbackInfo& info)
+void JSScrollableBase::JSBackToTop(bool backToTop)
 {
-    if (info.Length() < 1) {
-        return;
-    }
-    ScrollBarMargin scrollBarMargin;
-    if (!info[0]->IsObject()) {
-        NG::ScrollableModelNG::SetScrollBarMargin(scrollBarMargin);
-        return;
-    }
-    JSRef<JSObject> obj = JSRef<JSObject>::Cast(info[0]);
-    CalcDimension start;
-    CalcDimension end;
-    auto startObj = obj->GetProperty("start");
-    if (!(startObj->IsNull() || startObj->IsUndefined() || !startObj->IsObject())) {
-        if (JSViewAbstract::ParseJsLengthMetricsVp(startObj, start)) {
-            if (GreatOrEqual(start.Value(), 0.0)) {
-                scrollBarMargin.start_ = start;
-            }
-        }
-    }
-    auto endObj = obj->GetProperty("end");
-    if (!(endObj->IsNull() || endObj->IsUndefined() || !endObj->IsObject())) {
-        if (JSViewAbstract::ParseJsLengthMetricsVp(endObj, end)) {
-            if (GreatOrEqual(end.Value(), 0.0)) {
-                scrollBarMargin.end_ = end;
-            }
-        }
-    }
-
-    NG::ScrollableModelNG::SetScrollBarMargin(scrollBarMargin);
-}
-
-void JSScrollableBase::JSBackToTop(const JSCallbackInfo& info)
-{
-    if (info.Length() < 1) {
-        return;
-    }
-    if (info[0]->IsBoolean()) {
-        NG::ScrollableModelNG::SetBackToTop(info[0]->ToBoolean());
-    } else {
-        NG::ScrollableModelNG::ResetBackToTop();
-    }
+    NG::ScrollableModelNG::SetBackToTop(backToTop);
 }
 } // namespace OHOS::Ace::Framework

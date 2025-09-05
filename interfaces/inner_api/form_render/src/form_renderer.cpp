@@ -15,9 +15,12 @@
 
 #include "form_renderer.h"
 
-#include "form_mgr_errors.h"
+#include "configuration.h"
+#include "form_constants.h"
 #include "form_renderer_hilog.h"
-#include "form_event_report.h"
+#include "event_handler.h"
+#include "refbase.h"
+
 #include "base/utils/utils.h"
 
 namespace OHOS {
@@ -69,24 +72,12 @@ void FormRenderer::PreInitUIContent(const OHOS::AAFwk::Want& want, const OHOS::A
     if (!backgroundColor_.empty()) {
         uiContent_->SetFormBackgroundColor(backgroundColor_);
     }
-    if (!uiContent_->GetFormRootNode()) {
-        HILOG_ERROR("PreInitUIContent failed to PreInitializeForm, rsSurfaceNode is null");
-        AppExecFwk::FormEventReport::SendFormFailedEvent(AppExecFwk::FormEventName::FORM_NODE_ERROR,
-            formJsInfo.formId,
-            formJsInfo.bundleName,
-            formJsInfo.formName,
-            static_cast<int32_t>(AppExecFwk::AddFormFailedErrorType::UI_CONTENT_INIT_FAILED),
-            0);
-    }
 }
 
 void FormRenderer::RunFormPageInner(const OHOS::AAFwk::Want& want, const OHOS::AppExecFwk::FormJsInfo& formJsInfo)
 {
     if (renderingMode_ == AppExecFwk::Constants::RenderingMode::SINGLE_COLOR) {
         uiContent_->SetFormRenderingMode(static_cast<int8_t>(renderingMode_));
-    }
-    if (enableBlurBackground_) {
-        uiContent_->SetFormEnableBlurBackground(enableBlurBackground_);
     }
     uiContent_->RunFormPage();
     backgroundColor_ = want.GetStringParam(OHOS::AppExecFwk::Constants::PARAM_FORM_TRANSPARENCY_KEY);
@@ -120,12 +111,13 @@ void FormRenderer::RunFormPageInner(const OHOS::AAFwk::Want& want, const OHOS::A
         uiContent_->SetFormLinkInfoUpdateHandler(formLinkInfoUpdateHandler);
     }
 
-    auto surfaceNode = GetSurfaceNode();
-    if (!surfaceNode) {
-        HILOG_ERROR("rsSurfaceNode is nullptr.");
+    auto rsSurfaceNode = uiContent_->GetFormRootNode();
+    if (rsSurfaceNode == nullptr) {
         return;
     }
-    if (renderingMode_ == AppExecFwk::Constants::RenderingMode::SINGLE_COLOR || enableBlurBackground_) {
+    rsSurfaceNode->SetBounds(round(borderWidth_), round(borderWidth_), round(width_ - borderWidth_ * DOUBLE),
+        round(height_ - borderWidth_ * DOUBLE));
+    if (renderingMode_ == AppExecFwk::Constants::RenderingMode::SINGLE_COLOR) {
         HILOG_INFO("InitUIContent SetFormBackgroundColor #00FFFFFF");
         uiContent_->SetFormBackgroundColor(TRANSPARENT_COLOR);
     }
@@ -148,18 +140,16 @@ void FormRenderer::ParseWant(const OHOS::AAFwk::Want& want)
     proxy_ = want.GetRemoteObject(FORM_RENDERER_PROCESS_ON_ADD_SURFACE);
     renderingMode_ = (AppExecFwk::Constants::RenderingMode)want.GetIntParam(
         OHOS::AppExecFwk::Constants::PARAM_FORM_RENDERINGMODE_KEY, 0);
-    enableBlurBackground_ = want.GetBoolParam(OHOS::AppExecFwk::Constants::PARAM_FORM_ENABLE_BLUR_BACKGROUND_KEY,
-        false);
     borderWidth_ = want.GetFloatParam(OHOS::AppExecFwk::Constants::PARAM_FORM_BORDER_WIDTH_KEY, 0.0f);
     fontScaleFollowSystem_ = want.GetBoolParam(OHOS::AppExecFwk::Constants::PARAM_FONT_FOLLOW_SYSTEM_KEY, true);
     obscurationMode_ = want.GetBoolParam(OHOS::AppExecFwk::Constants::PARAM_FORM_OBSCURED_KEY, false);
 }
 
-int32_t FormRenderer::AddForm(const OHOS::AAFwk::Want& want, const OHOS::AppExecFwk::FormJsInfo& formJsInfo)
+void FormRenderer::AddForm(const OHOS::AAFwk::Want& want, const OHOS::AppExecFwk::FormJsInfo& formJsInfo)
 {
     if (uiContent_ == nullptr) {
         HILOG_ERROR("uiContent is null!");
-        return ERR_APPEXECFWK_FORM_FORM_NODE_RELEASED;
+        return;
     }
     formRendererDispatcherImpl_ = new FormRendererDispatcherImpl(uiContent_, shared_from_this(), eventHandler_);
     ParseWant(want);
@@ -169,7 +159,7 @@ int32_t FormRenderer::AddForm(const OHOS::AAFwk::Want& want, const OHOS::AppExec
         std::string statusData = want.GetStringParam(OHOS::AppExecFwk::Constants::FORM_STATUS_DATA);
         RecoverForm(statusData);
     }
-    return OnSurfaceCreate(formJsInfo, want.GetBoolParam(
+    OnSurfaceCreate(formJsInfo, want.GetBoolParam(
         OHOS::AppExecFwk::Constants::FORM_IS_RECOVER_FORM_TO_HANDLE_CLICK_EVENT, false));
 }
 
@@ -184,11 +174,11 @@ void FormRenderer::PreInitAddForm(const OHOS::AAFwk::Want& want, const OHOS::App
     PreInitUIContent(want, formJsInfo);
 }
 
-int32_t FormRenderer::RunFormPage(const OHOS::AAFwk::Want& want, const OHOS::AppExecFwk::FormJsInfo& formJsInfo)
+void FormRenderer::RunFormPage(const OHOS::AAFwk::Want& want, const OHOS::AppExecFwk::FormJsInfo& formJsInfo)
 {
     if (uiContent_ == nullptr) {
         HILOG_ERROR("uiContent is null!");
-        return ERR_APPEXECFWK_FORM_FORM_NODE_RELEASED;
+        return;
     }
     ParseWant(want);
     RunFormPageInner(want, formJsInfo);
@@ -197,7 +187,7 @@ int32_t FormRenderer::RunFormPage(const OHOS::AAFwk::Want& want, const OHOS::App
         std::string statusData = want.GetStringParam(OHOS::AppExecFwk::Constants::FORM_STATUS_DATA);
         RecoverForm(statusData);
     }
-    return OnSurfaceCreate(formJsInfo, want.GetBoolParam(
+    OnSurfaceCreate(formJsInfo, want.GetBoolParam(
         OHOS::AppExecFwk::Constants::FORM_IS_RECOVER_FORM_TO_HANDLE_CLICK_EVENT, false));
 }
 
@@ -248,36 +238,22 @@ void FormRenderer::UpdateForm(const OHOS::AppExecFwk::FormJsInfo& formJsInfo)
         formJsInfo.imageDataMap.size = %{public}zu.",
         formJsInfo.formData.size(),
         formJsInfo.imageDataMap.size());
-    if (!formRendererDelegate_) {
-        HILOG_ERROR("form renderer delegate is null!");
-        return;
-    }
-    formRendererDelegate_->OnUpdateFormDone(formJsInfo.formId);
-}
-
-void FormRenderer::RemoveFormDeathRecipient()
-{
-    if (!formRendererDelegate_) {
-        return;
-    }
-    auto renderDelegate = formRendererDelegate_->AsObject();
-    if (renderDelegate != nullptr) {
-        renderDelegate->RemoveDeathRecipient(renderDelegateDeathRecipient_);
-    }
 }
 
 void FormRenderer::Destroy()
 {
     HILOG_INFO("Destroy FormRenderer start.");
     if (formRendererDelegate_ != nullptr) {
-        auto surfaceNode = GetSurfaceNode();
-        if (surfaceNode) {
-            HILOG_INFO("Form OnSurfaceRelease, id: %{public}" PRIu64, surfaceNode->GetId());
-            formRendererDelegate_->OnSurfaceRelease(surfaceNode->GetId());
+        auto rsSurfaceNode = uiContent_->GetFormRootNode();
+        if (rsSurfaceNode != nullptr) {
+            HILOG_INFO("Form OnSurfaceRelease!");
+            formRendererDelegate_->OnSurfaceRelease(rsSurfaceNode->GetId());
         }
     }
 
-    RemoveFormDeathRecipient();
+    if (formRendererDelegate_ != nullptr && formRendererDelegate_->AsObject() != nullptr) {
+        formRendererDelegate_->AsObject()->RemoveDeathRecipient(renderDelegateDeathRecipient_);
+    }
     renderDelegateDeathRecipient_ = nullptr;
     formRendererDelegate_ = nullptr;
     formRendererDispatcherImpl_ = nullptr;
@@ -296,6 +272,11 @@ void FormRenderer::UpdateFormSize(float width, float height, float borderWidth)
         HILOG_ERROR("uiContent_ is null");
         return;
     }
+    auto rsSurfaceNode = uiContent_->GetFormRootNode();
+    if (rsSurfaceNode == nullptr) {
+        HILOG_ERROR("rsSurfaceNode is nullptr.");
+        return;
+    }
     float resizedWidth = width - borderWidth * DOUBLE;
     float resizedHeight = height - borderWidth * DOUBLE;
     if (!NearEqual(width, width_) || !NearEqual(height, height_) || !NearEqual(borderWidth, lastBorderWidth_)) {
@@ -306,7 +287,7 @@ void FormRenderer::UpdateFormSize(float width, float height, float borderWidth)
         uiContent_->SetFormHeight(resizedHeight);
         lastBorderWidth_ = borderWidth_;
         std::shared_ptr<EventHandler> eventHandler = eventHandler_.lock();
-        HILOG_INFO("UpdateFormSize after set uiContent, width: %{public}f, height: %{public}f", width, height);
+        rsSurfaceNode->SetBounds(borderWidth_, borderWidth_, resizedWidth, resizedHeight);
         if (!eventHandler) {
             HILOG_ERROR("eventHandler is null");
             return;
@@ -334,90 +315,61 @@ void FormRenderer::OnSurfaceChange(float width, float height, float borderWidth)
     borderWidth_ = borderWidth;
 }
 
-int32_t FormRenderer::OnSurfaceCreate(const OHOS::AppExecFwk::FormJsInfo& formJsInfo,
+void FormRenderer::OnSurfaceCreate(const OHOS::AppExecFwk::FormJsInfo& formJsInfo,
     bool isRecoverFormToHandleClickEvent)
 {
     if (!formRendererDispatcherImpl_) {
         HILOG_ERROR("form renderer dispatcher is null!");
-        return ERR_APPEXECFWK_FORM_FORM_NODE_RELEASED;
+        return;
     }
     if (!formRendererDelegate_) {
         HILOG_ERROR("form renderer delegate is null!");
-        return ERR_APPEXECFWK_FORM_FORM_NODE_RELEASED;
+        return;
     }
     OHOS::AAFwk::Want newWant;
     newWant.SetParam(FORM_RENDERER_DISPATCHER, formRendererDispatcherImpl_->AsObject());
     newWant.SetParam(OHOS::AppExecFwk::Constants::FORM_IS_RECOVER_FORM_TO_HANDLE_CLICK_EVENT,
         isRecoverFormToHandleClickEvent);
-
-    auto rsSurfaceNode = GetSurfaceNode();
-    if (!rsSurfaceNode) {
-        HILOG_ERROR("OnSurfaceCreate rsSurfaceNode is nullptr.");
-        return ERR_APPEXECFWK_FORM_FORM_NODE_RELEASED;
-    }
-    HILOG_INFO("Form OnSurfaceCreate, id: %{public}" PRIu64, rsSurfaceNode->GetId());
-
-    int32_t ret = ERR_OK;
-    if (formJsInfo.uiSyntax == OHOS::AppExecFwk::FormType::ETS) {
-        OHOS::AppExecFwk::FormJsInfo newFormJsInfo = formJsInfo.CopyFormJsInfoWithoutFormData();
-        ret = formRendererDelegate_->OnSurfaceCreate(rsSurfaceNode, newFormJsInfo, newWant);
-    } else {
-        ret = formRendererDelegate_->OnSurfaceCreate(rsSurfaceNode, formJsInfo, newWant);
-    }
-    if (ret != ERR_OK) {
-        HILOG_ERROR("Form OnSurfaceCreate failed, code:%{public}d", ret);
-    }
-    return ret;
+    auto rsSurfaceNode = uiContent_->GetFormRootNode();
+    HILOG_INFO("Form OnSurfaceCreate!");
+    formRendererDelegate_->OnSurfaceCreate(rsSurfaceNode, formJsInfo, newWant);
 }
 
-int32_t FormRenderer::OnSurfaceReuse(const OHOS::AppExecFwk::FormJsInfo& formJsInfo)
+void FormRenderer::OnSurfaceReuse(const OHOS::AppExecFwk::FormJsInfo& formJsInfo)
 {
     if (!formRendererDispatcherImpl_) {
-        HILOG_ERROR("Form OnSurfaceReuse, dispatcher is null!");
-        return ERR_APPEXECFWK_FORM_FORM_NODE_RELEASED;
+        HILOG_ERROR("form renderer dispatcher is null!");
+        return;
     }
     if (!formRendererDelegate_) {
-        HILOG_ERROR("Form OnSurfaceReuse, delegate is null!");
-        return ERR_APPEXECFWK_FORM_FORM_NODE_RELEASED;
+        HILOG_ERROR("form renderer delegate is null!");
+        return;
     }
-    auto rsSurfaceNode = GetSurfaceNode();
-    if (!rsSurfaceNode) {
-        HILOG_ERROR("Form OnSurfaceReuse, rsSurfaceNode is null!");
-        return ERR_APPEXECFWK_FORM_FORM_NODE_RELEASED;
+    auto rsSurfaceNode = uiContent_->GetFormRootNode();
+    if (rsSurfaceNode == nullptr) {
+        HILOG_ERROR("form renderer rsSurfaceNode is null!");
+        return;
     }
     OHOS::AAFwk::Want newWant;
     newWant.SetParam(FORM_RENDERER_DISPATCHER, formRendererDispatcherImpl_->AsObject());
-    HILOG_INFO("Form OnSurfaceReuse, id: %{public}" PRIu64, rsSurfaceNode->GetId());
-    int32_t ret = ERR_OK;
-    if (formJsInfo.uiSyntax == OHOS::AppExecFwk::FormType::ETS) {
-        OHOS::AppExecFwk::FormJsInfo newFormJsInfo = formJsInfo.CopyFormJsInfoWithoutFormData();
-        ret = formRendererDelegate_->OnSurfaceReuse(rsSurfaceNode->GetId(), newFormJsInfo, newWant);
-    } else {
-        ret = formRendererDelegate_->OnSurfaceReuse(rsSurfaceNode->GetId(), formJsInfo, newWant);
-    }
+    HILOG_INFO("Form OnSurfaceReuse.");
+    formRendererDelegate_->OnSurfaceReuse(rsSurfaceNode->GetId(), formJsInfo, newWant);
     formRendererDelegate_->OnFormLinkInfoUpdate(cachedInfos_);
-    if (ret != ERR_OK) {
-        HILOG_ERROR("Form OnSurfaceReuse failed, code:%{public}d", ret);
-    }
-    return ret;
 }
 
 void FormRenderer::OnSurfaceDetach()
 {
     if (!formRendererDelegate_) {
-        HILOG_ERROR("Form OnSurfaceDetach, delegate is null!");
+        HILOG_ERROR("form renderer delegate is null!");
         return;
     }
-    auto surfaceNode = GetSurfaceNode();
-    if (!surfaceNode) {
-        HILOG_ERROR("Form OnSurfaceDetach, rsSurfaceNode is null!");
+    auto rsSurfaceNode = uiContent_->GetFormRootNode();
+    if (rsSurfaceNode == nullptr) {
+        HILOG_ERROR("form renderer rsSurfaceNode is null!");
         return;
     }
-    HILOG_INFO("Form OnSurfaceDetach, id: %{public}" PRIu64, surfaceNode->GetId());
-    int32_t ret = formRendererDelegate_->OnSurfaceDetach(surfaceNode->GetId());
-    if (ret != ERR_OK) {
-        HILOG_ERROR("Form OnSurfaceDetach failed, code:%{public}d", ret);
-    }
+    HILOG_INFO("Form OnSurfaceDetach.");
+    formRendererDelegate_->OnSurfaceDetach(rsSurfaceNode->GetId());
 }
 
 void FormRenderer::OnActionEvent(const std::string& action)
@@ -432,17 +384,11 @@ void FormRenderer::OnActionEvent(const std::string& action)
 
 void FormRenderer::OnError(const std::string& code, const std::string& msg)
 {
-    auto rsSurfaceNode = GetSurfaceNode();
-    if (rsSurfaceNode) {
-        HILOG_INFO("Form OnError, id: %{public}" PRIu64, rsSurfaceNode->GetId());
-    } else {
-        HILOG_ERROR("Form OnError, rsSurfaceNode is null");
-    }
     if (!formRendererDelegate_) {
         HILOG_ERROR("formRendererDelegate is null!");
         return;
     }
-    HILOG_INFO("Form OnError, code: %{public}s, msg: %{public}s", code.c_str(), msg.c_str());
+
     formRendererDelegate_->OnError(code, msg);
 }
 
@@ -468,14 +414,13 @@ void FormRenderer::SetRenderDelegate(const sptr<IRemoteObject>& remoteObj)
     if (!formRendererDelegate_) {
         formRendererDelegate_ = renderRemoteObj;
     } else {
-        RemoveFormDeathRecipient();
         auto formRendererDelegate = renderRemoteObj;
         bool checkFlag = true;
         formRendererDelegate->OnCheckManagerDelegate(checkFlag);
         if (checkFlag) {
             formRendererDelegate_ = renderRemoteObj;
         } else {
-            HILOG_ERROR("EventHandle - SetRenderDelegate error checkFlag is false");
+            HILOG_ERROR("EventHandle - SetRenderDelegate error  checkFlag is false");
         }
     }
 
@@ -509,8 +454,6 @@ void FormRenderer::SetRenderDelegate(const sptr<IRemoteObject>& remoteObj)
 void FormRenderer::ResetRenderDelegate()
 {
     HILOG_INFO("ResetRenderDelegate.");
-    RemoveFormDeathRecipient();
-    renderDelegateDeathRecipient_ = nullptr;
     formRendererDelegate_ = nullptr;
 }
 
@@ -536,17 +479,17 @@ void FormRenderDelegateRecipient::OnRemoteDied(const wptr<IRemoteObject>& remote
     }
 }
 
-int32_t FormRenderer::AttachForm(const OHOS::AAFwk::Want& want, const OHOS::AppExecFwk::FormJsInfo& formJsInfo)
+void FormRenderer::AttachForm(const OHOS::AAFwk::Want& want, const OHOS::AppExecFwk::FormJsInfo& formJsInfo)
 {
     if (uiContent_ == nullptr) {
         HILOG_ERROR("uiContent is null!");
-        return ERR_APPEXECFWK_FORM_FORM_NODE_RELEASED;
+        return;
     }
     ParseWant(want);
     OnSurfaceDetach();
     AttachUIContent(want, formJsInfo);
     SetRenderDelegate(proxy_);
-    return OnSurfaceReuse(formJsInfo);
+    OnSurfaceReuse(formJsInfo);
 }
 
 void FormRenderer::AttachUIContent(const OHOS::AAFwk::Want& want, const OHOS::AppExecFwk::FormJsInfo& formJsInfo)
@@ -554,6 +497,11 @@ void FormRenderer::AttachUIContent(const OHOS::AAFwk::Want& want, const OHOS::Ap
     HILOG_INFO("AttachUIContent width = %{public}f , height = %{public}f, borderWidth_ = %{public}f.",
         width_, height_, borderWidth_);
     SetAllowUpdate(allowUpdate_);
+    auto rsSurfaceNode = uiContent_->GetFormRootNode();
+    if (rsSurfaceNode == nullptr) {
+        HILOG_ERROR("rsSurfaceNode is nullptr.");
+        return;
+    }
     float width = width_ - borderWidth_ * DOUBLE;
     float height = height_ - borderWidth_ * DOUBLE;
     if (!NearEqual(width, uiContent_->GetFormWidth()) || !NearEqual(height, uiContent_->GetFormHeight())
@@ -562,14 +510,14 @@ void FormRenderer::AttachUIContent(const OHOS::AAFwk::Want& want, const OHOS::Ap
         uiContent_->SetFormHeight(height);
         lastBorderWidth_ = borderWidth_;
         uiContent_->OnFormSurfaceChange(width, height);
-        HILOG_INFO("AttachUIContent after set uiContent, width: %{public}f, height: %{public}f", width, height);
+        rsSurfaceNode->SetBounds(borderWidth_, borderWidth_, width, height);
     }
     auto backgroundColor = want.GetStringParam(OHOS::AppExecFwk::Constants::PARAM_FORM_TRANSPARENCY_KEY);
     if (backgroundColor_ != backgroundColor) {
         backgroundColor_ = backgroundColor;
         uiContent_->SetFormBackgroundColor(backgroundColor_);
     }
-    if (renderingMode_ == AppExecFwk::Constants::RenderingMode::SINGLE_COLOR || enableBlurBackground_) {
+    if (renderingMode_ == AppExecFwk::Constants::RenderingMode::SINGLE_COLOR) {
         HILOG_INFO("AttachUIContent SetFormBackgroundColor #00FFFFFF");
         uiContent_->SetFormBackgroundColor(TRANSPARENT_COLOR);
     }
@@ -577,13 +525,13 @@ void FormRenderer::AttachUIContent(const OHOS::AAFwk::Want& want, const OHOS::Ap
     uiContent_->Foreground();
 }
 
-void FormRenderer::GetRectRelativeToWindow(AccessibilityParentRectInfo& parentRectInfo) const
+void FormRenderer::GetRectRelativeToWindow(int32_t &top, int32_t &left) const
 {
     if (!formRendererDelegate_) {
         HILOG_ERROR("form renderer delegate is null!");
         return;
     }
-    formRendererDelegate_->OnGetRectRelativeToWindow(parentRectInfo);
+    formRendererDelegate_->OnGetRectRelativeToWindow(top, left);
 }
 
 void FormRenderer::RecycleForm(std::string& statusData)
@@ -617,28 +565,6 @@ void FormRenderer::SetVisibleChange(bool isVisible)
         return;
     }
     uiContent_->ProcessFormVisibleChange(isVisible);
-}
-
-bool FormRenderer::IsManagerDelegateValid(const OHOS::AAFwk::Want& want)
-{
-    sptr<IRemoteObject> hostRemoteObj = want.GetRemoteObject(FORM_RENDERER_PROCESS_ON_ADD_SURFACE);
-    auto renderRemoteObj = iface_cast<IFormRendererDelegate>(hostRemoteObj);
-    if (renderRemoteObj == nullptr) {
-        return true;
-    }
-    bool checkFlag = true;
-    renderRemoteObj->OnCheckManagerDelegate(checkFlag);
-    HILOG_INFO("checkFlag:%{public}d", checkFlag);
-    return checkFlag;
-}
-
-std::shared_ptr<Rosen::RSSurfaceNode> FormRenderer::GetSurfaceNode()
-{
-    if (!uiContent_) {
-        HILOG_ERROR("uiContent_ is null");
-        return nullptr;
-    }
-    return uiContent_->GetFormRootNode();
 }
 } // namespace Ace
 } // namespace OHOS

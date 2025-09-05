@@ -14,7 +14,6 @@
  */
 #include "core/components_ng/render/adapter/rosen_media_player.h"
 
-#include <cstdio>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include "base/image/file_uri_helper.h"
@@ -30,11 +29,6 @@ constexpr float SPEED_1_00_X = 1.00;
 constexpr float SPEED_1_25_X = 1.25;
 constexpr float SPEED_1_75_X = 1.75;
 constexpr float SPEED_2_00_X = 2.00;
-constexpr float SPEED_0_50_X = 0.50;
-constexpr float SPEED_1_50_X = 1.50;
-constexpr float SPEED_3_00_X = 3.00;
-constexpr float SPEED_0_25_X = 0.25;
-constexpr float SPEED_0_125_X = 0.125;
 constexpr uint32_t MEDIA_RESOURCE_MATCH_SIZE = 2;
 const int32_t RAWFILE_PREFIX_LENGTH = strlen("resource://RAWFILE/");
 const std::regex MEDIA_RES_ID_REGEX(R"(^resource://\w+/([0-9]+)\.\w+$)", std::regex::icase);
@@ -68,18 +62,8 @@ OHOS::Media::PlaybackRateMode ConvertToMediaPlaybackSpeed(float speed)
         mode = OHOS::Media::PlaybackRateMode::SPEED_FORWARD_1_75_X;
     } else if (NearEqual(speed, SPEED_2_00_X)) {
         mode = OHOS::Media::PlaybackRateMode::SPEED_FORWARD_2_00_X;
-    } else if (NearEqual(speed, SPEED_0_50_X)) {
-        mode = OHOS::Media::PlaybackRateMode::SPEED_FORWARD_0_50_X;
-    } else if (NearEqual(speed, SPEED_1_50_X)) {
-        mode = OHOS::Media::PlaybackRateMode::SPEED_FORWARD_1_50_X;
-    } else if (NearEqual(speed, SPEED_3_00_X)) {
-        mode = OHOS::Media::PlaybackRateMode::SPEED_FORWARD_3_00_X;
-    } else if (NearEqual(speed, SPEED_0_25_X)) {
-        mode = OHOS::Media::PlaybackRateMode::SPEED_FORWARD_0_25_X;
-    } else if (NearEqual(speed, SPEED_0_125_X)) {
-        mode = OHOS::Media::PlaybackRateMode::SPEED_FORWARD_0_125_X;
     } else {
-        LOGW("speed [%{public}f] is not supported yet.", speed);
+        LOGW("speed is not supported yet.");
     }
     return mode;
 }
@@ -203,12 +187,7 @@ bool RosenMediaPlayer::MediaPlay(const std::string& filePath)
         return false;
     }
     MediaFileInfo fileInfo;
-    size_t pos = mediaPath.find("resources/base");
-    if (pos == std::string::npos) {
-        LOGE("substring is not found in mediaPath.");
-        return false;
-    }
-    std::string videoFilePath = mediaPath.substr(pos);
+    std::string videoFilePath = mediaPath.substr(mediaPath.find("resources/base"));
     auto container = Container::Current();
     CHECK_NULL_RETURN(container, false);
     if (!container->IsUseStageModel()) {
@@ -224,25 +203,24 @@ bool RosenMediaPlayer::MediaPlay(const std::string& filePath)
     if (!RealPath(hapPath, realPath)) {
         return false;
     }
-    std::FILE* hapFp = std::fopen(realPath, "r");
-    if (hapFp == nullptr) {
+    auto hapFd = open(realPath, O_RDONLY);
+    if (hapFd < 0) {
         LOGE("Open hap file failed");
         return false;
     }
-    auto hapFd = fileno(hapFp);
     if (mediaPlayer_ && mediaPlayer_->SetSource(hapFd, fileInfo.offset, fileInfo.length) != 0) {
         LOGE("Player SetSource failed");
-        std::fclose(hapFp);
+        close(hapFd);
         return false;
     }
-    std::fclose(hapFp);
+    close(hapFd);
     return true;
 }
 
 bool RosenMediaPlayer::RawFileWithModuleInfoPlay(const std::string& src, const std::string& bundleName,
     const std::string& moduleName)
 {
-    auto resourceObject = AceType::MakeRefPtr<ResourceObject>(bundleName, moduleName, Container::CurrentIdSafely());
+    auto resourceObject = AceType::MakeRefPtr<ResourceObject>(bundleName, moduleName);
     RefPtr<ResourceAdapter> resourceAdapter = nullptr;
     RefPtr<ThemeConstants> themeConstants = nullptr;
     if (SystemProperties::GetResourceDecoupling()) {
@@ -305,18 +283,19 @@ bool RosenMediaPlayer::RawFilePlay(const std::string& filePath)
         return false;
     }
 
-    std::FILE* hapFp = std::fopen(realPath, "r");
-    if (hapFp == nullptr) {
+    static std::mutex fdMutex_;
+    std::lock_guard lock(fdMutex_);
+    auto hapFd = open(realPath, O_RDONLY);
+    if (hapFd < 0) {
         LOGE("Open hap file failed");
         return false;
     }
-    auto hapFd = fileno(hapFp);
     if (!mediaPlayer_ || mediaPlayer_->SetSource(hapFd, fileInfo.offset, fileInfo.length) != 0) {
         LOGE("Player SetSource failed");
-        std::fclose(hapFp);
+        close(hapFd);
         return false;
     }
-    std::fclose(hapFp);
+    close(hapFd);
     return true;
 }
 
@@ -340,18 +319,17 @@ bool RosenMediaPlayer::RelativePathPlay(const std::string& filePath)
     if (!RealPath(hapPath, realPath)) {
         return false;
     }
-    std::FILE* hapFp = std::fopen(realPath, "r");
-    if (hapFp == nullptr) {
+    auto hapFd = open(realPath, O_RDONLY);
+    if (hapFd < 0) {
         LOGE("Open hap file failed");
         return false;
     }
-    auto hapFd = fileno(hapFp);
     if (mediaPlayer_ && mediaPlayer_->SetSource(hapFd, fileInfo.offset, fileInfo.length) != 0) {
         LOGE("Player SetSource failed");
-        std::fclose(hapFp);
+        close(hapFd);
         return false;
     }
-    std::fclose(hapFp);
+    close(hapFd);
     return true;
 }
 
@@ -444,13 +422,6 @@ void RosenMediaPlayer::RegisterMediaPlayerEvent(PositionUpdatedEvent&& positionU
     mediaPlayer_->SetPlayerCallback(mediaPlayerCallback_);
 }
 
-void RosenMediaPlayer::RegisterMediaPlayerVideoErrorEvent(VideoErrorEvent&& errorEvent)
-{
-    if (mediaPlayerCallback_) {
-        mediaPlayerCallback_->SetErrorEvent(std::move(errorEvent));
-    }
-}
-
 void RosenMediaPlayer::RegisterMediaPlayerSeekDoneEvent(SeekDoneEvent&& seekDoneEvent)
 {
     if (mediaPlayerCallback_) {
@@ -494,12 +465,6 @@ int32_t RosenMediaPlayer::SetSurface()
     auto renderSurface = renderSurface_.Upgrade();
     CHECK_NULL_RETURN(renderSurface, -1);
     return mediaPlayer_->SetVideoSurface(renderSurface->GetSurface());
-}
-
-int32_t RosenMediaPlayer::SetRenderFirstFrame(bool display)
-{
-    CHECK_NULL_RETURN(mediaPlayer_, -1);
-    return mediaPlayer_->SetRenderFirstFrame(display);
 }
 
 int32_t RosenMediaPlayer::PrepareAsync()
@@ -547,34 +512,6 @@ int32_t RosenMediaPlayer::SetPlayRange(int64_t startTime, int64_t endTime)
     LOGI("Media player start to SetPlayRange.");
     CHECK_NULL_RETURN(mediaPlayer_, -1);
     return mediaPlayer_->SetPlayRange(startTime, endTime);
-}
-
-int32_t RosenMediaPlayer::SetPlayRangeWithMode(int64_t startTime, int64_t endTime, OHOS::Ace::SeekMode mode)
-{
-    LOGI("Media player start to SetPlayRangeWithMode.");
-    CHECK_NULL_RETURN(mediaPlayer_, -1);
-    return mediaPlayer_->SetPlayRangeWithMode(startTime, endTime, ConvertToMediaSeekMode(mode));
-}
-
-int32_t RosenMediaPlayer::SetPlayRangeUsWithMode(int64_t startTime, int64_t endTime, SeekMode mode)
-{
-    LOGI("Media player start to SetPlayRangeUsWithMode.");
-    CHECK_NULL_RETURN(mediaPlayer_, -1);
-    return mediaPlayer_->SetPlayRangeUsWithMode(startTime, endTime, ConvertToMediaSeekMode(mode));
-}
-
-int32_t RosenMediaPlayer::EnableCameraPostprocessing()
-{
-    LOGI("Media player start to EnableCameraPostprocessing.");
-    CHECK_NULL_RETURN(mediaPlayer_, -1);
-    return mediaPlayer_->EnableCameraPostprocessing();
-}
- 
-int32_t RosenMediaPlayer::SetCameraPostprocessing(bool isOpen)
-{
-    LOGI("Media player start to SetCameraPostprocessing %{public}d.", isOpen);
-    CHECK_NULL_RETURN(mediaPlayer_, -1);
-    return mediaPlayer_->SetCameraPostprocessing(isOpen);
 }
 
 int32_t RosenMediaPlayer::SetParameter(const std::string& key, int64_t value)

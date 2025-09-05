@@ -15,8 +15,11 @@
 
 #include "native_drawable_descriptor.h"
 
+#include <memory>
 
+#include "interfaces/inner_api/drawable_descriptor/drawable_descriptor.h"
 
+#include "drawable_descriptor.h"
 #include "node_extened.h"
 
 extern "C" {

@@ -14,12 +14,16 @@
  */
 #include "core/interfaces/native/node/tabs_modifier.h"
 
-#include "bridge/common/utils/utils.h"
+#include "base/utils/string_utils.h"
+#include "core/components/common/layout/constants.h"
+#include "core/components/tab_bar/tab_theme.h"
+#include "core/components_ng/base/frame_node.h"
+#include "core/components_ng/base/view_abstract.h"
+#include "core/components_ng/base/view_abstract_model_ng.h"
+#include "core/components_ng/pattern/tabs/tabs_model.h"
 #include "core/components_ng/pattern/tabs/tabs_model_ng.h"
-#include "core/common/resource/resource_manager.h"
-#include "core/common/resource/resource_wrapper.h"
-#include "core/common/resource/resource_parse_utils.h"
-#include "core/pipeline_ng/pipeline_context.h"
+#include "core/pipeline/base/element_register.h"
+#include "frameworks/bridge/common/utils/utils.h"
 
 namespace OHOS::Ace::NG {
 constexpr int NUM_0 = 0;
@@ -31,8 +35,6 @@ constexpr int DEFAULT_LENGTH = 3;
 constexpr int DEFAULT_LENGTH_OF_BAR_GRID_ALIGN = 5;
 constexpr int DEFAULT_LENGTH_OF_BAR_GRID_ALIGN_VALUES = 2;
 constexpr int DEFAULT_ANIMATION_DURATION = 300;
-constexpr int ANIMATION_CURVE_TYPE_STR = 1;
-constexpr int ANIMATION_CURVE_TYPE_FUNC = 2;
 
 void SetTabBarMode(ArkUINodeHandle node, ArkUI_Int32 tabsBarMode)
 {
@@ -57,17 +59,6 @@ void SetScrollableBarModeOptions(ArkUINodeHandle node, const ArkUI_Float32 value
     }
     TabsModelNG::SetScrollableBarModeOptions(frameNode, option);
 }
-
-void CreateScrollableBarModeOptionsWithResourceObj(ArkUINodeHandle node, void* marginRawPtr)
-{
-    CHECK_NULL_VOID(SystemProperties::ConfigChangePerform());
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    auto* marginPtr = reinterpret_cast<ResourceObject*>(marginRawPtr);
-    auto marginResObj = AceType::Claim(marginPtr);
-    TabsModelNG::HandleScrollableBarMargin(frameNode, marginResObj, true);
-}
-
 void SetBarGridAlign(ArkUINodeHandle node, const ArkUI_Float32* values, ArkUI_Int32 valuesLength,
     const ArkUI_Int32* units, ArkUI_Int32 unitsLength)
 {
@@ -86,20 +77,6 @@ void SetBarGridAlign(ArkUINodeHandle node, const ArkUI_Float32* values, ArkUI_In
 
     TabsModelNG::SetBarGridAlign(frameNode, columnOption);
 }
-
-void CreateBarGridAlignWithResourceObj(ArkUINodeHandle node, void* columnGutterRawPtr, void* columnMarginRawPtr)
-{
-    CHECK_NULL_VOID(SystemProperties::ConfigChangePerform());
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    auto* columnGutterPtr = reinterpret_cast<ResourceObject*>(columnGutterRawPtr);
-    auto columnGutterResObj = AceType::Claim(columnGutterPtr);
-    auto* columnMarginPtr = reinterpret_cast<ResourceObject*>(columnMarginRawPtr);
-    auto columnMarginResObj = AceType::Claim(columnMarginPtr);
-    TabsModelNG::HandleBarGridGutter(frameNode, columnGutterResObj, true);
-    TabsModelNG::HandleBarGridMargin(frameNode, columnMarginResObj, true);
-}
-
 void SetDivider(ArkUINodeHandle node, ArkUI_Uint32 color, const ArkUI_Float32* values, const ArkUI_Int32* units,
     ArkUI_Int32 length)
 {
@@ -117,119 +94,24 @@ void SetDivider(ArkUINodeHandle node, ArkUI_Uint32 color, const ArkUI_Float32* v
 
     TabsModelNG::SetDivider(frameNode, divider);
 }
-
-void SetDividerColorByUser(ArkUINodeHandle node, ArkUI_Bool isByUser)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    TabsModelNG::SetDividerColorByUser(frameNode, isByUser);
-}
-
-void CreateDividerWithResourceObj(ArkUINodeHandle node,
-    void* strokeWidthRawPtr, void* colorRawPtr, void* startMarginRawPtr, void* endMarginRawPtr)
-{
-    CHECK_NULL_VOID(SystemProperties::ConfigChangePerform());
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    auto* strokeWidthPtr = reinterpret_cast<ResourceObject*>(strokeWidthRawPtr);
-    auto strokeWidthResObj = AceType::Claim(strokeWidthPtr);
-    TabsModelNG::HandleDividerStrokeWidth(frameNode, strokeWidthResObj, true);
-    auto* colorPtr = reinterpret_cast<ResourceObject*>(colorRawPtr);
-    auto colorResObj = AceType::Claim(colorPtr);
-    TabsModelNG::HandleDividerColor(frameNode, colorResObj, true);
-    auto* startMarginPtr = reinterpret_cast<ResourceObject*>(startMarginRawPtr);
-    auto startMarginResObj = AceType::Claim(startMarginPtr);
-    TabsModelNG::HandleDividerStartMargin(frameNode, startMarginResObj, true);
-    auto* endMarginPtr = reinterpret_cast<ResourceObject*>(endMarginRawPtr);
-    auto endMarginResObj = AceType::Claim(endMarginPtr);
-    TabsModelNG::HandleDividerEndMargin(frameNode, endMarginResObj, true);
-}
-
 void SetFadingEdge(ArkUINodeHandle node, ArkUI_Bool fadingEdge)
 {
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
     TabsModelNG::SetFadingEdge(frameNode, fadingEdge);
 }
-void SetTabOnUnselected(ArkUINodeHandle node, void* callback)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    if (callback) {
-        auto onEvent = reinterpret_cast<std::function<void(const BaseEventInfo*)>*>(callback);
-        TabsModelNG::SetOnUnselected(frameNode, std::move(*onEvent));
-    } else {
-        TabsModelNG::SetOnUnselected(frameNode, nullptr);
-    }
-}
 void SetBarBackgroundColor(ArkUINodeHandle node, ArkUI_Uint32 color)
 {
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
     TabsModelNG::SetBarBackgroundColor(frameNode, Color(color));
-    TabsModelNG::SetBarBackgroundColorByUser(frameNode, true);
 }
-
-void CreateBarBackgroundColorWithResourceObj(ArkUINodeHandle node, void* bgColorRawPtr)
-{
-    CHECK_NULL_VOID(SystemProperties::ConfigChangePerform());
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    auto* bgColorPtr = reinterpret_cast<ResourceObject*>(bgColorRawPtr);
-    auto bgColorResObj = AceType::Claim(bgColorPtr);
-    TabsModelNG::HandleBarBackgroundColor(frameNode, bgColorResObj, true);
-}
-
-void SetBarBackgroundBlurStyle(ArkUINodeHandle node, ArkUITabBarBackgroundBlurStyle* styleOption)
+void SetBarBackgroundBlurStyle(ArkUINodeHandle node, ArkUI_Int32 blurStyle)
 {
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
-    ArkUI_Int32 blurStyle = styleOption->blurStyle;
-    ArkUI_Int32 colorMode = styleOption->colorMode;
-    ArkUI_Int32 adaptiveColor = styleOption->adaptiveColor;
-    ArkUI_Int32 policy = styleOption->policy;
-    ArkUI_Int32 blurType = styleOption->blurType;
-    BlurStyleOption bgBlurStyle;
-    if (blurStyle >= 0) {
-        if (blurStyle >= static_cast<int>(BlurStyle::NO_MATERIAL) &&
-            blurStyle <= static_cast<int>(BlurStyle::COMPONENT_ULTRA_THICK)) {
-            bgBlurStyle.blurStyle = static_cast<BlurStyle>(blurStyle);
-        }
-    }
-    bool isHasOptions = !((styleOption->colorMode < 0) && (styleOption->adaptiveColor < 0) &&
-        (styleOption->scale < 0) && (styleOption->blurValuesSize == 0));
-    if (isHasOptions) {
-        if (colorMode >= static_cast<int32_t>(ThemeColorMode::SYSTEM) &&
-            colorMode <= static_cast<int32_t>(ThemeColorMode::DARK)) {
-            bgBlurStyle.colorMode = static_cast<ThemeColorMode>(colorMode);
-        }
-        if (adaptiveColor >= static_cast<int32_t>(AdaptiveColor::DEFAULT) &&
-            adaptiveColor <= static_cast<int32_t>(AdaptiveColor::AVERAGE)) {
-            bgBlurStyle.adaptiveColor = static_cast<AdaptiveColor>(adaptiveColor);
-        }
-        bgBlurStyle.scale = std::clamp(styleOption->scale, 0.0f, 1.0f);
-        BlurOption blurOption;
-        blurOption.grayscale.assign(styleOption->blurValues, styleOption->blurValues + styleOption->blurValuesSize);
-        bgBlurStyle.blurOption = blurOption;
-    }
-    bgBlurStyle.policy = static_cast<BlurStyleActivePolicy>(policy);
-    bgBlurStyle.blurType = static_cast<BlurType>(blurType);
-    bgBlurStyle.isValidColor = styleOption->isValidColor;
-    Color inactiveColor(styleOption->inactiveColor);
-    bgBlurStyle.inactiveColor = inactiveColor;
-    TabsModelNG::SetBarBackgroundBlurStyle(frameNode, bgBlurStyle);
+    TabsModelNG::SetBarBackgroundBlurStyle(frameNode, static_cast<BlurStyle>(blurStyle));
 }
-
-void CreateBarBackgroundBlurStyleWithResourceObj(ArkUINodeHandle node, void* inactiveColorRawPtr)
-{
-    CHECK_NULL_VOID(SystemProperties::ConfigChangePerform());
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    auto* inactiveColorPtr = reinterpret_cast<ResourceObject*>(inactiveColorRawPtr);
-    auto inactiveColorResObj = AceType::Claim(inactiveColorPtr);
-    TabsModelNG::HandleBackgroundBlurStyleInactiveColor(frameNode, inactiveColorResObj, true);
-}
-
 void SetBarOverlap(ArkUINodeHandle node, ArkUI_Bool barOverlap)
 {
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
@@ -248,30 +130,6 @@ void SetTabBarPosition(ArkUINodeHandle node, ArkUI_Int32 barVal)
     CHECK_NULL_VOID(frameNode);
     TabsModelNG::SetTabBarPosition(frameNode, static_cast<BarPosition>(barVal));
 }
-void SetTabsOptionsIndex(ArkUINodeHandle node, ArkUI_Int32 indexVal)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    TabsModelNG::SetTabBarIndex(frameNode, indexVal < 0 ? 0 : indexVal);
-}
-void SetTabsOptionsController(ArkUINodeHandle node, ArkUINodeHandle tabsController)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    TabsModelNG::SetTabsController(frameNode,
-        AceType::Claim(reinterpret_cast<OHOS::Ace::SwiperController*>(tabsController)));
-}
-void SetTabsOptionsBarModifier(ArkUINodeHandle node, void* callback)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    if (callback) {
-        auto onApply = reinterpret_cast<std::function<void(WeakPtr<NG::FrameNode>)>*>(callback);
-        TabsModelNG::SetBarModifier(frameNode, std::move(*onApply));
-    } else {
-        TabsModelNG::SetBarModifier(frameNode, nullptr);
-    }
-}
 void SetScrollable(ArkUINodeHandle node, ArkUI_Bool scrollable)
 {
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
@@ -284,12 +142,6 @@ void SetBarAdaptiveHeight(ArkUINodeHandle node, ArkUI_Bool value)
     CHECK_NULL_VOID(frameNode);
     TabsModelNG::SetBarAdaptiveHeight(frameNode, value);
 }
-void SetNoMinHeightLimit(ArkUINodeHandle node, ArkUI_Bool value)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    TabsModelNG::SetNoMinHeightLimit(frameNode, value);
-}
 void SetTabBarWidth(ArkUINodeHandle node, ArkUI_Float32 value, ArkUI_Int32 unit)
 {
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
@@ -297,47 +149,12 @@ void SetTabBarWidth(ArkUINodeHandle node, ArkUI_Float32 value, ArkUI_Int32 unit)
     CalcDimension width = Dimension(value, static_cast<OHOS::Ace::DimensionUnit>(unit));
     TabsModelNG::SetTabBarWidth(frameNode, width);
 }
-
-void CreateTabBarWidthWithResourceObj(ArkUINodeHandle node, void* widthRawPtr)
-{
-    CHECK_NULL_VOID(SystemProperties::ConfigChangePerform());
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    auto* widthPtr = reinterpret_cast<ResourceObject*>(widthRawPtr);
-    auto widthResObj = AceType::Claim(widthPtr);
-    TabsModelNG::HandleBarWidth(frameNode, widthResObj, true);
-}
-
 void SetTabBarHeight(ArkUINodeHandle node, ArkUI_Float32 value, ArkUI_Int32 unit)
 {
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
     CalcDimension width = Dimension(value, static_cast<OHOS::Ace::DimensionUnit>(unit));
     TabsModelNG::SetTabBarHeight(frameNode, width);
-}
-
-void CreateTabBarHeightWithResourceObj(ArkUINodeHandle node, void* heightRawPtr)
-{
-    CHECK_NULL_VOID(SystemProperties::ConfigChangePerform());
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    auto* heightPtr = reinterpret_cast<ResourceObject*>(heightRawPtr);
-    auto heightResObj = AceType::Claim(heightPtr);
-    TabsModelNG::HandleBarHeight(frameNode, heightResObj, true);
-}
-
-void SetAnimationCurve(ArkUINodeHandle node, ArkUI_Uint32 type, ArkUI_CharPtr curveChar, void* curveCallback)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    RefPtr<Curve> curve;
-    if (type == ANIMATION_CURVE_TYPE_STR && curveChar != nullptr) {
-        curve = Framework::CreateCurve(curveChar, false);
-    } else if (type == ANIMATION_CURVE_TYPE_FUNC && curveCallback != nullptr) {
-        auto callback = reinterpret_cast<std::function<float(float)>*>(curveCallback);
-        curve = Framework::CreateCurve(*callback);
-    }
-    TabsModelNG::SetAnimationCurve(frameNode, curve);
 }
 
 void SetAnimationDuration(ArkUINodeHandle node, ArkUI_Float32 duration)
@@ -370,8 +187,6 @@ void ResetScrollableBarModeOptions(ArkUINodeHandle node)
     defaultOption.margin = margin;
     defaultOption.nonScrollableLayoutStyle = std::nullopt;
     TabsModelNG::SetScrollableBarModeOptions(frameNode, defaultOption);
-
-    CreateScrollableBarModeOptionsWithResourceObj(node, nullptr);
 }
 void ResetBarGridAlign(ArkUINodeHandle node)
 {
@@ -379,8 +194,6 @@ void ResetBarGridAlign(ArkUINodeHandle node)
     CHECK_NULL_VOID(frameNode);
     BarGridColumnOptions columnOption;
     TabsModelNG::SetBarGridAlign(frameNode, columnOption);
-
-    CreateBarGridAlignWithResourceObj(node, nullptr, nullptr);
 }
 void ResetDivider(ArkUINodeHandle node)
 {
@@ -391,39 +204,25 @@ void ResetDivider(ArkUINodeHandle node)
     divider.isNull = true;
 
     TabsModelNG::SetDivider(frameNode, divider);
-    TabsModelNG::SetDividerColorByUser(frameNode, false);
-
-    CreateDividerWithResourceObj(node, nullptr, nullptr, nullptr, nullptr);
 }
+
 void ResetFadingEdge(ArkUINodeHandle node)
 {
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
     TabsModelNG::SetFadingEdge(frameNode, true);
 }
-void ResetTabOnUnselected(ArkUINodeHandle node)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    TabsModelNG::SetOnUnselected(frameNode, nullptr);
-}
 void ResetBarBackgroundColor(ArkUINodeHandle node)
 {
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
     TabsModelNG::SetBarBackgroundColor(frameNode, Color::BLACK.BlendOpacity(0.0f));
-    TabsModelNG::SetBarBackgroundColorByUser(frameNode, false);
-
-    CreateBarBackgroundColorWithResourceObj(node, nullptr);
 }
 void ResetBarBackgroundBlurStyle(ArkUINodeHandle node)
 {
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
-    BlurStyleOption bgBlurStyle;
-    TabsModelNG::SetBarBackgroundBlurStyle(frameNode, bgBlurStyle);
-
-    CreateBarBackgroundBlurStyleWithResourceObj(node, nullptr);
+    TabsModelNG::SetBarBackgroundBlurStyle(frameNode, BlurStyle::NO_MATERIAL);
 }
 void ResetBarOverlap(ArkUINodeHandle node)
 {
@@ -445,20 +244,6 @@ void ResetTabBarPosition(ArkUINodeHandle node)
     TabsModelNG::SetTabBarPosition(frameNode, BarPosition::START);
 }
 
-void ResetTabsOptionsIndex(ArkUINodeHandle node)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    TabsModelNG::SetTabBarIndex(frameNode, 0);
-}
-
-void ResetTabsOptionsBarModifier(ArkUINodeHandle node)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    TabsModelNG::SetBarModifier(frameNode, nullptr);
-}
-
 void ResetScrollable(ArkUINodeHandle node)
 {
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
@@ -471,8 +256,6 @@ void ResetTabBarWidth(ArkUINodeHandle node)
     CHECK_NULL_VOID(frameNode);
     CalcDimension width = Dimension(-1.0, DimensionUnit::VP);
     TabsModelNG::SetTabBarWidth(frameNode, width);
-
-    CreateTabBarWidthWithResourceObj(node, nullptr);
 }
 void ResetTabBarHeight(ArkUINodeHandle node)
 {
@@ -480,16 +263,6 @@ void ResetTabBarHeight(ArkUINodeHandle node)
     CHECK_NULL_VOID(frameNode);
     CalcDimension width = Dimension(-1.0, DimensionUnit::VP);
     TabsModelNG::SetTabBarHeight(frameNode, width);
-
-    CreateTabBarHeightWithResourceObj(node, nullptr);
-}
-
-void ResetAnimationCurve(ArkUINodeHandle node)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    RefPtr<Curve> curve;
-    TabsModelNG::SetAnimationCurve(frameNode, curve);
 }
 
 void ResetAnimationDuration(ArkUINodeHandle node)
@@ -504,13 +277,6 @@ void ResetBarAdaptiveHeight(ArkUINodeHandle node)
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
     TabsModelNG::SetBarAdaptiveHeight(frameNode, false);
-}
-
-void ResetNoMinHeightLimit(ArkUINodeHandle node)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    TabsModelNG::SetNoMinHeightLimit(frameNode, false);
 }
 
 void SetTabClip(ArkUINodeHandle node, ArkUI_Bool clipEdge)
@@ -599,380 +365,99 @@ void ResetAnimateMode(ArkUINodeHandle node)
     TabsModelNG::SetAnimateMode(frameNode, TabAnimateMode::CONTENT_FIRST);
 }
 
-void SetBarBackgroundEffect(ArkUINodeHandle node, ArkUITabBarBackgroundEffect* effectOption)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    CalcDimension radius;
-    if (AceApplicationInfo::GetInstance().GreatOrEqualTargetAPIVersion(PlatformVersion::VERSION_FOURTEEN)) {
-        radius = CalcDimension(effectOption->radius, DimensionUnit::VP);
-    } else {
-        radius = CalcDimension(effectOption->radius, DimensionUnit::PX);
-    }
-    Color color(effectOption->color);
-    BlurOption blurOption;
-    blurOption.grayscale.assign(effectOption->blurValues, effectOption->blurValues + effectOption->blurValuesSize);
-
-    EffectOption option;
-    option.radius = radius;
-    option.saturation = effectOption->saturation;
-    option.brightness = effectOption->brightness;
-    option.color = color;
-    option.adaptiveColor = static_cast<AdaptiveColor>(effectOption->adaptiveColor);
-    option.blurOption = blurOption;
-    option.blurType = static_cast<BlurType>(effectOption->blurType);
-    option.policy = static_cast<BlurStyleActivePolicy>(effectOption->policy);
-    Color inactiveColor(effectOption->inactiveColor);
-    option.inactiveColor = inactiveColor;
-    option.isValidColor = effectOption->isValidColor;
-    TabsModelNG::SetBarBackgroundEffect(frameNode, option);
-}
-
-void CreateBarBackgroundEffectWithResourceObj(ArkUINodeHandle node, void* colorRawPtr, void* inactiveColorRawPtr)
-{
-    CHECK_NULL_VOID(SystemProperties::ConfigChangePerform());
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    auto* colorPtr = reinterpret_cast<ResourceObject*>(colorRawPtr);
-    auto colorResObj = AceType::Claim(colorPtr);
-    TabsModelNG::HandleBackgroundEffectColor(frameNode, colorResObj, true);
-    auto* inactiveColorPtr = reinterpret_cast<ResourceObject*>(inactiveColorRawPtr);
-    auto inactiveColorResObj = AceType::Claim(inactiveColorPtr);
-    TabsModelNG::HandleBackgroundEffectInactiveColor(frameNode, inactiveColorResObj, true);
-}
-
-void ResetBarBackgroundEffect(ArkUINodeHandle node)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    CalcDimension radius;
-    radius.SetValue(0.0f);
-    double saturation = 1.0f;
-    double brightness = 1.0f;
-    Color color = Color::TRANSPARENT;
-    color.SetValue(Color::TRANSPARENT.GetValue());
-    auto adaptiveColor = AdaptiveColor::DEFAULT;
-    BlurOption blurOption;
-    EffectOption effectOption = { radius, saturation, brightness, color, adaptiveColor, blurOption };
-    TabsModelNG::SetBarBackgroundEffect(frameNode, effectOption);
-
-    CreateBarBackgroundEffectWithResourceObj(node, nullptr, nullptr);
-}
-
-void SetTabsOnSelected(ArkUINodeHandle node, void* callback)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    if (callback) {
-        auto onEvent = reinterpret_cast<std::function<void(const BaseEventInfo*)>*>(callback);
-        TabsModelNG::SetOnSelected(frameNode, std::move(*onEvent));
-    } else {
-        TabsModelNG::SetOnSelected(frameNode, nullptr);
-    }
-}
-
-void ResetTabsOnSelected(ArkUINodeHandle node)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    TabsModelNG::SetOnSelected(frameNode, nullptr);
-}
-
-void SetCachedMaxCount(ArkUINodeHandle node, ArkUI_Int32 count, ArkUI_Int32 mode)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    auto cacheMode = TabsCacheMode::CACHE_BOTH_SIDE;
-    if (mode >= static_cast<int32_t>(TabsCacheMode::CACHE_BOTH_SIDE) &&
-        mode <= static_cast<int32_t>(TabsCacheMode::CACHE_LATEST_SWITCHED)) {
-        cacheMode = static_cast<TabsCacheMode>(mode);
-    }
-    TabsModelNG::SetCachedMaxCount(frameNode, count, cacheMode);
-}
-
-void ResetCachedMaxCount(ArkUINodeHandle node)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    TabsModelNG::SetCachedMaxCount(frameNode, std::nullopt, TabsCacheMode::CACHE_BOTH_SIDE);
-}
-void SetTabsOnChange(ArkUINodeHandle node, void* callback)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    if (callback) {
-        auto onChange = reinterpret_cast<std::function<void(const BaseEventInfo*)>*>(callback);
-        TabsModelNG::SetOnChange(frameNode, std::move(*onChange));
-    } else {
-        TabsModelNG::SetOnChange(frameNode, nullptr);
-    }
-}
-
-void ResetTabsOnChange(ArkUINodeHandle node)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    TabsModelNG::SetOnChange(frameNode, nullptr);
-}
-
-void SetTabsOnTabBarClick(ArkUINodeHandle node, void* callback)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    if (callback) {
-        auto onTabBarClick = reinterpret_cast<std::function<void(const BaseEventInfo*)>*>(callback);
-        TabsModelNG::SetOnTabBarClick(frameNode, std::move(*onTabBarClick));
-    } else {
-        TabsModelNG::SetOnTabBarClick(frameNode, nullptr);
-    }
-}
-
-void ResetTabsOnTabBarClick(ArkUINodeHandle node)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    TabsModelNG::SetOnTabBarClick(frameNode, nullptr);
-}
-
-void SetTabsOnAnimationStart(ArkUINodeHandle node, void* callback)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    if (callback) {
-        auto onAnimationStart =
-            reinterpret_cast<std::function<void(int32_t, int32_t, const AnimationCallbackInfo&)>*>(callback);
-        TabsModelNG::SetOnAnimationStart(frameNode, std::move(*onAnimationStart));
-    } else {
-        TabsModelNG::SetOnAnimationStart(frameNode, nullptr);
-    }
-}
-
-void ResetTabsOnAnimationStart(ArkUINodeHandle node)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    TabsModelNG::SetOnAnimationStart(frameNode, nullptr);
-}
-
-void SetTabsOnAnimationEnd(ArkUINodeHandle node, void* callback)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    if (callback) {
-        auto onAnimationEnd = reinterpret_cast<std::function<void(int32_t, const AnimationCallbackInfo&)>*>(callback);
-        TabsModelNG::SetOnAnimationEnd(frameNode, std::move(*onAnimationEnd));
-    } else {
-        TabsModelNG::SetOnAnimationEnd(frameNode, nullptr);
-    }
-}
-
-void ResetTabsOnAnimationEnd(ArkUINodeHandle node)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    TabsModelNG::SetOnAnimationEnd(frameNode, nullptr);
-}
-
-void SetTabsOnGestureSwipe(ArkUINodeHandle node, void* callback)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    if (callback) {
-        auto onGestureSwipe = reinterpret_cast<std::function<void(int32_t, const AnimationCallbackInfo&)>*>(callback);
-        TabsModelNG::SetOnGestureSwipe(frameNode, std::move(*onGestureSwipe));
-    } else {
-        TabsModelNG::SetOnGestureSwipe(frameNode, nullptr);
-    }
-}
-
-void ResetTabsOnGestureSwipe(ArkUINodeHandle node)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    TabsModelNG::SetOnGestureSwipe(frameNode, nullptr);
-}
-
-void SetTabsOnContentWillChange(ArkUINodeHandle node, void* callback)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    if (callback) {
-        auto onContentWillChange = reinterpret_cast<std::function<bool(int32_t, int32_t)>*>(callback);
-        TabsModelNG::SetOnContentWillChange(frameNode, std::move(*onContentWillChange));
-    } else {
-        TabsModelNG::SetOnContentWillChange(frameNode, nullptr);
-    }
-}
-
-void ResetTabsOnContentWillChange(ArkUINodeHandle node)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    TabsModelNG::SetOnContentWillChange(frameNode, nullptr);
-}
-
-void SetTabsIsCustomAnimation(ArkUINodeHandle node, ArkUI_Bool isCustom)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    TabsModelNG::SetIsCustomAnimation(frameNode, isCustom);
-}
-
-void ResetTabsIsCustomAnimation(ArkUINodeHandle node)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    TabsModelNG::SetIsCustomAnimation(frameNode, false);
-}
-
 namespace NodeModifier {
 const ArkUITabsModifier* GetTabsModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
     static const ArkUITabsModifier modifier = {
-        .setTabBarMode = SetTabBarMode,
-        .setScrollableBarModeOptions = SetScrollableBarModeOptions,
-        .setBarGridAlign = SetBarGridAlign,
-        .setDivider = SetDivider,
-        .setDividerColorByUser = SetDividerColorByUser,
-        .setFadingEdge = SetFadingEdge,
-        .setTabOnUnselected = SetTabOnUnselected,
-        .setBarBackgroundColor = SetBarBackgroundColor,
-        .setBarBackgroundBlurStyle = SetBarBackgroundBlurStyle,
-        .setBarOverlap = SetBarOverlap,
-        .setIsVertical = SetIsVertical,
-        .setTabBarPosition = SetTabBarPosition,
-        .setTabsOptionsIndex = SetTabsOptionsIndex,
-        .setTabsOptionsController = SetTabsOptionsController,
-        .setTabsOptionsBarModifier = SetTabsOptionsBarModifier,
-        .setScrollable = SetScrollable,
-        .setTabBarWidth = SetTabBarWidth,
-        .setTabBarHeight = SetTabBarHeight,
-        .setBarAdaptiveHeight = SetBarAdaptiveHeight,
-        .setAnimationCurve = SetAnimationCurve,
-        .setNoMinHeightLimit = SetNoMinHeightLimit,
-        .setAnimationDuration = SetAnimationDuration,
-        .resetTabBarMode = ResetTabBarMode,
-        .resetScrollableBarModeOptions = ResetScrollableBarModeOptions,
-        .resetBarGridAlign = ResetBarGridAlign,
-        .resetDivider = ResetDivider,
-        .resetFadingEdge = ResetFadingEdge,
-        .resetTabOnUnselected = ResetTabOnUnselected,
-        .resetBarBackgroundColor = ResetBarBackgroundColor,
-        .resetBarBackgroundBlurStyle = ResetBarBackgroundBlurStyle,
-        .resetBarOverlap = ResetBarOverlap,
-        .resetIsVertical = ResetIsVertical,
-        .resetTabBarPosition = ResetTabBarPosition,
-        .resetTabsOptionsIndex = ResetTabsOptionsIndex,
-        .resetTabsOptionsBarModifier = ResetTabsOptionsBarModifier,
-        .resetScrollable = ResetScrollable,
-        .resetTabBarWidth = ResetTabBarWidth,
-        .resetTabBarHeight = ResetTabBarHeight,
-        .resetBarAdaptiveHeight = ResetBarAdaptiveHeight,
-        .resetAnimationCurve = ResetAnimationCurve,
-        .resetNoMinHeightLimit = ResetNoMinHeightLimit,
-        .resetAnimationDuration = ResetAnimationDuration,
-        .setTabClip = SetTabClip,
-        .resetTabClip = ResetTabClip,
-        .setTabEdgeEffect = SetTabEdgeEffect,
-        .resetTabEdgeEffect = ResetTabEdgeEffect,
-        .setTabPageFlipMode = SetTabPageFlipMode,
-        .resetTabPageFlipMode = ResetTabPageFlipMode,
-        .setTabWidthAuto = SetTabWidthAuto,
-        .resetTabWidthAuto = ResetTabWidthAuto,
-        .setTabHeightAuto = SetTabHeightAuto,
-        .resetTabHeightAuto = ResetTabHeightAuto,
-        .setAnimateMode = SetAnimateMode,
-        .resetAnimateMode = ResetAnimateMode,
-        .setBarBackgroundEffect = SetBarBackgroundEffect,
-        .resetBarBackgroundEffect = ResetBarBackgroundEffect,
-        .setTabsOnSelected = SetTabsOnSelected,
-        .resetTabsOnSelected = ResetTabsOnSelected,
-        .setCachedMaxCount = SetCachedMaxCount,
-        .resetCachedMaxCount = ResetCachedMaxCount,
-        .setTabsOnChange = SetTabsOnChange,
-        .resetTabsOnChange = ResetTabsOnChange,
-        .setTabsOnTabBarClick = SetTabsOnTabBarClick,
-        .resetTabsOnTabBarClick = ResetTabsOnTabBarClick,
-        .setTabsOnAnimationStart = SetTabsOnAnimationStart,
-        .resetTabsOnAnimationStart = ResetTabsOnAnimationStart,
-        .setTabsOnAnimationEnd = SetTabsOnAnimationEnd,
-        .resetTabsOnAnimationEnd = ResetTabsOnAnimationEnd,
-        .setTabsOnGestureSwipe = SetTabsOnGestureSwipe,
-        .resetTabsOnGestureSwipe = ResetTabsOnGestureSwipe,
-        .setTabsOnContentWillChange = SetTabsOnContentWillChange,
-        .resetTabsOnContentWillChange = ResetTabsOnContentWillChange,
-        .setTabsIsCustomAnimation = SetTabsIsCustomAnimation,
-        .resetTabsIsCustomAnimation = ResetTabsIsCustomAnimation,
-        .createScrollableBarModeOptionsWithResourceObj = CreateScrollableBarModeOptionsWithResourceObj,
-        .createBarGridAlignWithResourceObj = CreateBarGridAlignWithResourceObj,
-        .createDividerWithResourceObj = CreateDividerWithResourceObj,
-        .createBarBackgroundColorWithResourceObj = CreateBarBackgroundColorWithResourceObj,
-        .createBarBackgroundBlurStyleWithResourceObj = CreateBarBackgroundBlurStyleWithResourceObj,
-        .createTabBarWidthWithResourceObj = CreateTabBarWidthWithResourceObj,
-        .createTabBarHeightWithResourceObj = CreateTabBarHeightWithResourceObj,
-        .createBarBackgroundEffectWithResourceObj = CreateBarBackgroundEffectWithResourceObj,
+        SetTabBarMode,
+        SetScrollableBarModeOptions,
+        SetBarGridAlign,
+        SetDivider,
+        SetFadingEdge,
+        SetBarBackgroundColor,
+        SetBarBackgroundBlurStyle,
+        SetBarOverlap,
+        SetIsVertical,
+        SetTabBarPosition,
+        SetScrollable,
+        SetTabBarWidth,
+        SetTabBarHeight,
+        SetBarAdaptiveHeight,
+        SetAnimationDuration,
+        ResetTabBarMode,
+        ResetScrollableBarModeOptions,
+        ResetBarGridAlign,
+        ResetDivider,
+        ResetFadingEdge,
+        ResetBarBackgroundColor,
+        ResetBarBackgroundBlurStyle,
+        ResetBarOverlap,
+        ResetIsVertical,
+        ResetTabBarPosition,
+        ResetScrollable,
+        ResetTabBarWidth,
+        ResetTabBarHeight,
+        ResetBarAdaptiveHeight,
+        ResetAnimationDuration,
+        SetTabClip,
+        ResetTabClip,
+        SetTabEdgeEffect,
+        ResetTabEdgeEffect,
+        SetTabPageFlipMode,
+        ResetTabPageFlipMode,
+        SetTabWidthAuto,
+        ResetTabWidthAuto,
+        SetTabHeightAuto,
+        ResetTabHeightAuto,
+        SetAnimateMode,
+        ResetAnimateMode,
     };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
 
     return &modifier;
 }
 
 const CJUITabsModifier* GetCJUITabsModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
     static const CJUITabsModifier modifier = {
-        .setTabBarMode = SetTabBarMode,
-        .setScrollableBarModeOptions = SetScrollableBarModeOptions,
-        .setBarGridAlign = SetBarGridAlign,
-        .setDivider = SetDivider,
-        .setFadingEdge = SetFadingEdge,
-        .setBarBackgroundColor = SetBarBackgroundColor,
-        .setBarBackgroundBlurStyle = SetBarBackgroundBlurStyle,
-        .setBarOverlap = SetBarOverlap,
-        .setIsVertical = SetIsVertical,
-        .setTabBarPosition = SetTabBarPosition,
-        .setTabsOptionsIndex = SetTabsOptionsIndex,
-        .setTabsOptionsController = SetTabsOptionsController,
-        .setTabsOptionsBarModifier = SetTabsOptionsBarModifier,
-        .setScrollable = SetScrollable,
-        .setTabBarWidth = SetTabBarWidth,
-        .setTabBarHeight = SetTabBarHeight,
-        .setBarAdaptiveHeight = SetBarAdaptiveHeight,
-        .setAnimationDuration = SetAnimationDuration,
-        .resetTabBarMode = ResetTabBarMode,
-        .resetScrollableBarModeOptions = ResetScrollableBarModeOptions,
-        .resetBarGridAlign = ResetBarGridAlign,
-        .resetDivider = ResetDivider,
-        .resetFadingEdge = ResetFadingEdge,
-        .resetBarBackgroundColor = ResetBarBackgroundColor,
-        .resetBarBackgroundBlurStyle = ResetBarBackgroundBlurStyle,
-        .resetBarOverlap = ResetBarOverlap,
-        .resetIsVertical = ResetIsVertical,
-        .resetTabBarPosition = ResetTabBarPosition,
-        .resetTabsOptionsIndex = ResetTabsOptionsIndex,
-        .resetTabsOptionsBarModifier = ResetTabsOptionsBarModifier,
-        .resetScrollable = ResetScrollable,
-        .resetTabBarWidth = ResetTabBarWidth,
-        .resetTabBarHeight = ResetTabBarHeight,
-        .resetBarAdaptiveHeight = ResetBarAdaptiveHeight,
-        .resetAnimationDuration = ResetAnimationDuration,
-        .setTabClip = SetTabClip,
-        .resetTabClip = ResetTabClip,
-        .setTabEdgeEffect = SetTabEdgeEffect,
-        .resetTabEdgeEffect = ResetTabEdgeEffect,
-        .setTabWidthAuto = SetTabWidthAuto,
-        .resetTabWidthAuto = ResetTabWidthAuto,
-        .setTabHeightAuto = SetTabHeightAuto,
-        .resetTabHeightAuto = ResetTabHeightAuto,
-        .setAnimateMode = SetAnimateMode,
-        .resetAnimateMode = ResetAnimateMode,
-        .setBarBackgroundEffect = SetBarBackgroundEffect,
-        .resetBarBackgroundEffect = ResetBarBackgroundEffect,
-        .setTabsOnSelected = SetTabsOnSelected,
-        .resetTabsOnSelected = ResetTabsOnSelected,
+        SetTabBarMode,
+        SetScrollableBarModeOptions,
+        SetBarGridAlign,
+        SetDivider,
+        SetFadingEdge,
+        SetBarBackgroundColor,
+        SetBarBackgroundBlurStyle,
+        SetBarOverlap,
+        SetIsVertical,
+        SetTabBarPosition,
+        SetScrollable,
+        SetTabBarWidth,
+        SetTabBarHeight,
+        SetBarAdaptiveHeight,
+        SetAnimationDuration,
+        ResetTabBarMode,
+        ResetScrollableBarModeOptions,
+        ResetBarGridAlign,
+        ResetDivider,
+        ResetFadingEdge,
+        ResetBarBackgroundColor,
+        ResetBarBackgroundBlurStyle,
+        ResetBarOverlap,
+        ResetIsVertical,
+        ResetTabBarPosition,
+        ResetScrollable,
+        ResetTabBarWidth,
+        ResetTabBarHeight,
+        ResetBarAdaptiveHeight,
+        ResetAnimationDuration,
+        SetTabClip,
+        ResetTabClip,
+        SetTabWidthAuto,
+        ResetTabWidthAuto,
+        SetTabHeightAuto,
+        ResetTabHeightAuto,
+        SetAnimateMode,
+        ResetAnimateMode,
     };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
 
     return &modifier;
 }

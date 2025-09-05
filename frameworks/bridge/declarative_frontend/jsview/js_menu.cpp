@@ -15,14 +15,13 @@
 
 #include "bridge/declarative_frontend/jsview/js_menu.h"
 
-#include "bridge/declarative_frontend/ark_theme/theme_apply/js_menu_theme.h"
 #include "bridge/declarative_frontend/jsview/js_view_common_def.h"
 #include "bridge/declarative_frontend/jsview/models/menu_model_impl.h"
 #include "core/components_ng/layout/layout_property.h"
 #include "core/components_ng/pattern/menu/menu_model.h"
 #include "core/components_ng/pattern/menu/menu_model_ng.h"
 #include "core/components_ng/property/measure_property.h"
-#include "core/common/resource/resource_parse_utils.h"
+#include "bridge/declarative_frontend/ark_theme/theme_apply/js_menu_theme.h"
 
 namespace OHOS::Ace {
 std::unique_ptr<MenuModel> MenuModel::instance_ = nullptr;
@@ -61,21 +60,16 @@ void JSMenu::FontSize(const JSCallbackInfo& info)
         return;
     }
     CalcDimension fontSize;
-    RefPtr<ResourceObject> fontSizeResObj;
-    if (!ParseJsDimensionFp(info[0], fontSize, fontSizeResObj)) {
+    if (!ParseJsDimensionFp(info[0], fontSize)) {
         return;
     }
     MenuModel::GetInstance()->SetFontSize(fontSize);
-    if (SystemProperties::ConfigChangePerform()) {
-        MenuModel::GetInstance()->CreateWithDimensionResourceObj(fontSizeResObj, MenuDimensionType::FONT_SIZE);
-    }
 }
 
 void JSMenu::Font(const JSCallbackInfo& info)
 {
     CalcDimension fontSize;
     std::string weight;
-    RefPtr<ResourceObject> fontSizeResObj;
     if (!info[0]->IsObject()) {
         if (AceApplicationInfo::GetInstance().GreatOrEqualTargetAPIVersion(PlatformVersion::VERSION_TWELVE)) {
             MenuModel::GetInstance()->SetFontSize(CalcDimension());
@@ -85,66 +79,42 @@ void JSMenu::Font(const JSCallbackInfo& info)
         }
         return;
     } else {
-        HandleFontObject(info, fontSize, weight, fontSizeResObj);
-    }
-    MenuModel::GetInstance()->SetFontSize(fontSize);
-    if (SystemProperties::ConfigChangePerform()) {
-        MenuModel::GetInstance()->CreateWithDimensionResourceObj(fontSizeResObj, MenuDimensionType::FONT_SIZE);
-    }
-    MenuModel::GetInstance()->SetFontWeight(ConvertStrToFontWeight(weight));
-}
-
-void JSMenu::HandleFontObject(
-    const JSCallbackInfo& info, CalcDimension& fontSize, std::string& weight, RefPtr<ResourceObject>& fontSizeResObj)
-{
-    if (info.Length() < 1 || !info[0]->IsObject()) {
-        return;
-    }
-    JSRef<JSObject> obj = JSRef<JSObject>::Cast(info[0]);
-    JSRef<JSVal> size = obj->GetProperty("size");
-    if (!size->IsNull()) {
-        ParseJsDimensionFp(size, fontSize, fontSizeResObj);
-        if (fontSize.Unit() == DimensionUnit::PERCENT) {
-            // set zero for abnormal value
-            fontSize = CalcDimension();
+        JSRef<JSObject> obj = JSRef<JSObject>::Cast(info[0]);
+        JSRef<JSVal> size = obj->GetProperty("size");
+        if (!size->IsNull()) {
+            ParseJsDimensionFp(size, fontSize);
+            if (fontSize.Unit() == DimensionUnit::PERCENT) {
+                // set zero for abnormal value
+                fontSize = CalcDimension();
+            }
         }
-    }
-    auto jsWeight = obj->GetProperty("weight");
-    if (!jsWeight->IsNull()) {
-        if (jsWeight->IsNumber()) {
-            weight = std::to_string(jsWeight->ToNumber<int32_t>());
-        } else {
-            ParseJsString(jsWeight, weight);
+        auto jsWeight = obj->GetProperty("weight");
+        if (!jsWeight->IsNull()) {
+            if (jsWeight->IsNumber()) {
+                weight = std::to_string(jsWeight->ToNumber<int32_t>());
+            } else {
+                ParseJsString(jsWeight, weight);
+            }
         }
-    }
-    auto jsStyle = obj->GetProperty("style");
-    if (!jsStyle->IsNull()) {
-        if (jsStyle->IsNumber()) {
-            MenuModel::GetInstance()->SetFontStyle(static_cast<FontStyle>(jsStyle->ToNumber<int32_t>()));
-        } else {
-            std::string style;
-            ParseJsString(jsStyle, style);
-            MenuModel::GetInstance()->SetFontStyle(ConvertStrToFontStyle(style));
+        auto jsStyle = obj->GetProperty("style");
+        if (!jsStyle->IsNull()) {
+            if (jsStyle->IsNumber()) {
+                MenuModel::GetInstance()->SetFontStyle(static_cast<FontStyle>(jsStyle->ToNumber<int32_t>()));
+            } else {
+                std::string style;
+                ParseJsString(jsStyle, style);
+                MenuModel::GetInstance()->SetFontStyle(ConvertStrToFontStyle(style));
+            }
         }
-    }
-    auto jsFamily = obj->GetProperty("family");
-    if (!jsFamily->IsNull()) {
-        if (jsFamily->IsString()) {
+        auto jsFamily = obj->GetProperty("family");
+        if (!jsFamily->IsNull() && jsFamily->IsString()) {
             auto familyVal = jsFamily->ToString();
             auto fontFamilies = ConvertStrToFontFamilies(familyVal);
             MenuModel::GetInstance()->SetFontFamily(fontFamilies);
-        } else if (jsFamily->IsObject()) {
-            RefPtr<ResourceObject> familyResObj;
-            std::vector<std::string> fontFamilies;
-            if (ParseJsFontFamilies(jsFamily, fontFamilies, familyResObj)) {
-                MenuModel::GetInstance()->SetFontFamily(fontFamilies);
-            }
-            if (SystemProperties::ConfigChangePerform()) {
-                MenuModel::GetInstance()->CreateWithFontFamilyResourceObj(
-                    familyResObj, MenuFamilyType::FONT_FAMILY);
-            }
         }
     }
+    MenuModel::GetInstance()->SetFontSize(fontSize);
+    MenuModel::GetInstance()->SetFontWeight(ConvertStrToFontWeight(weight));
 }
 
 void JSMenu::FontColor(const JSCallbackInfo& info)
@@ -154,15 +124,11 @@ void JSMenu::FontColor(const JSCallbackInfo& info)
         return;
     } else {
         Color textColor;
-        RefPtr<ResourceObject> resObj;
-        if (ParseJsColor(info[0], textColor, resObj)) {
+        if (ParseJsColor(info[0], textColor)) {
             color = textColor;
         }
-        MenuModel::GetInstance()->SetFontColor(color);
-        if (SystemProperties::ConfigChangePerform()) {
-            MenuModel::GetInstance()->CreateWithColorResourceObj(resObj, MenuColorType::FONT_COLOR);
-        }
     }
+    MenuModel::GetInstance()->SetFontColor(color);
 }
 
 void JSMenu::SetWidth(const JSCallbackInfo& info)
@@ -170,26 +136,9 @@ void JSMenu::SetWidth(const JSCallbackInfo& info)
     if (info.Length() < 1) {
         return;
     }
-
-    const JSRef<JSVal>& jsValue = info[0];
-    if (jsValue->IsObject()) {
-        JSRef<JSObject> object = JSRef<JSObject>::Cast(jsValue);
-        JSRef<JSVal> layoutPolicy = object->GetProperty("id_");
-        if (layoutPolicy->IsString()) {
-            ViewAbstractModel::GetInstance()->ClearWidthOrHeight(true);
-            auto policy = ParseLayoutPolicy(layoutPolicy->ToString());
-            ViewAbstractModel::GetInstance()->UpdateLayoutPolicyProperty(policy, true);
-            return;
-        }
-    }
-
     CalcDimension width;
-    RefPtr<ResourceObject> resObj;
-    ParseJsDimensionVp(jsValue, width, resObj);
+    ParseJsDimensionVp(info[0], width);
     MenuModel::GetInstance()->SetWidth(width);
-    if (SystemProperties::ConfigChangePerform()) {
-        MenuModel::GetInstance()->CreateWithDimensionResourceObj(resObj, MenuDimensionType::WIDTH);
-    }
 }
 
 void JSMenu::HandleDifferentRadius(const JSRef<JSVal>& args)
@@ -198,96 +147,29 @@ void JSMenu::HandleDifferentRadius(const JSRef<JSVal>& args)
     std::optional<CalcDimension> radiusTopRight;
     std::optional<CalcDimension> radiusBottomLeft;
     std::optional<CalcDimension> radiusBottomRight;
-    NG::BorderRadiusProperty borderRadius;
     if (args->IsObject()) {
         JSRef<JSObject> object = JSRef<JSObject>::Cast(args);
         CalcDimension topLeft;
-        RefPtr<ResourceObject> topLeftResObj;
-        if (ParseJsDimensionVp(object->GetProperty("topLeft"), topLeft, topLeftResObj)) {
+        if (ParseJsDimensionVp(object->GetProperty("topLeft"), topLeft)) {
             radiusTopLeft = topLeft;
         }
         CalcDimension topRight;
-        RefPtr<ResourceObject> topRightResObj;
-        if (ParseJsDimensionVp(object->GetProperty("topRight"), topRight, topRightResObj)) {
+        if (ParseJsDimensionVp(object->GetProperty("topRight"), topRight)) {
             radiusTopRight = topRight;
         }
         CalcDimension bottomLeft;
-        RefPtr<ResourceObject> bottomLeftResObj;
-        if (ParseJsDimensionVp(object->GetProperty("bottomLeft"), bottomLeft, bottomLeftResObj)) {
+        if (ParseJsDimensionVp(object->GetProperty("bottomLeft"), bottomLeft)) {
             radiusBottomLeft = bottomLeft;
         }
         CalcDimension bottomRight;
-        RefPtr<ResourceObject> bottomRightResObj;
-        if (ParseJsDimensionVp(object->GetProperty("bottomRight"), bottomRight, bottomRightResObj)) {
+        if (ParseJsDimensionVp(object->GetProperty("bottomRight"), bottomRight)) {
             radiusBottomRight = bottomRight;
         }
         if (!radiusTopLeft.has_value() && !radiusTopRight.has_value() && !radiusBottomLeft.has_value() &&
             !radiusBottomRight.has_value()) {
             return;
         }
-        if (SystemProperties::ConfigChangePerform()) {
-            ParseBorderRadiusResourceObj(
-                topLeftResObj, topRightResObj, bottomLeftResObj, bottomRightResObj, borderRadius);
-            borderRadius.radiusTopLeft = radiusTopLeft;
-            borderRadius.radiusTopRight = radiusTopRight;
-            borderRadius.radiusBottomLeft = radiusBottomLeft;
-            borderRadius.radiusBottomRight = radiusBottomRight;
-            borderRadius.multiValued = true;
-            MenuModel::GetInstance()->SetBorderRadius(borderRadius);
-        } else {
-            MenuModel::GetInstance()->SetBorderRadius(
-                radiusTopLeft, radiusTopRight, radiusBottomLeft, radiusBottomRight);
-        }
-    }
-}
-
-void JSMenu::ParseBorderRadiusResourceObj(const RefPtr<ResourceObject>& topLeftResObj,
-    const RefPtr<ResourceObject>& topRightResObj, const RefPtr<ResourceObject>& bottomLeftResObj,
-    const RefPtr<ResourceObject>& bottomRightResObj, NG::BorderRadiusProperty& borderRadius)
-{
-    if (topLeftResObj) {
-        auto&& updateFunc = [](const RefPtr<ResourceObject>& resObj, NG::BorderRadiusProperty& borderRadiusProperty) {
-            CalcDimension topLeft;
-            if (!ResourceParseUtils::ParseResDimensionVp(resObj, topLeft)) {
-                borderRadiusProperty.radiusTopLeft.reset();
-                return;
-            }
-            borderRadiusProperty.radiusTopLeft = topLeft;
-        };
-        borderRadius.AddResource("borderRadius.topLeft", topLeftResObj, std::move(updateFunc));
-    }
-    if (topRightResObj) {
-        auto&& updateFunc = [](const RefPtr<ResourceObject>& resObj, NG::BorderRadiusProperty& borderRadiusProperty) {
-            CalcDimension topRight;
-            if (!ResourceParseUtils::ParseResDimensionVp(resObj, topRight)) {
-                borderRadiusProperty.radiusTopRight.reset();
-                return;
-            }
-            borderRadiusProperty.radiusTopRight = topRight;
-        };
-        borderRadius.AddResource("borderRadius.topRight", topRightResObj, std::move(updateFunc));
-    }
-    if (bottomLeftResObj) {
-        auto&& updateFunc = [](const RefPtr<ResourceObject>& resObj, NG::BorderRadiusProperty& borderRadiusProperty) {
-            CalcDimension bottomLeft;
-            if (!ResourceParseUtils::ParseResDimensionVp(resObj, bottomLeft)) {
-                borderRadiusProperty.radiusBottomLeft.reset();
-                return;
-            }
-            borderRadiusProperty.radiusBottomLeft = bottomLeft;
-        };
-        borderRadius.AddResource("borderRadius.bottomLeft", bottomLeftResObj, std::move(updateFunc));
-    }
-    if (bottomRightResObj) {
-        auto&& updateFunc = [](const RefPtr<ResourceObject>& resObj, NG::BorderRadiusProperty& borderRadiusProperty) {
-            CalcDimension bottomRight;
-            if (!ResourceParseUtils::ParseResDimensionVp(resObj, bottomRight)) {
-                borderRadiusProperty.radiusBottomRight.reset();
-                return;
-            }
-            borderRadiusProperty.radiusBottomRight = bottomRight;
-        };
-        borderRadius.AddResource("borderRadius.bottomRight", bottomRightResObj, std::move(updateFunc));
+        MenuModel::GetInstance()->SetBorderRadius(radiusTopLeft, radiusTopRight, radiusBottomLeft, radiusBottomRight);
     }
 }
 
@@ -309,11 +191,6 @@ void JSMenu::SetRadius(const JSCallbackInfo& info)
             return;
         }
         MenuModel::GetInstance()->SetBorderRadius(radius);
-        if (SystemProperties::ConfigChangePerform()) {
-            RefPtr<ResourceObject> resObj;
-            ParseJsDimensionVp(info[0], radius, resObj);
-            MenuModel::GetInstance()->CreateWithDimensionResourceObj(resObj, MenuDimensionType::BORDER_RADIUS);
-        }
     }
 }
 
@@ -324,27 +201,19 @@ void JSMenu::SetExpandingMode(const JSCallbackInfo& info)
     }
 
     auto mode = static_cast<SubMenuExpandingMode>(info[0]->ToNumber<int32_t>());
-    auto expandingMode = mode == SubMenuExpandingMode::EMBEDDED ? NG::SubMenuExpandingMode::EMBEDDED
-                         : mode == SubMenuExpandingMode::STACK  ? NG::SubMenuExpandingMode::STACK
-                                                                : NG::SubMenuExpandingMode::SIDE;
-
+    auto expandingMode =
+        mode == SubMenuExpandingMode::EMBEDDED
+            ? NG::SubMenuExpandingMode::EMBEDDED
+            : mode == SubMenuExpandingMode::STACK
+                ? NG::SubMenuExpandingMode::STACK
+                : NG::SubMenuExpandingMode::SIDE;
+                
     MenuModel::GetInstance()->SetExpandingMode(expandingMode);
-}
-
-void JSMenu::SetExpandSymbol(const JSCallbackInfo& info)
-{
-    if (info.Length() < 1 || !info[0]->IsObject()) {
-        return;
-    }
-    std::function<void(WeakPtr<NG::FrameNode>)> expandSymbol;
-    JSViewAbstract::SetSymbolOptionApply(info, expandSymbol, info[0]);
-    MenuModel::GetInstance()->SetExpandSymbol(expandSymbol);
 }
 
 void JSMenu::SetItemGroupDivider(const JSCallbackInfo& args)
 {
-    auto mode = DividerMode::FLOATING_ABOVE_MENU;
-    auto divider = V2::ItemDivider {
+    auto divider = V2::ItemDivider{
         .strokeWidth = Dimension(0.0f, DimensionUnit::INVALID),
         .color = Color::FOREGROUND,
     };
@@ -381,69 +250,44 @@ void JSMenu::SetItemGroupDivider(const JSCallbackInfo& args)
         if (!ConvertFromJSValue(obj->GetProperty("color"), divider.color)) {
             divider.color = Color::FOREGROUND;
         }
-        auto modeVal = obj->GetProperty("mode");
-        if (modeVal->IsNumber() && modeVal->ToNumber<int32_t>() == 1) {
-            mode = DividerMode::EMBEDDED_IN_MENU;
-        }
-        if (SystemProperties::ConfigChangePerform()) {
-            RefPtr<ResourceObject> resObj;
-            ParseJsColor(obj->GetProperty("color"), divider.color, resObj);
-            MenuModel::GetInstance()->CreateWithColorResourceObj(resObj, MenuColorType::GROUP_DIVIDER_COLOR);
-        }
     }
-    MenuModel::GetInstance()->SetItemGroupDivider(divider, mode);
+    MenuModel::GetInstance()->SetItemGroupDivider(divider);
     args.ReturnSelf();
 }
 
 void JSMenu::SetItemDivider(const JSCallbackInfo& args)
 {
-    auto mode = DividerMode::FLOATING_ABOVE_MENU;
     V2::ItemDivider divider;
     if (args.Length() >= 1 && args[0]->IsObject()) {
         JSRef<JSObject> obj = JSRef<JSObject>::Cast(args[0]);
-        auto modeVal = obj->GetProperty("mode");
-        if (modeVal->IsNumber() && modeVal->ToNumber<int32_t>() == 1) {
-            mode = DividerMode::EMBEDDED_IN_MENU;
-        }
         CalcDimension value;
         if (!ParseLengthMetricsToPositiveDimension(obj->GetProperty("strokeWidth"), value)) {
             value.Reset();
-            value.SetUnit(mode == DividerMode::EMBEDDED_IN_MENU ? DimensionUnit::INVALID : DimensionUnit::PX);
         }
         if (value.IsNegative()) {
             value.Reset();
-            value.SetUnit(mode == DividerMode::EMBEDDED_IN_MENU ? DimensionUnit::INVALID : DimensionUnit::PX);
         }
         divider.strokeWidth = value;
         if (!ParseLengthMetricsToPositiveDimension(obj->GetProperty("startMargin"), value)) {
             value.Reset();
-            value.SetUnit(mode == DividerMode::EMBEDDED_IN_MENU ? DimensionUnit::INVALID : DimensionUnit::PX);
         }
         if (value.IsNegative()) {
             value.Reset();
-            value.SetUnit(mode == DividerMode::EMBEDDED_IN_MENU ? DimensionUnit::INVALID : DimensionUnit::PX);
         }
         divider.startMargin = value;
         if (!ParseLengthMetricsToPositiveDimension(obj->GetProperty("endMargin"), value)) {
             value.Reset();
-            value.SetUnit(mode == DividerMode::EMBEDDED_IN_MENU ? DimensionUnit::INVALID : DimensionUnit::PX);
         }
         if (value.IsNegative()) {
             value.Reset();
-            value.SetUnit(mode == DividerMode::EMBEDDED_IN_MENU ? DimensionUnit::INVALID : DimensionUnit::PX);
         }
         divider.endMargin = value;
 
         if (!ConvertFromJSValue(obj->GetProperty("color"), divider.color)) {
             divider.color = Color::TRANSPARENT;
         }
-        if (SystemProperties::ConfigChangePerform()) {
-            RefPtr<ResourceObject> resObj;
-            ParseJsColor(obj->GetProperty("color"), divider.color, resObj);
-            MenuModel::GetInstance()->CreateWithColorResourceObj(resObj, MenuColorType::DIVIDER_COLOR);
-        }
     }
-    MenuModel::GetInstance()->SetItemDivider(divider, mode);
+    MenuModel::GetInstance()->SetItemDivider(divider);
     args.ReturnSelf();
 }
 
@@ -458,7 +302,6 @@ void JSMenu::JSBind(BindingTarget globalObj)
     JSClass<JSMenu>::StaticMethod("width", &JSMenu::SetWidth, opt);
     JSClass<JSMenu>::StaticMethod("radius", &JSMenu::SetRadius, opt);
     JSClass<JSMenu>::StaticMethod("subMenuExpandingMode", &JSMenu::SetExpandingMode);
-    JSClass<JSMenu>::StaticMethod("subMenuExpandSymbol", &JSMenu::SetExpandSymbol);
     JSClass<JSMenu>::StaticMethod("menuItemDivider", &JSMenu::SetItemDivider);
     JSClass<JSMenu>::StaticMethod("menuItemGroupDivider", &JSMenu::SetItemGroupDivider);
     JSClass<JSMenu>::StaticMethod("onAppear", &JSInteractableView::JsOnAppear);

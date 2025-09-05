@@ -75,7 +75,7 @@ void JSEnvironment::GetAccessibilityEnabled(const JSCallbackInfo& args)
 void JSEnvironment::GetColorMode(const JSCallbackInfo& args)
 {
     JAVASCRIPT_EXECUTION_SCOPE_WITH_CHECK(args.GetExecutionContext());
-    auto colorMode = Container::CurrentColorMode();
+    auto colorMode = SystemProperties::GetColorMode();
     auto returnValue = JSVal(ToJSValue(static_cast<int32_t>(colorMode)));
     auto returnPtr = JSRef<JSVal>::Make(returnValue);
     args.SetReturnValue(returnPtr);

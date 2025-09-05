@@ -15,9 +15,11 @@
 
 #include "cj_environment.h"
 
-#include "base/i18n/localization.h"
+#include "core/common/ace_application_info.h"
+#include "core/common/container.h"
 #include "core/common/environment/environment_proxy.h"
-#include "core/pipeline/pipeline_base.h"
+#include "frameworks/base/i18n/localization.h"
+#include "bridge/cj_frontend/interfaces/cj_ffi/utils.h"
 
 using namespace OHOS::Ace;
 using namespace OHOS::FFI;
@@ -46,7 +48,10 @@ NativeOptionBool FfiOHOSAceFrameworkEnvironmentGetAccessibilityEnabled()
 
 NativeOptionInt32 FfiOHOSAceFrameworkEnvironmentGetColorMode()
 {
-    NativeOptionInt32 result { .hasValue = true, .value = static_cast<int32_t>(Container::CurrentColorMode()) };
+    NativeOptionInt32 result {
+        .hasValue = true,
+        .value = static_cast<int32_t>(SystemProperties::GetColorMode())
+    };
     return result;
 }
 

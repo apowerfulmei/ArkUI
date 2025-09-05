@@ -24,7 +24,7 @@
 namespace OHOS::Ace::Framework {
 
 class JSCustomDialogController : public virtual AceType {
-    DECLARE_ACE_TYPE(JSCustomDialogController, AceType);
+    DECLARE_ACE_TYPE(JSCustomDialogController, AceType)
 
 public:
     explicit JSCustomDialogController(JSView* ownerView) : ownerView_(ownerView) {}
@@ -35,7 +35,6 @@ public:
     static void DestructorCallback(JSCustomDialogController* instance);
     void JsOpenDialog(const JSCallbackInfo& info);
     void JsCloseDialog(const JSCallbackInfo& info);
-    void JsGetState(const JSCallbackInfo& info);
 
 private:
     static bool ParseAnimation(
@@ -43,7 +42,6 @@ private:
     JSView* ownerView_ = nullptr;
     bool isShown_ = false;
     bool pending_ = false;
-    bool hasBind_ = false;
 
     // NG
     std::vector<WeakPtr<AceType>> dialogs_;

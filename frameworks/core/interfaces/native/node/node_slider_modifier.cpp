@@ -15,8 +15,11 @@
 #include "core/interfaces/native/node/node_slider_modifier.h"
 
 #include "core/components_ng/pattern/slider/slider_model_ng.h"
+#include "core/components/common/layout/constants.h"
 #include "core/components/slider/slider_theme.h"
-#include "core/components_ng/pattern/slider/slider_custom_content_options.h"
+#include "core/components_ng/base/frame_node.h"
+#include "core/interfaces/arkoala/arkoala_api.h"
+#include "core/pipeline/base/element_register.h"
 #include "core/pipeline_ng/pipeline_context.h"
 
 namespace OHOS::Ace::NG {
@@ -52,7 +55,7 @@ const float ERROR_FLOAT_CODE = -1.0f;
 const int32_t ERROR_INT_CODE = -1;
 namespace SliderModifier {
 
-thread_local std::string g_strValue;
+std::string g_strValue;
 
 void SetShowTips(ArkUINodeHandle node, ArkUI_Bool isShow, const char *value)
 {
@@ -68,32 +71,12 @@ void SetShowTips(ArkUINodeHandle node, ArkUI_Bool isShow, const char *value)
     SliderModelNG::SetShowTips(frameNode, static_cast<bool>(isShow), content);
 }
 
-void SetShowTipsPtr(ArkUINodeHandle node, ArkUI_Bool isShow, const char* value, void* strRawPtr)
-{
-    CHECK_NULL_VOID(node);
-    SetShowTips(node, isShow, value);
-    if (SystemProperties::ConfigChangePerform()) {
-        auto* frameNode = reinterpret_cast<FrameNode*>(node);
-        CHECK_NULL_VOID(frameNode);
-        if (strRawPtr) {
-            auto* str = reinterpret_cast<ResourceObject*>(strRawPtr);
-            auto strResObj = AceType::Claim(str);
-            SliderModelNG::CreateWithStringResourceObj(frameNode, strResObj, static_cast<bool>(isShow));
-        } else {
-            SliderModelNG::CreateWithStringResourceObj(frameNode, nullptr, static_cast<bool>(isShow));
-        }
-    }
-}
-
 void ResetShowTips(ArkUINodeHandle node)
 {
     auto *frameNode = reinterpret_cast<FrameNode *>(node);
     CHECK_NULL_VOID(frameNode);
     std::optional<std::string> content;
     SliderModelNG::SetShowTips(frameNode, DEFAULT_SHOW_TIPS, content);
-    if (SystemProperties::ConfigChangePerform()) {
-        SliderModelNG::CreateWithStringResourceObj(frameNode, nullptr, false);
-    }
 }
 
 void SetSliderStepSize(ArkUINodeHandle node, ArkUI_Float32 value, int unit)
@@ -167,31 +150,11 @@ void SetStepColor(ArkUINodeHandle node, uint32_t color)
     SliderModelNG::SetStepColor(frameNode, Color(color));
 }
 
-void SetStepColorPtr(ArkUINodeHandle node, uint32_t color, void* colorRawPtr)
-{
-    CHECK_NULL_VOID(node);
-    SetStepColor(node, color);
-    if (SystemProperties::ConfigChangePerform()) {
-        auto* frameNode = reinterpret_cast<FrameNode*>(node);
-        CHECK_NULL_VOID(frameNode);
-        if (colorRawPtr) {
-            auto* color = reinterpret_cast<ResourceObject*>(colorRawPtr);
-            auto colorResObj = AceType::Claim(color);
-            SliderModelNG::CreateWithColorResourceObj(frameNode, colorResObj, SliderColorType::STEP_COLOR);
-        } else {
-            SliderModelNG::CreateWithColorResourceObj(frameNode, nullptr, SliderColorType::STEP_COLOR);
-        }
-    }
-}
-
 void ResetStepColor(ArkUINodeHandle node)
 {
     auto *frameNode = reinterpret_cast<FrameNode *>(node);
     CHECK_NULL_VOID(frameNode);
     SliderModelNG::ResetStepColor(frameNode);
-    if (SystemProperties::ConfigChangePerform()) {
-        SliderModelNG::CreateWithColorResourceObj(frameNode, nullptr, SliderColorType::STEP_COLOR);
-    }
 }
 
 void SetBlockBorderColor(ArkUINodeHandle node, uint32_t color)
@@ -201,31 +164,11 @@ void SetBlockBorderColor(ArkUINodeHandle node, uint32_t color)
     SliderModelNG::SetBlockBorderColor(frameNode, Color(color));
 }
 
-void SetBlockBorderColorPtr(ArkUINodeHandle node, uint32_t color, void* colorRawPtr)
-{
-    CHECK_NULL_VOID(node);
-    SetBlockBorderColor(node, color);
-    if (SystemProperties::ConfigChangePerform()) {
-        auto* frameNode = reinterpret_cast<FrameNode*>(node);
-        CHECK_NULL_VOID(frameNode);
-        if (colorRawPtr) {
-            auto* color = reinterpret_cast<ResourceObject*>(colorRawPtr);
-            auto colorResObj = AceType::Claim(color);
-            SliderModelNG::CreateWithColorResourceObj(frameNode, colorResObj, SliderColorType::BLOCK_BORDER_COLOR);
-        } else {
-            SliderModelNG::CreateWithColorResourceObj(frameNode, nullptr, SliderColorType::BLOCK_BORDER_COLOR);
-        }
-    }
-}
-
 void ResetBlockBorderColor(ArkUINodeHandle node)
 {
     auto *frameNode = reinterpret_cast<FrameNode *>(node);
     CHECK_NULL_VOID(frameNode);
     SliderModelNG::ResetBlockBorderColor(frameNode);
-    if (SystemProperties::ConfigChangePerform()) {
-        SliderModelNG::CreateWithColorResourceObj(frameNode, nullptr, SliderColorType::BLOCK_BORDER_COLOR);
-    }
 }
 
 void SetBlockBorderWidth(ArkUINodeHandle node, ArkUI_Float32 value, int unit)
@@ -251,31 +194,11 @@ void SetBlockColor(ArkUINodeHandle node, uint32_t color)
     SliderModelNG::SetBlockColor(frameNode, Color(color));
 }
 
-void SetBlockColorPtr(ArkUINodeHandle node, uint32_t color, void* colorRawPtr)
-{
-    CHECK_NULL_VOID(node);
-    SetBlockColor(node, color);
-    if (SystemProperties::ConfigChangePerform()) {
-        auto* frameNode = reinterpret_cast<FrameNode*>(node);
-        CHECK_NULL_VOID(frameNode);
-        if (colorRawPtr) {
-            auto* color = reinterpret_cast<ResourceObject*>(colorRawPtr);
-            auto colorResObj = AceType::Claim(color);
-            SliderModelNG::CreateWithColorResourceObj(frameNode, colorResObj, SliderColorType::BLOCK_COLOR);
-        } else {
-            SliderModelNG::CreateWithColorResourceObj(frameNode, nullptr, SliderColorType::BLOCK_COLOR);
-        }
-    }
-}
-
 void ResetBlockColor(ArkUINodeHandle node)
 {
     auto *frameNode = reinterpret_cast<FrameNode *>(node);
     CHECK_NULL_VOID(frameNode);
     SliderModelNG::ResetBlockColor(frameNode);
-    if (SystemProperties::ConfigChangePerform()) {
-        SliderModelNG::CreateWithColorResourceObj(frameNode, nullptr, SliderColorType::BLOCK_COLOR);
-    }
 }
 
 void SetTrackBackgroundColor(ArkUINodeHandle node, uint32_t color)
@@ -285,98 +208,35 @@ void SetTrackBackgroundColor(ArkUINodeHandle node, uint32_t color)
     SliderModelNG::SetTrackBackgroundColor(frameNode, SliderModelNG::CreateSolidGradient(Color(color)), true);
 }
 
-void SetTrackBackgroundColorPtr(ArkUINodeHandle node, uint32_t color, void* colorRawPtr)
-{
-    CHECK_NULL_VOID(node);
-    SetTrackBackgroundColor(node, color);
-    if (SystemProperties::ConfigChangePerform()) {
-        auto* frameNode = reinterpret_cast<FrameNode*>(node);
-        CHECK_NULL_VOID(frameNode);
-        if (colorRawPtr) {
-            auto* color = reinterpret_cast<ResourceObject*>(colorRawPtr);
-            auto colorResObj = AceType::Claim(color);
-            SliderModelNG::CreateWithColorResourceObj(frameNode, colorResObj, SliderColorType::TRACK_COLOR);
-        } else {
-            SliderModelNG::CreateWithColorResourceObj(frameNode, nullptr, SliderColorType::TRACK_COLOR);
-        }
-    }
-}
-
-void SetLinearTrackBackgroundColor(ArkUINodeHandle node, const struct ArkUIGradientType* gradient,
-    ArkUI_Int32 colorLength)
-{
-    auto *frameNode = reinterpret_cast<FrameNode *>(node);
-    CHECK_NULL_VOID(frameNode);
-    OHOS::Ace::NG::Gradient tempGradient;
-    for (int32_t j = 0; j < colorLength; j++) {
-        OHOS::Ace::NG::GradientColor gradientColor;
-        gradientColor.SetLinearColor(LinearColor(Color(gradient->color[j])));
-        gradientColor.SetDimension(
-            Dimension(gradient->offset[j].number, static_cast<DimensionUnit>(gradient->offset[j].unit)));
-        tempGradient.AddColor(gradientColor);
-    }
-
-    SliderModelNG::SetTrackBackgroundColor(frameNode, tempGradient, false);
-}
-
 void ResetTrackBackgroundColor(ArkUINodeHandle node)
 {
     auto *frameNode = reinterpret_cast<FrameNode *>(node);
     CHECK_NULL_VOID(frameNode);
-    SliderModelNG::ResetTrackColor(frameNode);
-    if (SystemProperties::ConfigChangePerform()) {
-        SliderModelNG::CreateWithColorResourceObj(frameNode, nullptr, SliderColorType::TRACK_COLOR);
-    }
+    auto pipelineContext = frameNode->GetContext();
+    CHECK_NULL_VOID(pipelineContext);
+    auto theme = pipelineContext->GetTheme<SliderTheme>();
+    CHECK_NULL_VOID(theme);
+
+    SliderModelNG::SetTrackBackgroundColor(
+        frameNode, SliderModelNG::CreateSolidGradient(theme->GetTrackBgColor()), true);
 }
 
 void SetSelectColor(ArkUINodeHandle node, uint32_t color)
 {
     auto *frameNode = reinterpret_cast<FrameNode *>(node);
     CHECK_NULL_VOID(frameNode);
-    SliderModelNG::SetSelectColor(frameNode, SliderModelNG::CreateSolidGradient(Color(color)), true);
-}
-
-void SetSelectColorPtr(ArkUINodeHandle node, uint32_t color, void* colorRawPtr)
-{
-    CHECK_NULL_VOID(node);
-    SetSelectColor(node, color);
-    if (SystemProperties::ConfigChangePerform()) {
-        auto* frameNode = reinterpret_cast<FrameNode*>(node);
-        CHECK_NULL_VOID(frameNode);
-        if (colorRawPtr) {
-            auto* color = reinterpret_cast<ResourceObject*>(colorRawPtr);
-            auto colorResObj = AceType::Claim(color);
-            SliderModelNG::CreateWithColorResourceObj(frameNode, colorResObj, SliderColorType::SELECT_COLOR);
-        } else {
-            SliderModelNG::CreateWithColorResourceObj(frameNode, nullptr, SliderColorType::SELECT_COLOR);
-        }
-    }
-}
-
-void SetLinearSelectColor(ArkUINodeHandle node, const struct ArkUIGradientType* gradient, ArkUI_Int32 colorLength)
-{
-    auto *frameNode = reinterpret_cast<FrameNode *>(node);
-    CHECK_NULL_VOID(frameNode);
-    OHOS::Ace::NG::Gradient tempGradient;
-    for (int32_t j = 0; j < colorLength; j++) {
-        OHOS::Ace::NG::GradientColor gradientColor;
-        gradientColor.SetLinearColor(LinearColor(Color(gradient->color[j])));
-        gradientColor.SetDimension(
-            Dimension(gradient->offset[j].number, static_cast<DimensionUnit>(gradient->offset[j].unit)));
-        tempGradient.AddColor(gradientColor);
-    }
-
-    SliderModelNG::SetSelectColor(frameNode, tempGradient, false);
+    SliderModelNG::SetSelectColor(frameNode, Color(color));
 }
 
 void ResetSelectColor(ArkUINodeHandle node)
 {
     auto *frameNode = reinterpret_cast<FrameNode *>(node);
     CHECK_NULL_VOID(frameNode);
-    SliderModelNG::ResetSelectColor(frameNode);
-    if (SystemProperties::ConfigChangePerform()) {
-        SliderModelNG::CreateWithColorResourceObj(frameNode, nullptr, SliderColorType::SELECT_COLOR);
-    }
+    auto pipelineContext = frameNode->GetContext();
+    CHECK_NULL_VOID(pipelineContext);
+    auto theme = pipelineContext->GetTheme<SliderTheme>();
+    CHECK_NULL_VOID(theme);
+    SliderModelNG::SetSelectColor(frameNode, theme->GetTrackSelectedColor());
 }
 
 void SetShowSteps(ArkUINodeHandle node, int showSteps)
@@ -384,24 +244,6 @@ void SetShowSteps(ArkUINodeHandle node, int showSteps)
     auto *frameNode = reinterpret_cast<FrameNode *>(node);
     CHECK_NULL_VOID(frameNode);
     SliderModelNG::SetShowSteps(frameNode, static_cast<bool>(showSteps));
-}
-
-void SetShowStepsWithOptions(
-    ArkUINodeHandle node, int showSteps, ArkUISliderShowStepOptions* options, ArkUI_Int32 length)
-{
-    std::unordered_map<uint32_t, std::string> optionMaps;
-    std::optional<std::unordered_map<uint32_t, std::string>> showStepOptions = std::nullopt;
-    while (options && (length > 0)) {
-        optionMaps [options->step] = std::string(options->text);
-        options++;
-        length--;
-    }
-    if (optionMaps.size() > 0) {
-        showStepOptions = optionMaps;
-    }
-    auto *frameNode = reinterpret_cast<FrameNode *>(node);
-    CHECK_NULL_VOID(frameNode);
-    SliderModelNG::SetShowSteps(frameNode, static_cast<bool>(showSteps), showStepOptions);
 }
 
 void ResetShowSteps(ArkUINodeHandle node)
@@ -679,69 +521,6 @@ void ResetMinResponsiveDistance(ArkUINodeHandle node)
     SliderModelNG::ResetMinResponsiveDistance(frameNode);
 }
 
-void SetPrefix(ArkUINodeHandle node, ArkUINodeHandle prefix, ArkUISliderCustomContentOptions* options)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    auto* prefixNode = reinterpret_cast<FrameNode*>(prefix);
-    CHECK_NULL_VOID(prefixNode);
-    CHECK_NULL_VOID(options);
-    SliderPrefixOptions prefixOptions;
-    prefixOptions.accessibilityText = options->accessibilityText ? options->accessibilityText : "";
-    prefixOptions.accessibilityDescription = options->accessibilityDescription ? options->accessibilityDescription : "";
-    prefixOptions.accessibilityLevel = options->accessibilityLevel ? options->accessibilityLevel : "";
-    prefixOptions.accessibilityGroup = options->accessibilityGroup;
-    SliderModelNG::SetPrefix(frameNode, AceType::Claim<UINode>(prefixNode), prefixOptions);
-}
-
-void ResetPrefix(ArkUINodeHandle node)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    SliderModelNG::ResetPrefix(frameNode);
-}
-
-void SetSuffix(ArkUINodeHandle node, ArkUINodeHandle suffix, ArkUISliderCustomContentOptions* options)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    auto* suffixNode = reinterpret_cast<FrameNode*>(suffix);
-    CHECK_NULL_VOID(suffixNode);
-    CHECK_NULL_VOID(options);
-    SliderSuffixOptions suffixOptions;
-    suffixOptions.accessibilityText = options->accessibilityText ? options->accessibilityText : "";
-    suffixOptions.accessibilityDescription = options->accessibilityDescription ? options->accessibilityDescription : "";
-    suffixOptions.accessibilityLevel = options->accessibilityLevel ? options->accessibilityLevel : "";
-    suffixOptions.accessibilityGroup = options->accessibilityGroup;
-    SliderModelNG::SetSuffix(frameNode, AceType::Claim<UINode>(suffixNode), suffixOptions);
-}
-
-void ResetSuffix(ArkUINodeHandle node)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    SliderModelNG::ResetSuffix(frameNode);
-}
-
-void SetOnChange(ArkUINodeHandle node, void* callback)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    if (callback) {
-        auto onChange = reinterpret_cast<std::function<void(float, int32_t)>*>(callback);
-        SliderModelNG::SetOnChange(frameNode, std::move(*onChange));
-    } else {
-        SliderModelNG::SetOnChange(frameNode, nullptr);
-    }
-}
-
-void ResetOnChange(ArkUINodeHandle node)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    SliderModelNG::SetOnChange(frameNode, nullptr);
-}
-
 ArkUI_Uint32 GetBlockColor(ArkUINodeHandle node)
 {
     auto *frameNode = reinterpret_cast<FrameNode *>(node);
@@ -761,8 +540,7 @@ ArkUI_Uint32 GetSelectColor(ArkUINodeHandle node)
 {
     auto *frameNode = reinterpret_cast<FrameNode *>(node);
     CHECK_NULL_RETURN(frameNode, ERROR_UINT_CODE);
-    NG::Gradient gradient = SliderModelNG::GetSelectColor(frameNode);
-    return gradient.GetColors().at(0).GetLinearColor().ToColor().GetValue();
+    return SliderModelNG::GetSelectColor(frameNode).GetValue();
 }
 
 ArkUI_Bool GetShowSteps(ArkUINodeHandle node)
@@ -882,213 +660,163 @@ ArkUISliderValidSlideRange GetSliderValidSlideRange(ArkUINodeHandle node)
     };
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_RETURN(frameNode, errorReturn);
-    auto rangeValue = SliderModelNG::GetValidSlideRange(frameNode);
+    auto rangeValue = SliderModelNG::GetValidSlideRange(frameNode).GetRawPtr();
     CHECK_NULL_RETURN(rangeValue && rangeValue->HasValidValues(), errorReturn);
     return { rangeValue->GetFromValue(), rangeValue->GetToValue() };
-}
-
-ArkUI_Bool GetEnableHapticFeedback(ArkUINodeHandle node)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_RETURN(frameNode, true);
-    return SliderModelNG::GetEnableHapticFeedback(frameNode);
-}
-
-void SetEnableHapticFeedback(ArkUINodeHandle node, int enableHapticFeedback)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    SliderModelNG::SetEnableHapticFeedback(frameNode, enableHapticFeedback);
-}
-
-void ResetEnableHapticFeedback(ArkUINodeHandle node)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    SliderModelNG::SetEnableHapticFeedback(frameNode, true);
 }
 } // namespace SliderModifier
 
 namespace NodeModifier {
-const ArkUISliderModifier* GetSliderModifier()
+const ArkUISliderModifier *GetSliderModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
     static const ArkUISliderModifier modifier = {
-        .setShowTips = SliderModifier::SetShowTips,
-        .resetShowTips = SliderModifier::ResetShowTips,
-        .setSliderStepSize = SliderModifier::SetSliderStepSize,
-        .resetSliderStepSize = SliderModifier::ResetSliderStepSize,
-        .setBlockSize = SliderModifier::SetBlockSize,
-        .resetBlockSize = SliderModifier::ResetBlockSize,
-        .setTrackBorderRadius = SliderModifier::SetTrackBorderRadius,
-        .resetTrackBorderRadius = SliderModifier::ResetTrackBorderRadius,
-        .setStepColor = SliderModifier::SetStepColor,
-        .resetStepColor = SliderModifier::ResetStepColor,
-        .setBlockBorderColor = SliderModifier::SetBlockBorderColor,
-        .resetBlockBorderColor = SliderModifier::ResetBlockBorderColor,
-        .setBlockBorderWidth = SliderModifier::SetBlockBorderWidth,
-        .resetBlockBorderWidth = SliderModifier::ResetBlockBorderWidth,
-        .setBlockColor = SliderModifier::SetBlockColor,
-        .resetBlockColor = SliderModifier::ResetBlockColor,
-        .setTrackBackgroundColor = SliderModifier::SetTrackBackgroundColor,
-        .resetTrackBackgroundColor = SliderModifier::ResetTrackBackgroundColor,
-        .setSelectColor = SliderModifier::SetSelectColor,
-        .resetSelectColor = SliderModifier::ResetSelectColor,
-        .setShowSteps = SliderModifier::SetShowSteps,
-        .resetShowSteps = SliderModifier::ResetShowSteps,
-        .setThickness = SliderModifier::SetThickness,
-        .resetThickness = SliderModifier::ResetThickness,
-        .setSliderValue = SliderModifier::SetSliderValue,
-        .setMinLabel = SliderModifier::SetMinLabel,
-        .setMaxLabel = SliderModifier::SetMaxLabel,
-        .setDirection = SliderModifier::SetDirection,
-        .setStep = SliderModifier::SetStep,
-        .setReverse = SliderModifier::SetReverse,
-        .setSliderStyle = SliderModifier::SetSliderStyle,
-        .resetSliderValue = SliderModifier::ResetSliderValue,
-        .resetMinLabel = SliderModifier::ResetMinLabel,
-        .resetMaxLabel = SliderModifier::ResetMaxLabel,
-        .resetDirection = SliderModifier::ResetDirection,
-        .resetStep = SliderModifier::ResetStep,
-        .resetReverse = SliderModifier::ResetReverse,
-        .resetSliderStyle = SliderModifier::ResetSliderStyle,
-        .setSliderBlockImage = SliderModifier::SetSliderBlockImage,
-        .resetSliderBlockImage = SliderModifier::ResetSliderBlockImage,
-        .setSliderBlockPath = SliderModifier::SetSliderBlockPath,
-        .setSliderBlockShape = SliderModifier::SetSliderBlockShape,
-        .resetSliderBlockShape = SliderModifier::ResetSliderBlockShape,
-        .setSliderBlockType = SliderModifier::SetSliderBlockType,
-        .resetSliderBlockType = SliderModifier::ResetSliderBlockType,
-        .setSliderValidSlideRange = SliderModifier::SetSliderValidSlideRange,
-        .resetSliderValidSlideRange = SliderModifier::ResetSliderValidSlideRange,
-        .setSelectedBorderRadius = SliderModifier::SetSelectedBorderRadius,
-        .resetSelectedBorderRadius = SliderModifier::ResetSelectedBorderRadius,
-        .setInteractionMode = SliderModifier::SetInteractionMode,
-        .resetInteractionMode = SliderModifier::ResetInteractionMode,
-        .setMinResponsiveDistance = SliderModifier::SetMinResponsiveDistance,
-        .resetMinResponsiveDistance = SliderModifier::ResetMinResponsiveDistance,
-        .setOnChange = SliderModifier::SetOnChange,
-        .resetOnChange = SliderModifier::ResetOnChange,
-        .getBlockColor = SliderModifier::GetBlockColor,
-        .getTrackBackgroundColor = SliderModifier::GetTrackBackgroundColor,
-        .getSelectColor = SliderModifier::GetSelectColor,
-        .getShowSteps = SliderModifier::GetShowSteps,
-        .getBlockType = SliderModifier::GetBlockType,
-        .getSliderValue = SliderModifier::GetSliderValue,
-        .getMinLabel = SliderModifier::GetMinLabel,
-        .getMaxLabel = SliderModifier::GetMaxLabel,
-        .getDirection = SliderModifier::GetDirection,
-        .getStep = SliderModifier::GetStep,
-        .getReverse = SliderModifier::GetReverse,
-        .getSliderStyle = SliderModifier::GetSliderStyle,
-        .getBlockImageValue = SliderModifier::GetBlockImageValue,
-        .getSliderBlockShape = SliderModifier::GetSliderBlockShape,
-        .getThickness = SliderModifier::GetThickness,
-        .getSliderValidSlideRange = SliderModifier::GetSliderValidSlideRange,
-        .getEnableHapticFeedback = SliderModifier::GetEnableHapticFeedback,
-        .setEnableHapticFeedback = SliderModifier::SetEnableHapticFeedback,
-        .resetEnableHapticFeedback = SliderModifier::ResetEnableHapticFeedback,
-        .setPrefix = SliderModifier::SetPrefix,
-        .resetPrefix = SliderModifier::ResetPrefix,
-        .setSuffix = SliderModifier::SetSuffix,
-        .resetSuffix = SliderModifier::ResetSuffix,
-        .setShowTipsPtr = SliderModifier::SetShowTipsPtr,
-        .setStepColorPtr = SliderModifier::SetStepColorPtr,
-        .setBlockBorderColorPtr = SliderModifier::SetBlockBorderColorPtr,
-        .setBlockColorPtr = SliderModifier::SetBlockColorPtr,
-        .setTrackBackgroundColorPtr = SliderModifier::SetTrackBackgroundColorPtr,
-        .setSelectColorPtr = SliderModifier::SetSelectColorPtr,
-        .setLinearTrackBackgroundColor = SliderModifier::SetLinearTrackBackgroundColor,
-        .setLinearSelectColor = SliderModifier::SetLinearSelectColor,
-        .setShowStepsWithOptions = SliderModifier::SetShowStepsWithOptions,
+        SliderModifier::SetShowTips,
+        SliderModifier::ResetShowTips,
+        SliderModifier::SetSliderStepSize,
+        SliderModifier::ResetSliderStepSize,
+        SliderModifier::SetBlockSize,
+        SliderModifier::ResetBlockSize,
+        SliderModifier::SetTrackBorderRadius,
+        SliderModifier::ResetTrackBorderRadius,
+        SliderModifier::SetStepColor,
+        SliderModifier::ResetStepColor,
+        SliderModifier::SetBlockBorderColor,
+        SliderModifier::ResetBlockBorderColor,
+        SliderModifier::SetBlockBorderWidth,
+        SliderModifier::ResetBlockBorderWidth,
+        SliderModifier::SetBlockColor,
+        SliderModifier::ResetBlockColor,
+        SliderModifier::SetTrackBackgroundColor,
+        SliderModifier::ResetTrackBackgroundColor,
+        SliderModifier::SetSelectColor,
+        SliderModifier::ResetSelectColor,
+        SliderModifier::SetShowSteps,
+        SliderModifier::ResetShowSteps,
+        SliderModifier::SetThickness,
+        SliderModifier::ResetThickness,
+        SliderModifier::SetSliderValue,
+        SliderModifier::SetMinLabel,
+        SliderModifier::SetMaxLabel,
+        SliderModifier::SetDirection,
+        SliderModifier::SetStep,
+        SliderModifier::SetReverse,
+        SliderModifier::SetSliderStyle,
+        SliderModifier::ResetSliderValue,
+        SliderModifier::ResetMinLabel,
+        SliderModifier::ResetMaxLabel,
+        SliderModifier::ResetDirection,
+        SliderModifier::ResetStep,
+        SliderModifier::ResetReverse,
+        SliderModifier::ResetSliderStyle,
+        SliderModifier::SetSliderBlockImage,
+        SliderModifier::ResetSliderBlockImage,
+        SliderModifier::SetSliderBlockPath,
+        SliderModifier::SetSliderBlockShape,
+        SliderModifier::ResetSliderBlockShape,
+        SliderModifier::SetSliderBlockType,
+        SliderModifier::ResetSliderBlockType,
+        SliderModifier::SetSliderValidSlideRange,
+        SliderModifier::ResetSliderValidSlideRange,
+        SliderModifier::SetSelectedBorderRadius,
+        SliderModifier::ResetSelectedBorderRadius,
+        SliderModifier::SetInteractionMode,
+        SliderModifier::ResetInteractionMode,
+        SliderModifier::SetMinResponsiveDistance,
+        SliderModifier::ResetMinResponsiveDistance,
+        SliderModifier::GetBlockColor,
+        SliderModifier::GetTrackBackgroundColor,
+        SliderModifier::GetSelectColor,
+        SliderModifier::GetShowSteps,
+        SliderModifier::GetBlockType,
+        SliderModifier::GetSliderValue,
+        SliderModifier::GetMinLabel,
+        SliderModifier::GetMaxLabel,
+        SliderModifier::GetDirection,
+        SliderModifier::GetStep,
+        SliderModifier::GetReverse,
+        SliderModifier::GetSliderStyle,
+        SliderModifier::GetBlockImageValue,
+        SliderModifier::GetSliderBlockShape,
+        SliderModifier::GetThickness,
+        SliderModifier::GetSliderValidSlideRange,
     };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
 
     return &modifier;
 }
 
 const CJUISliderModifier* GetCJUISliderModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
     static const CJUISliderModifier modifier = {
-        .setShowTips = SliderModifier::SetShowTips,
-        .resetShowTips = SliderModifier::ResetShowTips,
-        .setSliderStepSize = SliderModifier::SetSliderStepSize,
-        .resetSliderStepSize = SliderModifier::ResetSliderStepSize,
-        .setBlockSize = SliderModifier::SetBlockSize,
-        .resetBlockSize = SliderModifier::ResetBlockSize,
-        .setTrackBorderRadius = SliderModifier::SetTrackBorderRadius,
-        .resetTrackBorderRadius = SliderModifier::ResetTrackBorderRadius,
-        .setStepColor = SliderModifier::SetStepColor,
-        .resetStepColor = SliderModifier::ResetStepColor,
-        .setBlockBorderColor = SliderModifier::SetBlockBorderColor,
-        .resetBlockBorderColor = SliderModifier::ResetBlockBorderColor,
-        .setBlockBorderWidth = SliderModifier::SetBlockBorderWidth,
-        .resetBlockBorderWidth = SliderModifier::ResetBlockBorderWidth,
-        .setBlockColor = SliderModifier::SetBlockColor,
-        .resetBlockColor = SliderModifier::ResetBlockColor,
-        .setTrackBackgroundColor = SliderModifier::SetTrackBackgroundColor,
-        .resetTrackBackgroundColor = SliderModifier::ResetTrackBackgroundColor,
-        .setSelectColor = SliderModifier::SetSelectColor,
-        .resetSelectColor = SliderModifier::ResetSelectColor,
-        .setShowSteps = SliderModifier::SetShowSteps,
-        .resetShowSteps = SliderModifier::ResetShowSteps,
-        .setThickness = SliderModifier::SetThickness,
-        .resetThickness = SliderModifier::ResetThickness,
-        .setSliderValue = SliderModifier::SetSliderValue,
-        .setMinLabel = SliderModifier::SetMinLabel,
-        .setMaxLabel = SliderModifier::SetMaxLabel,
-        .setDirection = SliderModifier::SetDirection,
-        .setStep = SliderModifier::SetStep,
-        .setReverse = SliderModifier::SetReverse,
-        .setSliderStyle = SliderModifier::SetSliderStyle,
-        .resetSliderValue = SliderModifier::ResetSliderValue,
-        .resetMinLabel = SliderModifier::ResetMinLabel,
-        .resetMaxLabel = SliderModifier::ResetMaxLabel,
-        .resetDirection = SliderModifier::ResetDirection,
-        .resetStep = SliderModifier::ResetStep,
-        .resetReverse = SliderModifier::ResetReverse,
-        .resetSliderStyle = SliderModifier::ResetSliderStyle,
-        .setSliderBlockImage = SliderModifier::SetSliderBlockImage,
-        .resetSliderBlockImage = SliderModifier::ResetSliderBlockImage,
-        .setSliderBlockPath = SliderModifier::SetSliderBlockPath,
-        .setSliderBlockShape = SliderModifier::SetSliderBlockShape,
-        .resetSliderBlockShape = SliderModifier::ResetSliderBlockShape,
-        .setSliderBlockType = SliderModifier::SetSliderBlockType,
-        .resetSliderBlockType = SliderModifier::ResetSliderBlockType,
-        .setSliderValidSlideRange = SliderModifier::SetSliderValidSlideRange,
-        .resetSliderValidSlideRange = SliderModifier::ResetSliderValidSlideRange,
-        .setSelectedBorderRadius = SliderModifier::SetSelectedBorderRadius,
-        .resetSelectedBorderRadius = SliderModifier::ResetSelectedBorderRadius,
-        .setInteractionMode = SliderModifier::SetInteractionMode,
-        .resetInteractionMode = SliderModifier::ResetInteractionMode,
-        .setMinResponsiveDistance = SliderModifier::SetMinResponsiveDistance,
-        .resetMinResponsiveDistance = SliderModifier::ResetMinResponsiveDistance,
-        .getBlockColor = SliderModifier::GetBlockColor,
-        .getTrackBackgroundColor = SliderModifier::GetTrackBackgroundColor,
-        .getSelectColor = SliderModifier::GetSelectColor,
-        .getShowSteps = SliderModifier::GetShowSteps,
-        .getBlockType = SliderModifier::GetBlockType,
-        .getSliderValue = SliderModifier::GetSliderValue,
-        .getMinLabel = SliderModifier::GetMinLabel,
-        .getMaxLabel = SliderModifier::GetMaxLabel,
-        .getDirection = SliderModifier::GetDirection,
-        .getStep = SliderModifier::GetStep,
-        .getReverse = SliderModifier::GetReverse,
-        .getSliderStyle = SliderModifier::GetSliderStyle,
-        .getBlockImageValue = SliderModifier::GetBlockImageValue,
-        .getSliderBlockShape = SliderModifier::GetSliderBlockShape,
-        .getThickness = SliderModifier::GetThickness,
-        .getSliderValidSlideRange = SliderModifier::GetSliderValidSlideRange,
-        .getEnableHapticFeedback = SliderModifier::GetEnableHapticFeedback,
-        .setEnableHapticFeedback = SliderModifier::SetEnableHapticFeedback,
-        .resetEnableHapticFeedback = SliderModifier::ResetEnableHapticFeedback,
-        .setPrefix = SliderModifier::SetPrefix,
-        .resetPrefix = SliderModifier::ResetPrefix,
-        .setSuffix = SliderModifier::SetSuffix,
-        .resetSuffix = SliderModifier::ResetSuffix,
+        SliderModifier::SetShowTips,
+        SliderModifier::ResetShowTips,
+        SliderModifier::SetSliderStepSize,
+        SliderModifier::ResetSliderStepSize,
+        SliderModifier::SetBlockSize,
+        SliderModifier::ResetBlockSize,
+        SliderModifier::SetTrackBorderRadius,
+        SliderModifier::ResetTrackBorderRadius,
+        SliderModifier::SetStepColor,
+        SliderModifier::ResetStepColor,
+        SliderModifier::SetBlockBorderColor,
+        SliderModifier::ResetBlockBorderColor,
+        SliderModifier::SetBlockBorderWidth,
+        SliderModifier::ResetBlockBorderWidth,
+        SliderModifier::SetBlockColor,
+        SliderModifier::ResetBlockColor,
+        SliderModifier::SetTrackBackgroundColor,
+        SliderModifier::ResetTrackBackgroundColor,
+        SliderModifier::SetSelectColor,
+        SliderModifier::ResetSelectColor,
+        SliderModifier::SetShowSteps,
+        SliderModifier::ResetShowSteps,
+        SliderModifier::SetThickness,
+        SliderModifier::ResetThickness,
+        SliderModifier::SetSliderValue,
+        SliderModifier::SetMinLabel,
+        SliderModifier::SetMaxLabel,
+        SliderModifier::SetDirection,
+        SliderModifier::SetStep,
+        SliderModifier::SetReverse,
+        SliderModifier::SetSliderStyle,
+        SliderModifier::ResetSliderValue,
+        SliderModifier::ResetMinLabel,
+        SliderModifier::ResetMaxLabel,
+        SliderModifier::ResetDirection,
+        SliderModifier::ResetStep,
+        SliderModifier::ResetReverse,
+        SliderModifier::ResetSliderStyle,
+        SliderModifier::SetSliderBlockImage,
+        SliderModifier::ResetSliderBlockImage,
+        SliderModifier::SetSliderBlockPath,
+        SliderModifier::SetSliderBlockShape,
+        SliderModifier::ResetSliderBlockShape,
+        SliderModifier::SetSliderBlockType,
+        SliderModifier::ResetSliderBlockType,
+        SliderModifier::SetSliderValidSlideRange,
+        SliderModifier::ResetSliderValidSlideRange,
+        SliderModifier::SetSelectedBorderRadius,
+        SliderModifier::ResetSelectedBorderRadius,
+        SliderModifier::SetInteractionMode,
+        SliderModifier::ResetInteractionMode,
+        SliderModifier::SetMinResponsiveDistance,
+        SliderModifier::ResetMinResponsiveDistance,
+        SliderModifier::GetBlockColor,
+        SliderModifier::GetTrackBackgroundColor,
+        SliderModifier::GetSelectColor,
+        SliderModifier::GetShowSteps,
+        SliderModifier::GetBlockType,
+        SliderModifier::GetSliderValue,
+        SliderModifier::GetMinLabel,
+        SliderModifier::GetMaxLabel,
+        SliderModifier::GetDirection,
+        SliderModifier::GetStep,
+        SliderModifier::GetReverse,
+        SliderModifier::GetSliderStyle,
+        SliderModifier::GetBlockImageValue,
+        SliderModifier::GetSliderBlockShape,
+        SliderModifier::GetThickness,
+        SliderModifier::GetSliderValidSlideRange,
     };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
 
     return &modifier;
 }
@@ -1104,7 +832,7 @@ void SetSliderChange(ArkUINodeHandle node, void* extraParam)
         event.componentAsyncEvent.subKind = ON_SLIDER_CHANGE;
         event.componentAsyncEvent.data[0].f32 = value;
         event.componentAsyncEvent.data[1].i32 = mode;
-        SendArkUISyncEvent(&event);
+        SendArkUIAsyncEvent(&event);
     };
     SliderModelNG::SetOnChange(frameNode, std::move(onEvent));
 }

@@ -21,7 +21,7 @@
 #include "core/components_ng/render/paint_wrapper.h"
 namespace OHOS::Ace::NG {
 class ACE_EXPORT BlankPaintMethod : public NodePaintMethod {
-    DECLARE_ACE_TYPE(BlankPaintMethod, NodePaintMethod);
+    DECLARE_ACE_TYPE(BlankPaintMethod, NodePaintMethod)
 public:
     BlankPaintMethod() = default;
     ~BlankPaintMethod() override = default;
@@ -39,7 +39,11 @@ public:
     void PaintRect(RSCanvas& canvas, PaintWrapper* paintWrapper);
 
 private:
+#ifndef USE_ROSEN_DRAWING
+    RSPath path_;
+#else
     RSRecordingPath path_;
+#endif
 
     ACE_DISALLOW_COPY_AND_MOVE(BlankPaintMethod);
 };

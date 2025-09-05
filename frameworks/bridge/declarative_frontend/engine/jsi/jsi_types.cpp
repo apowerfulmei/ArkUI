@@ -125,15 +125,6 @@ bool JsiValue::IsNull() const
     }
 }
 
-bool JsiValue::IsDate() const
-{
-    if (GetHandle().IsEmpty()) {
-        return false;
-    } else {
-        return GetHandle()->IsDate(GetEcmaVM());
-    }
-}
-
 std::string JsiValue::ToString() const
 {
     auto vm = GetEcmaVM();
@@ -144,28 +135,8 @@ std::string JsiValue::ToString() const
     return GetHandle()->ToString(vm)->ToString(vm);
 }
 
-std::u16string JsiValue::ToU16String() const
-{
-    auto vm = GetEcmaVM();
-    Local<StringRef> stringRef;
-    panda::LocalScope scope(vm);
-    if (IsObject()) {
-        stringRef = JSON::Stringify(vm, GetLocalHandle())->ToString(vm);
-    } else {
-        stringRef = GetHandle()->ToString(vm);
-    }
-    auto utf16Len = stringRef->Length(vm);
-    std::unique_ptr<char16_t[]> pBuf16 = std::make_unique<char16_t[]>(utf16Len);
-    char16_t *buf16 = pBuf16.get();
-    auto resultLen = stringRef->WriteUtf16(vm, buf16, utf16Len);
-    return std::u16string(buf16, resultLen);
-}
-
 bool JsiValue::ToBoolean() const
 {
-    if (SystemProperties::DetectJsObjTypeConvertion() && !IsBoolean()) {
-        LOGF_ABORT("bad call to ToBoolean.");
-    }
     return GetHandle()->BooleaValue(GetEcmaVM());
 }
 
@@ -395,13 +366,9 @@ JsiFunction::JsiFunction(panda::Local<panda::FunctionRef> val) : JsiType(val) {}
 
 JsiFunction::JsiFunction(const EcmaVM *vm, panda::Local<panda::FunctionRef> val) : JsiType(vm, val) {}
 
-JsiRef<JsiValue> JsiFunction::Call(JsiRef<JsiValue> thisVal, int argc, JsiRef<JsiValue> argv[]) const
+JsiRef<JsiValue> JsiFunction::Call(JsiRef<JsiValue> thisVal, int argc, JsiRef<JsiValue> argv[], bool isAnimation) const
 {
-    int32_t id = -1;
-    if (SystemProperties::GetAcePerformanceMonitorEnabled()) {
-        id = Container::CurrentId();
-    }
-    JS_CALLBACK_DURATION(id);
+    JS_CALLBACK_DURATION();
     auto vm = GetEcmaVM();
     panda::JsiFastNativeScope fastNativeScope(vm);
     LocalScope scope(vm);
@@ -415,7 +382,21 @@ JsiRef<JsiValue> JsiFunction::Call(JsiRef<JsiValue> thisVal, int argc, JsiRef<Js
         arguments.emplace_back(argv[i].Get().GetLocalHandle());
     }
     auto thisObj = thisVal.Get().GetLocalHandle();
+    if (isAnimation) {
+        if (GetHandle().IsEmpty() || !GetHandle()->IsFunction(vm) || trycatch.HasCaught()) {
+            TAG_LOGW(AceLogTag::ACE_ANIMATION,
+                "call function handle is empty or not function, empty: %{public}d, hasError: %{public}d",
+                GetHandle().IsEmpty(), trycatch.HasCaught());
+        } else {
+            TAG_LOGI(
+                AceLogTag::ACE_ANIMATION, "call function: %{public}s", GetHandle()->GetName(vm)->ToString(vm).c_str());
+        }
+    }
     auto result = GetHandle()->Call(vm, thisObj, arguments.data(), argc);
+    if (isAnimation && !result.IsEmpty()) {
+        TAG_LOGI(
+            AceLogTag::ACE_ANIMATION, "call function result: %{public}s", result->ToString(vm)->ToString(vm).c_str());
+    }
     JSNApi::ExecutePendingJob(vm);
     auto runtime = std::static_pointer_cast<ArkJSRuntime>(JsiDeclarativeEngineInstance::GetCurrentRuntime());
     if (result.IsEmpty() || trycatch.HasCaught()) {
@@ -467,7 +448,7 @@ JsiCallbackInfo::JsiCallbackInfo(panda::JsiRuntimeCallInfo* info) : info_(info) 
 
 JsiRef<JsiValue> JsiCallbackInfo::operator[](size_t index) const
 {
-    if (index < Length()) {
+    if (static_cast<int32_t>(index) < Length()) {
         return JsiRef<JsiValue>::FastMake(info_->GetVM(), info_->GetCallArgRef(index));
     }
     return JsiRef<JsiValue>::FastMake(info_->GetVM(), panda::JSValueRef::Undefined(info_->GetVM()));
@@ -480,7 +461,7 @@ JsiRef<JsiObject> JsiCallbackInfo::This() const
     return ref;
 }
 
-uint32_t JsiCallbackInfo::Length() const
+int JsiCallbackInfo::Length() const
 {
     return info_->GetArgsNumber();
 }
@@ -521,7 +502,7 @@ bool JsiCallbackInfo::GetUint32Arg(size_t index, uint32_t& value) const
     return true;
 }
 
-bool JsiCallbackInfo::GetDoubleArg(size_t index, double& value, bool isJudgeSpecialValue) const
+bool JsiCallbackInfo::GetDoubleArg(size_t index, double& value) const
 {
     auto arg = info_->GetCallArgRef(index);
     if (arg.IsEmpty()) {
@@ -529,9 +510,6 @@ bool JsiCallbackInfo::GetDoubleArg(size_t index, double& value, bool isJudgeSpec
     }
     bool ret = false;
     value = arg->GetValueDouble(ret);
-    if (isJudgeSpecialValue) {
-        return (std::isnan(value) || std::isinf(value)) ? false : ret;
-    }
     return ret;
 }
 

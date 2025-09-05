@@ -102,11 +102,11 @@ public:
             return;
         }
         Color color;
-        if (!obj->HasProperty("arrowColor") || !ParseJsColor(obj->GetProperty("arrowColor"), color)) {
+        if (!obj->HasProperty("arrowColorValue") || !ParseJsColor(obj->GetProperty("arrowColorValue"), color)) {
             swiperParameters.arrowColor = themeColors->IconPrimary();
         }
-        if (!obj->HasProperty("backgroundColor") ||
-                !ParseJsColor(obj->GetProperty("backgroundColor"), color)) {
+        if (!obj->HasProperty("backgroundColorValue") ||
+                !ParseJsColor(obj->GetProperty("backgroundColorValue"), color)) {
             swiperParameters.backgroundColor = themeColors->CompBackgroundSecondary();
         }
     }

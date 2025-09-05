@@ -24,7 +24,6 @@
 #include "interfaces/inner_api/ace/ui_event_observer.h"
 #include "base/utils/noncopyable.h"
 #include "core/common/recorder/event_config.h"
-#include "core/common/recorder/event_definition.h"
 
 namespace OHOS::Ace::Recorder {
 struct UIEventClient {
@@ -45,33 +44,15 @@ public:
     void NotifyEventSync(EventCategory category, int32_t eventType,
         const std::shared_ptr<std::unordered_map<std::string, std::string>>& eventParams);
 
-    std::vector<std::string> GetWebJsCodeList();
-
-    bool HasCached() const
-    {
-        return hasCached_;
-    }
-
 private:
-    struct CacheEvent {
-        EventCategory category;
-        int32_t eventType;
-        std::shared_ptr<std::unordered_map<std::string, std::string>> eventParams;
-    };
     EventController() = default;
     ~EventController() = default;
     void NotifyConfigChange();
-    void ApplyNewestConfig(bool isExposureChanged) const;
-    void ApplyExposureCfgInner(const std::shared_ptr<Config>& config, bool isExposureChanged) const;
-    void CacheEventIfNeed(EventCategory category, int32_t eventType,
-        const std::shared_ptr<std::unordered_map<std::string, std::string>>& eventParams);
-    void NotifyCacheEventsIfNeed(const UIEventClient& client) const;
+    void ApplyNewestConfig() const;
+    void ApplyExposureCfgInner(const std::shared_ptr<Config>& config) const;
 
     std::shared_mutex mutable cacheLock_;
     std::vector<UIEventClient> clientList_;
-    std::shared_mutex mutable cacheEventLock_;
-    std::vector<CacheEvent> cacheEvents_;
-    bool hasCached_ = false;
 
     ACE_DISALLOW_COPY_AND_MOVE(EventController);
 };

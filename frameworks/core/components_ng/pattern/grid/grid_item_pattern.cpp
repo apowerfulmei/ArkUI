@@ -16,20 +16,20 @@
 #include "core/components_ng/pattern/grid/grid_item_pattern.h"
 
 #include "base/log/dump_log.h"
-#include "base/utils/multi_thread.h"
-#include "core/components_ng/pattern/grid/grid_pattern.h"
+#include "base/utils/utils.h"
+#include "core/components_ng/pattern/grid/grid_item_layout_property.h"
+#include "core/components_ng/pattern/grid/grid_item_theme.h"
+#include "core/pipeline_ng/pipeline_context.h"
 namespace OHOS::Ace::NG {
 namespace {
 const Color ITEM_FILL_COLOR = Color::TRANSPARENT;
 } // namespace
 void GridItemPattern::OnAttachToFrameNode()
 {
-    auto host = GetHost();
-    // call OnAttachToFrameNodeMultiThread by multi thread;
-    THREAD_SAFE_NODE_CHECK(host, OnAttachToFrameNode);
     if (gridItemStyle_ == GridItemStyle::PLAIN) {
+        auto host = GetHost();
         CHECK_NULL_VOID(host);
-        auto pipeline = GetContext();
+        auto pipeline = PipelineContext::GetCurrentContext();
         CHECK_NULL_VOID(pipeline);
         auto theme = pipeline->GetTheme<GridItemTheme>();
         CHECK_NULL_VOID(theme);
@@ -38,13 +38,7 @@ void GridItemPattern::OnAttachToFrameNode()
         renderContext->UpdateBorderRadius(theme->GetGridItemBorderRadius());
     }
 }
-void GridItemPattern::OnAttachToMainTree()
-{
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    // call OnAttachToMainTreeMultiThread() by multi thread Pattern::OnAttachToMainTree()
-    THREAD_SAFE_NODE_CHECK(host, OnAttachToMainTree);
-}
+
 void GridItemPattern::OnModifyDone()
 {
     Pattern::OnModifyDone();
@@ -54,7 +48,6 @@ void GridItemPattern::OnModifyDone()
     auto focusHub = host->GetFocusHub();
     CHECK_NULL_VOID(focusHub);
     InitFocusPaintRect(focusHub);
-    InitOnFocusEvent(focusHub);
     InitDisableStyle();
     if (gridItemStyle_ == GridItemStyle::PLAIN) {
         InitHoverEvent();
@@ -140,7 +133,7 @@ void GridItemPattern::BeforeCreateLayoutWrapper()
 Color GridItemPattern::GetBlendGgColor()
 {
     Color color = Color::TRANSPARENT;
-    auto pipeline = GetContext();
+    auto pipeline = PipelineContext::GetCurrentContext();
     CHECK_NULL_RETURN(pipeline, color);
     auto theme = pipeline->GetTheme<GridItemTheme>();
     CHECK_NULL_RETURN(theme, color);
@@ -179,7 +172,7 @@ void GridItemPattern::HandleHoverEvent(bool isHover)
     CHECK_NULL_VOID(host);
     auto renderContext = host->GetRenderContext();
     CHECK_NULL_VOID(renderContext);
-    auto pipeline = PipelineContext::GetCurrentContextSafelyWithCheck();
+    auto pipeline = PipelineContext::GetCurrentContext();
     CHECK_NULL_VOID(pipeline);
     auto theme = pipeline->GetTheme<GridItemTheme>();
     CHECK_NULL_VOID(theme);
@@ -217,7 +210,7 @@ void GridItemPattern::HandlePressEvent(bool isPressed)
     CHECK_NULL_VOID(host);
     auto renderContext = host->GetRenderContext();
     CHECK_NULL_VOID(renderContext);
-    auto pipeline = GetContext();
+    auto pipeline = PipelineBase::GetCurrentContext();
     CHECK_NULL_VOID(pipeline);
     auto theme = pipeline->GetTheme<GridItemTheme>();
     CHECK_NULL_VOID(theme);
@@ -235,7 +228,7 @@ void GridItemPattern::InitDisableStyle()
     CHECK_NULL_VOID(eventHub);
     auto renderContext = host->GetRenderContext();
     CHECK_NULL_VOID(renderContext);
-    auto pipeline = GetContext();
+    auto pipeline = PipelineBase::GetCurrentContext();
     CHECK_NULL_VOID(pipeline);
     auto theme = pipeline->GetTheme<GridItemTheme>();
     CHECK_NULL_VOID(theme);
@@ -264,7 +257,7 @@ void GridItemPattern::GetInnerFocusPaintRect(RoundRect& paintRect)
     auto geometryNode = host->GetGeometryNode();
     CHECK_NULL_VOID(geometryNode);
     auto gridItemSize = geometryNode->GetFrameSize();
-    auto pipelineContext = GetContext();
+    auto pipelineContext = PipelineBase::GetCurrentContext();
     CHECK_NULL_VOID(pipelineContext);
     auto theme = pipelineContext->GetTheme<GridItemTheme>();
     CHECK_NULL_VOID(theme);
@@ -334,43 +327,6 @@ void GridItemPattern::DumpAdvanceInfo()
     }
 }
 
-void GridItemPattern::DumpAdvanceInfo(std::unique_ptr<JsonValue>& json)
-{
-    auto property = GetLayoutProperty<GridItemLayoutProperty>();
-    CHECK_NULL_VOID(property);
-    json->Put("MainIndex",
-        property->GetMainIndex().has_value() ? std::to_string(property->GetMainIndex().value()).c_str() : "null");
-    json->Put("CrossIndex",
-        property->GetCrossIndex().has_value() ? std::to_string(property->GetCrossIndex().value()).c_str() : "null");
-    json->Put("RowStart",
-        property->GetRowStart().has_value() ? std::to_string(property->GetRowStart().value()).c_str() : "null");
-    json->Put(
-        "RowEnd", property->GetRowEnd().has_value() ? std::to_string(property->GetRowEnd().value()).c_str() : "null");
-    json->Put("ColumnStart",
-        property->GetColumnStart().has_value() ? std::to_string(property->GetColumnStart().value()).c_str() : "null");
-    json->Put("ColumnEnd",
-        property->GetColumnEnd().has_value() ? std::to_string(property->GetColumnEnd().value()).c_str() : "null");
-
-    json->Put("needStretch", property->GetNeedStretch());
-    json->Put("selectable", selectable_);
-    json->Put("isSelected", isSelected_);
-    json->Put("isHover", isHover_);
-    json->Put("isPressed", isPressed_);
-    switch (gridItemStyle_) {
-        case GridItemStyle::NONE: {
-            json->Put("GridItemStyle", "NONE");
-            break;
-        }
-        case GridItemStyle::PLAIN: {
-            json->Put("GridItemStyle", "PLAIN");
-            break;
-        }
-        default: {
-            break;
-        }
-    }
-}
-
 void GridItemPattern::UpdateGridItemStyle(GridItemStyle gridItemStyle)
 {
     gridItemStyle_ = gridItemStyle;
@@ -386,37 +342,6 @@ void GridItemPattern::UpdateGridItemStyle(GridItemStyle gridItemStyle)
         renderContext->UpdateBorderRadius(theme->GetGridItemBorderRadius());
     } else if (gridItemStyle_ == GridItemStyle::NONE) {
         renderContext->UpdateBorderRadius(BorderRadiusProperty());
-    }
-}
-
-void GridItemPattern::InitOnFocusEvent(const RefPtr<FocusHub>& focusHub)
-{
-    focusHub->SetOnFocusInternal([weak = WeakClaim(this)](FocusReason reason) {
-        auto pattern = weak.Upgrade();
-        if (pattern) {
-            pattern->HandleFocusEvent();
-        }
-    });
-}
-
-void GridItemPattern::HandleFocusEvent()
-{
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    auto uiNode = DynamicCast<UINode>(host);
-    while (uiNode->GetTag() != V2::GRID_ETS_TAG) {
-        uiNode = uiNode->GetParent();
-        CHECK_NULL_VOID(uiNode);
-    }
-    auto grid = DynamicCast<FrameNode>(uiNode);
-    CHECK_NULL_VOID(grid);
-    auto pattern = grid->GetPattern<GridPattern>();
-    CHECK_NULL_VOID(pattern);
-    auto property = GetLayoutProperty<GridItemLayoutProperty>();
-    CHECK_NULL_VOID(property);
-    auto index = property->GetIndex();
-    if (index.has_value()) {
-        pattern->HandleOnItemFocus(index.value());
     }
 }
 } // namespace OHOS::Ace::NG

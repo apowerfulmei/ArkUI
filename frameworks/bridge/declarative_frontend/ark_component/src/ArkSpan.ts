@@ -168,10 +168,7 @@ class SpanFontColorModifier extends ModifierWithKey<ResourceColor> {
     return !isBaseOrResourceEqual(this.stageValue, this.value);
   }
 }
-class SpanLetterSpacingModifier extends ModifierWithKey<string | Resource> {
-  constructor(value: string | Resource) {
-    super(value);
-  }
+class SpanLetterSpacingModifier extends ModifierWithKey<string> {
   static identity = Symbol('spanLetterSpacing');
   applyPeer(node: KNode, reset: boolean): void {
     if (reset) {
@@ -208,9 +205,13 @@ class SpanFontModifier extends ModifierWithKey<Font> {
     if (this.stageValue.weight !== this.value.weight || this.stageValue.style !== this.value.style) {
       return true;
     }
-    if ((!isResource(this.stageValue.size) && !isResource(this.value.size) &&
-        this.stageValue.size === this.value.size) &&
-      ((!isResource(this.stageValue.family) && !isResource(this.value.family) &&
+    if (((isResource(this.stageValue.size) && isResource(this.value.size) &&
+      isResourceEqual(this.stageValue.size, this.value.size)) ||
+      (!isResource(this.stageValue.size) && !isResource(this.value.size) &&
+        this.stageValue.size === this.value.size)) &&
+      ((isResource(this.stageValue.family) && isResource(this.value.family) &&
+        isResourceEqual(this.stageValue.family, this.value.family)) ||
+        (!isResource(this.stageValue.family) && !isResource(this.value.family) &&
           this.stageValue.family === this.value.family))) {
       return false;
     } else {
@@ -235,17 +236,16 @@ class SpanDecorationModifier extends ModifierWithKey<{ type: TextDecorationType,
     if (this.stageValue.type !== this.value.type || this.stageValue.style !== this.value.style) {
       return true;
     }
-    if (!isResource(this.stageValue.color) && !isResource(this.value.color)) {
+    if (isResource(this.stageValue.color) && isResource(this.value.color)) {
+      return !isResourceEqual(this.stageValue.color, this.value.color);
+    } else if (!isResource(this.stageValue.color) && !isResource(this.value.color)) {
       return !(this.stageValue.color === this.value.color);
     } else {
       return true;
     }
   }
 }
-class SpanFontWeightModifier extends ModifierWithKey<string | Resource> {
-  constructor(value: string | Resource) {
-    super(value);
-  }
+class SpanFontWeightModifier extends ModifierWithKey<string> {
   static identity = Symbol('spanfontweight');
   applyPeer(node: KNode, reset: boolean): void {
     if (reset) {
@@ -313,20 +313,6 @@ class SpanAccessibilityLevelModifier extends ModifierWithKey<string> {
   }
 }
 
-class SpanOnHoverModifier extends ModifierWithKey<(isHover?: boolean, event?: HoverEvent) => void> {
-  constructor(value) {
-    super(value);
-  }
-  static identity = Symbol('spanOnHover');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().span.resetOnHover(node);
-    } else {
-      getUINativeModule().span.setOnHover(node, this.value);
-    }
-  }
-}
-
 class ArkSpanComponent implements CommonMethod<SpanAttribute> {
   _modifiersWithKeys: Map<Symbol, AttributeModifierWithKey>;
   _changed: boolean;
@@ -334,7 +320,6 @@ class ArkSpanComponent implements CommonMethod<SpanAttribute> {
   _weakPtr: JsPointerClass;
   _classType: ModifierType | undefined;
   _nativePtrChanged: boolean;
-  _needDiff: boolean;
 
   constructor(nativePtr: KNode, classType?: ModifierType) {
     this._modifiersWithKeys = new Map();
@@ -343,7 +328,6 @@ class ArkSpanComponent implements CommonMethod<SpanAttribute> {
     this._classType = classType;
     this._weakPtr = getUINativeModule().nativeUtils.createNativeWeakRef(nativePtr);
     this._nativePtrChanged = false;
-    this._needDiff = true;
   }
   initialize(value: Object[]): this {
     modifierWithKey(this._modifiersWithKeys, SpanInputModifier.identity, SpanInputModifier, value[0]);
@@ -373,7 +357,7 @@ class ArkSpanComponent implements CommonMethod<SpanAttribute> {
   applyModifierPatch(): void {
     let expiringItemsWithKeys = [];
     this._modifiersWithKeys.forEach((value, key) => {
-      if (value.applyStage(this.nativePtr, this)) {
+      if (value.applyStage(this.nativePtr)) {
         expiringItemsWithKeys.push(key);
       }
     });
@@ -513,8 +497,7 @@ class ArkSpanComponent implements CommonMethod<SpanAttribute> {
   }
 
   onHover(event: (isHover?: boolean, event?: HoverEvent) => void): this {
-    modifierWithKey(this._modifiersWithKeys, SpanOnHoverModifier.identity, SpanOnHoverModifier, event);
-    return this;
+    throw new Error('Method not implemented.');
   }
 
   hoverEffect(value: HoverEffect): this {
@@ -648,15 +631,11 @@ class ArkSpanComponent implements CommonMethod<SpanAttribute> {
     throw new Error('Method not implemented.');
   }
 
-  rotate(value: RotateOptions | RotateAngleOptions): this {
+  rotate(value: RotateOptions): this {
     throw new Error('Method not implemented.');
   }
 
   transform(value: object): this {
-    throw new Error('Method not implemented.');
-  }
-
-  transform3D(value: object): this {
     throw new Error('Method not implemented.');
   }
 
@@ -762,10 +741,6 @@ class ArkSpanComponent implements CommonMethod<SpanAttribute> {
   }
 
   onDragEnter(event: (event?: DragEvent, extraParams?: string) => void): this {
-    throw new Error('Method not implemented.');
-  }
-
-  onDragSpringLoading(callback: Callback<SpringLoadingContext> | null, configuration?: DragSpringLoadingConfiguration): this {
     throw new Error('Method not implemented.');
   }
 
@@ -974,7 +949,7 @@ class ArkSpanComponent implements CommonMethod<SpanAttribute> {
     modifierWithKey(this._modifiersWithKeys, SpanFontStyleModifier.identity, SpanFontStyleModifier, value);
     return this;
   }
-  fontWeight(value: number | FontWeight | string | Resource): SpanAttribute {
+  fontWeight(value: number | FontWeight | string): SpanAttribute {
     modifierWithKey(this._modifiersWithKeys, SpanFontWeightModifier.identity, SpanFontWeightModifier, value);
     return this;
   }
@@ -982,7 +957,7 @@ class ArkSpanComponent implements CommonMethod<SpanAttribute> {
     modifierWithKey(this._modifiersWithKeys, SpanFontFamilyModifier.identity, SpanFontFamilyModifier, value);
     return this;
   }
-  letterSpacing(value: number | string | Resource): SpanAttribute {
+  letterSpacing(value: number | string): SpanAttribute {
     modifierWithKey(this._modifiersWithKeys, SpanLetterSpacingModifier.identity, SpanLetterSpacingModifier, value);
     return this;
   }

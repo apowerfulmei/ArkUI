@@ -27,7 +27,6 @@
 namespace OHOS::Ace::NG {
 namespace {
 constexpr float PARAGRAPH_SAVE_BOUNDARY = 1.0f;
-constexpr uint32_t DEFAULT_MINLINES = 1;
 } // namespace
 std::optional<SizeF> TextAreaLayoutAlgorithm::MeasureContent(
     const LayoutConstraintF& contentConstraint, LayoutWrapper* layoutWrapper)
@@ -43,9 +42,8 @@ std::optional<SizeF> TextAreaLayoutAlgorithm::MeasureContent(
     ConstructTextStyles(frameNode, textStyle, textContent_, showPlaceHolder_);
 
     auto isInlineStyle = pattern->IsNormalInlineState();
-    isInlineFocus_ = isInlineStyle && pattern->HasFocus();
     if (!isInlineStyle && textFieldLayoutProperty->HasNormalMaxViewLines()) {
-        UpdateTextAreaMaxLines(textStyle, textFieldLayoutProperty);
+        textStyle.SetMaxLines(textFieldLayoutProperty->GetNormalMaxViewLines().value());
     }
 
     if (isInlineStyle && textFieldLayoutProperty->HasTextOverflow()) {
@@ -77,74 +75,18 @@ std::optional<SizeF> TextAreaLayoutAlgorithm::MeasureContent(
         // Used for empty text.
         preferredHeight_ = pattern->PreferredLineHeight(true);
     }
-    std::optional<SizeF> contentSize;
+
     // Paragraph layout.}
     if (isInlineStyle) {
-        auto fontSize = textStyle.GetFontSize().ConvertToPxDistribute(
-            textStyle.GetMinFontScale(), textStyle.GetMaxFontScale(), textStyle.IsAllowScale());
+        auto fontSize = pattern->FontSizeConvertToPx(textStyle.GetFontSize());
         auto paragraphData = CreateParagraphData { false, fontSize };
         CreateInlineParagraph(textStyle, textContent_, false, pattern->GetNakedCharPosition(), paragraphData);
-        contentSize = InlineMeasureContent(textFieldContentConstraint, layoutWrapper);
+        return InlineMeasureContent(textFieldContentConstraint, layoutWrapper);
     } else if (showPlaceHolder_) {
-        contentSize = PlaceHolderMeasureContent(textFieldContentConstraint, layoutWrapper);
-        if (textFieldLayoutProperty->GetShowCounterValue(false) && textFieldLayoutProperty->HasMaxLength() &&
-            paragraph_->GetLineCount() > 1 && isPlaceHolderOverSize_ &&
-            pattern->IsTextArea() && !pattern->IsNormalInlineState()) {
-                contentSize = ReMeasureContentForPlaceholder(textFieldContentConstraint, layoutWrapper,
-                    textStyle, textFieldContentConstraint);
-            }
+        return PlaceHolderMeasureContent(textFieldContentConstraint, layoutWrapper);
     } else {
-        contentSize = TextAreaMeasureContent(textFieldContentConstraint, layoutWrapper);
+        return TextAreaMeasureContent(textFieldContentConstraint, layoutWrapper);
     }
-    CalcMeasureContentWithMinLines(contentSize, layoutWrapper, contentConstraint);
-    return contentSize;
-}
-
-std::optional<SizeF> TextAreaLayoutAlgorithm::ReMeasureContentForPlaceholder(
-    const LayoutConstraintF& contentConstraint, LayoutWrapper* layoutWrapper,
-    TextStyle& textStyle, LayoutConstraintF& textFieldContentConstraint)
-{
-    auto frameNode = layoutWrapper->GetHostNode();
-    CHECK_NULL_RETURN(frameNode, std::nullopt);
-    auto textFieldLayoutProperty = DynamicCast<TextFieldLayoutProperty>(layoutWrapper->GetLayoutProperty());
-    CHECK_NULL_RETURN(textFieldLayoutProperty, std::nullopt);
-    auto pattern = frameNode->GetPattern<TextFieldPattern>();
-    CHECK_NULL_RETURN(pattern, std::nullopt);
-    auto lineCount = paragraph_->GetLineCount() != 0 ? paragraph_->GetLineCount() : 1;
-
-    float height = 0.0f;
-    if (isFontSizeNonPositive_) {
-        height = paragraph_->GetHeight();
-    } else {
-        height = GreatNotEqual(paragraph_->GetLongestLine(), 0.0) ? paragraph_->GetHeight()
-                                                                  : std::max(preferredHeight_, paragraph_->GetHeight());
-    }
-    auto paragraphHeight = height / lineCount;
-    auto contentHeight = std::min(contentConstraint.maxSize.Height(), height);
-    auto contentWidth = ConstraintWithMinWidth(contentConstraint, layoutWrapper, paragraph_);
-
-    auto counterNodeHeight = CounterNodeMeasure(contentWidth, layoutWrapper);
-    // new height consider counter
-    contentHeight = std::max(std::min(contentConstraint.maxSize.Height() - counterNodeHeight, height), 0.0f);
-
-    auto targetLines = 1.0f;
-    if (!NearEqual(paragraphHeight, 0.0f)) {
-        targetLines = std::max(targetLines, contentHeight / paragraphHeight);
-    }
-
-    textStyle.SetMaxLines(static_cast<uint32_t>(targetLines)); // replace with new maxlines for ellipsis
-
-    if (IsNeedAdaptFontSize(textStyle, textFieldLayoutProperty, textFieldContentConstraint)) {
-        if (!AddAdaptFontSizeAndAnimations(textStyle, textFieldLayoutProperty, textFieldContentConstraint,
-            layoutWrapper)) {
-            return std::nullopt;
-        }
-        pattern->SetAdaptFontSize(textStyle.GetFontSize());
-    } else {
-        CreateParagraphEx(textStyle, textContent_, contentConstraint, layoutWrapper);
-    }
-
-    return PlaceHolderMeasureContent(textFieldContentConstraint, layoutWrapper);
 }
 
 void TextAreaLayoutAlgorithm::Measure(LayoutWrapper* layoutWrapper)
@@ -163,19 +105,21 @@ void TextAreaLayoutAlgorithm::Measure(LayoutWrapper* layoutWrapper)
         contentHeight = contentSize.Height();
     }
     // Add children height;
-    auto counterDecorator = pattern->GetCounterDecorator();
-    if (counterDecorator && !pattern->IsNormalInlineState()) {
-        contentHeight += counterDecorator->GetDecoratorHeight();
+    auto counterNode = pattern->GetCounterNode().Upgrade();
+    if (counterNode && !pattern->IsNormalInlineState()) {
+        auto counterSize = counterNode->GetGeometryNode()->GetFrameSize();
+        contentHeight += counterSize.Height();
     }
 
     auto finalWidth = 0;
     if (pattern->IsNormalInlineState() && pattern->HasFocus()) {
-        finalWidth = contentWidth + pattern->GetHorizontalPaddingAndBorderSum() + PARAGRAPH_SAVE_BOUNDARY;
+        finalWidth = LessOrEqual(contentWidth, 0) ? 0 :
+            contentWidth + pattern->GetHorizontalPaddingAndBorderSum() + PARAGRAPH_SAVE_BOUNDARY;
         frameSize.SetWidth(finalWidth);
         frameSize.SetHeight(contentHeight + pattern->GetVerticalPaddingAndBorderSum() + PARAGRAPH_SAVE_BOUNDARY);
     } else {
         // The width after MeasureContent is already optimal, but the height needs to be constrained in Measure.
-        finalWidth = contentWidth + pattern->GetHorizontalPaddingAndBorderSum();
+        finalWidth = LessOrEqual(contentWidth, 0) ? 0 : contentWidth + pattern->GetHorizontalPaddingAndBorderSum();
         frameSize.SetWidth(finalWidth);
         ConstraintHeight(layoutWrapper, frameSize, contentHeight);
     }
@@ -195,7 +139,12 @@ void TextAreaLayoutAlgorithm::ConstraintHeight(LayoutWrapper* layoutWrapper, Opt
     auto textFieldContentConstraint =
         CalculateContentMaxSizeWithCalculateConstraint(contentConstraint, layoutWrapper);
     if (textFieldContentConstraint.selfIdealSize.Height().has_value()) {
-        frameSize.SetHeight(textFieldContentConstraint.maxSize.Height() + pattern->GetVerticalPaddingAndBorderSum());
+        if (LessOrEqual(textFieldContentConstraint.maxSize.Height(), 0)) {
+            frameSize.SetHeight(textFieldContentConstraint.maxSize.Height());
+        } else {
+            frameSize.SetHeight(
+                textFieldContentConstraint.maxSize.Height() + pattern->GetVerticalPaddingAndBorderSum());
+        }
     } else {
         frameSize.SetHeight(contentHeight + pattern->GetVerticalPaddingAndBorderSum());
     }
@@ -223,9 +172,10 @@ void TextAreaLayoutAlgorithm::Layout(LayoutWrapper* layoutWrapper)
                 SizeF(pattern->GetHorizontalPaddingAndBorderSum(), pattern->GetVerticalPaddingAndBorderSum());
 
     // Remove counterNode height.
-    auto counterDecorator = pattern->GetCounterDecorator();
-    if (counterDecorator && !pattern->IsNormalInlineState()) {
-        size.SetHeight(size.Height() - counterDecorator->GetDecoratorHeight());
+    auto counterNodeLayoutWrapper = layoutWrapper->GetOrCreateChildByIndex(0);
+    if (counterNodeLayoutWrapper && !pattern->IsNormalInlineState()) {
+        auto counterHeight = counterNodeLayoutWrapper->GetGeometryNode()->GetFrameSize().Height();
+        size.SetHeight(size.Height() - counterHeight);
     }
 
     const auto& content = layoutWrapper->GetGeometryNode()->GetContent();
@@ -265,7 +215,7 @@ void TextAreaLayoutAlgorithm::Layout(LayoutWrapper* layoutWrapper)
     }
 }
 
-bool TextAreaLayoutAlgorithm::CreateParagraphEx(const TextStyle& textStyle, const std::u16string& content,
+bool TextAreaLayoutAlgorithm::CreateParagraphEx(const TextStyle& textStyle, const std::string& content,
     const LayoutConstraintF& contentConstraint, LayoutWrapper* layoutWrapper)
 {
     // update child position.
@@ -274,8 +224,7 @@ bool TextAreaLayoutAlgorithm::CreateParagraphEx(const TextStyle& textStyle, cons
     auto pattern = frameNode->GetPattern<TextFieldPattern>();
     CHECK_NULL_RETURN(pattern, false);
     auto isInlineStyle = pattern->IsNormalInlineState();
-    auto fontSize = textStyle.GetFontSize().ConvertToPxDistribute(
-        textStyle.GetMinFontScale(), textStyle.GetMaxFontScale(), textStyle.IsAllowScale());
+    auto fontSize = pattern->FontSizeConvertToPx(textStyle.GetFontSize());
     auto paragraphData = CreateParagraphData { false, fontSize };
     if (pattern->IsDragging() && !showPlaceHolder_ && !isInlineStyle) {
         CreateParagraph(textStyle, pattern->GetDragContents(), content, false, paragraphData);
@@ -283,37 +232,5 @@ bool TextAreaLayoutAlgorithm::CreateParagraphEx(const TextStyle& textStyle, cons
         CreateParagraph(textStyle, content, false, pattern->GetNakedCharPosition(), paragraphData);
     }
     return true;
-}
-
-void TextAreaLayoutAlgorithm::CalcMeasureContentWithMinLines(
-    std::optional<SizeF>& size, LayoutWrapper* layoutWrapper, const LayoutConstraintF& contentConstraint)
-{
-    CHECK_NULL_VOID(layoutWrapper);
-    if (!size.has_value()) {
-        return;
-    }
-    auto textFieldLayoutProperty = DynamicCast<TextFieldLayoutProperty>(layoutWrapper->GetLayoutProperty());
-    CHECK_NULL_VOID(textFieldLayoutProperty);
-    if (!(textFieldLayoutProperty && textFieldLayoutProperty->HasMinLines() &&
-            textFieldLayoutProperty->GetMinLines().value() >= DEFAULT_MINLINES)) {
-        return;
-    }
-    auto paragraph = GetParagraph();
-    CHECK_NULL_VOID(paragraph);
-    auto paragraphHeight = paragraph->GetHeight();
-    if (LessOrEqual(paragraphHeight, 0.0)) {
-        return;
-    }
-    auto lineCount = std::max(static_cast<uint32_t>(paragraph->GetLineCount()), DEFAULT_MINLINES);
-    auto perLineHeight = paragraphHeight / lineCount;
-    auto minLines = textFieldLayoutProperty->GetMinLines().value();
-    if (textFieldLayoutProperty->HasNormalMaxViewLines()) {
-        minLines = std::min(minLines, textFieldLayoutProperty->GetNormalMaxViewLines().value());
-    }
-    auto finalMinHeight = perLineHeight * minLines;
-    finalMinHeight = std::clamp(finalMinHeight, contentConstraint.minSize.Height(), contentConstraint.maxSize.Height());
-    if (GreatNotEqual(finalMinHeight, size.value().Height())) {
-        size.value().SetHeight(finalMinHeight);
-    }
 }
 } // namespace OHOS::Ace::NG

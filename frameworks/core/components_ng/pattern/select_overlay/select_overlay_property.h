@@ -28,7 +28,6 @@
 #include "core/event/ace_events.h"
 #include "core/event/touch_event.h"
 #include "frameworks/core/components_ng/pattern/pattern.h"
-#include "frameworks/core/components_ng/manager/safe_area/safe_area_manager.h"
 
 namespace OHOS::Ace::NG {
 
@@ -39,9 +38,7 @@ constexpr int32_t HANDLE_ANIMATION_DURATION = 150;
 struct OnMenuItemCallback {
     OnCreateMenuCallback onCreateMenuCallback;
     OnMenuItemClickCallback onMenuItemClick;
-    OnPrepareMenuCallback onPrepareMenuCallback;
     std::function<void(int32_t&, int32_t&)> textRangeCallback;
-    std::function<void()> beforeOnPrepareMenuCallback;
 };
 
 struct SelectHandlePaintInfo {
@@ -83,7 +80,6 @@ struct SelectHandleInfo {
     bool needLayout = false;
     bool isPaintHandleWithPoints = false;
     bool isCircleShow = true;
-    bool forceDraw = false;
     bool isTouchable = true;
     // in Global coordinates.
     RectF paintRect;
@@ -93,8 +89,7 @@ struct SelectHandleInfo {
 
     bool operator==(const SelectHandleInfo& info) const
     {
-        return (isShow == info.isShow) && (paintRect == info.paintRect) && (paintInfo == info.paintInfo) &&
-               (localPaintRect == info.localPaintRect);
+        return (isShow == info.isShow) && (paintRect == info.paintRect) && (paintInfo == info.paintInfo);
     }
 
     bool operator!=(const SelectHandleInfo& info) const
@@ -121,7 +116,6 @@ struct SelectHandleInfo {
         JSON_STRING_PUT_BOOL(jsonValue, isShow);
         JSON_STRING_PUT_BOOL(jsonValue, needLayout);
         JSON_STRING_PUT_STRINGABLE(jsonValue, paintRect);
-        JSON_STRING_PUT_STRINGABLE(jsonValue, localPaintRect);
         return jsonValue->ToString();
     }
 };
@@ -135,64 +129,14 @@ inline constexpr SelectOverlayDirtyFlag DIRTY_COPY_ALL_ITEM = 1 << 4;
 inline constexpr SelectOverlayDirtyFlag DIRTY_SELECT_TEXT = 1 << 5;
 inline constexpr SelectOverlayDirtyFlag DIRTY_VIEWPORT = 1 << 6;
 inline constexpr SelectOverlayDirtyFlag DIRTY_HANDLE_COLOR_FLAG = 1 << 7;
-inline constexpr SelectOverlayDirtyFlag DIRTY_AI_MENU_ITEM = 1 << 8;
-inline constexpr SelectOverlayDirtyFlag DIRTY_ASK_CELIA = 1 << 9;
 inline constexpr SelectOverlayDirtyFlag DIRTY_DOUBLE_HANDLE = DIRTY_FIRST_HANDLE | DIRTY_SECOND_HANDLE;
 inline constexpr SelectOverlayDirtyFlag DIRTY_ALL =
     DIRTY_DOUBLE_HANDLE | DIRTY_ALL_MENU_ITEM | DIRTY_SELECT_AREA | DIRTY_SELECT_TEXT | DIRTY_VIEWPORT;
 
 inline constexpr int32_t REQUEST_RECREATE = 1;
 
-using SystemServiceMenuDisableFlag = uint32_t;
-inline constexpr SystemServiceMenuDisableFlag DISABLE_NORMAL_FLAG = 0;
-inline constexpr SystemServiceMenuDisableFlag DISABLE_ALL_FLAG = 1;
-inline constexpr SystemServiceMenuDisableFlag DISABLE_TRANSLATE_FLAG = 1 << 1;
-inline constexpr SystemServiceMenuDisableFlag DISABLE_SEARCH_FLAG = 1 << 2;
-inline constexpr SystemServiceMenuDisableFlag DISABLE_SHARE_FLAG = 1 << 3;
-inline constexpr SystemServiceMenuDisableFlag DISABLE_CAMERA_INPUT_FLAG = 1 << 4;
-inline constexpr SystemServiceMenuDisableFlag DISABLE_AI_WRITER_FLAG = 1 << 5;
-inline constexpr SystemServiceMenuDisableFlag DISABLE_COLLABORATION_SERVICE_FLAG = 1 << 6;
-inline constexpr SystemServiceMenuDisableFlag DISABLE_AI_MENU_PHONE_FLAG = 1 << 7;
-inline constexpr SystemServiceMenuDisableFlag DISABLE_AI_MENU_URL_FLAG = 1 << 8;
-inline constexpr SystemServiceMenuDisableFlag DISABLE_AI_MENU_EMAIL_FLAG = 1 << 9;
-inline constexpr SystemServiceMenuDisableFlag DISABLE_AI_MENU_ADDRESS_FLAG = 1 << 10;
-inline constexpr SystemServiceMenuDisableFlag DISABLE_AI_MENU_DATETIME_FLAG = 1 << 11;
-inline constexpr SystemServiceMenuDisableFlag DISABLE_ASK_CELIA_FLAG = 1 << 12;
-
-inline constexpr char OH_DEFAULT_CUT[] = "OH_DEFAULT_CUT";
-inline constexpr char OH_DEFAULT_COPY[] = "OH_DEFAULT_COPY";
-inline constexpr char OH_DEFAULT_PASTE[] = "OH_DEFAULT_PASTE";
-inline constexpr char OH_DEFAULT_SELECT_ALL[] = "OH_DEFAULT_SELECT_ALL";
-inline constexpr char OH_DEFAULT_TRANSLATE[] = "OH_DEFAULT_TRANSLATE";
-inline constexpr char OH_DEFAULT_SEARCH[] = "OH_DEFAULT_SEARCH";
-inline constexpr char OH_DEFAULT_SHARE[] = "OH_DEFAULT_SHARE";
-inline constexpr char OH_DEFAULT_CAMERA_INPUT[] = "OH_DEFAULT_CAMERA_INPUT";
-inline constexpr char OH_DEFAULT_AI_WRITE[] = "OH_DEFAULT_AI_WRITE";
-inline constexpr char OH_DEFAULT_AI_MENU_PHONE[] = "OH_DEFAULT_AI_MENU_PHONE";
-inline constexpr char OH_DEFAULT_AI_MENU_URL[] = "OH_DEFAULT_AI_MENU_URL";
-inline constexpr char OH_DEFAULT_AI_MENU_EMAIL[] = "OH_DEFAULT_AI_MENU_EMAIL";
-inline constexpr char OH_DEFAULT_AI_MENU_ADDRESS[] = "OH_DEFAULT_AI_MENU_ADDRESS";
-inline constexpr char OH_DEFAULT_AI_MENU_DATETIME[] = "OH_DEFAULT_AI_MENU_DATETIME";
-inline constexpr char OH_DEFAULT_ASK_CELIA[] = "OH_DEFAULT_ASK_CELIA";
-
-inline constexpr char OH_DEFAULT_COLLABORATION_SERVICE[] = "OH_DEFAULT_COLLABORATION_SERVICE";
-
 enum class OptionMenuType { NO_MENU, MOUSE_MENU, TOUCH_MENU };
-enum class OptionMenuActionId {
-    COPY,
-    CUT,
-    PASTE,
-    SELECT_ALL,
-    TRANSLATE,
-    SHARE,
-    SEARCH,
-    CAMERA_INPUT,
-    AI_WRITE,
-    APPEAR,
-    DISAPPEAR,
-    AI_MENU_OPTION,
-    ASK_CELIA
-};
+enum class OptionMenuActionId { COPY, CUT, PASTE, SELECT_ALL, TRANSLATE, CAMERA_INPUT, AI_WRITE, APPEAR, DISAPPEAR };
 enum class CloseReason {
     CLOSE_REASON_NORMAL = 1,
     CLOSE_REASON_HOLD_BY_OTHER,
@@ -200,13 +144,11 @@ enum class CloseReason {
     CLOSE_REASON_TOOL_BAR,
     CLOSE_REASON_BACK_PRESSED,
     CLOSE_REASON_CLICK_OUTSIDE,
-    CLOSE_REASON_DRAG_FLOATING,
-    CLOSE_REASON_WINDOW_SIZE_CHANGE,
-    CLOSE_REASON_SELECT_ALL
+    CLOSE_REASON_DRAG_FLOATING
 };
 
 struct HoldSelectionInfo {
-    std::function<bool(const PointF&, bool)> checkTouchInArea;
+    std::function<bool(const PointF&)> checkTouchInArea;
     std::function<void()> resetSelectionCallback;
     std::function<bool(SourceType, TouchType)> eventFilter;
 
@@ -230,16 +172,10 @@ struct SelectMenuInfo {
     bool showCopyAll = true;
     bool showCut = true;
     bool showTranslate = false;
-    bool showShare = false;
-    bool showSearch = false;
     bool showCameraInput = false;
     bool showAIWrite = false;
-    bool hasOnPrepareMenuCallback = false;
-    OHOS::Ace::TextDataDetectType aiMenuOptionType = TextDataDetectType::INVALID;
     std::optional<OffsetF> menuOffset;
     OptionMenuType menuType = OptionMenuType::TOUCH_MENU;
-    bool isAskCeliaEnabled = false;
-    bool isShowAIMenuOptionChanged = false;
 
     // Customize menu information.
     std::optional<int32_t> responseType;
@@ -252,11 +188,9 @@ struct SelectMenuInfo {
             return true;
         }
         return !((showCopy == info.showCopy) && (showPaste == info.showPaste) && (showCopyAll == info.showCopyAll) &&
-                 (showCut == info.showCut) && (showTranslate == info.showTranslate) &&
-                 (showSearch == info.showSearch) && (showShare == info.showShare) &&
-                 (showCameraInput == info.showCameraInput) && (showAIWrite == info.showAIWrite) &&
-                 (aiMenuOptionType == info.aiMenuOptionType) && !info.hasOnPrepareMenuCallback &&
-                 (isAskCeliaEnabled == info.isAskCeliaEnabled));
+                 (showTranslate == info.showTranslate) &&
+                 (showCut == info.showCut) && (showCameraInput == info.showCameraInput) &&
+                 (showAIWrite == info.showAIWrite));
     }
 
     std::string ToString() const
@@ -270,12 +204,7 @@ struct SelectMenuInfo {
         JSON_STRING_PUT_BOOL(jsonValue, showCopyAll);
         JSON_STRING_PUT_BOOL(jsonValue, showCut);
         JSON_STRING_PUT_BOOL(jsonValue, showTranslate);
-        JSON_STRING_PUT_BOOL(jsonValue, showSearch);
-        JSON_STRING_PUT_BOOL(jsonValue, showShare);
         JSON_STRING_PUT_BOOL(jsonValue, showCameraInput);
-        JSON_STRING_PUT_INT(jsonValue, aiMenuOptionType);
-        JSON_STRING_PUT_INT(jsonValue, hasOnPrepareMenuCallback);
-        JSON_STRING_PUT_INT(jsonValue, isAskCeliaEnabled);
         return jsonValue->ToString();
     }
 };
@@ -286,12 +215,8 @@ struct SelectMenuCallback {
     std::function<void()> onSelectAll;
     std::function<void()> onCut;
     std::function<void()> onTranslate;
-    std::function<void()> onSearch;
-    std::function<void()> onShare;
     std::function<void()> onCameraInput;
     std::function<void()> onAIWrite;
-    std::function<void(std::string)> onAIMenuOption;
-    std::function<void()> onAskCelia;
 
     std::function<void()> onAppear;
     std::function<void()> onDisappear;
@@ -404,7 +329,6 @@ struct SelectOverlayInfo {
     std::string ToString() const
     {
         auto jsonValue = JsonUtil::Create(true);
-        JSON_STRING_PUT_INT(jsonValue, handleLevelMode);
         JSON_STRING_PUT_BOOL(jsonValue, isUsingMouse);
         JSON_STRING_PUT_BOOL(jsonValue, isSingleHandle);
         JSON_STRING_PUT_BOOL(jsonValue, handleReverse);
@@ -424,55 +348,8 @@ struct SelectOverlayInfo {
     void GetCallerNodeAncestorViewPort(RectF& viewPort);
     const RectF& GetFirstHandlePaintRect();
     const RectF& GetSecondHandlePaintRect();
-    bool enableSubWindowMenu = false;
-    OffsetF containerModalOffset;
-
-    // menu avoid keyboard adjust ark_ui and web
-    std::function<bool(LayoutWrapper *, OffsetF &, const RectF, OffsetF &, std::shared_ptr<SelectOverlayInfo> &)>
-        computeMenuOffset = nullptr;
 };
 
-enum class TextMenuShowMode {
-    BEGIN = -1,
-    UNSPECIFIED = BEGIN,
-    // Display the text selection menu in the current window
-    DEFAULT = 0,
-    /**
-     * Prefer to display the text selection menu in a separate window
-     * and continue to display it within the current window if a separate window is not supported
-     */
-    PREFER_WINDOW = 1,
-    END = PREFER_WINDOW,
-};
-
-TextMenuShowMode CastToTextMenuShowMode(int32_t value);
-
-struct TextMenuOptions {
-    std::optional<TextMenuShowMode> showMode;
-};
-
-#define DEFINE_MENU_CHECK_METHOD(name) bool IsShow##name()
-
-#define DEFINE_MENU_CHECK_METHOD_IMPL(name, flag) \
-bool IsShow##name() {                             \
-    return !IsDisableMenuItem(flag);              \
-}                                                 \
-
-namespace TextSystemMenu {
-bool IsDisableMenuItem(SystemServiceMenuDisableFlag flag);
-DEFINE_MENU_CHECK_METHOD(Translate);
-DEFINE_MENU_CHECK_METHOD(Search);
-DEFINE_MENU_CHECK_METHOD(Share);
-DEFINE_MENU_CHECK_METHOD(CameraInput);
-DEFINE_MENU_CHECK_METHOD(AIWriter);
-DEFINE_MENU_CHECK_METHOD(CollaborationService);
-DEFINE_MENU_CHECK_METHOD(AIUrl);
-DEFINE_MENU_CHECK_METHOD(AIPhone);
-DEFINE_MENU_CHECK_METHOD(AIEmail);
-DEFINE_MENU_CHECK_METHOD(AIAddress);
-DEFINE_MENU_CHECK_METHOD(AIDatetime);
-DEFINE_MENU_CHECK_METHOD(AskCelia);
-} // namespace TextSystemMenu
 } // namespace OHOS::Ace::NG
 
 #endif // FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_PATTERNS_SELECT_OVERLAY_PROPERTY_H

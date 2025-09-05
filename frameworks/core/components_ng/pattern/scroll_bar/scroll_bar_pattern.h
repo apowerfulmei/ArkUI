@@ -27,7 +27,6 @@
 #include "core/components_ng/pattern/scroll_bar/scroll_bar_accessibility_property.h"
 #include "core/components_ng/pattern/scroll_bar/scroll_bar_layout_algorithm.h"
 #include "core/components_ng/pattern/scroll_bar/scroll_bar_layout_property.h"
-#include "core/components_ng/pattern/scroll_bar/scroll_bar_paint_property.h"
 #include "core/components_ng/pattern/scroll_bar/scroll_bar_paint_method.h"
 #include "core/components_ng/pattern/scrollable/scrollable_pattern.h"
 #include "core/components_ng/render/animation_utils.h"
@@ -57,11 +56,6 @@ public:
     RefPtr<LayoutProperty> CreateLayoutProperty() override
     {
         return MakeRefPtr<ScrollBarLayoutProperty>();
-    }
-
-    RefPtr<PaintProperty> CreatePaintProperty() override
-    {
-        return MakeRefPtr<ScrollBarPaintProperty>();
     }
 
     RefPtr<AccessibilityProperty> CreateAccessibilityProperty() override
@@ -135,7 +129,7 @@ public:
 
     bool IsAtTop() const;
     bool IsAtBottom() const;
-    bool UpdateCurrentOffset(float offset, int32_t source, bool isMouseWheelScroll = false);
+    bool UpdateCurrentOffset(float offset, int32_t source);
 
     /**
      * @brief Stops the motion animator of the scroll bar.
@@ -174,7 +168,7 @@ public:
 
     void OnCollectTouchTarget(const OffsetF& coordinateOffset, const GetEventTargetImpl& getEventTargetImpl,
         TouchTestResult& result, const RefPtr<FrameNode>& frameNode, const RefPtr<TargetComponent>& targetComponent,
-        ResponseLinkResult& responseLinkResult, bool inBarRect = false);
+        ResponseLinkResult& responseLinkResult);
 
     float GetMainOffset(const Offset& offset) const
     {
@@ -197,12 +191,10 @@ public:
     }
 
     void SetScrollBar(DisplayMode displayMode);
-    void UpdateScrollBarOffset(int32_t scrollSource);
+    void UpdateScrollBarOffset();
     void HandleScrollBarOutBoundary(float scrollBarOutBoundaryExtent);
-    void UpdateScrollBarRegion(
-        float offset, float estimatedHeight, Size viewPort, Offset viewOffset, int32_t scrollSource);
+    void UpdateScrollBarRegion(float offset, float estimatedHeight, Size viewPort, Offset viewOffset);
     void RegisterScrollBarEventTask();
-    void InitScrollBarGestureEvent();
     bool UpdateScrollBarDisplay();
     bool IsReverse() const;
     void SetReverse(bool reverse);
@@ -239,7 +231,7 @@ public:
         if (Container::GreatOrEqualAPITargetVersion(PlatformVersion::VERSION_TWELVE)) {
             auto paint = MakeRefPtr<ScrollBarPaintMethod>(hasChild_);
             paint->SetScrollBar(scrollBar_);
-            if (scrollBar_ && !HasChild()) {
+            if (!HasChild()) {
                 auto activeRect = scrollBar_->GetActiveRect();
                 auto offset = activeRect.GetOffset();
                 auto offsetF = OffsetF(offset.GetX(), offset.GetY());
@@ -302,15 +294,12 @@ public:
     void AddScrollBarLayoutInfo();
 
     void GetAxisDumpInfo();
-    void GetAxisDumpInfo(std::unique_ptr<JsonValue>& json);
 
     void GetDisplayModeDumpInfo();
-    void GetDisplayModeDumpInfo(std::unique_ptr<JsonValue>& json);
 
     void GetPanDirectionDumpInfo();
-    void GetPanDirectionDumpInfo(std::unique_ptr<JsonValue>& json);
+
     void DumpAdvanceInfo() override;
-    void DumpAdvanceInfo(std::unique_ptr<JsonValue>& json) override;
 
     void SetScrollEnabled(bool enabled)
     {
@@ -324,7 +313,6 @@ public:
     }
 
     void OnColorConfigurationUpdate() override;
-    void OnColorModeChange(uint32_t colorMode) override;
 
     RefPtr<ScrollBarProxy> GetScrollBarProxy()
     {
@@ -342,45 +330,9 @@ public:
     }
 
     void ToJsonValue(std::unique_ptr<JsonValue>& json, const InspectorFilter& filter) const override;
-
-    RefPtr<ScrollBar> GetScrollBar() const
-    {
-        return scrollBar_;
-    }
-
-    PositionMode GetPositionMode();
-
-    RefPtr<ScrollBarOverlayModifier> GetScrollBarOverlayModifier() const
-    {
-        return scrollBarOverlayModifier_;
-    }
-
-    virtual RefPtr<ScrollBar> CreateScrollBar() const
-    {
-        return AceType::MakeRefPtr<ScrollBar>();
-    }
-
-    virtual bool UseInnerScrollBar() const
-    {
-        return !hasChild_ && Container::GreatOrEqualAPITargetVersion(PlatformVersion::VERSION_TWELVE);
-    }
-
-    virtual void SetBarCollectClickAndLongPressTargetCallback();
-
-    void SetScrollBarOverlayModifier(RefPtr<ScrollBarOverlayModifier>& scrollBarOverlayModifier)
-    {
-        scrollBarOverlayModifier_ = scrollBarOverlayModifier;
-    }
-
-    void OnModifyDone() override;
-
 private:
-    bool ScrollPositionCallback(double offset, int32_t source, bool isMouseWheelScroll = false);
-    void InitScrollEndCallback();
-    void AddScrollableEvent();
-    void SetInBarRegionCallback();
-    void SetBarCollectTouchTargetCallback();
-    void SetBarRectCollectTouchTargetCallback();
+    void OnModifyDone() override;
+    void SetBarCollectClickAndLongPressTargetCallback();
     void SetInBarRectRegionCallback();
     void OnAttachToFrameNode() override;
     bool OnDirtyLayoutWrapperSwap(const RefPtr<LayoutWrapper>& dirty, const DirtySwapConfig& config) override;
@@ -416,6 +368,7 @@ private:
     RefPtr<PanRecognizer> panRecognizer_;
     RefPtr<FrictionMotion> frictionMotion_;
     RefPtr<Animator> frictionController_;
+    ScrollPositionCallback scrollPositionCallback_;
     ScrollEndCallback scrollEndCallback_;
     RectF childRect_;
     uint8_t opacity_ = UINT8_MAX;
@@ -425,8 +378,9 @@ private:
 
     // dump info
     std::list<OuterScrollBarLayoutInfo> outerScrollBarLayoutInfos_;
+    bool enableNestedSorll_ = false;
     bool isMousePressed_ = false;
-    bool isScrolling_ = false;
+    RefPtr<ClickEvent> clickListener_;
     RefPtr<ClickRecognizer> clickRecognizer_;
     RefPtr<LongPressRecognizer> longPressRecognizer_;
     RefPtr<InputEvent> mouseEvent_;
@@ -434,7 +388,6 @@ private:
     //Determine whether the current scroll direction is scrolling upwards or downwards
     bool scrollingUp_ = false;
     bool scrollingDown_ = false;
-    bool enableNestedSorll_ = false;
 };
 
 } // namespace OHOS::Ace::NG

@@ -24,20 +24,27 @@
 #include "frameworks/core/components_ng/pattern/stack/stack_model_ng.h"
 
 namespace OHOS::Ace {
+
+std::unique_ptr<StackModel> StackModel::instance_ = nullptr;
+std::mutex StackModel::mutex_;
+
 StackModel* StackModel::GetInstance()
 {
+    if (!instance_) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (!instance_) {
 #ifdef NG_BUILD
-    static NG::StackModelNG instance;
-    return &instance;
+            instance_.reset(new NG::StackModelNG());
 #else
-    if (Container::IsCurrentUseNewPipeline()) {
-        static NG::StackModelNG instance;
-        return &instance;
-    } else {
-        static Framework::StackModelImpl instance;
-        return &instance;
-    }
+            if (Container::IsCurrentUseNewPipeline()) {
+                instance_.reset(new NG::StackModelNG());
+            } else {
+                instance_.reset(new Framework::StackModelImpl());
+            }
 #endif
+        }
+    }
+    return instance_.get();
 }
 } // namespace OHOS::Ace
 namespace OHOS::Ace::Framework {

@@ -49,70 +49,19 @@ void resetScrollBarEnableNestedScroll(ArkUINodeHandle node)
     ScrollBarModelNG::SetEnableNestedScroll(frameNode, false);
 }
 
-void CreateScrollBarScrollBarColorWithResourceObj(ArkUINodeHandle node, void* colorRawPtr)
-{
-    CHECK_NULL_VOID(SystemProperties::ConfigChangePerform());
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    auto* colorPtr = reinterpret_cast<ResourceObject*>(colorRawPtr);
-    auto colorResObj = AceType::Claim(colorPtr);
-    ScrollBarModelNG::HandleSetScrollBarColor(frameNode, colorResObj);
-}
-
-void SetScrollBarScrollBarColor(ArkUINodeHandle node, ArkUI_Int32 color)
-{
-    auto *frameNode = reinterpret_cast<FrameNode *>(node);
-    CHECK_NULL_VOID(frameNode);
-    ScrollBarModelNG::SetScrollBarColor(frameNode, Color(color));
-}
-
-void ResetScrollBarScrollBarColor(ArkUINodeHandle node)
-{
-    auto *frameNode = reinterpret_cast<FrameNode *>(node);
-    CHECK_NULL_VOID(frameNode);
-    ScrollBarModelNG::ResetScrollBarColor(frameNode);
-
-    CreateScrollBarScrollBarColorWithResourceObj(node, nullptr);
-}
-
 namespace NodeModifier {
 const ArkUIScrollBarModifier* GetScrollBarModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
-    static const ArkUIScrollBarModifier modifier = {
-        .setScrollBarDirection = nullptr,
-        .resetScrollBarDirection = nullptr,
-        .setScrollBarState = nullptr,
-        .resetScrollBarState = nullptr,
-        .setScrollBarScroller = nullptr,
-        .setScrollBarEnableNestedScroll = setScrollBarEnableNestedScroll,
-        .resetScrollBarEnableNestedScroll = resetScrollBarEnableNestedScroll,
-        .setScrollBarScrollBarColor = SetScrollBarScrollBarColor,
-        .resetScrollBarScrollBarColor = ResetScrollBarScrollBarColor,
-        .createScrollBarScrollBarColorWithResourceObj = CreateScrollBarScrollBarColorWithResourceObj,
-    };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
-
+    static const ArkUIScrollBarModifier modifier = { nullptr, nullptr, nullptr, nullptr, nullptr,
+        setScrollBarEnableNestedScroll, resetScrollBarEnableNestedScroll };
     /* clang-format on */
     return &modifier;
 }
 
 const CJUIScrollBarModifier* GetCJUIScrollBarModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
-    static const CJUIScrollBarModifier modifier = {
-        .setScrollBarDirection = nullptr,
-        .resetScrollBarDirection = nullptr,
-        .setScrollBarState = nullptr,
-        .resetScrollBarState = nullptr,
-        .setScrollBarScroller = nullptr,
-        .setScrollBarEnableNestedScroll = setScrollBarEnableNestedScroll,
-        .resetScrollBarEnableNestedScroll = resetScrollBarEnableNestedScroll,
-        .setScrollBarScrollBarColor = SetScrollBarScrollBarColor,
-        .resetScrollBarScrollBarColor = ResetScrollBarScrollBarColor,
-    };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
-
+    static const CJUIScrollBarModifier modifier = { nullptr, nullptr, nullptr, nullptr, nullptr,
+        setScrollBarEnableNestedScroll, resetScrollBarEnableNestedScroll };
     /* clang-format on */
     return &modifier;
 }

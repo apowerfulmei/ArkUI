@@ -23,7 +23,6 @@
 #include <unordered_map>
 
 #include "base/utils/macros.h"
-#include "bridge/js_frontend/engine/jsi/js_value.h"
 #include "core/common/frontend.h"
 #include "core/common/js_message_dispatcher.h"
 #include "frameworks/bridge/js_frontend/frontend_delegate.h"
@@ -43,11 +42,6 @@ struct JsModule {
 struct JsComponent {
     const std::string componentName;
     const std::string methods;
-};
-
-// used for hybrid application
-enum class JsEngineHybridType {
-    NONE, DYNAMIC_HYBRID_STATIC, STATIC_HYBRID_DYNAMIC
 };
 
 class JsEngineInstance {
@@ -71,7 +65,7 @@ protected:
 
 using InspectorFunc = std::function<void()>;
 class InspectorEvent : public virtual AceType {
-    DECLARE_ACE_TYPE(InspectorEvent, AceType);
+    DECLARE_ACE_TYPE(InspectorEvent, AceType)
 public:
     explicit InspectorEvent(InspectorFunc&& callback) : callback_(std::move(callback)) {}
     ~InspectorEvent() override = default;
@@ -140,13 +134,7 @@ public:
         return false;
     }
 
-    virtual bool LoadNamedRouterSource(const std::string& routeNameOrUrl, bool isNamedRoute)
-    {
-        return false;
-    }
-
-    virtual bool GeneratePageByIntent(
-        const std::string& bundleName, const std::string& moduleName, const std::string& pagePath)
+    virtual bool LoadNamedRouterSource(const std::string& namedRoute, bool isTriggeredByJs)
     {
         return false;
     }
@@ -294,16 +282,6 @@ public:
         }
     }
 
-    void DrawChildrenInspectorCallback(const std::string& componentId)
-    {
-        auto iter = drawChildrenEvents_.find(componentId);
-        if (iter != drawChildrenEvents_.end()) {
-            for (auto&& observer : iter->second) {
-                (*observer)();
-            }
-        }
-    }
-
     virtual void RequestAnimationCallback(const std::string& callbackId, uint64_t timeStamp) = 0;
 
     virtual void JsCallback(const std::string& callbackId, const std::string& args) = 0;
@@ -341,17 +319,6 @@ public:
     virtual void SetLocalStorage(int32_t instanceId, NativeReference* storage) {}
 
     virtual void SetContext(int32_t instanceId, NativeReference* context) {}
-
-    virtual std::shared_ptr<Framework::JsValue> GetJsContext() { return nullptr; }
-
-    virtual void SetJsContext(const std::shared_ptr<Framework::JsValue>& jsContext) {}
-
-    virtual std::shared_ptr<void> SerializeValue(
-        const std::shared_ptr<Framework::JsValue>& jsValue) { return nullptr; }
-
-    virtual void TriggerModuleSerializer() {}
-
-    virtual void SetJsContextWithDeserialize(const std::shared_ptr<void>& recoder) {}
 
     virtual void SetPkgNameList(const std::map<std::string, std::string>& map) {}
 
@@ -455,29 +422,6 @@ public:
         }
     }
 
-    void ACE_EXPORT RegisterDrawChildrenInspectorCallback(
-        const RefPtr<InspectorEvent>& drawChildrenEvent, const std::string& componentId)
-    {
-        if (drawChildrenEvent) {
-            drawChildrenEvents_[componentId].emplace(drawChildrenEvent);
-        }
-    }
-
-    void ACE_EXPORT UnregisterDrawChildrenInspectorCallback(
-        const RefPtr<InspectorEvent>& drawChildrenEvent, const std::string& componentId)
-    {
-        if (!drawChildrenEvent) {
-            return;
-        }
-        auto iter = drawChildrenEvents_.find(componentId);
-        if (iter != drawChildrenEvents_.end()) {
-            iter->second.erase(drawChildrenEvent);
-            if (iter->second.empty()) {
-                drawChildrenEvents_.erase(componentId);
-            }
-        }
-    }
-
     bool IsLayoutCallBackFuncExist(const std::string& componentId) const
     {
         if (layoutEvents_.find(componentId) != layoutEvents_.end()) {
@@ -492,11 +436,6 @@ public:
             return true;
         }
         return false;
-    }
-
-    bool IsDrawChildrenCallbackFuncExist(const std::string& componentId) const
-    {
-        return drawChildrenEvents_.find(componentId) != drawChildrenEvents_.end();
     }
 
     virtual void RunNativeEngineLoop();
@@ -543,19 +482,9 @@ public:
         return value;
     }
 
-    virtual bool BuilderNodeFunc(std::string functionName, const std::vector<int32_t>& nodeIds)
-    {
-        return false;
-    }
-
     virtual napi_value GetFrameNodeValueByNodeId(int32_t nodeId)
     {
         return nullptr;
-    }
-
-    void UpdateHybridType(JsEngineHybridType type)
-    {
-        hybridType = type;
     }
 
 protected:
@@ -563,10 +492,8 @@ protected:
     std::function<void(JsEngine*)> mediaUpdateCallback_;
     std::map<std::string, std::set<RefPtr<InspectorEvent>>> layoutEvents_;
     std::map<std::string, std::set<RefPtr<InspectorEvent>>> drawEvents_;
-    std::map<std::string, std::set<RefPtr<InspectorEvent>>> drawChildrenEvents_;
     bool needUpdate_ = false;
     PageUrlCheckFunc pageUrlCheckFunc_;
-    JsEngineHybridType hybridType = JsEngineHybridType::NONE;
 
 private:
     // weather the app has debugger.so.

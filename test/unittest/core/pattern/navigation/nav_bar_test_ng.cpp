@@ -18,6 +18,9 @@
 #define protected public
 #define private public
 
+#include "test/mock/core/common/mock_theme_manager.h"
+#include "test/mock/core/pipeline/mock_pipeline_context.h"
+
 #include "base/utils/system_properties.h"
 #include "core/components/navigation_bar/navigation_bar_theme.h"
 #include "core/components/select/select_theme.h"
@@ -63,12 +66,6 @@ struct TestParameters {
     NG::BarItem menuItem;
     std::vector<NG::BarItem> menuItems;
 };
-
-void ThemeManagerSetTime(RefPtr<MockThemeManager>& themeManager)
-{
-    EXPECT_CALL(*themeManager, GetTheme(_)).Times(0);
-    EXPECT_CALL(*themeManager, GetTheme(_, _)).Times(0);
-}
 } // namespace
 
 class NavBarTestNg : public testing::Test {
@@ -131,7 +128,6 @@ void NavBarTestNg::InitializationParameters(TestParameters& testParameters)
     testParameters.theme = AceType::MakeRefPtr<NavigationBarTheme>();
     ASSERT_NE(testParameters.theme, nullptr);
     EXPECT_CALL(*themeManager, GetTheme(_)).WillRepeatedly(Return(testParameters.theme));
-    EXPECT_CALL(*themeManager, GetTheme(_, _)).WillRepeatedly(Return(testParameters.theme));
     auto selectTheme = AceType::MakeRefPtr<SelectTheme>();
     ASSERT_NE(selectTheme, nullptr);
     EXPECT_CALL(*themeManager, GetTheme(SelectTheme::TypeId())).WillRepeatedly(Return(selectTheme));
@@ -430,6 +426,83 @@ HWTEST_F(NavBarTestNg, GetPreToolBarNode001, TestSize.Level1)
 }
 
 /**
+ * @tc.name: OnPrevTitleIsCustomUpdate001
+ * @tc.desc: Test OnPrevTitleIsCustomUpdate interface.
+ * @tc.type: FUNC
+ */
+HWTEST_F(NavBarTestNg, OnPrevTitleIsCustomUpdate001, TestSize.Level1)
+{
+    std::string barTag = BAR_ITEM_ETS_TAG;
+    auto nodeId = ElementRegister::GetInstance()->MakeUniqueId();
+    auto barNode = AceType::MakeRefPtr<NavBarNode>(barTag, nodeId, AceType::MakeRefPtr<Pattern>());
+    int32_t ret = RET_OK;
+    barNode->OnPrevTitleIsCustomUpdate(true);
+    EXPECT_EQ(ret, RET_OK);
+}
+
+/**
+ * @tc.name: OnPrevMenuIsCustomUpdate001
+ * @tc.desc: Test OnPrevMenuIsCustomUpdate interface.
+ * @tc.type: FUNC
+ */
+HWTEST_F(NavBarTestNg, OnPrevMenuIsCustomUpdate001, TestSize.Level1)
+{
+    std::string barTag = BAR_ITEM_ETS_TAG;
+    auto nodeId = ElementRegister::GetInstance()->MakeUniqueId();
+    auto barNode = AceType::MakeRefPtr<NavBarNode>(barTag, nodeId, AceType::MakeRefPtr<Pattern>());
+    int32_t ret = RET_OK;
+    barNode->OnPrevMenuIsCustomUpdate(true);
+    EXPECT_EQ(ret, RET_OK);
+}
+
+/**
+ * @tc.name: OnPrevToolBarIsCustomUpdate001
+ * @tc.desc: Test OnPrevToolBarIsCustomUpdate interface.
+ * @tc.type: FUNC
+ */
+HWTEST_F(NavBarTestNg, OnPrevToolBarIsCustomUpdate001, TestSize.Level1)
+{
+    std::string barTag = BAR_ITEM_ETS_TAG;
+    auto nodeId = ElementRegister::GetInstance()->MakeUniqueId();
+    auto barNode = AceType::MakeRefPtr<NavBarNode>(barTag, nodeId, AceType::MakeRefPtr<Pattern>());
+    int32_t ret = RET_OK;
+    barNode->OnPrevToolBarIsCustomUpdate(true);
+    EXPECT_EQ(ret, RET_OK);
+}
+
+/**
+ * @tc.name: OnMenuNodeOperationUpdate001
+ * @tc.desc: Test OnMenuNodeOperationUpdate interface.
+ * @tc.type: FUNC
+ */
+HWTEST_F(NavBarTestNg, OnMenuNodeOperationUpdate001, TestSize.Level1)
+{
+    std::string barTag = BAR_ITEM_ETS_TAG;
+    auto nodeId = ElementRegister::GetInstance()->MakeUniqueId();
+    auto barNode = AceType::MakeRefPtr<NavBarNode>(barTag, nodeId, AceType::MakeRefPtr<Pattern>());
+    int32_t ret = RET_OK;
+    ChildNodeOperation value = ChildNodeOperation::ADD;
+    barNode->OnMenuNodeOperationUpdate(value);
+    EXPECT_EQ(ret, RET_OK);
+}
+
+/**
+ * @tc.name: OnToolBarNodeOperationUpdate001
+ * @tc.desc: Test OnToolBarNodeOperationUpdate interface.
+ * @tc.type: FUNC
+ */
+HWTEST_F(NavBarTestNg, OnToolBarNodeOperationUpdate001, TestSize.Level1)
+{
+    std::string barTag = BAR_ITEM_ETS_TAG;
+    auto nodeId = ElementRegister::GetInstance()->MakeUniqueId();
+    auto barNode = AceType::MakeRefPtr<NavBarNode>(barTag, nodeId, AceType::MakeRefPtr<Pattern>());
+    int32_t ret = RET_OK;
+    ChildNodeOperation value = ChildNodeOperation::ADD;
+    barNode->OnToolBarNodeOperationUpdate(value);
+    EXPECT_EQ(ret, RET_OK);
+}
+
+/**
  * @tc.name: NarBarPattern002
  * @tc.desc: Test InitPanEvent function.
  * @tc.type: FUNC
@@ -547,7 +620,7 @@ HWTEST_F(NavBarTestNg, NavBarPattern006, TestSize.Level1)
     auto navGeometryNode = navBarNode_->GetGeometryNode();
     ASSERT_NE(navGeometryNode, nullptr);
     navGeometryNode->SetFrameSize(size);
-    ThemeManagerSetTime(themeManager);
+    EXPECT_CALL(*themeManager, GetTheme(_)).Times(0);
     navBarpattern_->OnWindowSizeChanged(0, 0, WindowSizeChangeReason::UNDEFINED);
 
     /**
@@ -568,8 +641,6 @@ HWTEST_F(NavBarTestNg, NavBarPattern006, TestSize.Level1)
     SystemProperties::SetDeviceType(DeviceType::TABLET);
     navBarpattern_->OnWindowSizeChanged(0, 0, WindowSizeChangeReason::UNDEFINED);
     SystemProperties::SetDeviceType(DeviceType::PHONE);
-
-    MockPipelineContext::GetCurrent()->SetThemeManager(nullptr);
 }
 
 /**
@@ -877,7 +948,6 @@ HWTEST_F(NavBarTestNg, NavBarPattern013, TestSize.Level1)
 HWTEST_F(NavBarTestNg, NavBarPattern014, TestSize.Level1)
 {
     float offset = 0.001;
-    float currentOffset = 0.0;
     auto frameNode =
         FrameNode::CreateFrameNode("BackButton", 33, AceType::MakeRefPtr<NavBarPattern>());
     EXPECT_NE(frameNode, nullptr);
@@ -885,7 +955,7 @@ HWTEST_F(NavBarTestNg, NavBarPattern014, TestSize.Level1)
     EXPECT_NE(navBarPattern, nullptr);
     navBarPattern->isHideTitlebar_ = true;
     navBarPattern->titleMode_ = NavigationTitleMode::MINI;
-    navBarPattern->OnCoordScrollUpdate(offset, currentOffset);
+    navBarPattern->OnCoordScrollUpdate(offset);
 }
 
 /**
@@ -896,7 +966,6 @@ HWTEST_F(NavBarTestNg, NavBarPattern014, TestSize.Level1)
 HWTEST_F(NavBarTestNg, NavBarPattern015, TestSize.Level1)
 {
     float offset = 0.001;
-    float currentOffset = 0.0;
     auto frameNode =
         FrameNode::CreateFrameNode("BackButton", 33, AceType::MakeRefPtr<NavBarPattern>());
     EXPECT_NE(frameNode, nullptr);
@@ -904,7 +973,7 @@ HWTEST_F(NavBarTestNg, NavBarPattern015, TestSize.Level1)
     EXPECT_NE(navBarPattern, nullptr);
     navBarPattern->isHideTitlebar_ = false;
     navBarPattern->titleMode_ = NavigationTitleMode::FREE;
-    navBarPattern->OnCoordScrollUpdate(offset, currentOffset);
+    navBarPattern->OnCoordScrollUpdate(offset);
 }
 
 /**
@@ -1059,14 +1128,14 @@ HWTEST_F(NavBarTestNg, NavBarPattern022, TestSize.Level1)
     ASSERT_NE(navBarNode, nullptr);
     auto navBarpattern = navBarNode->GetPattern<NavBarPattern>();
     ASSERT_NE(navBarpattern, nullptr);
-
+ 
     auto navBarLayoutProperty = navBarNode->GetLayoutProperty<NavBarLayoutProperty>();
     EXPECT_NE(navBarLayoutProperty, nullptr);
     auto opts = navBarLayoutProperty->GetIgnoreLayoutSafeAreaValue({.type = SAFE_AREA_TYPE_NONE,
     .edges = SAFE_AREA_TYPE_NONE});
     EXPECT_EQ(opts.type, SAFE_AREA_TYPE_NONE);
     EXPECT_EQ(opts.edges, SAFE_AREA_TYPE_NONE);
-
+ 
     navBarLayoutProperty->UpdateIgnoreLayoutSafeArea({ .type = SAFE_AREA_TYPE_SYSTEM, .edges = SAFE_AREA_EDGE_ALL });
     opts = navBarLayoutProperty->GetIgnoreLayoutSafeAreaValue({.type = SAFE_AREA_TYPE_NONE,
         .edges = SAFE_AREA_TYPE_NONE});
@@ -1109,8 +1178,8 @@ HWTEST_F(NavBarTestNg, NavBarPattern023, TestSize.Level1)
         FRAME_ITEM_ETS_TAG, nodeId, AceType::MakeRefPtr<Pattern>());
     ASSERT_NE(buttonNode, nullptr);
     buttonNode->MountToParent(menuNode);
-    auto barItemNode = BarItemNode::GetOrCreateBarItemNode(
-        V2::BAR_ITEM_ETS_TAG, nodeId, []() { return AceType::MakeRefPtr<BarItemPattern>(); });
+    auto barItemNode = AceType::MakeRefPtr<BarItemNode>(
+        FRAME_ITEM_ETS_TAG, nodeId, AceType::MakeRefPtr<BarItemPattern>());
     ASSERT_NE(barItemNode, nullptr);
     barItemNode->MountToParent(buttonNode);
     barItemNode->SetIsMoreItemNode(true);
@@ -1146,6 +1215,47 @@ HWTEST_F(NavBarTestNg, NavBarPattern024, TestSize.Level1)
     EXPECT_FALSE(canCoordScrollUp);
     auto canCoordScrollUp2 = navBarpattern_->CanCoordScrollUp(DEFAULT_SIZE_LENGTH_NEGATIVE);
     EXPECT_FALSE(canCoordScrollUp2);
+}
+
+/**
+ * @tc.name: NavBarPattern025
+ * @tc.desc: Test SetNavBarMask function.
+ * @tc.type: FUNC
+ */
+HWTEST_F(NavBarTestNg, NavBarPattern025, TestSize.Level1)
+{
+    TestParameters testParameters;
+    InitializationParameters(testParameters);
+    auto navigationPattern = testParameters.navigationGroupNode->GetPattern<NavigationPattern>();
+    ASSERT_NE(navigationPattern, nullptr);
+    navigationPattern->SetNavigationMode(NavigationMode::SPLIT);
+    testParameters.theme->navBarUnfocusColor_ = Color::RED;
+    navBarpattern_->SetNavBarMask(false);
+    auto renderContext = navBarNode_->GetRenderContext();
+    CHECK_NULL_VOID(renderContext);
+    auto maskProperty = renderContext->GetProgressMaskValue();
+    auto isTransparent = maskProperty->GetColor() == Color::TRANSPARENT ? true : false;
+    EXPECT_FALSE(isTransparent);
+}
+
+/**
+ * @tc.name: NavBarPattern026
+ * @tc.desc: Test SetNavBarMask function.
+ * @tc.type: FUNC
+ */
+HWTEST_F(NavBarTestNg, NavBarPattern026, TestSize.Level1)
+{
+    TestParameters testParameters;
+    InitializationParameters(testParameters);
+    auto navigationPattern = testParameters.navigationGroupNode->GetPattern<NavigationPattern>();
+    ASSERT_NE(navigationPattern, nullptr);
+    navigationPattern->SetNavigationMode(NavigationMode::SPLIT);
+    navBarpattern_->SetNavBarMask(true);
+    auto renderContext = navBarNode_->GetRenderContext();
+    CHECK_NULL_VOID(renderContext);
+    auto maskProperty = renderContext->GetProgressMaskValue();
+    auto isTransparent = maskProperty->GetColor() == Color::TRANSPARENT ? true : false;
+    EXPECT_TRUE(isTransparent);
 }
 
 /**

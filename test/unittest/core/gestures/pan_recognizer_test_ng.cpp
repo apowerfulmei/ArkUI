@@ -12,7 +12,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "test/mock/base/mock_system_properties.h"
 #include "test/unittest/core/gestures/gestures_common_test_ng.h"
 #include "core/components_ng/event/event_constants.h"
 
@@ -20,8 +19,6 @@ using namespace testing;
 using namespace testing::ext;
 
 namespace OHOS::Ace::NG {
-constexpr float GESTURE_EVENT_PROPERTY_DEFAULT_VALUE = 0.0;
-constexpr float GESTURE_EVENT_PROPERTY_VALUE = 10.0;
 class PanRecognizerTestNg : public GesturesCommonTestNg {
 public:
     static void SetUpTestSuite();
@@ -49,21 +46,21 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerTest001, TestSize.Level1)
      * @tc.steps: step1. create PanRecognizer.
      */
     RefPtr<PanGestureOption> panGestureOption = AceType::MakeRefPtr<PanGestureOption>();
-    RefPtr<PanRecognizer> panRecognizer = AceType::MakeRefPtr<PanRecognizer>(panGestureOption);
+    PanRecognizer panRecognizer = PanRecognizer(panGestureOption);
 
     /**
      * @tc.steps: step2. call OnAccepted function and compare result.
      * @tc.expected: step2. result equals.
      */
-    panRecognizer->OnAccepted();
-    EXPECT_EQ(panRecognizer->refereeState_, RefereeState::SUCCEED);
+    panRecognizer.OnAccepted();
+    EXPECT_EQ(panRecognizer.refereeState_, RefereeState::SUCCEED);
 
     /**
      * @tc.steps: step3. call OnRejected function and compare result.
      * @tc.expected: step3. result equals.
      */
-    panRecognizer->OnRejected();
-    EXPECT_EQ(panRecognizer->refereeState_, RefereeState::SUCCEED);
+    panRecognizer.OnRejected();
+    EXPECT_EQ(panRecognizer.refereeState_, RefereeState::SUCCEED);
 }
 
 /**
@@ -75,34 +72,32 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerPanRecognizerTest001, TestSize.Level1
 {
     PanDirection panDirection;
     panDirection.type = PanDirection::VERTICAL;
-    RefPtr<PanRecognizer> panRecognizer =
-        AceType::MakeRefPtr<PanRecognizer>(FINGER_NUMBER_OVER_MAX, panDirection, 0.0);
-    EXPECT_NE(panRecognizer->refereeState_, RefereeState::FAIL);
+    PanRecognizer panRecognizer = PanRecognizer(FINGER_NUMBER_OVER_MAX, panDirection, 0.0);
+    EXPECT_NE(panRecognizer.refereeState_, RefereeState::FAIL);
     panDirection.type = PanDirection::NONE;
-    RefPtr<PanRecognizer> panRecognizer1 =
-        AceType::MakeRefPtr<PanRecognizer>(FINGER_NUMBER_OVER_MAX, panDirection, 0.0);
-    EXPECT_NE(panRecognizer1->refereeState_, RefereeState::FAIL);
+    PanRecognizer panRecognizer1 = PanRecognizer(FINGER_NUMBER_OVER_MAX, panDirection, 0.0);
+    EXPECT_NE(panRecognizer1.refereeState_, RefereeState::FAIL);
     panDirection.type = PanDirection::LEFT;
-    RefPtr<PanRecognizer> panRecognizer2 = AceType::MakeRefPtr<PanRecognizer>(FINGER_NUMBER, panDirection, 0.0);
-    EXPECT_NE(panRecognizer2->refereeState_, RefereeState::FAIL);
+    PanRecognizer panRecognizer2 = PanRecognizer(FINGER_NUMBER, panDirection, 0.0);
+    EXPECT_NE(panRecognizer2.refereeState_, RefereeState::FAIL);
     panDirection.type = PanDirection::RIGHT;
-    RefPtr<PanRecognizer> panRecognizer3 = AceType::MakeRefPtr<PanRecognizer>(FINGER_NUMBER, panDirection, 0.0);
-    EXPECT_NE(panRecognizer3->refereeState_, RefereeState::FAIL);
+    PanRecognizer panRecognizer3 = PanRecognizer(FINGER_NUMBER, panDirection, 0.0);
+    EXPECT_NE(panRecognizer3.refereeState_, RefereeState::FAIL);
     panDirection.type = PanDirection::HORIZONTAL;
-    RefPtr<PanRecognizer> panRecognizer4 = AceType::MakeRefPtr<PanRecognizer>(FINGER_NUMBER, panDirection, 0.0);
-    EXPECT_NE(panRecognizer4->refereeState_, RefereeState::FAIL);
+    PanRecognizer panRecognizer4 = PanRecognizer(FINGER_NUMBER, panDirection, 0.0);
+    EXPECT_NE(panRecognizer4.refereeState_, RefereeState::FAIL);
     panDirection.type = PanDirection::UP;
-    RefPtr<PanRecognizer> panRecognizer5 = AceType::MakeRefPtr<PanRecognizer>(0, panDirection, 0.0);
-    EXPECT_NE(panRecognizer5->refereeState_, RefereeState::FAIL);
+    PanRecognizer panRecognizer5 = PanRecognizer(0, panDirection, 0.0);
+    EXPECT_NE(panRecognizer5.refereeState_, RefereeState::FAIL);
     panDirection.type = PanDirection::DOWN;
-    RefPtr<PanRecognizer> panRecognizer6 = AceType::MakeRefPtr<PanRecognizer>(0, panDirection, 0.0);
-    EXPECT_NE(panRecognizer6->refereeState_, RefereeState::FAIL);
+    PanRecognizer panRecognizer6 = PanRecognizer(0, panDirection, 0.0);
+    EXPECT_NE(panRecognizer6.refereeState_, RefereeState::FAIL);
     panDirection.type = PanDirection::VERTICAL;
-    RefPtr<PanRecognizer> panRecognizer7 = AceType::MakeRefPtr<PanRecognizer>(0, panDirection, 0.0);
-    EXPECT_NE(panRecognizer7->refereeState_, RefereeState::FAIL);
+    PanRecognizer panRecognizer7 = PanRecognizer(0, panDirection, 0.0);
+    EXPECT_NE(panRecognizer7.refereeState_, RefereeState::FAIL);
     panDirection.type = PanDirection::ALL;
-    RefPtr<PanRecognizer> panRecognizer8 = AceType::MakeRefPtr<PanRecognizer>(0, panDirection, 0.0);
-    EXPECT_NE(panRecognizer8->refereeState_, RefereeState::FAIL);
+    PanRecognizer panRecognizer8 = PanRecognizer(0, panDirection, 0.0);
+    EXPECT_NE(panRecognizer8.refereeState_, RefereeState::FAIL);
 }
 
 /**
@@ -120,48 +115,48 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerPanRecognizerTest002, TestSize.Level1
     panGestureOption->fingers_ = FINGER_NUMBER_OVER_MAX;
     panDirection.type = PanDirection::VERTICAL;
     panGestureOption->SetDirection(panDirection);
-    RefPtr<PanRecognizer> panRecognizer = AceType::MakeRefPtr<PanRecognizer>(panGestureOption);
-    EXPECT_NE(panRecognizer->refereeState_, RefereeState::SUCCEED);
+    PanRecognizer panRecognizer = PanRecognizer(panGestureOption);
+    EXPECT_NE(panRecognizer.refereeState_, RefereeState::SUCCEED);
     panGestureOption->fingers_ = FINGER_NUMBER;
     panDirection.type = PanDirection::NONE;
     panGestureOption->SetDirection(panDirection);
-    RefPtr<PanRecognizer> panRecognizer1 = AceType::MakeRefPtr<PanRecognizer>(panGestureOption);
-    EXPECT_NE(panRecognizer1->refereeState_, RefereeState::SUCCEED);
+    PanRecognizer panRecognizer1 = PanRecognizer(panGestureOption);
+    EXPECT_NE(panRecognizer1.refereeState_, RefereeState::SUCCEED);
     panGestureOption->fingers_ = FINGER_NUMBER_OVER_MAX;
     panDirection.type = PanDirection::LEFT;
     panGestureOption->SetDirection(panDirection);
-    RefPtr<PanRecognizer> panRecognizer2 = AceType::MakeRefPtr<PanRecognizer>(panGestureOption);
-    EXPECT_NE(panRecognizer2->refereeState_, RefereeState::SUCCEED);
+    PanRecognizer panRecognizer2 = PanRecognizer(panGestureOption);
+    EXPECT_NE(panRecognizer2.refereeState_, RefereeState::SUCCEED);
     panGestureOption->fingers_ = FINGER_NUMBER;
     panDirection.type = PanDirection::RIGHT;
     panGestureOption->SetDirection(panDirection);
-    RefPtr<PanRecognizer> panRecognizer3 = AceType::MakeRefPtr<PanRecognizer>(panGestureOption);
-    EXPECT_NE(panRecognizer3->refereeState_, RefereeState::SUCCEED);
+    PanRecognizer panRecognizer3 = PanRecognizer(panGestureOption);
+    EXPECT_NE(panRecognizer3.refereeState_, RefereeState::SUCCEED);
     panGestureOption->fingers_ = FINGER_NUMBER_OVER_MAX;
     panDirection.type = PanDirection::HORIZONTAL;
     panGestureOption->SetDirection(panDirection);
-    RefPtr<PanRecognizer> panRecognizer4 = AceType::MakeRefPtr<PanRecognizer>(panGestureOption);
-    EXPECT_NE(panRecognizer4->refereeState_, RefereeState::SUCCEED);
+    PanRecognizer panRecognizer4 = PanRecognizer(panGestureOption);
+    EXPECT_NE(panRecognizer4.refereeState_, RefereeState::SUCCEED);
     panGestureOption->fingers_ = 0;
     panDirection.type = PanDirection::UP;
     panGestureOption->SetDirection(panDirection);
-    RefPtr<PanRecognizer> panRecognizer5 = AceType::MakeRefPtr<PanRecognizer>(panGestureOption);
-    EXPECT_NE(panRecognizer5->refereeState_, RefereeState::SUCCEED);
+    PanRecognizer panRecognizer5 = PanRecognizer(panGestureOption);
+    EXPECT_NE(panRecognizer5.refereeState_, RefereeState::SUCCEED);
     panGestureOption->fingers_ = 0;
     panDirection.type = PanDirection::DOWN;
     panGestureOption->SetDirection(panDirection);
-    RefPtr<PanRecognizer> panRecognizer6 = AceType::MakeRefPtr<PanRecognizer>(panGestureOption);
-    EXPECT_NE(panRecognizer6->refereeState_, RefereeState::SUCCEED);
+    PanRecognizer panRecognizer6 = PanRecognizer(panGestureOption);
+    EXPECT_NE(panRecognizer6.refereeState_, RefereeState::SUCCEED);
     panGestureOption->fingers_ = 0;
     panDirection.type = PanDirection::DOWN;
     panGestureOption->SetDirection(panDirection);
-    RefPtr<PanRecognizer> panRecognizer7 = AceType::MakeRefPtr<PanRecognizer>(panGestureOption);
-    EXPECT_NE(panRecognizer7->refereeState_, RefereeState::SUCCEED);
+    PanRecognizer panRecognizer7 = PanRecognizer(panGestureOption);
+    EXPECT_NE(panRecognizer7.refereeState_, RefereeState::SUCCEED);
     panGestureOption->fingers_ = 0;
     panDirection.type = PanDirection::ALL;
     panGestureOption->SetDirection(panDirection);
-    RefPtr<PanRecognizer> panRecognizer8 = AceType::MakeRefPtr<PanRecognizer>(panGestureOption);
-    EXPECT_NE(panRecognizer8->refereeState_, RefereeState::SUCCEED);
+    PanRecognizer panRecognizer8 = PanRecognizer(panGestureOption);
+    EXPECT_NE(panRecognizer8.refereeState_, RefereeState::SUCCEED);
 }
 
 /**
@@ -175,7 +170,7 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerTest002, TestSize.Level1)
      * @tc.steps: step1. create PanRecognizer.
      */
     RefPtr<PanGestureOption> panGestureOption = AceType::MakeRefPtr<PanGestureOption>();
-    RefPtr<PanRecognizer> panRecognizer = AceType::MakeRefPtr<PanRecognizer>(panGestureOption);
+    PanRecognizer panRecognizer = PanRecognizer(panGestureOption);
 
     /**
      * @tc.steps: step2. call HandleTouchDown function and compare result.
@@ -183,37 +178,37 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerTest002, TestSize.Level1)
      * @tc.expected: step2. result equals.
      */
     TouchEvent touchEvent;
-    panRecognizer->refereeState_ = RefereeState::SUCCEED;
-    panRecognizer->HandleTouchDownEvent(touchEvent);
-    EXPECT_EQ(panRecognizer->touchPoints_.size(), 1);
+    panRecognizer.refereeState_ = RefereeState::SUCCEED;
+    panRecognizer.HandleTouchDownEvent(touchEvent);
+    EXPECT_EQ(panRecognizer.touchPoints_.size(), 1);
 
     /**
      * @tc.steps: step2. call HandleTouchDown function and compare result.
      * @tc.steps: case2: call TouchEvent, normal case
      * @tc.expected: step2. result equals.
      */
-    panRecognizer->refereeState_ = RefereeState::PENDING;
-    panRecognizer->HandleTouchDownEvent(touchEvent);
-    EXPECT_EQ(panRecognizer->deviceId_, touchEvent.deviceId);
-    EXPECT_EQ(panRecognizer->deviceType_, touchEvent.sourceType);
+    panRecognizer.refereeState_ = RefereeState::PENDING;
+    panRecognizer.HandleTouchDownEvent(touchEvent);
+    EXPECT_EQ(panRecognizer.deviceId_, touchEvent.deviceId);
+    EXPECT_EQ(panRecognizer.deviceType_, touchEvent.sourceType);
 
     /**
      * @tc.steps: step2. call HandleTouchDown function and compare result.
      * @tc.steps: case3: call TouchEvent, set fingerNum != fingers_
      * @tc.expected: step2. result equals.
      */
-    panRecognizer->fingers_ = FINGER_NUMBER;
-    panRecognizer->HandleTouchDownEvent(touchEvent);
-    EXPECT_EQ(panRecognizer->refereeState_, RefereeState::PENDING);
+    panRecognizer.fingers_ = FINGER_NUMBER;
+    panRecognizer.HandleTouchDownEvent(touchEvent);
+    EXPECT_EQ(panRecognizer.refereeState_, RefereeState::PENDING);
 
     /**
      * @tc.steps: step2. call HandleTouchDown function and compare result.
      * @tc.steps: case4: call TouchEvent, set fingerNum = fingers_
      * @tc.expected: step2. result equals.
      */
-    panRecognizer->fingers_ = 1;
-    panRecognizer->HandleTouchDownEvent(touchEvent);
-    EXPECT_EQ(panRecognizer->refereeState_, RefereeState::PENDING);
+    panRecognizer.fingers_ = 1;
+    panRecognizer.HandleTouchDownEvent(touchEvent);
+    EXPECT_EQ(panRecognizer.refereeState_, RefereeState::PENDING);
 
     /**
      * @tc.steps: step2. call HandleTouchDown function and compare result.
@@ -221,21 +216,21 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerTest002, TestSize.Level1)
      * @tc.expected: step2. result equals.
      */
     AxisEvent axisEvent;
-    panRecognizer->refereeState_ = RefereeState::SUCCEED;
-    panRecognizer->touchPoints_.clear();
-    panRecognizer->HandleTouchDownEvent(axisEvent);
-    EXPECT_EQ(panRecognizer->touchPoints_.size(), 1);
+    panRecognizer.refereeState_ = RefereeState::SUCCEED;
+    panRecognizer.touchPoints_.clear();
+    panRecognizer.HandleTouchDownEvent(axisEvent);
+    EXPECT_EQ(panRecognizer.touchPoints_.size(), 1);
 
     /**
      * @tc.steps: step2. call HandleTouchDown function and compare result.
      * @tc.steps: case5: call AxisEvent, refereeState is PENDING, normal case
      * @tc.expected: step2. result equals.
      */
-    panRecognizer->refereeState_ = RefereeState::PENDING;
-    panRecognizer->HandleTouchDownEvent(axisEvent);
-    EXPECT_EQ(panRecognizer->deviceId_, axisEvent.deviceId);
-    EXPECT_EQ(panRecognizer->deviceType_, axisEvent.sourceType);
-    EXPECT_EQ(panRecognizer->refereeState_, RefereeState::DETECTING);
+    panRecognizer.refereeState_ = RefereeState::PENDING;
+    panRecognizer.HandleTouchDownEvent(axisEvent);
+    EXPECT_EQ(panRecognizer.deviceId_, axisEvent.deviceId);
+    EXPECT_EQ(panRecognizer.deviceType_, axisEvent.sourceType);
+    EXPECT_EQ(panRecognizer.refereeState_, RefereeState::DETECTING);
 }
 
 /**
@@ -249,7 +244,7 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerHandleTouchDownEventTest001, TestSize
      * @tc.steps: step1. create PanRecognizer.
      */
     RefPtr<PanGestureOption> panGestureOption = AceType::MakeRefPtr<PanGestureOption>();
-    RefPtr<PanRecognizer> panRecognizer = AceType::MakeRefPtr<PanRecognizer>(panGestureOption);
+    PanRecognizer panRecognizer = PanRecognizer(panGestureOption);
 
     /**
      * @tc.steps: step2. call HandleTouchDown function and compare result.
@@ -258,38 +253,38 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerHandleTouchDownEventTest001, TestSize
      */
     TouchEvent touchEvent;
     touchEvent.sourceType = SourceType::MOUSE;
-    panRecognizer->fingers_ = 1;
-    panRecognizer->refereeState_ = RefereeState::SUCCEED;
-    panRecognizer->HandleTouchDownEvent(touchEvent);
-    EXPECT_EQ(panRecognizer->touchPoints_.size(), 1);
+    panRecognizer.fingers_ = 1;
+    panRecognizer.refereeState_ = RefereeState::SUCCEED;
+    panRecognizer.HandleTouchDownEvent(touchEvent);
+    EXPECT_EQ(panRecognizer.touchPoints_.size(), 1);
 
     /**
      * @tc.steps: step2. call HandleTouchDown function and compare result.
      * @tc.steps: case2: call TouchEvent, normal case
      * @tc.expected: step2. result equals.
      */
-    panRecognizer->refereeState_ = RefereeState::PENDING;
-    panRecognizer->HandleTouchDownEvent(touchEvent);
-    EXPECT_EQ(panRecognizer->deviceId_, touchEvent.deviceId);
-    EXPECT_EQ(panRecognizer->deviceType_, touchEvent.sourceType);
+    panRecognizer.refereeState_ = RefereeState::PENDING;
+    panRecognizer.HandleTouchDownEvent(touchEvent);
+    EXPECT_EQ(panRecognizer.deviceId_, touchEvent.deviceId);
+    EXPECT_EQ(panRecognizer.deviceType_, touchEvent.sourceType);
 
     /**
      * @tc.steps: step2. call HandleTouchDown function and compare result.
      * @tc.steps: case3: call TouchEvent, set fingerNum != fingers_
      * @tc.expected: step2. result equals.
      */
-    panRecognizer->fingers_ = FINGER_NUMBER;
-    panRecognizer->HandleTouchDownEvent(touchEvent);
-    EXPECT_EQ(panRecognizer->refereeState_, RefereeState::PENDING);
+    panRecognizer.fingers_ = FINGER_NUMBER;
+    panRecognizer.HandleTouchDownEvent(touchEvent);
+    EXPECT_EQ(panRecognizer.refereeState_, RefereeState::PENDING);
 
     /**
      * @tc.steps: step2. call HandleTouchDown function and compare result.
      * @tc.steps: case4: call TouchEvent, set fingerNum = fingers_
      * @tc.expected: step2. result equals.
      */
-    panRecognizer->fingers_ = 1;
-    panRecognizer->HandleTouchDownEvent(touchEvent);
-    EXPECT_EQ(panRecognizer->refereeState_, RefereeState::PENDING);
+    panRecognizer.fingers_ = 1;
+    panRecognizer.HandleTouchDownEvent(touchEvent);
+    EXPECT_EQ(panRecognizer.refereeState_, RefereeState::PENDING);
 
     /**
      * @tc.steps: step2. call HandleTouchDown function and compare result.
@@ -297,21 +292,21 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerHandleTouchDownEventTest001, TestSize
      * @tc.expected: step2. result equals.
      */
     AxisEvent axisEvent;
-    panRecognizer->refereeState_ = RefereeState::SUCCEED;
-    panRecognizer->touchPoints_.clear();
-    panRecognizer->HandleTouchDownEvent(axisEvent);
-    EXPECT_EQ(panRecognizer->touchPoints_.size(), 1);
+    panRecognizer.refereeState_ = RefereeState::SUCCEED;
+    panRecognizer.touchPoints_.clear();
+    panRecognizer.HandleTouchDownEvent(axisEvent);
+    EXPECT_EQ(panRecognizer.touchPoints_.size(), 1);
 
     /**
      * @tc.steps: step2. call HandleTouchDown function and compare result.
      * @tc.steps: case5: call AxisEvent, refereeState is PENDING, normal case
      * @tc.expected: step2. result equals.
      */
-    panRecognizer->refereeState_ = RefereeState::PENDING;
-    panRecognizer->HandleTouchDownEvent(axisEvent);
-    EXPECT_EQ(panRecognizer->deviceId_, axisEvent.deviceId);
-    EXPECT_EQ(panRecognizer->deviceType_, axisEvent.sourceType);
-    EXPECT_EQ(panRecognizer->refereeState_, RefereeState::DETECTING);
+    panRecognizer.refereeState_ = RefereeState::PENDING;
+    panRecognizer.HandleTouchDownEvent(axisEvent);
+    EXPECT_EQ(panRecognizer.deviceId_, axisEvent.deviceId);
+    EXPECT_EQ(panRecognizer.deviceType_, axisEvent.sourceType);
+    EXPECT_EQ(panRecognizer.refereeState_, RefereeState::DETECTING);
 }
 
 /**
@@ -325,7 +320,7 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerTest003, TestSize.Level1)
      * @tc.steps: step1. create PanRecognizer.
      */
     RefPtr<PanGestureOption> panGestureOption = AceType::MakeRefPtr<PanGestureOption>();
-    RefPtr<PanRecognizer> panRecognizer = AceType::MakeRefPtr<PanRecognizer>(panGestureOption);
+    PanRecognizer panRecognizer = PanRecognizer(panGestureOption);
 
     /**
      * @tc.steps: step2. call HandleTouchUp function and compare result.
@@ -333,33 +328,33 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerTest003, TestSize.Level1)
      * @tc.expected: step2. result equals.
      */
     TouchEvent touchEvent;
-    panRecognizer->refereeState_ = RefereeState::SUCCEED;
-    panRecognizer->HandleTouchUpEvent(touchEvent);
-    EXPECT_EQ(panRecognizer->globalPoint_.GetX(), touchEvent.x);
-    EXPECT_EQ(panRecognizer->globalPoint_.GetY(), touchEvent.y);
-    EXPECT_EQ(panRecognizer->lastTouchEvent_.id, touchEvent.id);
+    panRecognizer.refereeState_ = RefereeState::SUCCEED;
+    panRecognizer.HandleTouchUpEvent(touchEvent);
+    EXPECT_EQ(panRecognizer.globalPoint_.GetX(), touchEvent.x);
+    EXPECT_EQ(panRecognizer.globalPoint_.GetY(), touchEvent.y);
+    EXPECT_EQ(panRecognizer.lastTouchEvent_.id, touchEvent.id);
 
     /**
      * @tc.steps: step2. call HandleTouchUp function and compare result.
      * @tc.steps: case2: refereeState is SUCCEED, size > 1
      * @tc.expected: step2. result equals.
      */
-    panRecognizer->touchPoints_[0] = touchEvent;
-    panRecognizer->touchPoints_[1] = touchEvent;
-    panRecognizer->HandleTouchUpEvent(touchEvent);
-    EXPECT_EQ(panRecognizer->globalPoint_.GetX(), touchEvent.x);
-    EXPECT_EQ(panRecognizer->globalPoint_.GetY(), touchEvent.y);
-    EXPECT_EQ(panRecognizer->lastTouchEvent_.id, touchEvent.id);
+    panRecognizer.touchPoints_[0] = touchEvent;
+    panRecognizer.touchPoints_[1] = touchEvent;
+    panRecognizer.HandleTouchUpEvent(touchEvent);
+    EXPECT_EQ(panRecognizer.globalPoint_.GetX(), touchEvent.x);
+    EXPECT_EQ(panRecognizer.globalPoint_.GetY(), touchEvent.y);
+    EXPECT_EQ(panRecognizer.lastTouchEvent_.id, touchEvent.id);
 
     /**
      * @tc.steps: step2. call HandleTouchUp function and compare result.
      * @tc.steps: case3: refereeState is FAIL
      * @tc.expected: step2. result equals.
      */
-    panRecognizer->refereeState_ = RefereeState::FAIL;
-    EXPECT_EQ(panRecognizer->globalPoint_.GetX(), touchEvent.x);
-    EXPECT_EQ(panRecognizer->globalPoint_.GetY(), touchEvent.y);
-    EXPECT_EQ(panRecognizer->lastTouchEvent_.id, touchEvent.id);
+    panRecognizer.refereeState_ = RefereeState::FAIL;
+    EXPECT_EQ(panRecognizer.globalPoint_.GetX(), touchEvent.x);
+    EXPECT_EQ(panRecognizer.globalPoint_.GetY(), touchEvent.y);
+    EXPECT_EQ(panRecognizer.lastTouchEvent_.id, touchEvent.id);
 
     /**
      * @tc.steps: step3. call HandleTouchUp function and compare result.
@@ -367,20 +362,20 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerTest003, TestSize.Level1)
      * @tc.expected: step2. result equals.
      */
     AxisEvent axisEvent;
-    panRecognizer->refereeState_ = RefereeState::SUCCEED;
-    panRecognizer->HandleTouchUpEvent(axisEvent);
-    EXPECT_EQ(panRecognizer->globalPoint_.GetX(), axisEvent.x);
-    EXPECT_EQ(panRecognizer->globalPoint_.GetY(), axisEvent.y);
+    panRecognizer.refereeState_ = RefereeState::SUCCEED;
+    panRecognizer.HandleTouchUpEvent(axisEvent);
+    EXPECT_EQ(panRecognizer.globalPoint_.GetX(), axisEvent.x);
+    EXPECT_EQ(panRecognizer.globalPoint_.GetY(), axisEvent.y);
 
     /**
      * @tc.steps: step3. call HandleTouchUp function and compare result.
      * @tc.steps: case2: refereeState is FAIL
      * @tc.expected: step2. result equals.
      */
-    panRecognizer->refereeState_ = RefereeState::FAIL;
-    panRecognizer->HandleTouchUpEvent(axisEvent);
-    EXPECT_EQ(panRecognizer->globalPoint_.GetX(), axisEvent.x);
-    EXPECT_EQ(panRecognizer->globalPoint_.GetY(), axisEvent.y);
+    panRecognizer.refereeState_ = RefereeState::FAIL;
+    panRecognizer.HandleTouchUpEvent(axisEvent);
+    EXPECT_EQ(panRecognizer.globalPoint_.GetX(), axisEvent.x);
+    EXPECT_EQ(panRecognizer.globalPoint_.GetY(), axisEvent.y);
 }
 
 /**
@@ -394,7 +389,7 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerHandleTouchUpEventTest001, TestSize.L
      * @tc.steps: step1. create PanRecognizer.
      */
     RefPtr<PanGestureOption> panGestureOption = AceType::MakeRefPtr<PanGestureOption>();
-    RefPtr<PanRecognizer> panRecognizer = AceType::MakeRefPtr<PanRecognizer>(panGestureOption);
+    PanRecognizer panRecognizer = PanRecognizer(panGestureOption);
 
     /**
      * @tc.steps: step2. call HandleTouchUp function and compare result.
@@ -402,26 +397,26 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerHandleTouchUpEventTest001, TestSize.L
      * @tc.expected: step2. result equals.
      */
     TouchEvent touchEvent;
-    panRecognizer->refereeState_ = RefereeState::SUCCEED;
-    panRecognizer->currentFingers_ = panRecognizer->fingers_;
-    panRecognizer->HandleTouchUpEvent(touchEvent);
-    EXPECT_EQ(panRecognizer->globalPoint_.GetX(), touchEvent.x);
-    EXPECT_EQ(panRecognizer->globalPoint_.GetY(), touchEvent.y);
-    EXPECT_EQ(panRecognizer->lastTouchEvent_.id, touchEvent.id);
+    panRecognizer.refereeState_ = RefereeState::SUCCEED;
+    panRecognizer.currentFingers_ = panRecognizer.fingers_;
+    panRecognizer.HandleTouchUpEvent(touchEvent);
+    EXPECT_EQ(panRecognizer.globalPoint_.GetX(), touchEvent.x);
+    EXPECT_EQ(panRecognizer.globalPoint_.GetY(), touchEvent.y);
+    EXPECT_EQ(panRecognizer.lastTouchEvent_.id, touchEvent.id);
 
     /**
      * @tc.steps: step2. call HandleTouchUp function and compare result.
      * @tc.steps: case2: refereeState is SUCCEED, size > 1
      * @tc.expected: step2. result equals.
      */
-    panRecognizer->touchPoints_[0] = touchEvent;
-    panRecognizer->touchPoints_[1] = touchEvent;
-    panRecognizer->currentFingers_ = panRecognizer->fingers_;
-    panRecognizer->refereeState_ = RefereeState::FAIL;
-    panRecognizer->HandleTouchUpEvent(touchEvent);
-    EXPECT_EQ(panRecognizer->globalPoint_.GetX(), touchEvent.x);
-    EXPECT_EQ(panRecognizer->globalPoint_.GetY(), touchEvent.y);
-    EXPECT_EQ(panRecognizer->lastTouchEvent_.id, touchEvent.id);
+    panRecognizer.touchPoints_[0] = touchEvent;
+    panRecognizer.touchPoints_[1] = touchEvent;
+    panRecognizer.currentFingers_ = panRecognizer.fingers_;
+    panRecognizer.refereeState_ = RefereeState::FAIL;
+    panRecognizer.HandleTouchUpEvent(touchEvent);
+    EXPECT_EQ(panRecognizer.globalPoint_.GetX(), touchEvent.x);
+    EXPECT_EQ(panRecognizer.globalPoint_.GetY(), touchEvent.y);
+    EXPECT_EQ(panRecognizer.lastTouchEvent_.id, touchEvent.id);
 }
 
 /**
@@ -435,7 +430,7 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerHandleTouchMoveEventTest001, TestSize
      * @tc.steps: step1. create PanRecognizer.
      */
     RefPtr<PanGestureOption> panGestureOption = AceType::MakeRefPtr<PanGestureOption>();
-    RefPtr<PanRecognizer> panRecognizer = AceType::MakeRefPtr<PanRecognizer>(panGestureOption);
+    PanRecognizer panRecognizer = PanRecognizer(panGestureOption);
 
     /**
      * @tc.steps: step2. call HandleTouchUp function and compare result.
@@ -443,47 +438,47 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerHandleTouchMoveEventTest001, TestSize
      * @tc.expected: step2. result equals.
      */
     TouchEvent touchEvent;
-    panRecognizer->refereeState_ = RefereeState::SUCCEED;
-    panRecognizer->touchPoints_[touchEvent.id] = touchEvent;
-    panRecognizer->direction_.type = PanDirection::VERTICAL;
-    panRecognizer->isFlushTouchEventsEnd_ = true;
-    panRecognizer->currentFingers_ = panRecognizer->fingers_;
-    panRecognizer->HandleTouchMoveEvent(touchEvent);
-    EXPECT_EQ(panRecognizer->globalPoint_.GetX(), touchEvent.x);
-    EXPECT_EQ(panRecognizer->globalPoint_.GetY(), touchEvent.y);
-    EXPECT_EQ(panRecognizer->delta_.GetX(), 0);
-    EXPECT_EQ(panRecognizer->delta_.GetY(), 0);
-    EXPECT_EQ(panRecognizer->averageDistance_.GetX(), 0);
+    panRecognizer.refereeState_ = RefereeState::SUCCEED;
+    panRecognizer.touchPoints_[touchEvent.id] = touchEvent;
+    panRecognizer.direction_.type = PanDirection::VERTICAL;
+    panRecognizer.isFlushTouchEventsEnd_ = true;
+    panRecognizer.currentFingers_ = panRecognizer.fingers_;
+    panRecognizer.HandleTouchMoveEvent(touchEvent);
+    EXPECT_EQ(panRecognizer.globalPoint_.GetX(), touchEvent.x);
+    EXPECT_EQ(panRecognizer.globalPoint_.GetY(), touchEvent.y);
+    EXPECT_EQ(panRecognizer.delta_.GetX(), 0);
+    EXPECT_EQ(panRecognizer.delta_.GetY(), 0);
+    EXPECT_EQ(panRecognizer.averageDistance_.GetX(), 0);
 
     /**
      * @tc.steps: step2. call HandleTouchUp function and compare result.
      * @tc.steps: case2: direction.type is HORIZONTAL
      * @tc.expected: step2. result equals.
      */
-    panRecognizer->direction_.type = PanDirection::HORIZONTAL;
-    panRecognizer->currentFingers_ = panRecognizer->fingers_;
-    panRecognizer->HandleTouchMoveEvent(touchEvent);
-    EXPECT_EQ(panRecognizer->averageDistance_.GetY(), 0);
+    panRecognizer.direction_.type = PanDirection::HORIZONTAL;
+    panRecognizer.currentFingers_ = panRecognizer.fingers_;
+    panRecognizer.HandleTouchMoveEvent(touchEvent);
+    EXPECT_EQ(panRecognizer.averageDistance_.GetY(), 0);
 
     /**
      * @tc.steps: step2. call HandleTouchUp function and compare result.
      * @tc.steps: case3: isFlushTouchEventsEnd_ is false
      * @tc.expected: step2. result equals.
      */
-    panRecognizer->isFlushTouchEventsEnd_ = false;
-    panRecognizer->currentFingers_ = panRecognizer->fingers_;
-    panRecognizer->HandleTouchMoveEvent(touchEvent);
-    EXPECT_EQ(panRecognizer->averageDistance_.GetY(), 0);
+    panRecognizer.isFlushTouchEventsEnd_ = false;
+    panRecognizer.currentFingers_ = panRecognizer.fingers_;
+    panRecognizer.HandleTouchMoveEvent(touchEvent);
+    EXPECT_EQ(panRecognizer.averageDistance_.GetY(), 0);
 
     /**
      * @tc.steps: step2. call HandleTouchUp function and compare result.
      * @tc.steps: case3: isFlushTouchEventsEnd_ is true
      * @tc.expected: step2. result equals.
      */
-    panRecognizer->isFlushTouchEventsEnd_ = true;
-    panRecognizer->currentFingers_ = panRecognizer->fingers_;
-    panRecognizer->HandleTouchMoveEvent(touchEvent);
-    EXPECT_EQ(panRecognizer->averageDistance_.GetY(), 0);
+    panRecognizer.isFlushTouchEventsEnd_ = true;
+    panRecognizer.currentFingers_ = panRecognizer.fingers_;
+    panRecognizer.HandleTouchMoveEvent(touchEvent);
+    EXPECT_EQ(panRecognizer.averageDistance_.GetY(), 0);
 }
 
 /**
@@ -497,7 +492,7 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerTest004, TestSize.Level1)
      * @tc.steps: step1. create PanRecognizer.
      */
     RefPtr<PanGestureOption> panGestureOption = AceType::MakeRefPtr<PanGestureOption>();
-    RefPtr<PanRecognizer> panRecognizer = AceType::MakeRefPtr<PanRecognizer>(panGestureOption);
+    PanRecognizer panRecognizer = PanRecognizer(panGestureOption);
 
     /**
      * @tc.steps: step2. call HandleTouchUp function and compare result.
@@ -505,34 +500,34 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerTest004, TestSize.Level1)
      * @tc.expected: step2. result equals.
      */
     TouchEvent touchEvent;
-    panRecognizer->refereeState_ = RefereeState::SUCCEED;
-    panRecognizer->touchPoints_[touchEvent.id] = touchEvent;
-    panRecognizer->direction_.type = PanDirection::VERTICAL;
-    panRecognizer->isFlushTouchEventsEnd_ = true;
-    panRecognizer->HandleTouchMoveEvent(touchEvent);
-    EXPECT_EQ(panRecognizer->globalPoint_.GetX(), touchEvent.x);
-    EXPECT_EQ(panRecognizer->globalPoint_.GetY(), touchEvent.y);
-    EXPECT_EQ(panRecognizer->delta_.GetX(), 0);
-    EXPECT_EQ(panRecognizer->delta_.GetY(), 0);
-    EXPECT_EQ(panRecognizer->averageDistance_.GetX(), 0);
+    panRecognizer.refereeState_ = RefereeState::SUCCEED;
+    panRecognizer.touchPoints_[touchEvent.id] = touchEvent;
+    panRecognizer.direction_.type = PanDirection::VERTICAL;
+    panRecognizer.isFlushTouchEventsEnd_ = true;
+    panRecognizer.HandleTouchMoveEvent(touchEvent);
+    EXPECT_EQ(panRecognizer.globalPoint_.GetX(), touchEvent.x);
+    EXPECT_EQ(panRecognizer.globalPoint_.GetY(), touchEvent.y);
+    EXPECT_EQ(panRecognizer.delta_.GetX(), 0);
+    EXPECT_EQ(panRecognizer.delta_.GetY(), 0);
+    EXPECT_EQ(panRecognizer.averageDistance_.GetX(), 0);
 
     /**
      * @tc.steps: step2. call HandleTouchUp function and compare result.
      * @tc.steps: case2: direction.type is HORIZONTAL
      * @tc.expected: step2. result equals.
      */
-    panRecognizer->direction_.type = PanDirection::HORIZONTAL;
-    panRecognizer->HandleTouchMoveEvent(touchEvent);
-    EXPECT_EQ(panRecognizer->averageDistance_.GetY(), 0);
+    panRecognizer.direction_.type = PanDirection::HORIZONTAL;
+    panRecognizer.HandleTouchMoveEvent(touchEvent);
+    EXPECT_EQ(panRecognizer.averageDistance_.GetY(), 0);
 
     /**
      * @tc.steps: step2. call HandleTouchUp function and compare result.
      * @tc.steps: case3: isFlushTouchEventsEnd_ is false
      * @tc.expected: step2. result equals.
      */
-    panRecognizer->isFlushTouchEventsEnd_ = false;
-    panRecognizer->HandleTouchMoveEvent(touchEvent);
-    EXPECT_EQ(panRecognizer->averageDistance_.GetY(), 0);
+    panRecognizer.isFlushTouchEventsEnd_ = false;
+    panRecognizer.HandleTouchMoveEvent(touchEvent);
+    EXPECT_EQ(panRecognizer.averageDistance_.GetY(), 0);
 }
 
 /**
@@ -546,16 +541,16 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerTest005, TestSize.Level1)
      * @tc.steps: step1. create PanRecognizer.
      */
     RefPtr<PanGestureOption> panGestureOption = AceType::MakeRefPtr<PanGestureOption>();
-    RefPtr<PanRecognizer> panRecognizer = AceType::MakeRefPtr<PanRecognizer>(panGestureOption);
+    PanRecognizer panRecognizer = PanRecognizer(panGestureOption);
 
     /**
      * @tc.steps: step2. call HandleTouchUp function and compare result.
      * @tc.expected: step2. result equals.
      */
-    panRecognizer->OnFlushTouchEventsBegin();
-    EXPECT_EQ(panRecognizer->isFlushTouchEventsEnd_, false);
-    panRecognizer->OnFlushTouchEventsEnd();
-    EXPECT_EQ(panRecognizer->isFlushTouchEventsEnd_, true);
+    panRecognizer.OnFlushTouchEventsBegin();
+    EXPECT_EQ(panRecognizer.isFlushTouchEventsEnd_, false);
+    panRecognizer.OnFlushTouchEventsEnd();
+    EXPECT_EQ(panRecognizer.isFlushTouchEventsEnd_, true);
 }
 
 /**
@@ -568,69 +563,66 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerTest006, TestSize.Level1)
     /**
      * @tc.steps: step1. create PanRecognizer.
      */
-    APIVersionGuard aPIVersionGuard(static_cast<int32_t>(PlatformVersion::VERSION_TWENTY));
-    ASSERT_EQ(static_cast<int32_t>(PlatformVersion::VERSION_TWENTY),
-        AceApplicationInfo::GetInstance().GetApiTargetVersion());
     RefPtr<PanGestureOption> panGestureOption = AceType::MakeRefPtr<PanGestureOption>();
-    RefPtr<PanRecognizer> panRecognizer = AceType::MakeRefPtr<PanRecognizer>(panGestureOption);
+    PanRecognizer panRecognizer = PanRecognizer(panGestureOption);
 
     /**
      * @tc.steps: step2. case1: PanDirection::ALL, fabs(offset) >= distance_.
      * @tc.expected: step2. return ACCEPT.
      */
     PanRecognizer::GestureAcceptResult result;
-    panRecognizer->direction_.type = PanDirection::ALL;
-    panRecognizer->distanceMap_[SourceTool::UNKNOWN] = Dimension(0, DimensionUnit::PX);
-    result = panRecognizer->IsPanGestureAccept();
+    panRecognizer.direction_.type = PanDirection::ALL;
+    panRecognizer.distance_ = 0;
+    result = panRecognizer.IsPanGestureAccept();
     EXPECT_EQ(result, PanRecognizer::GestureAcceptResult::ACCEPT);
 
     /**
      * @tc.steps: step2. case2: PanDirection::ALL, fabs(offset) < distance_.
      * @tc.expected: step2. return DETECTING.
      */
-    panRecognizer->direction_.type = PanDirection::ALL;
-    panRecognizer->distanceMap_[SourceTool::UNKNOWN] = Dimension(1, DimensionUnit::PX);
-    result = panRecognizer->IsPanGestureAccept();
+    panRecognizer.direction_.type = PanDirection::ALL;
+    panRecognizer.distance_ = 1;
+    result = panRecognizer.IsPanGestureAccept();
     EXPECT_EQ(result, PanRecognizer::GestureAcceptResult::DETECTING);
 
     /**
      * @tc.steps: step2. case3: GetX > GetY, GetX < distance, PanDirection::HORIZONTAL.
      * @tc.expected: step2. return DETECTING.
      */
-    panRecognizer->direction_.type = PanDirection::HORIZONTAL;
-    panRecognizer->averageDistance_ = Offset(0, -1);
-    panRecognizer->distanceMap_[SourceTool::UNKNOWN] = Dimension(1, DimensionUnit::PX);
-    result = panRecognizer->IsPanGestureAccept();
+    panRecognizer.direction_.type = PanDirection::HORIZONTAL;
+    panRecognizer.averageDistance_ = Offset(0, -1);
+    panRecognizer.distance_ = 1;
+    result = panRecognizer.IsPanGestureAccept();
     EXPECT_EQ(result, PanRecognizer::GestureAcceptResult::DETECTING);
 
     /**
      * @tc.steps: step2. case4: GetX > GetY, GetX > 0, GetX > distance_, PanDirection::LEFT.
      * @tc.expected: step2. return REJECT.
      */
-    panRecognizer->direction_.type = PanDirection::LEFT;
-    panRecognizer->averageDistance_ = Offset(1, 0);
-    panRecognizer->distanceMap_[SourceTool::UNKNOWN] = Dimension(0, DimensionUnit::PX);
-    result = panRecognizer->IsPanGestureAccept();
-    EXPECT_EQ(result, PanRecognizer::GestureAcceptResult::ACCEPT);
+    panRecognizer.direction_.type = PanDirection::LEFT;
+    panRecognizer.averageDistance_ = Offset(1, 0);
+    panRecognizer.distance_ = 0;
+    result = panRecognizer.IsPanGestureAccept();
+    EXPECT_EQ(result, PanRecognizer::GestureAcceptResult::REJECT);
 
     /**
      * @tc.steps: step2. case5: GetX > GetY, GetX > 0, GetX > distance_, PanDirection::VERTICAL.
      * @tc.expected: step2. return REJECT.
      */
-    panRecognizer->direction_.type = PanDirection::VERTICAL;
-    panRecognizer->averageDistance_ = Offset(1, 0);
-    panRecognizer->distanceMap_[SourceTool::UNKNOWN] = Dimension(0, DimensionUnit::PX);
-    result = panRecognizer->IsPanGestureAccept();
-    EXPECT_EQ(result, PanRecognizer::GestureAcceptResult::ACCEPT);
+    panRecognizer.direction_.type = PanDirection::VERTICAL;
+    panRecognizer.averageDistance_ = Offset(1, 0);
+    panRecognizer.distance_ = 0;
+    result = panRecognizer.IsPanGestureAccept();
+    EXPECT_EQ(result, PanRecognizer::GestureAcceptResult::DETECTING);
 
     /**
      * @tc.steps: step2. case6: GetX > GetY, GetX = distance_ = 0, PanDirection::VERTICAL.
      * @tc.expected: step2. return ACCEPT.
      */
-    panRecognizer->direction_.type = PanDirection::VERTICAL;
-    panRecognizer->averageDistance_ = Offset(0, -1);
-    panRecognizer->distanceMap_[SourceTool::UNKNOWN] = Dimension(0, DimensionUnit::PX);
-    result = panRecognizer->IsPanGestureAccept();
+    panRecognizer.direction_.type = PanDirection::VERTICAL;
+    panRecognizer.averageDistance_ = Offset(0, -1);
+    panRecognizer.distance_ = 0;
+    result = panRecognizer.IsPanGestureAccept();
     EXPECT_EQ(result, PanRecognizer::GestureAcceptResult::ACCEPT);
 }
 
@@ -645,49 +637,49 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerTest007, TestSize.Level1)
      * @tc.steps: step1. create PanRecognizer.
      */
     RefPtr<PanGestureOption> panGestureOption = AceType::MakeRefPtr<PanGestureOption>();
-    RefPtr<PanRecognizer> panRecognizer = AceType::MakeRefPtr<PanRecognizer>(panGestureOption);
+    PanRecognizer panRecognizer = PanRecognizer(panGestureOption);
 
     /**
      * @tc.steps: step2. case7: GetX <= GetY, GetY < distance_, PanDirection::VERTICAL.
      * @tc.expected: step2. return DETECTING.
      */
     PanRecognizer::GestureAcceptResult result;
-    panRecognizer->direction_.type = PanDirection::VERTICAL;
-    panRecognizer->averageDistance_ = Offset(-1, 0);
-    panRecognizer->distanceMap_[SourceTool::UNKNOWN] = Dimension(1, DimensionUnit::PX);
-    result = panRecognizer->IsPanGestureAccept();
+    panRecognizer.direction_.type = PanDirection::VERTICAL;
+    panRecognizer.averageDistance_ = Offset(-1, 0);
+    panRecognizer.distance_ = 1;
+    result = panRecognizer.IsPanGestureAccept();
     EXPECT_EQ(result, PanRecognizer::GestureAcceptResult::DETECTING);
 
     /**
      * @tc.steps: step2. case8: GetX <= GetY, GetY > distance_, GetY < 0, PanDirection::DOWN.
      * @tc.expected: step2. return ACCEPT.
      */
-    panRecognizer->direction_.type = PanDirection::DOWN;
-    panRecognizer->averageDistance_ = Offset(-1, 1);
-    panRecognizer->touchPointsDistance_[0] = Offset(-1, 1);
-    panRecognizer->distanceMap_[SourceTool::UNKNOWN] = Dimension(0, DimensionUnit::PX);
-    result = panRecognizer->IsPanGestureAccept();
+    panRecognizer.direction_.type = PanDirection::DOWN;
+    panRecognizer.averageDistance_ = Offset(-1, 1);
+    panRecognizer.touchPointsDistance_[0] = Offset(-1, 1);
+    panRecognizer.distance_ = 0;
+    result = panRecognizer.IsPanGestureAccept();
     EXPECT_EQ(result, PanRecognizer::GestureAcceptResult::ACCEPT);
 
     /**
      * @tc.steps: step2. case9: GetX <= GetY, GetY > distance_, GetY > 0, PanDirection::UP.
-     * @tc.expected: step2. return ACCEPT.
+     * @tc.expected: step2. return REJECT.
      */
-    panRecognizer->direction_.type = PanDirection::UP;
-    panRecognizer->averageDistance_ = Offset(-1, 1);
-    panRecognizer->distanceMap_[SourceTool::UNKNOWN] = Dimension(0, DimensionUnit::PX);
-    result = panRecognizer->IsPanGestureAccept();
-    EXPECT_EQ(result, PanRecognizer::GestureAcceptResult::ACCEPT);
+    panRecognizer.direction_.type = PanDirection::UP;
+    panRecognizer.averageDistance_ = Offset(-1, 1);
+    panRecognizer.distance_ = 0;
+    result = panRecognizer.IsPanGestureAccept();
+    EXPECT_EQ(result, PanRecognizer::GestureAcceptResult::REJECT);
 
     /**
      * @tc.steps: step2. case10: GetX <= GetY, GetY = distance_ = 0, PanDirection::UP.
-     * @tc.expected: step2. return ACCEPT.
+     * @tc.expected: step2. return DETECTING.
      */
-    panRecognizer->direction_.type = PanDirection::UP;
-    panRecognizer->averageDistance_ = Offset(-1, 0);
-    panRecognizer->distanceMap_[SourceTool::UNKNOWN] = Dimension(0, DimensionUnit::PX);
-    result = panRecognizer->IsPanGestureAccept();
-    EXPECT_EQ(result, PanRecognizer::GestureAcceptResult::ACCEPT);
+    panRecognizer.direction_.type = PanDirection::UP;
+    panRecognizer.averageDistance_ = Offset(-1, 0);
+    panRecognizer.distance_ = 0;
+    result = panRecognizer.IsPanGestureAccept();
+    EXPECT_EQ(result, PanRecognizer::GestureAcceptResult::DETECTING);
 }
 
 /**
@@ -701,7 +693,7 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerTest008, TestSize.Level1)
      * @tc.steps: step1. create PanRecognizer.
      */
     RefPtr<PanGestureOption> panGestureOption = AceType::MakeRefPtr<PanGestureOption>();
-    RefPtr<PanRecognizer> panRecognizer = AceType::MakeRefPtr<PanRecognizer>(panGestureOption);
+    PanRecognizer panRecognizer = PanRecognizer(panGestureOption);
 
     /**
      * @tc.steps: step2. call HandleTouchCancel function and compare result.
@@ -709,18 +701,18 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerTest008, TestSize.Level1)
      * @tc.expected: step2. result equals.
      */
     TouchEvent touchEvent;
-    panRecognizer->refereeState_ = RefereeState::SUCCEED;
-    panRecognizer->HandleTouchCancelEvent(touchEvent);
-    EXPECT_EQ(panRecognizer->touchPoints_.size(), 0);
+    panRecognizer.refereeState_ = RefereeState::SUCCEED;
+    panRecognizer.HandleTouchCancelEvent(touchEvent);
+    EXPECT_EQ(panRecognizer.touchPoints_.size(), 0);
 
     /**
      * @tc.steps: step2. call HandleTouchCancel function and compare result.
      * @tc.steps: case2: Touch, refereeState is FAIL
      * @tc.expected: step2. result equals.
      */
-    panRecognizer->refereeState_ = RefereeState::FAIL;
-    panRecognizer->HandleTouchCancelEvent(touchEvent);
-    EXPECT_EQ(panRecognizer->touchPoints_.size(), 0);
+    panRecognizer.refereeState_ = RefereeState::FAIL;
+    panRecognizer.HandleTouchCancelEvent(touchEvent);
+    EXPECT_EQ(panRecognizer.touchPoints_.size(), 0);
 
     /**
      * @tc.steps: step3. call HandleTouchCancel function and compare result.
@@ -728,18 +720,18 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerTest008, TestSize.Level1)
      * @tc.expected: step2. result equals.
      */
     AxisEvent axisEvent;
-    panRecognizer->refereeState_ = RefereeState::SUCCEED;
-    panRecognizer->HandleTouchCancelEvent(axisEvent);
-    EXPECT_EQ(panRecognizer->touchPoints_.size(), 0);
+    panRecognizer.refereeState_ = RefereeState::SUCCEED;
+    panRecognizer.HandleTouchCancelEvent(axisEvent);
+    EXPECT_EQ(panRecognizer.touchPoints_.size(), 0);
 
     /**
      * @tc.steps: step3. call HandleTouchCancel function and compare result.
      * @tc.steps: case2: Axis, refereeState is FAIL
      * @tc.expected: step2. result equals.
      */
-    panRecognizer->refereeState_ = RefereeState::FAIL;
-    panRecognizer->HandleTouchCancelEvent(axisEvent);
-    EXPECT_EQ(panRecognizer->touchPoints_.size(), 0);
+    panRecognizer.refereeState_ = RefereeState::FAIL;
+    panRecognizer.HandleTouchCancelEvent(axisEvent);
+    EXPECT_EQ(panRecognizer.touchPoints_.size(), 0);
 }
 
 /**
@@ -753,7 +745,7 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerTest009, TestSize.Level1)
      * @tc.steps: step1. create PanRecognizer.
      */
     RefPtr<PanGestureOption> panGestureOption = AceType::MakeRefPtr<PanGestureOption>();
-    RefPtr<PanRecognizer> panRecognizer = AceType::MakeRefPtr<PanRecognizer>(panGestureOption);
+    PanRecognizer panRecognizer = PanRecognizer(panGestureOption);
 
     /**
      * @tc.steps: step2. call SendCallbackMsg function and compare result.
@@ -761,8 +753,8 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerTest009, TestSize.Level1)
      * @tc.expected: step2. result equals.
      */
     std::unique_ptr<GestureEventFunc> onAction;
-    panRecognizer->SendCallbackMsg(onAction, GestureCallbackType::START);
-    EXPECT_EQ(panRecognizer->touchPoints_.size(), 0);
+    panRecognizer.SendCallbackMsg(onAction, GestureCallbackType::START);
+    EXPECT_EQ(panRecognizer.touchPoints_.size(), 0);
 
     /**
      * @tc.steps: step2. call SendCallbackMsg function and compare result.
@@ -770,8 +762,8 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerTest009, TestSize.Level1)
      * @tc.expected: step2. result equals.
      */
     onAction = std::make_unique<GestureEventFunc>();
-    panRecognizer->SendCallbackMsg(onAction, GestureCallbackType::START);
-    EXPECT_EQ(panRecognizer->touchPoints_.size(), 0);
+    panRecognizer.SendCallbackMsg(onAction, GestureCallbackType::START);
+    EXPECT_EQ(panRecognizer.touchPoints_.size(), 0);
 
     /**
      * @tc.steps: step2. call SendCallbackMsg function and compare result.
@@ -779,9 +771,9 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerTest009, TestSize.Level1)
      * @tc.expected: step2. result equals.
      */
     onAction = std::make_unique<GestureEventFunc>([](GestureEvent) {});
-    panRecognizer->inputEventType_ = InputEventType::AXIS;
-    panRecognizer->SendCallbackMsg(onAction, GestureCallbackType::START);
-    EXPECT_EQ(panRecognizer->touchPoints_.size(), 0);
+    panRecognizer.inputEventType_ = InputEventType::AXIS;
+    panRecognizer.SendCallbackMsg(onAction, GestureCallbackType::START);
+    EXPECT_EQ(panRecognizer.touchPoints_.size(), 0);
 
     /**
      * @tc.steps: step2. call SendCallbackMsg function and compare result.
@@ -789,9 +781,9 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerTest009, TestSize.Level1)
      * @tc.expected: step2. result equals.
      */
     TouchEvent touchEvent;
-    panRecognizer->lastTouchEvent_ = touchEvent;
-    panRecognizer->SendCallbackMsg(onAction, GestureCallbackType::START);
-    EXPECT_EQ(panRecognizer->touchPoints_.size(), 0);
+    panRecognizer.lastTouchEvent_ = touchEvent;
+    panRecognizer.SendCallbackMsg(onAction, GestureCallbackType::START);
+    EXPECT_EQ(panRecognizer.touchPoints_.size(), 0);
 
     /**
      * @tc.steps: step2. call SendCallbackMsg function and compare result.
@@ -800,11 +792,9 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerTest009, TestSize.Level1)
      */
     touchEvent.tiltX = 0.0f;
     touchEvent.tiltY = 0.0f;
-    panRecognizer->lastTouchEvent_ = touchEvent;
-    panRecognizer->SendCallbackMsg(onAction, GestureCallbackType::START);
-    EXPECT_EQ(panRecognizer->touchPoints_.size(), 0);
-    panRecognizer->SendCallbackMsg(onAction, GestureCallbackType::END);
-    EXPECT_TRUE(panRecognizer->localMatrix_.empty());
+    panRecognizer.lastTouchEvent_ = touchEvent;
+    panRecognizer.SendCallbackMsg(onAction, GestureCallbackType::START);
+    EXPECT_EQ(panRecognizer.touchPoints_.size(), 0);
 }
 
 /**
@@ -818,19 +808,19 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerSendCallbackMsgTest002, TestSize.Leve
      * @tc.steps: step1. create PanRecognizer.
      */
     RefPtr<PanGestureOption> panGestureOption = AceType::MakeRefPtr<PanGestureOption>();
-    RefPtr<PanRecognizer> panRecognizer = AceType::MakeRefPtr<PanRecognizer>(panGestureOption);
+    PanRecognizer panRecognizer = PanRecognizer(panGestureOption);
 
     /**
      * @tc.steps: step2. SendCallbackMsg
      * @tc.expected: step2. result equals.
      */
     TouchEvent touchEvent;
-    panRecognizer->refereeState_ = RefereeState::SUCCEED;
-    panRecognizer->HandleTouchDownEvent(touchEvent);
-    EXPECT_EQ(panRecognizer->touchPoints_.size(), 1);
+    panRecognizer.refereeState_ = RefereeState::SUCCEED;
+    panRecognizer.HandleTouchDownEvent(touchEvent);
+    EXPECT_EQ(panRecognizer.touchPoints_.size(), 1);
     std::unique_ptr<GestureEventFunc> onAction;
-    panRecognizer->SendCallbackMsg(onAction, GestureCallbackType::START);
-    EXPECT_EQ(panRecognizer->touchPoints_.size(), 1);
+    panRecognizer.SendCallbackMsg(onAction, GestureCallbackType::START);
+    EXPECT_EQ(panRecognizer.touchPoints_.size(), 1);
 }
 
 /**
@@ -844,7 +834,7 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerSendCallbackMsgTest001, TestSize.Leve
      * @tc.steps: step1. create PanRecognizer.
      */
     RefPtr<PanGestureOption> panGestureOption = AceType::MakeRefPtr<PanGestureOption>();
-    RefPtr<PanRecognizer> panRecognizer = AceType::MakeRefPtr<PanRecognizer>(panGestureOption);
+    PanRecognizer panRecognizer = PanRecognizer(panGestureOption);
 
     /**
      * @tc.steps: step2. call SendCallbackMsg function and compare result.
@@ -852,9 +842,9 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerSendCallbackMsgTest001, TestSize.Leve
      * @tc.expected: step2. result equals.
      */
     std::unique_ptr<GestureEventFunc> onAction = std::make_unique<GestureEventFunc>();
-    panRecognizer->inputEventType_ = InputEventType::TOUCH_SCREEN;
-    panRecognizer->SendCallbackMsg(onAction, GestureCallbackType::START);
-    EXPECT_EQ(panRecognizer->touchPoints_.size(), 0);
+    panRecognizer.inputEventType_ = InputEventType::TOUCH_SCREEN;
+    panRecognizer.SendCallbackMsg(onAction, GestureCallbackType::START);
+    EXPECT_EQ(panRecognizer.touchPoints_.size(), 0);
 }
 
 /**
@@ -868,7 +858,7 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerTest010, TestSize.Level1)
      * @tc.steps: step1. create PanRecognizer.
      */
     RefPtr<PanGestureOption> panGestureOption = AceType::MakeRefPtr<PanGestureOption>();
-    RefPtr<PanRecognizer> panRecognizer = AceType::MakeRefPtr<PanRecognizer>(panGestureOption);
+    PanRecognizer panRecognizer = PanRecognizer(panGestureOption);
     RefPtr<PanRecognizer> panRecognizerPtr = AceType::MakeRefPtr<PanRecognizer>(panGestureOption);
 
     /**
@@ -876,7 +866,7 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerTest010, TestSize.Level1)
      * @tc.steps: case1: recognizer is nullptr
      * @tc.expected: step2. result equals.
      */
-    auto result = panRecognizer->ReconcileFrom(nullptr);
+    auto result = panRecognizer.ReconcileFrom(nullptr);
     EXPECT_EQ(result, false);
 
     /**
@@ -884,7 +874,7 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerTest010, TestSize.Level1)
      * @tc.steps: case2: recognizer is normal
      * @tc.expected: step2. result equals.
      */
-    result = panRecognizer->ReconcileFrom(panRecognizerPtr);
+    result = panRecognizer.ReconcileFrom(panRecognizerPtr);
     EXPECT_EQ(result, true);
 
     /**
@@ -892,8 +882,8 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerTest010, TestSize.Level1)
      * @tc.steps: case3: fingers not same
      * @tc.expected: step2. result equals.
      */
-    panRecognizer->fingers_ = panRecognizerPtr->fingers_ + 1;
-    result = panRecognizer->ReconcileFrom(panRecognizerPtr);
+    panRecognizer.fingers_ = panRecognizerPtr->fingers_ + 1;
+    result = panRecognizer.ReconcileFrom(panRecognizerPtr);
     EXPECT_EQ(result, false);
 
     /**
@@ -901,8 +891,8 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerTest010, TestSize.Level1)
      * @tc.steps: case4: fingers not same, priority not same
      * @tc.expected: step2. result equals.
      */
-    panRecognizer->priorityMask_ = GestureMask::End;
-    result = panRecognizer->ReconcileFrom(panRecognizerPtr);
+    panRecognizer.priorityMask_ = GestureMask::End;
+    result = panRecognizer.ReconcileFrom(panRecognizerPtr);
     EXPECT_EQ(result, false);
 
     /**
@@ -910,8 +900,8 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerTest010, TestSize.Level1)
      * @tc.steps: case4: fingers same, priority not same
      * @tc.expected: step2. result equals.
      */
-    panRecognizer->fingers_ = panRecognizerPtr->fingers_;
-    result = panRecognizer->ReconcileFrom(panRecognizerPtr);
+    panRecognizer.fingers_ = panRecognizerPtr->fingers_;
+    result = panRecognizer.ReconcileFrom(panRecognizerPtr);
     EXPECT_EQ(result, false);
 }
 
@@ -926,25 +916,25 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerTest012, TestSize.Level1)
      * @tc.steps: step1. create PanRecognizer.
      */
     RefPtr<PanGestureOption> panGestureOption = AceType::MakeRefPtr<PanGestureOption>();
-    RefPtr<PanRecognizer> panRecognizer = AceType::MakeRefPtr<PanRecognizer>(panGestureOption);
+    PanRecognizer panRecognizer = PanRecognizer(panGestureOption);
 
     /**
      * @tc.steps: step2. call ChangeFingers function
      * @tc.steps: case1: fingers not same
      * @tc.expected: step2. result equals.
      */
-    panRecognizer->fingers_ = 0;
-    panRecognizer->ChangeFingers(1);
-    EXPECT_EQ(panRecognizer->newFingers_, 1);
+    panRecognizer.fingers_ = 0;
+    panRecognizer.ChangeFingers(1);
+    EXPECT_EQ(panRecognizer.newFingers_, 1);
 
     /**
      * @tc.steps: step2. call ChangeFingers function
      * @tc.steps: case1: fingers not same
      * @tc.expected: step2. result equals.
      */
-    panRecognizer->fingers_ = 1;
-    panRecognizer->ChangeFingers(1);
-    EXPECT_EQ(panRecognizer->newFingers_, 1);
+    panRecognizer.fingers_ = 1;
+    panRecognizer.ChangeFingers(1);
+    EXPECT_EQ(panRecognizer.newFingers_, 1);
 }
 
 /**
@@ -958,7 +948,7 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerTest013, TestSize.Level1)
      * @tc.steps: step1. create PanRecognizer.
      */
     RefPtr<PanGestureOption> panGestureOption = AceType::MakeRefPtr<PanGestureOption>();
-    RefPtr<PanRecognizer> panRecognizer = AceType::MakeRefPtr<PanRecognizer>(panGestureOption);
+    PanRecognizer panRecognizer = PanRecognizer(panGestureOption);
 
     /**
      * @tc.steps: step2. call ChangeDirection function
@@ -967,10 +957,10 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerTest013, TestSize.Level1)
      */
     PanDirection panDirection;
     panDirection.type = PanDirection::VERTICAL;
-    panRecognizer->direction_.type = PanDirection::HORIZONTAL;
-    panRecognizer->ChangeDirection(panDirection);
-    EXPECT_EQ(panRecognizer->direction_.type, PanDirection::VERTICAL);
-    EXPECT_EQ(panRecognizer->newDirection_.type, PanDirection::VERTICAL);
+    panRecognizer.direction_.type = PanDirection::HORIZONTAL;
+    panRecognizer.ChangeDirection(panDirection);
+    EXPECT_EQ(panRecognizer.direction_.type, PanDirection::VERTICAL);
+    EXPECT_EQ(panRecognizer.newDirection_.type, PanDirection::VERTICAL);
 
     /**
      * @tc.steps: step2. call ChangeDirection function
@@ -978,10 +968,10 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerTest013, TestSize.Level1)
      * @tc.expected: step2. result equals.
      */
     panDirection.type = PanDirection::VERTICAL;
-    panRecognizer->direction_.type = PanDirection::VERTICAL;
-    panRecognizer->ChangeDirection(panDirection);
-    EXPECT_EQ(panRecognizer->direction_.type, PanDirection::VERTICAL);
-    EXPECT_EQ(panRecognizer->newDirection_.type, PanDirection::VERTICAL);
+    panRecognizer.direction_.type = PanDirection::VERTICAL;
+    panRecognizer.ChangeDirection(panDirection);
+    EXPECT_EQ(panRecognizer.direction_.type, PanDirection::VERTICAL);
+    EXPECT_EQ(panRecognizer.newDirection_.type, PanDirection::VERTICAL);
 }
 
 /**
@@ -995,51 +985,51 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerTest014, TestSize.Level1)
      * @tc.steps: step1. create PanRecognizer.
      */
     RefPtr<PanGestureOption> panGestureOption = AceType::MakeRefPtr<PanGestureOption>();
-    RefPtr<PanRecognizer> panRecognizer = AceType::MakeRefPtr<PanRecognizer>(panGestureOption);
+    PanRecognizer panRecognizer = PanRecognizer(panGestureOption);
 
     /**
      * @tc.steps: step2. call ChangeDistance function
      * @tc.steps: case1: distance not same, refereeState is READY
      * @tc.expected: step2. result equals.
      */
-    panRecognizer->distanceMap_[SourceTool::UNKNOWN] = Dimension(0, DimensionUnit::PX);
-    panRecognizer->ChangeDistance(1);
-    panRecognizer->refereeState_ = RefereeState::READY;
-    EXPECT_EQ(panRecognizer->distanceMap_[SourceTool::UNKNOWN].ConvertToPx(), 1);
-    EXPECT_EQ(panRecognizer->newDistanceMap_[SourceTool::UNKNOWN].ConvertToPx(), 1);
+    panRecognizer.distance_ = 0;
+    panRecognizer.ChangeDistance(1);
+    panRecognizer.refereeState_ = RefereeState::READY;
+    EXPECT_EQ(panRecognizer.distance_, 1);
+    EXPECT_EQ(panRecognizer.newDistance_, 1);
 
     /**
      * @tc.steps: step2. call ChangeDistance function
      * @tc.steps: case2: distance not same, refereeState is DETECTING
      * @tc.expected: step2. result equals.
      */
-    panRecognizer->distanceMap_[SourceTool::UNKNOWN] = Dimension(0, DimensionUnit::PX);
-    panRecognizer->ChangeDistance(1);
-    panRecognizer->refereeState_ = RefereeState::DETECTING;
-    EXPECT_EQ(panRecognizer->distanceMap_[SourceTool::UNKNOWN].ConvertToPx(), 1);
-    EXPECT_EQ(panRecognizer->newDistanceMap_[SourceTool::UNKNOWN].ConvertToPx(), 1);
+    panRecognizer.distance_ = 0;
+    panRecognizer.ChangeDistance(1);
+    panRecognizer.refereeState_ = RefereeState::DETECTING;
+    EXPECT_EQ(panRecognizer.distance_, 1);
+    EXPECT_EQ(panRecognizer.newDistance_, 1);
 
     /**
      * @tc.steps: step2. call ChangeDistance function
      * @tc.steps: case3: distance not same, refereeState is FAIL
      * @tc.expected: step2. result equals.
      */
-    panRecognizer->distanceMap_[SourceTool::UNKNOWN] = Dimension(0, DimensionUnit::PX);
-    panRecognizer->ChangeDistance(1);
-    panRecognizer->refereeState_ = RefereeState::FAIL;
-    EXPECT_EQ(panRecognizer->distanceMap_[SourceTool::UNKNOWN].ConvertToPx(), 1);
-    EXPECT_EQ(panRecognizer->newDistanceMap_[SourceTool::UNKNOWN].ConvertToPx(), 1);
+    panRecognizer.distance_ = 0;
+    panRecognizer.ChangeDistance(1);
+    panRecognizer.refereeState_ = RefereeState::FAIL;
+    EXPECT_EQ(panRecognizer.distance_, 1);
+    EXPECT_EQ(panRecognizer.newDistance_, 1);
 
     /**
      * @tc.steps: step2. call ChangeDistance function
      * @tc.steps: case4: distance same
      * @tc.expected: step2. result equals.
      */
-    panRecognizer->distanceMap_[SourceTool::UNKNOWN] = Dimension(0, DimensionUnit::PX);
-    panRecognizer->ChangeDistance(0);
-    panRecognizer->refereeState_ = RefereeState::FAIL;
-    EXPECT_EQ(panRecognizer->distanceMap_[SourceTool::UNKNOWN].ConvertToPx(), 0);
-    EXPECT_EQ(panRecognizer->newDistanceMap_[SourceTool::UNKNOWN].ConvertToPx(), 1);
+    panRecognizer.distance_ = 0;
+    panRecognizer.ChangeDistance(0);
+    panRecognizer.refereeState_ = RefereeState::FAIL;
+    EXPECT_EQ(panRecognizer.distance_, 0);
+    EXPECT_EQ(panRecognizer.newDistance_, 1);
 }
 
 /**
@@ -1053,50 +1043,50 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerChangeDistanceTest001, TestSize.Level
      * @tc.steps: step1. create PanRecognizer.
      */
     RefPtr<PanGestureOption> panGestureOption = AceType::MakeRefPtr<PanGestureOption>();
-    RefPtr<PanRecognizer> panRecognizer = AceType::MakeRefPtr<PanRecognizer>(panGestureOption);
+    PanRecognizer panRecognizer = PanRecognizer(panGestureOption);
 
     /**
      * @tc.steps: step2. call ChangeDistance function
      * @tc.steps: case1: distance not same, refereeState is READY
      * @tc.expected: step2. result equals.
      */
-    panRecognizer->distanceMap_[SourceTool::UNKNOWN] = Dimension(0, DimensionUnit::PX);
-    panRecognizer->refereeState_ = RefereeState::READY;
-    panRecognizer->ChangeDistance(1);
-    EXPECT_EQ(panRecognizer->distanceMap_[SourceTool::UNKNOWN].ConvertToPx(), 1);
-    EXPECT_EQ(panRecognizer->newDistanceMap_[SourceTool::UNKNOWN].ConvertToPx(), 1);
+    panRecognizer.distance_ = 0;
+    panRecognizer.refereeState_ = RefereeState::READY;
+    panRecognizer.ChangeDistance(1);
+    EXPECT_EQ(panRecognizer.distance_, 1);
+    EXPECT_EQ(panRecognizer.newDistance_, 1);
 
     /**
      * @tc.steps: step2. call ChangeDistance function
      * @tc.steps: case2: distance not same, refereeState is DETECTING
      * @tc.expected: step2. result equals.
      */
-    panRecognizer->distanceMap_[SourceTool::UNKNOWN] = Dimension(0, DimensionUnit::PX);
-    panRecognizer->refereeState_ = RefereeState::DETECTING;
-    panRecognizer->ChangeDistance(1);
-    EXPECT_EQ(panRecognizer->distanceMap_[SourceTool::UNKNOWN].ConvertToPx(), 1);
-    EXPECT_EQ(panRecognizer->newDistanceMap_[SourceTool::UNKNOWN].ConvertToPx(), 1);
+    panRecognizer.distance_ = 0;
+    panRecognizer.refereeState_ = RefereeState::DETECTING;
+    panRecognizer.ChangeDistance(1);
+    EXPECT_EQ(panRecognizer.distance_, 1);
+    EXPECT_EQ(panRecognizer.newDistance_, 1);
 
     /**
      * @tc.steps: step2. call ChangeDistance function
      * @tc.steps: case3: distance not same, refereeState is FAIL
      * @tc.expected: step2. result equals.
      */
-    panRecognizer->distanceMap_[SourceTool::UNKNOWN] = Dimension(0, DimensionUnit::PX);
-    panRecognizer->refereeState_ = RefereeState::FAIL;
-    panRecognizer->ChangeDistance(1);
-    EXPECT_EQ(panRecognizer->newDistanceMap_[SourceTool::UNKNOWN].ConvertToPx(), 1);
+    panRecognizer.distance_ = 0;
+    panRecognizer.refereeState_ = RefereeState::FAIL;
+    panRecognizer.ChangeDistance(1);
+    EXPECT_EQ(panRecognizer.newDistance_, 1);
 
     /**
      * @tc.steps: step2. call ChangeDistance function
      * @tc.steps: case4: distance same
      * @tc.expected: step2. result equals.
      */
-    panRecognizer->distanceMap_[SourceTool::UNKNOWN] = Dimension(0, DimensionUnit::PX);
-    panRecognizer->refereeState_ = RefereeState::FAIL;
-    panRecognizer->ChangeDistance(1);
-    EXPECT_EQ(panRecognizer->distanceMap_[SourceTool::UNKNOWN].ConvertToPx(), 0);
-    EXPECT_EQ(panRecognizer->newDistanceMap_[SourceTool::UNKNOWN].ConvertToPx(), 1);
+    panRecognizer.distance_ = 0;
+    panRecognizer.refereeState_ = RefereeState::FAIL;
+    panRecognizer.ChangeDistance(1);
+    EXPECT_EQ(panRecognizer.distance_, 0);
+    EXPECT_EQ(panRecognizer.newDistance_, 1);
 }
 
 /**
@@ -1110,7 +1100,7 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerTest015, TestSize.Level1)
      * @tc.steps: step1. create PanRecognizer.
      */
     RefPtr<PanGestureOption> panGestureOption = AceType::MakeRefPtr<PanGestureOption>();
-    RefPtr<PanRecognizer> panRecognizer = AceType::MakeRefPtr<PanRecognizer>(panGestureOption);
+    PanRecognizer panRecognizer = PanRecognizer(panGestureOption);
 
     /**
      * @tc.steps: step2. call ChangeDistance function
@@ -1118,9 +1108,9 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerTest015, TestSize.Level1)
      * @tc.expected: step2. result equals.
      */
     PanDirection panDirection;
-    panRecognizer->direction_ = panDirection;
-    panRecognizer->direction_.type = PanDirection::ALL;
-    auto result = panRecognizer->GetMainAxisDelta();
+    panRecognizer.direction_ = panDirection;
+    panRecognizer.direction_.type = PanDirection::ALL;
+    auto result = panRecognizer.GetMainAxisDelta();
     EXPECT_EQ(result, 0);
 
     /**
@@ -1128,8 +1118,8 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerTest015, TestSize.Level1)
      * @tc.steps: case2: directionType is HORIZONTAL
      * @tc.expected: step2. result equals.
      */
-    panRecognizer->direction_.type = PanDirection::HORIZONTAL;
-    result = panRecognizer->GetMainAxisDelta();
+    panRecognizer.direction_.type = PanDirection::HORIZONTAL;
+    result = panRecognizer.GetMainAxisDelta();
     EXPECT_EQ(result, 0);
 
     /**
@@ -1137,8 +1127,8 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerTest015, TestSize.Level1)
      * @tc.steps: case3: directionType is VERTICAL
      * @tc.expected: step2. result equals.
      */
-    panRecognizer->direction_.type = PanDirection::VERTICAL;
-    result = panRecognizer->GetMainAxisDelta();
+    panRecognizer.direction_.type = PanDirection::VERTICAL;
+    result = panRecognizer.GetMainAxisDelta();
     EXPECT_EQ(result, 0);
 
     /**
@@ -1146,8 +1136,8 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerTest015, TestSize.Level1)
      * @tc.steps: case4: directionType is LEFT
      * @tc.expected: step2. result equals.
      */
-    panRecognizer->direction_.type = PanDirection::LEFT;
-    result = panRecognizer->GetMainAxisDelta();
+    panRecognizer.direction_.type = PanDirection::LEFT;
+    result = panRecognizer.GetMainAxisDelta();
     EXPECT_EQ(result, 0);
 }
 
@@ -1168,8 +1158,8 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerTest016, TestSize.Level1)
      * @tc.steps: case1: 0 <= direction.type <= 15
      * @tc.expected: step2. result equals.
      */
-    RefPtr<PanRecognizer> panRecognizer1 = AceType::MakeRefPtr<PanRecognizer>(panGestureOption);
-    EXPECT_EQ(panRecognizer1->direction_.type, PanDirection::ALL);
+    PanRecognizer panRecognizer1 = PanRecognizer(panGestureOption);
+    EXPECT_EQ(panRecognizer1.direction_.type, PanDirection::ALL);
 
     /**
      * @tc.steps: step2. call PanRecognizer function
@@ -1177,8 +1167,8 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerTest016, TestSize.Level1)
      * @tc.expected: step2. result equals.
      */
     panGestureOption->direction_.type = -1;
-    RefPtr<PanRecognizer> panRecognizer2 = AceType::MakeRefPtr<PanRecognizer>(panGestureOption);
-    EXPECT_EQ(panRecognizer2->direction_.type, PanDirection::ALL);
+    PanRecognizer panRecognizer2 = PanRecognizer(panGestureOption);
+    EXPECT_EQ(panRecognizer2.direction_.type, PanDirection::ALL);
 
     /**
      * @tc.steps: step2. call PanRecognizer function
@@ -1186,8 +1176,8 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerTest016, TestSize.Level1)
      * @tc.expected: step2. result equals.
      */
     panGestureOption->direction_.type = PanDirection::ALL + 1;
-    RefPtr<PanRecognizer> panRecognizer3 = AceType::MakeRefPtr<PanRecognizer>(panGestureOption);
-    EXPECT_EQ(panRecognizer3->direction_.type, PanDirection::ALL);
+    PanRecognizer panRecognizer3 = PanRecognizer(panGestureOption);
+    EXPECT_EQ(panRecognizer3.direction_.type, PanDirection::ALL);
 }
 
 /**
@@ -1201,7 +1191,7 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerTest017, TestSize.Level1)
      * @tc.steps: step1. create PanRecognizer.
      */
     RefPtr<PanGestureOption> panGestureOption = AceType::MakeRefPtr<PanGestureOption>();
-    RefPtr<PanRecognizer> panRecognizer = AceType::MakeRefPtr<PanRecognizer>(panGestureOption);
+    PanRecognizer panRecognizer = PanRecognizer(panGestureOption);
     AxisEvent axisEvent;
 
     /**
@@ -1209,22 +1199,22 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerTest017, TestSize.Level1)
      * @tc.steps: case1: fingers_ is 0, return
      * @tc.expected: step2. result equals.
      */
-    panRecognizer->fingers_ = 0;
-    panRecognizer->HandleTouchMoveEvent(axisEvent);
-    EXPECT_EQ(panRecognizer->touchPoints_.size(), 0);
+    panRecognizer.fingers_ = 0;
+    panRecognizer.HandleTouchMoveEvent(axisEvent);
+    EXPECT_EQ(panRecognizer.touchPoints_.size(), 0);
 
     /**
      * @tc.steps: step2. call HandleTouchMove function and compare result.
      * @tc.steps: case2: fingers_ is 1, direction is VERTICAL, refereeState is SUCCEED
      * @tc.expected: step2. result equals.
      */
-    panRecognizer->fingers_ = 1;
-    panRecognizer->direction_.type = PanDirection::VERTICAL;
-    panRecognizer->refereeState_ = RefereeState::SUCCEED;
-    panRecognizer->HandleTouchMoveEvent(axisEvent);
-    EXPECT_EQ(panRecognizer->touchPoints_.size(), 1);
-    EXPECT_EQ(panRecognizer->delta_.GetX(), 0);
-    EXPECT_EQ(panRecognizer->delta_.GetY(), 0);
+    panRecognizer.fingers_ = 1;
+    panRecognizer.direction_.type = PanDirection::VERTICAL;
+    panRecognizer.refereeState_ = RefereeState::SUCCEED;
+    panRecognizer.HandleTouchMoveEvent(axisEvent);
+    EXPECT_EQ(panRecognizer.touchPoints_.size(), 1);
+    EXPECT_EQ(panRecognizer.delta_.GetX(), 0);
+    EXPECT_EQ(panRecognizer.delta_.GetY(), 0);
 
     /**
      * @tc.steps: step2. call HandleTouchMove function and compare result.
@@ -1232,13 +1222,13 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerTest017, TestSize.Level1)
      * @tc.steps: case3: event.horizontalAxis = 0
      * @tc.expected: step2. result equals.
      */
-    panRecognizer->direction_.type = PanDirection::HORIZONTAL;
-    panRecognizer->refereeState_ = RefereeState::SUCCEED;
+    panRecognizer.direction_.type = PanDirection::HORIZONTAL;
+    panRecognizer.refereeState_ = RefereeState::SUCCEED;
     axisEvent.horizontalAxis = 0;
-    panRecognizer->HandleTouchMoveEvent(axisEvent);
-    EXPECT_EQ(panRecognizer->touchPoints_.size(), 1);
-    EXPECT_EQ(panRecognizer->delta_.GetX(), 0);
-    EXPECT_EQ(panRecognizer->delta_.GetY(), 0);
+    panRecognizer.HandleTouchMoveEvent(axisEvent);
+    EXPECT_EQ(panRecognizer.touchPoints_.size(), 1);
+    EXPECT_EQ(panRecognizer.delta_.GetX(), 0);
+    EXPECT_EQ(panRecognizer.delta_.GetY(), 0);
 
     /**
      * @tc.steps: step2. call HandleTouchMove function and compare result.
@@ -1246,11 +1236,11 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerTest017, TestSize.Level1)
      * @tc.steps: case3: event.horizontalAxis != 0
      * @tc.expected: step2. result equals.
      */
-    panRecognizer->direction_.type = PanDirection::HORIZONTAL;
-    panRecognizer->refereeState_ = RefereeState::PENDING;
+    panRecognizer.direction_.type = PanDirection::HORIZONTAL;
+    panRecognizer.refereeState_ = RefereeState::PENDING;
     axisEvent.horizontalAxis = 1;
-    panRecognizer->HandleTouchMoveEvent(axisEvent);
-    EXPECT_EQ(panRecognizer->touchPoints_.size(), 1);
+    panRecognizer.HandleTouchMoveEvent(axisEvent);
+    EXPECT_EQ(panRecognizer.touchPoints_.size(), 1);
 }
 
 /**
@@ -1352,7 +1342,7 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerSendCallbackMsgTest003, TestSize.Leve
      * @tc.steps: step1. create PanRecognizer.
      */
     RefPtr<PanGestureOption> panGestureOption = AceType::MakeRefPtr<PanGestureOption>();
-    RefPtr<PanRecognizer> panRecognizer = AceType::MakeRefPtr<PanRecognizer>(panGestureOption);
+    PanRecognizer panRecognizer = PanRecognizer(panGestureOption);
     std::unique_ptr<GestureEventFunc> onAction;
 
     /**
@@ -1361,9 +1351,9 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerSendCallbackMsgTest003, TestSize.Leve
      * @tc.expected: step2. result equals.
      */
     onAction = std::make_unique<GestureEventFunc>([](GestureEvent) {});
-    panRecognizer->inputEventType_ = InputEventType::AXIS;
-    panRecognizer->SendCallbackMsg(onAction, GestureCallbackType::START);
-    EXPECT_EQ(panRecognizer->touchPoints_.size(), 0);
+    panRecognizer.inputEventType_ = InputEventType::AXIS;
+    panRecognizer.SendCallbackMsg(onAction, GestureCallbackType::START);
+    EXPECT_EQ(panRecognizer.touchPoints_.size(), 0);
 
     /**
      * @tc.steps: step2. call SendCallbackMsg function and compare result.
@@ -1371,10 +1361,10 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerSendCallbackMsgTest003, TestSize.Leve
      * @tc.expected: step2. result equals.
      */
     TouchEvent touchEvent;
-    panRecognizer->lastTouchEvent_ = touchEvent;
-    panRecognizer->inputEventType_ = InputEventType::AXIS;
-    panRecognizer->SendCallbackMsg(onAction, GestureCallbackType::START);
-    EXPECT_EQ(panRecognizer->touchPoints_.size(), 0);
+    panRecognizer.lastTouchEvent_ = touchEvent;
+    panRecognizer.inputEventType_ = InputEventType::AXIS;
+    panRecognizer.SendCallbackMsg(onAction, GestureCallbackType::START);
+    EXPECT_EQ(panRecognizer.touchPoints_.size(), 0);
 
     /**
      * @tc.steps: step2. call SendCallbackMsg function and compare result.
@@ -1383,11 +1373,11 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerSendCallbackMsgTest003, TestSize.Leve
      */
     touchEvent.tiltX = 0.0f;
     touchEvent.tiltY = 0.0f;
-    panRecognizer->lastTouchEvent_ = touchEvent;
-    panRecognizer->touchPoints_[touchEvent.id] = touchEvent;
-    panRecognizer->inputEventType_ = InputEventType::AXIS;
-    panRecognizer->SendCallbackMsg(onAction, GestureCallbackType::START);
-    EXPECT_EQ(panRecognizer->touchPoints_.size(), 1);
+    panRecognizer.lastTouchEvent_ = touchEvent;
+    panRecognizer.touchPoints_[touchEvent.id] = touchEvent;
+    panRecognizer.inputEventType_ = InputEventType::AXIS;
+    panRecognizer.SendCallbackMsg(onAction, GestureCallbackType::START);
+    EXPECT_EQ(panRecognizer.touchPoints_.size(), 1);
 }
 
 /*
@@ -1414,7 +1404,7 @@ HWTEST_F(PanRecognizerTestNg, PanGestureTest001, TestSize.Level1)
     ASSERT_NE(panRecognizer, nullptr);
     EXPECT_EQ(panRecognizer->GetPriority(), GesturePriority::Low);
     EXPECT_EQ(panRecognizer->GetPriorityMask(), GestureMask::Normal);
-    EXPECT_EQ(panRecognizer->distanceMap_[SourceTool::UNKNOWN], DEFAULT_PAN_DISTANCE);
+    EXPECT_EQ(panRecognizer->distance_, DEFAULT_PAN_DISTANCE.ConvertToPx());
 }
 
 /**
@@ -1441,7 +1431,7 @@ HWTEST_F(PanRecognizerTestNg, PanGestureTest002, TestSize.Level1)
     auto onActionStart = [](GestureEvent& info) { return true; };
     auto onActionUpdate = [](GestureEvent& info) { return true; };
     auto onActionEnd = [](GestureEvent& info) { return true; };
-    auto onActionCancel = [](GestureEvent& info) { return true; };
+    auto onActionCancel = []() { return true; };
     panGesture->SetOnActionStartId(onActionStart);
     panGesture->SetOnActionUpdateId(onActionUpdate);
     panGesture->SetOnActionEndId(onActionEnd);
@@ -1620,9 +1610,6 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerHandleTouchMoveEventTest006, TestSize
     /**
      * @tc.steps: step1. create PanRecognizer.
      */
-    APIVersionGuard aPIVersionGuard(static_cast<int32_t>(PlatformVersion::VERSION_TWENTY));
-    ASSERT_EQ(static_cast<int32_t>(PlatformVersion::VERSION_TWENTY),
-        AceApplicationInfo::GetInstance().GetApiTargetVersion());
     RefPtr<PanGestureOption> panGestureOption = AceType::MakeRefPtr<PanGestureOption>();
     RefPtr<PanRecognizer> panRecognizer = AceType::MakeRefPtr<PanRecognizer>(panGestureOption);
     TouchEvent touchEvent;
@@ -1637,7 +1624,7 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerHandleTouchMoveEventTest006, TestSize
     panRecognizer->currentFingers_ = panRecognizer->fingers_;
     panRecognizer->refereeState_ = RefereeState::DETECTING;
     panRecognizer->direction_.type = PanDirection::ALL;
-    panRecognizer->distanceMap_[SourceTool::UNKNOWN] = Dimension(0, DimensionUnit::PX);
+    panRecognizer->distance_ = 0;
     result = panRecognizer->IsPanGestureAccept();
     panRecognizer->HandleTouchMoveEvent(touchEvent);
     EXPECT_EQ(result, PanRecognizer::GestureAcceptResult::ACCEPT);
@@ -1647,7 +1634,7 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerHandleTouchMoveEventTest006, TestSize
      * @tc.expected: step2. return DETECTING.
      */
     panRecognizer->direction_.type = PanDirection::ALL;
-    panRecognizer->distanceMap_[SourceTool::UNKNOWN] = Dimension(1, DimensionUnit::PX);
+    panRecognizer->distance_ = 1;
     result = panRecognizer->IsPanGestureAccept();
     panRecognizer->HandleTouchMoveEvent(touchEvent);
     EXPECT_EQ(result, PanRecognizer::GestureAcceptResult::DETECTING);
@@ -1658,7 +1645,7 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerHandleTouchMoveEventTest006, TestSize
      */
     panRecognizer->direction_.type = PanDirection::HORIZONTAL;
     panRecognizer->averageDistance_ = Offset(0, -1);
-    panRecognizer->distanceMap_[SourceTool::UNKNOWN] = Dimension(1, DimensionUnit::PX);
+    panRecognizer->distance_ = 1;
     result = panRecognizer->IsPanGestureAccept();
     panRecognizer->HandleTouchMoveEvent(touchEvent);
     EXPECT_EQ(result, PanRecognizer::GestureAcceptResult::DETECTING);
@@ -1669,10 +1656,10 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerHandleTouchMoveEventTest006, TestSize
      */
     panRecognizer->direction_.type = PanDirection::LEFT;
     panRecognizer->averageDistance_ = Offset(1, 0);
-    panRecognizer->distanceMap_[SourceTool::UNKNOWN] = Dimension(0, DimensionUnit::PX);
+    panRecognizer->distance_ = 0;
     result = panRecognizer->IsPanGestureAccept();
     panRecognizer->HandleTouchMoveEvent(touchEvent);
-    EXPECT_EQ(result, PanRecognizer::GestureAcceptResult::ACCEPT);
+    EXPECT_EQ(result, PanRecognizer::GestureAcceptResult::REJECT);
 
     /**
      * @tc.steps: step2. case5: GetX > GetY, GetX > 0, GetX > distance_, PanDirection::VERTICAL.
@@ -1680,10 +1667,10 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerHandleTouchMoveEventTest006, TestSize
      */
     panRecognizer->direction_.type = PanDirection::VERTICAL;
     panRecognizer->averageDistance_ = Offset(1, 0);
-    panRecognizer->distanceMap_[SourceTool::UNKNOWN] = Dimension(0, DimensionUnit::PX);
+    panRecognizer->distance_ = 0;
     result = panRecognizer->IsPanGestureAccept();
     panRecognizer->HandleTouchMoveEvent(touchEvent);
-    EXPECT_EQ(result, PanRecognizer::GestureAcceptResult::ACCEPT);
+    EXPECT_EQ(result, PanRecognizer::GestureAcceptResult::DETECTING);
 
     /**
      * @tc.steps: step2. case6: GetX > GetY, GetX = distance_ = 0, PanDirection::VERTICAL.
@@ -1691,7 +1678,7 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerHandleTouchMoveEventTest006, TestSize
      */
     panRecognizer->direction_.type = PanDirection::VERTICAL;
     panRecognizer->averageDistance_ = Offset(0, -1);
-    panRecognizer->distanceMap_[SourceTool::UNKNOWN] = Dimension(0, DimensionUnit::PX);
+    panRecognizer->distance_ = 0;
     result = panRecognizer->IsPanGestureAccept();
     panRecognizer->HandleTouchMoveEvent(touchEvent);
     EXPECT_EQ(result, PanRecognizer::GestureAcceptResult::ACCEPT);
@@ -1717,13 +1704,13 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerHandleTouchMoveEventTest007, TestSize
      */
     PanRecognizer::GestureAcceptResult result;
     panRecognizer->direction_.type = PanDirection::ALL;
-    panRecognizer->distanceMap_[SourceTool::UNKNOWN] = Dimension(0, DimensionUnit::PX);
+    panRecognizer->distance_ = 0;
     result = panRecognizer->IsPanGestureAccept();
     panRecognizer->currentFingers_ = panRecognizer->fingers_;
     panRecognizer->refereeState_ = RefereeState::DETECTING;
     panRecognizer->HandleTouchMoveEvent(touchEvent);
     panRecognizer->direction_.type = PanDirection::ALL;
-    panRecognizer->distanceMap_[SourceTool::UNKNOWN] = Dimension(1, DimensionUnit::PX);
+    panRecognizer->distance_ = 1;
     result = panRecognizer->IsPanGestureAccept();
     panRecognizer->currentFingers_ = panRecognizer->fingers_;
     panRecognizer->refereeState_ = RefereeState::DETECTING;
@@ -1732,23 +1719,23 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerHandleTouchMoveEventTest007, TestSize
 
     /**
      * @tc.steps: step2. case3: GetX > GetY, GetX < distance, PanDirection::HORIZONTAL.
-     * @tc.expected: step2. return ACCEPT.
+     * @tc.expected: step2. return DETECTING.
      */
     panRecognizer->direction_.type = PanDirection::HORIZONTAL;
     panRecognizer->averageDistance_ = Offset(0, -1);
-    panRecognizer->distanceMap_[SourceTool::UNKNOWN] = Dimension(1, DimensionUnit::PX);
+    panRecognizer->distance_ = 1;
     result = panRecognizer->IsPanGestureAccept();
     panRecognizer->currentFingers_ = panRecognizer->fingers_;
     panRecognizer->refereeState_ = RefereeState::DETECTING;
     panRecognizer->HandleTouchMoveEvent(touchEvent);
     panRecognizer->direction_.type = PanDirection::LEFT;
     panRecognizer->averageDistance_ = Offset(1, 0);
-    panRecognizer->distanceMap_[SourceTool::UNKNOWN] = Dimension(0, DimensionUnit::PX);
+    panRecognizer->distance_ = 0;
     result = panRecognizer->IsPanGestureAccept();
     panRecognizer->currentFingers_ = panRecognizer->fingers_;
     panRecognizer->refereeState_ = RefereeState::DETECTING;
     panRecognizer->HandleTouchMoveEvent(touchEvent);
-    EXPECT_EQ(result, PanRecognizer::GestureAcceptResult::ACCEPT);
+    EXPECT_EQ(result, PanRecognizer::GestureAcceptResult::REJECT);
 
     /**
      * @tc.steps: step2. case5: GetX > GetY, GetX > 0, GetX > distance_, PanDirection::VERTICAL.
@@ -1756,14 +1743,14 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerHandleTouchMoveEventTest007, TestSize
      */
     panRecognizer->direction_.type = PanDirection::VERTICAL;
     panRecognizer->averageDistance_ = Offset(1, 0);
-    panRecognizer->distanceMap_[SourceTool::UNKNOWN] = Dimension(0, DimensionUnit::PX);
+    panRecognizer->distance_ = 0;
     result = panRecognizer->IsPanGestureAccept();
     panRecognizer->currentFingers_ = panRecognizer->fingers_;
     panRecognizer->refereeState_ = RefereeState::DETECTING;
     panRecognizer->HandleTouchMoveEvent(touchEvent);
     panRecognizer->direction_.type = PanDirection::VERTICAL;
     panRecognizer->averageDistance_ = Offset(0, -1);
-    panRecognizer->distanceMap_[SourceTool::UNKNOWN] = Dimension(0, DimensionUnit::PX);
+    panRecognizer->distance_ = 0;
     result = panRecognizer->IsPanGestureAccept();
     panRecognizer->currentFingers_ = panRecognizer->fingers_;
     panRecognizer->refereeState_ = RefereeState::DETECTING;
@@ -1808,9 +1795,6 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerHandleTouchMoveEventTest009, TestSize
     /**
      * @tc.steps: step1. create PanRecognizer.
      */
-    APIVersionGuard aPIVersionGuard(static_cast<int32_t>(PlatformVersion::VERSION_TWENTY));
-    ASSERT_EQ(static_cast<int32_t>(PlatformVersion::VERSION_TWENTY),
-        AceApplicationInfo::GetInstance().GetApiTargetVersion());
     RefPtr<PanGestureOption> panGestureOption = AceType::MakeRefPtr<PanGestureOption>();
     RefPtr<PanRecognizer> panRecognizer = AceType::MakeRefPtr<PanRecognizer>(panGestureOption);
     AxisEvent axisEvent;
@@ -1823,7 +1807,7 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerHandleTouchMoveEventTest009, TestSize
     panRecognizer->currentFingers_ = panRecognizer->fingers_;
     panRecognizer->refereeState_ = RefereeState::DETECTING;
     panRecognizer->direction_.type = PanDirection::ALL;
-    panRecognizer->distanceMap_[SourceTool::UNKNOWN] = Dimension(0, DimensionUnit::PX);
+    panRecognizer->distance_ = 0;
     result = panRecognizer->IsPanGestureAccept();
     panRecognizer->HandleTouchMoveEvent(axisEvent);
     EXPECT_EQ(result, PanRecognizer::GestureAcceptResult::ACCEPT);
@@ -1833,7 +1817,7 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerHandleTouchMoveEventTest009, TestSize
      * @tc.expected: step2. return DETECTING.
      */
     panRecognizer->direction_.type = PanDirection::ALL;
-    panRecognizer->distanceMap_[SourceTool::UNKNOWN] = Dimension(1, DimensionUnit::PX);
+    panRecognizer->distance_ = 1;
     result = panRecognizer->IsPanGestureAccept();
     panRecognizer->HandleTouchMoveEvent(axisEvent);
     EXPECT_EQ(result, PanRecognizer::GestureAcceptResult::DETECTING);
@@ -1844,7 +1828,7 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerHandleTouchMoveEventTest009, TestSize
      */
     panRecognizer->direction_.type = PanDirection::HORIZONTAL;
     panRecognizer->averageDistance_ = Offset(0, -1);
-    panRecognizer->distanceMap_[SourceTool::UNKNOWN] = Dimension(1, DimensionUnit::PX);
+    panRecognizer->distance_ = 1;
     result = panRecognizer->IsPanGestureAccept();
     panRecognizer->HandleTouchMoveEvent(axisEvent);
     EXPECT_EQ(result, PanRecognizer::GestureAcceptResult::DETECTING);
@@ -1855,10 +1839,10 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerHandleTouchMoveEventTest009, TestSize
      */
     panRecognizer->direction_.type = PanDirection::LEFT;
     panRecognizer->averageDistance_ = Offset(1, 0);
-    panRecognizer->distanceMap_[SourceTool::UNKNOWN] = Dimension(0, DimensionUnit::PX);
+    panRecognizer->distance_ = 0;
     result = panRecognizer->IsPanGestureAccept();
     panRecognizer->HandleTouchMoveEvent(axisEvent);
-    EXPECT_EQ(result, PanRecognizer::GestureAcceptResult::ACCEPT);
+    EXPECT_EQ(result, PanRecognizer::GestureAcceptResult::REJECT);
 
     /**
      * @tc.steps: step2. case5: GetX > GetY, GetX > 0, GetX > distance_, PanDirection::VERTICAL.
@@ -1866,10 +1850,10 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerHandleTouchMoveEventTest009, TestSize
      */
     panRecognizer->direction_.type = PanDirection::VERTICAL;
     panRecognizer->averageDistance_ = Offset(1, 0);
-    panRecognizer->distanceMap_[SourceTool::UNKNOWN] = Dimension(0, DimensionUnit::PX);
+    panRecognizer->distance_ = 0;
     result = panRecognizer->IsPanGestureAccept();
     panRecognizer->HandleTouchMoveEvent(axisEvent);
-    EXPECT_EQ(result, PanRecognizer::GestureAcceptResult::ACCEPT);
+    EXPECT_EQ(result, PanRecognizer::GestureAcceptResult::DETECTING);
 
     /**
      * @tc.steps: step2. case6: GetX > GetY, GetX = distance_ = 0, PanDirection::VERTICAL.
@@ -1877,7 +1861,7 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerHandleTouchMoveEventTest009, TestSize
      */
     panRecognizer->direction_.type = PanDirection::VERTICAL;
     panRecognizer->averageDistance_ = Offset(0, -1);
-    panRecognizer->distanceMap_[SourceTool::UNKNOWN] = Dimension(0, DimensionUnit::PX);
+    panRecognizer->distance_ = 0;
     result = panRecognizer->IsPanGestureAccept();
     panRecognizer->HandleTouchMoveEvent(axisEvent);
     EXPECT_EQ(result, PanRecognizer::GestureAcceptResult::ACCEPT);
@@ -1903,13 +1887,13 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerHandleTouchMoveEventTest010, TestSize
      */
     PanRecognizer::GestureAcceptResult result;
     panRecognizer->direction_.type = PanDirection::ALL;
-    panRecognizer->distanceMap_[SourceTool::UNKNOWN] = Dimension(0, DimensionUnit::PX);
+    panRecognizer->distance_ = 0;
     result = panRecognizer->IsPanGestureAccept();
     panRecognizer->currentFingers_ = panRecognizer->fingers_;
     panRecognizer->refereeState_ = RefereeState::DETECTING;
     panRecognizer->HandleTouchMoveEvent(axisEvent);
     panRecognizer->direction_.type = PanDirection::ALL;
-    panRecognizer->distanceMap_[SourceTool::UNKNOWN] = Dimension(1, DimensionUnit::PX);
+    panRecognizer->distance_ = 1;
     result = panRecognizer->IsPanGestureAccept();
     panRecognizer->currentFingers_ = panRecognizer->fingers_;
     panRecognizer->refereeState_ = RefereeState::DETECTING;
@@ -1918,23 +1902,23 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerHandleTouchMoveEventTest010, TestSize
 
     /**
      * @tc.steps: step2. case3: GetX > GetY, GetX < distance, PanDirection::HORIZONTAL.
-     * @tc.expected: step2. return ACCEPT.
+     * @tc.expected: step2. return DETECTING.
      */
     panRecognizer->direction_.type = PanDirection::HORIZONTAL;
     panRecognizer->averageDistance_ = Offset(0, -1);
-    panRecognizer->distanceMap_[SourceTool::UNKNOWN] = Dimension(1, DimensionUnit::PX);
+    panRecognizer->distance_ = 1;
     result = panRecognizer->IsPanGestureAccept();
     panRecognizer->currentFingers_ = panRecognizer->fingers_;
     panRecognizer->refereeState_ = RefereeState::DETECTING;
     panRecognizer->HandleTouchMoveEvent(axisEvent);
     panRecognizer->direction_.type = PanDirection::LEFT;
     panRecognizer->averageDistance_ = Offset(1, 0);
-    panRecognizer->distanceMap_[SourceTool::UNKNOWN] = Dimension(0, DimensionUnit::PX);
+    panRecognizer->distance_ = 0;
     result = panRecognizer->IsPanGestureAccept();
     panRecognizer->currentFingers_ = panRecognizer->fingers_;
     panRecognizer->refereeState_ = RefereeState::DETECTING;
     panRecognizer->HandleTouchMoveEvent(axisEvent);
-    EXPECT_EQ(result, PanRecognizer::GestureAcceptResult::ACCEPT);
+    EXPECT_EQ(result, PanRecognizer::GestureAcceptResult::REJECT);
 
     /**
      * @tc.steps: step2. case5: GetX > GetY, GetX > 0, GetX > distance_, PanDirection::VERTICAL.
@@ -1942,103 +1926,17 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerHandleTouchMoveEventTest010, TestSize
      */
     panRecognizer->direction_.type = PanDirection::VERTICAL;
     panRecognizer->averageDistance_ = Offset(1, 0);
-    panRecognizer->distanceMap_[SourceTool::UNKNOWN] = Dimension(0, DimensionUnit::PX);
+    panRecognizer->distance_ = 0;
     result = panRecognizer->IsPanGestureAccept();
     panRecognizer->currentFingers_ = panRecognizer->fingers_;
     panRecognizer->refereeState_ = RefereeState::DETECTING;
     panRecognizer->HandleTouchMoveEvent(axisEvent);
     panRecognizer->direction_.type = PanDirection::VERTICAL;
     panRecognizer->averageDistance_ = Offset(0, -1);
-    panRecognizer->distanceMap_[SourceTool::UNKNOWN] = Dimension(0, DimensionUnit::PX);
+    panRecognizer->distance_ = 0;
     result = panRecognizer->IsPanGestureAccept();
     panRecognizer->currentFingers_ = panRecognizer->fingers_;
     panRecognizer->refereeState_ = RefereeState::DETECTING;
-    panRecognizer->HandleTouchMoveEvent(axisEvent);
-    EXPECT_EQ(result, PanRecognizer::GestureAcceptResult::ACCEPT);
-}
-
-/**
- * @tc.name: PanRecognizerHandleTouchMoveEventTest011
- * @tc.desc: Test PanRecognizer function: HandleTouchMoveEvent
- * @tc.type: FUNC
- */
-HWTEST_F(PanRecognizerTestNg, PanRecognizerHandleTouchMoveEventTest011, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. create PanRecognizer.
-     */
-    APIVersionGuard aPIVersionGuard(static_cast<int32_t>(PlatformVersion::VERSION_FOURTEEN));
-    ASSERT_EQ(static_cast<int32_t>(PlatformVersion::VERSION_FOURTEEN),
-        AceApplicationInfo::GetInstance().GetApiTargetVersion());
-    RefPtr<PanGestureOption> panGestureOption = AceType::MakeRefPtr<PanGestureOption>();
-    RefPtr<PanRecognizer> panRecognizer = AceType::MakeRefPtr<PanRecognizer>(panGestureOption);
-    AxisEvent axisEvent;
-    TouchEvent touchEvent;
-    touchEvent.x = 100.0;
-    touchEvent.y = 100.0;
-    PanRecognizer::GestureAcceptResult result;
-    
-    /**
-     * @tc.steps: step2. case1: GetX > GetY, GetX > 0, GetX > distance_, PanDirection::LEFT.
-     * @tc.expected: step2. return ACCEPT.
-     */
-    panRecognizer->direction_.type = PanDirection::LEFT;
-    panRecognizer->averageDistance_ = Offset(1, 0);
-    panRecognizer->distanceMap_[SourceTool::UNKNOWN] = Dimension(0, DimensionUnit::PX);
-    result = panRecognizer->IsPanGestureAccept();
-    EXPECT_EQ(result, PanRecognizer::GestureAcceptResult::ACCEPT);
-
-    /**
-     * @tc.steps: step2. case2: GetX > GetY, GetX > 0, GetX > distance_, PanDirection::VERTICAL.
-     * @tc.expected: step2. return ACCEPT.
-     */
-    panRecognizer->direction_.type = PanDirection::VERTICAL;
-    panRecognizer->averageDistance_ = Offset(1, 0);
-    panRecognizer->distanceMap_[SourceTool::UNKNOWN] = Dimension(0, DimensionUnit::PX);
-    result = panRecognizer->IsPanGestureAccept();
-    EXPECT_EQ(result, PanRecognizer::GestureAcceptResult::ACCEPT);
-
-    /**
-     * @tc.steps: step2. case3: GetX > GetY, GetX > 0, GetX > distance_, PanDirection::LEFT.
-     * @tc.expected: step2. return ACCEPT.
-     */
-    panRecognizer->direction_.type = PanDirection::LEFT;
-    panRecognizer->averageDistance_ = Offset(1, 0);
-    panRecognizer->distanceMap_[SourceTool::UNKNOWN] = Dimension(0, DimensionUnit::PX);
-    result = panRecognizer->IsPanGestureAccept();
-    panRecognizer->HandleTouchMoveEvent(touchEvent);
-    EXPECT_EQ(result, PanRecognizer::GestureAcceptResult::ACCEPT);
-
-    /**
-     * @tc.steps: step2. case4: GetX > GetY, GetX > 0, GetX > distance_, PanDirection::VERTICAL.
-     * @tc.expected: step2. return ACCEPT.
-     */
-    panRecognizer->direction_.type = PanDirection::VERTICAL;
-    panRecognizer->averageDistance_ = Offset(1, 0);
-    panRecognizer->distanceMap_[SourceTool::UNKNOWN] = Dimension(0, DimensionUnit::PX);
-    result = panRecognizer->IsPanGestureAccept();
-    panRecognizer->HandleTouchMoveEvent(touchEvent);
-    EXPECT_EQ(result, PanRecognizer::GestureAcceptResult::ACCEPT);
-    
-    /**
-     * @tc.steps: step2. case5: GetX > GetY, GetX > 0, GetX > distance_, PanDirection::LEFT.
-     * @tc.expected: step2. return ACCEPT.
-     */
-    panRecognizer->direction_.type = PanDirection::LEFT;
-    panRecognizer->averageDistance_ = Offset(1, 0);
-    panRecognizer->distanceMap_[SourceTool::UNKNOWN] = Dimension(0, DimensionUnit::PX);
-    result = panRecognizer->IsPanGestureAccept();
-    panRecognizer->HandleTouchMoveEvent(axisEvent);
-    EXPECT_EQ(result, PanRecognizer::GestureAcceptResult::ACCEPT);
-
-    /**
-     * @tc.steps: step2. case6: GetX > GetY, GetX > 0, GetX > distance_, PanDirection::VERTICAL.
-     * @tc.expected: step2. return ACCEPT.
-     */
-    panRecognizer->direction_.type = PanDirection::VERTICAL;
-    panRecognizer->averageDistance_ = Offset(1, 0);
-    panRecognizer->distanceMap_[SourceTool::UNKNOWN] = Dimension(0, DimensionUnit::PX);
-    result = panRecognizer->IsPanGestureAccept();
     panRecognizer->HandleTouchMoveEvent(axisEvent);
     EXPECT_EQ(result, PanRecognizer::GestureAcceptResult::ACCEPT);
 }
@@ -2087,155 +1985,6 @@ HWTEST_F(PanRecognizerTestNg, PanRecognizerHandleTouchUpEvent005, TestSize.Level
     panRecognizerPtr->refereeState_ = RefereeState::DETECTING;
     panRecognizerPtr->HandleTouchUpEvent(axisEvent);
     EXPECT_EQ(panRecognizerPtr->refereeState_, RefereeState::FAIL);
-}
-
-/**
- * @tc.name: SetOnActionCancelTest001
- * @tc.desc: Test SendCallbackMsg function in the HandleTouchCancelEvent with touch event input. The onActionCancel
- * function will return GestureEvent info.
- * @tc.type: FUNC
- */
-HWTEST_F(PanRecognizerTestNg, SetOnActionCancelTest001, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. Create PanRecognizerTestNg.
-     */
-    RefPtr<PanGestureOption> panGestureOption = AceType::MakeRefPtr<PanGestureOption>();
-    RefPtr<PanRecognizer> panRecognizer = AceType::MakeRefPtr<PanRecognizer>(panGestureOption);
-
-    /**
-     * @tc.steps: step2. Call SetOnActionCancel.
-     * @tc.expected: panRecognizer's callback onActionCancel is not nullptr.
-     */
-    panRecognizer->deviceId_ = GESTURE_EVENT_PROPERTY_VALUE;
-    double unknownPropertyValue = GESTURE_EVENT_PROPERTY_DEFAULT_VALUE;
-    auto onActionCancel = [&unknownPropertyValue](
-                                GestureEvent& info) { unknownPropertyValue = info.GetDeviceId(); };
-    panRecognizer->SetOnActionCancel(onActionCancel);
-    EXPECT_NE(panRecognizer->onActionCancel_, nullptr);
-
-    /**
-     * @tc.steps: step3. Invoke HandleTouchCancelEvent when onActionCancel_ is not null.
-     * @tc.expected: The functions have been executed and the unknownPropertyValue has been assigned the correct
-     * value. panRecognizer->refereeState_ = RefereeState::READY
-     */
-    TouchEvent touchEvent;
-    panRecognizer->touchPoints_[touchEvent.id] = touchEvent;
-    panRecognizer->refereeState_ = RefereeState::SUCCEED;
-    panRecognizer->currentFingers_ = panRecognizer->fingers_;
-    panRecognizer->HandleTouchCancelEvent(touchEvent);
-    EXPECT_EQ(unknownPropertyValue, GESTURE_EVENT_PROPERTY_VALUE);
-    EXPECT_EQ(panRecognizer->refereeState_, RefereeState::READY);
-}
-
-/**
- * @tc.name: SetOnActionCancelTest002
- * @tc.desc: Test SendCallbackMsg function in the HandleTouchCancelEvent with axis event input. The onActionCancel
- * function will return GestureEvent info.
- * @tc.type: FUNC
- */
-HWTEST_F(PanRecognizerTestNg, SetOnActionCancelTest002, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. Create PanRecognizerTestNg.
-     */
-    RefPtr<PanGestureOption> panGestureOption = AceType::MakeRefPtr<PanGestureOption>();
-    RefPtr<PanRecognizer> panRecognizer = AceType::MakeRefPtr<PanRecognizer>(panGestureOption);
-
-    /**
-     * @tc.steps: step2. Call SetOnActionCancel.
-     * @tc.expected: panRecognizerPtr's callback onActionCancel is not nullptr.
-     */
-    panRecognizer->deviceId_ = GESTURE_EVENT_PROPERTY_VALUE;
-    double unknownPropertyValue = GESTURE_EVENT_PROPERTY_DEFAULT_VALUE;
-    auto onActionCancel = [&unknownPropertyValue](
-                                GestureEvent& info) { unknownPropertyValue = info.GetDeviceId(); };
-    panRecognizer->SetOnActionCancel(onActionCancel);
-    EXPECT_NE(panRecognizer->onActionCancel_, nullptr);
-
-    /**
-     * @tc.steps: step3. Invoke HandleTouchCancelEvent when onActionCancel_ is not null.
-     * @tc.expected: The functions have been executed and the unknownPropertyValue has been assigned the correct
-     * value.
-     */
-    AxisEvent axisEvent;
-    panRecognizer->refereeState_ = RefereeState::SUCCEED;
-    panRecognizer->HandleTouchCancelEvent(axisEvent);
-    EXPECT_EQ(unknownPropertyValue, GESTURE_EVENT_PROPERTY_VALUE);
-}
-
-/**
- * @tc.name: SetOnActionCancelTest003
- * @tc.desc: Test SendCallbackMsg function in the ReconcileFrom. The onActionCancel function will return
- * GestureEvent info.
- * @tc.type: FUNC
- */
-HWTEST_F(PanRecognizerTestNg, SetOnActionCancelTest003, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. Create PanRecognizer.
-     */
-    RefPtr<PanGestureOption> panGestureOption = AceType::MakeRefPtr<PanGestureOption>();
-    RefPtr<PanRecognizer> panRecognizer = AceType::MakeRefPtr<PanRecognizer>(panGestureOption);
-    RefPtr<PanRecognizer> panRecognizerPtr = AceType::MakeRefPtr<PanRecognizer>(panGestureOption);
-
-    /**
-     * @tc.steps: step2. Call SetOnActionCancel.
-     * @tc.expected: panRecognizer's callback onActionCancel is not nullptr.
-     */
-    panRecognizer->deviceId_ = GESTURE_EVENT_PROPERTY_VALUE;
-    double unknownPropertyValue = GESTURE_EVENT_PROPERTY_DEFAULT_VALUE;
-    auto onActionCancel = [&unknownPropertyValue](
-                                GestureEvent& info) { unknownPropertyValue = info.GetDeviceId(); };
-    panRecognizer->SetOnActionCancel(onActionCancel);
-    EXPECT_NE(panRecognizer->onActionCancel_, nullptr);
-
-    /**
-     * @tc.steps: step3. Invoke ReconcileFrom when onActionCancel_ is not null.
-     * @tc.expected: The functions have been executed and the unknownPropertyValue has been assigned the correct
-     * value.
-     */
-    TouchEvent touchEvent;
-    panRecognizer->touchPoints_[touchEvent.id] = touchEvent;
-    panRecognizer->fingers_ = 0;
-    panRecognizer->refereeState_ = RefereeState::SUCCEED;
-    auto result = panRecognizer->ReconcileFrom(panRecognizerPtr);
-    EXPECT_EQ(unknownPropertyValue, GESTURE_EVENT_PROPERTY_VALUE);
-    EXPECT_EQ(result, false);
-}
-
-/**
- * @tc.name: SetOnActionCancelTest004
- * @tc.desc: Test SendCallbackMsg function in the OnSucceedCancel. The onActionCancel function will return
- * GestureEvent info.
- * @tc.type: FUNC
- */
-HWTEST_F(PanRecognizerTestNg, SetOnActionCancelTest004, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. Create PanRecognizer.
-     */
-    RefPtr<PanGestureOption> panGestureOption = AceType::MakeRefPtr<PanGestureOption>();
-    RefPtr<PanRecognizer> panRecognizer = AceType::MakeRefPtr<PanRecognizer>(panGestureOption);
-
-    /**
-     * @tc.steps: step2. Call SetOnActionCancel.
-     * @tc.expected: panRecognizer's callback onActionCancel is not nullptr.
-     */
-    panRecognizer->deviceId_ = GESTURE_EVENT_PROPERTY_VALUE;
-    double unknownPropertyValue = GESTURE_EVENT_PROPERTY_DEFAULT_VALUE;
-    auto onActionCancel = [&unknownPropertyValue](
-                                GestureEvent& info) { unknownPropertyValue = info.GetDeviceId(); };
-    panRecognizer->SetOnActionCancel(onActionCancel);
-    EXPECT_NE(panRecognizer->onActionCancel_, nullptr);
-
-    /**
-     * @tc.steps: step4. Invoke OnSucceedCancel when onActionCancel_ is not null.
-     * @tc.expected: The functions have been executed and the unknownPropertyValue has been assigned the correct
-     * value.
-     */
-    panRecognizer->OnSucceedCancel();
-    EXPECT_EQ(unknownPropertyValue, GESTURE_EVENT_PROPERTY_VALUE);
 }
 
 /**
@@ -2319,10 +2068,10 @@ HWTEST_F(PanRecognizerTestNg, PanGestureLimitFingerTest002, TestSize.Level1)
      */
     panGesture->priority_ = GesturePriority::Low;
     panGesture->gestureMask_ = GestureMask::Normal;
-    auto onActionStart = [](GestureEvent& info) { return true; };
-    auto onActionUpdate = [](GestureEvent& info) { return true; };
-    auto onActionEnd = [](GestureEvent& info) { return true; };
-    auto onActionCancel = [](GestureEvent& info) { return true; };
+    auto onActionStart = [](GestureEvent& info) {};
+    auto onActionUpdate = [](GestureEvent& info) {};
+    auto onActionEnd = [](GestureEvent& info) {};
+    auto onActionCancel = []() {};
     panGesture->SetOnActionStartId(onActionStart);
     panGesture->SetOnActionUpdateId(onActionUpdate);
     panGesture->SetOnActionEndId(onActionEnd);
@@ -2337,168 +2086,5 @@ HWTEST_F(PanRecognizerTestNg, PanGestureLimitFingerTest002, TestSize.Level1)
     EXPECT_EQ(panRecognizerWithFunc->GetPriority(), GesturePriority::Low);
     EXPECT_EQ(panRecognizerWithFunc->GetPriorityMask(), GestureMask::Normal);
     EXPECT_EQ(panRecognizerWithFunc->isLimitFingerCount_, IS_NOT_LIMIT_FINGER_COUNT);
-}
-
-/**
- * @tc.name: IsPanGestureAcceptInAllDirection001
- * @tc.desc: Test IsPanGestureAcceptInAllDirection function
- */
-HWTEST_F(PanRecognizerTestNg, IsPanGestureAcceptInAllDirection001, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. Create PanRecognizer.
-     */
-    RefPtr<PanGestureOption> panGestureOption = AceType::MakeRefPtr<PanGestureOption>();
-    PanRecognizer panRecognizer = PanRecognizer(panGestureOption);
-
-    /**
-     * @tc.steps: step2. set judgeDistance is 0.0 and call IsPanGestureAcceptInAllDirection function.
-     * @tc.expect: gestureAcceptResult is equal to GestureAcceptResult::ACCEPT.
-     */
-    double judgeDistance = 0.0;
-    auto gestureAcceptResult = panRecognizer.IsPanGestureAcceptInAllDirection(judgeDistance);
-    EXPECT_EQ(gestureAcceptResult, PanRecognizer::GestureAcceptResult::ACCEPT);
-
-    /**
-     * @tc.steps: step3. set judgeDistance is 1.0 and call IsPanGestureAcceptInAllDirection function.
-     * @tc.expect: gestureAcceptResult is equal to GestureAcceptResult::DETECTING.
-     */
-    judgeDistance = 1.0;
-    gestureAcceptResult = panRecognizer.IsPanGestureAcceptInAllDirection(judgeDistance);
-    EXPECT_EQ(gestureAcceptResult, PanRecognizer::GestureAcceptResult::DETECTING);
-}
-
-/**
- * @tc.name: PanRecognizerTest001
- * @tc.desc: Test OnAccepted function
- * @tc.type: FUNC
- */
-HWTEST_F(PanRecognizerTestNg, OnAcceptedTest001, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. create PanRecognizer.
-     */
-    RefPtr<PanGestureOption> panGestureOption = AceType::MakeRefPtr<PanGestureOption>();
-    PanRecognizer panRecognizer = PanRecognizer(panGestureOption);
-
-    /**
-     * @tc.steps: step2. call OnAccepted function and compare result.
-     * @tc.expected: step2. result equals.
-     */
-    auto currentTime = GetSysTimestamp();
-    std::chrono::nanoseconds nanoseconds(currentTime);
-    TimeStamp time(nanoseconds);
-    panRecognizer.firstInputTime_ = time;
-    panRecognizer.lastTouchEvent_.time = time;
-    panRecognizer.isTouchEventFinished_ = true;
-    panRecognizer.SetEnabled(false);
-    panRecognizer.OnAccepted();
-    EXPECT_EQ(panRecognizer.refereeState_, RefereeState::SUCCEED);
-    EXPECT_FALSE(panRecognizer.isStartTriggered_);
-
-    /**
-     * @tc.steps: step3. set lastTouchEvent_.sourceType is SourceType::TOUCH and call OnAccepted function.
-     * @tc.expected: result equals.
-     */
-    panRecognizer.lastTouchEvent_.sourceType = SourceType::TOUCH;
-    panRecognizer.OnAccepted();
-    EXPECT_EQ(panRecognizer.refereeState_, RefereeState::SUCCEED);
-    EXPECT_FALSE(panRecognizer.isStartTriggered_);
-}
-
-/**
- * @tc.name: HandleTouchUpEvent001
- * @tc.desc: Test HandleTouchUpEvent function
- * @tc.type: FUNC
- */
-HWTEST_F(PanRecognizerTestNg, HandleTouchUpEvent001, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. create PanRecognizer.
-     */
-    RefPtr<PanGestureOption> panGestureOption = AceType::MakeRefPtr<PanGestureOption>();
-    PanRecognizer panRecognizer = PanRecognizer(panGestureOption);
-
-    /**
-     * @tc.steps: step2. set axisEvent.isRotationEvent is true and call HandleTouchUp function.
-     * @tc.expected: result equals.
-     */
-    AxisEvent axisEvent;
-    axisEvent.isRotationEvent = true;
-    panRecognizer.HandleTouchUpEvent(axisEvent);
-    EXPECT_EQ(panRecognizer.globalPoint_.GetX(), axisEvent.x);
-    EXPECT_EQ(panRecognizer.globalPoint_.GetY(), axisEvent.y);
-}
-/**
- * @tc.name: PanRecognizerTypeTest001
- * @tc.desc: Test PanRecognizerType
- * @tc.type: FUNC
- */
-HWTEST_F(PanRecognizerTestNg, PanRecognizerTypeTest001, TestSize.Level1)
-{
-    RefPtr<PanGestureOption> panGestureOption = AceType::MakeRefPtr<PanGestureOption>();
-    PanRecognizer panRecognizer = PanRecognizer(panGestureOption);
-    auto frameNode = FrameNode::CreateFrameNode("myButton", 100, AceType::MakeRefPtr<Pattern>());
-    panRecognizer.AttachFrameNode(frameNode);
-    panRecognizer.SetRecognizerType(GestureTypeName::PAN_GESTURE);
-    GestureEvent info;
-    panRecognizer.HandleReports(info, GestureCallbackType::END);
-    EXPECT_EQ(panRecognizer.GetRecognizerType(), GestureTypeName::PAN_GESTURE);
-}
-
-/**
- * @tc.name: OnResetStatus001
- * @tc.desc: Test OnResetStatus function
- * @tc.type: FUNC
- */
-HWTEST_F(PanRecognizerTestNg, OnResetStatus001, TestSize.Level1)
-{
-    /**
-      * @tc.steps: step1. create PanRecognizer.
-      */
-    RefPtr<PanGestureOption> panGestureOption = AceType::MakeRefPtr<PanGestureOption>();
-    PanRecognizer panRecognizer = PanRecognizer(panGestureOption);
-  
-    /**
-      * @tc.steps: step2. call OnResetStatus function.
-      * @tc.expected: result equals.
-      */
-    panRecognizer.OnResetStatus();
-    EXPECT_EQ(panRecognizer.touchPoints_.size(), 0);
-    EXPECT_EQ(panRecognizer.isStartTriggered_, false);
-}
-
-/**
- * @tc.name: HandlePanExtAccept001
- * @tc.desc: Test HandlePanExtAccept function
- * @tc.type: FUNC
- */
-HWTEST_F(PanRecognizerTestNg, HandlePanExtAccept001, TestSize.Level1)
-{
-    /**
-      * @tc.steps: step1. create PanRecognizer.
-      */
-    RefPtr<PanGestureOption> panGestureOption = AceType::MakeRefPtr<PanGestureOption>();
-    PanRecognizer panRecognizer = PanRecognizer(panGestureOption);
-
-    /**
-      * @tc.steps: step2. call HandlePanExtAccept function.
-      * @tc.describe: set onActionExtUpdate_ to null.
-      * @tc.expected: result equals.
-      */
-    uint32_t tag = 0;
-    panRecognizer.onActionExtUpdate_ = nullptr;
-    panRecognizer.HandlePanExtAccept();
-
-    /**
-      * @tc.steps: step3. call HandlePanExtAccept function.
-      * @tc.describe: set onActionExtUpdate_ to custom callback.
-      * @tc.expected: result equals.
-      */
-    panRecognizer.onActionExtUpdate_ = std::make_unique<GestureEventFunc>([&tag](GestureEvent& info) {
-        tag = 1;
-    });
-    panRecognizer.HandlePanExtAccept();
-    EXPECT_NE(tag, 0);
 }
 } // namespace OHOS::Ace::NG

@@ -21,13 +21,12 @@
 
 #include "base/memory/ace_type.h"
 #include "core/components_ng/base/modifier.h"
-#include "core/components_ng/pattern/canvas/custom_paint_util.h"
 #include "core/components_ng/render/drawing.h"
 
 namespace OHOS::Ace::NG {
-class RenderContext;
+struct CanvasModifierDump;
 class CanvasModifier : public ContentModifier {
-    DECLARE_ACE_TYPE(CanvasModifier, ContentModifier);
+    DECLARE_ACE_TYPE(CanvasModifier, ContentModifier)
 
 public:
     CanvasModifier();
@@ -36,7 +35,10 @@ public:
     std::string GetDumpInfo();
     void GetSimplifyDumpInfo(std::unique_ptr<JsonValue>& array);
 
-    void SetRenderContext(const WeakPtr<RenderContext>& renderContext);
+    void SetRenderContext(const WeakPtr<RenderContext>& renderContext)
+    {
+        renderContext_ = renderContext;
+    }
 
     void SetNeedResetSurface()
     {

@@ -17,9 +17,9 @@
 
 #include "core/components/common/properties/color.h"
 #include "core/components/picker/picker_theme.h"
-#include "core/components_ng/pattern/button/button_pattern.h"
 #include "core/components_ng/pattern/text_picker/textpicker_layout_property.h"
 #include "core/components_ng/pattern/text_picker/textpicker_pattern.h"
+#include "core/components_ng/render/drawing.h"
 #include "core/components_ng/render/drawing_prop_convertor.h"
 #include "core/pipeline_ng/pipeline_context.h"
 
@@ -28,55 +28,14 @@ namespace OHOS::Ace::NG {
 namespace {
 constexpr uint8_t DOUBLE = 2;
 const Dimension PICKER_DIALOG_DIVIDER_MARGIN = 24.0_vp;
-
-void UpdateDividerColor(ItemDivider& divider)
-{
-    if (SystemProperties::ConfigChangePerform() && divider.isDefaultColor) {
-        auto pipelineContext = PipelineContext::GetCurrentContext();
-        if (pipelineContext && pipelineContext->IsSystmColorChange()) {
-            auto pickerTheme = pipelineContext->GetTheme<PickerTheme>();
-            if (pickerTheme) {
-                divider.color = pickerTheme->GetDividerColor();
-            }
-        }
-    }
-}
 } // namespace
-
-CanvasDrawFunction TextPickerPaintMethod::GetContentDrawFunction(PaintWrapper* paintWrapper)
-{
-    auto pipeline = PipelineBase::GetCurrentContext();
-    CHECK_NULL_RETURN(pipeline, nullptr);
-    auto theme = pipeline->GetTheme<PickerTheme>();
-    CHECK_NULL_RETURN(theme, nullptr);
-    auto renderContext = paintWrapper->GetRenderContext();
-    CHECK_NULL_RETURN(renderContext, nullptr);
-    auto pickerNode = renderContext->GetHost();
-    CHECK_NULL_RETURN(pickerNode, nullptr);
-    auto layoutProperty = pickerNode->GetLayoutProperty<TextPickerLayoutProperty>();
-    CHECK_NULL_RETURN(layoutProperty, nullptr);
-    auto children = pickerNode->GetChildren();
-
-    return [weak = WeakClaim(this), layoutProperty, pattern = pattern_, children](RSCanvas& canvas) {
-            auto picker = weak.Upgrade();
-            CHECK_NULL_VOID(picker);
-            if (layoutProperty->HasSelectedBackgroundColor()) {
-                picker->PaintSelectedBackgroundColor(canvas, children,
-                    layoutProperty->GetSelectedBackgroundColorValue(), layoutProperty->GetSelectedBorderRadiusValue());
-            }
-        };
-}
 
 CanvasDrawFunction TextPickerPaintMethod::GetForegroundDrawFunction(PaintWrapper* paintWrapper)
 {
-    auto pipeline = PipelineContext::GetCurrentContext();
-    CHECK_NULL_RETURN(pipeline, nullptr);
-    auto theme = pipeline->GetTheme<PickerTheme>();
-    CHECK_NULL_RETURN(theme, nullptr);
-    CHECK_EQUAL_RETURN(theme->IsCircleDial(), true, nullptr);
     const auto& geometryNode = paintWrapper->GetGeometryNode();
     CHECK_NULL_RETURN(geometryNode, nullptr);
     auto frameRect = geometryNode->GetFrameRect();
+
     auto renderContext = paintWrapper->GetRenderContext();
     CHECK_NULL_RETURN(renderContext, nullptr);
     auto pickerNode = renderContext->GetHost();
@@ -108,7 +67,6 @@ CanvasDrawFunction TextPickerPaintMethod::GetForegroundDrawFunction(PaintWrapper
             if (contentRect.Width() >= 0.0f && (contentRect.Height() >= dividerHeight)) {
                 if (textPickerPattern->GetCustomDividerFlag()) {
                     auto divider = textPickerPattern->GetDivider();
-                    UpdateDividerColor(divider);
                     auto textDirection = layoutProperty->GetNonAutoLayoutDirection();
                     divider.isRtl = (textDirection == TextDirection::RTL) ? true : false;
                     picker->PaintCustomDividerLines(canvas, contentRect, frameRect, divider, dividerHeight);
@@ -136,6 +94,7 @@ void TextPickerPaintMethod::PaintDefaultDividerLines(RSCanvas& canvas, const Rec
     auto theme = pipeline->GetTheme<PickerTheme>();
     auto dividerColor = theme->GetDividerColor();
     auto dividerLineWidth = theme->GetDividerThickness().ConvertToPx();
+
     auto dividerLength = contentRect.Width();
     auto dividerMargin = contentRect.GetX();
     auto textPickerPattern = DynamicCast<TextPickerPattern>(pattern_.Upgrade());
@@ -144,7 +103,7 @@ void TextPickerPaintMethod::PaintDefaultDividerLines(RSCanvas& canvas, const Rec
         dividerLength -= PICKER_DIALOG_DIVIDER_MARGIN.ConvertToPx() * DOUBLE;
         dividerMargin += PICKER_DIALOG_DIVIDER_MARGIN.ConvertToPx();
     }
-
+    
     DividerInfo info;
     info.dividerColor = dividerColor;
     info.dividerWidth = dividerLineWidth;
@@ -243,7 +202,7 @@ void TextPickerPaintMethod::PaintLine(const OffsetF& offset, const DividerInfo &
     RSBrush brush;
     brush.SetColor(info.dividerColor.GetValue());
     canvas.AttachBrush(brush);
-
+    
     auto startPointX = offset.GetX();
     auto startPointY = offset.GetY();
     auto endPointX = offset.GetX() + info.dividerLength;
@@ -254,48 +213,4 @@ void TextPickerPaintMethod::PaintLine(const OffsetF& offset, const DividerInfo &
     canvas.Restore();
 }
 
-void TextPickerPaintMethod::PaintSelectedBackgroundColor(RSCanvas& canvas, std::list<RefPtr<UINode>> children,
-    Color color, NG::BorderRadiusProperty borderRadius)
-{
-    for (const auto& child : children) {
-        auto stackNode = DynamicCast<FrameNode>(child);
-        CHECK_NULL_VOID(stackNode);
-        auto buttonNode = DynamicCast<FrameNode>(child->GetFirstChild());
-        CHECK_NULL_VOID(buttonNode);
-        auto buttonLayoutProperty = buttonNode->GetLayoutProperty<ButtonLayoutProperty>();
-        CHECK_NULL_VOID(buttonLayoutProperty);
-        auto stackGeometryNode = stackNode->GetGeometryNode();
-        auto stackRect = stackGeometryNode->GetFrameRect();
-        auto buttonGeometryNode = buttonNode->GetGeometryNode();
-        auto buttonRect = buttonGeometryNode->GetFrameRect();
-        auto height = buttonRect.Height();
-        auto width = buttonRect.Width();
-        auto maxRadius = std::min(height, width) / 2;
-        auto left = stackRect.GetX() + buttonRect.GetX();
-        auto top = stackRect.GetY() + buttonRect.GetY();
-        auto topLeft = GreatNotEqual(borderRadius.radiusTopLeft->ConvertToPx(), maxRadius) ?
-            maxRadius : borderRadius.radiusTopLeft->ConvertToPx();
-        auto topRight = GreatNotEqual(borderRadius.radiusTopRight->ConvertToPx(), maxRadius) ?
-            maxRadius : borderRadius.radiusTopRight->ConvertToPx();
-        auto bottomLeft = GreatNotEqual(borderRadius.radiusBottomLeft->ConvertToPx(), maxRadius) ?
-            maxRadius : borderRadius.radiusBottomLeft->ConvertToPx();
-        auto bottomRight = GreatNotEqual(borderRadius.radiusBottomRight->ConvertToPx(), maxRadius) ?
-            maxRadius : borderRadius.radiusBottomRight->ConvertToPx();
-        canvas.Save();
-        RSBrush brush;
-        brush.SetColor(color.GetValue());
-        brush.SetAntiAlias(true);
-        canvas.AttachBrush(brush);
-        std::vector<RSPoint> radiusXY = {
-            RSPoint(topLeft, topLeft),
-            RSPoint(topRight, topRight),
-            RSPoint(bottomRight, bottomRight),
-            RSPoint(bottomLeft, bottomLeft)
-        };
-        RSRoundRect result (RSRect(left, top, left + width, top + height), radiusXY);
-        canvas.DrawRoundRect(result);
-        canvas.DetachBrush();
-        canvas.Restore();
-    }
-}
 } // namespace OHOS::Ace::NG

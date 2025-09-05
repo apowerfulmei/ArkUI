@@ -17,7 +17,6 @@
 
 #include "core/common/ai/image_analyzer_mgr.h"
 #include "core/common/ai/image_analyzer_default.h"
-#include "key_event.h"
 
 namespace OHOS::Ace {
 ImageAnalyzerMgr& ImageAnalyzerMgr::GetInstance()
@@ -52,25 +51,11 @@ void ImageAnalyzerMgr::BuildNodeFunc(
         return engine_->BuildNodeFunc(pixelMap, config, uiConfig, overlayData);
     }
 }
-void ImageAnalyzerMgr::BuildNodeFunc(std::string uri, void* pixelMap, int frameTimestamp,
-    void* config, ImageAnalyzerInnerConfig* uiConfig, void** overlayData)
-{
-    if (engine_) {
-        return engine_->BuildNodeFunc(uri, pixelMap, frameTimestamp, config, uiConfig, overlayData);
-    }
-}
 void ImageAnalyzerMgr::UpdateImage(
     void** overlayData, void* pixelMap, void* config, ImageAnalyzerInnerConfig* uiConfig)
 {
     if (engine_) {
         return engine_->UpdateImage(overlayData, pixelMap, config, uiConfig);
-    }
-}
-void ImageAnalyzerMgr::UpdateImage(void** overlayData, std::string uri, void* pixelMap,
-    int frameTimestamp, void* config, ImageAnalyzerInnerConfig* uiConfig)
-{
-    if (engine_) {
-        return engine_->UpdateImage(overlayData, uri, pixelMap, frameTimestamp, config, uiConfig);
     }
 }
 void ImageAnalyzerMgr::UpdateConfig(void** overlayData, void* config)
@@ -115,16 +100,6 @@ void ImageAnalyzerMgr::UpdateAIButtonConfig(void** overlayData, AIButtonConfig* 
 {
     if (engine_) {
         return engine_->UpdateAIButtonConfig(overlayData, config);
-    }
-}
-
-void ImageAnalyzerMgr::UpdateKeyEvent(void** overlayData, void* keyEvent)
-{
-    if (engine_ && keyEvent != nullptr) {
-        auto* event = static_cast<OHOS::MMI::KeyEvent*>(keyEvent);
-        LOGI("ImageAnalyzerMgr::UpdateKeyEvent event.action: %{public}d, event.code: %{public}d", event->GetKeyAction(),
-            event->GetKeyCode());
-        return engine_->UpdateKeyEvent(overlayData, keyEvent);
     }
 }
 }

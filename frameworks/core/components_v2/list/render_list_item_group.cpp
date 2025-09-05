@@ -15,6 +15,11 @@
 
 #include "core/components_v2/list/render_list_item_group.h"
 
+#include "core/components/box/box_component.h"
+#include "core/components/box/render_box.h"
+#include "core/components/button/button_component.h"
+#include "core/components/image/image_component.h"
+
 namespace OHOS::Ace::V2 {
 
 void RenderListItemGroup::RemoveAllItems()

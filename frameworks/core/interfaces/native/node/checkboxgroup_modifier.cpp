@@ -14,34 +14,24 @@
  */
 #include "core/interfaces/native/node/checkboxgroup_modifier.h"
 
+#include "core/pipeline/base/element_register.h"
+#include "core/components_ng/base/frame_node.h"
 #include "core/components_ng/base/view_abstract.h"
-#include "core/pipeline_ng/pipeline_context.h"
+#include "core/components/common/layout/constants.h"
+#include "core/components_ng/pattern/checkboxgroup/checkboxgroup_model_ng.h"
+#include "frameworks/core/components/checkable/checkable_theme.h"
 
 namespace OHOS::Ace::NG {
-static const uint32_t ERROR_UINT_CODE = -1;
+static uint32_t ERROR_UINT_CODE = -1;
 static const float ERROR_FLOAT_CODE = -1.0f;
 static const int32_t ERROR_INT_CODE = -1;
 static std::string groupNameValue;
 const DimensionUnit DEFAULT_UNIT = DimensionUnit::VP;
-
 void SetCheckboxGroupSelectedColor(ArkUINodeHandle node, uint32_t color)
 {
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
     CheckBoxGroupModelNG::SetSelectedColor(frameNode, Color(color));
-}
-
-void SetCheckboxGroupSelectedColorPtr(ArkUINodeHandle node, uint32_t color, void* colorRawPtr)
-{
-    CHECK_NULL_VOID(node);
-    SetCheckboxGroupSelectedColor(node, color);
-    if (SystemProperties::ConfigChangePerform()) {
-        auto* frameNode = reinterpret_cast<FrameNode*>(node);
-        CHECK_NULL_VOID(frameNode);
-        auto* color = reinterpret_cast<ResourceObject*>(colorRawPtr);
-        auto colorResObj = AceType::Claim(color);
-        CheckBoxGroupModelNG::CreateWithResourceObj(frameNode, CheckBoxGroupColorType::SELECTED_COLOR, colorResObj);
-    }
 }
 
 void ResetCheckboxGroupSelectedColor(ArkUINodeHandle node)
@@ -54,10 +44,6 @@ void ResetCheckboxGroupSelectedColor(ArkUINodeHandle node)
     CHECK_NULL_VOID(themeManager);
     auto checkBoxTheme = themeManager->GetTheme<CheckboxTheme>();
     CheckBoxGroupModelNG::SetSelectedColor(frameNode, checkBoxTheme->GetActiveColor());
-    if (SystemProperties::ConfigChangePerform()) {
-        CheckBoxGroupModelNG::SetSelectedColorByUser(frameNode, false);
-        CheckBoxGroupModelNG::CreateWithResourceObj(frameNode, CheckBoxGroupColorType::SELECTED_COLOR, nullptr);
-    }
 }
 
 void SetCheckboxGroupUnSelectedColor(ArkUINodeHandle node, uint32_t color)
@@ -65,19 +51,6 @@ void SetCheckboxGroupUnSelectedColor(ArkUINodeHandle node, uint32_t color)
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
     CheckBoxGroupModelNG::SetUnSelectedColor(frameNode, Color(color));
-}
-
-void SetCheckboxGroupUnSelectedColorPtr(ArkUINodeHandle node, uint32_t color, void* colorRawPtr)
-{
-    CHECK_NULL_VOID(node);
-    SetCheckboxGroupUnSelectedColor(node, color);
-    if (SystemProperties::ConfigChangePerform()) {
-        auto* frameNode = reinterpret_cast<FrameNode*>(node);
-        CHECK_NULL_VOID(frameNode);
-        auto* color = reinterpret_cast<ResourceObject*>(colorRawPtr);
-        auto colorResObj = AceType::Claim(color);
-        CheckBoxGroupModelNG::CreateWithResourceObj(frameNode, CheckBoxGroupColorType::UN_SELECTED_COLOR, colorResObj);
-    }
 }
 
 void ResetCheckboxGroupUnSelectedColor(ArkUINodeHandle node)
@@ -90,10 +63,6 @@ void ResetCheckboxGroupUnSelectedColor(ArkUINodeHandle node)
     CHECK_NULL_VOID(themeManager);
     auto checkBoxTheme = themeManager->GetTheme<CheckboxTheme>();
     CheckBoxGroupModelNG::SetUnSelectedColor(frameNode, checkBoxTheme->GetInactiveColor());
-    if (SystemProperties::ConfigChangePerform()) {
-        CheckBoxGroupModelNG::SetUnSelectedColorByUser(frameNode, false);
-        CheckBoxGroupModelNG::CreateWithResourceObj(frameNode, CheckBoxGroupColorType::UN_SELECTED_COLOR, nullptr);
-    }
 }
 
 void SetCheckboxGroupSelectAll(ArkUINodeHandle node, ArkUI_Bool isSelected)
@@ -203,25 +172,6 @@ void SetCheckboxGroupName(ArkUINodeHandle node, ArkUI_CharPtr group)
     CheckBoxGroupModelNG::SetCheckboxGroupName(frameNode, std::string(group));
 }
 
-void SetCheckboxGroupOnChange(ArkUINodeHandle node, void* callback)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    if (callback) {
-        auto onChange = reinterpret_cast<std::function<void (const BaseEventInfo*)>*>(callback);
-        CheckBoxGroupModelNG::SetOnChange(frameNode, std::move(*onChange));
-    } else {
-        CheckBoxGroupModelNG::SetOnChange(frameNode, nullptr);
-    }
-}
-
-void ResetCheckboxGroupOnChange(ArkUINodeHandle node)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    CheckBoxGroupModelNG::SetOnChange(frameNode, nullptr);
-}
-
 ArkUI_CharPtr GetCheckboxGroupName(ArkUINodeHandle node)
 {
     auto *frameNode = reinterpret_cast<FrameNode *>(node);
@@ -282,69 +232,25 @@ ArkUI_Int32 GetCheckboxGroupStyle(ArkUINodeHandle node)
 namespace NodeModifier {
 const ArkUICheckboxGroupModifier* GetCheckboxGroupModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
-    static const ArkUICheckboxGroupModifier modifier = {
-        .setCheckboxGroupSelectedColor = SetCheckboxGroupSelectedColor,
-        .resetCheckboxGroupSelectedColor = ResetCheckboxGroupSelectedColor,
-        .setCheckboxGroupUnSelectedColor = SetCheckboxGroupUnSelectedColor,
-        .resetCheckboxGroupUnSelectedColor = ResetCheckboxGroupUnSelectedColor,
-        .setCheckboxGroupSelectAll = SetCheckboxGroupSelectAll,
-        .resetCheckboxGroupSelectAll = ResetCheckboxGroupSelectAll,
-        .setCheckboxGroupWidth = SetCheckboxGroupWidth,
-        .resetCheckboxGroupWidth = ResetCheckboxGroupWidth,
-        .setCheckboxGroupHeight = SetCheckboxGroupHeight,
-        .resetCheckboxGroupHeight = ResetCheckboxGroupHeight,
-        .setCheckboxGroupMark = SetCheckboxGroupMark,
-        .resetCheckboxGroupMark = ResetCheckboxGroupMark,
-        .setCheckboxGroupStyle = SetCheckboxGroupStyle,
-        .resetCheckboxGroupStyle = ResetCheckboxGroupStyle,
-        .setCheckboxGroupName = SetCheckboxGroupName,
-        .setCheckboxGroupOnChange=SetCheckboxGroupOnChange,
-        .resetCheckboxGroupOnChange=ResetCheckboxGroupOnChange,
-        .getCheckboxGroupName = GetCheckboxGroupName,
-        .getCheckboxGroupSelectAll = GetCheckboxGroupSelectAll,
-        .getCheckboxGroupSelectedColor = GetCheckboxGroupSelectedColor,
-        .getCheckboxGroupUnSelectedColor = GetCheckboxGroupUnSelectedColor,
-        .getCheckboxGroupMarkColor = GetCheckboxGroupMarkColor,
-        .getCheckboxGroupMarkSize = GetCheckboxGroupMarkSize,
-        .getCheckboxGroupMarkWidth = GetCheckboxGroupMarkWidth,
-        .getCheckboxGroupStyle = GetCheckboxGroupStyle,
-        .setCheckboxGroupSelectedColorPtr = SetCheckboxGroupSelectedColorPtr,
-        .setCheckboxGroupUnSelectedColorPtr = SetCheckboxGroupUnSelectedColorPtr,
-    };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
+    static const ArkUICheckboxGroupModifier modifier = { SetCheckboxGroupSelectedColor,
+        ResetCheckboxGroupSelectedColor, SetCheckboxGroupUnSelectedColor, ResetCheckboxGroupUnSelectedColor,
+        SetCheckboxGroupSelectAll, ResetCheckboxGroupSelectAll, SetCheckboxGroupWidth, ResetCheckboxGroupWidth,
+        SetCheckboxGroupHeight, ResetCheckboxGroupHeight, SetCheckboxGroupMark, ResetCheckboxGroupMark,
+        SetCheckboxGroupStyle, ResetCheckboxGroupStyle, SetCheckboxGroupName, GetCheckboxGroupName,
+        GetCheckboxGroupSelectAll, GetCheckboxGroupSelectedColor, GetCheckboxGroupUnSelectedColor,
+        GetCheckboxGroupMarkColor, GetCheckboxGroupMarkSize, GetCheckboxGroupMarkWidth, GetCheckboxGroupStyle };
     return &modifier;
 }
 
 const CJUICheckboxGroupModifier* GetCJUICheckboxGroupModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
-    static const CJUICheckboxGroupModifier modifier = {
-        .setCheckboxGroupSelectedColor = SetCheckboxGroupSelectedColor,
-        .resetCheckboxGroupSelectedColor = ResetCheckboxGroupSelectedColor,
-        .setCheckboxGroupUnSelectedColor = SetCheckboxGroupUnSelectedColor,
-        .resetCheckboxGroupUnSelectedColor = ResetCheckboxGroupUnSelectedColor,
-        .setCheckboxGroupSelectAll = SetCheckboxGroupSelectAll,
-        .resetCheckboxGroupSelectAll = ResetCheckboxGroupSelectAll,
-        .setCheckboxGroupWidth = SetCheckboxGroupWidth,
-        .resetCheckboxGroupWidth = ResetCheckboxGroupWidth,
-        .setCheckboxGroupHeight = SetCheckboxGroupHeight,
-        .resetCheckboxGroupHeight = ResetCheckboxGroupHeight,
-        .setCheckboxGroupMark = SetCheckboxGroupMark,
-        .resetCheckboxGroupMark = ResetCheckboxGroupMark,
-        .setCheckboxGroupStyle = SetCheckboxGroupStyle,
-        .resetCheckboxGroupStyle = ResetCheckboxGroupStyle,
-        .setCheckboxGroupName = SetCheckboxGroupName,
-        .getCheckboxGroupName = GetCheckboxGroupName,
-        .getCheckboxGroupSelectAll = GetCheckboxGroupSelectAll,
-        .getCheckboxGroupSelectedColor = GetCheckboxGroupSelectedColor,
-        .getCheckboxGroupUnSelectedColor = GetCheckboxGroupUnSelectedColor,
-        .getCheckboxGroupMarkColor = GetCheckboxGroupMarkColor,
-        .getCheckboxGroupMarkSize = GetCheckboxGroupMarkSize,
-        .getCheckboxGroupMarkWidth = GetCheckboxGroupMarkWidth,
-        .getCheckboxGroupStyle = GetCheckboxGroupStyle,
-    };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
+    static const CJUICheckboxGroupModifier modifier = { SetCheckboxGroupSelectedColor,
+        ResetCheckboxGroupSelectedColor, SetCheckboxGroupUnSelectedColor, ResetCheckboxGroupUnSelectedColor,
+        SetCheckboxGroupSelectAll, ResetCheckboxGroupSelectAll, SetCheckboxGroupWidth, ResetCheckboxGroupWidth,
+        SetCheckboxGroupHeight, ResetCheckboxGroupHeight, SetCheckboxGroupMark, ResetCheckboxGroupMark,
+        SetCheckboxGroupStyle, ResetCheckboxGroupStyle, SetCheckboxGroupName, GetCheckboxGroupName,
+        GetCheckboxGroupSelectAll, GetCheckboxGroupSelectedColor, GetCheckboxGroupUnSelectedColor,
+        GetCheckboxGroupMarkColor, GetCheckboxGroupMarkSize, GetCheckboxGroupMarkWidth, GetCheckboxGroupStyle };
     return &modifier;
 }
 
@@ -377,7 +283,7 @@ void SetCheckboxGroupChange(ArkUINodeHandle node, void* extraParam)
 
         nodeEventStr.append("Status:" + status);
         event.textInputEvent.nativeStringPtr = reinterpret_cast<intptr_t>(nodeEventStr.c_str());
-        SendArkUISyncEvent(&event);
+        SendArkUIAsyncEvent(&event);
     };
     CheckBoxGroupModelNG::SetOnChange(frameNode, std::move(onEvent));
 }

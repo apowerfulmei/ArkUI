@@ -19,20 +19,18 @@
 #include <memory>
 
 #include "base/geometry/ng/rect_t.h"
-#include "base/geometry/matrix4.h"
 #include "base/image/drawing_color_filter.h"
 #include "base/image/drawing_lattice.h"
 #include "base/image/pixel_map.h"
 #include "base/memory/ace_type.h"
 #include "base/utils/noncopyable.h"
 #include "core/components/common/layout/constants.h"
-#include "core/components/common/properties/color.h"
-#include "core/components_ng/pattern/image/image_dfx.h"
+#include "core/components/common/properties/decoration.h"
 #include "core/components_ng/render/drawing_forward.h"
+#include "core/image/image_source_info.h"
 
 namespace OHOS::Ace::NG {
 using BorderRadiusArray = std::array<PointF, 4>;
-
 struct ImageColorFilter {
     std::shared_ptr<std::vector<float>> colorFilterMatrix_;
     RefPtr<DrawingColorFilter> colorFilterDrawing_;
@@ -42,34 +40,33 @@ struct ImageColorFilter {
         colorFilterDrawing_.Reset();
     }
 };
-
 struct ImagePaintConfig {
-    float scaleX_ = 1.0f;
-    float scaleY_ = 1.0f;
-    float smoothEdge_ = 0.0f;
-    bool flipHorizontally_ = false;
-    bool isSvg_ = false;
-    int32_t frameCount_ = 1;
     RectF srcRect_;
     RectF dstRect_;
-    std::optional<Color> svgFillColor_;
     ImageColorFilter colorFilter_;
+    std::shared_ptr<BorderRadiusArray> borderRadiusXY_ = nullptr;
+    float scaleX_ = 1.0f;
+    float scaleY_ = 1.0f;
     ImageRenderMode renderMode_ = ImageRenderMode::ORIGINAL;
     ImageInterpolation imageInterpolation_ = ImageInterpolation::NONE;
     ImageRepeat imageRepeat_ = ImageRepeat::NO_REPEAT;
     ImageFit imageFit_ = ImageFit::COVER;
+    float smoothEdge_ = 0.0f;
     ImageRotateOrientation orientation_ = ImageRotateOrientation::UP;
     DynamicRangeMode dynamicMode = DynamicRangeMode::STANDARD;
+    bool flipHorizontally_ = false;
+    bool isSvg_ = false;
+    int32_t frameCount_ = 1;
     std::vector<ObscuredReasons> obscuredReasons_;
     ImageResizableSlice resizableSlice_;
-    std::shared_ptr<BorderRadiusArray> borderRadiusXY_ = nullptr;
     RefPtr<DrawingLattice> resizableLattice_ = nullptr;
+    ImageSourceInfo sourceInfo_;
     Matrix4 imageMatrix_;
 };
 
 // CanvasImage is interface for drawing image.
 class CanvasImage : public virtual AceType {
-    DECLARE_ACE_TYPE(CanvasImage, AceType);
+    DECLARE_ACE_TYPE(CanvasImage, AceType)
 
 public:
     CanvasImage() = default;
@@ -121,11 +118,6 @@ public:
         return *paintConfig_;
     }
 
-    inline ImageDfxConfig& GetImageDfxConfig()
-    {
-        return imageDfxConfig_;
-    }
-
     virtual bool IsStatic()
     {
         return true;
@@ -138,81 +130,14 @@ public:
 
     virtual void SetRawCompressData(void* dataPtr, int32_t w, int32_t h) {}
 
-    inline void SetImageDfxConfig(const ImageDfxConfig& imageDfxConfig)
-    {
-        imageDfxConfig_ = imageDfxConfig;
-    }
-
-    void SetDrawCompleteCallback(std::function<void(const RenderedImageInfo&)>&& drawCompleteCallback)
-    {
-        drawCompleteCallback_ = std::move(drawCompleteCallback);
-    }
-
-    void FireDrawCompleteCallback(const RenderedImageInfo& renderedImageInfo)
-    {
-        if (drawCompleteCallback_) {
-            drawCompleteCallback_(renderedImageInfo);
-        }
-    }
-
-    virtual bool IsHdrPixelMap()
-    {
-        return false;
-    }
-
 protected:
     bool isDrawAnimate_ = false;
 
 private:
     std::unique_ptr<ImagePaintConfig> paintConfig_;
-    ImageDfxConfig imageDfxConfig_;
-    // Callback function executed after the graphics rendering is complete.
-    std::function<void(const RenderedImageInfo&)> drawCompleteCallback_ = nullptr;
 
     ACE_DISALLOW_COPY_AND_MOVE(CanvasImage);
 };
-
-class CanvasImageModifierWrapper final {
-public:
-    CanvasImageModifierWrapper() = default;
-    ~CanvasImageModifierWrapper() = default;
-
-    explicit CanvasImageModifierWrapper(const RefPtr<CanvasImage>& canvasImage) : canvasImage_(canvasImage) {}
-
-    void SetCanvasImage(const RefPtr<CanvasImage>& canvasImage)
-    {
-        canvasImage_ = canvasImage;
-    }
-
-    RefPtr<CanvasImage> GetCanvasImage() const
-    {
-        return canvasImage_;
-    }
-
-    CanvasImageModifierWrapper operator+(const CanvasImageModifierWrapper& /* other */) const
-    {
-        return CanvasImageModifierWrapper(canvasImage_);
-    }
-
-    CanvasImageModifierWrapper operator-(const CanvasImageModifierWrapper& /* other */) const
-    {
-        return CanvasImageModifierWrapper(canvasImage_);
-    }
-
-    CanvasImageModifierWrapper operator*(const CanvasImageModifierWrapper& /* other */) const
-    {
-        return CanvasImageModifierWrapper(canvasImage_);
-    }
-
-    bool operator==(const CanvasImageModifierWrapper& /* other */) const
-    {
-        return false;
-    }
-
-private:
-    RefPtr<CanvasImage> canvasImage_;
-};
-
 } // namespace OHOS::Ace::NG
 
 #endif // FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_RENDER_CANVAS_IMAGE_H

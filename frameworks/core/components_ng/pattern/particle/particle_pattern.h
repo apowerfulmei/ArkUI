@@ -31,7 +31,6 @@ public:
     void OnVisibleChange(bool isVisible) override;
     void OnAttachToMainTree() override;
     void ToJsonValue(std::unique_ptr<JsonValue>& json, const InspectorFilter& filter) const override;
-    std::unique_ptr<JsonValue> ToEmitterPropertyJsonValue(const EmitterProperty& emitterProperty) const;
     void UpdateDisturbance(const std::vector<ParticleDisturbance>& disturbance);
     void updateEmitterPosition(std::vector<EmitterProperty>& property);
 
@@ -71,25 +70,6 @@ public:
     }
 
 private:
-    void GetEmitterJson(const std::unique_ptr<JsonValue>& objectParticlesJson, const ParticleOption& item) const;
-    void GetColorJson(const std::unique_ptr<JsonValue>& objectParticlesJson,
-        const ParticleOption& particleOption) const;
-    void GetOpacityJson(const std::unique_ptr<JsonValue>& objectParticlesJson,
-        const ParticleOption& particleOption) const;
-    void GetScaleJson(const std::unique_ptr<JsonValue>& objectParticlesJson,
-        const ParticleOption& particleOption) const;
-    void GetVelocityJson(const std::unique_ptr<JsonValue>& objectParticlesJson,
-        const ParticleOption& particleOption) const;
-    void GetAccelerationJson(const std::unique_ptr<JsonValue>& objectParticlesJson,
-        const ParticleOption& particleOption) const;
-    void GetSpinJson(const std::unique_ptr<JsonValue>& objectParticlesJson, const ParticleOption& particleOption) const;
-
-    std::unique_ptr<JsonValue> ParseEmitterParticleJson(const ParticleOption& particleOption) const;
-    std::unique_ptr<JsonValue> ParseAnnulusRegionJson(const ParticleAnnulusRegion& annulusRegion) const;
-    std::unique_ptr<JsonValue> ParseColorUpdater(ParticleColorPropertyUpdater& updater) const;
-    std::unique_ptr<JsonValue> ParseFloatObjectJson(const ParticleFloatPropertyOption& updaterObject) const;
-    void ParseParticleObject(std::unique_ptr<JsonValue>& json, const InspectorFilter& filter) const;
-
     bool haveUnVisibleParent_ = false;
     std::vector<ParticleDisturbance> disturbance_;
     std::vector<EmitterProperty> emitterProperty_;

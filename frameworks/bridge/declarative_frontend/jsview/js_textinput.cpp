@@ -27,6 +27,7 @@
 #include "frameworks/bridge/declarative_frontend/jsview/js_text_editable_controller.h"
 #include "frameworks/bridge/declarative_frontend/jsview/js_textfield.h"
 #include "frameworks/bridge/declarative_frontend/jsview/js_view_common_def.h"
+#include "frameworks/bridge/declarative_frontend/ark_theme/theme_apply/js_textinput_theme.h"
 #include "frameworks/bridge/declarative_frontend/view_stack_processor.h"
 #include "frameworks/core/common/ime/text_input_action.h"
 #include "frameworks/core/common/ime/text_input_type.h"
@@ -66,8 +67,6 @@ void JSTextInput::JSBind(BindingTarget globalObj)
     JSClass<JSTextInput>::StaticMethod("fontWeight", &JSTextField::SetFontWeight);
     JSClass<JSTextInput>::StaticMethod("fontStyle", &JSTextField::SetFontStyle);
     JSClass<JSTextInput>::StaticMethod("fontFamily", &JSTextField::SetFontFamily);
-    JSClass<JSTextInput>::StaticMethod("minFontScale", &JSTextField::SetMinFontScale);
-    JSClass<JSTextInput>::StaticMethod("maxFontScale", &JSTextField::SetMaxFontScale);
     JSClass<JSTextInput>::StaticMethod("inputFilter", &JSTextField::SetInputFilter);
     JSClass<JSTextInput>::StaticMethod("showPasswordIcon", &JSTextField::SetShowPasswordIcon);
     JSClass<JSTextInput>::StaticMethod("textAlign", &JSTextField::SetTextAlign);
@@ -80,7 +79,6 @@ void JSTextInput::JSBind(BindingTarget globalObj)
     JSClass<JSTextInput>::StaticMethod("barState", &JSTextField::SetBarState);
     JSClass<JSTextInput>::StaticMethod("maxLines", &JSTextField::SetMaxLines);
     JSClass<JSTextInput>::StaticMethod("wordBreak", &JSTextField::SetWordBreak);
-    JSClass<JSTextInput>::StaticMethod("ellipsisMode", &JSTextField::SetEllipsisMode);
     // API7 onEditChanged deprecated
     JSClass<JSTextInput>::StaticMethod("onEditChanged", &JSTextField::SetOnEditChanged);
     JSClass<JSTextInput>::StaticMethod("onEditChange", &JSTextField::SetOnEditChanged);
@@ -111,7 +109,6 @@ void JSTextInput::JSBind(BindingTarget globalObj)
     JSClass<JSTextInput>::StaticMethod("customKeyboard", &JSTextField::SetCustomKeyboard);
     JSClass<JSTextInput>::StaticMethod("passwordRules", &JSTextField::SetPasswordRules);
     JSClass<JSTextInput>::StaticMethod("enableAutoFill", &JSTextField::SetEnableAutoFill);
-    JSClass<JSTextInput>::StaticMethod("enableAutoFillAnimation", &JSTextField::SetEnableAutoFillAnimation);
     JSClass<JSTextInput>::StaticMethod("cancelButton", &JSTextField::SetCancelButton);
     JSClass<JSTextInput>::StaticMethod("selectAll", &JSTextField::SetSelectAllValue);
     JSClass<JSTextInput>::StaticMethod("lineBreakStrategy", &JSTextField::SetLineBreakStrategy);
@@ -123,7 +120,6 @@ void JSTextInput::JSBind(BindingTarget globalObj)
     JSClass<JSTextInput>::StaticMethod("heightAdaptivePolicy", &JSTextField::SetHeightAdaptivePolicy);
     JSClass<JSTextInput>::StaticMethod("letterSpacing", &JSTextField::SetLetterSpacing);
     JSClass<JSTextInput>::StaticMethod("lineHeight", &JSTextField::SetLineHeight);
-    JSClass<JSTextInput>::StaticMethod("halfLeading", &JSTextField::SetHalfLeading);
     JSClass<JSTextInput>::StaticMethod("textOverflow", &JSTextField::SetTextOverflow);
     JSClass<JSTextInput>::StaticMethod("textIndent", &JSTextField::SetTextIndent);
     JSClass<JSTextInput>::StaticMethod("showPassword", &JSTextField::ShowPasswordText);
@@ -135,19 +131,15 @@ void JSTextInput::JSBind(BindingTarget globalObj)
     JSClass<JSTextInput>::StaticMethod("editMenuOptions", &JSTextField::EditMenuOptions);
     JSClass<JSTextInput>::StaticMethod("enablePreviewText", &JSTextField::SetEnablePreviewText);
     JSClass<JSTextInput>::StaticMethod("enableHapticFeedback", &JSTextField::SetEnableHapticFeedback);
-    JSClass<JSTextInput>::StaticMethod("autoCapitalizationMode", &JSTextField::SetCapitalizationMode);
     JSClass<JSTextInput>::StaticMethod("stopBackPress", &JSTextField::SetStopBackPress);
     JSClass<JSTextInput>::StaticMethod("keyboardAppearance", &JSTextField::SetKeyboardAppearance);
-    JSClass<JSTextInput>::StaticMethod("strokeWidth", &JSTextField::SetStrokeWidth);
-    JSClass<JSTextInput>::StaticMethod("strokeColor", &JSTextField::SetStrokeColor);
-    JSClass<JSTextInput>::StaticMethod("enableAutoSpacing", &JSTextField::SetEnableAutoSpacing);
-    JSClass<JSTextInput>::StaticMethod("onWillAttachIME", &JSTextField::SetOnWillAttachIME);
     JSClass<JSTextInput>::InheritAndBind<JSViewAbstract>(globalObj);
 }
 
 void JSTextInput::Create(const JSCallbackInfo& info)
 {
     JSTextField::CreateTextInput(info);
+    JSTextInputTheme::ApplyTheme();
 }
 
 void JSTextInputController::JSBind(BindingTarget globalObj)

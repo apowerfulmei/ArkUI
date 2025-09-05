@@ -213,8 +213,8 @@ inline ImageRepeat ConvertStrToImageRepeat(const std::string& repeat)
     return index < 0 ? ImageRepeat::NO_REPEAT : imageRepeatTable[index].value;
 }
 
-inline std::pair<bool, FontWeight> ParseFontWeight(
-    const std::string& weight, FontWeight defaultFontWeight = FontWeight::NORMAL)
+inline std::pair<bool, FontWeight> ParseFontWeight(const std::string& weight,
+    FontWeight defaultFontWeight = FontWeight::NORMAL)
 {
     return StringUtils::ParseFontWeight(weight, defaultFontWeight);
 }
@@ -329,17 +329,6 @@ inline TextDirection ConvertStrToTextDirection(const std::string& val)
     return index < 0 ? TextDirection::LTR : textDirectionTable[index].value;
 }
 
-inline TextFieldOverflowX ConvertStrToTextFieldOverflowX(const std::string& val)
-{
-    const LinearMapNode<TextFieldOverflowX> textFieldOverflowXTable[] = {
-        { "auto", TextFieldOverflowX::AUTO },
-        { "hidden", TextFieldOverflowX::HIDDEN },
-        { "scroll", TextFieldOverflowX::SCROLL },
-    };
-    auto index = BinarySearchFindIndex(textFieldOverflowXTable, ArraySize(textFieldOverflowXTable), val.c_str());
-    return index < 0 ? TextFieldOverflowX::HIDDEN : textFieldOverflowXTable[index].value;
-}
-
 inline std::vector<std::string> ConvertStrToFontFamilies(const std::string& family)
 {
     std::vector<std::string> fontFamilies;
@@ -448,8 +437,6 @@ ACE_FORCE_EXPORT RefPtr<Curve> CreateCustomCurve(const std::string& aniTimFunc);
 ACE_FORCE_EXPORT RefPtr<Curve> CreateCurve(const std::function<float(float)>& jsFunc);
 
 ACE_FORCE_EXPORT RefPtr<Curve> CreateCurve(const std::string& aniTimFunc, bool useDefault = true);
-
-ACE_FORCE_EXPORT RefPtr<Curve> CreateCurve(int curveType, bool useDefault = true);
 
 ACE_FORCE_EXPORT bool ParseCurveParam(
     const std::string& aniTimFunc, std::string& curveName, std::vector<std::string>& paramsVector);

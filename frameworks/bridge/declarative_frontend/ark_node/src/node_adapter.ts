@@ -18,7 +18,7 @@ interface NodeInfo {
     nodePtr: NodePtr
 }
 
-class NodeAdapter extends Disposable {
+class NodeAdapter {
     nativePtr_: NodePtr;
     nativeRef_: NativeStrongRef;
     nodeRefs_: Array<FrameNode> = new Array();
@@ -33,7 +33,6 @@ class NodeAdapter extends Disposable {
     onUpdateChild?: (id: number, node: FrameNode) => void;
 
     constructor() {
-        super();
         this.nativeRef_ = getUINativeModule().nodeAdapter.createAdapter();
         this.nativePtr_ = this.nativeRef_.getNativeHandle();
         getUINativeModule().nodeAdapter.setCallbacks(this.nativePtr_, this,
@@ -45,26 +44,13 @@ class NodeAdapter extends Disposable {
         );
     }
 
-    getNodeType(): string {
-        return getUINativeModule().nodeAdapter.getNodeType(this.nativePtr_);
-    }
-
     dispose(): void {
-        super.dispose();
-        if (this.nativePtr_) {
-            getUINativeModule().nodeAdapter.fireArkUIObjectLifecycleCallback(new WeakRef(this),
-                'NodeAdapter', this.getNodeType() || 'NodeAdapter', this.nativePtr_);
-        }
         let hostNode = this.attachedNodeRef_.deref();
         if (hostNode !== undefined) {
             NodeAdapter.detachNodeAdapter(hostNode);
         }
         this.nativeRef_.dispose();
         this.nativePtr_ = null;
-    }
-
-    isDisposed(): boolean {
-        return super.isDisposed() && (this.nativePtr_ === undefined || this.nativePtr_ === null);
     }
 
     set totalNodeCount(count: number) {

@@ -19,7 +19,6 @@
 #include "bridge/declarative_frontend/engine/functions/js_function.h"
 #include "bridge/declarative_frontend/engine/functions/js_mouse_function.h"
 #include "bridge/declarative_frontend/jsview/js_container_base.h"
-#include "core/components_v2/list/list_properties.h"
 
 namespace OHOS::Ace::Framework {
 
@@ -34,17 +33,11 @@ public:
     static void SetSelectable(const JSCallbackInfo& info);
     static void SetSelected(const JSCallbackInfo& info);
     static void SetSwiperAction(const JSCallbackInfo& args);
-    static void ParseSwiperAction(const JSRef<JSObject>& obj, const JsiExecutionContext& context,
-        NG::FrameNode* node = nullptr);
+    static void ParseSwiperAction(const JSRef<JSObject>& obj, const JsiExecutionContext& context);
     static void SelectCallback(const JSCallbackInfo& args);
     static void JsBorderRadius(const JSCallbackInfo& info);
     static void JsOnDragStart(const JSCallbackInfo& info);
-    static void JsParseDeleteArea(const JsiExecutionContext& context, const JSRef<JSVal>& jsValue,
-        bool isStartArea, NG::FrameNode* node);
-    static void ParseBuilderComponentContent(const JSRef<JSVal>& contentParam, RefPtr<NG::FrameNode>& refPtrFrameNode);
-    static void ParseBuilder(const JSRef<JSObject>& obj, OnDeleteEvent&& onDelete,
-        OnEnterDeleteAreaEvent&& onEnterDeleteArea, OnExitDeleteAreaEvent&& onExitDeleteArea,
-        OnStateChangedEvent&& onStateChange, const Dimension& length, bool isStartArea, NG::FrameNode* node);
+    static void JsParseDeleteArea(const JsiExecutionContext& context, const JSRef<JSVal>& jsValue, bool isStartArea);
 };
 
 } // namespace OHOS::Ace::Framework

@@ -30,7 +30,6 @@
 #include "base/utils/macros.h"
 #include "base/view_data/view_data_wrap.h"
 #include "core/common/resource/resource_configuration.h"
-#include "core/common/window_animation_config.h"
 #include "core/components_ng/event/focus_hub.h"
 #include "core/components_ng/event/gesture_event_hub.h"
 #include "core/components_ng/export_texture_info/export_texture_info.h"
@@ -38,7 +37,6 @@
 #include "core/components_ng/layout/layout_wrapper_node.h"
 #include "core/components_ng/property/accessibility_property.h"
 #include "core/event/touch_event.h"
-#include "core/event/mouse_event.h"
 
 namespace OHOS::Ace::NG {
 class AccessibilityProperty;
@@ -61,32 +59,6 @@ enum class RootNodeType : int32_t {
     WINDOW_SCENE_ETS_TAG = 2
 };
 
-struct InteractionEventBindingInfo  {
-    bool baseEventRegistered = false;
-    bool nodeEventRegistered = false;
-    bool nativeEventRegistered = false;
-    bool builtInEventRegistered = false;
-
-    void SetModifierEventRegistered(bool isCNode, bool state)
-    {
-        if (isCNode) {
-            nativeEventRegistered = state;
-        } else {
-            baseEventRegistered = state;
-        }
-    }
-
-    void SetNodeEventRegistered(bool state)
-    {
-        nodeEventRegistered = state;
-    }
-
-    void SetBuiltInEventRegistered(bool state)
-    {
-        builtInEventRegistered = state;
-    }
-};
-
 class InspectorFilter;
 class PipelineContext;
 constexpr int32_t DEFAULT_NODE_SLOT = -1;
@@ -98,9 +70,6 @@ class ACE_FORCE_EXPORT UINode : public virtual AceType {
 public:
     UINode(const std::string& tag, int32_t nodeId, bool isRoot = false);
     ~UINode() override;
-
-    void RegisterReleaseFunc(bool enableRegister);
-    virtual void OnDelete();
 
     // atomic node is like button, image, custom node and so on.
     // In ets UI compiler, the atomic node does not Add Pop function, only have Create function.
@@ -120,17 +89,13 @@ public:
     void AddChildBefore(const RefPtr<UINode>& child, const RefPtr<UINode>& siblingNode);
 
     std::list<RefPtr<UINode>>::iterator RemoveChild(const RefPtr<UINode>& child, bool allowTransition = false);
-    bool RemoveChildSilently(const RefPtr<UINode>& child);
     int32_t RemoveChildAndReturnIndex(const RefPtr<UINode>& child);
     void ReplaceChild(const RefPtr<UINode>& oldNode, const RefPtr<UINode>& newNode);
     void MovePosition(int32_t slot);
-    virtual void MountToParent(const RefPtr<UINode>& parent, int32_t slot = DEFAULT_NODE_SLOT, bool silently = false,
+    void MountToParent(const RefPtr<UINode>& parent, int32_t slot = DEFAULT_NODE_SLOT, bool silently = false,
         bool addDefaultTransition = false, bool addModalUiextension = false);
-    void MountToParentAfter(const RefPtr<UINode>& parent, const RefPtr<UINode>& siblingNode);
-    void MountToParentBefore(const RefPtr<UINode>& parent, const RefPtr<UINode>& siblingNode);
     RefPtr<FrameNode> GetParentFrameNode() const;
     RefPtr<CustomNode> GetParentCustomNode() const;
-    RefPtr<FrameNode> GetFocusParentWithBoundary() const;
     RefPtr<FrameNode> GetFocusParent() const;
     RefPtr<FocusHub> GetFirstFocusHubChild() const;
 
@@ -144,26 +109,15 @@ public:
     int32_t GetChildIndex(const RefPtr<UINode>& child) const;
     [[deprecated]] void AttachToMainTree(bool recursive = false);
     void AttachToMainTree(bool recursive, PipelineContext* context);
-    void DetachFromMainTree(bool recursive = false, bool needCheckThreadSafeNodeTree = false);
+    void DetachFromMainTree(bool recursive = false);
     virtual void FireCustomDisappear();
     // Traverse downwards to update system environment variables.
     void UpdateConfigurationUpdate();
     void UpdateConfigurationUpdate(const ConfigurationChange& configurationChange);
-
-    // Return value: 0 indicates successful execution, non - zero indicates failed execution.
-    virtual int32_t OnRecvCommand(const std::string& command) { return 0; }
-
     virtual void OnConfigurationUpdate(const ConfigurationChange& configurationChange) {}
 
     // process offscreen process.
     void ProcessOffscreenTask(bool recursive = false);
-
-    // Determine if the node is a SyntaxNode, default returns false.
-    // SyntaxNode classes need to override the method and return true.
-    virtual bool IsSyntaxNode() const
-    {
-        return false;
-    }
 
     void UpdateModalUiextensionCount(bool addNode)
     {
@@ -189,13 +143,7 @@ public:
         return children_;
     }
 
-    // Return children for get inspector tree calling, return cache children directly
-    virtual const std::list<RefPtr<UINode>>& GetChildrenForInspector(bool needCacheNode = false) const
-    {
-        return children_;
-    }
-
-    RefPtr<UINode> GetLastChild() const
+    RefPtr<UINode> GetLastChild()
     {
         if (children_.empty()) {
             return nullptr;
@@ -203,7 +151,7 @@ public:
         return children_.back();
     }
 
-    RefPtr<UINode> GetFirstChild() const
+    RefPtr<UINode> GetFirstChild()
     {
         if (children_.empty()) {
             return nullptr;
@@ -224,15 +172,15 @@ public:
         return parent_.Upgrade();
     }
 
-    RefPtr<UINode> GetAncestor() const;
-
     void SetNeedCallChildrenUpdate(bool needCallChildrenUpdate)
     {
         needCallChildrenUpdate_ = needCallChildrenUpdate;
     }
 
-    virtual void SetParent(const WeakPtr<UINode>& parent, bool needDetect = true);
-    void SetAncestor(const WeakPtr<UINode>& parent);
+    virtual void SetParent(const WeakPtr<UINode>& parent)
+    {
+        parent_ = parent;
+    }
     // Tree operation end.
 
     // performance.
@@ -251,13 +199,11 @@ public:
         RefPtr<ViewDataWrap> viewDataWrap, bool skipSubAutoFillContainer = false, bool needsRecordData = false);
     bool NeedRequestAutoSave();
     // DFX info.
-    virtual void DumpTree(int32_t depth, bool hasJson = false);
-    void DumpTreeJsonForDiff(std::unique_ptr<JsonValue>& json);
-    void DumpSimplifyTree(int32_t depth, std::shared_ptr<JsonValue>& current);
+    void DumpTree(int32_t depth);
+    void DumpSimplifyTree(int32_t depth, std::unique_ptr<JsonValue>& current);
     virtual bool IsContextTransparent();
 
-    bool DumpTreeById(int32_t depth, const std::string& id, bool hasJson = false);
-    bool DumpTreeByComponentName(const std::string& name);
+    bool DumpTreeById(int32_t depth, const std::string& id);
 
     const std::string& GetTag() const
     {
@@ -352,11 +298,6 @@ public:
         return isInDestroying_;
     }
 
-    bool IsDestroyingState() const
-    {
-        return isDestroyingState_;
-    }
-
     void SetChildrenInDestroying();
 
     virtual HitTestResult TouchTest(const PointF& globalPoint, const PointF& parentLocalPoint,
@@ -407,25 +348,19 @@ public:
 
     virtual void OnWindowUnfocused() {}
 
-    virtual void OnWindowActivated() {}
-
-    virtual void OnWindowDeactivated() {}
-
     virtual void OnWindowSizeChanged(int32_t width, int32_t height, WindowSizeChangeReason type) {}
 
     virtual void OnNotifyMemoryLevel(int32_t level) {}
 
     virtual void SetActive(bool active, bool needRebuildRenderContext = false);
 
-    virtual void SetJSViewActive(bool active, bool isLazyForEachNode = false, bool isReuse = false);
+    virtual void SetJSViewActive(bool active, bool isLazyForEachNode = false);
 
     virtual void TryVisibleChangeOnDescendant(VisibleType preVisibility, VisibleType currentVisibility);
 
     // call by recycle framework.
     virtual void OnRecycle();
     virtual void OnReuse();
-
-    virtual void NotifyColorModeChange(uint32_t colorMode);
 
     virtual bool MarkRemoving();
 
@@ -440,8 +375,6 @@ public:
     }
 
     virtual void ToJsonValue(std::unique_ptr<JsonValue>& json, const InspectorFilter& filter) const {}
-
-    virtual void ToTreeJson(std::unique_ptr<JsonValue>& json, const InspectorConfig& config) const {}
 
     virtual void FromJson(const std::unique_ptr<JsonValue>& json) {}
 
@@ -579,20 +512,6 @@ public:
             nodeInfo_->codeCol = col;
         }
     }
-    void SetFilePath(const std::string& sources)
-    {
-        if (nodeInfo_) {
-            nodeInfo_->pagePath = sources;
-        }
-    }
-
-    std::string GetFilePath() const
-    {
-        if (nodeInfo_) {
-            return nodeInfo_->pagePath;
-        }
-        return "";
-    }
     void SetForeachItem()
     {
         if (nodeInfo_) {
@@ -652,22 +571,7 @@ public:
     NodeStatus GetNodeStatus() const;
     void UpdateNodeStatus(NodeStatus nodeStatus);
     void SetIsRootBuilderNode(bool isRootBuilderNode);
-    void SetJsBuilderNodeId(int32_t jsBuilderNodeId)
-    {
-        jsBuilderNodeId_ = jsBuilderNodeId;
-    }
-
-    int32_t GetJsBuilderNodeId() const
-    {
-        return jsBuilderNodeId_;
-    }
-
     bool GetIsRootBuilderNode() const;
-    void SetNodeAdapter(bool enable)
-    {
-        isNodeAdapter_ = enable;
-    }
-    
 
     bool IsArkTsFrameNode() const
     {
@@ -700,21 +604,6 @@ public:
     virtual void PaintDebugBoundaryTreeAll(bool flag);
     static void DFSAllChild(const RefPtr<UINode>& root, std::vector<RefPtr<UINode>>& res);
     static void GetBestBreakPoint(RefPtr<UINode>& breakPointChild, RefPtr<UINode>& breakPointParent);
-
-    virtual bool HasVirtualNodeAccessibilityProperty()
-    {
-        return false;
-    }
-
-    void AddFlag(uint32_t flag)
-    {
-        nodeFlag_ |= flag;
-    }
-
-    bool IsNodeHasFlag(uint32_t flag) const
-    {
-        return (flag & nodeFlag_) == flag;
-    }
 
     void SetAccessibilityNodeVirtual()
     {
@@ -756,6 +645,11 @@ public:
     {
         rootNodeId_ = rootNodeId;
     }
+    
+    virtual bool HasVirtualNodeAccessibilityProperty()
+    {
+        return false;
+    }
 
     int32_t GetRootNodeId() const
     {
@@ -791,11 +685,6 @@ public:
         return instanceId_;
     }
 
-    static std::set<std::string> GetLayoutTags()
-    {
-        return layoutTags_;
-    }
-
     virtual void SetGeometryTransitionInRecursive(bool isGeometryTransitionIn)
     {
         for (const auto& child : GetChildren()) {
@@ -816,17 +705,7 @@ public:
     virtual void FireOnNodeDestroyCallback()
     {
         CHECK_NULL_VOID(destroyCallback_);
-        destroyCallback_(nodeId_);
-    }
-
-    bool IsAllowAddChildBelowModalUec() const
-    {
-        return isAllowAddChildBelowModalUec_;
-    }
-
-    void SetIsAllowAddChildBelowModalUec(bool isAllowAddChildBelowModalUec)
-    {
-        isAllowAddChildBelowModalUec_ = isAllowAddChildBelowModalUec;
+        destroyCallback_(GetId());
     }
 
     void SetBuilderFunc(std::function<void()>&& lazyBuilderFunc)
@@ -859,9 +738,19 @@ public:
         return updateNodeConfig_;
     }
 
+    void AddFlag(uint32_t flag)
+    {
+        nodeFlag_ |= flag;
+    }
+
+    bool IsNodeHasFlag(uint32_t flag) const
+    {
+        return (flag & nodeFlag_) == flag;
+    }
+
     virtual void GetInspectorValue();
     virtual void NotifyWebPattern(bool isRegister);
-    void GetContainerComponentText(std::u16string& text);
+    void GetContainerComponentText(std::string& text);
 
     enum class NotificationType : int32_t {
         START_CHANGE_POSITION = 0,
@@ -878,22 +767,8 @@ public:
      */
     virtual void NotifyChange(int32_t changeIdx, int32_t count, int64_t id, NotificationType notificationType);
 
-    int32_t GetThemeScopeId() const;
-    void SetThemeScopeId(int32_t themeScopeId);
-    virtual void UpdateThemeScopeId(int32_t themeScopeId);
-    virtual void UpdateThemeScopeUpdate(int32_t themeScopeId);
-    virtual void OnThemeScopeUpdate(int32_t themeScopeId) {}
-    void AllowUseParentTheme(bool isAllow);
-    bool IsAllowUseParentTheme() const;
-    ColorMode GetLocalColorMode() const;
-
     // Used to mark freeze and block dirty mark.
-    virtual void SetFreeze(bool isFreeze, bool isForceUpdateFreezeVaule = false, bool isUserFreeze = false);
-
-    void SetUserFreeze(bool isUserFreeze);
-
-    bool IsUserFreeze();
-
+    virtual void SetFreeze(bool isFreeze);
     bool IsFreeze() const
     {
         return isFreeze_;
@@ -909,11 +784,6 @@ public:
         isCNode_ = createByCapi;
     }
 
-    bool IsReusableNode() const
-    {
-        return isCNode_ || isArkTsFrameNode_ || isRootBuilderNode_ || isArkTsRenderNode_;
-    }
-
     virtual RefPtr<UINode> GetCurrentPageRootNode()
     {
         return nullptr;
@@ -921,19 +791,6 @@ public:
 
     virtual void AddCustomProperty(const std::string& key, const std::string& value) {}
     virtual void RemoveCustomProperty(const std::string& key) {}
-
-    bool IsMoving() const
-    {
-        return isMoving_;
-    }
-
-    void setIsMoving(bool isMoving)
-    {
-        isMoving_ = isMoving;
-        for (auto& child : children_) {
-            child->setIsMoving(isMoving);
-        }
-    }
 
     bool isCrossLanguageAttributeSetting() const
     {
@@ -944,158 +801,6 @@ public:
     {
         isCrossLanguageAttributeSetting_ = isCrossLanguageAttributeSetting;
     }
-
-    /**
-     * flag used by Repeat virtual scroll
-     * to mark a child UINode of RepeatVirtualScroll as either allowing or not allowing
-     * adding a @ReusableV2 @ComponentV2 CustomNode
-     * allowReusableV2Descendant_ default value is true
-     */
-    void SetAllowReusableV2Descendant(bool allow);
-    bool IsAllowReusableV2Descendant() const;
-
-    bool HasSkipNode();
-    virtual void OnDestroyingStateChange(bool isDestroying, bool cleanStatus)
-    {
-        isDestroyingState_ = isDestroying;
-    }
-    virtual void SetDestroying(bool isDestroying = true, bool cleanStatus = true);
-
-    /**
-     * @description: Compare whether the target api version of the application is greater than or equal to the incoming
-     * target. It can be used in scenarios where the uiNode can be obtained.
-     * @param: Target version to be isolated.
-     * @return: return the compare result.
-     */
-    bool GreatOrEqualAPITargetVersion(PlatformVersion version) const;
-
-    /**
-     * @description: Compare whether the target api version of the application is less than the incoming
-     * target. It can be used in scenarios where the uiNode can be obtained.
-     * @param: Target version to be isolated.
-     * @return: return the compare result.
-     */
-    bool LessThanAPITargetVersion(PlatformVersion version) const;
-
-    void SetRerenderable(bool shouldRerender)
-    {
-        shouldRerender_ = shouldRerender;
-    }
-
-    bool GetRerenderable()
-    {
-        return shouldRerender_;
-    }
-
-    void SetDarkMode(bool isDarkMode)
-    {
-        isDarkMode_ = isDarkMode;
-    }
-
-    bool CheckIsDarkMode()
-    {
-        return isDarkMode_;
-    }
-
-    void SetMeasureAnyway(bool measureAnyWay)
-    {
-        measureAnyWay_  = measureAnyWay;
-    }
-
-    bool CheckMeasureAnyway()
-    {
-        return measureAnyWay_;
-    }
-
-    void SetShouldClearCache(bool shouldClearCache)
-    {
-        shouldClearCache_ = shouldClearCache;
-    }
-
-    bool CheckShouldClearCache()
-    {
-        return shouldClearCache_;
-    }
-
-    bool IsArkTsRenderNode() const
-    {
-        return isArkTsRenderNode_;
-    }
-
-    void SetIsArkTsRenderNode(bool isArkTsRenderNode)
-    {
-        isArkTsRenderNode_ = isArkTsRenderNode;
-    }
-
-    void ProcessIsInDestroyingForReuseableNode(const RefPtr<UINode>& child);
-    virtual bool CheckVisibleOrActive()
-    {
-        return true;
-    }
-
-    void SetModifierEventRegistrationState(bool isCNode, bool state) {
-        InteractionEventBindingInfo currentInfo = GetInteractionEventBindingInfo();
-        currentInfo.SetModifierEventRegistered(isCNode, state);
-        SetInteractionEventBindingInfo(currentInfo);
-    }
-
-    void SetNodeEventRegistrationState(bool state) {
-        InteractionEventBindingInfo currentInfo = GetInteractionEventBindingInfo();
-        currentInfo.SetNodeEventRegistered(state);
-        SetInteractionEventBindingInfo(currentInfo);
-    }
-
-    void SetBuiltInEventRegistrationState(bool state) {
-        InteractionEventBindingInfo currentInfo = GetInteractionEventBindingInfo();
-        currentInfo.SetBuiltInEventRegistered(state);
-        SetInteractionEventBindingInfo(currentInfo);
-    }
-
-    void SetInteractionEventBindingInfo(const InteractionEventBindingInfo &eventBindingInfo)
-    {
-        eventBindingInfo_ = eventBindingInfo;
-    }
-
-    const InteractionEventBindingInfo& GetInteractionEventBindingInfo() const
-    {
-        return eventBindingInfo_;
-    }
-
-    bool IsObservedByDrawChildren() const
-    {
-        return isObservedByDrawChildren_;
-    }
-
-    RefPtr<UINode> GetObserverParentForDrawChildren() const
-    {
-        return drawChildrenParent_.Upgrade();
-    }
-
-    bool IsThreadSafeNode() const
-    {
-        return isThreadSafeNode_;
-    }
-
-    bool IsFree() const
-    {
-        return isFree_;
-    }
-
-    void PostAfterAttachMainTreeTask(std::function<void()>&& task)
-    {
-        if (IsOnMainTree()) {
-            return;
-        }
-        afterAttachMainTreeTasks_.emplace_back(std::move(task));
-    }
-
-    void FindTopNavDestination(RefPtr<FrameNode>& result);
-
-    bool SubtreeWithIgnoreChild() const
-    {
-        return subtreeIgnoreCount_ != 0;
-    }
-
 protected:
     std::list<RefPtr<UINode>>& ModifyChildren()
     {
@@ -1125,10 +830,8 @@ protected:
     virtual void OnContextAttached() {}
     // dump self info.
     virtual void DumpInfo() {}
-    virtual void DumpInfo(std::unique_ptr<JsonValue>& json) {}
-    virtual void DumpSimplifyInfo(std::shared_ptr<JsonValue>& json) {}
+    virtual void DumpSimplifyInfo(std::unique_ptr<JsonValue>& json) {}
     virtual void DumpAdvanceInfo() {}
-    virtual void DumpAdvanceInfo(std::unique_ptr<JsonValue>& json) {}
     virtual void DumpViewDataPageNode(RefPtr<ViewDataWrap> viewDataWrap, bool needsRecordData = false) {}
     virtual bool CheckAutoSave()
     {
@@ -1140,7 +843,7 @@ protected:
     virtual void OnAttachToBuilderNode(NodeStatus nodeStatus) {}
 
     virtual void OnFreezeStateChange() {}
-    virtual void UpdateChildrenFreezeState(bool isFreeze, bool isForceUpdateFreezeVaule = false);
+    virtual void UpdateChildrenFreezeState(bool isFreeze);
 
     // run offscreen process.
     virtual void OnOffscreenProcess(bool recursive) {}
@@ -1157,10 +860,6 @@ protected:
     void CollectRemovedChildren(const std::list<RefPtr<UINode>>& children,
         std::list<int32_t>& removedElmtId, bool isEntry);
     void CollectRemovedChild(const RefPtr<UINode>& child, std::list<int32_t>& removedElmtId);
-    void CollectCleanedChildren(const std::list<RefPtr<UINode>>& children, std::list<int32_t>& removedElmtId,
-        std::list<int32_t>& reservedElmtId, bool isEntry);
-    void CollectReservedChildren(std::list<int32_t>& reservedElmtId);
-    virtual void OnCollectRemoved() {}
 
     bool needCallChildrenUpdate_ = true;
 
@@ -1179,83 +878,44 @@ protected:
      * @param id the accessibilityId of child.
      */
     int32_t CalcAbsPosition(int32_t changeIdx, int64_t id) const;
-    const static std::set<std::string> layoutTags_;
-    std::string tag_ = "UINode";
-    int32_t depth_ = Infinity<int32_t>();
-    int32_t hostRootId_ = 0;
-    int32_t hostPageId_ = 0;
-    int32_t nodeId_ = 0;
-    int32_t jsBuilderNodeId_ = -1;
-    int64_t accessibilityId_ = -1;
-    int32_t layoutPriority_ = 0;
-    int32_t rootNodeId_ = 0; // host is Page or NavDestination
-    int32_t themeScopeId_ = 0;
-    int32_t subtreeIgnoreCount_ = 0;
-
+    
 private:
     void DoAddChild(std::list<RefPtr<UINode>>::iterator& it, const RefPtr<UINode>& child, bool silently = false,
         bool addDefaultTransition = false);
-    bool CanAddChildWhenTopNodeIsModalUec(std::list<RefPtr<UINode>>::iterator& curIter);
-    void UpdateDrawChildObserver(const RefPtr<UINode>& child);
-
-    void SetObserverParentForDrawChildren(const RefPtr<UINode>& parent);
-    void ClearObserverParentForDrawChildren()
-    {
-        drawChildrenParent_.Reset();
-        isObservedByDrawChildren_ = false;
-        for (const auto& child : GetChildren()) {
-            child->ClearObserverParentForDrawChildren();
-        }
-    }
-    
-    void ExecuteAfterAttachMainTreeTasks()
-    {
-        for (auto& task : afterAttachMainTreeTasks_) {
-            if (task) {
-                task();
-            }
-        }
-        afterAttachMainTreeTasks_.clear();
-    }
-    bool CheckThreadSafeNodeTree(bool needCheck);
-    virtual bool MaybeRelease() override;
 
     std::list<RefPtr<UINode>> children_;
     // disappearingChild、index、branchId
     std::list<std::tuple<RefPtr<UINode>, uint32_t, int32_t>> disappearingChildren_;
     std::unique_ptr<PerformanceCheckNode> nodeInfo_;
-    WeakPtr<UINode> parent_; // maybe wrong when not on the tree
-    WeakPtr<UINode> ancestor_; // always correct parent ptr, used to remove duplicates when inserting child nodes
+    WeakPtr<UINode> parent_;
+    std::string tag_ = "UINode";
+    int32_t depth_ = INT32_MAX;
+    int32_t hostRootId_ = 0;
+    int32_t hostPageId_ = 0;
+    int32_t nodeId_ = 0;
+    int64_t accessibilityId_ = -1;
+    int32_t layoutPriority_ = 0;
+    int32_t rootNodeId_ = 0; // host is Page or NavDestination
     bool isRoot_ = false;
     bool onMainTree_ = false;
-    bool isThreadSafeNode_ = false;
-    bool isFree_ = false; // the thread safe node in free state can be operated by non UI threads
-    std::vector<std::function<void()>> afterAttachMainTreeTasks_;
     bool removeSilently_ = true;
     bool isInDestroying_ = false;
     bool isDisappearing_ = false;
     bool isBuildByJS_ = false;
     bool isRootBuilderNode_ = false;
     bool isArkTsFrameNode_ = false;
-    bool isArkTsRenderNode_ = false;
     bool isTraversing_ = false;
-    bool isAllowUseParentTheme_ = true;
     NodeStatus nodeStatus_ = NodeStatus::NORMAL_NODE;
     RootNodeType rootNodeType_ = RootNodeType::PAGE_ETS_TAG;
-    InteractionEventBindingInfo eventBindingInfo_;
     RefPtr<ExportTextureInfo> exportTextureInfo_;
-    int32_t instanceId_ = -1;
-    int32_t apiVersion_ = 0;
+
     uint32_t nodeFlag_ { 0 };
-    bool isNodeAdapter_ = false;
 
     int32_t restoreId_ = -1;
 
     bool useOffscreenProcess_ = false;
 
     bool isCNode_ = false;
-    bool isDestroyingState_ = false;
-    bool isAllowAddChildBelowModalUec_ = true;
 
     std::function<void(int32_t)> updateJSInstanceCallback_;
     std::function<void()> lazyBuilderFunc_;
@@ -1264,6 +924,7 @@ private:
 
     std::string debugLine_;
     std::string viewId_;
+    int32_t instanceId_ = -1;
     void* externalData_ = nullptr;
     std::function<void(int32_t)> destroyCallback_;
     // Other components cannot be masked above the modal uiextension,
@@ -1275,20 +936,9 @@ private:
     bool isFirstAccessibilityVirtualNode_ = false;
     // the flag to block dirty mark.
     bool isFreeze_ = false;
-    bool allowReusableV2Descendant_ = true;
-    bool shouldRerender_ = true;
-    bool isDarkMode_ = false;
-    bool measureAnyWay_ = false;
-    bool shouldClearCache_ = true;
     friend class RosenRenderContext;
     ACE_DISALLOW_COPY_AND_MOVE(UINode);
-    bool isMoving_ = false;
     bool isCrossLanguageAttributeSetting_ = false;
-    std::optional<bool> userFreeze_;
-    WeakPtr<UINode> drawChildrenParent_;
-    bool isObservedByDrawChildren_ = false;
-
-    bool uiNodeGcEnable_ = false;
 };
 
 } // namespace OHOS::Ace::NG

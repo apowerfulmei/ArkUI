@@ -15,6 +15,8 @@
 
 #include "core/components/tool_bar/render_tool_bar.h"
 
+#include "core/components/tool_bar/tool_bar_component.h"
+
 namespace OHOS::Ace {
 
 RenderToolBar::RenderToolBar() : RenderNode(true) {}

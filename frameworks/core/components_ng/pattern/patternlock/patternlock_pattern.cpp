@@ -16,6 +16,7 @@
 #include "base/i18n/localization.h"
 #include "core/components_ng/pattern/patternlock/patternlock_pattern.h"
 
+#include "core/components_ng/pattern/patternlock/patternlock_paint_property.h"
 #include "core/components_ng/pattern/stage/page_event_hub.h"
 #include "core/components_ng/pattern/text/text_pattern.h"
 #include "core/components_ng/property/calc_length.h"
@@ -292,9 +293,6 @@ void PatternLockPattern::HandleTouchEvent(const TouchEventInfo& info)
                 OnTouchMove(touchInfo);
             } else if (touchType == TouchType::UP) {
                 OnTouchUp();
-            } else if (Container::GreatOrEqualAPITargetVersion(PlatformVersion::VERSION_FOURTEEN) &&
-                       touchType == TouchType::CANCEL) {
-                OnTouchUp();
             }
             break;
         }
@@ -563,7 +561,7 @@ void PatternLockPattern::InitFocusEvent()
     auto focusHub = host->GetOrCreateFocusHub();
     CHECK_NULL_VOID(focusHub);
 
-    auto focusTask = [weak = WeakClaim(this)](FocusReason reason) {
+    auto focusTask = [weak = WeakClaim(this)]() {
         auto pattern = weak.Upgrade();
         CHECK_NULL_VOID(pattern);
         pattern->HandleFocusEvent();
@@ -891,151 +889,6 @@ void PatternLockPattern::InitSkipUnselectedPoint()
     CHECK_NULL_VOID(patternLockPaintProperty);
     if (patternLockPaintProperty->HasSkipUnselectedPoint()) {
         skipUnselectedPoint_ = patternLockPaintProperty->GetSkipUnselectedPointValue();
-    }
-}
-
-void PatternLockPattern::UpdateSelectedColor(const Color& color, bool isFristLoad)
-{
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    auto pipelineContext = host->GetContext();
-    CHECK_NULL_VOID(pipelineContext);
-    auto paintProperty = host->GetPaintProperty<PatternLockPaintProperty>();
-    CHECK_NULL_VOID(paintProperty);
-    if (pipelineContext->IsSystmColorChange() || isFristLoad) {
-        paintProperty->UpdateSelectedColor(color);
-    }
-    if (host->GetRerenderable()) {
-        host->MarkDirtyNode(PROPERTY_UPDATE_RENDER);
-    }
-}
-
-void PatternLockPattern::UpdatePathColor(const Color& color, bool isFristLoad)
-{
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    auto pipelineContext = host->GetContext();
-    CHECK_NULL_VOID(pipelineContext);
-    auto paintProperty = host->GetPaintProperty<PatternLockPaintProperty>();
-    CHECK_NULL_VOID(paintProperty);
-    if (pipelineContext->IsSystmColorChange() || isFristLoad) {
-        paintProperty->UpdatePathColor(color);
-    }
-    if (host->GetRerenderable()) {
-        host->MarkDirtyNode(PROPERTY_UPDATE_RENDER);
-    }
-}
-
-void PatternLockPattern::UpdateActiveColor(const Color& color, bool isFristLoad)
-{
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    auto pipelineContext = host->GetContext();
-    CHECK_NULL_VOID(pipelineContext);
-    auto paintProperty = host->GetPaintProperty<PatternLockPaintProperty>();
-    CHECK_NULL_VOID(paintProperty);
-    if (pipelineContext->IsSystmColorChange() || isFristLoad) {
-        paintProperty->UpdateActiveColor(color);
-    }
-    if (host->GetRerenderable()) {
-        host->MarkDirtyNode(PROPERTY_UPDATE_RENDER);
-    }
-}
-
-void PatternLockPattern::UpdateRegularColor(const Color& color, bool isFristLoad)
-{
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    auto pipelineContext = host->GetContext();
-    CHECK_NULL_VOID(pipelineContext);
-    auto paintProperty = host->GetPaintProperty<PatternLockPaintProperty>();
-    CHECK_NULL_VOID(paintProperty);
-    if (pipelineContext->IsSystmColorChange() || isFristLoad) {
-        paintProperty->UpdateRegularColor(color);
-    }
-    if (host->GetRerenderable()) {
-        host->MarkDirtyNode(PROPERTY_UPDATE_RENDER);
-    }
-}
-
-void PatternLockPattern::UpdateCircleRadius(const CalcDimension& radius, bool isFristLoad)
-{
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    auto pipelineContext = host->GetContext();
-    CHECK_NULL_VOID(pipelineContext);
-    auto paintProperty = host->GetPaintProperty<PatternLockPaintProperty>();
-    CHECK_NULL_VOID(paintProperty);
-    if (pipelineContext->IsSystmColorChange() || isFristLoad) {
-        paintProperty->UpdateCircleRadius(radius);
-    }
-    if (host->GetRerenderable()) {
-        host->MarkDirtyNode(PROPERTY_UPDATE_RENDER);
-    }
-}
-
-void PatternLockPattern::UpdateSideLength(const CalcDimension& sideLength, bool isFristLoad)
-{
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    auto pipelineContext = host->GetContext();
-    CHECK_NULL_VOID(pipelineContext);
-    auto layoutProperty = host->GetLayoutProperty<PatternLockLayoutProperty>();
-    CHECK_NULL_VOID(layoutProperty);
-    if (pipelineContext->IsSystmColorChange() || isFristLoad) {
-        layoutProperty->UpdateSideLength(sideLength);
-    }
-    if (host->GetRerenderable()) {
-        host->MarkDirtyNode(PROPERTY_UPDATE_RENDER);
-    }
-}
-
-void PatternLockPattern::UpdateActiveCircleColor(const Color& color, bool isFristLoad)
-{
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    auto pipelineContext = host->GetContext();
-    CHECK_NULL_VOID(pipelineContext);
-    auto paintProperty = host->GetPaintProperty<PatternLockPaintProperty>();
-    CHECK_NULL_VOID(paintProperty);
-    if (pipelineContext->IsSystmColorChange() || isFristLoad) {
-        paintProperty->UpdateActiveCircleColor(color);
-    }
-    if (host->GetRerenderable()) {
-        host->MarkDirtyNode(PROPERTY_UPDATE_RENDER);
-    }
-}
-void PatternLockPattern::OnColorConfigurationUpdate()
-{
-    if (!SystemProperties::ConfigChangePerform()) {
-        return;
-    }
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    auto pipeline = host->GetContext();
-    CHECK_NULL_VOID(pipeline);
-    auto theme = pipeline->GetTheme<V2::PatternLockTheme>();
-    CHECK_NULL_VOID(theme);
-    auto pops = host->GetPaintProperty<PatternLockPaintProperty>();
-    CHECK_NULL_VOID(pops);
-    if (!pops->HasPathColorSetByUser() || (pops->HasPathColorSetByUser() && !pops->GetPathColorSetByUserValue())) {
-        pops->UpdatePathColor(theme->GetPathColor());
-    }
-    if (!pops->HasRegularColorSetByUser() ||
-        (pops->HasRegularColorSetByUser() && !pops->GetRegularColorSetByUserValue())) {
-        pops->UpdateRegularColor(theme->GetRegularColor());
-    }
-    if (!pops->HasActiveColorSetByUser() ||
-        (pops->HasActiveColorSetByUser() && !pops->GetActiveColorSetByUserValue())) {
-        pops->UpdateActiveColor(theme->GetActiveColor());
-    }
-    if (!pops->HasSelectedColorSetByUser() ||
-        (pops->HasSelectedColorSetByUser() && !pops->GetSelectedColorSetByUserValue())) {
-        UpdateSelectedColor(theme->GetSelectedColor());
-    }
-    if (!pops->HasActiveCircleColorSetByUser() ||
-        (pops->HasActiveCircleColorSetByUser() && !pops->GetActiveCircleColorSetByUserValue())) {
-        UpdateActiveCircleColor(Color::TRANSPARENT);
     }
 }
 } // namespace OHOS::Ace::NG

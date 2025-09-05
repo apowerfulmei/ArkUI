@@ -38,18 +38,15 @@ ArkUINativeModuleValue LineBridge::SetStartPoint(ArkUIRuntimeCallInfo* runtimeCa
 
     CalcDimension star;
     CalcDimension end;
-    RefPtr<ResourceObject> startResObj;
-    RefPtr<ResourceObject> endResObj;
     std::string calcStr;
     Local<JSValueRef> starItem = panda::ArrayRef::GetValueAt(vm, arrayVal, 0);
     Local<JSValueRef> endItem = panda::ArrayRef::GetValueAt(vm, arrayVal, 1);
-    if (!ArkTSUtils::ParseJsDimensionVpNG(vm, starItem, star, startResObj, false)) {
+    if (!ArkTSUtils::ParseJsDimensionVpNG(vm, starItem, star, false)) {
         star = CalcDimension(0, DimensionUnit::VP);
     }
-    if (!ArkTSUtils::ParseJsDimensionVpNG(vm, endItem, end, endResObj, false)) {
+    if (!ArkTSUtils::ParseJsDimensionVpNG(vm, endItem, end, false)) {
         end = CalcDimension(0, DimensionUnit::VP);
     }
-    std::vector<RefPtr<ResourceObject>> resObjArray = { startResObj, endResObj };
 
     std::vector<ArkUI_Float32> pointValues;
     std::vector<int32_t> pointUnits;
@@ -73,7 +70,7 @@ ArkUINativeModuleValue LineBridge::SetStartPoint(ArkUIRuntimeCallInfo* runtimeCa
     }
 
     GetArkUINodeModifiers()->getLineModifier()->setStartPoint(nativeNode, pointValues.data(),
-        pointUnits.data(), pointStr.data(), resObjArray.data());
+        pointUnits.data(), pointStr.data());
     return panda::JSValueRef::Undefined(vm);
 }
 
@@ -109,18 +106,15 @@ ArkUINativeModuleValue LineBridge::SetEndPoint(ArkUIRuntimeCallInfo* runtimeCall
 
     CalcDimension star;
     CalcDimension end;
-    RefPtr<ResourceObject> startResObj;
-    RefPtr<ResourceObject> endResObj;
     std::string calcStr;
     Local<JSValueRef> starItem = panda::ArrayRef::GetValueAt(vm, arrayVal, 0);
     Local<JSValueRef> endItem = panda::ArrayRef::GetValueAt(vm, arrayVal, 1);
-    if (!ArkTSUtils::ParseJsDimensionVpNG(vm, starItem, star, startResObj, false)) {
+    if (!ArkTSUtils::ParseJsDimensionVpNG(vm, starItem, star, false)) {
         star = CalcDimension(0, DimensionUnit::VP);
     }
-    if (!ArkTSUtils::ParseJsDimensionVpNG(vm, endItem, end, endResObj, false)) {
+    if (!ArkTSUtils::ParseJsDimensionVpNG(vm, endItem, end, false)) {
         end = CalcDimension(0, DimensionUnit::VP);
     }
-    std::vector<RefPtr<ResourceObject>> resObjArray = { startResObj, endResObj };
 
     std::vector<ArkUI_Float32> pointValues;
     std::vector<int32_t> pointUnits;
@@ -144,7 +138,7 @@ ArkUINativeModuleValue LineBridge::SetEndPoint(ArkUIRuntimeCallInfo* runtimeCall
     }
 
     GetArkUINodeModifiers()->getLineModifier()->setEndPoint(nativeNode,
-        pointValues.data(), pointUnits.data(), pointStr.data(), resObjArray.data());
+        pointValues.data(), pointUnits.data(), pointStr.data());
     return panda::JSValueRef::Undefined(vm);
 }
 

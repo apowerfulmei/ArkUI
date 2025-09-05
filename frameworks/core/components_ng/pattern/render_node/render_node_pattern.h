@@ -57,6 +57,11 @@ public:
         return { FocusType::SCOPE, true };
     }
 
+    bool IsNeedInitClickEventRecorder() const override
+    {
+        return true;
+    }
+
     void SetDrawCallback(std::function<void(DrawingContext& context)>&& drawCallback)
     {
         drawCallback_ = drawCallback;
@@ -76,10 +81,6 @@ public:
         CHECK_NULL_RETURN(host, nullptr);
         auto paintProperty = host->GetPaintProperty<RenderNodePaintProperty>();
         paintProperty->SetHost(host);
-        auto context = host->GetRenderContext();
-        if (context != nullptr) {
-            context->SetNeedUseCmdlistDrawRegion(true);
-        }
 
         if (!renderNodeModifier_) {
             renderNodeModifier_ = AceType::MakeRefPtr<RenderNodeModifier>(drawCallback_);

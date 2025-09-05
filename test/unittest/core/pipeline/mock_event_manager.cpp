@@ -99,7 +99,7 @@ bool EventManager::DispatchMouseEventNG(const MouseEvent& event)
     return true;
 }
 
-void EventManager::DispatchMouseHoverAnimationNG(const MouseEvent& event, bool isMockEvent)
+void EventManager::DispatchMouseHoverAnimationNG(const MouseEvent& event)
 {
     SetInstanceId(instanceId_ | DISPATCH_MOUSE_HOVER_ANIMATION_NG_FLAG);
 }
@@ -146,8 +146,8 @@ bool EventManager::HasDifferentDirectionGesture()
 
 EventManager::EventManager() {}
 
-void EventManager::DumpEvent(NG::EventTreeType type, bool hasJson = false) const {}
+void EventManager::DumpEvent(NG::EventTreeType type) const {}
 
-void AddGestureSnapshot(int32_t finger, int32_t depth, const RefPtr<TouchEventTarget>& target, NG::EventTreeType type)
+void AddGestureSnapshot(int32_t finger, int32_t depth,  const RefPtr<TouchEventTarget>& target, NG::EventTreeType type)
 {}
 } // namespace OHOS::Ace

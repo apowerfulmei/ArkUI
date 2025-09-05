@@ -13,7 +13,10 @@
  * limitations under the License.
  */
 
+#include <algorithm>
+#include <cstddef>
 
+#include "native_type.h"
 #include "node/node_transition.h"
 
 #include "base/utils/utils.h"

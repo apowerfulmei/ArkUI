@@ -51,6 +51,16 @@ void FunctionDeleter(void *env, void *nativePointer, void *data)
 
 thread_local EcmaVM* ArkJSRuntime::threadVm_ = nullptr;
 
+void ArkJSRuntime::SetUniqueId(const std::string& uniqueId)
+{
+    uniqueId_ = uniqueId;
+}
+
+const std::string& ArkJSRuntime::GetUniqueId() const
+{
+    return uniqueId_;
+}
+
 bool ArkJSRuntime::Initialize(const std::string& libraryPath, bool isDebugMode, int32_t instanceId)
 {
     RuntimeOption option;
@@ -158,7 +168,8 @@ bool ArkJSRuntime::StartDebugger()
     if (!libPath_.empty()) {
         bool isDebugApp = AceApplicationInfo::GetInstance().IsDebugVersion();
 #if !defined(ANDROID_PLATFORM) && !defined(IOS_PLATFORM)
-        auto callback = [weak = weak_from_this(), isDebugApp](int socketFd, std::string option) {
+        auto callback = [instanceId = instanceId_,
+                            weak = weak_from_this(), isDebugApp](int socketFd, std::string option) {
             LOGI("HdcRegister callback socket %{public}d, option %{public}s.", socketFd, option.c_str());
             if (option.find(DEBUGGER) == std::string::npos) {
                 if (isDebugApp) {
@@ -202,35 +213,6 @@ bool ArkJSRuntime::IsExecuteModuleInAbcFile(
     LocalScope scope(vm_);
     panda::TryCatch trycatch(vm_);
     bool ret = JSNApi::IsExecuteModuleInAbcFile(vm_, bundleName, moduleName, ohmurl);
-    HandleUncaughtException(trycatch);
-    return ret;
-}
-
-bool ArkJSRuntime::IsStaticOrInvalidFile(const uint8_t *data, int32_t size)
-{
-    JSExecutionScope executionScope(vm_);
-    LocalScope scope(vm_);
-    panda::TryCatch trycatch(vm_);
-    JSNApi::PandaFileType fileType = JSNApi::GetFileType(data, size);
-    bool ret;
-    switch (fileType) {
-        case JSNApi::PandaFileType::FILE_DYNAMIC:
-            ret = false;
-            LOGI("ArkJSRuntime::IsStaticOrInvalidFile, file is dynamic");
-            break;
-        case JSNApi::PandaFileType::FILE_STATIC:
-            ret = true;
-            LOGI("ArkJSRuntime::IsStaticOrInvalidFile, file is static");
-            break;
-        case JSNApi::PandaFileType::FILE_FORMAT_INVALID:
-            ret = true;
-            LOGE("ArkJSRuntime::IsStaticOrInvalidFile, file is invalid. reason is param invalid");
-            break;
-        default:
-            ret = true;
-            LOGE("ArkJSRuntime::IsStaticOrInvalidFile, file is invalid");
-    }
-
     HandleUncaughtException(trycatch);
     return ret;
 }
@@ -288,26 +270,18 @@ shared_ptr<JsValue> ArkJSRuntime::GetGlobal()
     return std::make_shared<ArkJSValue>(shared_from_this(), JSNApi::GetGlobalObject(vm_));
 }
 
-shared_ptr<JsValue> ArkJSRuntime::GetGlobal(ArkNativeEngine* nativeArkEngine)
-{
-    LocalScope scope(vm_);
-    CHECK_NULL_RETURN(nativeArkEngine, nullptr);
-    return std::make_shared<ArkJSValue>(
-        shared_from_this(), JSNApi::GetGlobalObject(vm_, nativeArkEngine->GetContext()));
-}
-
 void ArkJSRuntime::RunGC()
 {
     JSExecutionScope executionScope(vm_);
     LocalScope scope(vm_);
-    JSNApi::HintGC(vm_, JSNApi::MemoryReduceDegree::LOW, panda::ecmascript::GCReason::TRIGGER_BY_ARKUI);
+    JSNApi::TriggerGC(vm_, panda::ecmascript::GCReason::TRIGGER_BY_ARKUI, JSNApi::TRIGGER_GC_TYPE::SEMI_GC);
 }
 
 void ArkJSRuntime::RunFullGC()
 {
     JSExecutionScope executionScope(vm_);
     LocalScope scope(vm_);
-    JSNApi::HintGC(vm_, JSNApi::MemoryReduceDegree::HIGH, panda::ecmascript::GCReason::TRIGGER_BY_ARKUI);
+    JSNApi::TriggerGC(vm_, panda::ecmascript::GCReason::TRIGGER_BY_ARKUI, JSNApi::TRIGGER_GC_TYPE::FULL_GC);
 }
 
 shared_ptr<JsValue> ArkJSRuntime::NewInt32(int32_t value)
@@ -392,6 +366,16 @@ void ArkJSRuntime::ThrowError(const std::string& msg, int32_t code)
 void ArkJSRuntime::RegisterUncaughtExceptionHandler(UncaughtExceptionCallback callback)
 {
     JSNApi::EnableUserUncaughtErrorHandler(vm_);
+    std::weak_ptr<ArkJSRuntime> weakThis = shared_from_this();
+    JSNApi::RegisterUncatchableErrorHandler(vm_,
+        [weakThis](auto& tryCatch) {
+            auto sharedThis = weakThis.lock();
+            if (sharedThis) {
+                sharedThis->HandleUncaughtExceptionWithoutNativeEngine(tryCatch, nullptr);
+            } else {
+                LOGE("ArkJSRuntime has been destructed.");
+            }
+        });
     uncaughtErrorHandler_ = callback;
 }
 
@@ -433,7 +417,7 @@ void ArkJSRuntime::HandleUncaughtExceptionWithoutNativeEngine(panda::TryCatch& t
     if (!exception.IsEmpty() && !exception->IsHole()) {
         shared_ptr<JsValue> errorPtr =
             std::static_pointer_cast<JsValue>(std::make_shared<ArkJSValue>(shared_from_this(), exception));
-        uncaughtErrorHandler_(errorPtr, shared_from_this());
+        uncaughtErrorHandler_(errorPtr, shared_from_this(), uniqueId_);
     }
 }
 

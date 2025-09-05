@@ -20,7 +20,6 @@
 #include "base/memory/referenced.h"
 #include "core/components_ng/layout/layout_algorithm.h"
 #include "core/components_ng/layout/layout_wrapper.h"
-#include "core/components_ng/property/layout_policy_property.h"
 
 namespace OHOS::Ace::NG {
 
@@ -46,10 +45,7 @@ private:
     float defaultHeight_ = 0.0f;
     float horizontalPadding_ = 0.0f;
     float verticalPadding_ = 0.0f;
-    void InitializeParam(const RefPtr<FrameNode>& host);
-    std::optional<SizeF> LayoutPolicyIsMatchParent(const LayoutConstraintF& contentConstraint,
-        std::optional<NG::LayoutPolicyProperty> layoutPolicy, LayoutWrapper* layoutWrapper);
-    std::optional<NG::LayoutPolicyProperty> GetLayoutPolicy(LayoutWrapper* layoutWrapper);
+    void InitializeParam();
 
     ACE_DISALLOW_COPY_AND_MOVE(CheckBoxLayoutAlgorithm);
 };

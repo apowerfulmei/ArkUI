@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -45,7 +45,6 @@ class CheckboxGroupSelectedColorModifier extends ModifierWithKey<ResourceColor> 
     return !isBaseOrResourceEqual(this.stageValue, this.value);
   }
 }
-
 
 class CheckboxGroupUnselectedColorModifier extends ModifierWithKey<ResourceColor> {
   constructor(value: ResourceColor) {
@@ -158,61 +157,9 @@ class CheckboxGroupStyleModifier extends ModifierWithKey<CheckBoxShape> {
   }
 }
 
-class CheckBoxGroupOptionsModifier extends ModifierWithKey<CheckboxGroupOptions> {
-  constructor(value: CheckboxGroupOptions) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('checkboxGroupOptions');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().checkbox.setCheckboxGroupOptions(node, undefined);
-    } else {
-      getUINativeModule().checkbox.setCheckboxGroupOptions(node, this.value.group);
-    }
-  }
-
-  checkObjectDiff(): boolean {
-    return !isBaseOrResourceEqual(this.stageValue.group, this.value.group);
-  }
-}
-
-class CheckboxGroupOnChangeModifier extends ModifierWithKey<OnCheckboxGroupChangeCallback> {
-  constructor(value: OnCheckboxGroupChangeCallback) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('checkboxOnChange');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().checkboxgroup.resetCheckboxGroupOnChange(node);
-    } else {
-      getUINativeModule().checkboxgroup.setCheckboxGroupOnChange(node, this.value);
-    }
-  }
-}
-
 class ArkCheckboxGroupComponent extends ArkComponent implements CheckboxGroupAttribute {
-  builder: WrappedBuilder<Object[]> | null = null;
-  checkboxgroupNode: BuilderNode<[CheckBoxGroupConfiguration]> | null = null;
-  modifier: ContentModifier<CheckBoxGroupConfiguration>;
-  needRebuild: boolean = false;
   constructor(nativePtr: KNode, classType?: ModifierType) {
     super(nativePtr, classType);
-  }
-  allowChildCount(): number {
-    return 0;
-  }
-  initialize(value: Object[]): this {
-    if (!value.length) {
-      return this;
-    }
-    if (!isUndefined(value[0]) && !isNull(value[0]) && isObject(value[0])) {
-      modifierWithKey(this._modifiersWithKeys, CheckBoxGroupOptionsModifier.identity, CheckBoxGroupOptionsModifier,
-        value[0]);
-    } else {
-      modifierWithKey(this._modifiersWithKeys, CheckBoxGroupOptionsModifier.identity, CheckBoxGroupOptionsModifier,
-        undefined);
-    }
-    return this;
   }
   selectAll(value: boolean): this {
     modifierWithKey(this._modifiersWithKeys, CheckboxGroupSelectAllModifier.identity, CheckboxGroupSelectAllModifier, value);
@@ -231,9 +178,8 @@ class ArkCheckboxGroupComponent extends ArkComponent implements CheckboxGroupAtt
       this._modifiersWithKeys, CheckboxGroupMarkModifier.identity, CheckboxGroupMarkModifier, value);
     return this;
   }
-  onChange(callback: OnCheckboxGroupChangeCallback ): this {
-    modifierWithKey(this._modifiersWithKeys, CheckboxGroupOnChangeModifier.identity, CheckboxGroupOnChangeModifier, callback);
-    return this;
+  onChange(callback: (event: CheckboxGroupResult) => void): CheckboxGroupAttribute {
+    throw new Error('Method not implemented.');
   }
   size(value: SizeOptions): this {
     modifierWithKey(
@@ -253,45 +199,6 @@ class ArkCheckboxGroupComponent extends ArkComponent implements CheckboxGroupAtt
     modifierWithKey(this._modifiersWithKeys, CheckboxGroupStyleModifier.identity, CheckboxGroupStyleModifier, value);
     return this;
   }
-  contentModifier(value: ContentModifier<CheckBoxGroupConfiguration>): this {
-    modifierWithKey(this._modifiersWithKeys, CheckBoxGroupContentModifier.identity, CheckBoxGroupContentModifier, value);
-    return this;
-  }
-  setContentModifier(modifier: ContentModifier<CheckBoxGroupConfiguration>): this {
-    if (modifier === undefined || modifier === null) {
-      getUINativeModule().checkboxgroup.setContentModifierBuilder(this.nativePtr, false);
-      return;
-    }
-    this.needRebuild = false;
-    if (this.builder !== modifier.applyContent()) {
-      this.needRebuild = true;
-    }
-    this.builder = modifier.applyContent();
-    this.modifier = modifier;
-    getUINativeModule().checkboxgroup.setContentModifierBuilder(this.nativePtr, this);
-  }
-  makeContentModifierNode(context: UIContext, CheckBoxGroupConfiguration: CheckBoxGroupConfiguration): FrameNode | null {
-    CheckBoxGroupConfiguration.contentModifier = this.modifier;
-    if (isUndefined(this.checkboxgroupNode) || this.needRebuild) {
-      const xNode = globalThis.requireNapi('arkui.node');
-      this.checkboxgroupNode = new xNode.BuilderNode(context);
-      this.checkboxgroupNode.build(this.builder, CheckBoxGroupConfiguration);
-      this.needRebuild = false;
-    } else {
-      this.checkboxgroupNode.update(CheckBoxGroupConfiguration);
-    }
-    return this.checkboxgroupNode.getFrameNode();
-  }
-}
-class CheckBoxGroupContentModifier extends ModifierWithKey<ContentModifier<CheckBoxGroupConfiguration>> {
-  constructor(value: ContentModifier<CheckBoxGroupConfiguration>) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('checkBoxGroupContentModifier');
-  applyPeer(node: KNode, reset: boolean, component: ArkComponent): void {
-    let checkboxGroupComponent = component as ArkCheckboxGroupComponent;
-    checkboxGroupComponent.setContentModifier(this.value);
-  }
 }
 // @ts-ignore
 globalThis.CheckboxGroup.attributeModifier = function (modifier: ArkComponent): void {
@@ -300,13 +207,4 @@ globalThis.CheckboxGroup.attributeModifier = function (modifier: ArkComponent): 
   }, (nativePtr: KNode, classType: ModifierType, modifierJS: ModifierJS) => {
     return new modifierJS.CheckboxGroupModifier(nativePtr, classType);
   });
-};
-// @ts-ignore
-globalThis.CheckboxGroup.contentModifier = function (modifier: ContentModifier<CheckBoxGroupConfiguration>): void {
-  const elmtId = ViewStackProcessor.GetElmtIdToAccountFor();
-  let nativeNode = getUINativeModule().getFrameNodeById(elmtId);
-  let component = this.createOrGetNode(elmtId, () => {
-    return new ArkCheckboxGroupComponent(nativeNode);
-  });
-  component.setContentModifier(modifier);
 };

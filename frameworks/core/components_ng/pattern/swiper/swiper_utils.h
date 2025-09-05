@@ -46,47 +46,15 @@ public:
 
     static float GetItemSpace(const RefPtr<SwiperLayoutProperty>& property)
     {
-        if (!property || property->IgnoreItemSpace()) {
+        if (property->IgnoreItemSpace()) {
             return 0.0f;
         }
         return property->GetItemSpace().value_or(0.0_px).ConvertToPx();
     }
 
-    static LayoutConstraintF CheckLayoutPolicyConstraint(const RefPtr<SwiperLayoutProperty>& property,
-        OptionalSizeF childSelfIdealSize, LayoutConstraintF layoutConstraint)
-    {
-        auto layoutPolicy = property->GetLayoutPolicyProperty();
-        auto axis = property->GetDirection().value_or(Axis::HORIZONTAL);
-        if (layoutPolicy.has_value()) {
-            auto widthLayoutPolicy = layoutPolicy.value().widthLayoutPolicy_.value_or(LayoutCalPolicy::NO_MATCH);
-            auto heightLayoutPolicy = layoutPolicy.value().heightLayoutPolicy_.value_or(LayoutCalPolicy::NO_MATCH);
-            // crosss axis set maxSize and reset IdealSize'cross width/heigth, when layoutPolicy is matchParent
-            if (axis == Axis::HORIZONTAL && heightLayoutPolicy == LayoutCalPolicy::MATCH_PARENT) {
-                auto heightOpt = childSelfIdealSize.Height();
-                if (heightOpt) {
-                    layoutConstraint.maxSize.SetHeight(heightOpt.value());
-                }
-                auto width = childSelfIdealSize.Width();
-                childSelfIdealSize.Reset();
-                childSelfIdealSize.SetWidth(width);
-            } else if (axis == Axis::VERTICAL && widthLayoutPolicy == LayoutCalPolicy::MATCH_PARENT) {
-                auto widthOpt = childSelfIdealSize.Width();
-                if (widthOpt) {
-                    layoutConstraint.maxSize.SetWidth(widthOpt.value());
-                }
-                auto height = childSelfIdealSize.Height();
-                childSelfIdealSize.Reset();
-                childSelfIdealSize.SetHeight(height);
-            }
-        }
-        layoutConstraint.selfIdealSize = childSelfIdealSize;
-        return layoutConstraint;
-    }
-
     static LayoutConstraintF CreateChildConstraint(
         const RefPtr<SwiperLayoutProperty>& property, const OptionalSizeF& idealSize, bool getAutoFill)
     {
-        CHECK_NULL_RETURN(property, {});
         auto layoutConstraint = property->CreateChildConstraint();
         layoutConstraint.parentIdealSize = idealSize;
         auto displayCount = property->GetDisplayCount().value_or(1);
@@ -132,8 +100,9 @@ public:
             axis == Axis::HORIZONTAL ? childSelfIdealSize.SetWidth(childCalcIdealLength)
                                      : childSelfIdealSize.SetHeight(childCalcIdealLength);
         }
-        
-        return CheckLayoutPolicyConstraint(property, childSelfIdealSize, layoutConstraint);
+
+        layoutConstraint.selfIdealSize = childSelfIdealSize;
+        return layoutConstraint;
     }
 
     static int32_t CaculateDisplayItemSpaceCount(
@@ -175,7 +144,6 @@ public:
     static void CheckAutoFillDisplayCount(
         RefPtr<SwiperLayoutProperty>& swiperLayoutProperty, float contentWidth, int32_t totalCount)
     {
-        CHECK_NULL_VOID(swiperLayoutProperty);
         bool isAutoFill = swiperLayoutProperty->GetMinSize().has_value();
         if (!isAutoFill) {
             return;
@@ -194,17 +162,6 @@ public:
         if (displayCountProperty != displayCount) {
             swiperLayoutProperty->UpdateDisplayCount(displayCount);
         }
-    }
-
-    static bool CheckIsSingleCase(const RefPtr<SwiperLayoutProperty>& property)
-    {
-        bool hasMinSize = property->GetMinSize().has_value() && !LessOrEqual(property->GetMinSizeValue().Value(), 0);
-        bool hasPrevMargin = Positive(property->GetCalculatedPrevMargin());
-        bool hasNextMargin = Positive(property->GetCalculatedNextMargin());
-
-        return !hasMinSize && (!hasPrevMargin && !hasNextMargin) &&
-               ((property->GetDisplayCount().has_value() && property->GetDisplayCountValue() == 1) ||
-                   (!property->GetDisplayCount().has_value() && SwiperUtils::IsStretch(property)));
     }
 
 private:

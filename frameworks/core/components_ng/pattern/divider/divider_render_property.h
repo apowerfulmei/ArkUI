@@ -26,7 +26,7 @@
 namespace OHOS::Ace::NG {
 // PaintProperty are used to set render properties.
 class DividerRenderProperty : public PaintProperty {
-    DECLARE_ACE_TYPE(DividerRenderProperty, PaintProperty);
+    DECLARE_ACE_TYPE(DividerRenderProperty, PaintProperty)
 public:
     DividerRenderProperty() = default;
     ~DividerRenderProperty() override = default;
@@ -53,11 +53,9 @@ public:
         if (filter.IsFastFilter()) {
             return;
         }
-        auto host = GetHost();
-        CHECK_NULL_VOID(host);
-        auto pipelineContext = host->GetContext();
+        auto pipelineContext = PipelineBase::GetCurrentContext();
         CHECK_NULL_VOID(pipelineContext);
-        auto theme = pipelineContext->GetTheme<DividerTheme>(host->GetThemeScopeId());
+        auto theme = pipelineContext->GetTheme<DividerTheme>();
         CHECK_NULL_VOID(theme);
         json->PutExtAttr("color", propDividerColor_.value_or(theme->GetColor()).ColorToString().c_str(), filter);
         json->PutExtAttr("lineCap",
@@ -73,70 +71,9 @@ public:
         PaintProperty::FromJson(json);
     }
 
-    const std::optional<Color>& GetDividerColor() const
-    {
-        return propDividerColor_;
-    }
-
-    bool HasDividerColor() const
-    {
-        return propDividerColor_.has_value();
-    }
-
-    const Color& GetDividerColorValue() const
-    {
-        return propDividerColor_.value();
-    }
-
-    const Color& GetDividerColorValue(const Color& defaultValue) const
-    {
-        if (!HasDividerColor()) {
-            return defaultValue;
-        }
-        return propDividerColor_.value();
-    }
-
-    std::optional<Color> CloneDividerColor() const
-    {
-        return propDividerColor_;
-    }
-
-    void ResetDividerColor()
-    {
-        return propDividerColor_.reset();
-    }
-
-    void UpdateDividerColor(const Color& value)
-    {
-        if (SystemProperties::ConfigChangePerform()) {
-            UpdateDividerColorSetByUser(true);
-        }
-        if (propDividerColor_.has_value()) {
-            if (NearEqual(propDividerColor_.value(), value)) {
-                return;
-            }
-        }
-        propDividerColor_ = value;
-        UpdatePropertyChangeFlag(PROPERTY_UPDATE_RENDER);
-    }
-
-    void UpdateDividerColorByTheme(const Color& value)
-    {
-        if (propDividerColor_.has_value()) {
-            if (NearEqual(propDividerColor_.value(), value)) {
-                return;
-            }
-        }
-        propDividerColor_ = value;
-        UpdatePropertyChangeFlag(PROPERTY_UPDATE_RENDER);
-    }
-
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(DividerColorSetByUser, bool, PROPERTY_UPDATE_RENDER);
+    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(DividerColor, Color, PROPERTY_UPDATE_RENDER);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(LineCap, LineCap, PROPERTY_UPDATE_RENDER);
     ACE_DISALLOW_COPY_AND_MOVE(DividerRenderProperty);
-
-protected:
-    std::optional<Color> propDividerColor_;
 };
 } // namespace OHOS::Ace::NG
 #endif // FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_PATTERN_DIVIDER_DIVIDER_RENDER_PROPERTY_H

@@ -21,7 +21,6 @@
 #include "base/geometry/axis.h"
 #include "base/memory/referenced.h"
 #include "core/components/common/layout/grid_system_manager.h"
-#include "core/components/common/properties/alignment.h"
 #include "core/components_ng/layout/layout_algorithm.h"
 #include "core/components_ng/layout/layout_wrapper.h"
 
@@ -33,34 +32,24 @@ class ACE_EXPORT ScrollLayoutAlgorithm : public LayoutAlgorithm {
     DECLARE_ACE_TYPE(ScrollLayoutAlgorithm, LayoutAlgorithm);
 
 public:
-    explicit ScrollLayoutAlgorithm(float currentOffset, float crossOffset = 0.0f)
-        : crossOffset_(crossOffset), currentOffset_(currentOffset)
-    {}
+    explicit ScrollLayoutAlgorithm(float currentOffset) : currentOffset_(currentOffset) {}
     ~ScrollLayoutAlgorithm() override = default;
 
     void OnReset() override {}
+
+    void SetCurrentOffset(float offset)
+    {
+        currentOffset_ = offset;
+    }
 
     float GetCurrentOffset() const
     {
         return currentOffset_;
     }
 
-    OffsetF GetFreeOffset() const
-    {
-        return { currentOffset_, crossOffset_ };
-    }
-
     float GetScrollableDistance() const
     {
         return scrollableDistance_;
-    }
-
-    /**
-     * @return 2D scrollable distance for free mode.
-     */
-    SizeF GetScrollableArea() const
-    {
-        return { scrollableDistance_, viewPortExtent_.Height() - viewPort_.Height() };
     }
 
     float GetViewPortLength() const
@@ -87,20 +76,14 @@ public:
 
     void Layout(LayoutWrapper* layoutWrapper) override;
     void UpdateOverlay(LayoutWrapper* layoutWrapper);
-    void MarkAndCheckNewOpIncNode(const RefPtr<LayoutWrapper>& layoutWrapper, Axis axis);
 
 private:
-    void UseInitialOffset(Axis axis, SizeF selfSize, LayoutWrapper* layoutWrapper);
-    bool UnableOverScroll(LayoutWrapper* layoutWrapper) const;
-    void OnSurfaceChanged(LayoutWrapper* layoutWrapper, float contentMainSize);
-
-    float crossOffset_;
     float currentOffset_ = 0.0f;
     float scrollableDistance_ = 0.0f;
     float viewPortLength_ = 0.0f;
-    SizeF viewPort_;       // content area size (viewSize_ minus padding)
-    SizeF viewPortExtent_; // size of child (scrollable area)
-    SizeF viewSize_;       // size of the Scroll component
+    SizeF viewPort_;
+    SizeF viewPortExtent_;
+    SizeF viewSize_;
     void UpdateScrollAlignment(Alignment& scrollAlignment);
 };
 

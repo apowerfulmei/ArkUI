@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2022-2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -18,10 +18,6 @@
 
 #include "base/geometry/axis.h"
 #include "core/components/common/layout/constants.h"
-#include "core/components_ng/gestures/recognizers/pan_recognizer.h"
-#include "core/components_ng/gestures/recognizers/parallel_recognizer.h"
-#include "core/components_ng/pattern/scroll/free_scroll_controller.h"
-#include "core/components_ng/pattern/scroll/inner/scroll_bar_2d.h"
 #include "core/components_ng/pattern/scroll/scroll_accessibility_property.h"
 #include "core/components_ng/pattern/scroll/scroll_content_modifier.h"
 #include "core/components_ng/pattern/scroll/scroll_edge_effect.h"
@@ -30,13 +26,8 @@
 #include "core/components_ng/pattern/scroll/scroll_layout_property.h"
 #include "core/components_ng/pattern/scroll/scroll_paint_method.h"
 #include "core/components_ng/pattern/scroll_bar/proxy/scroll_bar_proxy.h"
-#include "core/components_ng/pattern/scroll/zoom_controller.h"
 #include "core/components_ng/pattern/scrollable/scrollable_pattern.h"
 #include "core/components_ng/pattern/scrollable/scrollable_properties.h"
-
-#ifdef SUPPORT_DIGITAL_CROWN
-#include "core/common/vibrator/vibrator_utils.h"
-#endif
 
 namespace OHOS::Ace::NG {
 class InspectorFilter;
@@ -66,15 +57,34 @@ public:
 
     RefPtr<LayoutAlgorithm> CreateLayoutAlgorithm() override
     {
-        if (freeScroll_) {
-            return MakeRefPtr<ScrollLayoutAlgorithm>(freeScroll_->GetOffset().GetX(), freeScroll_->GetOffset().GetY());
-        }
-        return MakeRefPtr<ScrollLayoutAlgorithm>(currentOffset_);
+        auto layoutAlgorithm = MakeRefPtr<ScrollLayoutAlgorithm>(currentOffset_);
+        return layoutAlgorithm;
     }
 
+    RefPtr<NodePaintMethod> CreateNodePaintMethod() override
+    {
+        auto host = GetHost();
+        CHECK_NULL_RETURN(host, nullptr);
+        auto layoutProperty = host->GetLayoutProperty<ScrollLayoutProperty>();
+        CHECK_NULL_RETURN(layoutProperty, nullptr);
+        auto layoutDirection = layoutProperty->GetNonAutoLayoutDirection();
+        auto drawDirection = (layoutDirection == TextDirection::RTL);
+        auto paint = MakeRefPtr<ScrollPaintMethod>(GetAxis() == Axis::HORIZONTAL, drawDirection);
+        paint->SetScrollBar(GetScrollBar());
+        CreateScrollBarOverlayModifier();
+        paint->SetScrollBarOverlayModifier(GetScrollBarOverlayModifier());
+        auto scrollEffect = GetScrollEdgeEffect();
+        if (scrollEffect && scrollEffect->IsFadeEffect()) {
+            paint->SetEdgeEffect(scrollEffect);
+        }
+        if (!scrollContentModifier_) {
+            scrollContentModifier_ = AceType::MakeRefPtr<ScrollContentModifier>();
+        }
+        paint->SetContentModifier(scrollContentModifier_);
+        UpdateFadingEdge(paint);
+        return paint;
+    }
     RefPtr<PaintProperty> CreatePaintProperty() override;
-
-    RefPtr<NodePaintMethod> CreateNodePaintMethod() override;
 
     OPINC_TYPE_E OpIncType() override
     {
@@ -105,7 +115,7 @@ public:
         return currentOffset_;
     }
 
-    double GetTotalOffset() const override
+    float GetTotalOffset() const override
     {
         return -currentOffset_;
     }
@@ -115,9 +125,9 @@ public:
     Offset GetCurrentOffset() const
     {
         if (GetAxis() == Axis::HORIZONTAL) {
-            return Offset { currentOffset_, 0 };
+            return Offset{currentOffset_, 0};
         }
-        return Offset { 0, currentOffset_ };
+        return Offset{0, currentOffset_};
     }
 
     float GetScrollableDistance() const
@@ -132,7 +142,7 @@ public:
 
     bool IsColReverse() const
     {
-        return direction_ == FlexDirection::COLUMN_REVERSE;
+        return  direction_ == FlexDirection::COLUMN_REVERSE;
     }
 
     RefPtr<ScrollableController> GetScrollPositionController() const
@@ -154,7 +164,7 @@ public:
     ScrollOffsetAbility GetScrollOffsetAbility() override;
 
     bool IsAtTop() const override;
-    bool IsAtBottom(bool considerRepeat = false) const override;
+    bool IsAtBottom() const override;
     bool IsOutOfBoundary(bool useCurrentDelta = true) override;
     OverScrollOffset GetOverScrollOffset(double delta) const override;
 
@@ -192,12 +202,10 @@ public:
     Rect GetItemRect(int32_t index) const override;
 
     // scrollSnap
-    std::optional<float> CalcPredictSnapOffset(float delta, float dragDistance = 0.f, float velocity = 0.f,
-        SnapDirection snapDirection = SnapDirection::NONE) override;
-    std::optional<float> CalcPredictNextSnapOffset(float delta, SnapDirection snapDirection);
+    std::optional<float> CalePredictSnapOffset(float delta, float dragDistance = 0.f, float velocity = 0.f) override;
     bool NeedScrollSnapToSide(float delta) override;
-    void CaleSnapOffsets(const RefPtr<FrameNode>& host);
-    void CaleSnapOffsetsByInterval(ScrollSnapAlign scrollSnapAlign, const RefPtr<FrameNode>& host);
+    void CaleSnapOffsets();
+    void CaleSnapOffsetsByInterval(ScrollSnapAlign scrollSnapAlign);
     void CaleSnapOffsetsByPaginations(ScrollSnapAlign scrollSnapAlign);
 
     float GetSelectScrollWidth();
@@ -225,15 +233,6 @@ public:
             scrollSnapUpdate_ = true;
         }
     }
-
-#ifdef SUPPORT_DIGITAL_CROWN
-    void StartVibrateFeedback();
-
-    void SetReachBoundary(bool flag)
-    {
-        reachBoundary_ = flag;
-    }
-#endif
 
     Dimension GetIntervalSize() const
     {
@@ -282,8 +281,6 @@ public:
         return scrollLayoutProperty->GetScrollSnapAlign().value_or(ScrollSnapAlign::NONE);
     }
 
-    ScrollSnapAlign GetScrollSnapAlign(const RefPtr<FrameNode>& host) const;
-
     std::string ProvideRestoreInfo() override;
     void OnRestoreInfo(const std::string& restoreInfo) override;
 
@@ -319,7 +316,7 @@ public:
 
     void SetEnablePaging(ScrollPagingStatus status)
     {
-        enablePagingStatus_ = status;
+        enablePagingStatus_ =  status;
     }
 
     ScrollPagingStatus GetEnablePaging()
@@ -331,14 +328,6 @@ public:
     {
         return !snapOffsets_.empty() &&
                (GetScrollSnapAlign() != ScrollSnapAlign::NONE || enablePagingStatus_ == ScrollPagingStatus::VALID);
-    }
-
-    SnapType GetSnapType() override
-    {
-        return (!snapOffsets_.empty() &&
-                   (GetScrollSnapAlign() != ScrollSnapAlign::NONE || enablePagingStatus_ == ScrollPagingStatus::VALID))
-                   ? SnapType::SCROLL_SNAP
-                   : SnapType::NONE_SNAP;
     }
 
     void TriggerModifyDone();
@@ -364,37 +353,26 @@ public:
     void AddScrollLayoutInfo();
 
     void GetScrollSnapAlignDumpInfo();
-    void GetScrollSnapAlignDumpInfo(std::unique_ptr<JsonValue>& json);
 
     void GetScrollPagingStatusDumpInfo();
-    void GetScrollPagingStatusDumpInfo(std::unique_ptr<JsonValue>& json);
-    void DumpAdvanceInfo() override;
-    void DumpAdvanceInfo(std::unique_ptr<JsonValue>& json) override;
 
-    const SizeF& GetViewSize() const
+    void DumpAdvanceInfo() override;
+
+    SizeF GetViewSize() const
     {
         return viewSize_;
     }
 
-    const SizeF& GetViewPortExtent() const
+    SizeF GetViewPortExtent() const
     {
         return viewPortExtent_;
     }
 
     void ToJsonValue(std::unique_ptr<JsonValue>& json, const InspectorFilter& filter) const override;
 
-    bool StartSnapAnimation(SnapAnimationOptions snapAnimationOptions) override;
-
-    void StartScrollSnapAnimation(float scrollSnapDelta, float scrollSnapVelocity, bool fromScrollBar);
+    bool OnScrollSnapCallback(double targetOffset, double velocity) override;
 
     SizeF GetChildrenExpandedSize() override;
-
-    void TriggerScrollBarDisplay();
-
-    bool IsEnablePagingValid() override
-    {
-        return enablePagingStatus_ == ScrollPagingStatus::VALID && GetScrollSnapAlign() == ScrollSnapAlign::NONE;
-    }
 
 protected:
     void DoJump(float position, int32_t source = SCROLL_FROM_JUMP);
@@ -410,85 +388,39 @@ private:
     bool IsScrollOutOnEdge(float delta) const;
     void HandleCrashTop();
     void HandleCrashBottom();
+    bool IsEnablePagingValid() const
+    {
+        return enablePagingStatus_ == ScrollPagingStatus::VALID && GetScrollSnapAlign() == ScrollSnapAlign::NONE;
+    }
 
     void RegisterScrollBarEventTask();
     void HandleScrollEffect();
     void ValidateOffset(int32_t source);
-    double ValidateOffset(int32_t source, double willScrollOffset);
+    float ValidateOffset(int32_t source, float willScrollOffset);
     void HandleScrollPosition(float scroll);
     float FireTwoDimensionOnWillScroll(float scroll);
-    TwoDimensionScrollResult FireObserverTwoDimensionOnWillScroll(Dimension xOffset, Dimension yOffset,
-        ScrollState state, ScrollSource source);
     void FireOnDidScroll(float scroll);
-    void FireOnReachStart(const OnReachEvent& onReachStart, const OnReachEvent& onJSFrameNodeReachStart) override;
-    void FireOnReachEnd(const OnReachEvent& onReachEnd, const OnReachEvent& onJSFrameNodeReachEnd) override;
+    void FireOnReachStart(const OnReachEvent& onReachStart) override;
+    void FireOnReachEnd(const OnReachEvent& onReachEnd) override;
     void SetEdgeEffectCallback(const RefPtr<ScrollEdgeEffect>& scrollEffect) override;
     void UpdateScrollBarOffset() override;
     void SetAccessibilityAction() override;
     bool ScrollSnapTrigger();
     void CheckScrollable();
     OffsetF GetOffsetToScroll(const RefPtr<FrameNode>& childFrame) const;
-    bool SetScrollProperties(const RefPtr<LayoutWrapper>& dirty, const RefPtr<FrameNode>& host);
+    bool SetScrollProperties(const RefPtr<LayoutWrapper>& dirty);
     std::string GetScrollSnapPagination() const;
-    void OnColorModeChange(uint32_t colorMode) override;
 
-    double currentOffset_ = 0.0;
-    double lastOffset_ = 0.0;
+    float currentOffset_ = 0.0f;
+    float lastOffset_ = 0.0f;
     // keep lastOffset_ for compatibility, use prevOffset_ for onReachStart/onReachEnd
-    double prevOffset_ = 0.0;
-    double scrollableDistance_ = 0.0;
+    float prevOffset_ = 0.0f;
+    float scrollableDistance_ = 0.0f;
     float viewPortLength_ = 0.0f;
     SizeF viewPort_;
     SizeF viewSize_;
     SizeF viewPortExtent_;
     FlexDirection direction_ { FlexDirection::COLUMN };
-
-    /* ============================= zoom Enhancements ============================= */
-public:
-    void SetMaxZoomScale(float scale);
-    float GetMaxZoomScale() const;
-    void SetMinZoomScale(float scale);
-    float GetMinZoomScale() const;
-    void SetZoomScale(std::optional<float> scale);
-    float GetZoomScale() const;
-    void UpdateZoomScale(float scale);
-    void SetEnableBouncesZoom(bool enable);
-    bool GetEnableBouncesZoom() const;
-    void ProcessZoomScale();
-    void SetChildScale(std::optional<float> scale);
-private:
-    void UpdatePinchGesture();
-    friend class ZoomController;
-    RefPtr<ZoomController> zoomCtrl_;
-    float maxZoomScale_ = 1.0f;
-    float minZoomScale_ = 1.0f;
-    std::optional<float> zoomScale_;
-    std::optional<float> childScale_;
-    bool enableBouncesZoom_ = true;
-    /* ============================================================================== */
-
-    /* ============================= Free Scroll Enhancements ============================= */
-public:
-    /**
-     * @return Pan gesture recognizer configured for Axis::FREE mode
-     */
-    RefPtr<NGGestureRecognizer> GetOverrideRecognizer();
-    RefPtr<ScrollBar2D> Get2DScrollBar() const
-    {
-        return scrollBar2d_;
-    }
-
-    Offset GetFreeScrollOffset() const final;
-    bool FreeScrollBy(const OffsetF& delta) final;
-    bool FreeScrollPage(bool reverse, bool smooth) final;
-    bool FreeScrollToEdge(ScrollEdgeType type, bool smooth, std::optional<float> velocity) final;
-    void FreeScrollTo(const ScrollControllerBase::ScrollToParam& param) final;
-
-private:
-    RefPtr<ParallelRecognizer> gestureGroup_;
-    RefPtr<FreeScrollController> freeScroll_;
-    RefPtr<ScrollBar2D> scrollBar2d_;
-    /* ============================================================================== */
 
     // scrollSnap
     std::vector<float> snapOffsets_;
@@ -504,26 +436,20 @@ private:
     // enablePaging
     ScrollPagingStatus enablePagingStatus_ = ScrollPagingStatus::NONE;
     float lastPageLength_ = 0.0f;
-    float GetPagingOffset(float delta, float dragDistance, float velocity) const;
+    float GetPagingOffset(float delta, float dragDistance, float velocity)  const;
     float GetPagingDelta(float dragDistance, float velocity, float pageLength) const;
 
     RefPtr<ScrollContentModifier> scrollContentModifier_;
 
-    // initialOffset
+    //initialOffset
     std::optional<OffsetT<CalcDimension>> initialOffset_;
 
-    // scrollToEdge
+    //scrollToEdge
     ScrollEdgeType scrollEdgeType_ = ScrollEdgeType::SCROLL_NONE;
 
     // dump info
     std::list<ScrollLayoutInfo> scrollLayoutInfos_;
     std::list<ScrollMeasureInfo> scrollMeasureInfos_;
-
-#ifdef SUPPORT_DIGITAL_CROWN
-    int32_t crownEventNum_ = 0;
-    bool reachBoundary_ = false;
-    int64_t lastTime_ = 0;
-#endif
 };
 
 } // namespace OHOS::Ace::NG

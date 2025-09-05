@@ -42,7 +42,6 @@ public:
     virtual void SetAlphaF(float a) {}
     virtual void SetARGB(int r, int g, int b, int a) {}
     virtual void Reset() {}
-    virtual void SetColor(const TestingColor4f& cf, std::shared_ptr<TestingColorSpace> s) {}
     const TestingFilter& GetFilter() const
     {
         return filer_;

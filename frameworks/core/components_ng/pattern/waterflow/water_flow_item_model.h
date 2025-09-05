@@ -19,12 +19,10 @@
 #include <memory>
 #include <mutex>
 
-#include "frameworks/base/utils/macros.h"
-
 namespace OHOS::Ace {
 class WaterFlowItemModel {
 public:
-    ACE_FORCE_EXPORT static WaterFlowItemModel* GetInstance();
+    static WaterFlowItemModel* GetInstance();
     virtual ~WaterFlowItemModel() = default;
 
     virtual void Create() = 0;

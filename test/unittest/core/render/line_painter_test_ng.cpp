@@ -40,6 +40,7 @@ const NG::OffsetF OFFSET_TEST { 1, 1 };
 static constexpr NG::ShapePoint START_POINT = ShapePoint(10.0, 10.0);
 static constexpr NG::ShapePoint END_POINT = ShapePoint(30.0, 30.0);
 
+Testing::MockCanvas canvas;
 } // namespace
 
 class LinePainterTestNg : public testing::Test {
@@ -62,8 +63,6 @@ void LinePainterTestNg::CallBack(Testing::MockCanvas& rSCanvas)
  */
 HWTEST_F(LinePainterTestNg, LinePainterTestNg001, TestSize.Level1)
 {
-    Testing::MockCanvas* canvasPtr = new Testing::MockCanvas();
-    Testing::MockCanvas& canvas = *canvasPtr;
     /**
      * @tc.steps1: create canvas pen and linePaintProperty object.
      */
@@ -94,6 +93,5 @@ HWTEST_F(LinePainterTestNg, LinePainterTestNg001, TestSize.Level1)
     bool result_test = NG::ShapePainter::SetPen(pen, linePaintProperty);
     EXPECT_FALSE(result_test);
     EXPECT_TRUE(linePaintProperty.HasStrokeWidth());
-    testing::Mock::AllowLeak(canvasPtr);
 }
 } // namespace OHOS::Ace

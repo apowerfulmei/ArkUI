@@ -55,12 +55,6 @@ struct AvgPoint {
     }
 };
 
-enum class CoordinateType : int32_t {
-    NORMAL = 0,
-    SCREEN = 1,
-    GLOBALDISPLAY = 2,
-};
-
 struct ResamplePoint {
     float x{};
     float y{};
@@ -75,14 +69,14 @@ public:
     ~ResampleAlgo() = delete;
 
     static AvgPoint GetAvgPoint(const std::vector<PointerEvent>&& events,
-        CoordinateType coordinateType);
+        bool isScreen);
 
     static ResamplePoint LinearInterpolation(const AvgPoint& history, const AvgPoint& current,
         uint64_t nanoTimeStamp);
 
     static ResamplePoint GetResampleCoord(const std::vector<PointerEvent>&& history,
         const std::vector<PointerEvent>&& current, uint64_t nanoTimeStamp,
-        CoordinateType coordinateType);
+        bool isScreen);
 
     template<class T>
     static bool GetResamplePointerEvent(std::vector<T>& events,

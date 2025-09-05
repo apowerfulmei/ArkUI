@@ -34,7 +34,7 @@ public:
     void Layout(LayoutWrapper* layoutWrapper) override;
     float GetDefaultHeightByType(LayoutWrapper* layoutWrapper);
 protected:
-    bool CreateParagraphEx(const TextStyle& textStyle, const std::u16string& content,
+    bool CreateParagraphEx(const TextStyle& textStyle, const std::string& content,
         const LayoutConstraintF& contentConstraint, LayoutWrapper* layoutWrapper) override;
     LayoutConstraintF BuildLayoutConstraintWithoutResponseArea(const LayoutConstraintF& contentConstraint,
         LayoutWrapper* layoutWrapper);
@@ -62,12 +62,6 @@ private:
     void UpdateContentPosition(const UpdateContentPositionParams& params,
         const std::unique_ptr<GeometryProperty>& content);
     void UpdateTextRect(const UpdateTextRectParams& params);
-    bool IsFontSizeNonPositive(const TextStyle& textStyle) const;
-    void MeasureAutoFillIcon(LayoutWrapper* layoutWrapper);
-    void LayoutAutoFillIcon(LayoutWrapper* layoutWrapper);
-    void MeasureCounterWithPolicy(LayoutWrapper* layoutWrapper, float nonContentWidth);
-
-    SizeF autoFillIconSizeMeasure_;
 };
 } // namespace OHOS::Ace::NG
 

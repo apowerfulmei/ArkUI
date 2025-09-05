@@ -15,7 +15,11 @@
 
 #include "bridge/declarative_frontend/jsview/models/span_model_impl.h"
 
+#include <utility>
+
+#include "base/utils/utils.h"
 #include "bridge/declarative_frontend/view_stack_processor.h"
+#include "core/event/ace_event_handler.h"
 
 namespace OHOS::Ace::Framework {
 void SpanModelImpl::Create(const std::string& content)
@@ -28,16 +32,6 @@ void SpanModelImpl::Create(const std::string& content)
     auto textStyle = spanComponent->GetTextStyle();
     textStyle.SetAllowScale(false);
     spanComponent->SetTextStyle(textStyle);
-}
-
-void SpanModelImpl::Create(const std::u16string& content)
-{
-    Create(UtfUtils::Str16DebugToStr8(content));
-}
-
-void SpanModelImpl::Create(const std::u16string& content, RefPtr<ResourceObject>& resObj)
-{
-    Create(UtfUtils::Str16DebugToStr8(content));
 }
 
 void SpanModelImpl::SetFont(const Font& value) {}

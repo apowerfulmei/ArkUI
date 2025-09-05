@@ -17,11 +17,9 @@
 
 #ifdef ENABLE_ROSEN_BACKEND
 #include "render_service_client/core/ui/rs_canvas_node.h"
-#include "render_service_client/core/ui/rs_ui_director.h"
 
 #include "core/animation/native_curve_helper.h"
 #include "core/components/remote_window/rosen_render_remote_window.h"
-#include "core/pipeline/base/rs_node_adapter.h"
 #endif
 
 #include "base/log/dump_log.h"
@@ -1749,16 +1747,16 @@ void RenderNode::CreateLayoutTransition()
         context->SaveExplicitAnimationOption(option);
         nonStrictOption_ = AnimationOption();
     } else {
-        if (paintX_.GetAnimationStatus() != AnimatorStatus::RUNNING) {
+        if (paintX_.GetAnimationStatus() != Animator::Status::RUNNING) {
             paintX_.MoveTo(paintRect_.GetOffset().GetX());
         }
-        if (paintY_.GetAnimationStatus() != AnimatorStatus::RUNNING) {
+        if (paintY_.GetAnimationStatus() != Animator::Status::RUNNING) {
             paintY_.MoveTo(paintRect_.GetOffset().GetY());
         }
-        if (paintW_.GetAnimationStatus() != AnimatorStatus::RUNNING) {
+        if (paintW_.GetAnimationStatus() != Animator::Status::RUNNING) {
             paintW_.MoveTo(paintRect_.GetSize().Width());
         }
-        if (paintH_.GetAnimationStatus() != AnimatorStatus::RUNNING) {
+        if (paintH_.GetAnimationStatus() != Animator::Status::RUNNING) {
             paintH_.MoveTo(paintRect_.GetSize().Height());
         }
     }
@@ -1981,10 +1979,10 @@ void RenderNode::SetLayoutSize(const Size& size)
 
 bool RenderNode::InLayoutTransition() const
 {
-    return paintX_.GetAnimationStatus() == AnimatorStatus::RUNNING ||
-           paintY_.GetAnimationStatus() == AnimatorStatus::RUNNING ||
-           paintW_.GetAnimationStatus() == AnimatorStatus::RUNNING ||
-           paintH_.GetAnimationStatus() == AnimatorStatus::RUNNING;
+    return paintX_.GetAnimationStatus() == Animator::Status::RUNNING ||
+           paintY_.GetAnimationStatus() == Animator::Status::RUNNING ||
+           paintW_.GetAnimationStatus() == Animator::Status::RUNNING ||
+           paintH_.GetAnimationStatus() == Animator::Status::RUNNING;
 }
 
 void RenderNode::MarkUpdateType(const RefPtr<Component>& component)
@@ -2174,10 +2172,7 @@ void RenderNode::MarkParentNeedRender() const
 std::shared_ptr<RSNode> RenderNode::CreateRSNode() const
 {
 #ifdef ENABLE_ROSEN_BACKEND
-    if (!SystemProperties::GetMultiInstanceEnabled()) {
-        return Rosen::RSCanvasNode::Create();
-    }
-    return RsNodeAdapter::CreateCanvasNode();
+    return Rosen::RSCanvasNode::Create();
 #else
     return nullptr;
 #endif

@@ -33,8 +33,6 @@
 #include "core/components_ng/pattern/pattern.h"
 #include "core/components_ng/pattern/rich_editor/paragraph_manager.h"
 #include "core/components_ng/pattern/rich_editor/selection_info.h"
-#include "core/components_ng/pattern/rich_editor_drag/preview_menu_controller.h"
-#include "core/components_ng/pattern/rich_editor_drag/rich_editor_drag_info.h"
 #include "core/components_ng/pattern/scrollable/scrollable_pattern.h"
 #include "core/components_ng/pattern/select_overlay/magnifier.h"
 #include "core/components_ng/pattern/text/layout_info_interface.h"
@@ -55,19 +53,13 @@
 #include "core/components_ng/pattern/text/text_select_overlay.h"
 #include "core/components_ng/pattern/text_drag/text_drag_base.h"
 #include "core/components_ng/pattern/text_field/text_selector.h"
-#include "core/components_ng/render/text_effect.h"
 #include "core/components_ng/property/property.h"
 #include "core/event/ace_events.h"
 #include "core/pipeline_ng/ui_task_scheduler.h"
 
 namespace OHOS::Ace::NG {
-namespace {
-constexpr int32_t MAX_SIZE_OF_LOG = 2000;
-}
-
 class InspectorFilter;
-class PreviewMenuController;
-enum class Status { DRAGGING, FLOATING, ON_DROP, NONE };
+enum class Status { DRAGGING, ON_DROP, NONE };
 using CalculateHandleFunc = std::function<void()>;
 using ShowSelectOverlayFunc = std::function<void(const RectF&, const RectF&)>;
 struct SpanNodeInfo {
@@ -90,15 +82,10 @@ public:
     {
         selectOverlay_ = AceType::MakeRefPtr<TextSelectOverlay>(WeakClaim(this));
         pManager_ = AceType::MakeRefPtr<ParagraphManager>();
-        ResetOriginCaretPosition();
+        magnifierController_ = MakeRefPtr<MagnifierController>(WeakClaim(this));
     }
 
     ~TextPattern() override;
-
-    virtual RefPtr<FrameNode> GetContentHost() const
-    {
-        return GetHost();
-    }
 
     SelectionInfo GetSpansInfo(int32_t start, int32_t end, GetSpansMethod method);
     std::list<ResultObject> GetSpansInfoInStyledString(int32_t start, int32_t end);
@@ -117,11 +104,9 @@ public:
         auto textLayoutProperty = GetLayoutProperty<TextLayoutProperty>();
         if (textLayoutProperty &&
             textLayoutProperty->GetTextOverflowValue(TextOverflow::CLIP) == TextOverflow::MARQUEE) {
-            return MakeRefPtr<TextLayoutAlgorithm>(
-                spans_, pManager_, isSpanStringMode_, textStyle_.value_or(TextStyle()), true);
+            return MakeRefPtr<TextLayoutAlgorithm>(spans_, pManager_, isSpanStringMode_, true);
         } else {
-            return MakeRefPtr<TextLayoutAlgorithm>(
-                spans_, pManager_, isSpanStringMode_, textStyle_.value_or(TextStyle()));
+            return MakeRefPtr<TextLayoutAlgorithm>(spans_, pManager_, isSpanStringMode_);
         }
     }
 
@@ -135,7 +120,7 @@ public:
         return MakeRefPtr<TextEventHub>();
     }
 
-    virtual bool IsDragging() const
+    bool IsDragging() const
     {
         return status_ == Status::DRAGGING;
     }
@@ -160,7 +145,6 @@ public:
     }
 
     void OnModifyDone() override;
-    void MultiThreadDelayedExecution();
 
     void OnWindowHide() override;
 
@@ -171,7 +155,6 @@ public:
     void BeforeCreateLayoutWrapper() override;
 
     void AddChildSpanItem(const RefPtr<UINode>& child);
-    void SetSpanItemEvent(const RefPtr<SpanItem>& spanItem, RefPtr<FocusHub>& focusHub);
     void AddImageToSpanItem(const RefPtr<UINode>& child);
 
     FocusPattern GetFocusPattern() const override
@@ -182,26 +165,15 @@ public:
     void DumpAdvanceInfo() override;
 
     void DumpInfo() override;
-    void DumpSimplifyInfo(std::shared_ptr<JsonValue>& json) override;
-    void DumpInfo(std::unique_ptr<JsonValue>& json) override;
-    void DumpAdvanceInfo(std::unique_ptr<JsonValue>& json) override;
-    void SetTextStyleDumpInfo(std::unique_ptr<JsonValue>& json);
-    void DumpTextStyleInfo();
-    void DumpTextStyleInfo2();
-    void DumpTextStyleInfo3();
-    void DumpTextStyleInfo4();
-    void DumpTextStyleInfo5();
-    void DumpSpanItem();
     void DumpScaleInfo();
     void DumpTextEngineInfo();
-    void DumpParagraphsInfo();
 
     TextSelector GetTextSelector() const
     {
         return textSelector_;
     }
 
-    const std::u16string& GetTextForDisplay() const
+    std::string GetTextForDisplay() const
     {
         return textForDisplay_;
     }
@@ -235,54 +207,41 @@ public:
         return contentMod_;
     }
 
-    virtual void SetTextDetectEnable(bool enable);
-    void SetTextDetectEnableMultiThread(bool enable);
+    void SetTextDetectEnable(bool enable);
     bool GetTextDetectEnable()
     {
         return textDetectEnable_;
     }
     void SetTextDetectTypes(const std::string& types)
     {
-        CHECK_NULL_VOID(GetDataDetectorAdapter());
         dataDetectorAdapter_->SetTextDetectTypes(types);
-        textDetectTypes_ = types; // url value is not recorded in dataDetectorAdapter_, need to record it here
     }
     std::string GetTextDetectTypes()
     {
-        return textDetectTypes_;
+        return dataDetectorAdapter_->textDetectTypes_;
     }
     RefPtr<DataDetectorAdapter> GetDataDetectorAdapter()
     {
-        if (!dataDetectorAdapter_) {
-            dataDetectorAdapter_ = MakeRefPtr<DataDetectorAdapter>();
-        }
         return dataDetectorAdapter_;
     }
-    virtual const std::map<int32_t, AISpan>& GetAISpanMap()
+    const std::map<int32_t, AISpan>& GetAISpanMap()
     {
-        return GetDataDetectorAdapter()->aiSpanMap_;
+        return dataDetectorAdapter_->aiSpanMap_;
     }
-    const std::u16string& GetTextForAI()
+    const std::string& GetTextForAI()
     {
-        return GetDataDetectorAdapter()->textForAI_;
+        return dataDetectorAdapter_->textForAI_;
     }
     void SetOnResult(std::function<void(const std::string&)>&& onResult)
     {
-        GetDataDetectorAdapter()->onResult_ = std::move(onResult);
+        dataDetectorAdapter_->onResult_ = std::move(onResult);
     }
     TextDataDetectResult GetTextDetectResult()
     {
-        return GetDataDetectorAdapter()->textDetectResult_;
-    }
-    virtual void MarkAISpanStyleChanged()
-    {
-        auto host = GetHost();
-        CHECK_NULL_VOID(host);
-        host->MarkDirtyWithOnProChange(PROPERTY_UPDATE_MEASURE);
+        return dataDetectorAdapter_->textDetectResult_;
     }
     void SetTextDetectConfig(const TextDetectConfig& textDetectConfig)
     {
-        CHECK_NULL_VOID(GetDataDetectorAdapter());
         dataDetectorAdapter_->SetTextDetectTypes(textDetectConfig.types);
         dataDetectorAdapter_->onResult_ = std::move(textDetectConfig.onResult);
         dataDetectorAdapter_->entityColor_ = textDetectConfig.entityColor;
@@ -290,15 +249,15 @@ public:
         dataDetectorAdapter_->entityDecorationColor_ = textDetectConfig.entityDecorationColor;
         dataDetectorAdapter_->entityDecorationStyle_ = textDetectConfig.entityDecorationStyle;
         auto textDetectConfigCache = dataDetectorAdapter_->textDetectConfigStr_;
-        dataDetectorAdapter_->enablePreviewMenu_ = textDetectConfig.enablePreviewMenu;
         dataDetectorAdapter_->textDetectConfigStr_ = textDetectConfig.ToString();
         if (textDetectConfigCache != dataDetectorAdapter_->textDetectConfigStr_) {
-            MarkAISpanStyleChanged();
+            auto host = GetHost();
+            CHECK_NULL_VOID(host);
+            host->MarkDirtyNode(PROPERTY_UPDATE_MEASURE);
         }
     }
     void ModifyAISpanStyle(TextStyle& aiSpanStyle)
     {
-        CHECK_NULL_VOID(GetDataDetectorAdapter());
         TextDetectConfig textDetectConfig;
         aiSpanStyle.SetTextColor(dataDetectorAdapter_->entityColor_.value_or(textDetectConfig.entityColor));
         aiSpanStyle.SetTextDecoration(
@@ -318,7 +277,7 @@ public:
 
     int32_t GetDisplayWideTextLength()
     {
-        return textForDisplay_.length();
+        return StringUtils::ToWstring(textForDisplay_).length();
     }
 
     // ===========================================================
@@ -329,7 +288,7 @@ public:
         return false;
     }
 
-    const RectF& GetTextRect() const override
+    const RectF& GetTextRect() override
     {
         return contentRect_;
     }
@@ -354,8 +313,6 @@ public:
     }
     virtual void CloseSelectOverlay() override;
     void CloseSelectOverlay(bool animation);
-    void CloseSelectOverlayMultiThread(bool animation);
-    void CloseSelectOverlayMultiThreadAction(bool animation);
     void CreateHandles() override;
     bool BetweenSelectedPosition(const Offset& globalOffset) override;
 
@@ -364,8 +321,7 @@ public:
 
     void InitSurfaceChangedCallback();
     void InitSurfacePositionChangedCallback();
-    virtual void HandleSurfaceChanged(
-        int32_t newWidth, int32_t newHeight, int32_t prevWidth, int32_t prevHeight, WindowSizeChangeReason type);
+    virtual void HandleSurfaceChanged(int32_t newWidth, int32_t newHeight, int32_t prevWidth, int32_t prevHeight);
     virtual void HandleSurfacePositionChanged(int32_t posX, int32_t posY) {};
     bool HasSurfaceChangedCallback()
     {
@@ -390,6 +346,7 @@ public:
         onClick_ = std::move(onClick);
         distanceThreshold_ = distanceThreshold;
     }
+    virtual void OnColorConfigurationUpdate() override;
 
     NG::DragDropInfo OnDragStart(const RefPtr<Ace::DragEvent>& event, const std::string& extraParams);
     DragDropInfo OnDragStartNoChild(const RefPtr<Ace::DragEvent>& event, const std::string& extraParams);
@@ -407,12 +364,11 @@ public:
     virtual void AddUdmfData(const RefPtr<Ace::DragEvent>& event);
     void ProcessNormalUdmfData(const RefPtr<UnifiedData>& unifiedData);
     void AddPixelMapToUdmfData(const RefPtr<PixelMap>& pixelMap, const RefPtr<UnifiedData>& unifiedData);
-    std::u16string GetSelectedSpanText(std::u16string value, int32_t start, int32_t end, bool includeStartHalf = false,
-        bool includeEndHalf = true, bool getSubstrDirectly = true) const;
+    std::string GetSelectedSpanText(std::wstring value, int32_t start, int32_t end) const;
 
     TextStyleResult GetTextStyleObject(const RefPtr<SpanNode>& node);
     SymbolSpanStyle GetSymbolSpanStyleObject(const RefPtr<SpanNode>& node);
-    virtual RefPtr<UINode> GetChildByIndex(int32_t index) const;
+    RefPtr<UINode> GetChildByIndex(int32_t index) const;
     RefPtr<SpanItem> GetSpanItemByIndex(int32_t index) const;
     ResultObject GetTextResultObject(RefPtr<UINode> uinode, int32_t index, int32_t start, int32_t end);
     virtual void SetResultObjectText(ResultObject& resultObject, const RefPtr<SpanItem>& spanItem);
@@ -420,11 +376,9 @@ public:
     ResultObject GetImageResultObject(RefPtr<UINode> uinode, int32_t index, int32_t start, int32_t end);
     std::string GetFontInJson() const;
     std::string GetBindSelectionMenuInJson() const;
-    std::unique_ptr<JsonValue> GetShaderStyleInJson() const;
     virtual void FillPreviewMenuInJson(const std::unique_ptr<JsonValue>& jsonValue) const {}
-    std::string GetFontSizeWithThemeInJson(const std::optional<Dimension>& value) const;
 
-    const std::vector<std::u16string>& GetDragContents() const
+    const std::vector<std::string>& GetDragContents() const
     {
         return dragContents_;
     }
@@ -489,16 +443,14 @@ public:
     virtual void CheckHandles(SelectHandleInfo& handleInfo) {};
     OffsetF GetDragUpperLeftCoordinates() override;
     void SetTextSelection(int32_t selectionStart, int32_t selectionEnd);
-    void SetTextSelectionMultiThread(int32_t selectionStart, int32_t selectionEnd);
-    void SetTextSelectionMultiThreadAction(int32_t selectionStart, int32_t selectionEnd);
 
     // Deprecated: Use the TextSelectOverlay::OnHandleMove() instead.
     // It is currently used by RichEditorPattern.
     void OnHandleMove(const RectF& handleRect, bool isFirstHandle) override;
 
-    virtual std::vector<ParagraphManager::ParagraphInfo> GetParagraphs() const
+    virtual std::list<ParagraphManager::ParagraphInfo> GetParagraphs() const
     {
-        std::vector<ParagraphManager::ParagraphInfo> res;
+        std::list<ParagraphManager::ParagraphInfo> res;
         CHECK_NULL_RETURN(pManager_, res);
         return pManager_->GetParagraphs();
     }
@@ -604,41 +556,18 @@ public:
     {
         return isSpanStringMode_;
     }
-    void AllocStyledString()
-    {
-        if (!styledString_) {
-            styledString_ = MakeRefPtr<MutableSpanString>(u"");
-        }
-    }
     void SetStyledString(const RefPtr<SpanString>& value, bool closeSelectOverlay = true);
-    void SetStyledStringMultiThread(const RefPtr<SpanString>& value, bool closeSelectOverlay = true);
     // select overlay
     virtual int32_t GetHandleIndex(const Offset& offset) const;
-    std::u16string GetSelectedText(int32_t start, int32_t end, bool includeStartHalf = false,
-        bool includeEndHalf = false, bool getSubstrDirectly = false) const;
+    std::string GetSelectedText(int32_t start, int32_t end) const;
     void UpdateSelectionSpanType(int32_t selectStart, int32_t selectEnd);
-    virtual void CalculateHandleOffsetAndShowOverlay(bool isUsingMouse = false);
+    void CalculateHandleOffsetAndShowOverlay(bool isUsingMouse = false);
     void ResetSelection();
-    virtual bool IsSelectAll();
+    bool IsSelectAll();
     void HandleOnCopy();
-    virtual void HandleAIMenuOption(const std::string& labelInfo = "");
-
-    virtual void HandleOnAskCelia();
-
-    void SetIsAskCeliaEnabled(bool isAskCeliaEnabled)
-    {
-        isAskCeliaEnabled_ = isAskCeliaEnabled && IsNeedAskCelia();
-    }
-    
-    bool IsAskCeliaEnabled() const
-    {
-        return isAskCeliaEnabled_;
-    }
-
     void HandleOnCopySpanString();
     virtual void HandleOnSelectAll();
     bool IsShowTranslate();
-    bool IsShowSearch();
     void SetTextSelectableMode(TextSelectableMode value);
 
     OffsetF GetTextPaintOffset() const override
@@ -672,8 +601,8 @@ public:
 
     void OnSensitiveStyleChange(bool isSensitive) override;
 
-    bool IsSetObscured() const;
-    bool IsSensitiveEnable();
+    bool IsSetObscured();
+    bool IsSensitiveEnalbe();
 
     void CopySelectionMenuParams(SelectOverlayInfo& selectInfo)
     {
@@ -703,7 +632,6 @@ public:
     // add for capi NODE_TEXT_CONTENT_WITH_STYLED_STRING
     void SetExternalParagraph(void* paragraph)
     {
-        ACE_TEXT_SCOPED_TRACE("SetExternalParagraph");
         externalParagraph_ = paragraph;
     }
 
@@ -713,7 +641,6 @@ public:
     }
 
     void SetExternalSpanItem(const std::list<RefPtr<SpanItem>>& spans);
-    void SetExternalSpanItemMultiThread(const std::list<RefPtr<SpanItem>>& spans);
 
     void SetExternalParagraphStyle(std::optional<ParagraphStyle> paragraphStyle)
     {
@@ -724,8 +651,6 @@ public:
     {
         return textStyle_.value_or(TextStyle());
     }
-
-    bool DidExceedMaxLines() const override;
 
     std::optional<ParagraphStyle> GetExternalParagraphStyle()
     {
@@ -738,24 +663,8 @@ public:
         RectHeightStyle heightStyle, RectWidthStyle widthStyle) override;
     PositionWithAffinity GetGlyphPositionAtCoordinate(int32_t x, int32_t y) override;
 
-    void OnSelectionMenuOptionsUpdate(const NG::OnCreateMenuCallback&& onCreateMenuCallback,
-        const NG::OnMenuItemClickCallback&& onMenuItemClick, const NG::OnPrepareMenuCallback&& onPrepareMenuCallback);
-
-    void OnCreateMenuCallbackUpdate(const NG::OnCreateMenuCallback&& onCreateMenuCallback)
-    {
-        selectOverlay_->OnCreateMenuCallbackUpdate(std::move(onCreateMenuCallback));
-    }
-
-    void OnMenuItemClickCallbackUpdate(const NG::OnMenuItemClickCallback&& onMenuItemClick)
-    {
-        selectOverlay_->OnMenuItemClickCallbackUpdate(std::move(onMenuItemClick));
-    }
-
-    void OnPrepareMenuCallbackUpdate(const NG::OnPrepareMenuCallback&& onPrepareMenuCallback)
-    {
-        selectOverlay_->OnPrepareMenuCallbackUpdate(std::move(onPrepareMenuCallback));
-    }
-    
+    void OnSelectionMenuOptionsUpdate(
+        const NG::OnCreateMenuCallback&& onCreateMenuCallback, const NG::OnMenuItemClickCallback&& onMenuItemClick);
     void OnFrameNodeChanged(FrameNodeChangeInfoFlag flag) override;
 
     void UpdateParentGlobalOffset()
@@ -768,12 +677,9 @@ public:
         paintInfo_ = area + paintOffset.ToString();
     }
 
-    void DumpRecord(const std::string& record, bool stateChange = false)
+    void DumpRecord(const std::string& record)
     {
-        if (stateChange || frameRecord_.length() > MAX_SIZE_OF_LOG) {
-            frameRecord_.clear();
-        }
-        frameRecord_.append("[" + record + "]");
+        frameRecord_ = record;
     }
 
     void LogForFormRender(const std::string& logTag);
@@ -791,7 +697,6 @@ public:
     void OnTextOverflowChanged();
 
     void MarkDirtyNodeRender();
-    void MarkDirtyNodeMeasure();
     void ChangeHandleHeight(const GestureEvent& event, bool isFirst, bool isOverlayMode);
     void ChangeFirstHandleHeight(const Offset& touchOffset, RectF& handleRect);
     void ChangeSecondHandleHeight(const Offset& touchOffset, RectF& handleRect);
@@ -808,17 +713,6 @@ public:
     {
         isEnableHapticFeedback_ = isEnabled;
     }
-
-    bool HasContent();
-
-    virtual bool IsEnabledObscured() const
-    {
-        return true;
-    }
-    void SetupMagnifier();
-    void DoTextSelectionTouchCancel() override;
-
-    virtual Color GetUrlSpanColor();
     void BeforeSyncGeometryProperties(const DirtySwapConfig& config) override;
 
     void RegisterAfterLayoutCallback(std::function<void()> callback)
@@ -831,94 +725,11 @@ public:
         afterLayoutCallback_ = std::nullopt;
     }
 
-    RefPtr<MagnifierController> GetOrCreateMagnifier()
-    {
-        if (!magnifierController_) {
-            magnifierController_ = MakeRefPtr<MagnifierController>(WeakClaim(this));
-        }
-        return magnifierController_;
-    }
-
-    void UnRegisterResource(const std::string& key) override;
-    void EmplaceSymbolColorIndex(int32_t index)
-    {
-        symbolFontColorResObjIndexArr.emplace_back(index);
-    }
+    virtual Color GetUrlSpanColor();
+    void DoTextSelectionTouchCancel() override;
 
     std::string GetCaretColor() const;
     std::string GetSelectedBackgroundColor() const;
-
-    void ResetCustomFontColor();
-    void OnColorConfigurationUpdate() override;
-    bool OnThemeScopeUpdate(int32_t themeScopeId) override;
-    void OnWindowSizeChanged(int32_t width, int32_t height, WindowSizeChangeReason type) override;
-
-    bool GetOriginCaretPosition(OffsetF& offset) const;
-    void ResetOriginCaretPosition();
-    bool RecordOriginCaretPosition(const OffsetF& offset);
-    TextDragInfo CreateTextDragInfo();
-
-    void SetIsShowAIMenuOption(bool isShowAIMenuOption)
-    {
-        isShowAIMenuOption_ = isShowAIMenuOption;
-    }
-
-    bool IsShowAIMenuOption() const
-    {
-        return isShowAIMenuOption_;
-    }
-
-    void SetAIItemOption(const std::unordered_map<TextDataDetectType, AISpan>& aiMenuOptions)
-    {
-        aiMenuOptions_ = aiMenuOptions;
-    }
-
-    const std::unordered_map<TextDataDetectType, AISpan>& GetAIItemOption() const
-    {
-        return aiMenuOptions_;
-    }
-    virtual void UpdateAIMenuOptions();
-    bool PrepareAIMenuOptions(std::unordered_map<TextDataDetectType, AISpan>& aiMenuOptions);
-    bool IsAiSelected();
-    virtual RefPtr<FrameNode> CreateAIEntityMenu();
-    virtual bool CheckAIPreviewMenuEnable();
-    void InitAiSelection(const Offset& globalOffset);
-    bool CanAIEntityDrag() override;
-    RefPtr<PreviewMenuController> GetOrCreatePreviewMenuController();
-    void ResetAISelected(AIResetSelectionReason reason) override;
-    std::function<void()> GetPreviewMenuAISpanClickrCallback(const AISpan& aiSpan);
-
-    void ShowAIEntityMenuForCancel() override;
-    bool IsPreviewMenuShow() override;
-    void DragNodeDetachFromParent();
-    AISpan GetSelectedAIData();
-    std::pair<bool, bool> GetCopyAndSelectable();
-    std::pair<int32_t, int32_t> GetSelectedStartAndEnd();
-
-    RefPtr<TextEffect> GetTextEffect()
-    {
-        return textEffect_;
-    }
-    RefPtr<TextEffect> GetOrCreateTextEffect(const std::u16string& content, bool& needUpdateTypography);
-    void RelayoutResetOrUpdateTextEffect();
-    void ResetTextEffect();
-    bool ResetTextEffectBeforeLayout(bool onlyReset = true);
-    bool IsNeedAskCelia() const
-    {
-        // placeholder and symbol not support
-        auto start = GetTextSelector().GetTextStart();
-        auto end = GetTextSelector().GetTextEnd();
-        auto content = UtfUtils::Str16DebugToStr8(GetSelectedText(start, end));
-        return !std::regex_match(content, std::regex("^\\s*$"));
-    }
-    void UpdateTextSelectorSecondHandle(const RectF& rect)
-    {
-        textSelector_.secondHandle = rect;
-    }
-    bool IsEnableMatchParent() override
-    {
-        return true;
-    }
 
 protected:
     int32_t GetClickedSpanPosition()
@@ -926,33 +737,13 @@ protected:
         return clickedSpanPosition_;
     }
     void OnAttachToFrameNode() override;
-    void OnAttachToFrameNodeMultiThread();
     void OnDetachFromFrameNode(FrameNode* node) override;
-    void OnDetachFromFrameNodeMultiThread(FrameNode* node);
     void OnAfterModifyDone() override;
     virtual bool ClickAISpan(const PointF& textOffset, const AISpan& aiSpan);
-    virtual void InitAISpanHoverEvent();
-    virtual void HandleAISpanHoverEvent(const MouseInfo& info);
-    void OnHover(bool isHover);
-    void InitSpanMouseEvent();
-    HoverInfo ConvertHoverInfoFromMouseInfo(const MouseInfo& info) const;
-    void HandleSpanMouseEvent(const MouseInfo& info);
-    void TriggerSpanOnHoverEvent(const HoverInfo& info, const RefPtr<SpanItem>& item, bool isOnHover);
-    void TriggerSpansOnHover(const HoverInfo& info, const PointF& textOffset);
-    void ExitSpansForOnHoverEvent(const HoverInfo& info);
-    bool HasSpanOnHoverEvent();
     void InitMouseEvent();
-    void InitFocusEvent();
-    void InitHoverEvent();
-    void AddIsFocusActiveUpdateEvent();
-    void RemoveIsFocusActiveUpdateEvent();
-    void OnIsFocusActiveUpdate(bool isFocusAcitve);
-    void RecoverCopyOption();
-    void InitCopyOption(const RefPtr<GestureEventHub>& gestureEventHub, const RefPtr<EventHub>& eventHub);
     void RecoverSelection();
     virtual void HandleOnCameraInput() {};
     void InitSelection(const Offset& pos);
-    void GetIndexByOffset(const Offset& pos, int32_t& extend);
     void StartVibratorByLongPress();
     void HandleLongPress(GestureEvent& info);
     void HandleClickEvent(GestureEvent& info);
@@ -961,20 +752,18 @@ protected:
     void HandleDoubleClickEvent(GestureEvent& info);
     void CheckOnClickEvent(GestureEvent& info);
     void HandleClickOnTextAndSpan(GestureEvent& info);
-    bool TryLinkJump(const RefPtr<SpanItem>& span);
+    void RecordClickEvent();
     void ActTextOnClick(GestureEvent& info);
-    RectF CalcAIMenuPosition(const AISpan& aiSpan, const CalculateHandleFunc& calculateHandleFunc);
-    virtual void AdjustAIEntityRect(RectF& aiRect) {}
+    void RecordSpanClickEvent(const RefPtr<SpanItem>& span);
     bool ShowAIEntityMenu(const AISpan& aiSpan, const CalculateHandleFunc& calculateHandleFunc = nullptr,
         const ShowSelectOverlayFunc& showSelectOverlayFunc = nullptr);
     void SetOnClickMenu(const AISpan& aiSpan, const CalculateHandleFunc& calculateHandleFunc,
         const ShowSelectOverlayFunc& showSelectOverlayFunc);
     bool IsDraggable(const Offset& localOffset);
     virtual void InitClickEvent(const RefPtr<GestureEventHub>& gestureHub);
-    virtual void ProcessOverlay(const OverlayRequest& request = OverlayRequest());
     void ShowSelectOverlay(const OverlayRequest& = OverlayRequest());
     bool OnDirtyLayoutWrapperSwap(const RefPtr<LayoutWrapper>& dirty, const DirtySwapConfig& config) override;
-    virtual void UpdateSelectorOnHandleMove(const OffsetF& localOffset, float handleHeight, bool isFirstHandle);
+    std::wstring GetWideText() const;
     void CalcCaretMetricsByPosition(
         int32_t extent, CaretMetricsF& caretCaretMetric, TextAffinity textAffinity = TextAffinity::DOWNSTREAM);
     void UpdateSelectionType(const SelectionInfo& selection);
@@ -986,6 +775,7 @@ protected:
     bool CalculateClickedSpanPosition(const PointF& textOffset);
     void HiddenMenu();
     std::shared_ptr<SelectionMenuParams> GetMenuParams(TextSpanType type, TextResponseType responseType);
+    bool MaxLinesZero();
     void AddUdmfTxtPreProcessor(const ResultObject src, ResultObject& result, bool isAppend);
     void InitKeyEvent();
     void UpdateShiftFlag(const KeyEvent& keyEvent);
@@ -998,19 +788,18 @@ protected:
     int32_t GetActualTextLength();
     bool IsSelectableAndCopy();
     void SetResponseRegion(const SizeF& frameSize, const SizeF& boundsSize);
-    virtual bool CanStartAITask() const;
+
+    virtual bool CanStartAITask();
 
     void MarkDirtySelf();
-    void OnAttachToMainTree() override;
-    void OnAttachToMainTreeMultiThread();
-    void OnDetachFromMainTree() override;
-    void OnDetachFromMainTreeMultiThread();
-
-    void CreateMultipleClickRecognizer()
+    void OnAttachToMainTree() override
     {
-        if (!multipleClickRecognizer_) {
-            multipleClickRecognizer_ = MakeRefPtr<MultipleClickRecognizer>();
-        }
+        isDetachFromMainTree_ = false;
+    }
+
+    void OnDetachFromMainTree() override
+    {
+        isDetachFromMainTree_ = true;
     }
 
     bool SetActionExecSubComponent();
@@ -1026,34 +815,23 @@ protected:
 
     int32_t GetTouchIndex(const OffsetF& offset) override;
     void OnTextGestureSelectionUpdate(int32_t start, int32_t end, const TouchEventInfo& info) override;
-    void OnTextGestureSelectionEnd(const TouchLocationInfo& locationInfo) override;
+    void OnTextGenstureSelectionEnd() override;
     void StartGestureSelection(int32_t start, int32_t end, const Offset& startOffset) override;
 
     void SetImageNodeGesture(RefPtr<ImageSpanNode> imageNode);
-    virtual std::pair<int32_t, int32_t> GetStartAndEnd(int32_t start, const RefPtr<SpanItem>& spanItem);
-    void HandleSpanStringTouchEvent(TouchEventInfo& info);
-    void ShowAIEntityPreviewMenuTimer();
-    void PreviewDragNodeHideAnimation();
+
     bool enabled_ = true;
     Status status_ = Status::NONE;
     bool contChange_ = false;
     int32_t recoverStart_ = 0;
     int32_t recoverEnd_ = 0;
-    bool aiSpanHoverEventInitialized_ = false;
     bool mouseEventInitialized_ = false;
-    bool spanMouseEventInitialized_ = false;
-    bool isHover_ = false;
     bool panEventInitialized_ = false;
     bool clickEventInitialized_ = false;
     bool touchEventInitialized_ = false;
-    bool focusInitialized_ = false;
-    bool hoverInitialized_ = false;
     bool isSpanStringMode_ = false;
-    RefPtr<MutableSpanString> styledString_;
+    RefPtr<MutableSpanString> styledString_ = MakeRefPtr<MutableSpanString>("");
     bool keyEventInitialized_ = false;
-    bool isShowAIMenuOption_ = false;
-    bool isAskCeliaEnabled_ = false;
-    std::unordered_map<TextDataDetectType, AISpan> aiMenuOptions_;
 
     RefPtr<FrameNode> dragNode_;
     RefPtr<LongPressEvent> longPressEvent_;
@@ -1063,9 +841,8 @@ protected:
     RefPtr<TextContentModifier> contentMod_;
     RefPtr<TextOverlayModifier> overlayMod_;
     CopyOptions copyOption_ = CopyOptions::None;
-    std::vector<int32_t> symbolFontColorResObjIndexArr;
 
-    std::u16string textForDisplay_;
+    std::string textForDisplay_;
     std::string paintInfo_ = "NA";
     std::string frameRecord_ = "NA";
     std::optional<TextStyle> textStyle_;
@@ -1078,15 +855,14 @@ protected:
     std::map<std::pair<TextSpanType, TextResponseType>, std::shared_ptr<SelectionMenuParams>> selectionMenuMap_;
     std::optional<TextSpanType> selectedType_;
     SourceType sourceType_ = SourceType::NONE;
-    std::function<void(bool)> isFocusActiveUpdateEvent_;
 
-    friend class TextContentModifier;
     // properties for AI
     bool textDetectEnable_ = false;
-    RefPtr<DataDetectorAdapter> dataDetectorAdapter_;
+    RefPtr<DataDetectorAdapter> dataDetectorAdapter_ = MakeRefPtr<DataDetectorAdapter>();
 
     OffsetF parentGlobalOffset_;
     std::optional<TextResponseType> textResponseType_;
+    MouseFormat currentMouseStyle_ = MouseFormat::DEFAULT;
 
     struct SubComponentInfoEx {
         std::optional<AISpan> aiSpan;
@@ -1094,14 +870,10 @@ protected:
     };
     std::vector<SubComponentInfoEx> subComponentInfos_;
     virtual std::vector<RectF> GetSelectedRects(int32_t start, int32_t end);
-    MouseFormat currentMouseStyle_ = MouseFormat::DEFAULT;
-    RefPtr<MultipleClickRecognizer> multipleClickRecognizer_;
+    RefPtr<MultipleClickRecognizer> multipleClickRecognizer_ = MakeRefPtr<MultipleClickRecognizer>();
     bool ShowShadow(const PointF& textOffset, const Color& color);
     virtual PointF GetTextOffset(const Offset& localLocation, const RectF& contentRect);
     bool hasUrlSpan_ = false;
-    WeakPtr<PipelineContext> pipeline_;
-    void UpdatePropertyImpl(const std::string& key, RefPtr<PropertyValueBase> value) override;
-    bool IsSupportAskCelia();
 
 private:
     void InitLongPressEvent(const RefPtr<GestureEventHub>& gestureHub);
@@ -1110,46 +882,42 @@ private:
     void OnHandleTouchUp();
     void InitTouchEvent();
     void HandleTouchEvent(const TouchEventInfo& info);
+    void UpdateChildProperty(const RefPtr<SpanNode>& child) const;
     void ActSetSelection(int32_t start, int32_t end);
-    virtual bool IsShowHandle();
+    bool IsShowHandle();
     void InitUrlMouseEvent();
     void InitUrlTouchEvent();
     void HandleUrlMouseEvent(const MouseInfo& info);
     void HandleUrlTouchEvent(const TouchEventInfo& info);
-    void InitSpanStringTouchEvent();
     void URLOnHover(bool isHover);
     bool HandleUrlClick();
+    std::pair<int32_t, int32_t> GetStartAndEnd(int32_t start);
     Color GetUrlHoverColor();
     Color GetUrlPressColor();
     void SetAccessibilityAction();
-    void SetSpanEventFlagValue(
-        const RefPtr<UINode>& code, bool& isSpanHasClick, bool& isSpanHasLongPress);
-    void CollectSymbolSpanNodes(const RefPtr<SpanNode>& spanNode, const RefPtr<UINode>& node);
-    void CollectSpanNodes(std::stack<SpanNodeInfo> nodes, bool& isSpanHasClick, bool& isSpanHasLongPress);
-    void CollectTextSpanNodes(const RefPtr<SpanNode>& child, bool& isSpanHasClick, bool& isSpanHasLongPress);
+    void CollectSpanNodes(std::stack<SpanNodeInfo> nodes, bool& isSpanHasClick);
+    void CollectTextSpanNodes(const RefPtr<SpanNode>& child, bool& isSpanHasClick);
     void UpdateContainerChildren(const RefPtr<UINode>& parent, const RefPtr<UINode>& child);
     RefPtr<RenderContext> GetRenderContext();
-    void UpdateRectForSymbolShadow(RectF& rect, float offsetX, float offsetY, float blurRadius) const;
     void ProcessBoundRectByTextShadow(RectF& rect);
     void FireOnSelectionChange(int32_t start, int32_t end);
-    void FireOnMarqueeStateChange(const TextMarqueeState& state);
     void HandleMouseLeftButton(const MouseInfo& info, const Offset& textOffset);
     void HandleMouseRightButton(const MouseInfo& info, const Offset& textOffset);
     void HandleMouseLeftPressAction(const MouseInfo& info, const Offset& textOffset);
     void HandleMouseLeftReleaseAction(const MouseInfo& info, const Offset& textOffset);
     void HandleMouseLeftMoveAction(const MouseInfo& info, const Offset& textOffset);
-    void InitSpanItemEvent(bool& isSpanHasClick, bool& isSpanHasLongPress);
     void InitSpanItem(std::stack<SpanNodeInfo> nodes);
     int32_t GetSelectionSpanItemIndex(const MouseInfo& info);
     void CopySelectionMenuParams(SelectOverlayInfo& selectInfo, TextResponseType responseType);
     void ProcessBoundRectByTextMarquee(RectF& rect);
     ResultObject GetBuilderResultObject(RefPtr<UINode> uiNode, int32_t index, int32_t start, int32_t end);
     void CreateModifier();
+    bool DidExceedMaxLines() const override;
     void ToJsonValue(std::unique_ptr<JsonValue>& json, const InspectorFilter& filter) const override;
-    void ToTreeJson(std::unique_ptr<JsonValue>& json, const InspectorConfig& config) const override;
     void ProcessOverlayAfterLayout();
     // SpanString
     void MountImageNode(const RefPtr<ImageSpanItem>& imageItem);
+    ImageSourceInfo CreateImageSourceInfo(const ImageSpanOptions& options);
     void ProcessSpanString();
     // to check if drag is in progress
     void SetCurrentDragTool(SourceTool tool)
@@ -1159,8 +927,7 @@ private:
 
     std::optional<RenderContext::ContextParam> GetContextParam() const override
     {
-        return RenderContext::ContextParam { .type = RenderContext::ContextType::CANVAS,
-                                             .surfaceName = std::nullopt };
+        return RenderContext::ContextParam { RenderContext::ContextType::CANVAS };
     }
 
     SourceTool GetCurrentDragTool() const
@@ -1170,35 +937,10 @@ private:
     Offset ConvertGlobalToLocalOffset(const Offset& globalOffset);
     Offset ConvertLocalOffsetToParagraphOffset(const Offset& offset);
     void ProcessMarqueeVisibleAreaCallback();
-    void ParseOriText(const std::u16string& currentText);
+    void ParseOriText(const std::string& currentText);
     bool IsMarqueeOverflow() const;
     virtual void ResetAfterTextChange();
-    bool GlobalOffsetInSelectedArea(const Offset& globalOffset);
-    bool LocalOffsetInSelectedArea(const Offset& localOffset);
-    bool LocalOffsetInRange(const Offset& localOffset, int32_t start, int32_t end);
-    void HandleOnCopyWithoutSpanString(const std::string& pasteData);
     void CheckPressedSpanPosition(const Offset& textOffset);
-    void EncodeTlvNoChild(const std::string& pasteData, std::vector<uint8_t>& buff);
-    void EncodeTlvFontStyleNoChild(std::vector<uint8_t>& buff);
-    void EncodeTlvTextLineStyleNoChild(std::vector<uint8_t>& buff);
-    void EncodeTlvSpanItems(const std::string& pasteData, std::vector<uint8_t>& buff);
-    RefPtr<SpanItem> FindSpanItemByOffset(const PointF& textOffset);
-    void UpdateMarqueeStartPolicy();
-    void PauseSymbolAnimation();
-    void ResumeSymbolAnimation();
-    bool IsLocationInFrameRegion(const Offset& localOffset) const;
-    void RegisterFormVisibleChangeCallback();
-    void RegisterVisibleAreaChangeCallback();
-    void HandleFormVisibleChange(bool visible);
-    void RemoveFormVisibleChangeCallback(int32_t id);
-    void GetSpanItemAttributeUseForHtml(NG::FontStyle& fontStyle,
-        NG::TextLineStyle& textLineStyle, const std::optional<TextStyle>& textStyle);
-    RefPtr<TaskExecutor> GetTaskExecutorItem();
-    void AsyncHandleOnCopySpanStringHtml(RefPtr<SpanString>& subSpanString);
-    void AsyncHandleOnCopyWithoutSpanStringHtml(const std::string& pasteData);
-    std::list<RefPtr<SpanItem>> GetSpanSelectedContent();
-    bool RegularMatchNumbers(const std::u16string& content);
-    void ResetMouseLeftPressedState();
 
     bool isMeasureBoundary_ = false;
     bool isMousePressed_ = false;
@@ -1211,17 +953,14 @@ private:
     int32_t clickedSpanPosition_ = -1;
     Offset leftMousePressedOffset_;
     bool isEnableHapticFeedback_ = true;
-    bool mouseUpAndDownPointChange_ = false;
 
     bool urlTouchEventInitialized_ = false;
     bool urlMouseEventInitialized_ = false;
-    bool spanStringTouchInitialized_ = false;
     bool moveOverClickThreshold_ = false;
-    bool isMarqueeRunning_ = false;
 
     RefPtr<ParagraphManager> pManager_;
-    RefPtr<TextEffect> textEffect_;
     std::vector<int32_t> placeholderIndex_;
+    std::vector<int32_t> customSpanIndex_;
     std::vector<RectF> rectsForPlaceholders_;
     OffsetF imageOffset_;
 
@@ -1230,7 +969,6 @@ private:
     double distanceThreshold_ = std::numeric_limits<double>::infinity();
     RefPtr<DragWindow> dragWindow_;
     RefPtr<DragDropProxy> dragDropProxy_;
-    RefPtr<PreviewMenuController> previewController_;
     std::optional<int32_t> surfaceChangedCallbackId_;
     SourceTool lastDragTool_ = SourceTool::UNKNOWN;
     std::optional<int32_t> surfacePositionChangedCallbackId_;
@@ -1245,32 +983,11 @@ private:
     std::optional<void*> externalParagraph_;
     std::optional<ParagraphStyle> externalParagraphStyle_;
     bool isUserSetResponseRegion_ = false;
+    WeakPtr<PipelineContext> pipeline_;
     WeakPtr<ScrollablePattern> scrollableParent_;
     ACE_DISALLOW_COPY_AND_MOVE(TextPattern);
     std::optional<std::function<void()>> afterLayoutCallback_;
-    Offset lastLeftMouseMoveLocation_;
-    bool isAutoScrollByMouse_ = false;
     bool shiftFlag_ = false;
-    std::string textDetectTypes_ = "";
-    // Used to record original caret position for "shift + up/down"
-    // Less than 0 is invalid, initialized as invalid in constructor
-    OffsetF originCaretPosition_;
-    bool hasRegisterFormVisibleCallback_ = false;
-    // params for ai/url entity dragging
-    // left mouse click(lastLeftMouseClickStyle_ = true) ==> dragging(isTryEntityDragging_ = true)
-    MouseFormat lastLeftMouseClickStyle_ = MouseFormat::DEFAULT;
-    bool isTryEntityDragging_ = false;
-    bool isRegisteredAreaCallback_ = false;
-
-    // ----- multi thread state variables -----
-    bool setTextDetectEnableMultiThread_ = false;
-    bool setExternalSpanItemMultiThread_ = false;
-    bool closeSelectOverlayMultiThread_ = false;
-    bool closeSelectOverlayMultiThreadValue_ = false;
-    bool setTextSelectionMultiThread_ = true;
-    int32_t setTextSelectionMultiThreadValue0_ = -1;
-    int32_t setTextSelectionMultiThreadValue1_ = -1;
-    // ----- multi thread state variables end -----
 };
 } // namespace OHOS::Ace::NG
 

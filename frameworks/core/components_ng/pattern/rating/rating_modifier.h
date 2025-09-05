@@ -20,11 +20,10 @@
 #include "base/utils/utils.h"
 #include "core/components/common/properties/animation_option.h"
 #include "core/components/rating/rating_theme.h"
-#include "core/components_ng/base/frame_node.h"
 #include "core/components_ng/base/modifier.h"
 #include "core/components_ng/render/animation_utils.h"
 #include "core/image/image_source_info.h"
-#include "core/pipeline_ng/pipeline_context.h"
+#include "core/pipeline/pipeline_base.h"
 
 namespace OHOS::Ace::NG {
 class RatingModifier : public ContentModifier {
@@ -40,11 +39,8 @@ public:
         HOVERTOPRESS,
         PRESSTOHOVER,
         PRESS,
-        FOCUS,
     };
 
-    int32_t GetTouchStar();
-    double GetDistanceFromTheme();
     void PaintBoard(DrawingContext& context);
     void PaintStar(DrawingContext& context);
     void PaintReverseStar(DrawingContext& context);
@@ -53,21 +49,16 @@ public:
 
     void UpdateCanvasImage(const RefPtr<CanvasImage>& foregroundImageCanvas,
         const RefPtr<CanvasImage>& secondaryImageCanvas, const RefPtr<CanvasImage>& backgroundImageCanvas,
-        const RefPtr<CanvasImage>& backgroundImageFocusCanvas,
         const ImagePaintConfig& foregroundConfig, const ImagePaintConfig& secondaryConfig,
-        const ImagePaintConfig& backgroundConfig, const ImagePaintConfig& backgroundFocusConfig)
+        const ImagePaintConfig& backgroundConfig)
     {
         SetNeedDraw(true);
         foregroundImageCanvas_ = foregroundImageCanvas;
         secondaryImageCanvas_ = secondaryImageCanvas;
         backgroundImageCanvas_ = backgroundImageCanvas;
-        backgroundImageFocusCanvas_ = backgroundImageFocusCanvas;
         foregroundImageCanvas_->SetPaintConfig(foregroundConfig);
         secondaryImageCanvas_->SetPaintConfig(secondaryConfig);
         backgroundImageCanvas_->SetPaintConfig(backgroundConfig);
-        if (backgroundImageFocusCanvas_ != nullptr) {
-            backgroundImageFocusCanvas_->SetPaintConfig(backgroundFocusConfig);
-        }
     }
 
     void UpdateImageSourceInfo(
@@ -109,33 +100,13 @@ public:
         }
     }
 
-    void SetIndicator(bool indicator)
+    void SetBoardColor(LinearColor color, int32_t duratuion, const RefPtr<CubicCurve>& curve)
     {
-        indicator_ = indicator;
-    }
-
-    void SetImageInfoFromTheme(bool isImageInfoFromTheme)
-    {
-        isImageInfoFromTheme_ = isImageInfoFromTheme;
-    }
-
-    void SetBoardColor(
-        LinearColor color, int32_t duration, const RefPtr<CubicCurve>& curve, const RefPtr<FrameNode>& host)
-    {
-        CHECK_NULL_VOID(host);
         if (boardColor_) {
             AnimationOption option = AnimationOption();
-            option.SetDuration(duration);
+            option.SetDuration(duratuion);
             option.SetCurve(curve);
-            AnimationUtils::Animate(
-                option, [&]() { boardColor_->Set(color); }, nullptr, nullptr, host->GetContextRefPtr());
-        }
-    }
-
-    void SetFocusOrBlurColor(const Color& color)
-    {
-        if (boardColor_) {
-            boardColor_->Set(LinearColor(color));
+            AnimationUtils::Animate(option, [&]() { boardColor_->Set(color); });
         }
     }
 
@@ -153,11 +124,6 @@ public:
         }
     }
 
-    RefPtr<PropertySizeF> GetContentSize()
-    {
-        return contentSize_;
-    }
-
     void SetDrawScore(double drawScore)
     {
         if (drawScore_) {
@@ -172,10 +138,10 @@ public:
         }
     }
 
-    void SetTouchStar(int32_t touchStar, const RefPtr<FrameNode>& host)
+    void SetTouchStar(int32_t touchStar)
     {
         if (touchStar < 0 || touchStar >= starNum_->Get() || touchStar_->Get() != touchStar) {
-            SetHoverState(RatingAnimationType::NONE, host);
+            SetHoverState(RatingAnimationType::NONE);
         }
         if (touchStar_) {
             touchStar_->Set(touchStar);
@@ -196,13 +162,7 @@ public:
         }
     }
 
-    void SetIsFocus(bool isFocus, const RefPtr<FrameNode>& host)
-    {
-        isFocus_ = isFocus;
-        SetHoverState(state_, host);
-    }
-
-    void SetHoverState(const RatingAnimationType& state, const RefPtr<FrameNode>& host)
+    void SetHoverState(const RatingAnimationType& state)
     {
         if (state_ == state) {
             return;
@@ -216,22 +176,19 @@ public:
         auto pressDuration = static_cast<int32_t>(ratingTheme->GetPressAnimationDuration());
         switch (state) {
             case RatingAnimationType::HOVER:
-                SetBoardColor(LinearColor(ratingTheme->GetHoverColor()), hoverDuration, Curves::FRICTION, host);
-                break;
-            case RatingAnimationType::FOCUS:
-                SetBoardColor(LinearColor(ratingTheme->GetFocusColor()), hoverDuration, Curves::FRICTION, host);
+                SetBoardColor(LinearColor(ratingTheme->GetHoverColor()), hoverDuration, Curves::FRICTION);
                 break;
             case RatingAnimationType::HOVERTOPRESS:
-                SetBoardColor(LinearColor(ratingTheme->GetPressColor()), pressDuration, Curves::SHARP, host);
+                SetBoardColor(LinearColor(ratingTheme->GetPressColor()), pressDuration, Curves::SHARP);
                 break;
             case RatingAnimationType::PRESSTOHOVER:
-                SetBoardColor(LinearColor(ratingTheme->GetHoverColor()), pressDuration, Curves::SHARP, host);
+                SetBoardColor(LinearColor(ratingTheme->GetHoverColor()), pressDuration, Curves::SHARP);
                 break;
             case RatingAnimationType::PRESS:
-                SetBoardColor(LinearColor(ratingTheme->GetPressColor()), hoverDuration, Curves::SHARP, host);
+                SetBoardColor(LinearColor(ratingTheme->GetPressColor()), hoverDuration, Curves::SHARP);
                 break;
             case RatingAnimationType::NONE:
-                SetBoardColor(LinearColor(Color::TRANSPARENT), hoverDuration, Curves::FRICTION, host);
+                SetBoardColor(LinearColor(Color::TRANSPARENT), hoverDuration, Curves::FRICTION);
                 break;
             default:
                 break;
@@ -248,14 +205,9 @@ public:
 private:
     // others
     RatingAnimationType state_ = RatingAnimationType::NONE;
-    bool isFocus_ = false;
-    bool indicator_ = false;
-    bool isImageInfoFromTheme_ = false;
-    Dimension distance_ = 4.0_vp;
     RefPtr<CanvasImage> foregroundImageCanvas_;
     RefPtr<CanvasImage> secondaryImageCanvas_;
     RefPtr<CanvasImage> backgroundImageCanvas_;
-    RefPtr<CanvasImage> backgroundImageFocusCanvas_;
     ImageSourceInfo foreground_;
     ImageSourceInfo secondary_;
     ImageSourceInfo background_;
@@ -271,8 +223,6 @@ private:
     // animatable property
     RefPtr<AnimatablePropertyColor> boardColor_;
     RefPtr<PropertyBool> reverse_;
-    RefPtr<RatingTheme> ratingTheme_;
-    static constexpr int32_t NUMBER_TWO = 2;
     ACE_DISALLOW_COPY_AND_MOVE(RatingModifier);
 };
 } // namespace OHOS::Ace::NG

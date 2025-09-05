@@ -35,66 +35,7 @@ class UIUtilsImpl {
     public makeObserved<T extends object>(target: T): T {
       // mark makeObserved using V2 feature
       ConfigureStateMgmt.instance.usingV2ObservedTrack('makeObserved', 'use');
-      return RefInfo.get(target)[RefInfo.MAKE_OBSERVED_PROXY] as T;
-    }
-
-    public makeV1Observed<T extends object>(target: T): T {
-      // Make non-observed data into observed V1 data
-      return ObservedObject.makeV1Observed(target);
-    }
-
-    public enableV2Compatibility<T extends object>(target: T): T {
-      // Enables V2 compatibility for the given object and all its nested objects
-      ObservedObject.enableV2Compatible(target);
-      return target;
-    }
-
-    // Function overloading.
-    public makeBinding<T>(getter: () => T): Binding<T>;
-    public makeBinding<T>(getter: () => T, setter: (newValue: T) => void): MutableBinding<T>;
-    public makeBinding<T>(getter: () => T, setter?:
-    (newValue: T) => void): Binding<T> | MutableBinding<T> {
-      return setter ? new MutableBinding(getter, setter) : new Binding(getter);
-    }
-
-    public addMonitor(target: object, path: string | string[], monitorFunc: MonitorCallback, options?: MonitorOptions): void {
-      if (!target || typeof target !== 'object' || !(ObserveV2.IsObservedObjectV2(target) ||  target instanceof ViewV2)) {
-        const message = `addMonitor failed because the target is illegal. The target must be an instance of @ObservedV2 (with at least one @Trace inside) or @ComponentV2.`;
-        stateMgmtConsole.applicationError(message);
-        throw new BusinessError(ADD_MONITOR_FAIL_TARGET_ILLEGAL, message);
-      }
-      if (!(typeof path === 'string' || Array.isArray(path))) {
-        const message = `addMonitor failed because path must be string or Array of string.`;
-        stateMgmtConsole.applicationError(message);
-        throw new BusinessError(ADD_MONITOR_FAIL_PATH_ILLEGAL, message);
-      }
-      
-      if (typeof monitorFunc !== 'function' || !monitorFunc.name) {
-        const message = `addMonitor failed because the monitorFunc is illegal, monitorFunc must be function or but cannot be an anonymous function.`;
-        stateMgmtConsole.applicationError(message);
-        throw new BusinessError(ADD_MONITOR_FAIL_FUNC_ILLEGAL, message);
-      }
-      ObserveV2.getObserve().AddMonitorPath(target, path, monitorFunc, options);
-    }
-        
-    public clearMonitor(target: object, path: string | string[], monitorFunc: MonitorCallback): void {
-      if (!target || typeof target !== 'object' || !(ObserveV2.IsObservedObjectV2(target) ||  target instanceof ViewV2)) {
-        const message = `clearMonitor failed because the target is illegal. The target must be an instance of @ObservedV2 (with at least one @Trace inside) or @ComponentV2.`;
-        stateMgmtConsole.applicationError(message);
-        throw new BusinessError(ADD_MONITOR_FAIL_TARGET_ILLEGAL, message);
-      }
-      if (!(typeof path === 'string' || Array.isArray(path))) {
-        const message = `clearMonitor failed because path must be string or Array of string.`;
-        stateMgmtConsole.applicationError(message);
-        throw new BusinessError(ADD_MONITOR_FAIL_PATH_ILLEGAL, message);
-      }
-      
-      if (monitorFunc && (typeof monitorFunc !== 'function' || !monitorFunc.name)) {
-        const message = `clearMonitor failed because the monitorFunc is illegal, monitorFunc must be function or but cannot be an anonymous function.`;
-        stateMgmtConsole.applicationError(message);
-        throw new BusinessError(ADD_MONITOR_FAIL_FUNC_ILLEGAL, message);
-      }
-      ObserveV2.getObserve().clearMonitorPath(target, path, monitorFunc);
+      return RefInfo.get(target).proxy as T;
     }
 
     public static instance(): UIUtilsImpl {

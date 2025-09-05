@@ -46,8 +46,6 @@ namespace {
 const std::string NAME = "checkbox";
 const std::string GROUP_NAME = "checkboxGroup";
 const std::string TAG = "CHECKBOX_TAG";
-constexpr float SIZE_WIDTH_NEW = 50.0f;
-constexpr float SIZE_HEIGHT = 460.0f;
 } // namespace
 
 class CheckBoxPatternSubTestNG : public testing::Test {
@@ -63,7 +61,6 @@ void CheckBoxPatternSubTestNG::SetUpTestSuite()
     auto themeManager = AceType::MakeRefPtr<MockThemeManager>();
     MockPipelineContext::GetCurrent()->SetThemeManager(themeManager);
     EXPECT_CALL(*themeManager, GetTheme(_)).WillRepeatedly(Return(AceType::MakeRefPtr<CheckboxTheme>()));
-    EXPECT_CALL(*themeManager, GetTheme(_, _)).WillRepeatedly(Return(AceType::MakeRefPtr<CheckboxTheme>()));
 
     RefPtr<FrameNode> stageNode = AceType::MakeRefPtr<FrameNode>("STAGE", -1, AceType::MakeRefPtr<Pattern>());
     auto stageManager = AceType::MakeRefPtr<StageManager>(stageNode);
@@ -599,7 +596,6 @@ HWTEST_F(CheckBoxPatternSubTestNG, CheckBoxPatternTest061, TestSize.Level1)
     MockPipelineContext::GetCurrent()->SetThemeManager(themeManager);
     auto checkBoxTheme = AceType::MakeRefPtr<CheckboxTheme>();
     EXPECT_CALL(*themeManager, GetTheme(_)).WillRepeatedly(Return(checkBoxTheme));
-    EXPECT_CALL(*themeManager, GetTheme(_, _)).WillRepeatedly(Return(checkBoxTheme));
     EXPECT_NE(pattern->paintMethod_->GetContentModifier(paintWrapper), nullptr);
     checkBoxTheme->focusPaintPadding_ = 10.0_px; //10.0_px is value of focusPaintPadding_
     pattern->size_ = SizeF(200, 200); //200 is width of checkbox, 200 is height of checkbox
@@ -653,7 +649,6 @@ HWTEST_F(CheckBoxPatternSubTestNG, CheckBoxPatternTest062, TestSize.Level1)
     MockPipelineContext::GetCurrent()->SetThemeManager(themeManager);
     auto checkBoxTheme = AceType::MakeRefPtr<CheckboxTheme>();
     EXPECT_CALL(*themeManager, GetTheme(_)).WillRepeatedly(Return(checkBoxTheme));
-    EXPECT_CALL(*themeManager, GetTheme(_, _)).WillRepeatedly(Return(checkBoxTheme));
     EXPECT_NE(pattern->paintMethod_->GetContentModifier(paintWrapper), nullptr);
     checkBoxTheme->focusPaintPadding_ = 10.0_px; //10.0_px is value of focusPaintPadding_
     pattern->size_ = SizeF(200, 200); //200 is width of checkbox, 200 is height of checkbox
@@ -707,7 +702,6 @@ HWTEST_F(CheckBoxPatternSubTestNG, CheckBoxPatternTest063, TestSize.Level1)
     MockPipelineContext::GetCurrent()->SetThemeManager(themeManager);
     auto checkBoxTheme = AceType::MakeRefPtr<CheckboxTheme>();
     EXPECT_CALL(*themeManager, GetTheme(_)).WillRepeatedly(Return(checkBoxTheme));
-    EXPECT_CALL(*themeManager, GetTheme(_, _)).WillRepeatedly(Return(checkBoxTheme));
     EXPECT_NE(pattern->paintMethod_->GetContentModifier(paintWrapper), nullptr);
     checkBoxTheme->focusPaintPadding_ = 100.0_px; //10.0_px is value of focusPaintPadding_
     pattern->size_ = SizeF(200, 200); //200 is width of checkbox, 200 is height of checkbox
@@ -717,36 +711,5 @@ HWTEST_F(CheckBoxPatternSubTestNG, CheckBoxPatternTest063, TestSize.Level1)
     RoundRect paintRect;
     eventHub->getInnerFocusRectFunc_(paintRect);
     EXPECT_EQ(paintRect.GetRect().ToString(), "RectT (-100.00, -100.00) - [400.00 x 400.00]");
-}
-
-/**
- * @tc.name: SetModifierBoundsRect001
- * @tc.desc: test SetModifierBoundsRect
- * @tc.type: FUNC
- */
-HWTEST_F(CheckBoxPatternSubTestNG, SetModifierBoundsRect001, TestSize.Level1)
-{
-    CheckBoxPaintMethod checkBoxPaintMethod;
-    checkBoxPaintMethod.checkboxModifier_ = AceType::MakeRefPtr<CheckBoxModifier>(true, Color::BLACK, Color::BLUE,
-        Color::GRAY, Color::TRANSPARENT, SizeF(20.0f, 20.0f), OffsetF(0.0f, 0.0f), 2.0f, 1.0f);
-    auto themeManager = AceType::MakeRefPtr<MockThemeManager>();
-    MockPipelineContext::GetCurrent()->SetThemeManager(themeManager);
-    auto checkBoxTheme = AceType::MakeRefPtr<CheckboxTheme>();
-    EXPECT_CALL(*themeManager, GetTheme(_)).WillRepeatedly(Return(checkBoxTheme));
-    EXPECT_CALL(*themeManager, GetTheme(_, _)).WillRepeatedly(Return(checkBoxTheme));
-    checkBoxTheme->hotZoneHorizontalPadding_ = Dimension(0.0f);
-    checkBoxTheme->hotZoneVerticalPadding_ = Dimension(0.0f);
-    checkBoxPaintMethod.checkboxModifier_->rect_->x_ = 0.0f;
-    checkBoxPaintMethod.checkboxModifier_->rect_->y_ = 0.0f;
-    checkBoxPaintMethod.checkboxModifier_->rect_->width_ = SIZE_WIDTH_NEW;
-    checkBoxPaintMethod.checkboxModifier_->rect_->height_ = 0.0f;
-    SizeF size(SIZE_WIDTH_NEW, SIZE_HEIGHT);
-    OffsetF offset(0.0f, 0.0f);
-    RefPtr<CheckBoxPaintProperty> paintProperty = AceType::MakeRefPtr<CheckBoxPaintProperty>();
-    WeakPtr<RenderContext> renderContext;
-    RefPtr<GeometryNode> geometryNode = AceType::MakeRefPtr<GeometryNode>();
-    PaintWrapper* paintWrapper = new PaintWrapper(renderContext, geometryNode, paintProperty);
-    checkBoxPaintMethod.SetModifierBoundsRect(checkBoxTheme, size, offset, paintWrapper);
-    EXPECT_EQ(checkBoxPaintMethod.checkboxModifier_->rect_->height_, SIZE_HEIGHT);
 }
 } // namespace OHOS::Ace::NG

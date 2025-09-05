@@ -14,8 +14,11 @@
  */
 #include "core/interfaces/native/node/scroller_modifier.h"
 
+#include "base/log/log_wrapper.h"
 #include "bridge/common/utils/utils.h"
+#include "core/components_ng/base/frame_node.h"
 #include "core/components_ng/pattern/scroll/scroll_model_ng.h"
+#include "core/components_ng/pattern/scroll_bar/proxy/scroll_bar_proxy.h"
 #include "core/components_ng/pattern/scrollable/scrollable_controller.h"
 
 namespace OHOS::Ace::NG {
@@ -77,33 +80,27 @@ void ScrollTo(ArkUINodeHandle node, ArkUI_Float32* xOffsetArray, ArkUI_Float32* 
 namespace NodeModifier {
 const ArkUIScrollerModifier* GetScrollerModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
     static const ArkUIScrollerModifier modifier = {
-        .getScroller = GetScroller,
-        .getScrollerProxy = GetScrollerProxy,
-        .scrollToIndex = SetScrollToIndex,
-        .scrollBy = ScrollBy,
-        .getCurrentOffset = GetCurrentOffset,
-        .scrollTo = ScrollTo,
+        GetScroller,
+        GetScrollerProxy,
+        SetScrollToIndex,
+        ScrollBy,
+        GetCurrentOffset,
+        ScrollTo
     };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
-
     return &modifier;
 }
 
 const CJUIScrollerModifier* GetCJUIScrollerModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
     static const CJUIScrollerModifier modifier = {
-        .getScroller = GetScroller,
-        .getScrollerProxy = GetScrollerProxy,
-        .scrollToIndex = SetScrollToIndex,
-        .scrollBy = ScrollBy,
-        .getCurrentOffset = GetCurrentOffset,
-        .scrollTo = ScrollTo,
+        GetScroller,
+        GetScrollerProxy,
+        SetScrollToIndex,
+        ScrollBy,
+        GetCurrentOffset,
+        ScrollTo
     };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
-
     return &modifier;
 }
 }

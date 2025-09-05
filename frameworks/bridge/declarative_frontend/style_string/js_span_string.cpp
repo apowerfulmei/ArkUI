@@ -47,9 +47,6 @@ struct AsyncContext {
     napi_async_work asyncWork;
     std::vector<uint8_t> buffer;
     RefPtr<SpanString> spanString;
-    RefPtr<JsFunction> jsFunc;
-    JSExecutionContext execContext;
-    int32_t instanceId = -1;
     int32_t status = -1;
 };
 
@@ -145,7 +142,7 @@ void JSSpanString::Constructor(const JSCallbackInfo& args)
 {
     auto jsSpanString = Referenced::MakeRefPtr<JSSpanString>();
     jsSpanString->IncRefCount();
-    std::u16string data;
+    std::string data;
     RefPtr<SpanString> spanString;
     if (args.Length() == 0) {
         spanString = AceType::MakeRefPtr<SpanString>(data);
@@ -155,7 +152,8 @@ void JSSpanString::Constructor(const JSCallbackInfo& args)
             spanString = AceType::MakeRefPtr<SpanString>(data);
             if (args.Length() > 1) {
                 auto thisObj = args.This();
-                auto spanBases = JSSpanString::ParseJsSpanBaseVector(args[1], data.length(), thisObj);
+                auto spanBases = JSSpanString::ParseJsSpanBaseVector(args[1], StringUtils::ToWstring(data).length(),
+                    thisObj);
                 spanString->BindWithSpans(spanBases);
             }
         } else {
@@ -278,19 +276,7 @@ void JSSpanString::GetSpans(const JSCallbackInfo& info)
     JSRef<JSArray> spanObjectArray = JSRef<JSArray>::New();
     uint32_t idx = 0;
     for (const RefPtr<SpanBase>& spanObject : spans) {
-        auto decorationSpan = AceType::DynamicCast<DecorationSpan>(spanObject);
-        if (decorationSpan) {
-            auto types = decorationSpan->GetTextDecorationTypes();
-            for (TextDecoration type : types) {
-                auto tempSpan = decorationSpan->GetSubSpan(
-                    decorationSpan->GetStartIndex(), decorationSpan->GetEndIndex());
-                auto tempDecorationSpan = AceType::DynamicCast<DecorationSpan>(tempSpan);
-                tempDecorationSpan->SetTextDecorationTypes({type});
-                spanObjectArray->SetValueAt(idx++, CreateJsSpanBaseObject(tempSpan));
-            }
-        } else {
-            spanObjectArray->SetValueAt(idx++, CreateJsSpanBaseObject(spanObject));
-        }
+        spanObjectArray->SetValueAt(idx++, CreateJsSpanBaseObject(spanObject));
     }
     info.SetReturnValue(JSRef<JSVal>::Cast(spanObjectArray));
 }
@@ -499,13 +485,9 @@ RefPtr<SpanBase> JSSpanString::ParseJsDecorationSpan(int32_t start, int32_t leng
     auto* base = obj->Unwrap<AceType>();
     auto* decorationSpan = AceType::DynamicCast<JSDecorationSpan>(base);
     if (decorationSpan && decorationSpan->GetDecorationSpan()) {
-        return AceType::MakeRefPtr<DecorationSpan>(
-            decorationSpan->GetDecorationSpan()->GetTextDecorationTypes(),
+        return AceType::MakeRefPtr<DecorationSpan>(decorationSpan->GetDecorationSpan()->GetTextDecorationType(),
             decorationSpan->GetDecorationSpan()->GetColor(),
-            decorationSpan->GetDecorationSpan()->GetTextDecorationStyle(),
-            decorationSpan->GetDecorationSpan()->GetLineThicknessScale(),
-            decorationSpan->GetDecorationSpan()->GetTextDecorationOptions(),
-            start, start + length);
+            decorationSpan->GetDecorationSpan()->GetTextDecorationStyle(), start, start + length);
     }
     return nullptr;
 }
@@ -767,22 +749,22 @@ void JSSpanString::FromHtml(const JSCallbackInfo& info)
             auto container = AceEngine::Get().GetContainer(asyncContext->instanceId);
             CHECK_NULL_VOID(container);
             auto taskExecutor = container->GetTaskExecutor();
-            taskExecutor->PostTask([styledString, asyncContext]() mutable {
+            taskExecutor->PostTask(
+                [styledString, asyncContext]() mutable {
                     ContainerScope scope(asyncContext->instanceId);
                     if (!styledString) {
                         ProcessPromiseCallback(asyncContext, ERROR_CODE_FROM_HTML_CONVERT_ERROR);
                         return;
-                    }
-                    if (SystemProperties::GetDebugEnabled()) {
-                        TAG_LOGD(ACE_TEXT, "Get StyledString From Html: %{public}s", styledString->ToString().c_str());
                     }
                     JSRef<JSObject> obj = JSClass<JSSpanString>::NewInstance();
                     auto jsSpanString = Referenced::Claim(obj->Unwrap<JSSpanString>());
                     jsSpanString->SetController(styledString);
                     auto spanStrNapi = JsConverter::ConvertJsValToNapiValue(obj);
                     ProcessPromiseCallback(asyncContext, ERROR_CODE_NO_ERROR, spanStrNapi);
-                }, TaskExecutor::TaskType::UI, "FromHtmlReturnPromise", PriorityType::IMMEDIATE);
-        }, TaskExecutor::TaskType::BACKGROUND, "FromHtml", PriorityType::IMMEDIATE);
+                },
+                TaskExecutor::TaskType::UI, "FromHtmlReturnPromise", PriorityType::IMMEDIATE);
+        },
+        TaskExecutor::TaskType::BACKGROUND, "FromHtml", PriorityType::IMMEDIATE);
     auto jsPromise = JsConverter::ConvertNapiValueToJsVal(result);
     CHECK_NULL_VOID(jsPromise->IsObject());
     info.SetReturnValue(JSRef<JSObject>::Cast(jsPromise));
@@ -790,39 +772,35 @@ void JSSpanString::FromHtml(const JSCallbackInfo& info)
 
 void JSSpanString::ToHtml(const JSCallbackInfo& info)
 {
-    if (info.Length() != 1 || !info[0]->IsObject()) {
+    auto arg = info[0];
+    if (info.Length() != 1 || !arg->IsObject()) {
         ReturnPromise(info, ERROR_CODE_PARAM_INVALID);
         return;
     }
-    auto arg = info[0];
 
     auto* spanString = JSRef<JSObject>::Cast(arg)->Unwrap<JSSpanString>();
     CHECK_NULL_VOID(spanString);
     auto spanStringController = spanString->GetController();
     CHECK_NULL_VOID(spanStringController);
-    auto html = HtmlUtils::ToHtml(Referenced::RawPtr(spanStringController));
-    if (SystemProperties::GetDebugEnabled()) {
-        TAG_LOGD(ACE_TEXT, "Transfer StyledString %{public}s To Html", spanStringController->ToString().c_str());
-    }
+    auto html = HtmlUtils::ToHtml(spanStringController.GetRawPtr());
     auto ret = JSRef<JSVal>::Make(JSVal(ToJSValue(html)));
     info.SetReturnValue(ret);
 }
 
 void JSSpanString::Marshalling(const JSCallbackInfo& info)
 {
-    if ((info.Length() != 1 && info.Length() != 2) || !info[0]->IsObject()) {
-        // marshalling only support one or two params
+    auto arg = info[0];
+    if (info.Length() != 1 || !arg->IsObject()) {
         ReturnPromise(info, ERROR_CODE_PARAM_INVALID);
         return;
     }
-    auto* spanString = JSRef<JSObject>::Cast(info[0])->Unwrap<JSSpanString>();
+
+    auto* spanString = JSRef<JSObject>::Cast(arg)->Unwrap<JSSpanString>();
     CHECK_NULL_VOID(spanString);
     auto spanStringController = spanString->GetController();
     CHECK_NULL_VOID(spanStringController);
     std::vector<uint8_t> buff;
     spanStringController->EncodeTlv(buff);
-
-    MarshallingExtSpan(info, buff);
 
     size_t bufferSize = buff.size();
     JSRef<JSArrayBuffer> arrayBuffer = JSRef<JSArrayBuffer>::New(bufferSize);
@@ -833,83 +811,11 @@ void JSSpanString::Marshalling(const JSCallbackInfo& info)
     info.SetReturnValue(arrayBuffer);
 }
 
-void JSSpanString::MarshallingExtSpan(const JSCallbackInfo& info, std::vector<uint8_t>& buff)
-{
-    if (info.Length() != 2 || !info[1]->IsFunction() || !info[0]->IsObject()) {
-        // marshalling only support two params: spanString and callback function
-        return;
-    }
-    auto jsVal = info[0];
-    if (!jsVal->IsObject()) {
-        return;
-    }
-    auto* spanString = JSRef<JSObject>::Cast(jsVal)->Unwrap<JSSpanString>();
-    CHECK_NULL_VOID(spanString);
-    auto spanStringController = spanString->GetController();
-    CHECK_NULL_VOID(spanStringController);
-    auto jsFunction = AceType::MakeRefPtr<JsFunction>(Framework::JSRef<Framework::JSObject>(),
-        JSRef<JSFunc>::Cast(info[1]));
-    auto marshallCallback = [execCtx = info.GetExecutionContext(), func = std::move(jsFunction)]
-        (JSRef<JSObject> spanObj) -> std::vector<uint8_t> {
-        std::vector<uint8_t> arrBuff;
-        JAVASCRIPT_EXECUTION_SCOPE_WITH_CHECK(execCtx, arrBuff);
-        JSRef<JSVal> param = JSRef<JSObject>::Cast(spanObj);
-        auto ret = func->ExecuteJS(1, &param);
-        if (ret->IsArrayBuffer()) {
-            JsiRef<JsiArrayBuffer> retJSBuf = JsiRef<JsiArrayBuffer>::Cast(ret);
-            int32_t bufferSize = retJSBuf->ByteLength();
-            auto* retBuf = static_cast<uint8_t*>(retJSBuf->GetBuffer());
-            std::vector<uint8_t> resBuf(retBuf, retBuf + bufferSize);
-            return resBuf;
-        }
-        return arrBuff;
-    };
-    auto spans = spanStringController->GetSpans(0, spanStringController->GetLength(), SpanType::ExtSpan);
-    for (const RefPtr<SpanBase>& spanObject : spans) {
-        auto obj = CreateJsSpanObject(spanObject);
-        auto arrBuff = marshallCallback(obj);
-        std::vector<uint8_t> spanInfo;
-        TLVUtil::WriteInt32(spanInfo, spanObject->GetStartIndex());
-        TLVUtil::WriteInt32(spanInfo, spanObject->GetLength());
-        TLVUtil::WriteUint8(buff, TLV_CUSTOM_MARSHALL_BUFFER_START);
-        TLVUtil::WriteInt32(buff, static_cast<int32_t>(arrBuff.size()) + static_cast<int32_t>(spanInfo.size()));
-        buff.insert(buff.end(), spanInfo.begin(), spanInfo.end());
-        buff.insert(buff.end(), arrBuff.begin(), arrBuff.end());
-    }
-    TLVUtil::WriteUint8(buff, TLV_END);
-}
-
 void JSSpanString::UnmarshallingExec(napi_env env, void *data)
 {
     CHECK_NULL_VOID(data);
     auto asyncContext = static_cast<AsyncContext*>(data);
-    std::function<RefPtr<ExtSpan>(const std::vector<uint8_t>&, int32_t, int32_t)> unmarshallCallback;
-    if (asyncContext->jsFunc) {
-        ContainerScope scope(asyncContext->instanceId);
-        unmarshallCallback = [instanceId = asyncContext->instanceId, execCtx = asyncContext->execContext,
-            func = std::move(asyncContext->jsFunc)]
-            (const std::vector<uint8_t>& buff, int32_t spanStart, int32_t spanLength) -> RefPtr<ExtSpan> {
-            RefPtr<ExtSpan> extSpan;
-            ContainerScope scope(instanceId);
-            JAVASCRIPT_EXECUTION_SCOPE_WITH_CHECK(execCtx, extSpan);
-            size_t bufferSize = buff.size();
-            JSRef<JSArrayBuffer> arrayBuffer = JSRef<JSArrayBuffer>::New(bufferSize);
-            auto* buffer = static_cast<uint8_t*>(arrayBuffer->GetBuffer());
-            if (memcpy_s(buffer, bufferSize, buff.data(), bufferSize) != 0) {
-                return extSpan;
-            }
-            JSRef<JSVal> param = JSRef<JSObject>::Cast(arrayBuffer);
-            auto ret = func->ExecuteJS(1, &param);
-            if (ret->IsObject()) {
-                auto retJSObj = JSRef<JSObject>::Cast(ret);
-                RefPtr<ExtSpan> retSpan = MakeRefPtr<JSExtSpan>(retJSObj, spanStart, spanLength);
-                return retSpan;
-            }
-            return extSpan;
-        };
-    }
-    asyncContext->spanString = SpanString::DecodeTlv(asyncContext->buffer, std::move(unmarshallCallback),
-        asyncContext->instanceId);
+    asyncContext->spanString = SpanString::DecodeTlv(asyncContext->buffer);
     CHECK_NULL_VOID(asyncContext->spanString);
     asyncContext->status = napi_ok;
 }
@@ -937,35 +843,21 @@ void JSSpanString::UnmarshallingComplete(napi_env env, napi_status status, void 
 void JSSpanString::Unmarshalling(const JSCallbackInfo& info)
 {
     auto arg = info[0];
-    if (info.Length() == 0 || info.Length() > 2 || !arg->IsArrayBuffer()) {
-        // unmarshalling only support one or two params
+    if (info.Length() != 1 || !arg->IsArrayBuffer()) {
         ReturnPromise(info, ERROR_CODE_PARAM_INVALID);
         return;
     }
-    auto instanceId = Container::CurrentIdSafely();
-    ContainerScope scope(instanceId);
     JSRef<JSArrayBuffer> arrayBuffer = JSRef<JSArrayBuffer>::Cast(arg);
     size_t bufferSize = static_cast<size_t>(arrayBuffer->ByteLength());
     void* buffer = arrayBuffer->GetBuffer();
     std::vector<uint8_t> buff(static_cast<uint8_t*>(buffer), static_cast<uint8_t*>(buffer) + bufferSize);
     auto asyncContext = new AsyncContext();
     asyncContext->buffer = buff;
-    asyncContext->instanceId = instanceId;
-    if (info.Length() != 1 && info[1]->IsFunction()) {
-        asyncContext->jsFunc = AceType::MakeRefPtr<JsFunction>(Framework::JSRef<Framework::JSObject>(),
-            JSRef<JSFunc>::Cast(info[1]));
-        asyncContext->execContext = info.GetExecutionContext();
-    }
+
     auto engine = EngineHelper::GetCurrentEngineSafely();
-    if (!engine) {
-        delete(asyncContext);
-        return;
-    }
+    CHECK_NULL_VOID(engine);
     NativeEngine* nativeEngine = engine->GetNativeEngine();
-    if (!nativeEngine) {
-        delete(asyncContext);
-        return;
-    }
+    CHECK_NULL_VOID(nativeEngine);
     asyncContext->env = reinterpret_cast<napi_env>(nativeEngine);
     napi_value promise = nullptr;
     napi_create_promise(asyncContext->env, &asyncContext->deferred, &promise);
@@ -985,7 +877,7 @@ void JSMutableSpanString::Constructor(const JSCallbackInfo& args)
 {
     auto jsSpanString = Referenced::MakeRefPtr<JSMutableSpanString>();
     jsSpanString->IncRefCount();
-    std::u16string data;
+    std::string data;
 
     RefPtr<MutableSpanString> spanString;
     if (args.Length() == 0) {
@@ -996,7 +888,8 @@ void JSMutableSpanString::Constructor(const JSCallbackInfo& args)
             spanString = AceType::MakeRefPtr<MutableSpanString>(data);
             if (args.Length() > 1) {
                 auto thisObj = args.This();
-                auto spanBases = JSSpanString::ParseJsSpanBaseVector(args[1], data.length(), thisObj);
+                auto spanBases = JSSpanString::ParseJsSpanBaseVector(args[1],
+                    StringUtils::ToWstring(data).length(), thisObj);
                 spanString->BindWithSpans(spanBases);
             }
         } else {
@@ -1062,7 +955,7 @@ void JSMutableSpanString::ReplaceString(const JSCallbackInfo& info)
     if (!CheckParameters(start, length)) {
         return;
     }
-    std::u16string data = info[2]->ToU16String();
+    std::string data = info[2]->ToString();
     controller->ReplaceString(start, length, data);
 }
 
@@ -1073,7 +966,7 @@ void JSMutableSpanString::InsertString(const JSCallbackInfo& info)
         return;
     }
     auto start = info[0]->ToNumber<int32_t>();
-    std::u16string data = info[1]->ToU16String();
+    std::string data = info[1]->ToString();
     auto controller = GetMutableController().Upgrade();
     CHECK_NULL_VOID(controller);
     // The input parameter must not cross the boundary.

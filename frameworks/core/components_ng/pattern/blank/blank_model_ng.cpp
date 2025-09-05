@@ -15,9 +15,18 @@
 
 #include "core/components_ng/pattern/blank/blank_model_ng.h"
 
-#include "core/common/resource/resource_parse_utils.h"
+#include "base/geometry/dimension.h"
+#include "base/memory/ace_type.h"
+#include "base/memory/referenced.h"
+#include "core/common/container.h"
+#include "core/components/common/layout/constants.h"
+#include "core/components_ng/base/frame_node.h"
 #include "core/components_ng/base/view_stack_processor.h"
+#include "core/components_ng/pattern/blank/blank_layout_property.h"
+#include "core/components_ng/pattern/blank/blank_paint_property.h"
 #include "core/components_ng/pattern/blank/blank_pattern.h"
+#include "core/components_v2/inspector/inspector_constants.h"
+#include "core/pipeline/base/element_register.h"
 
 namespace OHOS::Ace::NG {
 void BlankModelNG::Create()
@@ -81,48 +90,9 @@ void BlankModelNG::SetHeight(const Dimension& height)
     layoutProperty->UpdateHeight(height);
 }
 
-void BlankModelNG::ResetResObj(const std::string& key)
-{
-    if (!SystemProperties::ConfigChangePerform()) {
-        return;
-    }
-    auto frameNode = ViewStackProcessor::GetInstance()->GetMainFrameNode();
-    CHECK_NULL_VOID(frameNode);
-    auto blankPattern = frameNode->GetPattern<BlankPattern>();
-    CHECK_NULL_VOID(blankPattern);
-    blankPattern->RemoveResObj(key);
-}
-
 void BlankModelNG::SetColor(const Color& color)
 {
     ACE_UPDATE_PAINT_PROPERTY(BlankPaintProperty, Color, color);
-}
-
-void BlankModelNG::SetColor(const RefPtr<ResourceObject>& resObj)
-{
-    auto frameNode = ViewStackProcessor::GetInstance()->GetMainFrameNode();
-    CHECK_NULL_VOID(frameNode);
-
-    auto blankPattern = frameNode->GetPattern<BlankPattern>();
-    CHECK_NULL_VOID(blankPattern);
-    auto&& updateFunc = [weak = AceType::WeakClaim(frameNode)](const RefPtr<ResourceObject>& resObj) {
-        auto frameNode = weak.Upgrade();
-        CHECK_NULL_VOID(frameNode);
-        auto blankPattern = frameNode->GetPattern<BlankPattern>();
-        CHECK_NULL_VOID(blankPattern);
-        std::string blankColor = blankPattern->GetResCacheMapByKey("blank.color");
-        Color result;
-        if (blankColor.empty()) {
-            ResourceParseUtils::ParseResColor(resObj, result);
-            blankPattern->AddResCache("blank.color", result.ColorToString());
-        } else {
-            result = Color::ColorFromString(blankColor);
-        }
-        ACE_UPDATE_NODE_PAINT_PROPERTY(BlankPaintProperty, Color, result, frameNode);
-        frameNode->MarkDirtyNode(PROPERTY_UPDATE_RENDER);
-    };
-    updateFunc(resObj);
-    blankPattern->AddResObj("blank.color", resObj, std::move(updateFunc));
 }
 
 void BlankModelNG::SetColor(FrameNode* frameNode, const Color& color)
@@ -130,30 +100,6 @@ void BlankModelNG::SetColor(FrameNode* frameNode, const Color& color)
     ACE_UPDATE_NODE_PAINT_PROPERTY(BlankPaintProperty, Color, color, frameNode);
 }
 
-void BlankModelNG::SetColor(FrameNode* frameNode, const RefPtr<ResourceObject>& resObj)
-{
-    CHECK_NULL_VOID(frameNode);
-    auto blockPattern = frameNode->GetPattern<BlankPattern>();
-    CHECK_NULL_VOID(blockPattern);
-    auto&& updateFunc = [weak = AceType::WeakClaim(frameNode)](const RefPtr<ResourceObject>& resObj) {
-        auto frameNode = weak.Upgrade();
-        CHECK_NULL_VOID(frameNode);
-        auto blankPattern = frameNode->GetPattern<BlankPattern>();
-        CHECK_NULL_VOID(blankPattern);
-        std::string blankColor = blankPattern->GetResCacheMapByKey("blank.color");
-        Color result;
-        if (blankColor.empty()) {
-            ResourceParseUtils::ParseResColor(resObj, result);
-            blankPattern->AddResCache("blank.color", result.ColorToString());
-        } else {
-            result = Color::ColorFromString(blankColor);
-        }
-        ACE_UPDATE_NODE_PAINT_PROPERTY(BlankPaintProperty, Color, result, frameNode);
-        frameNode->MarkDirtyNode(PROPERTY_UPDATE_RENDER);
-    };
-    updateFunc(resObj);
-    blockPattern->AddResObj("blank.color", resObj, std::move(updateFunc));
-}
 void BlankModelNG::SetHeight(FrameNode* frameNode, const Dimension& height)
 {
     CHECK_NULL_VOID(frameNode);
@@ -175,16 +121,5 @@ void BlankModelNG::SetBlankMin(FrameNode* frameNode, const Dimension& blankMin)
     if (Container::LessThanAPIVersion(PlatformVersion::VERSION_TEN)) {
         ACE_UPDATE_NODE_LAYOUT_PROPERTY(BlankLayoutProperty, FlexBasis, result, frameNode);
     }
-}
-
-void BlankModelNG::ResetResObj(FrameNode* frameNode, const std::string& key)
-{
-    if (!SystemProperties::ConfigChangePerform()) {
-        return;
-    }
-    CHECK_NULL_VOID(frameNode);
-    auto blankPattern = frameNode->GetPattern<BlankPattern>();
-    CHECK_NULL_VOID(blankPattern);
-    blankPattern->RemoveResObj(key);
 }
 } // namespace OHOS::Ace::NG

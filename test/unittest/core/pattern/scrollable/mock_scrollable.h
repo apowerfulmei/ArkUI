@@ -18,7 +18,6 @@
 
 #include "gmock/gmock.h"
 
-#include "core/components_ng/pattern/scroll/scroll_edge_effect.h"
 #include "core/components_ng/pattern/scrollable/scrollable_event_hub.h"
 #include "core/components_ng/pattern/scrollable/scrollable_pattern.h"
 
@@ -26,16 +25,15 @@ namespace OHOS::Ace::NG {
 // implement interfaces with mock
 class PartiallyMockedScrollable : public ScrollablePattern {
     DECLARE_ACE_TYPE(PartiallyMockedScrollable, ScrollablePattern);
-
 private:
     MOCK_METHOD(bool, UpdateCurrentOffset, (float delta, int32_t source), (override));
     MOCK_METHOD(bool, IsAtTop, (), (const, override));
-    MOCK_METHOD(bool, IsAtBottom, (bool considerRepeat), (const, override));
+    MOCK_METHOD(bool, IsAtBottom, (), (const, override));
     MOCK_METHOD(void, UpdateScrollBarOffset, (), (override));
     MOCK_METHOD(bool, IsScrollable, (), (const, override));
     MOCK_METHOD(OverScrollOffset, GetOverScrollOffset, (double delta), (const, override));
-    MOCK_METHOD(float, GetMainContentSize, (), (const, override));
     MOCK_METHOD(bool, IsOutOfBoundary, (bool useCurrentDelta), (override));
+    MOCK_METHOD(float, GetMainContentSize, (), (const, override));
 };
 
 class FullyMockedScrollable : public PartiallyMockedScrollable {

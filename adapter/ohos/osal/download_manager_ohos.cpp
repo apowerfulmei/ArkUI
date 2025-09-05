@@ -15,6 +15,7 @@
 
 #include <dlfcn.h>
 
+#include "base/log/log.h"
 #include "base/log/log_wrapper.h"
 #include "base/network/download_manager.h"
 
@@ -45,14 +46,10 @@ DownloadManager* CreateDownloadManager()
 DownloadManager* DownloadManager::GetInstance()
 {
     TAG_LOGI(AceLogTag::ACE_DOWNLOAD_MANAGER, "DownloadManager GetInstance");
-    struct DownloadManagerHolder {
-        DownloadManager* mgr_;
-        DownloadManagerHolder()
-        {
-            mgr_ = CreateDownloadManager();
-        }
-    };
-    static DownloadManagerHolder mgrHolder;
-    return mgrHolder.mgr_;
+    static std::once_flag onceFlag;
+    std::call_once(onceFlag, []() {
+        instance_.reset(CreateDownloadManager());
+    });
+    return instance_.get();
 }
 } // namespace OHOS::Ace

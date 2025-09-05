@@ -119,17 +119,14 @@ OrderResult DateTimeSequence::GetAmPmTimeOrder(const std::string& locale)
         return orderResult;
     }
     const char* language = localeObj.getBaseName();
-    // 0 represents am/pm position, 1 represents time position
-    const std::string amPmFirst = "10";
-    const std::string amPmLast = "01";
     const std::unordered_map<std::string, std::string> AM_PM_TIME_ORDER_MAP = {
-        { "ug", amPmFirst },
-        { "ar", amPmFirst },
-        { "fa", amPmLast },
-        { "ur", amPmFirst },
-        { "iw", amPmLast },
-        { "he", amPmLast },
-        { "bo", amPmFirst },
+        { "ug", "10" },
+        { "ar", "01" },
+        { "fa", "01" },
+        { "ur", "10" },
+        { "iw", "01" },
+        { "he", "01" },
+        { "bo", "10" },
     };
     std::string languageTag = language == nullptr ? "" : language;
     if (AM_PM_TIME_ORDER_MAP.find(languageTag) != AM_PM_TIME_ORDER_MAP.end()) {
@@ -152,7 +149,8 @@ OrderResult DateTimeSequence::GetAmPmTimeOrder(const std::string& locale)
     std::regex pattrn("a[^ah]*h");
     std::smatch match;
     bool found = std::regex_search(result, match, pattrn);
-    std::string amPmTimeOrder = found ? amPmFirst : amPmLast;
+    // 0 represent am/pm position
+    std::string amPmTimeOrder = found ? "10" : "01"; // 1 represent time position
     orderResult = {result, "", amPmTimeOrder};
     delete gen;
     return orderResult;

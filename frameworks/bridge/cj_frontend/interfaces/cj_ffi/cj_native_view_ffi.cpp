@@ -15,9 +15,17 @@
 
 #include "bridge/cj_frontend/interfaces/cj_ffi/cj_native_view_ffi.h"
 
-#include "cj_lambda.h"
+#include <securec.h>
+#include <cinttypes>
 
 #include "bridge/cj_frontend/cppview/native_view.h"
+#include "ffi_remote_data.h"
+#include "bridge/cj_frontend/interfaces/cj_ffi/utils.h"
+#include "core/components_ng/pattern/image/image_model_ng.h"
+#include "core/components_ng/pattern/linear_layout/column_model_ng.h"
+#include "core/components_ng/pattern/linear_layout/row_model_ng.h"
+#include "core/components_ng/pattern/linear_split/linear_split_model_ng.h"
+#include "core/components_ng/pattern/navigator/navigator_model_ng.h"
 
 using namespace OHOS::Ace::Framework;
 using namespace OHOS::FFI;
@@ -160,30 +168,12 @@ void FfiOHOSAceFrameworkNativeViewFinishUpdateFunc(int64_t nativeViewId, int64_t
     view->FinishUpdateFunc(elmtId);
 }
 
-int32_t FfiOHOSAceFrameworkNativeViewGetUINodeId(int64_t nativeViewId)
-{
-    auto view = FFIData::GetData<NativeView>(nativeViewId);
-    if (!view) {
-        LOGE("FfiOHOSAceFrameworkNativeViewGetUINodeId fail, no NativeView of %{public}" PRId64, nativeViewId);
-        return -1;
-    }
-    auto node = view->GetViewNode();
-    if (!node) {
-        return -1;
-    }
-    auto uiNode = OHOS::Ace::AceType::DynamicCast<OHOS::Ace::NG::UINode>(node);
-    if (!uiNode) {
-        return -1;
-    }
-    return uiNode->GetId();
-}
-
 void FfiOHOSAceFrameworkViewDeletedElmtIdsHaveBeenPurged(int64_t nativeViewId, VectorCJInt64Handle vec)
 {
     auto view = FFIData::GetData<NativeView>(nativeViewId);
     if (!view) {
-        LOGE("FfiOHOSAceFrameworkViewDeletedElmtIdsHaveBeenPurged fail, no NativeView of %{public}" PRId64,
-            nativeViewId);
+        LOGE("FfiOHOSAceFrameworkViewDeletedElmtIdsHaveBeenPurged fail, no NativeView of %{public}"
+            PRId64, nativeViewId);
         return;
     }
 
@@ -236,28 +226,5 @@ void FFICJVectorCJInt64Delete(VectorCJInt64Handle vec)
 {
     auto actualVec = reinterpret_cast<std::vector<int64_t>*>(vec);
     delete actualVec;
-}
-
-void FfiOHOSAceFrameworkNativeViewCreateRecycle(
-    int64_t nativeViewId, bool isRecycling, const char* name, void (*callback)())
-{
-    auto view = FFIData::GetData<NativeView>(nativeViewId);
-    if (!view) {
-        LOGE("FfiOHOSAceFrameworkNativeViewCreateRecycle fail, no NativeView of %{public}" PRId64, nativeViewId);
-        return;
-    }
-    auto func = CJLambda::Create(callback);
-    NativeView::CreateRecycle(view, isRecycling, name, std::move(func));
-}
-
-void FfiOHOSAceFrameworkNativeViewResetRecycleCustomNode(int64_t nativeViewId)
-{
-    auto view = FFIData::GetData<NativeView>(nativeViewId);
-    if (!view) {
-        LOGE("FfiOHOSAceFrameworkNativeViewResetRecycleCustomNode fail, no NativeView of %{public}" PRId64,
-            nativeViewId);
-        return;
-    }
-    view->ResetRecycleCustomNode();
 }
 }

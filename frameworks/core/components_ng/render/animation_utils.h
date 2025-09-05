@@ -16,22 +16,13 @@
 #ifndef FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_RENDER_ANIMATION_UTILS_H
 #define FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_RENDER_ANIMATION_UTILS_H
 
-#include "base/utils/macros.h"
 #include "core/components/common/properties/animation_option.h"
 #include "core/components/common/properties/color.h"
-#include "core/pipeline/base/render_context.h"
-#include "core/pipeline/pipeline_base.h"
-#include "core/pipeline/pipeline_context.h"
+#include "core/components_ng/render/render_context.h"
 
-namespace OHOS::Rosen {
-class RSUIContext;
-}
+#include "foundation/arkui/ace_engine/frameworks/base/utils/macros.h"
 
 namespace OHOS::Ace {
-
-namespace NG {
-class RenderContext;
-}
 
 namespace {
 
@@ -47,42 +38,31 @@ public:
 
     class InteractiveAnimation;
 
-    static void OpenImplicitAnimation(const AnimationOption& option, const RefPtr<Curve>& curve,
-        const std::function<void()>& finishCallback, const RefPtr<PipelineBase>& context = nullptr);
-    static bool CloseImplicitAnimation(const RefPtr<PipelineBase>& context = nullptr);
-    static bool CloseImplicitCancelAnimation(const RefPtr<PipelineBase>& context = nullptr);
-    static CancelAnimationStatus CloseImplicitCancelAnimationReturnStatus(
-        const RefPtr<PipelineBase>& context = nullptr);
-    static bool IsImplicitAnimationOpen(const RefPtr<PipelineBase>& context = nullptr);
+    static void OpenImplicitAnimation(
+        const AnimationOption& option, const RefPtr<Curve>& curve, const std::function<void()>& finishCallback);
+    static bool CloseImplicitAnimation();
+    static bool IsImplicitAnimationOpen();
     static void Animate(const AnimationOption& option, const PropertyCallback& callback,
-        const FinishCallback& finishCallback = nullptr, const RepeatCallback& repeatCallback = nullptr,
-            const RefPtr<PipelineBase>& context = nullptr);
-    static void AddKeyFrame(float fraction, const RefPtr<Curve>& curve, const PropertyCallback& callback,
-        const RefPtr<PipelineBase>& context = nullptr);
-    static void AddKeyFrame(float fraction, const PropertyCallback& callback,
-        const RefPtr<PipelineBase>& context = nullptr);
-    static void AddDurationKeyFrame(int duration, const RefPtr<Curve>& curve, const PropertyCallback& callback,
-        const RefPtr<PipelineBase>& context = nullptr);
+        const FinishCallback& finishCallback = nullptr, const RepeatCallback& repeatCallback = nullptr);
+    static void AddKeyFrame(float fraction, const RefPtr<Curve>& curve, const PropertyCallback& callback);
+    static void AddKeyFrame(float fraction, const PropertyCallback& callback);
+    static void AddDurationKeyFrame(int duration, const RefPtr<Curve>& curve, const PropertyCallback& callback);
 
     // Similar to Animate, but reuses current options and replaces callback
-    static void AnimateWithCurrentOptions(const PropertyCallback& callback, const FinishCallback& finishCallback,
-        bool timingSensitive = true, const RefPtr<PipelineBase>& context = nullptr);
+    static void AnimateWithCurrentOptions(
+        const PropertyCallback& callback, const FinishCallback& finishCallback, bool timingSensitive = true);
     // Similar to Animate, but reuses current callback and replaces options
-    static void AnimateWithCurrentCallback(const AnimationOption& option, const PropertyCallback& callback,
-        const RefPtr<PipelineBase>& context = nullptr);
+    static void AnimateWithCurrentCallback(const AnimationOption& option, const PropertyCallback& callback);
 
     static std::shared_ptr<AnimationUtils::Animation> StartAnimation(const AnimationOption& option,
         const PropertyCallback& callback, const FinishCallback& finishCallback = nullptr,
-        const RepeatCallback& repeatCallback = nullptr, const RefPtr<PipelineBase>& context = nullptr);
+        const RepeatCallback& repeatCallback = nullptr);
     static void StopAnimation(const std::shared_ptr<AnimationUtils::Animation>& animation);
     static void BlendBgColorAnimation(
         RefPtr<NG::RenderContext>& renderContext, const Color& endColor, int32_t duration, const RefPtr<Curve>& curve);
     static void PauseAnimation(const std::shared_ptr<AnimationUtils::Animation>& animation);
     static void ResumeAnimation(const std::shared_ptr<AnimationUtils::Animation>& animation);
-    // need to reset the attribute of arkui node after Reverse in case of attribute inconsistent
-    static void ReverseAnimation(const std::shared_ptr<AnimationUtils::Animation>& animation);
-    static void ExecuteWithoutAnimation(const PropertyCallback& callback,
-        const RefPtr<PipelineBase>& context = nullptr);
+    static void ExecuteWithoutAnimation(const PropertyCallback& callback);
 
     static std::shared_ptr<AnimationUtils::InteractiveAnimation> CreateInteractiveAnimation(
         const InteractiveAnimationCallback& addCallback, const FinishCallback& callback);
@@ -102,9 +82,6 @@ public:
     static void AddInteractiveAnimation(
         const std::shared_ptr<AnimationUtils::InteractiveAnimation>& interactiveAnimation,
         const std::function<void()>& callback);
-    static void SetNavGroupNodeTransAnimationCallback();
-    static std::shared_ptr<Rosen::RSUIContext> GetCurrentRSUIContext(RefPtr<PipelineBase> context);
-    static uint64_t GetRSUIContextToken(RefPtr<PipelineBase> context);
 };
 } // namespace OHOS::Ace
 

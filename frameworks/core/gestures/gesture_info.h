@@ -38,7 +38,6 @@ constexpr int32_t DEFAULT_PAN_FINGER = 1;
 constexpr Dimension DEFAULT_PAN_DISTANCE = 5.0_vp;
 constexpr Dimension DRAG_PAN_DISTANCE_MOUSE = 1.0_vp;
 constexpr Dimension DEFAULT_SLIDE_DISTANCE = DEFAULT_PAN_DISTANCE;
-constexpr Dimension DEFAULT_PEN_PAN_DISTANCE = 8.0_vp;
 constexpr int32_t DEFAULT_SLIDE_FINGER = DEFAULT_PAN_FINGER;
 constexpr double DEFAULT_SLIDE_SPEED = 300.0;
 constexpr int32_t DEFAULT_LONG_PRESS_DURATION = 100;
@@ -107,8 +106,6 @@ enum class DragEventAction {
     DRAG_EVENT_END,
     DRAG_EVENT_OUT,
     DRAG_EVENT_START_FOR_CONTROLLER,
-    DRAG_EVENT_PULL_CANCEL,
-    DRAG_EVENT_PULL_THROW,
 };
 
 enum class InputEventType {
@@ -117,12 +114,6 @@ enum class InputEventType {
     MOUSE_BUTTON,
     AXIS,
     KEYBOARD,
-};
-
-enum class RecognizerDelayStatus {
-    NONE = 0,
-    START,
-    END,
 };
 
 struct PanDirection final {
@@ -144,8 +135,6 @@ using OnPanDirectionFunc = EventCallback<void(const PanDirection& direction)>;
 using PanDirectionFuncType = OnPanDirectionFunc::FunctionType;
 using OnPanDistanceFunc = EventCallback<void(double distance)>;
 using PanDistanceFuncType = OnPanDistanceFunc::FunctionType;
-using PanDistanceMap = std::unordered_map<SourceTool, double>;
-using PanDistanceMapDimension = std::unordered_map<SourceTool, Dimension>;
 
 class PanGestureOption : public AceType {
     DECLARE_ACE_TYPE(PanGestureOption, AceType);
@@ -170,21 +159,9 @@ public:
     void SetDistance(double distance)
     {
         distance_ = distance;
-        distanceMap_[SourceTool::UNKNOWN] = Dimension(
-            Dimension(distance_, DimensionUnit::PX).ConvertToVp(), DimensionUnit::VP);
         for (const auto& callback : onPanDistanceIds_) {
             (callback.second.GetCallback())(distance);
         }
-    }
-
-    void SetDistanceMap(const PanDistanceMapDimension& distanceMap)
-    {
-        distanceMap_ = distanceMap;
-    }
-
-    const PanDistanceMapDimension& GetPanDistanceMap() const
-    {
-        return distanceMap_;
     }
 
     double GetDistance() const
@@ -248,7 +225,6 @@ public:
 private:
     PanDirection direction_;
     double distance_ = DEFAULT_PAN_DISTANCE.ConvertToPx();
-    PanDistanceMapDimension distanceMap_;
     int32_t fingers_ = 1;
     bool isLimitFingerCount_ = false;
     std::unordered_map<typename OnPanFingersFunc::IdType, OnPanFingersFunc> onPanFingersIds_;
@@ -282,8 +258,6 @@ struct FingerInfo {
 
     //screen position at which the touch point contacts the screen.
     Offset screenLocation_;
-    // The location where the touch point touches the screen when there are multiple screens.
-    Offset globalDisplayLocation_;
     SourceType sourceType_ = SourceType::NONE;
     SourceTool sourceTool_ = SourceTool::UNKNOWN;
 };

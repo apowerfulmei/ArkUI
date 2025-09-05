@@ -14,8 +14,14 @@
  */
 #include "frameworks/core/interfaces/native/node/node_symbol_span_modifier.h"
 
+#include "frameworks/bridge/common/utils/utils.h"
+#include "frameworks/core/components/common/layout/constants.h"
+#include "frameworks/core/components/common/properties/text_style.h"
+#include "frameworks/core/components/common/properties/text_style_parser.h"
+#include "frameworks/core/components_ng/base/frame_node.h"
+#include "frameworks/core/components_ng/base/view_abstract.h"
 #include "frameworks/core/components_ng/pattern/text/symbol_span_model_ng.h"
-#include "frameworks/core/components_ng/pattern/text/span_node.h"
+#include "frameworks/core/pipeline/base/element_register.h"
 
 namespace OHOS::Ace::NG {
 namespace {
@@ -45,14 +51,9 @@ void ResetSymbolSpanFontColor(ArkUINodeHandle node)
     Color fontColor = theme->GetTextStyle().GetTextColor();
     std::vector<Color> colorArray = { fontColor };
     SymbolSpanModelNG::SetFontColor(frameNode, colorArray);
-    if (SystemProperties::ConfigChangePerform()) {
-        auto spanNode = AceType::DynamicCast<NG::SpanNode>(frameNode);
-        CHECK_NULL_VOID(spanNode);
-        spanNode->UnregisterResource("symbolColor");
-    }
 }
 
-void SetSymbolSpanFontSize(ArkUINodeHandle node, ArkUI_Float32 fontSize, ArkUI_Int32 unit, void* fontSizeRawPtr)
+void SetSymbolSpanFontSize(ArkUINodeHandle node, ArkUI_Float32 fontSize, ArkUI_Int32 unit)
 {
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
@@ -65,9 +66,7 @@ void SetSymbolSpanFontSize(ArkUINodeHandle node, ArkUI_Float32 fontSize, ArkUI_I
         CalcDimension fontSize = theme->GetTextStyle().GetFontSize();
         SymbolSpanModelNG::SetFontSize(frameNode, fontSize);
     } else {
-        auto fontSizeVal = Dimension(fontSize, static_cast<OHOS::Ace::DimensionUnit>(unit));
-        SymbolSpanModelNG::SetFontSize(frameNode, fontSizeVal);
-        NodeModifier::ProcessResourceObj<CalcDimension>(frameNode, "fontSize", fontSizeVal, fontSizeRawPtr);
+        SymbolSpanModelNG::SetFontSize(frameNode, Dimension(fontSize, static_cast<OHOS::Ace::DimensionUnit>(unit)));
     }
 }
 
@@ -79,11 +78,6 @@ void ResetSymbolSpanFontSize(ArkUINodeHandle node)
     CHECK_NULL_VOID(theme);
     CalcDimension fontSize = theme->GetTextStyle().GetFontSize();
     SymbolSpanModelNG::SetFontSize(frameNode, fontSize);
-    if (SystemProperties::ConfigChangePerform()) {
-        auto spanNode = AceType::DynamicCast<NG::SpanNode>(frameNode);
-        CHECK_NULL_VOID(spanNode);
-        spanNode->UnregisterResource("fontSize");
-    }
 }
 
 void SetSymbolSpanFontWeightStr(ArkUINodeHandle node, ArkUI_CharPtr weight)
@@ -135,13 +129,6 @@ void ResetSymbolSpanEffectStrategy(ArkUINodeHandle node)
     SymbolSpanModelNG::SetSymbolEffect(frameNode, 0);
 }
 
-void SetCustomSymbolSpanId(ArkUINodeHandle node, ArkUI_Uint32 symbolId, ArkUI_CharPtr fontFamily)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    SymbolSpanModelNG::InitialCustomSymbol(frameNode, symbolId, fontFamily);
-}
-
 void SetSymbolSpanId(ArkUINodeHandle node, ArkUI_Uint32 symbolId)
 {
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
@@ -153,65 +140,42 @@ void SetSymbolSpanId(ArkUINodeHandle node, ArkUI_Uint32 symbolId)
 namespace NodeModifier {
 const ArkUISymbolSpanModifier* GetSymbolSpanModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
     static const ArkUISymbolSpanModifier modifier = {
-        .setSymbolSpanFontColor = SetSymbolSpanFontColor,
-        .resetSymbolSpanFontColor = ResetSymbolSpanFontColor,
-        .setSymbolSpanFontSize = SetSymbolSpanFontSize,
-        .resetSymbolSpanFontSize = ResetSymbolSpanFontSize,
-        .setSymbolSpanFontWeightStr = SetSymbolSpanFontWeightStr,
-        .setSymbolSpanFontWeight = SetSymbolSpanFontWeight,
-        .resetSymbolSpanFontWeight = ResetSymbolSpanFontWeight,
-        .setSymbolSpanRenderingStrategy = SetSymbolSpanRenderingStrategy,
-        .resetSymbolSpanRenderingStrategy = ResetSymbolSpanRenderingStrategy,
-        .setSymbolSpanEffectStrategy = SetSymbolSpanEffectStrategy,
-        .resetSymbolSpanEffectStrategy = ResetSymbolSpanEffectStrategy,
-        .setSymbolSpanId = SetSymbolSpanId,
-        .setCustomSymbolSpanId = SetCustomSymbolSpanId,
+        SetSymbolSpanFontColor,
+        ResetSymbolSpanFontColor,
+        SetSymbolSpanFontSize,
+        ResetSymbolSpanFontSize,
+        SetSymbolSpanFontWeightStr,
+        SetSymbolSpanFontWeight,
+        ResetSymbolSpanFontWeight,
+        SetSymbolSpanRenderingStrategy,
+        ResetSymbolSpanRenderingStrategy,
+        SetSymbolSpanEffectStrategy,
+        ResetSymbolSpanEffectStrategy,
+        SetSymbolSpanId
     };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
 
     return &modifier;
 }
 
 const CJUISymbolSpanModifier* GetCJUISymbolSpanModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
     static const CJUISymbolSpanModifier modifier = {
-        .setSymbolSpanFontColor = SetSymbolSpanFontColor,
-        .resetSymbolSpanFontColor = ResetSymbolSpanFontColor,
-        .setSymbolSpanFontSize = SetSymbolSpanFontSize,
-        .resetSymbolSpanFontSize = ResetSymbolSpanFontSize,
-        .setSymbolSpanFontWeightStr = SetSymbolSpanFontWeightStr,
-        .setSymbolSpanFontWeight = SetSymbolSpanFontWeight,
-        .resetSymbolSpanFontWeight = ResetSymbolSpanFontWeight,
-        .setSymbolSpanRenderingStrategy = SetSymbolSpanRenderingStrategy,
-        .resetSymbolSpanRenderingStrategy = ResetSymbolSpanRenderingStrategy,
-        .setSymbolSpanEffectStrategy = SetSymbolSpanEffectStrategy,
-        .resetSymbolSpanEffectStrategy = ResetSymbolSpanEffectStrategy,
-        .setSymbolSpanId = SetSymbolSpanId,
-        .setCustomSymbolSpanId = SetCustomSymbolSpanId,
+        SetSymbolSpanFontColor,
+        ResetSymbolSpanFontColor,
+        SetSymbolSpanFontSize,
+        ResetSymbolSpanFontSize,
+        SetSymbolSpanFontWeightStr,
+        SetSymbolSpanFontWeight,
+        ResetSymbolSpanFontWeight,
+        SetSymbolSpanRenderingStrategy,
+        ResetSymbolSpanRenderingStrategy,
+        SetSymbolSpanEffectStrategy,
+        ResetSymbolSpanEffectStrategy,
+        SetSymbolSpanId
     };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
 
     return &modifier;
 }
-
-template<typename T>
-void ProcessResourceObj(UINode* uinode, std::string key, T value, void* objRawPtr)
-{
-    CHECK_NULL_VOID(SystemProperties::ConfigChangePerform());
-    CHECK_NULL_VOID(uinode);
-    auto spanNode = AceType::DynamicCast<NG::SpanNode>(uinode);
-    CHECK_NULL_VOID(spanNode);
-    if (objRawPtr) {
-        auto resObj = AceType::Claim(reinterpret_cast<ResourceObject*>(objRawPtr));
-        spanNode->RegisterResource<T>(key, resObj, value);
-    } else {
-        spanNode->UnregisterResource(key);
-    }
-}
-
-template void ProcessResourceObj<CalcDimension>(UINode* uinode, std::string key, CalcDimension value, void* objRawPtr);
 } // namespace NodeModifier
 } // namespace OHOS::Ace::NG

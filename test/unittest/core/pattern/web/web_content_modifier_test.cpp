@@ -52,7 +52,6 @@ HWTEST_F(WebContentModifierTest, onDraw_001, TestSize.Level1)
     Testing::MockCanvas rsCanvas;
     DrawingContext context { rsCanvas, 100.0f, 100.0f };
     modifier.onDraw(context);
-    EXPECT_EQ(modifier.renderSuface_, nullptr);
 }
 
 /**
@@ -67,7 +66,6 @@ HWTEST_F(WebContentModifierTest, onDraw_002, TestSize.Level1)
     Testing::MockCanvas rsCanvas;
     DrawingContext context { rsCanvas, 100.0f, 100.0f };
     modifier.onDraw(context);
-    EXPECT_NE(modifier.renderSuface_, nullptr);
 }
 
 } // namespace OHOS::Ace::NG

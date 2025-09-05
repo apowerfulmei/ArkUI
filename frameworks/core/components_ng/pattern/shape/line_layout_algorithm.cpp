@@ -17,34 +17,11 @@
 
 #include "core/components_ng/base/frame_node.h"
 #include "core/components_ng/pattern/shape/line_paint_property.h"
-#include "core/components_ng/property/measure_utils.h"
 
 namespace OHOS::Ace::NG {
 namespace {
 const Dimension DEFAULT_STROKE_WIDTH(1, DimensionUnit::PX);
 } // namespace
-void LineLayoutAlgorithm::Measure(LayoutWrapper* layoutWrapper)
-{
-    BoxLayoutAlgorithm::Measure(layoutWrapper);
-    const auto& layoutProperty = layoutWrapper->GetLayoutProperty();
-    CHECK_NULL_VOID(layoutProperty);
-    auto layoutPolicy = layoutProperty->GetLayoutPolicyProperty();
-    CHECK_NULL_VOID(layoutPolicy.has_value());
-    const auto& content = layoutWrapper->GetGeometryNode()->GetContent();
-    CHECK_NULL_VOID(content);
-    auto contentSize = content->GetRect().GetSize();
-    OptionalSizeF frameSize =
-        UpdateOptionSizeByCalcLayoutConstraint(OptionalSizeF(contentSize.Width(), contentSize.Height()),
-            layoutWrapper->GetLayoutProperty()->GetCalcLayoutConstraint(),
-            layoutWrapper->GetLayoutProperty()->GetLayoutConstraint()->percentReference);
-    if (layoutPolicy->IsWidthFix()) {
-        layoutWrapper->GetGeometryNode()->SetFrameWidth(frameSize.Width().value_or(-1));
-    }
-    if (layoutPolicy->IsHeightFix()) {
-        layoutWrapper->GetGeometryNode()->SetFrameHeight(frameSize.Height().value_or(-1));
-    }
-}
-
 std::optional<SizeF> LineLayoutAlgorithm::MeasureContent(
     const LayoutConstraintF& contentConstraint, LayoutWrapper* layoutWrapper)
 {
@@ -58,38 +35,28 @@ std::optional<SizeF> LineLayoutAlgorithm::MeasureContent(
     auto paintProperty = host->GetPaintProperty<LinePaintProperty>();
     CHECK_NULL_RETURN(paintProperty, std::nullopt);
 
-    auto strokeWidth = static_cast<float>(paintProperty->GetStrokeWidthValue(DEFAULT_STROKE_WIDTH).ConvertToPx());
+    auto strokewidth = static_cast<float>(paintProperty->GetStrokeWidthValue(DEFAULT_STROKE_WIDTH).ConvertToPx());
+    if (paintProperty->HasStrokeWidth()) {
+        strokewidth = paintProperty->GetStrokeWidthValue().ConvertToPx();
+    }
 
     PointF startPoint = PointF(paintProperty->GetStartPointValue().first.ConvertToPx(),
         paintProperty->GetStartPointValue().second.ConvertToPx());
     PointF endPoint = PointF(
         paintProperty->GetEndPointValue().first.ConvertToPx(), paintProperty->GetEndPointValue().second.ConvertToPx());
-    SizeF size = SizeF(std::max(startPoint.GetX(), endPoint.GetX()), std::max(startPoint.GetY(), endPoint.GetY()));
-    if (NearZero(size.Width())) {
-        size.SetWidth(strokeWidth);
-    }
-    if (NearZero(size.Height())) {
-        size.SetHeight(strokeWidth);
-    }
-    MeasureLayoutPolicySize(contentConstraint, layoutWrapper, size);
-    return size;
-}
 
-void LineLayoutAlgorithm::MeasureLayoutPolicySize(
-    const LayoutConstraintF& contentConstraint, LayoutWrapper* layoutWrapper, SizeF& size)
-{
-    const auto& layoutProperty = layoutWrapper->GetLayoutProperty();
-    CHECK_NULL_VOID(layoutProperty);
-    auto layoutPolicy = layoutProperty->GetLayoutPolicyProperty();
-    CHECK_NULL_VOID(layoutPolicy.has_value());
-    const std::optional<float>& parentIdealSizeWidth = contentConstraint.parentIdealSize.Width();
-    const std::optional<float>& parentIdealSizeHeight = contentConstraint.parentIdealSize.Height();
-    if (layoutPolicy->IsWidthMatch() && parentIdealSizeWidth.has_value()) {
-        size.SetWidth(parentIdealSizeWidth.value());
+    auto width = startPoint.GetX() > endPoint.GetX() ? startPoint.GetX()
+                                                     : endPoint.GetX();
+    auto height = startPoint.GetY() > endPoint.GetY() ? startPoint.GetY()
+                                                      : endPoint.GetY();
+    if (NearZero(width)) {
+        width = strokewidth;
     }
-    if (layoutPolicy->IsHeightMatch() && parentIdealSizeHeight.has_value()) {
-        size.SetHeight(parentIdealSizeHeight.value());
+    if (NearZero(height)) {
+        height = strokewidth;
     }
+
+    return SizeF(width, height);
 }
 } // namespace OHOS::Ace::NG
 

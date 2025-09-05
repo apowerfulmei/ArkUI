@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Huawei Device Co., Ltd.
+ * Copyright (C) 2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,13 +12,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#ifndef FOUNDATION_ACE_INTERFACE_INNERKITS_IMAGE_SOURCE_PREVIEW_H
+#define FOUNDATION_ACE_INTERFACE_INNERKITS_IMAGE_SOURCE_PREVIEW_H
 
-#ifndef FOUNDATION_ACE_INTERFACE_INNERAPI_IMAGE_SOURCE_PREVIEW_H
-#define FOUNDATION_ACE_INTERFACE_INNERAPI_IMAGE_SOURCE_PREVIEW_H
+#include <memory>
 
-#include "napi/native_api.h"
-#include "napi/native_common.h"
-#include "napi/native_node_api.h"
+#include "js_native_api.h"
+#include "js_native_api_types.h"
 
 namespace OHOS {
 namespace Media {
@@ -64,7 +64,6 @@ struct InitializationOptions {
 struct SourceOptions {};
 struct DecodeOptions {
     PixelFormat desiredPixelFormat;
-    Size desiredSize;
 };
 class PixelMap;
 
@@ -113,13 +112,8 @@ public:
     {
         return 0;
     }
-
-    void* GetWritablePixels()
-    {
-        return nullptr;
-    }
-
-    int32_t GetByteCount()
+    
+    uint32_t WritePixels(const uint8_t *source, const uint64_t &bufferSize)
     {
         return 0;
     }
@@ -151,5 +145,4 @@ public:
 };
 } // namespace Media
 } // namespace OHOS
-
-#endif // FOUNDATION_ACE_INTERFACE_INNERAPI_IMAGE_SOURCE_PREVIEW_H
+#endif

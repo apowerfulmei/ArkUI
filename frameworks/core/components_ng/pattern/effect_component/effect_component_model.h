@@ -31,8 +31,6 @@ public:
     virtual ~EffectComponentModel() = default;
 
     virtual void Create();
-    virtual void Create(NG::EffectLayer independentLayer);
-    virtual void AlwaysSnapshot(bool enable);
     
 private:
     static std::unique_ptr<EffectComponentModel> instance_;

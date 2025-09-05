@@ -12,12 +12,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+ 
 #ifndef FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_PATTERNS_RICH_EDITOR_ONE_STEP_DRAG_CONTROLLER_H
 #define FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_PATTERNS_RICH_EDITOR_ONE_STEP_DRAG_CONTROLLER_H
-
+ 
 #include "core/components_ng/pattern/rich_editor/rich_editor_pattern.h"
-
+ 
 namespace OHOS::Ace::NG {
 namespace {
 using TagFilter = std::function<bool(const std::string&)>;
@@ -26,7 +26,7 @@ const TagFilter DEFAULT_FILTER = [](const std::string&) { return false; };
 const TagFilter IMAGE_TAG_FILTER = [](const std::string& tag) { return tag == V2::IMAGE_ETS_TAG; };
 const TagFilter PLACEHOLDER_TAG_FILTER = [](const std::string& tag) { return tag == V2::PLACEHOLDER_SPAN_ETS_TAG; };
 }
-
+ 
 class OneStepDragParam {
 public:
     OneStepDragParam(const Builder& builder, const SelectMenuParam& selectMenuParam,
@@ -39,12 +39,10 @@ public:
     void FillJsonValue(const std::unique_ptr<JsonValue>& jsonValue) const;
     void HandleDirtyNodes();
     inline void MarkDirtyNode(const WeakPtr<FrameNode>& dirtyFrameNode);
-    template<typename T>
-    void SetEnableEventResponse(int32_t start, int32_t end, std::list<WeakPtr<T>>& nodes);
-
+ 
     const TextSpanType spanType_;
     const std::function<bool(const std::string&)> tagFilter_;
-
+ 
 protected:
     Builder menuBuilder = nullptr;
     Builder previewBuilder = nullptr;
@@ -53,18 +51,18 @@ protected:
     MenuParam menuParam;
     std::queue<WeakPtr<FrameNode>> dirtyFrameNodes;
 };
-
+ 
 class ImageOneStepDragParam : public OneStepDragParam {
 public:
     ImageOneStepDragParam(const Builder& builder, const SelectMenuParam& selectMenuParam)
         : OneStepDragParam(builder, selectMenuParam, TextSpanType::IMAGE, IMAGE_TAG_FILTER) {}
     MenuParam GetMenuParam(const RefPtr<FrameNode>& frameNode) const override;
     void EnableOneStepDrag(const RefPtr<FrameNode>& frameNode) override;
-
+ 
 private:
     float CalcImageScale(const RefPtr<ImageSpanNode>& imageNode) const;
 };
-
+ 
 class PlaceholderOneStepDragParam : public OneStepDragParam {
 public:
     PlaceholderOneStepDragParam(const Builder& builder, const SelectMenuParam& selectMenuParam)
@@ -73,7 +71,7 @@ public:
     void EnableDrag(const RefPtr<FrameNode>& frameNode) const override;
     void EnableOneStepDrag(const RefPtr<FrameNode>& frameNode) override;
 };
-
+ 
 class OneStepDragController {
 public:
     OneStepDragController(const WeakPtr<RichEditorPattern>& pattern) : pattern_(pattern) {}
@@ -81,25 +79,29 @@ public:
     bool SetMenuParam(TextSpanType spanType, const Builder& builder, const SelectMenuParam& menuParam);
     void EnableOneStepDrag(TextSpanType spanType, const RefPtr<FrameNode>& frameNode);
     void CopyDragCallback(TextSpanType spanType, const RefPtr<FrameNode>& frameNode);
+    void SetEnableEventResponse(bool isEnable);
     void SetEnableEventResponse(const TextSelector& selector,
         std::list<WeakPtr<ImageSpanNode>>& imageNodes,
         std::list<WeakPtr<PlaceholderSpanNode>>& builderNodes);
+    template<typename T>
+    void SetEnableEventResponse(int32_t start, int32_t end, std::list<WeakPtr<T>>& nodes);
     void FillJsonValue(const std::unique_ptr<JsonValue>& jsonValue);
     void MarkDirtyNode(const WeakPtr<ImageSpanNode>& dirtyFrameNode);
     void HandleDirtyNodes();
-
+ 
 private:
     const std::unique_ptr<OneStepDragParam>& GetDragParam(TextSpanType spanType) const;
     const std::unique_ptr<OneStepDragParam>& CreateDragParam(TextSpanType spanType, const Builder& builder,
         const SelectMenuParam& menuParam);
-
+ 
 private:
     const std::unique_ptr<OneStepDragParam> invalidParam = nullptr;
     WeakPtr<RichEditorPattern> pattern_;
     std::unique_ptr<OneStepDragParam> imageDragParam_ = nullptr;
     std::unique_ptr<OneStepDragParam> placeholderDragParam_ = nullptr;
+    bool isEnableEventResponse_ = true;
 };
-
+ 
 } // namespace OHOS::Ace::NG
-
+ 
 #endif // FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_PATTERNS_RICH_EDITOR_ONE_STEP_DRAG_CONTROLLER_H

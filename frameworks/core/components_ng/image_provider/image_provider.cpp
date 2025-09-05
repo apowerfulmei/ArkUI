@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022-2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -15,11 +15,16 @@
 
 #include "core/components_ng/image_provider/image_provider.h"
 
+#include <cstdint>
+#include <mutex>
+
+#include "base/log/ace_trace.h"
 #include "base/log/log_wrapper.h"
-#include "base/network/download_manager.h"
+#include "base/memory/referenced.h"
 #include "base/subwindow/subwindow_manager.h"
-#include "core/components_ng/image_provider/image_decoder.h"
-#include "core/components_ng/image_provider/drawing_image_data.h"
+#include "base/utils/utils.h"
+#include "core/components_ng/image_provider/adapter/image_decoder.h"
+#include "core/components_ng/image_provider/adapter/rosen/drawing_image_data.h"
 #include "core/components_ng/image_provider/animated_image_object.h"
 #include "core/components_ng/image_provider/image_loading_context.h"
 #include "core/components_ng/image_provider/image_object.h"
@@ -27,15 +32,13 @@
 #include "core/components_ng/image_provider/pixel_map_image_object.h"
 #include "core/components_ng/image_provider/static_image_object.h"
 #include "core/components_ng/image_provider/svg_image_object.h"
-#include "core/components_ng/pattern/image/image_dfx.h"
-#include "core/components_ng/render/adapter/drawing_image.h"
+#include "core/components_ng/render/adapter/rosen/drawing_image.h"
 #include "core/image/image_loader.h"
+#include "core/image/sk_image_cache.h"
 #include "core/pipeline_ng/pipeline_context.h"
 
 namespace OHOS::Ace::NG {
-namespace {
-constexpr uint64_t MAX_WAITING_TIME_FOR_TASKS = 1000; // 1000ms
-}
+
 void ImageProvider::CacheImageObject(const RefPtr<ImageObject>& obj)
 {
     CHECK_NULL_VOID(obj);
@@ -48,45 +51,37 @@ void ImageProvider::CacheImageObject(const RefPtr<ImageObject>& obj)
     }
 }
 
-std::timed_mutex ImageProvider::taskMtx_;
+std::mutex ImageProvider::taskMtx_;
 std::unordered_map<std::string, ImageProvider::Task> ImageProvider::tasks_;
 
 bool ImageProvider::PrepareImageData(const RefPtr<ImageObject>& imageObj)
 {
     CHECK_NULL_RETURN(imageObj, false);
-    auto&& dfxConfig = imageObj->GetImageDfxConfig();
     // Attempt to acquire a timed lock (maximum wait time: 1000ms)
     auto lock = imageObj->GetPrepareImageDataLock();
     if (!lock.owns_lock()) {
-        TAG_LOGW(AceLogTag::ACE_IMAGE, "Lock timeout. %{private}s-%{public}s.",
-            dfxConfig.GetImageSrc().c_str(), dfxConfig.ToStringWithoutSrc().c_str());
+        TAG_LOGW(AceLogTag::ACE_IMAGE, "Failed to acquire lock within timeout.");
         return false;
     }
     // data already loaded
     if (imageObj->GetData()) {
         return true;
     }
+    // if image object has no skData, reload data.
+    auto imageLoader = ImageLoader::CreateImageLoader(imageObj->GetSourceInfo());
+    CHECK_NULL_RETURN(imageLoader, false);
 
     auto container = Container::Current();
     if (container && container->IsSubContainer()) {
-        TAG_LOGW(AceLogTag::ACE_IMAGE, "%{private}s-%{public}s. subContainer's dataProviderManager is null.",
-            dfxConfig.GetImageSrc().c_str(), dfxConfig.ToStringWithoutSrc().c_str());
+        TAG_LOGI(AceLogTag::ACE_IMAGE, "subContainer's pipeline's dataProviderManager is null, cannot load image "
+                                       "source, need to switch pipeline in parentContainer.");
         auto currentId = SubwindowManager::GetInstance()->GetParentContainerId(Container::CurrentId());
         container = Container::GetContainer(currentId);
     }
     CHECK_NULL_RETURN(container, false);
     auto pipeline = container->GetPipelineContext();
     CHECK_NULL_RETURN(pipeline, false);
-    // if image object has no skData, reload data.
-    auto imageLoader = ImageLoader::CreateImageLoader(imageObj->GetSourceInfo());
-    if (!imageLoader) {
-        TAG_LOGW(AceLogTag::ACE_IMAGE, "Loader create fail. %{public}s-[%{private}s]",
-            dfxConfig.ToStringWithoutSrc().c_str(), dfxConfig.GetImageSrc().c_str());
-        return false;
-    }
-    NG::ImageLoadResultInfo loadResultInfo;
-    auto newLoadedData =
-        imageLoader->GetImageData(imageObj->GetSourceInfo(), loadResultInfo, WeakClaim(RawPtr(pipeline)));
+    auto newLoadedData = imageLoader->GetImageData(imageObj->GetSourceInfo(), WeakClaim(RawPtr(pipeline)));
     CHECK_NULL_RETURN(newLoadedData, false);
     // load data success
     imageObj->SetData(newLoadedData);
@@ -123,118 +118,97 @@ RefPtr<ImageObject> ImageProvider::QueryImageObjectFromCache(const ImageSourceIn
     return imageObj;
 }
 
-void ImageProvider::FailCallback(const std::string& key, const std::string& errorMsg, const ImageErrorInfo& errorInfo,
-    bool sync, int32_t containerId)
+void ImageProvider::FailCallback(const std::string& key, const std::string& errorMsg, bool sync)
 {
     auto ctxs = EndTask(key);
-    auto notifyLoadFailTask = [ctxs, errorMsg, errorInfo] {
-        for (auto&& it : ctxs) {
-            auto ctx = it.Upgrade();
-            if (!ctx) {
-                continue;
-            }
-            ctx->FailCallback(errorMsg, errorInfo);
+    for (auto&& it : ctxs) {
+        auto ctx = it.Upgrade();
+        if (!ctx) {
+            continue;
         }
-    };
 
-    if (sync) {
-        notifyLoadFailTask();
-    } else {
-        ImageUtils::PostToUI(std::move(notifyLoadFailTask), "ArkUIImageProviderFail", containerId);
+        if (sync) {
+            ctx->FailCallback(errorMsg);
+        } else {
+            // NOTE: contexts may belong to different arkui pipelines
+            auto notifyLoadFailTask = [ctx, errorMsg] { ctx->FailCallback(errorMsg); };
+            ImageUtils::PostToUI(std::move(notifyLoadFailTask), "ArkUIImageProviderFail", ctx->GetContainerId());
+        }
     }
 }
 
 void ImageProvider::SuccessCallback(
-    const RefPtr<CanvasImage>& canvasImage, const std::string& key, bool sync, int32_t containerId)
+    const RefPtr<CanvasImage>& canvasImage, const std::string& key, bool sync, bool loadInVipChannel)
 {
     canvasImage->Cache(key);
     auto ctxs = EndTask(key);
     // when upload success, pass back canvasImage to LoadingContext
-    auto notifyLoadSuccess = [ctxs, canvasImage] {
-        for (auto&& it : ctxs) {
-            auto ctx = it.Upgrade();
-            if (!ctx) {
-                continue;
-            }
-            ctx->SuccessCallback(canvasImage->Clone());
+    for (auto&& it : ctxs) {
+        auto ctx = it.Upgrade();
+        if (!ctx) {
+            continue;
         }
-    };
-
-    if (sync) {
-        notifyLoadSuccess();
-    } else {
-        ImageUtils::PostToUI(std::move(notifyLoadSuccess), "ArkUIImageProviderSuccess", containerId);
+        if (sync) {
+            ctx->SuccessCallback(canvasImage->Clone());
+        } else {
+            // NOTE: contexts may belong to different arkui pipelines
+            auto notifyLoadSuccess = [ctx, canvasImage] { ctx->SuccessCallback(canvasImage->Clone()); };
+            ImageUtils::PostToUI(std::move(notifyLoadSuccess), "ArkUIImageProviderSuccess", ctx->GetContainerId());
+        }
     }
 }
 
-void ImageProvider::CreateImageObjHelper(const ImageSourceInfo& src, bool sync, bool isSceneBoardWindow)
+void ImageProvider::CreateImageObjHelper(const ImageSourceInfo& src, bool sync)
 {
-    const ImageDfxConfig& imageDfxConfig = src.GetImageDfxConfig();
-    ACE_SCOPED_TRACE("CreateImageObj %s", imageDfxConfig.ToStringWithSrc().c_str());
+    ACE_SCOPED_TRACE("CreateImageObj %s", src.ToString().c_str());
     // load image data
     auto imageLoader = ImageLoader::CreateImageLoader(src);
     if (!imageLoader) {
-        FailCallback(src.GetTaskKey(), "Failed to create image loader.",
-            { ImageErrorCode::CREATE_IMAGE_UNKNOWN_SOURCE_TYPE, "unknown source type." }, sync, src.GetContainerId());
+        std::string errorMessage("Failed to create image loader, Image source type not supported");
+        FailCallback(src.GetKey(), src.ToString() + errorMessage, sync);
         return;
     }
-    ImageLoadResultInfo loadResultInfo;
     auto pipeline = PipelineContext::GetCurrentContext();
-    RefPtr<ImageData> data = imageLoader->GetImageData(src, loadResultInfo, WeakClaim(RawPtr(pipeline)));
+    RefPtr<ImageData> data = imageLoader->GetImageData(src, WeakClaim(RawPtr(pipeline)));
     if (!data) {
-        FailCallback(
-            src.GetTaskKey(), "Failed to load image data", loadResultInfo.errorInfo, sync, src.GetContainerId());
+        FailCallback(src.GetKey(), "Failed to load image data", sync);
         return;
     }
 
     // build ImageObject
-    RefPtr<ImageObject> imageObj = ImageProvider::BuildImageObject(src, loadResultInfo.errorInfo, data);
+    RefPtr<ImageObject> imageObj = ImageProvider::BuildImageObject(src, data);
     if (!imageObj) {
-        FailCallback(
-            src.GetTaskKey(), "Failed to build image object", loadResultInfo.errorInfo, sync, src.GetContainerId());
+        FailCallback(src.GetKey(), "Failed to build image object", sync);
         return;
     }
-
-    imageObj->SetImageFileSize(loadResultInfo.fileSize);
 
     auto cloneImageObj = imageObj->Clone();
 
     // ImageObject cache is only for saving image size info, clear data to save memory
     cloneImageObj->ClearData();
 
-    // Only skip caching when the image is SVG and it's SceneBorder
-    if (!src.IsSvg() || !isSceneBoardWindow) {
-        CacheImageObject(cloneImageObj);
-    }
+    CacheImageObject(cloneImageObj);
 
-    auto ctxs = EndTask(src.GetTaskKey());
-
+    auto ctxs = EndTask(src.GetKey());
     // callback to LoadingContext
-    auto notifyDataReadyTask = [ctxs, imageObj, src] {
-        for (auto&& it : ctxs) {
-            auto ctx = it.Upgrade();
-            if (!ctx) {
-                continue;
-            }
-            ctx->DataReadyCallback(imageObj);
+    for (auto&& it : ctxs) {
+        auto ctx = it.Upgrade();
+        if (!ctx) {
+            continue;
         }
-    };
-
-    if (sync) {
-        notifyDataReadyTask();
-    } else {
-        ImageUtils::PostToUI(std::move(notifyDataReadyTask), "ArkUIImageProviderDataReady", src.GetContainerId());
+        if (sync) {
+            ctx->DataReadyCallback(imageObj);
+        } else {
+            // NOTE: contexts may belong to different arkui pipelines
+            auto notifyDataReadyTask = [ctx, imageObj, src] { ctx->DataReadyCallback(imageObj); };
+            ImageUtils::PostToUI(std::move(notifyDataReadyTask), "ArkUIImageProviderDataReady", ctx->GetContainerId());
+        }
     }
 }
 
 bool ImageProvider::RegisterTask(const std::string& key, const WeakPtr<ImageLoadingContext>& ctx)
 {
-    if (!taskMtx_.try_lock_for(std::chrono::milliseconds(MAX_WAITING_TIME_FOR_TASKS))) {
-        TAG_LOGW(AceLogTag::ACE_IMAGE, "Lock timeout in registerTask.");
-        return false;
-    }
-    // Adopt the already acquired lock
-    std::scoped_lock lock(std::adopt_lock, taskMtx_);
+    std::scoped_lock<std::mutex> lock(taskMtx_);
     // key exists -> task is running
     auto it = tasks_.find(key);
     if (it != tasks_.end()) {
@@ -245,243 +219,84 @@ bool ImageProvider::RegisterTask(const std::string& key, const WeakPtr<ImageLoad
     return true;
 }
 
-std::set<WeakPtr<ImageLoadingContext>> ImageProvider::EndTask(const std::string& key, bool isErase)
+std::set<WeakPtr<ImageLoadingContext>> ImageProvider::EndTask(const std::string& key)
 {
-    if (!taskMtx_.try_lock_for(std::chrono::milliseconds(MAX_WAITING_TIME_FOR_TASKS))) {
-        TAG_LOGW(AceLogTag::ACE_IMAGE, "Lock timeout in endTask.");
-        return {};
-    }
-    // Adopt the already acquired lock
-    std::scoped_lock lock(std::adopt_lock, taskMtx_);
+    std::scoped_lock<std::mutex> lock(taskMtx_);
     auto it = tasks_.find(key);
     if (it == tasks_.end()) {
-        TAG_LOGW(AceLogTag::ACE_IMAGE, "Task InvalidKey %{private}s", key.c_str());
+        TAG_LOGW(AceLogTag::ACE_IMAGE, "task not found in map %{private}s", key.c_str());
         return {};
     }
     auto ctxs = it->second.ctxs_;
-    if (isErase) {
-        tasks_.erase(it);
+    if (ctxs.empty()) {
+        TAG_LOGW(AceLogTag::ACE_IMAGE, "registered task has empty context %{public}s", key.c_str());
     }
+    tasks_.erase(it);
     return ctxs;
 }
 
-bool ImageProvider::CancelTask(const std::string& key, const WeakPtr<ImageLoadingContext>& ctx)
+void ImageProvider::CancelTask(const std::string& key, const WeakPtr<ImageLoadingContext>& ctx)
 {
-    if (!taskMtx_.try_lock_for(std::chrono::milliseconds(MAX_WAITING_TIME_FOR_TASKS))) {
-        TAG_LOGW(AceLogTag::ACE_IMAGE, "Lock timeout in cancelTask.");
-        return false;
-    }
-    // Adopt the already acquired lock
-    std::scoped_lock lock(std::adopt_lock, taskMtx_);
+    std::scoped_lock<std::mutex> lock(taskMtx_);
     auto it = tasks_.find(key);
-    CHECK_NULL_RETURN(it != tasks_.end(), false);
-    CHECK_NULL_RETURN(it->second.ctxs_.find(ctx) != it->second.ctxs_.end(), false);
+    CHECK_NULL_VOID(it != tasks_.end());
+    CHECK_NULL_VOID(it->second.ctxs_.find(ctx) != it->second.ctxs_.end());
     // only one LoadingContext waiting for this task, can just cancel
     if (it->second.ctxs_.size() == 1) {
         // task should be deleted regardless of whether the cancellation is successful or not
         it->second.bgTask_.Cancel();
         tasks_.erase(it);
-        return true;
+        return;
     }
     // other LoadingContext still waiting for this task, remove ctx from set
     it->second.ctxs_.erase(ctx);
-    return false;
 }
 
-void ImageProvider::DownLoadSuccessCallback(
-    const RefPtr<ImageObject>& imageObj, const std::string& key, bool sync, int32_t containerId)
+void ImageProvider::CreateImageObject(const ImageSourceInfo& src, const WeakPtr<ImageLoadingContext>& ctxWp, bool sync)
 {
-    ImageProvider::CacheImageObject(imageObj);
-    auto ctxs = EndTask(key);
-    auto notifyDownLoadSuccess = [ctxs, imageObj] {
-        for (auto&& it : ctxs) {
-            auto ctx = it.Upgrade();
-            if (!ctx) {
-                continue;
-            }
-            ctx->DataReadyCallback(imageObj);
-        }
-    };
-
-    if (sync) {
-        notifyDownLoadSuccess();
-    } else {
-        ImageUtils::PostToUI(std::move(notifyDownLoadSuccess), "ArkUIImageProviderDownLoadSuccess", containerId);
-    }
-}
-
-void ImageProvider::DownLoadOnProgressCallback(
-    const std::string& key, bool sync, const uint32_t& dlNow, const uint32_t& dlTotal, int32_t containerId)
-{
-    auto ctxs = EndTask(key, false);
-    auto notifyDownLoadOnProgressCallback = [ctxs, dlNow, dlTotal] {
-        for (auto&& it : ctxs) {
-            auto ctx = it.Upgrade();
-            if (!ctx) {
-                continue;
-            }
-            ctx->DownloadOnProgress(dlNow, dlTotal);
-        }
-    };
-
-    if (sync) {
-        notifyDownLoadOnProgressCallback();
-    } else {
-        ImageUtils::PostToUI(
-            std::move(notifyDownLoadOnProgressCallback), "ArkUIImageDownloadOnProcessCallback", containerId);
-    }
-}
-
-RefPtr<ImageData> ImageProvider::QueryDataFromCache(const ImageSourceInfo& src)
-{
-    ACE_FUNCTION_TRACE();
-    std::string result;
-    if (DownloadManager::GetInstance()->fetchCachedResult(src.GetSrc(), result)) {
-        auto data = ImageData::MakeFromDataWithCopy(result.data(), result.size());
-        return data;
-    }
-    return nullptr;
-}
-
-void ImageProvider::DownLoadImage(const UriDownLoadConfig& downLoadConfig)
-{
-    ACE_SCOPED_TRACE("PerformDownload %s", downLoadConfig.imageDfxConfig.ToStringWithSrc().c_str());
-    auto queryData = QueryDataFromCache(downLoadConfig.src);
-    if (queryData) {
-        ImageErrorInfo errorInfo;
-        RefPtr<ImageObject> imageObj = ImageProvider::BuildImageObject(downLoadConfig.src, errorInfo, queryData);
-        if (imageObj) {
-            ACE_SCOPED_TRACE("Hit network image cache %s", downLoadConfig.imageDfxConfig.ToStringWithSrc().c_str());
-            ImageProvider::DownLoadSuccessCallback(
-                imageObj, downLoadConfig.taskKey, downLoadConfig.sync, downLoadConfig.src.GetContainerId());
-            return;
-        }
-    }
-    DownloadCallback downloadCallback;
-    downloadCallback.successCallback = [downLoadConfig, containerId = downLoadConfig.src.GetContainerId()](
-                                           const std::string&& imageData, bool async, int32_t instanceId) {
-        ContainerScope scope(instanceId);
-        ACE_SCOPED_TRACE("DownloadImageSuccess %s, [%zu]", downLoadConfig.imageDfxConfig.ToStringWithSrc().c_str(),
-            imageData.size());
-        ImageErrorInfo errorInfo;
-        if (!GreatNotEqual(imageData.size(), 0)) {
-            ImageProvider::FailCallback(downLoadConfig.taskKey, "The length of imageData from netStack is not positive",
-                errorInfo, downLoadConfig.sync, containerId);
-            return;
-        }
-        auto data = ImageData::MakeFromDataWithCopy(imageData.data(), imageData.size());
-        RefPtr<ImageObject> imageObj = ImageProvider::BuildImageObject(downLoadConfig.src, errorInfo, data);
-        if (!imageObj) {
-            ImageProvider::FailCallback(downLoadConfig.taskKey, "After download successful, imageObject Create fail",
-                errorInfo, downLoadConfig.sync, containerId);
-            return;
-        }
-        ImageProvider::DownLoadSuccessCallback(imageObj, downLoadConfig.taskKey, downLoadConfig.sync, containerId);
-    };
-    downloadCallback.failCallback = [taskKey = downLoadConfig.taskKey, sync = downLoadConfig.sync,
-                                        containerId = downLoadConfig.src.GetContainerId()](std::string errorMessage,
-                                        ImageErrorInfo errorInfo, bool async, int32_t instanceId) {
-        ContainerScope scope(instanceId);
-        ImageProvider::FailCallback(taskKey, errorMessage, errorInfo, sync, containerId);
-    };
-    downloadCallback.cancelCallback = downloadCallback.failCallback;
-    if (downLoadConfig.hasProgressCallback) {
-        downloadCallback.onProgressCallback = [taskKey = downLoadConfig.taskKey, sync = downLoadConfig.sync,
-                                                  containerId = downLoadConfig.src.GetContainerId()](
-                                                  uint32_t dlTotal, uint32_t dlNow, bool async, int32_t instanceId) {
-            ContainerScope scope(instanceId);
-            ImageProvider::DownLoadOnProgressCallback(taskKey, sync, dlNow, dlTotal, containerId);
-        };
-    }
-    NetworkImageLoader::DownloadImage(std::move(downloadCallback), downLoadConfig.src.GetSrc(), downLoadConfig.sync);
-}
-
-void ImageProvider::CreateImageObject(
-    const ImageSourceInfo& src, const WeakPtr<ImageLoadingContext>& ctxWp, bool sync, bool isSceneBoardWindow)
-{
-    if (src.GetSrcType() == SrcType::NETWORK && SystemProperties::GetDownloadByNetworkEnabled()) {
-        auto ctx = ctxWp.Upgrade();
-        CHECK_NULL_VOID(ctx);
-        const std::string taskKey = src.GetTaskKey() + (ctx->GetOnProgressCallback() ? "1" : "0");
-        if (!RegisterTask(taskKey, ctxWp)) {
-            // task is already running, only register callbacks
-            return;
-        }
-        UriDownLoadConfig downloadConfig = {
-            .src = src,
-            .imageDfxConfig = ctx->GetImageDfxConfig(),
-            .taskKey = taskKey,
-            .sync = sync,
-            .hasProgressCallback = static_cast<bool>(ctx->GetOnProgressCallback())
-        };
-        if (sync) {
-            DownLoadImage(downloadConfig);
-        } else {
-            auto downloadConfigPtr = std::make_shared<UriDownLoadConfig>(std::move(downloadConfig));
-            auto downloadImageTask = [downloadConfigPtr]() {
-                DownLoadImage(*downloadConfigPtr);
-            };
-            ImageUtils::PostToBg(downloadImageTask, "ArkUIImageDownload", src.GetContainerId());
-        }
-        return;
-    }
-    if (!RegisterTask(src.GetTaskKey(), ctxWp)) {
+    if (!RegisterTask(src.GetKey(), ctxWp)) {
         // task is already running, only register callbacks
         return;
     }
     if (sync) {
-        CreateImageObjHelper(src, true, isSceneBoardWindow);
+        CreateImageObjHelper(src, true);
     } else {
-        if (!taskMtx_.try_lock_for(std::chrono::milliseconds(MAX_WAITING_TIME_FOR_TASKS))) {
-            TAG_LOGW(AceLogTag::ACE_IMAGE, "Lock timeout in createObj.");
-            return;
-        }
-        // Adopt the already acquired lock
-        std::scoped_lock lock(std::adopt_lock, taskMtx_);
+        std::scoped_lock<std::mutex> lock(taskMtx_);
         // wrap with [CancelableCallback] and record in [tasks_] map
         CancelableCallback<void()> task;
-        task.Reset(
-            [src, isSceneBoardWindow] { ImageProvider::CreateImageObjHelper(src, false, isSceneBoardWindow); });
-        tasks_[src.GetTaskKey()].bgTask_ = task;
+        task.Reset([src, ctxWp] { ImageProvider::CreateImageObjHelper(src); });
+        tasks_[src.GetKey()].bgTask_ = task;
         auto ctx = ctxWp.Upgrade();
         CHECK_NULL_VOID(ctx);
         ImageUtils::PostToBg(task, "ArkUIImageProviderCreateImageObject", ctx->GetContainerId());
     }
 }
 
-RefPtr<ImageObject> ImageProvider::BuildImageObject(
-    const ImageSourceInfo& src, ImageErrorInfo& errorInfo, const RefPtr<ImageData>& data)
+RefPtr<ImageObject> ImageProvider::BuildImageObject(const ImageSourceInfo& src, const RefPtr<ImageData>& data)
 {
-    auto imageDfxConfig = src.GetImageDfxConfig();
     if (!data) {
-        TAG_LOGW(AceLogTag::ACE_IMAGE, "data is null when build obj, [%{private}s]-%{public}s.",
-            imageDfxConfig.GetImageSrc().c_str(), imageDfxConfig.ToStringWithoutSrc().c_str());
+        TAG_LOGW(AceLogTag::ACE_IMAGE, "data is null when try ParseImageObjectType, src: %{private}s",
+            src.ToString().c_str());
         return nullptr;
     }
     if (src.IsSvg()) {
         // SVG object needs to make SVG dom during creation
-        return SvgImageObject::Create(src, errorInfo, data);
+        return SvgImageObject::Create(src, data);
     }
     if (src.IsPixmap()) {
         return PixelMapImageObject::Create(src, data);
     }
 
     auto rosenImageData = DynamicCast<DrawingImageData>(data);
-    if (!rosenImageData) {
-        TAG_LOGW(AceLogTag::ACE_IMAGE, "rosenImageData null, [%{private}s]-%{public}s.",
-            imageDfxConfig.GetImageSrc().c_str(), imageDfxConfig.ToStringWithoutSrc().c_str());
-        return nullptr;
-    }
-    rosenImageData->SetDfxConfig(imageDfxConfig.GetNodeId(), imageDfxConfig.GetAccessibilityId());
+    CHECK_NULL_RETURN(rosenImageData, nullptr);
     auto codec = rosenImageData->Parse();
     if (!codec.imageSize.IsPositive()) {
         TAG_LOGW(AceLogTag::ACE_IMAGE,
-            "%{private}s - %{public}s dataSize is invalid : %{public}d-%{public}s-%{public}d.", src.ToString().c_str(),
-            imageDfxConfig.ToStringWithoutSrc().c_str(), static_cast<int32_t>(data->GetSize()),
-            codec.imageSize.ToString().c_str(), codec.frameCount);
-        if (errorInfo.errorCode == ImageErrorCode::DEFAULT) {
-            errorInfo = { ImageErrorCode::BUILD_IMAGE_DATA_SIZE_INVALID, "image data size is invalid." };
-        }
+            "Image of src: %{private}s, imageData's size = %{public}d is invalid, and the parsed size is invalid "
+            "%{public}s, "
+            "frameCount is %{public}d",
+            src.ToString().c_str(), static_cast<int32_t>(data->GetSize()), codec.imageSize.ToString().c_str(),
+            codec.frameCount);
         return nullptr;
     }
     RefPtr<ImageObject> imageObject;
@@ -506,12 +321,7 @@ void ImageProvider::MakeCanvasImage(const RefPtr<ImageObject>& obj, const WeakPt
     if (imageDecoderOptions.sync) {
         MakeCanvasImageHelper(obj, size, key, imageDecoderOptions);
     } else {
-        if (!taskMtx_.try_lock_for(std::chrono::milliseconds(MAX_WAITING_TIME_FOR_TASKS))) {
-            TAG_LOGW(AceLogTag::ACE_IMAGE, "Lock timeout in makeCanvasImage.");
-            return;
-        }
-        // Adopt the already acquired lock
-        std::scoped_lock lock(std::adopt_lock, taskMtx_);
+        std::scoped_lock<std::mutex> lock(taskMtx_);
         // wrap with [CancelableCallback] and record in [tasks_] map
         CancelableCallback<void()> task;
         task.Reset(
@@ -526,27 +336,19 @@ void ImageProvider::MakeCanvasImage(const RefPtr<ImageObject>& obj, const WeakPt
 void ImageProvider::MakeCanvasImageHelper(const RefPtr<ImageObject>& obj, const SizeF& size, const std::string& key,
     const ImageDecoderOptions& imageDecoderOptions)
 {
-    RefPtr<CanvasImage> image = nullptr;
-    ImageDecoderConfig imageDecoderConfig = {
-        .desiredSize_ = size,
-        .forceResize_ = imageDecoderOptions.forceResize,
-        .imageQuality_ = imageDecoderOptions.imageQuality,
-        .isHdrDecoderNeed_ = imageDecoderOptions.isHdrDecoderNeed,
-        .photoDecodeFormat_ = imageDecoderOptions.photoDecodeFormat,
-    };
-    ImageErrorInfo errorInfo;
+    ImageDecoder decoder(obj, size, imageDecoderOptions.forceResize);
+    RefPtr<CanvasImage> image;
     // preview and ohos platform
     if (SystemProperties::GetImageFrameworkEnabled()) {
-        image = ImageDecoder::MakePixmapImage(obj, imageDecoderConfig, errorInfo);
+        image = decoder.MakePixmapImage(imageDecoderOptions.imageQuality, imageDecoderOptions.isHdrDecoderNeed);
     } else {
-        image = ImageDecoder::MakeDrawingImage(obj, imageDecoderConfig);
+        image = decoder.MakeDrawingImage();
     }
 
     if (image) {
-        SuccessCallback(image, key, imageDecoderOptions.sync, obj->GetSourceInfo().GetContainerId());
+        SuccessCallback(image, key, imageDecoderOptions.sync, imageDecoderOptions.loadInVipChannel);
     } else {
-        FailCallback(
-            key, "Failed to decode image", errorInfo, imageDecoderOptions.sync, obj->GetSourceInfo().GetContainerId());
+        FailCallback(key, "Failed to decode image");
     }
 }
 } // namespace OHOS::Ace::NG

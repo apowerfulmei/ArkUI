@@ -16,11 +16,13 @@
 #include "core/components_ng/pattern/text_input/text_input_layout_algorithm.h"
 
 #include "base/utils/utils.h"
-#include "core/components_ng/pattern/text/text_layout_property.h"
-#include "core/components_ng/pattern/text_field/auto_fill_controller.h"
 #include "core/components_ng/pattern/text_field/text_field_pattern.h"
 
 namespace OHOS::Ace::NG {
+namespace {
+    constexpr Dimension ERROR_TEXT_UNDERLINE_MARGIN = 8.0_vp;
+    constexpr Dimension ERROR_TEXT_CAPSULE_MARGIN = 8.0_vp;
+} // namespace
 
 std::optional<SizeF> TextInputLayoutAlgorithm::MeasureContent(
     const LayoutConstraintF& contentConstraint, LayoutWrapper* layoutWrapper)
@@ -34,10 +36,9 @@ std::optional<SizeF> TextInputLayoutAlgorithm::MeasureContent(
     // Construct text style.
     TextStyle textStyle;
     ConstructTextStyles(frameNode, textStyle, textContent_, showPlaceHolder_);
-    std::replace(textContent_.begin(), textContent_.end(), u'\n', u' ');
+    std::replace(textContent_.begin(), textContent_.end(), '\n', ' ');
 
     auto isInlineStyle = pattern->IsNormalInlineState();
-    isInlineFocus_ = isInlineStyle && pattern->HasFocus();
 
     direction_ = textFieldLayoutProperty->GetLayoutDirection();
 
@@ -58,7 +59,6 @@ std::optional<SizeF> TextInputLayoutAlgorithm::MeasureContent(
     }
 
     autoWidth_ = textFieldLayoutProperty->GetWidthAutoValue(false);
-    isFontSizeNonPositive_ = IsFontSizeNonPositive(textStyle);
 
     if (textContent_.empty()) {
         // Used for empty text.
@@ -67,8 +67,7 @@ std::optional<SizeF> TextInputLayoutAlgorithm::MeasureContent(
 
     // Paragraph layout.
     if (isInlineStyle) {
-        auto fontSize = textStyle.GetFontSize().ConvertToPxDistribute(
-            textStyle.GetMinFontScale(), textStyle.GetMaxFontScale(), textStyle.IsAllowScale());
+        auto fontSize = pattern->FontSizeConvertToPx(textStyle.GetFontSize());
         auto paragraphData = CreateParagraphData { disableTextAlign, fontSize };
         CreateInlineParagraph(textStyle, textContent_, false, pattern->GetNakedCharPosition(), paragraphData);
         return InlineMeasureContent(contentConstraintWithoutResponseArea, layoutWrapper);
@@ -77,11 +76,6 @@ std::optional<SizeF> TextInputLayoutAlgorithm::MeasureContent(
     } else {
         return TextInputMeasureContent(contentConstraintWithoutResponseArea, layoutWrapper, 0);
     }
-}
-
-bool TextInputLayoutAlgorithm::IsFontSizeNonPositive(const TextStyle& textStyle) const
-{
-    return textStyle.GetFontSize().IsNonPositive();
 }
 
 void TextInputLayoutAlgorithm::Measure(LayoutWrapper* layoutWrapper)
@@ -139,8 +133,118 @@ void TextInputLayoutAlgorithm::Measure(LayoutWrapper* layoutWrapper)
         frameSize.Constrain(frameSizeConstraint.minSize, frameSizeConstraint.maxSize);
     }
     layoutWrapper->GetGeometryNode()->SetFrameSize(frameSize.ConvertToSizeT());
-    MeasureAutoFillIcon(layoutWrapper);
-    MeasureCounterWithPolicy(layoutWrapper, responseAreaWidth + pattern->GetHorizontalPaddingAndBorderSum());
+}
+
+void PrepareErrorTextNode(LayoutWrapper* layoutWrapper)
+{
+    auto host = layoutWrapper->GetHostNode();
+    CHECK_NULL_VOID(host);
+    auto pattern = host->GetPattern<TextFieldPattern>();
+    CHECK_NULL_VOID(pattern);
+    auto textNode = pattern->GetErrorNode().Upgrade();
+    CHECK_NULL_VOID(textNode);
+    auto theme = pattern->GetTheme();
+    CHECK_NULL_VOID(theme);
+    auto textNodeLayoutProperty = AceType::DynamicCast<TextLayoutProperty>(textNode->GetLayoutProperty());
+    CHECK_NULL_VOID(textNodeLayoutProperty);
+
+    TextStyle errorTextStyle = theme->GetErrorTextStyle(); // update content
+    auto errorText = pattern->GetErrorTextString();
+    StringUtils::TransformStrCase(errorText, static_cast<int32_t>(errorTextStyle.GetTextCase()));
+    textNodeLayoutProperty->UpdateContent(errorText);
+}
+
+// calculate width constraint according to width of Counter and TextInput
+void BeforeErrorLayout(LayoutWrapper* layoutWrapper)
+{
+    PrepareErrorTextNode(layoutWrapper);
+    auto host = layoutWrapper->GetHostNode();
+    CHECK_NULL_VOID(host);
+    auto pattern = host->GetPattern<TextFieldPattern>();
+    CHECK_NULL_VOID(pattern);
+    auto geometryNode = host->GetGeometryNode();
+    CHECK_NULL_VOID(geometryNode);
+    auto textNode = pattern->GetErrorNode().Upgrade();
+    CHECK_NULL_VOID(textNode);
+    RectF textFieldFrameRect = geometryNode->GetFrameRect(); // calculate layoutWidth
+    auto errorValue = pattern->GetErrorTextString();
+    if (pattern->IsShowError() && !pattern->IsDisabled() && !errorValue.empty()) {
+        float padding = 0.0f;
+        auto textFieldLayoutProperty = pattern->GetLayoutProperty<TextFieldLayoutProperty>();
+        if (textFieldLayoutProperty && textFieldLayoutProperty->GetPaddingProperty()) {
+            const auto& paddingProperty = textFieldLayoutProperty->GetPaddingProperty();
+            padding = paddingProperty->left.value_or(CalcLength(0.0f)).GetDimension().ConvertToPx() +
+                paddingProperty->right.value_or(CalcLength(0.0f)).GetDimension().ConvertToPx();
+        }
+        float layoutWidth = textFieldFrameRect.Width() - padding; // subtract border width
+        auto localBorder = pattern->GetBorderWidthProperty();
+        float borderWidth = pattern->GetBorderLeft(localBorder) + pattern->GetBorderRight(localBorder);
+        borderWidth = std::max(borderWidth, 0.0f);
+        layoutWidth -= borderWidth;
+        auto counterDecoratorWrapper = pattern->GetCounterNode().Upgrade();
+        if (pattern->IsShowCount() && counterDecoratorWrapper) {
+            auto counterDecorator = counterDecoratorWrapper->GetHostNode();
+            if (counterDecorator) { // subtract counter length
+                float counterWidth = pattern->CalcDecoratorWidth(counterDecorator);
+                layoutWidth -= counterWidth;
+            }
+        }
+        LayoutConstraintF invisibleConstraint;
+        invisibleConstraint.UpdateMaxSizeWithCheck({0.0f, 0.0f});
+        if (LessOrEqual(layoutWidth, 0.0f)) {
+            textNode->Measure(invisibleConstraint);
+            return;
+        }
+        LayoutConstraintF textContentConstraint;
+        textContentConstraint.UpdateMaxSizeWithCheck({layoutWidth, Infinity<float>()});
+        auto textNodeLayoutWrapper = host->GetOrCreateChildByIndex(host->GetChildIndex(textNode));
+        if (textNodeLayoutWrapper) {
+            textNode->Measure(textContentConstraint);
+            if (GreatNotEqual(pattern->CalcDecoratorWidth(textNode), layoutWidth)) {
+                textNode->Measure(invisibleConstraint);
+            }
+        }
+    }
+}
+
+void ErrorLayout(LayoutWrapper* layoutWrapper)
+{
+    BeforeErrorLayout(layoutWrapper);
+    auto decoratedNode = layoutWrapper->GetHostNode();
+    CHECK_NULL_VOID(decoratedNode);
+    RefPtr<TextFieldPattern> textFieldPattern = decoratedNode->GetPattern<TextFieldPattern>();
+    CHECK_NULL_VOID(textFieldPattern);
+    auto textFieldLayoutProperty = decoratedNode->GetLayoutProperty<TextFieldLayoutProperty>();
+    CHECK_NULL_VOID(textFieldLayoutProperty);
+    auto textFieldGeometryNode = decoratedNode->GetGeometryNode();
+    CHECK_NULL_VOID(textFieldGeometryNode);
+    auto textNode = textFieldPattern->GetErrorNode().Upgrade();
+    CHECK_NULL_VOID(textNode);
+    auto textGeometryNode = textNode->GetGeometryNode();
+    CHECK_NULL_VOID(textGeometryNode);
+
+    float errorMargin = 0.0f;
+    if (textFieldLayoutProperty->GetShowUnderlineValue(false) && textFieldPattern->IsShowError()) {
+        errorMargin = ERROR_TEXT_UNDERLINE_MARGIN.ConvertToPx();
+    } else if (textFieldPattern->NeedShowPasswordIcon() && textFieldPattern->IsShowError()) {
+        errorMargin = ERROR_TEXT_CAPSULE_MARGIN.ConvertToPx();
+    } else if (textFieldPattern->IsShowError()) {
+        errorMargin = ERROR_TEXT_CAPSULE_MARGIN.ConvertToPx();
+    } else {
+        errorMargin = 0;
+    }
+
+    auto textFrameRect = textFieldGeometryNode->GetFrameRect();
+    auto offset = textFieldGeometryNode->GetContentOffset();
+    auto isRTL = textFieldLayoutProperty->GetNonAutoLayoutDirection() == TextDirection::RTL;
+    auto offSetX = offset.GetX();
+    if (isRTL) {
+        auto textFieldContentRect = textFieldGeometryNode->GetContentRect();
+        offSetX += textFieldContentRect.Width() - textGeometryNode->GetFrameRect().Width();
+    }
+
+    textGeometryNode->SetFrameOffset(OffsetF(offSetX, textFrameRect.Bottom() - textFrameRect.Top() + errorMargin));
+    textNode->Layout();
 }
 
 void TextInputLayoutAlgorithm::Layout(LayoutWrapper* layoutWrapper)
@@ -149,22 +253,23 @@ void TextInputLayoutAlgorithm::Layout(LayoutWrapper* layoutWrapper)
     CHECK_NULL_VOID(frameNode);
     auto pattern = frameNode->GetPattern<TextFieldPattern>();
     CHECK_NULL_VOID(pattern);
-    auto geometryNode = layoutWrapper->GetGeometryNode();
-    CHECK_NULL_VOID(geometryNode);
-    auto size = geometryNode->GetFrameSize() -
+    auto size = layoutWrapper->GetGeometryNode()->GetFrameSize() -
                 SizeF(pattern->GetHorizontalPaddingAndBorderSum(), pattern->GetVerticalPaddingAndBorderSum());
-    const auto& content = geometryNode->GetContent();
+    const auto& content = layoutWrapper->GetGeometryNode()->GetContent();
     CHECK_NULL_VOID(content);
     SizeT<float> contentSize = content->GetRect().GetSize();
     auto layoutProperty = DynamicCast<TextFieldLayoutProperty>(layoutWrapper->GetLayoutProperty());
     CHECK_NULL_VOID(layoutProperty);
-    PipelineContext* context = frameNode->GetContext();
+    PipelineContext* context = layoutWrapper->GetHostNode()->GetContext();
     CHECK_NULL_VOID(context);
-    parentGlobalOffset_ = frameNode->GetPaintRectOffset(false, true) - context->GetRootRect().GetOffset();
+    parentGlobalOffset_ = layoutWrapper->GetHostNode()->GetPaintRectOffset(false, true) -
+        context->GetRootRect().GetOffset();
     Alignment align = Alignment::CENTER;
     auto isRTL = layoutProperty->GetNonAutoLayoutDirection() == TextDirection::RTL;
+    auto hasAlign = false;
     if (layoutProperty->GetPositionProperty()) {
-        align = layoutProperty->GetPositionProperty()->GetAlignment().value_or(align);
+        align = layoutWrapper->GetLayoutProperty()->GetPositionProperty()->GetAlignment().value_or(align);
+        hasAlign = layoutWrapper->GetLayoutProperty()->GetPositionProperty()->GetAlignment().has_value();
     }
     auto border = pattern->GetBorderWidthProperty();
     OffsetF offsetBase = OffsetF(pattern->GetPaddingLeft() + pattern->GetBorderLeft(border),
@@ -211,9 +316,8 @@ void TextInputLayoutAlgorithm::Layout(LayoutWrapper* layoutWrapper)
         TextFieldLayoutAlgorithm::CounterLayout(layoutWrapper);
     }
     if (pattern->IsShowError()) {
-        TextFieldLayoutAlgorithm::ErrorLayout(layoutWrapper);
+        ErrorLayout(layoutWrapper);
     }
-    LayoutAutoFillIcon(layoutWrapper);
 }
 
 void TextInputLayoutAlgorithm::UpdateContentPosition(const UpdateContentPositionParams &params,
@@ -243,7 +347,7 @@ void TextInputLayoutAlgorithm::UpdateTextRect(const UpdateTextRectParams& params
             auto border = params.pattern->GetBorderWidthProperty();
             textRectOffsetX = params.pattern->GetPaddingLeft() + params.pattern->GetBorderLeft(border);
         }
-        bool isEmptyTextEditValue = params.pattern->GetTextUtf16Value().empty();
+        bool isEmptyTextEditValue = params.pattern->GetTextValue().empty();
         bool isInlineStyle = params.pattern->IsNormalInlineState();
         if (!isEmptyTextEditValue && !isInlineStyle) {
             TextAlign textAlign = params.layoutProperty->GetTextAlignValue(TextAlign::START);
@@ -278,7 +382,7 @@ float TextInputLayoutAlgorithm::GetDefaultHeightByType(LayoutWrapper* layoutWrap
     return static_cast<float>(textFieldTheme->GetContentHeight().ConvertToPx());
 }
 
-bool TextInputLayoutAlgorithm::CreateParagraphEx(const TextStyle& textStyle, const std::u16string& content,
+bool TextInputLayoutAlgorithm::CreateParagraphEx(const TextStyle& textStyle, const std::string& content,
     const LayoutConstraintF& contentConstraint, LayoutWrapper* layoutWrapper)
 {
     // update child position.
@@ -289,24 +393,15 @@ bool TextInputLayoutAlgorithm::CreateParagraphEx(const TextStyle& textStyle, con
     auto isInlineStyle = pattern->IsNormalInlineState();
     auto isPasswordType = pattern->IsInPasswordMode();
     auto disableTextAlign = false;
-    auto fontSize =
-        textStyle.GetFontSize().ConvertToPxDistribute(textStyle.GetMinFontScale(), textStyle.GetMaxFontScale());
+    auto fontSize = pattern->FontSizeConvertToPx(textStyle.GetFontSize());
     auto paragraphData = CreateParagraphData { disableTextAlign, fontSize };
-    auto autofillController = pattern->GetOrCreateAutoFillController();
-    CHECK_NULL_RETURN(autofillController, false);
-    auto autoFillAnimationStatus = autofillController->GetAutoFillAnimationStatus();
-    if (autoFillAnimationStatus != AutoFillAnimationStatus::INIT) {
-        CreateAutoFillParagraph(textStyle, content, isPasswordType && pattern->GetTextObscured(),
-            pattern->GetNakedCharPosition(), paragraphData);
-        autofillController->SetAutoFillOriginTextColor(textStyle.GetTextColor());
+
+    if (pattern->IsDragging() && !showPlaceHolder_ && !isInlineStyle) {
+        CreateParagraph(textStyle, pattern->GetDragContents(), content,
+            isPasswordType && pattern->GetTextObscured() && !showPlaceHolder_, paragraphData);
     } else {
-        if (pattern->IsDragging() && !showPlaceHolder_ && !isInlineStyle) {
-            CreateParagraph(textStyle, pattern->GetDragContents(), content,
-                isPasswordType && pattern->GetTextObscured() && !showPlaceHolder_, paragraphData);
-        } else {
-            CreateParagraph(textStyle, content, isPasswordType && pattern->GetTextObscured() && !showPlaceHolder_,
-                pattern->GetNakedCharPosition(), paragraphData);
-        }
+        CreateParagraph(textStyle, content, isPasswordType && pattern->GetTextObscured() && !showPlaceHolder_,
+            pattern->GetNakedCharPosition(), paragraphData);
     }
     return true;
 }
@@ -338,101 +433,5 @@ LayoutConstraintF TextInputLayoutAlgorithm::BuildLayoutConstraintWithoutResponse
         newLayoutConstraint.selfIdealSize.SetWidth(newLayoutConstraint.selfIdealSize.Width().value() - childWidth);
     }
     return newLayoutConstraint;
-}
-
-void TextInputLayoutAlgorithm::MeasureAutoFillIcon(LayoutWrapper* layoutWrapper)
-{
-    CHECK_NULL_VOID(layoutWrapper);
-    auto frameNode = layoutWrapper->GetHostNode();
-    CHECK_NULL_VOID(frameNode);
-    auto textFieldPattern = frameNode->GetPattern<TextFieldPattern>();
-    CHECK_NULL_VOID(textFieldPattern);
-    auto textFieldlayoutProperty = frameNode->GetLayoutProperty();
-    CHECK_NULL_VOID(textFieldlayoutProperty);
-    auto autofillController = textFieldPattern->GetOrCreateAutoFillController();
-    CHECK_NULL_VOID(autofillController);
-    auto weakAutoFillIcon = autofillController->GetAutoFillIconNode();
-    auto autoFillIcon =  weakAutoFillIcon.Upgrade();
-    CHECK_NULL_VOID(autoFillIcon);
-    auto autoFillIconIndex = frameNode->GetChildIndex(autoFillIcon);
-    auto childWrapper = layoutWrapper->GetOrCreateChildByIndex(autoFillIconIndex);
-    CHECK_NULL_VOID(childWrapper);
-    auto iconGeometryNode = childWrapper->GetGeometryNode();
-    CHECK_NULL_VOID(iconGeometryNode);
-    auto iconLayoutProperty = AceType::DynamicCast<TextLayoutProperty>(childWrapper->GetLayoutProperty());
-    CHECK_NULL_VOID(iconLayoutProperty);
-    auto pipeline = frameNode->GetContext();
-    CHECK_NULL_VOID(pipeline);
-    auto textFieldTheme = pipeline->GetTheme<TextFieldTheme>();
-    CHECK_NULL_VOID(textFieldTheme);
-    auto iconSize = iconLayoutProperty->GetFontSize().value_or(textFieldTheme->GetAutoFillIconSize());
-    auto iconHeight = iconSize.ConvertToPx();
-    CalcSize iconCalcSize;
-    iconCalcSize.SetWidth(CalcLength(iconHeight));
-    iconCalcSize.SetHeight(CalcLength(iconHeight));
-    iconLayoutProperty->UpdateUserDefinedIdealSize(iconCalcSize);
-    auto childLayoutConstraint = textFieldlayoutProperty->CreateChildConstraint();
-    childWrapper->Measure(childLayoutConstraint);
-    autoFillIconSizeMeasure_ = iconGeometryNode->GetFrameSize();
-}
-
-void TextInputLayoutAlgorithm::LayoutAutoFillIcon(LayoutWrapper* layoutWrapper)
-{
-    CHECK_NULL_VOID(layoutWrapper);
-    auto frameNode = layoutWrapper->GetHostNode();
-    CHECK_NULL_VOID(frameNode);
-    auto textFieldPattern = frameNode->GetPattern<TextFieldPattern>();
-    CHECK_NULL_VOID(textFieldPattern);
-    auto textFieldlayoutProperty = frameNode->GetLayoutProperty();
-    CHECK_NULL_VOID(textFieldlayoutProperty);
-    auto isRTL = textFieldlayoutProperty->GetNonAutoLayoutDirection() == TextDirection::RTL;
-    auto textFieldGeometryNode = layoutWrapper->GetGeometryNode();
-    CHECK_NULL_VOID(textFieldGeometryNode);
-    auto textFieldSize = textFieldGeometryNode->GetFrameSize();
-    auto textFieldFrameWidth = textFieldSize.Width();
-    auto textFieldFrameHeight = textFieldSize.Height();
-    auto autofillController = textFieldPattern->GetOrCreateAutoFillController();
-    CHECK_NULL_VOID(autofillController);
-    auto weakAutoFillIcon = autofillController->GetAutoFillIconNode();
-    auto autoFillIcon =  weakAutoFillIcon.Upgrade();
-    CHECK_NULL_VOID(autoFillIcon);
-    auto autoFillIconIndex = frameNode->GetChildIndex(autoFillIcon);
-    auto childWrapper = layoutWrapper->GetOrCreateChildByIndex(autoFillIconIndex);
-    CHECK_NULL_VOID(childWrapper);
-    auto iconGeometryNode = childWrapper->GetGeometryNode();
-    CHECK_NULL_VOID(iconGeometryNode);
-    auto iconFrameWidth = autoFillIconSizeMeasure_.Width();
-    auto iconFrameHeight = autoFillIconSizeMeasure_.Height();
-
-    auto padding = textFieldlayoutProperty->CreatePaddingAndBorder();
-    auto leftOffset = padding.left.value_or(0.0f);
-    auto rightOffset = padding.right.value_or(0.0f);
-    float iconHorizontalOffset = isRTL ? textFieldFrameWidth - iconFrameWidth - rightOffset : leftOffset;
-    // Vertically center-align text
-    auto half = 2.0f;
-    float iconVerticalOffset = textRect_.Top() + textRect_.Height() / half - autoFillIconSizeMeasure_.Height() / half;
-    // Vertically center-align textinput
-    if (GreatOrEqual(iconFrameHeight, textFieldFrameHeight)) {
-        iconVerticalOffset = -(iconFrameHeight - textFieldFrameHeight) / half;
-    } else if (LessNotEqual(iconVerticalOffset, 0.0f)) {
-        iconVerticalOffset = 0.0f;
-    } else if (GreatNotEqual(iconVerticalOffset + iconFrameHeight, textFieldFrameHeight)) {
-        iconVerticalOffset = iconVerticalOffset - (iconVerticalOffset + iconFrameHeight - textFieldFrameHeight);
-    }
-
-    OffsetF iconOffset(iconHorizontalOffset, iconVerticalOffset);
-    iconGeometryNode->SetMarginFrameOffset(iconOffset);
-    childWrapper->Layout();
-}
-
-void TextInputLayoutAlgorithm::MeasureCounterWithPolicy(LayoutWrapper* layoutWrapper, float nonContentWidth)
-{
-    CHECK_NULL_VOID(layoutWrapper);
-    auto widthLayoutPolicy = TextBase::GetLayoutCalPolicy(layoutWrapper, true);
-    if (widthLayoutPolicy != LayoutCalPolicy::NO_MATCH) {
-        auto frameSize = layoutWrapper->GetGeometryNode()->GetFrameSize();
-        auto counterWidth = frameSize.Width() - nonContentWidth;
-        CounterNodeMeasure(counterWidth, layoutWrapper);
-    }
 }
 } // namespace OHOS::Ace::NG

@@ -23,17 +23,30 @@
 #include "core/common/container.h"
 #include "core/common/display_info.h"
 #include "core/components_ng/pattern/folder_stack/folder_stack_event_info.h"
-#include "frameworks/bridge/declarative_frontend/engine/functions/js_event_function.h"
 #include "frameworks/bridge/declarative_frontend/engine/js_ref_ptr.h"
 #include "frameworks/bridge/declarative_frontend/jsview/js_view_common_def.h"
 #include "frameworks/bridge/declarative_frontend/jsview/models/stack_model_impl.h"
 #include "frameworks/core/components_ng/pattern/folder_stack/folder_stack_model_ng.h"
 
 namespace OHOS::Ace {
+std::unique_ptr<FolderStackModel> FolderStackModel::instance_ = nullptr;
+std::mutex FolderStackModel::mutex_;
+
 FolderStackModel* FolderStackModel::GetInstance()
 {
-    static NG::FolderStackModelNG instance;
-    return &instance;
+    if (!instance_) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (!instance_) {
+#ifdef NG_BUILD
+            instance_.reset(new NG::FolderStackModelNG());
+#else
+            if (Container::IsCurrentUseNewPipeline()) {
+                instance_.reset(new NG::FolderStackModelNG());
+            }
+#endif
+        }
+    }
+    return instance_.get();
 }
 } // namespace OHOS::Ace
 namespace OHOS::Ace::Framework {

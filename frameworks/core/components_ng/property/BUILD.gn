@@ -17,14 +17,11 @@ import(
 build_component_ng("property_ng") {
   sources = [
     "accessibility_property.cpp",
-    "accessibility_property_mutilthread.cpp",
     "border_property.cpp",
     "calc_length.cpp",
     "constraint_flags.cpp",
     "gradient_property.cpp",
     "grid_property.cpp",
-    "magic_layout_property.cpp",
-    "measure_property.cpp",
     "measure_utils.cpp",
     "property.cpp",
     "safe_area_insets.cpp",

@@ -24,7 +24,7 @@
 
 namespace OHOS::Ace::NG {
 class ACE_EXPORT DividerPaintMethod : public NodePaintMethod {
-    DECLARE_ACE_TYPE(DividerPaintMethod, NodePaintMethod);
+    DECLARE_ACE_TYPE(DividerPaintMethod, NodePaintMethod)
 public:
     DividerPaintMethod(float constrainStrokeWidth, float dividerLength, bool vertical, bool strokeWidthLimitation,
         RefPtr<DividerModifier> dividerModifier)
@@ -44,11 +44,9 @@ public:
         CHECK_NULL_VOID(dividerModifier_);
         auto dividerRenderProperty = DynamicCast<DividerRenderProperty>(paintWrapper->GetPaintProperty());
         CHECK_NULL_VOID(dividerRenderProperty);
-        auto host = paintWrapper->GetRenderContext()->GetHost();
-        CHECK_NULL_VOID(host);
-        auto pipeline = host->GetContext();
+        auto pipeline = PipelineBase::GetCurrentContext();
         CHECK_NULL_VOID(pipeline);
-        auto theme = pipeline->GetTheme<DividerTheme>(host->GetThemeScopeId());
+        auto theme = pipeline->GetTheme<DividerTheme>();
         CHECK_NULL_VOID(theme);
         dividerColor_ = dividerRenderProperty->GetDividerColor().value_or(theme->GetColor());
         lineCap_ = dividerRenderProperty->GetLineCap().value_or(LineCap::BUTT);
@@ -70,7 +68,6 @@ public:
             }
             RectF boundsRect(offset_.GetX(), offset_.GetY(), boundsRectWidth, boundsRectHeight);
             dividerModifier_->SetBoundsRect(boundsRect);
-            paintWrapper->FlushContentModifier();
         }
         dividerModifier_->SetStrokeWidth(constrainStrokeWidth_);
         dividerModifier_->SetDividerLength(dividerLength_);

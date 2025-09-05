@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2023-2025 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -25,7 +25,6 @@
 #include "native_node.h"
 #include "native_type.h"
 
-#include "frameworks/core/common/ace_application_info.h"
 #include "frameworks/core/interfaces/arkoala/arkoala_api.h"
 
 #ifdef __cplusplus
@@ -36,7 +35,6 @@ struct ArkUI_Node {
     int32_t type;
     ArkUINodeHandle uiNodeHandle = nullptr;
     bool cNode = false;
-    bool threadSafeNode = false;
     bool buildNode = false;
     void* extraData = nullptr;
     void* extraCustomData = nullptr;
@@ -44,7 +42,7 @@ struct ArkUI_Node {
     void* eventListeners = nullptr;
     void* barrierOption = nullptr;
     void* guidelineOption = nullptr;
-    void* alignRuleOption = nullptr;
+    void* alignRuleOption = nullptr;  
     void* userData = nullptr;
     void* swiperIndicator = nullptr;
     int32_t linearGradientDirection = -1;
@@ -55,10 +53,6 @@ struct ArkUI_Node {
     ArkUI_AttributeItem* areaChangeRadio = nullptr;
     void* transitionOption = nullptr;
     void* progressLinearStyle = nullptr;
-    void* visibleAreaEventOptions = nullptr;
-    bool isBindNative = false;
-    void* commonEventListeners = nullptr;
-    void* extraCommonData = nullptr;
 };
 
 struct ArkUI_Context {
@@ -111,17 +105,6 @@ struct ArkUI_AlignmentRuleOption {
     float biasHorizontal;
     float biasVertical;
 };
-
-struct InnerEventExtraParam {
-    int32_t targetId;
-    ArkUI_NodeHandle nodePtr;
-    void* userData;
-};
-
-struct ExtraData {
-    std::unordered_map<int64_t, InnerEventExtraParam*> eventMap;
-};
-
 #ifdef __cplusplus
 };
 #endif
@@ -138,7 +121,6 @@ inline bool UsePXUnit(ArkUI_NodeHandle nodePtr)
 bool InitialFullImpl();
 ArkUIFullNodeAPI* GetFullImpl();
 ArkUI_NodeHandle CreateNode(ArkUI_NodeType type);
-void DisposeNativeSource(ArkUI_NodeHandle nativePtr);
 void DisposeNode(ArkUI_NodeHandle nativePtr);
 bool IsValidArkUINode(ArkUI_NodeHandle nodePtr);
 
@@ -158,7 +140,6 @@ int32_t ResetAttribute(ArkUI_NodeHandle node, ArkUI_NodeAttributeType attribute)
 int32_t RegisterNodeEvent(ArkUI_NodeHandle nodePtr, ArkUI_NodeEventType eventType, int32_t targetId);
 int32_t RegisterNodeEvent(ArkUI_NodeHandle nodePtr, ArkUI_NodeEventType eventType, int32_t targetId, void* userData);
 void UnregisterNodeEvent(ArkUI_NodeHandle nodePtr, ArkUI_NodeEventType eventType);
-bool GreatOrEqualTargetAPIVersion(OHOS::Ace::PlatformVersion platfromVersion);
 void RegisterOnEvent(void (*eventReceiver)(ArkUI_NodeEvent* event));
 void RegisterOnEvent(void (*eventReceiver)(ArkUI_CompatibleNodeEvent* event));
 void UnregisterOnEvent();
@@ -166,17 +147,11 @@ void HandleTouchEvent(ArkUI_UIInputEvent& uiEvent, ArkUINodeEvent* innerEvent);
 void HandleMouseEvent(ArkUI_UIInputEvent& uiEvent, ArkUINodeEvent* innerEvent);
 void HandleKeyEvent(ArkUI_UIInputEvent& uiEvent, ArkUINodeEvent* innerEvent);
 void HandleFocusAxisEvent(ArkUI_UIInputEvent& uiEvent, ArkUINodeEvent* innerEvent);
-void HandleHoverEvent(ArkUI_UIInputEvent& uiEvent, ArkUINodeEvent* innerEvent);
-void HandleClickEvent(ArkUI_UIInputEvent& uiEvent, ArkUINodeEvent* innerEvent);
 int32_t CheckEvent(ArkUI_NodeEvent* event);
 void HandleInnerNodeEvent(ArkUINodeEvent* innerEvent);
-int32_t GetNativeNodeEventType(ArkUINodeEvent* innerEvent, bool isCommonEvent);
+int32_t GetNativeNodeEventType(ArkUINodeEvent* innerEvent);
 void HandleNodeEvent(ArkUI_NodeEvent* event);
 void TriggerNodeEvent(ArkUI_NodeEvent* event, std::set<void (*)(ArkUI_NodeEvent*)>* eventListenersSet);
-void HandleInnerNodeCommonEvent(ArkUINodeEvent* innerEvent);
-void HandleNodeCommonEvent(ArkUI_NodeEvent* event, int32_t eventType);
-void TriggerNodeCommonEvent(ArkUI_NodeEvent* event, int32_t eventType,
-    std::map<uint32_t, void (*)(ArkUI_NodeEvent*)>* commonEventListenersMap);
 void ApplyModifierFinish(ArkUI_NodeHandle nodePtr);
 void MarkDirty(ArkUI_NodeHandle nodePtr, ArkUI_NodeDirtyFlag dirtyFlag);
 
@@ -190,7 +165,5 @@ bool CheckIsCNode(ArkUI_NodeHandle node);
 bool CheckIsCNodeOrCrossLanguage(ArkUI_NodeHandle node);
 ArkUI_NodeHandle GetArkUINode(ArkUINodeHandle node);
 int32_t GetNodeTypeByTag(ArkUI_NodeHandle node);
-std::string ConvertNodeTypeToTag(ArkUI_NodeType nodeType);
-void RegisterBindNativeNode(ArkUI_NodeHandle node);
 }; // namespace OHOS::Ace::NodeModel
 #endif // FOUNDATION_ACE_FRAMEWORKS_CORE_INTERFACES_NATIVE_NODE_NODE_MODEL_H

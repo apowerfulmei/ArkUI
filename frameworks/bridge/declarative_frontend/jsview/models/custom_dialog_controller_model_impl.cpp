@@ -17,6 +17,8 @@
 
 #include "base/subwindow/subwindow_manager.h"
 #include "core/components/dialog/dialog_component.h"
+#include "core/pipeline_ng/pipeline_context.h"
+#include "frameworks/bridge/common/utils/engine_helper.h"
 #include "frameworks/bridge/declarative_frontend/view_stack_processor.h"
 
 namespace OHOS::Ace::Framework {
@@ -222,8 +224,7 @@ void CustomDialogControllerModelImpl::CloseDialog(DialogProperties& dialogProper
 void CustomDialogControllerModelImpl::SetOpenDialog(DialogProperties& dialogProperties,
     const WeakPtr<AceType>& controller, std::vector<WeakPtr<AceType>>& dialogs,
     bool& pending, bool& isShown, std::function<void()>&& cancelTask, std::function<void()>&& buildFunc,
-    RefPtr<AceType>& dialogComponent, RefPtr<AceType>& customDialog, std::list<DialogOperation>& dialogOperation,
-    bool& hasBind)
+    RefPtr<AceType>& dialogComponent, RefPtr<AceType>& customDialog, std::list<DialogOperation>& dialogOperation)
 {
     // Cannot reuse component because might depend on state
     if (customDialog) {
@@ -247,10 +248,5 @@ void CustomDialogControllerModelImpl::SetCloseDialog(DialogProperties& dialogPro
 {
     CloseDialog(
         dialogProperties, pending, isShown, std::move(cancelTask), dialogComponent, customDialog, dialogOperation);
-}
-
-PromptActionCommonState CustomDialogControllerModelImpl::GetState(std::vector<WeakPtr<AceType>>& dialogs, bool& hasBind)
-{
-    return PromptActionCommonState::UNINITIALIZED;
 }
 } // namespace OHOS::Ace::Framework

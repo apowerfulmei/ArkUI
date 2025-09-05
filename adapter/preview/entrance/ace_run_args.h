@@ -30,7 +30,8 @@ using SendRenderDataCallback = bool (*)(const void*, const size_t, const int32_t
 using SendCurrentRouterCallback = bool (*)(const std::string currentRouterPath);
 using FastPreviewErrorCallback = void (*)(const std::string& jsonStr);
 
-constexpr uint32_t OHOS_THEME_ID = 125829872;
+constexpr uint32_t THEME_ID_LIGHT = 117440515;
+constexpr uint32_t THEME_ID_DARK = 117440516;
 
 enum class AceVersion {
     ACE_1_0,
@@ -40,27 +41,6 @@ enum class AceVersion {
 enum class ProjectModel {
     FA,
     STAGE,
-};
-
-struct ConfigChanges {
-    bool watchLocale = false;
-    bool watchLayout = false;
-    bool watchFontSize = false;
-    bool watchOrientation = false;
-    bool watchDensity = false;
-};
-
-struct SystemParams {
-    int32_t deviceWidth { 0 };
-    int32_t deviceHeight { 0 };
-    bool isRound = false;
-    double density { 1.0 };
-    std::string language = "zh";
-    std::string region = "CN";
-    std::string script = "";
-    OHOS::Ace::DeviceType deviceType { DeviceType::PHONE };
-    OHOS::Ace::ColorMode colorMode { ColorMode::LIGHT };
-    OHOS::Ace::DeviceOrientation orientation { DeviceOrientation::PORTRAIT };
 };
 
 struct ACE_FORCE_EXPORT AceRunArgs {
@@ -76,7 +56,7 @@ struct ACE_FORCE_EXPORT AceRunArgs {
     std::string appResourcesPath;
 
     // Indicate light or dark theme.
-    uint32_t themeId = OHOS_THEME_ID;
+    uint32_t themeId = THEME_ID_LIGHT;
 
     OHOS::Ace::DeviceConfig deviceConfig = {
         .orientation = DeviceOrientation::PORTRAIT,
@@ -118,10 +98,6 @@ struct ACE_FORCE_EXPORT AceRunArgs {
     // for strict mode
     std::map<std::string, std::string> pkgContextInfoJsonStringMap;
     std::map<std::string, std::string> packageNameList;
-
-    // Component test
-    bool isComponentTestMode = false;
-    std::string componentTestConfig = "";
 };
 
 } // namespace OHOS::Ace::Platform

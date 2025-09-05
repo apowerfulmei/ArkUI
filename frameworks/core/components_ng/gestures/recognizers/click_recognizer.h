@@ -26,7 +26,6 @@
 #include "core/components_ng/gestures/tap_gesture.h"
 #include "core/components_ng/gestures/recognizers/multi_fingers_recognizer.h"
 #include "core/gestures/click_info.h"
-#include "core/components_ng/event/event_constants.h"
 
 namespace OHOS::Ace::NG {
 using OnAccessibilityEventFunc = std::function<void(AccessibilityEventType)>;
@@ -38,7 +37,6 @@ public:
     ClickRecognizer() = default;
     ClickRecognizer(int32_t fingers, int32_t count, double distanceThreshold = std::numeric_limits<double>::infinity(),
     bool isLimitFingerCount_ = false);
-    ClickRecognizer(int32_t fingers, int32_t count, Dimension distanceThreshold, bool isLimitFingerCount_ = false);
 
     ~ClickRecognizer() override = default;
 
@@ -67,29 +65,15 @@ public:
 
     void SetDistanceThreshold(double distanceThreshold)
     {
-        distanceThreshold_ = Dimension(
-            Dimension(distanceThreshold, DimensionUnit::PX).ConvertToVp(), DimensionUnit::VP);
-        if (distanceThreshold <= 0) {
-            distanceThreshold_ = Dimension(std::numeric_limits<double>::infinity(), DimensionUnit::PX);
-        }
-    }
-
-    void SetDistanceThreshold(Dimension distanceThreshold)
-    {
         distanceThreshold_ = distanceThreshold;
-        if (distanceThreshold_.ConvertToPx() <= 0) {
-            distanceThreshold_ = Dimension(std::numeric_limits<double>::infinity(), DimensionUnit::PX);
+        if (distanceThreshold_ <= 0) {
+            distanceThreshold_ = std::numeric_limits<double>::infinity();
         }
     }
 
     int GetCount()
     {
         return count_;
-    }
-
-    double GetDistanceThreshold() const
-    {
-        return distanceThreshold_.ConvertToPx();
     }
 
     GestureEventFunc GetTapActionFunc()
@@ -119,8 +103,6 @@ private:
     void HandleTouchMoveEvent(const TouchEvent& event) override;
     void HandleTouchCancelEvent(const TouchEvent& event) override;
     bool ReconcileFrom(const RefPtr<NGGestureRecognizer>& recognizer) override;
-    void UpdateInfoWithDownEvent(const TouchEvent& event);
-    void ResetStatusInHandleOverdueDeadline();
 
     void OnResetStatus() override
     {
@@ -138,8 +120,7 @@ private:
     void DeadlineTimer(CancelableCallback<void()>& deadlineTimer, int32_t time);
     Offset ComputeFocusPoint();
 
-    void SendCallbackMsg(const std::unique_ptr<GestureEventFunc>& callback, GestureCallbackType type);
-    void HandleReports(const GestureEvent& info, GestureCallbackType type) override;
+    void SendCallbackMsg(const std::unique_ptr<GestureEventFunc>& callback);
     GestureJudgeResult TriggerGestureJudgeCallback();
     bool ExceedSlop();
     void InitGlobalValue(SourceType deviceId);
@@ -148,14 +129,9 @@ private:
 
     bool IsFormRenderClickRejected(const TouchEvent& event);
     void TriggerClickAccepted(const TouchEvent& event);
-    OnAccessibilityEventFunc GetOnAccessibilityEventFunc();
-    void RecordClickEventIfNeed(const GestureEvent& info) const;
-    void AboutToAddToPendingRecognizers(const TouchEvent& event);
-    bool CheckReconcileFromProperties(const RefPtr<NGGestureRecognizer>& recognizer) override;
 
     int32_t count_ = 1;
-    Dimension distanceThreshold_ = Dimension(std::numeric_limits<double>::infinity(), DimensionUnit::PX);
-    double userDT_ = 0.0;
+    double distanceThreshold_ = std::numeric_limits<double>::infinity();
 
     // number of tap action.
     int32_t tappedCount_ = 0;

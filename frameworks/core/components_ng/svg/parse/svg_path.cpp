@@ -15,7 +15,10 @@
 
 #include "frameworks/core/components_ng/svg/parse/svg_path.h"
 
-#include "frameworks/core/components_ng/svg/parse/svg_constants.h"
+#include "include/utils/SkParsePath.h"
+
+#include "base/utils/utils.h"
+#include "frameworks/core/components/declaration/svg/svg_path_declaration.h"
 
 
 namespace OHOS::Ace::NG {
@@ -29,53 +32,26 @@ RefPtr<SvgNode> SvgPath::Create()
 
 bool SvgPath::ParseAndSetSpecializedAttr(const std::string& name, const std::string& value)
 {
-    if (name == SVG_D) {
+    if (name == DOM_SVG_D) {
         d_ = value;
         return true;
     }
     return false;
 }
 
-Rect SvgPath::GetobjectBoundingBox(const SvgLengthScaleRule& lengthRule)
+#ifndef USE_ROSEN_DRAWING
+SkPath SvgPath::AsPath(const Size& /* viewPort */) const
 {
-    if (lengthRule.GetLengthScaleUnit() == SvgLengthScaleUnit::OBJECT_BOUNDING_BOX) {
-        LOGD("SvgPath::GetobjectBoundingBox : objectBoundingBox");
-        return lengthRule.GetContainerRect();
-    }
-    LOGD("SvgPath::GetobjectBoundingBox : userSpaceOnUse");
-    Rect objectBoundingBox(0, 0, 1, 1);
-    return objectBoundingBox;
-}
-
-RSRecordingPath SvgPath::AsPath(const SvgLengthScaleRule& lengthRule)
-{
-    /* re-generate the Path for pathTransform(true). AsPath come from clip-path */
-    if (path_.has_value() && !lengthRule.GetPathTransform()) {
-        return path_.value();
-    }
-    RSRecordingPath tmp;
-    RSRecordingPath out;
-    Rect objectBoundingBox = GetobjectBoundingBox(lengthRule);
-    RSMatrix matrix;
-    /* Setup matrix  for converting the points in path */
-    matrix.SetScaleTranslate(objectBoundingBox.Width(), objectBoundingBox.Height(), objectBoundingBox.Left(),
-        objectBoundingBox.Top());
-
-    if (!d_.empty()) {
-        tmp.BuildFromSVGString(d_);
-        /* convert the points in Path with the matrixs */
-        tmp.TransformWithPerspectiveClip(matrix, &out, false);
+    SkPath out;
+    if (!pathD.empty()) {
+        SkParsePath::FromSVGString(d_.c_str(), &out);
         if (attributes_.fillState.IsEvenodd()) {
-            out.SetFillStyle(RSPathFillType::EVENTODD);
+            out.setFillType(SkPathFillType::kEvenOdd);
         }
-    }
-    /* Apply path transform for clip-path only */
-    if (lengthRule.GetPathTransform()) {
-        ApplyTransform(out);
     }
     return out;
 }
-
+#else
 RSRecordingPath SvgPath::AsPath(const Size& /* viewPort */) const
 {
     RSRecordingPath out;
@@ -87,5 +63,6 @@ RSRecordingPath SvgPath::AsPath(const Size& /* viewPort */) const
     }
     return out;
 }
+#endif
 
 } // namespace OHOS::Ace::NG

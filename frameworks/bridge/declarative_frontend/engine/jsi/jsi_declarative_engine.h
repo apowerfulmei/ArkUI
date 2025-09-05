@@ -27,6 +27,7 @@
 #include "native_engine/impl/ark/ark_native_engine.h"
 
 #include "base/memory/ace_type.h"
+#include "base/subwindow/subwindow_manager.h"
 #include "base/utils/noncopyable.h"
 #include "core/common/ace_application_info.h"
 #include "core/common/ace_page.h"
@@ -47,7 +48,7 @@ struct NamedRouterProperty {
 };
 
 class JsiDeclarativeEngineInstance final : public AceType, public JsEngineInstance {
-    DECLARE_ACE_TYPE(JsiDeclarativeEngineInstance, AceType);
+    DECLARE_ACE_TYPE(JsiDeclarativeEngineInstance, AceType)
 public:
     explicit JsiDeclarativeEngineInstance(const RefPtr<FrontendDelegate>& delegate) : frontendDelegate_(delegate) {}
     ~JsiDeclarativeEngineInstance() override;
@@ -68,7 +69,6 @@ public:
     void DestroyAllRootViewHandle();
     void FlushReload();
     napi_value GetContextValue();
-    bool BuilderNodeFunc(std::string functionName, const std::vector<int32_t>& nodeIds);
     napi_value GetFrameNodeValueByNodeId(int32_t nodeId);
 
     static std::unique_ptr<JsonValue> GetI18nStringResource(
@@ -82,13 +82,7 @@ public:
     static void TriggerPageUpdate(const shared_ptr<JsRuntime>&);
     static RefPtr<PipelineBase> GetPipelineContext(const shared_ptr<JsRuntime>& runtime);
     static void PreloadAceModule(void* runtime);
-    static void PreloadAceModuleForCustomRuntime(void* runtime);
-    static void RemoveInvalidEnv(void* env);
     static void PreloadAceModuleWorker(void* runtime);
-    // crossPlatform Resets the module pre-load flag
-    static void ResetModulePreLoadFlag();
-    // crossPlatform Prepares for resetting the module pre-load flag
-    static void PrepareForResetModulePreLoadFlag();
 
     WeakPtr<JsMessageDispatcher> GetJsMessageDispatcher() const
     {
@@ -216,10 +210,6 @@ public:
     static bool RegisterStringCacheTable(const EcmaVM* vm, int32_t size);
     static panda::Local<panda::StringRef> GetCachedString(const EcmaVM *vm, int32_t propertyIndex);
     static void SetCachedString(const EcmaVM* vm);
-    void CallAddAvailableInstanceIdFunc(
-        const shared_ptr<JsRuntime>& runtime, const std::vector<shared_ptr<JsValue>>& argv);
-    void CallRemoveAvailableInstanceIdFunc(
-        const shared_ptr<JsRuntime>& runtime, const std::vector<shared_ptr<JsValue>>& argv);
 
 private:
     void InitGlobalObjectTemplate();
@@ -233,8 +223,6 @@ private:
     static shared_ptr<JsRuntime> InnerGetCurrentRuntime();
     shared_ptr<JsValue> CallGetUIContextFunc(
         const shared_ptr<JsRuntime>& runtime, const std::vector<shared_ptr<JsValue>>& argv);
-    shared_ptr<JsValue> CallViewFunc(const shared_ptr<JsRuntime>& runtime,
-        const shared_ptr<JsValue> functionName, const std::vector<shared_ptr<JsValue>>& argv);
     shared_ptr<JsValue> CallGetFrameNodeByNodeIdFunc(
         const shared_ptr<JsRuntime>& runtime, const std::vector<shared_ptr<JsValue>>& argv);
     std::unordered_map<int32_t, panda::Global<panda::ObjectRef>> rootViewMap_;
@@ -277,7 +265,7 @@ private:
 };
 
 class JsiDeclarativeEngine : public JsEngine {
-    DECLARE_ACE_TYPE(JsiDeclarativeEngine, JsEngine);
+    DECLARE_ACE_TYPE(JsiDeclarativeEngine, JsEngine)
 public:
     JsiDeclarativeEngine(int32_t instanceId, void* runtime) : instanceId_(instanceId), runtime_(runtime) {}
     explicit JsiDeclarativeEngine(int32_t instanceId) : instanceId_(instanceId) {}
@@ -390,16 +378,6 @@ public:
 
     void SetContext(int32_t instanceId, NativeReference* context) override;
 
-    std::shared_ptr<Framework::JsValue> GetJsContext() override;
-
-    void SetJsContext(const std::shared_ptr<Framework::JsValue>& jsContext) override;
-
-    std::shared_ptr<void> SerializeValue(const std::shared_ptr<Framework::JsValue>& jsValue) override;
-
-    void TriggerModuleSerializer() override;
-
-    void SetJsContextWithDeserialize(const std::shared_ptr<void>& recoder) override;
-
     void SetErrorEventHandler(std::function<void(const std::string&, const std::string&)>&& errorCallback) override;
 
     RefPtr<GroupJsBridge> GetGroupJsBridge() override;
@@ -445,19 +423,12 @@ public:
         return engineInstance_->GetContextValue();
     }
 
-    bool BuilderNodeFunc(std::string functionName, const std::vector<int32_t>& nodeIds) override
-    {
-        return engineInstance_->BuilderNodeFunc(functionName, nodeIds);
-    }
-
     napi_value GetFrameNodeValueByNodeId(int32_t nodeId) override
     {
         return engineInstance_->GetFrameNodeValueByNodeId(nodeId);
     }
 
     void JsStateProfilerResgiter();
-
-    void JsSetAceDebugMode();
 
 #if defined(PREVIEW)
     void ReplaceJSContent(const std::string& url, const std::string componentName) override;
@@ -483,15 +454,7 @@ public:
         const std::string& namedRoute, panda::Local<panda::ObjectRef> params);
     static void AddToNavigationBuilderMap(std::string name,
         panda::Global<panda::ObjectRef> builderFunc);
-    /**
-     * @brief find the router page by name or url, then call its constructor to build the page.
-     */
-    bool LoadNamedRouterSource(const std::string& routeNameOrUrl, bool isNamedRoute) override;
-    /**
-     * @brief find the router page by intentInfo, then call its constructor to build the page.
-     */
-    bool GeneratePageByIntent(
-        const std::string& bundleName, const std::string& moduleName, const std::string& pagePath) override;
+    bool LoadNamedRouterSource(const std::string& namedRoute, bool isTriggeredByJs) override;
     std::unique_ptr<JsonValue> GetFullPathInfo() override;
     void RestoreFullPathInfo(std::unique_ptr<JsonValue> namedRouterInfo) override;
     std::unique_ptr<JsonValue> GetNamedRouterInfo() override;
@@ -509,8 +472,6 @@ public:
 
     panda::Global<panda::ObjectRef> GetNavigationBuilder(std::string name);
 
-    // crossPlatform Clears the 'namedRouterRegisterMap_'
-    static void ResetNamedRouterRegisterMap();
 private:
     bool CallAppFunc(const std::string& appFuncName);
 
@@ -529,9 +490,6 @@ private:
     bool ExecuteAbc(const std::string& fileName);
     bool ExecuteCardAbc(const std::string& fileName, int64_t cardId);
     bool ExecuteDynamicAbc(const std::string& fileName, const std::string& entryPoint);
-    bool InnerExecuteIsolatedAbc(const std::string& fileName, const std::string& entryPoint);
-    bool InnerExecuteDynamicAbc(const std::string& fileName, const std::string& entryPoint);
-    std::shared_ptr<JsValue> Deserialize(const std::shared_ptr<void>& recoder);
 
     RefPtr<JsiDeclarativeEngineInstance> engineInstance_;
 

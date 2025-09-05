@@ -30,7 +30,7 @@
 
 namespace OHOS::Ace::NG {
 class ACE_EXPORT TextPaintMethod : public NodePaintMethod {
-    DECLARE_ACE_TYPE(TextPaintMethod, NodePaintMethod);
+    DECLARE_ACE_TYPE(TextPaintMethod, NodePaintMethod)
 public:
     TextPaintMethod(const WeakPtr<Pattern>& pattern, float baselineOffset,
         RefPtr<TextContentModifier> textContentModifier, RefPtr<TextOverlayModifier> textOverlayModifier);
@@ -52,9 +52,8 @@ protected:
 private:
     void UpdateParagraphAndImageSpanNodeList();
     void UpdateObscuredRects();
-    static std::vector<RectF> CalculateSelectedRect(
-        const std::vector<std::pair<std::vector<RectF>, ParagraphStyle>>& selectedRects, float contentWidth);
-    void DoStartTextRace();
+    std::vector<RectF> CalculateSelectedRect(
+        const std::vector<std::pair<std::vector<RectF>, TextDirection>>& selectedRects, float contentWidth);
 
     WeakPtr<Pattern> pattern_;
     float baselineOffset_;

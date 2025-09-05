@@ -43,7 +43,7 @@ public:
 
         RefPtr<ToolBarTheme> Build(const RefPtr<ThemeConstants>& themeConstants) const
         {
-            RefPtr<ToolBarTheme> theme = AceType::MakeRefPtr<ToolBarTheme>();
+            RefPtr<ToolBarTheme> theme = AceType::Claim(new ToolBarTheme());
             if (!themeConstants) {
                 return theme;
             }

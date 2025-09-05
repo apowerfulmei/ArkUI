@@ -22,6 +22,9 @@
 #include "adapter/ohos/entrance/ace_container.h"
 #include "adapter/ohos/osal/resource_convertor.h"
 #include "adapter/ohos/osal/resource_theme_style.h"
+#include "base/utils/system_properties.h"
+#include "base/utils/utils.h"
+#include "core/components/theme/theme_attributes.h"
 namespace OHOS::Ace {
 namespace {
 
@@ -62,8 +65,6 @@ const char* PATTERN_MAP[] = {
     THEME_PATTERN_IMAGE,
     THEME_PATTERN_LIST,
     THEME_PATTERN_LIST_ITEM,
-    THEME_PATTERN_ARC_LIST,
-    THEME_PATTERN_ARC_LIST_ITEM,
     THEME_PATTERN_MARQUEE,
     THEME_PATTERN_NAVIGATION_BAR,
     THEME_PATTERN_PICKER,
@@ -96,9 +97,7 @@ const char* PATTERN_MAP[] = {
     THEME_PATTERN_SHEET,
     THEME_BLUR_STYLE_COMMON,
     THEME_PATTERN_SHADOW,
-    THEME_PATTERN_CONTAINER_MODAL,
-    THEME_PATTERN_SCROLLABLE,
-    THEME_PATTERN_APP
+    THEME_PATTERN_CONTAINER_MODAL
 };
 
 bool IsDirExist(const std::string& path)
@@ -180,7 +179,7 @@ RefPtr<ThemeStyle> ResourceAdapterImpl::GetTheme(int32_t themeId)
 {
     CheckThemeId(themeId);
     auto theme = AceType::MakeRefPtr<ResourceThemeStyle>(AceType::Claim(this));
-    constexpr char flag[] = "ohos_"; // fit with resource/base/theme.json and pattern.json
+    constexpr char OHFlag[] = "ohos_"; // fit with resource/base/theme.json and pattern.json
     {
         auto manager = GetResourceManager();
         if (manager) {
@@ -188,7 +187,7 @@ RefPtr<ThemeStyle> ResourceAdapterImpl::GetTheme(int32_t themeId)
             for (size_t i = 0; i < sizeof(PATTERN_MAP) / sizeof(PATTERN_MAP[0]); i++) {
                 ResourceThemeStyle::RawAttrMap attrMap;
                 std::string patternTag = PATTERN_MAP[i];
-                std::string patternName = std::string(flag) + PATTERN_MAP[i];
+                std::string patternName = std::string(OHFlag) + PATTERN_MAP[i];
                 ret = manager->GetPatternByName(patternName.c_str(), attrMap);
                 if (attrMap.empty()) {
                     continue;
@@ -414,7 +413,7 @@ std::vector<uint32_t> ResourceAdapterImpl::GetIntArray(uint32_t resId) const
         }
     }
 
-    std::vector<uint32_t> result(intVectorResult.size());
+    std::vector<uint32_t> result;
     std::transform(
         intVectorResult.begin(), intVectorResult.end(), result.begin(), [](int x) { return static_cast<uint32_t>(x); });
     return result;
@@ -431,7 +430,7 @@ std::vector<uint32_t> ResourceAdapterImpl::GetIntArrayByName(const std::string& 
         LOGE("GetIntArray error, resName=%{public}s", resName.c_str());
     }
 
-    std::vector<uint32_t> result(intVectorResult.size());
+    std::vector<uint32_t> result;
     std::transform(
         intVectorResult.begin(), intVectorResult.end(), result.begin(), [](int x) { return static_cast<uint32_t>(x); });
     return result;
@@ -710,15 +709,6 @@ uint32_t ResourceAdapterImpl::GetSymbolById(uint32_t resId) const
     CHECK_NULL_RETURN(manager, -1);
     manager->GetSymbolById(resId, result);
     return result;
-}
-
-uint32_t ResourceAdapterImpl::GetResId(const std::string &resTypeName) const
-{
-    uint32_t resId = -1;
-    auto manager = GetResourceManager();
-    CHECK_NULL_RETURN(manager, -1);
-    manager->GetResId(resTypeName, resId);
-    return resId;
 }
 
 } // namespace OHOS::Ace

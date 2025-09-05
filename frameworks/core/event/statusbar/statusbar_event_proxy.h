@@ -47,7 +47,6 @@ public:
     virtual void Register(const WeakPtr<StatusBarClickListener>& listener) = 0;
     virtual void UnRegister(const WeakPtr<StatusBarClickListener>& listener) = 0;
     virtual void OnStatusBarClick() = 0;
-    virtual std::set<std::pair<WeakPtr<StatusBarClickListener>, int32_t>> GetStatusBarClickListener();
 
 protected:
     StatusBarEventProxy() = default;

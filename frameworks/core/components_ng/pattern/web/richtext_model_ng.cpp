@@ -16,6 +16,9 @@
 #include "core/components_ng/pattern/web/richtext_model_ng.h"
 
 #include "core/components_ng/base/node_flag.h"
+#include "core/components_ng/base/view_abstract.h"
+#include "core/components_ng/base/view_stack_processor.h"
+#include "core/components_ng/pattern/web/web_event_hub.h"
 #if !defined(ANDROID_PLATFORM) && !defined(IOS_PLATFORM)
 #include "core/components_ng/pattern/web/web_pattern.h"
 #else
@@ -28,7 +31,6 @@ namespace OHOS::Ace::NG {
 void RichTextModelNG::Create(const std::string& webData)
 {
     auto* stack = ViewStackProcessor::GetInstance();
-    CHECK_NULL_VOID(stack);
     auto nodeId = stack->ClaimNodeId();
     ACE_LAYOUT_SCOPED_TRACE("Create[%s][self:%d]", V2::WEB_ETS_TAG, nodeId);
     auto frameNode =
@@ -58,9 +60,7 @@ void RichTextModelNG::SetOnPageStart(std::function<void(const BaseEventInfo*)>&&
 #endif
     auto func = onPageStarted;
     auto onPageStartedEvent = [func](const std::shared_ptr<BaseEventInfo>& info) { func(info.get()); };
-    auto stackProcessor = ViewStackProcessor::GetInstance();
-    CHECK_NULL_VOID(stackProcessor);
-    auto webEventHub = stackProcessor->GetMainFrameNodeEventHub<WebEventHub>();
+    auto webEventHub = ViewStackProcessor::GetInstance()->GetMainFrameNodeEventHub<WebEventHub>();
     CHECK_NULL_VOID(webEventHub);
     webEventHub->SetOnPageStartedEvent(std::move(onPageStartedEvent));
 }
@@ -74,9 +74,7 @@ void RichTextModelNG::SetOnPageFinish(std::function<void(const BaseEventInfo*)>&
 #endif
     auto func = onPageFinish;
     auto onPageFinishEvent = [func](const std::shared_ptr<BaseEventInfo>& info) { func(info.get()); };
-    auto stackProcessor = ViewStackProcessor::GetInstance();
-    CHECK_NULL_VOID(stackProcessor);
-    auto webEventHub = stackProcessor->GetMainFrameNodeEventHub<WebEventHub>();
+    auto webEventHub = ViewStackProcessor::GetInstance()->GetMainFrameNodeEventHub<WebEventHub>();
     CHECK_NULL_VOID(webEventHub);
     webEventHub->SetOnPageFinishedEvent(std::move(onPageFinishEvent));
 }

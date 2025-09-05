@@ -16,16 +16,16 @@
 #ifndef FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_PATTERNS_RICH_EDITOR_TEXT_CONTENT_MODIFIER_H
 #define FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_PATTERNS_RICH_EDITOR_TEXT_CONTENT_MODIFIER_H
 
-#include "core/components_ng/pattern/rich_editor/rich_editor_paragraph_manager.h"
+#include "core/components_ng/pattern/rich_editor/paragraph_manager.h"
 #include "core/components_ng/pattern/text/text_content_modifier.h"
 
 namespace OHOS::Ace::NG {
 class RichEditorContentModifier : public TextContentModifier {
-    DECLARE_ACE_TYPE(RichEditorContentModifier, TextContentModifier);
+    DECLARE_ACE_TYPE(RichEditorContentModifier, TextContentModifier)
 
 public:
-    explicit RichEditorContentModifier(const std::optional<TextStyle>& textStyle,
-        RichEditorParagraphManager* const pManager, const WeakPtr<OHOS::Ace::NG::Pattern>& pattern);
+    explicit RichEditorContentModifier(const std::optional<TextStyle>& textStyle, const ParagraphManager* pManager,
+        const WeakPtr<OHOS::Ace::NG::Pattern>& pattern);
 
     ~RichEditorContentModifier() override = default;
 
@@ -53,7 +53,7 @@ public:
 
 private:
     void PaintCustomSpan(DrawingContext& drawingContext);
-    RichEditorParagraphManager* const pManager_;
+    const ParagraphManager* pManager_;
     WeakPtr<OHOS::Ace::NG::Pattern> pattern_;
     RefPtr<PropertyFloat> richTextRectX_;
     RefPtr<PropertyFloat> richTextRectY_;

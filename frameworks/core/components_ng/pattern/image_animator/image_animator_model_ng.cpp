@@ -15,30 +15,14 @@
 
 #include "core/components_ng/pattern/image_animator/image_animator_model_ng.h"
 
+#include "core/components_ng/base/view_abstract.h"
 #include "core/components_ng/base/view_stack_processor.h"
 #include "core/components_ng/pattern/image/image_pattern.h"
-#include "core/components_ng/pattern/image_animator/controlled_animator.h"
+#include "core/components_v2/inspector/inspector_constants.h"
 
 namespace OHOS::Ace::NG {
 namespace {
     constexpr int32_t DEFAULT_DURATION = 1000;
-    void InitImageNodeInImageAnimator(FrameNode* frameNode)
-    {
-        CHECK_NULL_VOID(frameNode);
-        if (frameNode->GetChildren().empty()) {
-            auto imageNode = FrameNode::CreateFrameNode(
-                V2::IMAGE_ETS_TAG, -1, AceType::MakeRefPtr<ImagePattern>());
-            CHECK_NULL_VOID(imageNode);
-            auto imagePattern = AceType::DynamicCast<ImagePattern>(imageNode->GetPattern());
-            CHECK_NULL_VOID(imagePattern);
-            imagePattern->SetImageAnimator(true);
-            auto imageLayoutProperty = AceType::DynamicCast<ImageLayoutProperty>(imageNode->GetLayoutProperty());
-            CHECK_NULL_VOID(imageLayoutProperty);
-            imageLayoutProperty->UpdateMeasureType(MeasureType::MATCH_PARENT);
-            frameNode->GetLayoutProperty()->UpdateAlignment(Alignment::TOP_LEFT);
-            frameNode->AddChild(imageNode);
-        }
-    }
 }
 
 void ImageAnimatorModelNG::Create()
@@ -49,27 +33,30 @@ void ImageAnimatorModelNG::Create()
     auto frameNode = FrameNode::GetOrCreateFrameNode(
         V2::IMAGE_ANIMATOR_ETS_TAG, nodeId, []() { return AceType::MakeRefPtr<ImageAnimatorPattern>(); });
     CHECK_NULL_VOID(frameNode);
+    if (frameNode->GetChildren().empty()) {
+        auto imageNode = FrameNode::CreateFrameNode(V2::IMAGE_ETS_TAG, -1, AceType::MakeRefPtr<ImagePattern>());
+        CHECK_NULL_VOID(imageNode);
+        auto imagePattern = AceType::DynamicCast<ImagePattern>(imageNode->GetPattern());
+        CHECK_NULL_VOID(imagePattern);
+        imagePattern->SetImageAnimator(true);
+        auto imageLayoutProperty = AceType::DynamicCast<ImageLayoutProperty>(imageNode->GetLayoutProperty());
+        CHECK_NULL_VOID(imageLayoutProperty);
+        imageLayoutProperty->UpdateMeasureType(MeasureType::MATCH_PARENT);
+        frameNode->GetLayoutProperty()->UpdateAlignment(Alignment::TOP_LEFT);
+        frameNode->AddChild(imageNode);
+    }
     stack->Push(frameNode);
-}
-
-void ImageAnimatorModelNG::SetAutoMonitorInvisibleArea(bool autoMonitorInvisibleArea)
-{
-    GetImageAnimatorPattern()->SetAutoMonitorInvisibleArea(autoMonitorInvisibleArea);
 }
 
 void ImageAnimatorModelNG::SetImages(const std::vector<ImageProperties>& images)
 {
-    auto frameNode = ViewStackProcessor::GetInstance()->GetMainFrameNode();
-    if (!images.empty()) {
-        InitImageNodeInImageAnimator(frameNode);
-    }
     std::vector<ImageProperties> imageList = images;
     GetImageAnimatorPattern()->SetImages(std::move(imageList));
 }
 
 void ImageAnimatorModelNG::SetState(int32_t state)
 {
-    GetImageAnimatorPattern()->SetStatus(static_cast<ControlledAnimator::ControlStatus>(state));
+    GetImageAnimatorPattern()->SetStatus(static_cast<Animator::Status>(state));
 }
 
 void ImageAnimatorModelNG::SetDuration(int32_t duration)
@@ -183,9 +170,6 @@ RefPtr<FrameNode> ImageAnimatorModelNG::CreateFrameNode(int32_t nodeId)
 void ImageAnimatorModelNG::SetImages(FrameNode* frameNode, const std::vector<ImageProperties>& images)
 {
     CHECK_NULL_VOID(frameNode);
-    if (!images.empty()) {
-        InitImageNodeInImageAnimator(frameNode);
-    }
     std::vector<ImageProperties> imageList = images;
     auto imageAnimatorPattern = AceType::DynamicCast<ImageAnimatorPattern>(frameNode->GetPattern());
     imageAnimatorPattern->SetImages(std::move(imageList));
@@ -204,7 +188,7 @@ void ImageAnimatorModelNG::SetDuration(FrameNode* frameNode, int32_t duration)
 
 void ImageAnimatorModelNG::SetState(FrameNode* frameNode, int32_t state)
 {
-    GetImageAnimatorPattern(frameNode)->SetStatus(static_cast<ControlledAnimator::ControlStatus>(state));
+    GetImageAnimatorPattern(frameNode)->SetStatus(static_cast<Animator::Status>(state));
 }
 
 void ImageAnimatorModelNG::SetFixedSize(FrameNode* frameNode, bool fixedSize)
@@ -220,11 +204,6 @@ void ImageAnimatorModelNG::SetFillMode(FrameNode* frameNode, int32_t fillMode)
 void ImageAnimatorModelNG::SetIteration(FrameNode* frameNode, int32_t iteration)
 {
     GetImageAnimatorPattern(frameNode)->SetIteration(iteration);
-}
-
-void ImageAnimatorModelNG::SetAutoMonitorInvisibleArea(FrameNode* frameNode, bool autoMonitorInvisibleArea)
-{
-    GetImageAnimatorPattern(frameNode)->SetAutoMonitorInvisibleArea(autoMonitorInvisibleArea);
 }
 
 bool ImageAnimatorModelNG::IsReverse(FrameNode* frameNode)

@@ -19,8 +19,6 @@ config("uicontent_public_config") {
   include_dirs = [
     "${ace_root}/interfaces/inner_api/ace",
     "${ace_root}/interfaces/inner_api/ace/ai/",
-    "${ace_root}/interfaces/inner_api/ace/share/",
-    "$ace_root/interfaces/inner_api/ace_kit/include",
   ]
   if (use_hilog) {
     defines = [ "USE_HILOG" ]
@@ -79,7 +77,6 @@ ohos_shared_library("ace_uicontent") {
   ]
 
   sources = [
-    "${ace_root}/interfaces/inner_api/ace/arkts_module_preloader.cpp",
     "${ace_root}/interfaces/inner_api/ace/declarative_module_preloader.cpp",
     "${ace_root}/interfaces/inner_api/ace/hot_reloader.cpp",
     "${ace_root}/interfaces/inner_api/ace/navigation_controller.cpp",
@@ -88,21 +85,7 @@ ohos_shared_library("ace_uicontent") {
     "${ace_root}/interfaces/inner_api/ace/ui_event.cpp",
     "${ace_root}/interfaces/inner_api/ace/ui_event_func.cpp",
   ]
-  external_deps = [
-    "hilog:libhilog",
-    "runtime_core:ani",
-  ]
-
-  if (build_ohos_sdk) {
-    external_deps -= [ "runtime_core:ani" ]
-  }
-
-  if (current_os == "ohos") {
-    external_deps += [ "c_utils:utils" ]
-  } else if (is_arkui_x || use_mingw_win || use_mac || use_linux) {
-    include_dirs = [ c_utils_header_path ]
-  }
-
+  external_deps = [ "hilog:libhilog" ]
   if (!use_mingw_win && !use_mac && !use_linux &&
       defined(uicast_configs.uicast_enable) && uicast_configs.uicast_enable) {
     sources +=

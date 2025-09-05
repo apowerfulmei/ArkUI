@@ -15,6 +15,10 @@
 
 #include "core/components_ng/event/long_press_event.h"
 
+#include "base/utils/utils.h"
+#include "core/components_ng/base/frame_node.h"
+#include "core/components_ng/event/gesture_event_hub.h"
+#include "core/components_ng/gestures/recognizers/long_press_recognizer.h"
 #include "core/pipeline_ng/pipeline_context.h"
 
 namespace OHOS::Ace::NG {
@@ -60,12 +64,4 @@ GestureEventFunc LongPressEventActuator::GetGestureEventFunc()
     return callback;
 }
 
-void LongPressEventActuator::SetLongPressEventType(GestureTypeName typeName)
-{
-    CHECK_NULL_VOID(longPressRecognizer_);
-    auto gestureInfo = longPressRecognizer_->GetOrCreateGestureInfo();
-    CHECK_NULL_VOID(gestureInfo);
-    gestureInfo->SetType(typeName);
-    gestureInfo->SetIsSystemGesture(true);
-}
 } // namespace OHOS::Ace::NG

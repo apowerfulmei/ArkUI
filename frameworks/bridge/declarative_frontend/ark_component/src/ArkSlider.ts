@@ -22,20 +22,6 @@ class ArkSliderComponent extends ArkComponent implements SliderAttribute {
   constructor(nativePtr: KNode, classType?: ModifierType) {
     super(nativePtr, classType);
   }
-  allowChildCount(): number {
-    return 0;
-  }
-  initialize(value: Object[]): this {
-    if (!value.length) {
-      return this;
-    }
-    if (!isUndefined(value[0]) && !isNull(value[0]) && isObject(value[0])) {
-      modifierWithKey(this._modifiersWithKeys, SliderOptionsModifier.identity, SliderOptionsModifier, value[0]);
-    } else {
-      modifierWithKey(this._modifiersWithKeys, SliderOptionsModifier.identity, SliderOptionsModifier, undefined);
-    }
-    return this;
-  }
   blockColor(value: ResourceColor): this {
     modifierWithKey(this._modifiersWithKeys, BlockColorModifier.identity, BlockColorModifier, value);
     return this;
@@ -54,9 +40,8 @@ class ArkSliderComponent extends ArkComponent implements SliderAttribute {
   maxLabel(value: string): this {
     throw new Error('Method not implemented.');
   }
-  showSteps(value: boolean, options?: SliderShowStepOptions): this {
-    let stepOptions = new ArkSliderStepOptions(value, options);
-    modifierWithKey(this._modifiersWithKeys, ShowStepsModifier.identity, ShowStepsModifier, stepOptions);
+  showSteps(value: boolean): this {
+    modifierWithKey(this._modifiersWithKeys, ShowStepsModifier.identity, ShowStepsModifier, value);
     return this;
   }
   showTips(value: boolean, content?: any): this {
@@ -69,8 +54,7 @@ class ArkSliderComponent extends ArkComponent implements SliderAttribute {
     return this;
   }
   onChange(callback: (value: number, mode: SliderChangeMode) => void): this {
-    modifierWithKey(this._modifiersWithKeys, OnChangeModifier.identity, OnChangeModifier, callback);
-    return this;
+    throw new Error('Method not implemented.');
   }
   blockBorderColor(value: ResourceColor): this {
     modifierWithKey(this._modifiersWithKeys, BlockBorderColorModifier.identity, BlockBorderColorModifier, value);
@@ -112,16 +96,6 @@ class ArkSliderComponent extends ArkComponent implements SliderAttribute {
     modifierWithKey(this._modifiersWithKeys, MinResponsiveDistanceModifier.identity, MinResponsiveDistanceModifier, value);
     return this;
   }
-  prefix(value: KNode, options: SliderCustomContentOptions): this {
-    let prefix = new ArkPrefixOrSuffix(value, options);
-    modifierWithKey(this._modifiersWithKeys, PrefixModifier.identity, PrefixModifier, prefix);
-    return this;
-  }
-  suffix(value: KNode, options: SliderCustomContentOptions): this {
-    let suffix = new ArkPrefixOrSuffix(value, options);
-    modifierWithKey(this._modifiersWithKeys, SuffixModifier.identity, SuffixModifier, suffix);
-    return this;
-  }
   contentModifier(value: ContentModifier<SliderConfiguration>): this {
     modifierWithKey(this._modifiersWithKeys, SliderContentModifier.identity, SliderContentModifier, value);
     return this;
@@ -154,36 +128,6 @@ class ArkSliderComponent extends ArkComponent implements SliderAttribute {
       this.sliderNode.update(sliderConfiguration);
     }
     return this.sliderNode.getFrameNode();
-  }
-  enableHapticFeedback(value: boolean): this {
-    modifierWithKey(this._modifiersWithKeys, SliderEnableHapticFeedbackModifier.identity, SliderEnableHapticFeedbackModifier, value);
-    return this;
-  }
-}
-
-class SliderOptionsModifier extends ModifierWithKey<SliderOptions> {
-  constructor(value: SliderOptions) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('sliderOptions');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().slider.setSliderOptions(node, undefined, undefined, undefined, undefined, undefined,
-        undefined, undefined);
-    } else {
-      getUINativeModule().slider.setSliderOptions(node, this.value.value, this.value.min, this.value.max,
-        this.value.step, this.value.style, this.value.direction, this.value.reverse);
-    }
-  }
-
-  checkObjectDiff(): boolean {
-    return !isBaseOrResourceEqual(this.stageValue?.value, this.value?.value) ||
-      !isBaseOrResourceEqual(this.stageValue?.min, this.value?.min) ||
-      !isBaseOrResourceEqual(this.stageValue?.max, this.value?.max) ||
-      !isBaseOrResourceEqual(this.stageValue?.step, this.value?.step) ||
-      !isBaseOrResourceEqual(this.stageValue?.style, this.value?.style) ||
-      !isBaseOrResourceEqual(this.stageValue?.direction, this.value?.direction) ||
-      !isBaseOrResourceEqual(this.stageValue?.reverse, this.value?.reverse);
   }
 }
 
@@ -247,48 +191,6 @@ class StepSizeModifier extends ModifierWithKey<Length> {
   }
 }
 
-class PrefixModifier extends ModifierWithKey<ArkPrefixOrSuffix> {
-  options:SliderCustomContentOptions;
-  constructor(value: ArkPrefixOrSuffix) {
-    super(value);
-    this.options = value.options;
-  }
-  static identity: Symbol = Symbol('sliderPrefix');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().slider.resetPrefix(node);
-    } else {
-      getUINativeModule().slider.setPrefix(node, this.value.value, this.options.text, 
-        this.options.description, this.options.level, this.options.group);
-    }
-  }
-
-  checkObjectDiff(): boolean {
-    return !isBaseOrResourceEqual(this.stageValue, this.value);
-  }
-}
-
-class SuffixModifier extends ModifierWithKey<ArkPrefixOrSuffix> {
-  options:SliderCustomContentOptions;
-  constructor(value: ArkPrefixOrSuffix) {
-    super(value);
-    this.options = value.options;
-  }
-  static identity: Symbol = Symbol('sliderSuffix');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().slider.resetSuffix(node);
-    } else {
-      getUINativeModule().slider.setSuffix(node, this.value.value, this.options.text, 
-        this.options.description, this.options.level, this.options.group);
-    }
-  }
-
-  checkObjectDiff(): boolean {
-    return !isBaseOrResourceEqual(this.stageValue, this.value);
-  }
-}
-
 class BlockSizeModifier extends ModifierWithKey<SizeOptions> {
   constructor(value: SizeOptions) {
     super(value);
@@ -299,6 +201,14 @@ class BlockSizeModifier extends ModifierWithKey<SizeOptions> {
       getUINativeModule().slider.resetBlockSize(node);
     } else {
       getUINativeModule().slider.setBlockSize(node, this.value!.width, this.value!.height);
+    }
+  }
+
+  checkObjectDiff(): boolean {
+    if (isResource(this.stageValue.height) && isResource(this.value.height) && isResource(this.stageValue.width) && isResource(this.value.width)) {
+      return !(isResourceEqual(this.stageValue.height, this.value.height) && isResourceEqual(this.stageValue.width, this.value.width));
+    } else {
+      return true;
     }
   }
 }
@@ -336,20 +246,6 @@ class StepColorModifier extends ModifierWithKey<ResourceColor> {
 
   checkObjectDiff(): boolean {
     return !isBaseOrResourceEqual(this.stageValue, this.value);
-  }
-}
-
-class OnChangeModifier extends ModifierWithKey<(value:number, mode:SliderChangeMode) => void> {
-  constructor(value: (value:number, mode:SliderChangeMode) => void) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('sliderOnChange');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().slider.resetOnChange(node);
-    } else {
-      getUINativeModule().slider.setOnChange(node, this.value);
-    }
   }
 }
 
@@ -443,8 +339,8 @@ class SelectColorModifier extends ModifierWithKey<ResourceColor> {
   }
 }
 
-class ShowStepsModifier extends ModifierWithKey<ArkSliderStepOptions> {
-  constructor(value: ArkSliderStepOptions) {
+class ShowStepsModifier extends ModifierWithKey<boolean> {
+  constructor(value: boolean) {
     super(value);
   }
   static identity: Symbol = Symbol('sliderShowSteps');
@@ -452,29 +348,11 @@ class ShowStepsModifier extends ModifierWithKey<ArkSliderStepOptions> {
     if (reset) {
       getUINativeModule().slider.resetShowSteps(node);
     } else {
-      getUINativeModule().slider.setShowSteps(node, this.value.showSteps, this.value.stepOptions);
+      getUINativeModule().slider.setShowSteps(node, this.value);
     }
   }
   checkObjectDiff(): boolean {
-    let isShowStepsDiff = this.stageValue.showSteps !== this.value.showSteps;
-    let isStepOptionsDiff = false;
-    if ((this.stageValue.stepOptions === null) || (this.stageValue.stepOptions === undefined)) {
-      isStepOptionsDiff = (this.value.stepOptions !== null) && (this.value.stepOptions !== undefined);
-    } else if ((this.value.stepOptions === null) || (this.value.stepOptions === undefined)) {
-      isStepOptionsDiff = true;
-    } else if (this.stageValue.stepOptions.stepsAccessibility.size !==
-      this.value.stepOptions.stepsAccessibility.size) {
-      isStepOptionsDiff = true;
-    } else {
-      for (const [key, val] of this.stageValue.stepOptions.stepsAccessibility) {
-        if (!this.value.stepOptions.stepsAccessibility.has(key)) {
-          isStepOptionsDiff = true;
-        } else if (!isBaseOrResourceEqual(this.value.stepOptions.stepsAccessibility.get(key), val)) {
-          isStepOptionsDiff = true;
-        }
-      }
-    }
-    return isShowStepsDiff || isStepOptionsDiff;
+    return this.stageValue !== this.value;
   }
 }
 
@@ -576,20 +454,6 @@ class SliderContentModifier extends ModifierWithKey<ContentModifier<SliderConfig
   applyPeer(node: KNode, reset: boolean, component: ArkComponent) {
     let sliderComponent = component as ArkSliderComponent;
     sliderComponent.setContentModifier(this.value);
-  }
-}
-
-class SliderEnableHapticFeedbackModifier extends ModifierWithKey<boolean> {
-  constructor(value: boolean) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('sliderEnableHapticFeedback');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().slider.resetEnableHapticFeedback(node);
-    } else {
-      getUINativeModule().slider.setEnableHapticFeedback(node, this.value);
-    }
   }
 }
 

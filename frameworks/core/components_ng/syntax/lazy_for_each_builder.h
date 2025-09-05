@@ -54,7 +54,7 @@ using LazyForEachChild = std::pair<std::string, RefPtr<UINode>>;
 using LazyForEachCacheChild = std::pair<int32_t, RefPtr<UINode>>;
 
 class ACE_EXPORT LazyForEachBuilder : public virtual AceType {
-    DECLARE_ACE_TYPE(NG::LazyForEachBuilder, AceType);
+    DECLARE_ACE_TYPE(NG::LazyForEachBuilder, AceType)
 public:
     LazyForEachBuilder() = default;
     ~LazyForEachBuilder() override = default;
@@ -149,19 +149,156 @@ public:
         return nullptr;
     }
 
-    void Transit(std::list<std::pair<std::string, RefPtr<UINode>>>& childList);
+    std::map<int32_t, LazyForEachChild>& GetItems(std::list<std::pair<std::string, RefPtr<UINode>>>& childList)
+    {
+        startIndex_ = -1;
+        endIndex_ = -1;
+        int32_t lastIndex = -1;
+        bool isCertained = false;
 
-    std::map<int32_t, LazyForEachChild>& GetItems(std::list<std::pair<std::string, RefPtr<UINode>>>& childList);
+        decltype(cachedItems_) items(std::move(cachedItems_));
 
-    void RemoveAllChild();
+        for (auto& [index, node] : items) {
+            if (!node.second) {
+                cachedItems_.try_emplace(index, std::move(node));
+                continue;
+            }
 
-    bool SetActiveChildRange(int32_t start, int32_t end);
+            auto frameNode = AceType::DynamicCast<FrameNode>(node.second->GetFrameChildByIndex(0, true));
+            if (frameNode && !frameNode->IsActive()) {
+                ACE_SYNTAX_SCOPED_TRACE("LazyForEach not active index[%d]", index);
+                frameNode->SetJSViewActive(false, true);
+                expiringItem_.try_emplace(node.first, LazyForEachCacheChild(index, std::move(node.second)));
+                continue;
+            }
+            cachedItems_.try_emplace(index, std::move(node));
+            if (startIndex_ == -1) {
+                startIndex_ = index;
+            }
+            if (isLoop_) {
+                if (isCertained) {
+                    continue;
+                }
+                if (lastIndex > -1 && index - lastIndex > 1) {
+                    startIndex_ = index;
+                    endIndex_ = lastIndex;
+                    isCertained = true;
+                } else {
+                    endIndex_ = std::max(endIndex_, index);
+                }
+            } else {
+                endIndex_ = std::max(endIndex_, index);
+            }
+            lastIndex = index;
+        }
 
-    int32_t GetChildIndex(const RefPtr<FrameNode>& targetNode);
+        if (needTransition) {
+            for (auto& [key, node] : expiringItem_) {
+                if (!node.second) {
+                    continue;
+                }
+                auto frameNode = AceType::DynamicCast<FrameNode>(node.second->GetFrameChildByIndex(0, true));
+                if (frameNode && frameNode->IsOnMainTree()) {
+                    childList.emplace_back(key, node.second);
+                }
+            }
+            needTransition = false;
+        }
+
+        return cachedItems_;
+    }
+
+    void RemoveAllChild()
+    {
+        ACE_SYNTAX_SCOPED_TRACE("LazyForEach RemoveAllChild");
+        for (auto& [index, node] : cachedItems_) {
+            if (!node.second) {
+                continue;
+            }
+            auto frameNode = AceType::DynamicCast<FrameNode>(node.second->GetFrameChildByIndex(0, true));
+            if (frameNode) {
+                frameNode->SetActive(false);
+            }
+            auto tempNode = node.second;
+            auto pair = expiringItem_.try_emplace(node.first, LazyForEachCacheChild(index, std::move(node.second)));
+            if (!pair.second) {
+                TAG_LOGW(AceLogTag::ACE_LAZY_FOREACH, "Use repeat key for index: %{public}d", index);
+                ProcessOffscreenNode(tempNode, true);
+            }
+        }
+    }
+
+    bool SetActiveChildRange(int32_t start, int32_t end)
+    {
+        ACE_SYNTAX_SCOPED_TRACE("LazyForEach active range start[%d], end[%d]", start, end);
+        int32_t count = GetTotalCount();
+        UpdateHistoricalTotalCount(count);
+        bool needBuild = false;
+        for (auto& [index, node] : cachedItems_) {
+            if ((index < count) && ((start <= end && start <= index && end >= index) ||
+                (start > end && (index <= end || index >= start)))) {
+                if (node.second) {
+                    auto frameNode = AceType::DynamicCast<FrameNode>(node.second->GetFrameChildByIndex(0, true));
+                    if (frameNode) {
+                        frameNode->SetActive(true);
+                    }
+                    continue;
+                }
+                auto keyIter = expiringItem_.find(node.first);
+                if (keyIter != expiringItem_.end() && keyIter->second.second) {
+                    node.second = keyIter->second.second;
+                    expiringItem_.erase(keyIter);
+                    auto frameNode = AceType::DynamicCast<FrameNode>(node.second->GetFrameChildByIndex(0, true));
+                    if (frameNode) {
+                        frameNode->SetActive(true);
+                    }
+                }
+                needBuild = true;
+                continue;
+            }
+            if (!node.second) {
+                continue;
+            }
+            auto frameNode = AceType::DynamicCast<FrameNode>(node.second->GetFrameChildByIndex(0, true));
+            if (frameNode) {
+                frameNode->SetActive(false);
+            }
+            auto tempNode = node.second;
+            auto pair = expiringItem_.try_emplace(node.first, LazyForEachCacheChild(index, std::move(node.second)));
+            if (!pair.second) {
+                TAG_LOGW(AceLogTag::ACE_LAZY_FOREACH, "Use repeat key for index: %{public}d", index);
+                ProcessOffscreenNode(tempNode, true);
+            }
+            needBuild = true;
+        }
+        return needBuild;
+    }
+
+    int32_t GetChildIndex(const RefPtr<FrameNode>& targetNode)
+    {
+        for (auto& [index, node] : cachedItems_) {
+            if (node.second) {
+                auto frameNode = AceType::DynamicCast<FrameNode>(node.second->GetFrameChildByIndex(0, true));
+                if (frameNode == targetNode) {
+                    return index;
+                }
+            }
+        }
+        for (auto& [key, node] : expiringItem_) {
+            if (!node.second) {
+                continue;
+            }
+            auto frameNode = AceType::DynamicCast<FrameNode>(node.second->GetFrameChildByIndex(0, true));
+            if (frameNode && frameNode == targetNode) {
+                return node.first;
+            }
+        }
+        return -1;
+    }
 
     void UpdateMoveFromTo(int32_t from, int32_t to);
     void ResetMoveFromTo();
-    int32_t ConvertFromToIndex(int32_t index);
+    int32_t ConvertFormToIndex(int32_t index);
 
     void SetFlagForGeneratedItem(PropertyChangeFlag propertyChangeFlag)
     {
@@ -174,12 +311,107 @@ public:
     }
 
     RefPtr<UINode> CacheItem(int32_t index, std::unordered_map<std::string, LazyForEachCacheChild>& cache,
-        const std::optional<LayoutConstraintF>& itemConstraint, int64_t deadline, bool& isTimeout);
+        const std::optional<LayoutConstraintF>& itemConstraint, int64_t deadline, bool& isTimeout)
+    {
+        ACE_SCOPED_TRACE("Builder:BuildLazyItem [%d]", index);
+        auto itemInfo = OnGetChildByIndex(ConvertFormToIndex(index), expiringItem_);
+        CHECK_NULL_RETURN(itemInfo.second, nullptr);
+        auto pair = cache.try_emplace(itemInfo.first, LazyForEachCacheChild(index, itemInfo.second));
+        auto context = itemInfo.second->GetContext();
+        CHECK_NULL_RETURN(context, itemInfo.second);
+        auto frameNode = AceType::DynamicCast<FrameNode>(itemInfo.second->GetFrameChildByIndex(0, false, true));
+        context->SetPredictNode(frameNode);
+        if (!itemInfo.second->RenderCustomChild(deadline)) {
+            isTimeout = true;
+            context->ResetPredictNode();
+            return itemInfo.second;
+        }
+        if (pair.second) {
+            ProcessOffscreenNode(itemInfo.second, false);
+        } else {
+            TAG_LOGW(AceLogTag::ACE_LAZY_FOREACH, "Use repeat key for index: %{public}d", index);
+        }
+        itemInfo.second->Build(nullptr);
+        context->ResetPredictNode();
+        itemInfo.second->SetJSViewActive(false, true);
+        cachedItems_[index] = LazyForEachChild(itemInfo.first, nullptr);
 
-    void CheckCacheIndex(std::set<int32_t>& idleIndexes, int32_t count);
+        return itemInfo.second;
+    }
+
+    void CheckCacheIndex(std::set<int32_t>& idleIndexes, int32_t count)
+    {
+        for (int32_t i = 1; i <= cacheCount_ - endShowCached_; i++) {
+            if (isLoop_) {
+                if ((startIndex_ <= endIndex_ && endIndex_ + i < count) ||
+                    startIndex_ > endIndex_ + i) {
+                    idleIndexes.emplace(endIndex_ + i);
+                } else if ((endIndex_ + i) % count < startIndex_) {
+                    idleIndexes.emplace((endIndex_ + i) % count);
+                }
+            } else {
+                if (endIndex_ + i < count) {
+                    idleIndexes.emplace(endIndex_ + i);
+                }
+            }
+        }
+        for (int32_t i = 1; i <= cacheCount_ - startShowCached_; i++) {
+            if (isLoop_) {
+                if ((startIndex_ <= endIndex_ && startIndex_ >= i) ||
+                    startIndex_ > endIndex_ + i) {
+                    idleIndexes.emplace(startIndex_ - i);
+                } else if ((startIndex_ - i + count) % count > endIndex_) {
+                    idleIndexes.emplace((startIndex_ - i + count) % count);
+                }
+            } else {
+                if (startIndex_ >= i) {
+                    idleIndexes.emplace(startIndex_ - i);
+                }
+            }
+        }
+    }
 
     bool PreBuildByIndex(int32_t index, std::unordered_map<std::string, LazyForEachCacheChild>& cache,
-        int64_t deadline, const std::optional<LayoutConstraintF>& itemConstraint, bool canRunLongPredictTask);
+        int64_t deadline, const std::optional<LayoutConstraintF>& itemConstraint, bool canRunLongPredictTask)
+    {
+        if (GetSysTimestamp() > deadline) {
+            if (DeleteExpiringItemImmediately()) {
+                return false;
+            }
+            for (const auto& [key, node] : expiringItem_) {
+                if (node.first == -1) {
+                    cache.try_emplace(key, node);
+                }
+            }
+            return false;
+        }
+        bool isTimeout = false;
+        preBuildingIndex_ = -1;
+        auto uiNode = CacheItem(index, cache, itemConstraint, deadline, isTimeout);
+        if (isTimeout) {
+            preBuildingIndex_ = index;
+            return false;
+        }
+        if (!canRunLongPredictTask && itemConstraint) {
+            return false;
+        }
+        if (canRunLongPredictTask && uiNode && itemConstraint) {
+            RefPtr<FrameNode> frameNode = DynamicCast<FrameNode>(uiNode);
+            while (!frameNode) {
+                auto tempNode = uiNode;
+                uiNode = tempNode->GetFirstChild();
+                if (!uiNode) {
+                    break;
+                }
+                frameNode = DynamicCast<FrameNode>(uiNode);
+            }
+            if (frameNode) {
+                frameNode->GetGeometryNode()->SetParentLayoutConstraint(itemConstraint.value());
+                FrameNode::ProcessOffscreenNode(frameNode);
+            }
+        }
+        return true;
+    }
 
     bool ProcessPreBuildingIndex(std::unordered_map<std::string, LazyForEachCacheChild>& cache, int64_t deadline,
         const std::optional<LayoutConstraintF>& itemConstraint, bool canRunLongPredictTask,
@@ -196,7 +428,20 @@ public:
     bool PreBuild(int64_t deadline, const std::optional<LayoutConstraintF>& itemConstraint, bool canRunLongPredictTask);
 
     void ProcessCachedIndex(std::unordered_map<std::string, LazyForEachCacheChild>& cache,
-        std::set<int32_t>& idleIndexes);
+        std::set<int32_t>& idleIndexes)
+    {
+        auto expiringIter = expiringItem_.begin();
+        while (expiringIter != expiringItem_.end()) {
+            const auto& key = expiringIter->first;
+            const auto& node = expiringIter->second;
+            auto iter = idleIndexes.find(node.first);
+            if (iter != idleIndexes.end() && node.second) {
+                LoadCacheByIndex(cache, idleIndexes, node, key, iter, expiringIter);
+            } else {
+                LoadCacheByKey(cache, idleIndexes, node, key, expiringIter);
+            }
+        }
+    }
 
     void LoadCacheByIndex(std::unordered_map<std::string, LazyForEachCacheChild>& cache, std::set<int32_t>& idleIndexes,
         const LazyForEachCacheChild& node, const std::string& key, const std::set<int32_t>::iterator& iter,
@@ -233,7 +478,27 @@ public:
         }
     }
 
-    void ProcessOffscreenNode(RefPtr<UINode> uiNode, bool remove);
+    void ProcessOffscreenNode(RefPtr<UINode> uiNode, bool remove)
+    {
+        if (uiNode) {
+            auto frameNode = DynamicCast<FrameNode>(uiNode);
+            while (!frameNode) {
+                auto tempNode = uiNode;
+                uiNode = tempNode->GetFirstChild();
+                if (!uiNode) {
+                    break;
+                }
+                frameNode = DynamicCast<FrameNode>(uiNode);
+            }
+            if (frameNode) {
+                if (!remove) {
+                    Inspector::AddOffscreenNode(frameNode);
+                } else {
+                    Inspector::RemoveOffscreenNode(frameNode);
+                }
+            }
+        }
+    }
 
     void ClearAllOffscreenNode()
     {
@@ -276,11 +541,56 @@ public:
         return expiringItem_;
     }
 
-    const std::map<int32_t, LazyForEachChild>& GetAllChildren();
+    const std::map<int32_t, LazyForEachChild>& GetAllChildren()
+    {
+        if (!cachedItems_.empty()) {
+            startIndex_ = cachedItems_.begin()->first;
+            endIndex_ = cachedItems_.rbegin()->first;
+        }
+        if (isLoop_ && !cachedItems_.empty()) {
+            int32_t lastIndex = -1;
+            for (auto& [index, node] : cachedItems_) {
+                if (lastIndex > -1 && index - lastIndex > 1) {
+                    startIndex_ = index;
+                    endIndex_ = lastIndex;
+                    break;
+                }
+            }
+        }
+        return cachedItems_;
+    }
 
-    void SetJSViewActive(bool active);
+    void SetJSViewActive(bool active)
+    {
+        for (const auto& node : cachedItems_) {
+            if (node.second.second == nullptr) {
+                continue;
+            }
+            node.second.second->SetJSViewActive(active, true);
+        }
+        for (const auto& node : expiringItem_) {
+            if (node.second.second == nullptr) {
+                continue;
+            }
+            node.second.second->SetJSViewActive(active, true);
+        }
+    }
 
-    void PaintDebugBoundaryTreeAll(bool flag);
+    void PaintDebugBoundaryTreeAll(bool flag)
+    {
+        for (const auto& node : cachedItems_) {
+            if (node.second.second == nullptr) {
+                continue;
+            }
+            node.second.second->PaintDebugBoundaryTreeAll(flag);
+        }
+        for (const auto& node : expiringItem_) {
+            if (node.second.second == nullptr) {
+                continue;
+            }
+            node.second.second->PaintDebugBoundaryTreeAll(flag);
+        }
+    }
 
     void NotifyItemDeleted(UINode* node, const std::string& key)
     {
@@ -299,15 +609,6 @@ public:
     {
         return historicalTotalCount_;
     }
-
-    void SetDestroying(bool isDestroying, bool cleanStatus);
-    void NotifyColorModeChange(uint32_t colorMode, bool rerenderable);
-
-    void EnablePreBuild(bool enable)
-    {
-        enablePreBuild_ = enable;
-    }
-
 protected:
     virtual int32_t OnGetTotalCount() = 0;
 
@@ -365,7 +666,6 @@ private:
     bool needTransition = false;
     bool isLoop_ = false;
     bool useNewInterface_ = false;
-    bool enablePreBuild_ = true;
     ACE_DISALLOW_COPY_AND_MOVE(LazyForEachBuilder);
 };
 } // namespace OHOS::Ace::NG

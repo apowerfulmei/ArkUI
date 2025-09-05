@@ -15,6 +15,7 @@
 
 #include "core/components_ng/pattern/menu/menu_item/menu_item_accessibility_property.h"
 
+#include "base/utils/utils.h"
 #include "core/components_ng/pattern/menu/menu_item/menu_item_pattern.h"
 
 namespace OHOS::Ace::NG {
@@ -22,15 +23,9 @@ std::string MenuItemAccessibilityProperty::GetText() const
 {
     auto frameNode = host_.Upgrade();
     CHECK_NULL_RETURN(frameNode, "");
-    if (isOption_) {
-        auto optionPattern = frameNode->GetPattern<MenuItemPattern>();
-        CHECK_NULL_RETURN(optionPattern, "");
-        return optionPattern->GetText();
-    } else {
-        auto layoutProperty = frameNode->GetLayoutProperty<MenuItemLayoutProperty>();
-        CHECK_NULL_RETURN(layoutProperty, "");
-        return layoutProperty->GetContentValue("");
-    }
+    auto menuItemLayoutProperty = frameNode->GetLayoutProperty<MenuItemLayoutProperty>();
+    CHECK_NULL_RETURN(menuItemLayoutProperty, "");
+    return menuItemLayoutProperty->GetContentValue("");
 }
 
 bool MenuItemAccessibilityProperty::IsSelected() const

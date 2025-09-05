@@ -20,7 +20,6 @@
 
 #include "base/log/ace_scoring_log.h"
 #include "base/log/log_wrapper.h"
-#include "base/utils/utf_helper.h"
 #include "bridge/declarative_frontend/engine/functions/js_click_function.h"
 #include "bridge/declarative_frontend/engine/functions/js_hover_function.h"
 #include "bridge/declarative_frontend/engine/functions/js_key_function.h"
@@ -60,7 +59,7 @@ void JSInteractableView::JsOnTouch(const JSCallbackInfo& args)
         return;
     }
     auto jsOnTouchFuncLocalHandle = jsOnTouchFunc->GetLocalHandle();
-    WeakPtr<NG::FrameNode> frameNode = AceType::WeakClaim(NG::ViewStackProcessor::GetInstance()->GetMainFrameNode());
+    auto frameNode = AceType::WeakClaim(NG::ViewStackProcessor::GetInstance()->GetMainFrameNode());
     auto onTouch = [vm, execCtx = args.GetExecutionContext(),
                        func = panda::CopyableGlobal(vm, jsOnTouchFuncLocalHandle),
                        node = frameNode](TouchEventInfo& info) {
@@ -106,7 +105,7 @@ void JSInteractableView::JsOnKeyPreIme(const JSCallbackInfo& args)
         return;
     }
     RefPtr<JsKeyFunction> JsOnPreImeEvent = AceType::MakeRefPtr<JsKeyFunction>(JSRef<JSFunc>::Cast(args[0]));
-    WeakPtr<NG::FrameNode> frameNode = AceType::WeakClaim(NG::ViewStackProcessor::GetInstance()->GetMainFrameNode());
+    auto frameNode = AceType::WeakClaim(NG::ViewStackProcessor::GetInstance()->GetMainFrameNode());
     auto onPreImeEvent = [execCtx = args.GetExecutionContext(), func = std::move(JsOnPreImeEvent), node = frameNode](
                           KeyEventInfo& info) -> bool {
         JAVASCRIPT_EXECUTION_SCOPE_WITH_CHECK(execCtx, false);
@@ -257,11 +256,11 @@ void JSInteractableView::JsOnClick(const JSCallbackInfo& info)
 #endif
     };
 
-    Dimension distanceThreshold = Dimension(std::numeric_limits<double>::infinity(), DimensionUnit::PX);
+    double distanceThreshold = std::numeric_limits<double>::infinity();
     if (info.Length() > 1 && info[1]->IsNumber()) {
-        double jsDistanceThreshold = info[1]->ToNumber<double>();
-        distanceThreshold = Dimension(jsDistanceThreshold, DimensionUnit::VP);
+        distanceThreshold = info[1]->ToNumber<double>();
     }
+    distanceThreshold = Dimension(distanceThreshold, DimensionUnit::VP).ConvertToPx();
 
     ViewAbstractModel::GetInstance()->SetOnClick(std::move(onTap), std::move(onClick), distanceThreshold);
     CHECK_NULL_VOID(frameNode);
@@ -450,12 +449,12 @@ std::function<void()> JSInteractableView::GetRemoteMessageEventCallback(const JS
 }
 
 #if !defined(PREVIEW) && defined(OHOS_PLATFORM)
-void JSInteractableView::ReportClickEvent(const WeakPtr<NG::FrameNode>& weakNode, const std::u16string text)
+void JSInteractableView::ReportClickEvent(const WeakPtr<NG::FrameNode>& weakNode, const std::string text)
 {
-    if (UiSessionManager::GetInstance()->GetClickEventRegistered()) {
+    if (UiSessionManager::GetInstance().GetClickEventRegistered()) {
         auto data = JsonUtil::Create();
         data->Put("event", "onClick");
-        std::u16string content = text;
+        std::string content = text;
         auto node = weakNode.Upgrade();
         if (node) {
             data->Put("id", node->GetId());
@@ -463,10 +462,10 @@ void JSInteractableView::ReportClickEvent(const WeakPtr<NG::FrameNode>& weakNode
             if (!children.empty()) {
                 node->GetContainerComponentText(content);
             }
-            data->Put("text", UtfUtils::Str16DebugToStr8(content).data());
+            data->Put("text", content.data());
             data->Put("position", node->GetGeometryNode()->GetFrameRect().ToString().data());
         }
-        UiSessionManager::GetInstance()->ReportClickEvent(data->ToString());
+        UiSessionManager::GetInstance().ReportClickEvent(data->ToString());
     }
 }
 #endif

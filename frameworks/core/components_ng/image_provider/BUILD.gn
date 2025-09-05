@@ -16,7 +16,9 @@ import(
 
 build_component_ng("image_provider_ng") {
   sources = [
-    "image_decoder.cpp",
+    "adapter/image_decoder.cpp",
+    "adapter/skia_image_data.cpp",
+    "adapter/skia_svg_dom.cpp",
     "animated_image_object.cpp",
     "image_data.cpp",
     "image_loading_context.cpp",
@@ -30,6 +32,7 @@ build_component_ng("image_provider_ng") {
   ]
 
   if (ace_use_rosen_drawing) {
-    rosen_sources = [ "drawing_image_data.cpp" ]
+    sources -= [ "adapter/skia_image_data.cpp" ]
+    rosen_sources = [ "adapter/rosen/drawing_image_data.cpp" ]
   }
 }

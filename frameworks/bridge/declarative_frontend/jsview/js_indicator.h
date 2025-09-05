@@ -21,6 +21,7 @@
 #include "frameworks/core/components_ng/pattern/swiper_indicator/indicator_common/indicator_controller.h"
 
 namespace OHOS::Ace::Framework {
+
 class JSIndicator : public JSViewAbstract {
 public:
     static void JSBind(BindingTarget globalObj);
@@ -36,7 +37,6 @@ protected:
     static SwiperParameters GetDotIndicatorInfo(const JSRef<JSObject>& obj);
     static SwiperDigitalParameters GetDigitIndicatorInfo(const JSRef<JSObject>& obj);
     static std::optional<Dimension> ParseIndicatorDimension(const JSRef<JSVal>& value);
-    static std::optional<Dimension> ParseIndicatorBottom(const JSRef<JSVal>& bottomValue, bool hasIgnoreSize);
     static void GetFontContent(const JSRef<JSVal>& font, bool isSelected, SwiperDigitalParameters& digitalParameters);
     static void SetDotIndicatorInfo(const JSRef<JSObject>& obj, SwiperParameters& swiperParameters,
         const RefPtr<SwiperIndicatorTheme>& swiperIndicatorTheme);
@@ -49,49 +49,37 @@ public:
     static void JSBind(BindingTarget globalObj);
     static void Constructor(const JSCallbackInfo& args);
     static void Destructor(JSIndicatorController* scroller);
-
+ 
     void ShowNext(const JSCallbackInfo& args)
     {
-        if (controller_.Upgrade()) {
-            ContainerScope scope(instanceId_);
-            controller_.Upgrade()->ShowNext();
+        ContainerScope scope(instanceId_);
+        if (controller_) {
+            controller_->ShowNext();
         }
     }
 
     void ShowPrevious(const JSCallbackInfo& args)
     {
-        if (controller_.Upgrade()) {
-            ContainerScope scope(instanceId_);
-            controller_.Upgrade()->ShowPrevious();
+        ContainerScope scope(instanceId_);
+        if (controller_) {
+            controller_->ShowPrevious();
         }
     }
 
     void ChangeIndex(const JSCallbackInfo& args);
-
-    void SetController(const RefPtr<NG::IndicatorController>& controller, RefPtr<NG::FrameNode>& indicatorNode)
+    void SetController(const RefPtr<NG::IndicatorController>& controller, WeakPtr<NG::UINode>& indicatorNode)
     {
-        auto resetFunc = [wp = WeakClaim(this), wpNode = WeakClaim(RawPtr(indicatorNode))]() {
-            auto JSController = wp.Upgrade();
-            CHECK_NULL_VOID(JSController);
-            auto controller = JSController->controller_.Upgrade();
-            CHECK_NULL_VOID(controller);
-            auto host = controller->GetIndicatorNode();
-            auto node = wpNode.Upgrade();
-            if (node && node == host) {
-                JSController->controller_ = nullptr;
-            }
-        };
-        if (controller_.Upgrade()) {
-            controller_.Upgrade()->ResetIndicatorControllor(controller, indicatorNode);
-        }
         controller_ = controller;
-        controller->SetJSIndicatorController(resetFunc);
-        controller->SetSwiperNode(swiperNode_.Upgrade());
+        indicatorNode_ = indicatorNode;
+        hasController_ = true;
+        if (hasSwiperNode_) {
+            controller_->SetSwiperNode(swiperNode_, indicatorNode_);
+        }
     }
 
-    void ResetSwiperNode()
+    RefPtr<NG::IndicatorController> GetController()
     {
-        swiperNode_ = nullptr;
+        return controller_;
     }
 
     void SetInstanceId(int32_t id)
@@ -99,34 +87,31 @@ public:
         instanceId_ = id;
     }
 
-    std::function<void()> SetSwiperNodeBySwiper(const RefPtr<NG::FrameNode>& node)
+    void SetSwiperNode(WeakPtr<NG::UINode>& node)
     {
-        if (controller_.Upgrade()) {
-            controller_.Upgrade()->SetSwiperNode(node);
-            controller_.Upgrade()->UpdateIndicatorNode();
+        swiperNode_ = node;
+        hasSwiperNode_ = true;
+        if (hasController_) {
+            controller_->SetSwiperNode(swiperNode_, indicatorNode_);
         }
-        if (node != swiperNode_) {
-            swiperNode_ = node;
-            return [wp = WeakClaim(this), wpNode = WeakClaim(RawPtr(node))]() {
-                auto JSController = wp.Upgrade();
-                if (JSController) {
-                    auto node = wpNode.Upgrade();
-                    if (node && node == JSController->swiperNode_) {
-                        JSController->swiperNode_ = nullptr;
-                    }
-                    auto controller = JSController->controller_.Upgrade();
-                    CHECK_NULL_VOID(controller);
-                    controller->UpdateIndicatorNode();
-                }
-            };
+    }
+
+    void ResetSwiperNode()
+    {
+        swiperNode_ = nullptr;
+        auto controller = GetController();
+        if (hasController_ && GetController()) {
+            controller->ResetSwiperNode();
         }
-        return nullptr;
     }
 
 private:
     int32_t instanceId_ = INSTANCE_ID_UNDEFINED;
-    WeakPtr<NG::IndicatorController> controller_;
-    WeakPtr<NG::FrameNode> swiperNode_;
+    RefPtr<NG::IndicatorController> controller_;
+    bool hasSwiperNode_ = false;
+    bool hasController_ = false;
+    WeakPtr<NG::UINode> swiperNode_;
+    WeakPtr<NG::UINode> indicatorNode_;
     ACE_DISALLOW_COPY_AND_MOVE(JSIndicatorController);
 };
 

@@ -31,7 +31,6 @@
 #include "core/pipeline/pipeline_base.h"
 #include "frameworks/bridge/common/media_query/media_query_info.h"
 #include "frameworks/bridge/common/utils/componentInfo.h"
-#include "frameworks/bridge/declarative_frontend/jsview/js_view_abstract_bridge.h"
 #include "frameworks/bridge/js_frontend/engine/common/group_js_bridge.h"
 #include "frameworks/bridge/js_frontend/engine/common/js_constants.h"
 #include "interfaces/inner_api/ace/constants.h"
@@ -120,11 +119,6 @@ public:
     {
         return -1;
     }
-    // Gets current page's init params
-    virtual std::string GetInitParams()
-    {
-        return "";
-    }
     // Gets current page's params
     virtual std::string GetParams()
     {
@@ -140,15 +134,9 @@ public:
 
     virtual void ResetRequestFocusCallback();
 
-    virtual bool Activate(bool isActive, bool autoInactive = true);
-
-    virtual bool GetFocusActive();
-
     virtual void SetAutoFocusTransfer(bool autoFocusTransfer);
-
     virtual void SetKeyProcessingMode(int32_t keyProcessingMode);
-
-    virtual bool ConfigWindowMask(bool enable);
+    virtual bool Activate(bool isActive, bool autoInactive = true);
 
     // restore
     virtual std::pair<RouterRecoverRecord, UIContentErrorCode> RestoreRouterStack(
@@ -184,8 +172,7 @@ public:
     // ----------------
     // system.prompt
     // ----------------
-    virtual void ShowToast(const NG::ToastInfo& toastInfo, std::function<void(int32_t)>&& callback) = 0;
-    virtual void CloseToast(const int32_t toastId, std::function<void(int32_t)>&& callback) {};
+    virtual void ShowToast(const NG::ToastInfo& toastInfo) = 0;
     virtual void SetToastStopListenerCallback(std::function<void()>&& stopCallback) {};
     virtual void ShowDialog(const std::string& title, const std::string& message,
         const std::vector<ButtonInfo>& buttons, bool autoCancel, std::function<void(int32_t, int32_t)>&& callback,
@@ -198,22 +185,12 @@ public:
     virtual void ShowDialog(const PromptDialogAttr& dialogAttr, const std::vector<ButtonInfo>& buttons,
         std::function<void(int32_t, int32_t)>&& callback, const std::set<std::string>& callbacks,
         std::function<void(bool)>&& onStatusChanged) {};
-    virtual void RemoveCustomDialog(int32_t instanceId) {};
+    virtual void RemoveCustomDialog() {};
     virtual void OpenCustomDialog(const PromptDialogAttr &dialogAttr, std::function<void(int32_t)> &&callback) {};
     virtual void CloseCustomDialog(const int32_t dialogId) {};
     virtual void CloseCustomDialog(const WeakPtr<NG::UINode>& node, std::function<void(int32_t)> &&callback) {};
     virtual void UpdateCustomDialog(const WeakPtr<NG::UINode>& node, const PromptDialogAttr &dialogAttr,
         std::function<void(int32_t)> &&callback) {};
-
-    virtual std::optional<double> GetTopOrder()
-    {
-        return std::nullopt;
-    }
-
-    virtual std::optional<double> GetBottomOrder()
-    {
-        return std::nullopt;
-    }
 
     virtual RefPtr<NG::ChainedTransitionEffect> GetTransitionEffect(void* value)
     {
@@ -287,17 +264,6 @@ public:
         return {};
     }
 
-    virtual void GetSnapshotWithRange(const NG::NodeIdentity& startID, const NG::NodeIdentity& endID,
-        const bool isStartRect,
-        std::function<void(std::shared_ptr<Media::PixelMap>, int32_t, std::function<void()>)>&& callback,
-        const NG::SnapshotOptions& options)
-    {}
-
-    virtual void CreateSnapshotFromComponent(const RefPtr<NG::UINode>& nodeWk,
-        std::function<void(std::shared_ptr<Media::PixelMap>, int32_t, std::function<void()>)>&& callback,
-        bool enableInspector, const NG::SnapshotParam& param)
-    {}
-
     virtual bool GetAssetContent(const std::string& url, std::string& content) = 0;
     virtual bool GetAssetContent(const std::string& url, std::vector<uint8_t>& content) = 0;
     virtual std::string GetAssetPath(const std::string& url) = 0;
@@ -332,7 +298,6 @@ public:
 
     virtual void AddFrameNodeToOverlay(
         const RefPtr<NG::FrameNode>& node, std::optional<int32_t> index = std::nullopt) {}
-    virtual void AddFrameNodeWithOrder(const RefPtr<NG::FrameNode>& node, std::optional<double> levelOrder) {}
     virtual void RemoveFrameNodeOnOverlay(const RefPtr<NG::FrameNode>& node) {}
     virtual void ShowNodeOnOverlay(const RefPtr<NG::FrameNode>& node) {}
     virtual void HideNodeOnOverlay(const RefPtr<NG::FrameNode>& node) {}
@@ -383,15 +348,6 @@ public:
     }
 
     virtual void CallNativeHandler(const std::string& event, const std::string& params) {}
-
-    virtual void GetBackgroundBlurStyleOption(napi_value value, BlurStyleOption& styleOption)
-    {
-        JSViewAbstractBridge::GetBackgroundBlurStyleOption(value, styleOption);
-    }
-    virtual void GetBackgroundEffect(napi_value value, EffectOption& styleOption)
-    {
-        JSViewAbstractBridge::GetBackgroundEffect(value, styleOption);
-    }
 
 protected:
     RefPtr<AssetManager> assetManager_;

@@ -15,14 +15,14 @@
 #include "window_scene_layout_manager.h"
 
 #include "core/components_ng/pattern/window_scene/helper/window_scene_helper.h"
-#include "core/components_ng/pattern/window_scene/scene/input_scene.h"
-#include "core/components_ng/pattern/window_scene/scene/layout_manager_dfx.h"
-#include "core/components_ng/pattern/window_scene/scene/panel_scene.h"
+#include "core/components_ng/pattern/window_scene/scene/system_window_scene.h"
 #include "core/components_ng/pattern/window_scene/scene/window_scene.h"
+#include "core/components_ng/pattern/window_scene/scene/panel_scene.h"
+#include "core/components_ng/pattern/window_scene/scene/input_scene.h"
+#include "core/components_ng/pattern/window_scene/scene/system_window_scene.h"
 #include "core/components_ng/pattern/window_scene/screen/screen_pattern.h"
 #include "core/components_ng/render/adapter/rosen_render_context.h"
 #include "core/pipeline_ng/pipeline_context.h"
-#include "hisysevent.h"
 #include "parameters.h"
 #include "session/host/include/session.h"
 #include "session_manager/include/scene_session_manager.h"
@@ -35,7 +35,7 @@ namespace OHOS::Ace::NG {
 WindowSceneLayoutManager* WindowSceneLayoutManager::GetInstance()
 {
     auto container = Container::Current();
-    if (!container || !container->IsSceneBoardWindow() || !Rosen::Session::IsScbCoreEnabled()) {
+    if (!container || !container->IsScenceBoardWindow() || !Rosen::Session::IsScbCoreEnabled()) {
         return nullptr;
     }
     static WindowSceneLayoutManager* instance = nullptr;
@@ -54,16 +54,10 @@ void WindowSceneLayoutManager::Init()
             GetTotalUITreeInfo(info);
         }
     );
-    Rosen::SceneSessionManager::GetInstance().SetFindScenePanelRsNodeByZOrderFunc(
-        [this](uint64_t screenId, uint32_t targetZOrder) {
-            return FindScenePanelRsNodeByZOrder(screenId, targetZOrder);
-        }
-    );
 }
 
 bool WindowSceneLayoutManager::IsNodeDirty(const RefPtr<FrameNode>& node)
 {
-    CHECK_NULL_RETURN(node, false);
     auto context = AceType::DynamicCast<RosenRenderContext>(node->GetRenderContext());
     CHECK_NULL_RETURN(context, false);
     auto rsNode = context->GetRSNode();
@@ -83,8 +77,8 @@ bool WindowSceneLayoutManager::IsNodeVisible(const RefPtr<FrameNode>& node)
     bool opaque = (opacityVal - 0.0f) > std::numeric_limits<float>::epsilon();
     bool ret = isVisible && opaque;
     if (isCoreDebugEnable_) {
-        TAG_LOGI(AceLogTag::ACE_WINDOW_PIPELINE, "winId:%{public}d name:%{public}s frameNodeId:%{public}d "
-            "isVisible:%{public}d opaque:%{public}f ret:%{public}u", GetWindowId(node),
+        TAG_LOGI(AceLogTag::ACE_WINDOW_PIPELINE, "winId:%{public}d name:%{public}s frameNodeId:%{public}d"
+            "isVisible:%{public}d opaque:%{public}f ret:%{public}d", GetWindowId(node),
             GetWindowName(node).c_str(), node->GetId(), isVisible, opacityVal, ret);
     }
     return ret;
@@ -93,7 +87,7 @@ bool WindowSceneLayoutManager::IsNodeVisible(const RefPtr<FrameNode>& node)
 int32_t WindowSceneLayoutManager::GetNodeZIndex(const RefPtr<FrameNode>& node)
 {
     CHECK_NULL_RETURN(node, ZINDEX_DEFAULT_VALUE);
-    auto context = AceType::DynamicCast<RosenRenderContext>(node->GetRenderContext());
+    auto context = node->GetRenderContext();
     CHECK_NULL_RETURN(context, ZINDEX_DEFAULT_VALUE);
     return context->GetZIndexValue(ZINDEX_DEFAULT_VALUE);
 }
@@ -165,30 +159,6 @@ std::shared_ptr<Rosen::RSObjAbsGeometry> WindowSceneLayoutManager::GetLocalGeome
     return rsNode->GetLocalGeometry();
 }
 
-bool WindowSceneLayoutManager::SetGeometry(const bool isAncestorRecent, const RefPtr<FrameNode>& node,
-    std::shared_ptr<Rosen::RSObjAbsGeometry>& globalGeometry, std::shared_ptr<Rosen::RSObjAbsGeometry>& localGeometry)
-{
-    auto rsNode = GetRSNode(node);
-    if (!rsNode) {
-        TAG_LOGE(AceLogTag::ACE_WINDOW_PIPELINE, "rsNode is null");
-        return false;
-    }
-    if (isAncestorRecent) {
-        globalGeometry = std::make_shared<Rosen::RSObjAbsGeometry>();
-    }
-    if (isAncestorRecent && !localGeometry) {
-        localGeometry = std::make_shared<Rosen::RSObjAbsGeometry>();
-    }
-    if (!globalGeometry || !localGeometry) {
-        if (isCoreDebugEnable_) {
-            TAG_LOGI(AceLogTag::ACE_WINDOW_PIPELINE, "name:%{public}s globalGeo null:%{public}d localGeo:%{public}d",
-                GetWindowName(node).c_str(), globalGeometry == nullptr, localGeometry == nullptr);
-        }
-        return false;
-    }
-    return true;
-}
-          
 void WindowSceneLayoutManager::FillWindowSceneInfo(const RefPtr<FrameNode>& node,
     TraverseResult& res, TraverseInfo& ancestorInfo)
 {
@@ -198,9 +168,17 @@ void WindowSceneLayoutManager::FillWindowSceneInfo(const RefPtr<FrameNode>& node
         return;
     }
     IsFrameNodeAbnormal(node);
-    std::shared_ptr<Rosen::RSObjAbsGeometry> localGeometry = rsNode->GetLocalGeometry();
-    std::shared_ptr<Rosen::RSObjAbsGeometry> globalGeometry = rsNode->GetGlobalGeometry();
-    if (!SetGeometry(ancestorInfo.isAncestorRecent, node, globalGeometry, localGeometry)) {
+    auto globalGeometry = ancestorInfo.isAncestorRecent ? std::make_shared<Rosen::RSObjAbsGeometry>()
+                                           : rsNode->GetGlobalGeometry();
+    auto localGeometry = rsNode->GetLocalGeometry();
+    if (ancestorInfo.isAncestorRecent && !localGeometry) {
+        localGeometry = std::make_shared<Rosen::RSObjAbsGeometry>();
+    }
+    if (!globalGeometry || !localGeometry) {
+        if (isCoreDebugEnable_) {
+            TAG_LOGI(AceLogTag::ACE_WINDOW_PIPELINE, "name:%{public}s globalGeo is null:%{public}d localGeo:%{public}d",
+                GetWindowName(node).c_str(), globalGeometry == nullptr, localGeometry == nullptr);
+        }
         return;
     }
     Rosen::SessionUIParam uiParam;
@@ -228,7 +206,7 @@ void WindowSceneLayoutManager::FillWindowSceneInfo(const RefPtr<FrameNode>& node
         (rsNode->GetGlobalPositionY() - ancestorInfo.transScenePosY));
     uiParam.pivotX_ = globalGeometry->GetPivotX();
     uiParam.pivotY_ = globalGeometry->GetPivotY();
-    uiParam.zOrder_ = static_cast<uint32_t>(res.zOrderCnt);
+    uiParam.zOrder_ = res.zOrderCnt_;
     auto windowId = GetWindowId(node);
     uiParam.sessionName_ = GetWindowName(node);
     if (ancestorInfo.isAncestorRecent) {
@@ -236,30 +214,7 @@ void WindowSceneLayoutManager::FillWindowSceneInfo(const RefPtr<FrameNode>& node
         // default interactive is true
         uiParam.interactive_ = WindowSceneHelper::IsPanelScene(node->GetWindowPatternType());
     }
-    res.uiParams[windowId] = std::move(uiParam);
-    windowSceneOnTreeDfxSet_.insert(windowId);
-}
-
-// once return false: need sync position; else not sync
-bool WindowSceneLayoutManager::NoNeedSyncScenePanelGlobalPosition(const RefPtr<FrameNode>& node)
-{
-    CHECK_NULL_RETURN(node, false);
-    if (!WindowSceneHelper::IsPanelScene(node->GetWindowPatternType())) {
-        return false;
-    }
-    auto windowPattern = node->GetPattern<PanelScene>();
-    if (windowPattern == nullptr) {
-        TAG_LOGE(AceLogTag::ACE_WINDOW_PIPELINE, "recent SystemWindowScene is null. node:%{public}s",
-            GetWindowName(node).c_str());
-        return false;
-    }
-    auto session = windowPattern->GetSession();
-    if (session == nullptr) {
-        TAG_LOGE(AceLogTag::ACE_WINDOW_PIPELINE, "recent session is null. node:%{public}s",
-            GetWindowName(node).c_str());
-        return false;
-    }
-    return !session->IsNeedSyncScenePanelGlobalPosition();
+    res.uiParams_[windowId] = std::move(uiParam);
 }
 
 void WindowSceneLayoutManager::FlushWindowPatternInfo(const RefPtr<FrameNode>& screenNode)
@@ -274,8 +229,8 @@ void WindowSceneLayoutManager::FlushWindowPatternInfo(const RefPtr<FrameNode>& s
         return;
     }
     TraverseResult res;
-    res.zOrderCnt = 0;
-    res.screenId = screenId;
+    res.zOrderCnt_ = 0;
+    res.screenId_ = screenId;
     UpdateGeometry(screenNode, nullptr, false);
     TraverseInfo parentInfo = {
         .isAncestorDirty = IsNodeDirty(screenNode)
@@ -285,11 +240,8 @@ void WindowSceneLayoutManager::FlushWindowPatternInfo(const RefPtr<FrameNode>& s
         DumpFlushInfo(screenId, res);
         TAG_LOGI(AceLogTag::ACE_WINDOW_PIPELINE, "------------------- End FlushWindowPatternInfo ------------------");
     }
-    RemoveAbnormalId();
-    auto recordRes = res;
     // cannot post ui task, since flush may not excute on next frame
-    Rosen::SceneSessionManager::GetInstance().FlushUIParams(screenId, std::move(res.uiParams));
-    Ace::NG::LayoutManagerDfx::GetInstance()->ExecuteRecordUIParams(recordRes);
+    Rosen::SceneSessionManager::GetInstance().FlushUIParams(screenId, std::move(res.uiParams_));
 }
 
 bool WindowSceneLayoutManager::IsRecentContainerState(const RefPtr<FrameNode>& node)
@@ -313,17 +265,25 @@ bool WindowSceneLayoutManager::IsRecentContainerState(const RefPtr<FrameNode>& n
     return session->GetSystemTouchable();
 }
 
-void WindowSceneLayoutManager::RemoveAbnormalId()
+bool WindowSceneLayoutManager::NoNeedSyncScenePanelGlobalPosition(const RefPtr<FrameNode>& node) // false: need sync
 {
-    for (auto it = abnormalNodeDfxSet_.begin(); it != abnormalNodeDfxSet_.end();) {
-        if (windowSceneOnTreeDfxSet_.find(*it) == windowSceneOnTreeDfxSet_.end()) {
-            TAG_LOGE(AceLogTag::ACE_WINDOW_PIPELINE, "remove: %{public}" PRIu64, *it);
-            it = abnormalNodeDfxSet_.erase(it);
-        } else {
-            ++it;
-        }
+    CHECK_NULL_RETURN(node, false);
+    if (!WindowSceneHelper::IsPanelScene(node->GetWindowPatternType())) {
+        return false;
     }
-    windowSceneOnTreeDfxSet_.clear();
+    auto windowPattern = node->GetPattern<PanelScene>();
+    if (windowPattern == nullptr) {
+        TAG_LOGE(AceLogTag::ACE_WINDOW_PIPELINE, "recent SystemWindowScene is null. node:%{public}s",
+            GetWindowName(node).c_str());
+        return false;
+    }
+    auto session = windowPattern->GetSession();
+    if (session == nullptr) {
+        TAG_LOGE(AceLogTag::ACE_WINDOW_PIPELINE, "recent session is null. node:%{public}s",
+            GetWindowName(node).c_str());
+        return false;
+    }
+    return !session->IsNeedSyncScenePanelGlobalPosition();
 }
 
 void WindowSceneLayoutManager::IsFrameNodeAbnormal(const RefPtr<FrameNode>& node)
@@ -338,34 +298,10 @@ void WindowSceneLayoutManager::IsFrameNodeAbnormal(const RefPtr<FrameNode>& node
     CHECK_NULL_VOID(session);
     auto surfaceNode = session->GetSurfaceNode();
     CHECK_NULL_VOID(surfaceNode);
-    auto nodeId = GetWindowId(node);
-    auto it = abnormalNodeDfxSet_.find(nodeId);
-    if (surfaceNode->GetParent()) {
-        if (it != abnormalNodeDfxSet_.end()) {
-            abnormalNodeDfxSet_.erase(it);
-            TAG_LOGD(AceLogTag::ACE_WINDOW_PIPELINE, "node:%{public}d name:%{public}s Abnormal Remove",
-                node->GetId(), GetWindowName(node).c_str());
-        }
-        return;
+    if (!surfaceNode->GetParent()) {
+        TAG_LOGE(AceLogTag::ACE_WINDOW_PIPELINE, "node:%{public}d name:%{public}s is on ui tree but not rs tree, "
+            "screenId:%{public}" PRIu64, node->GetId(), GetWindowName(node).c_str(), GetScreenId(node));
     }
-    if (it != abnormalNodeDfxSet_.end()) {
-        return;
-    }
-    abnormalNodeDfxSet_.insert(nodeId);
-    auto rsNode = GetRSNode(node);
-    int32_t eventRet = HiSysEventWrite(
-        OHOS::HiviewDFX::HiSysEvent::Domain::WINDOW_MANAGER,
-        "WINDOW_STATE_ERROR",
-        OHOS::HiviewDFX::HiSysEvent::EventType::FAULT,
-        "PID", getpid(),
-        "PERSISTENT_ID", nodeId,
-        "TYPE", "WINDOW_PATTERN_EXCEPTION",
-        "WINDOW_NAME", GetWindowName(node).c_str(),
-        "FRAME_NODE_ID", node->GetId(),
-        "RS_NODE_ID", rsNode ? rsNode->GetId() : 0,
-        "DISPLAY_ID", GetScreenId(node));
-    TAG_LOGE(AceLogTag::ACE_WINDOW_PIPELINE, "ret:%{public}d node:%{public}d name:%{public}s on ui tree not rs tree,"
-        "screenId:%{public}" PRIu64, eventRet, node->GetId(), GetWindowName(node).c_str(), GetScreenId(node));
 }
 
 void WindowSceneLayoutManager::FillTransScenePos(const RefPtr<FrameNode>& node, TraverseInfo& ancestorInfo)
@@ -396,14 +332,14 @@ void WindowSceneLayoutManager::TraverseTree(const RefPtr<FrameNode>& rootNode, T
             continue;
         }
         // once delete in recent, need update zorder
-        uint32_t currentZorder = res.zOrderCnt;
+        uint32_t currentZorder = res.zOrderCnt_;
         if (WindowSceneHelper::IsWindowPattern(node)) {
-            currentZorder = std::max(res.zOrderCnt, static_cast<uint32_t>(GetNodeZIndex(node)));
+            currentZorder = std::max(res.zOrderCnt_, static_cast<uint32_t>(GetNodeZIndex(node)));
         }
         // only window pattern need cal zorder
         bool hasWindowSession = WindowSceneHelper::HasWindowSession(node);
         if (hasWindowSession) {
-            res.zOrderCnt = currentZorder++; // keep last zorder as current zorder
+            res.zOrderCnt_ = currentZorder++; // keep last zorder as current zorder
         }
         ancestorInfo.notSyncPosition = (ancestorInfo.notSyncPosition || NoNeedSyncScenePanelGlobalPosition(node));
         // process recent and child node
@@ -426,7 +362,7 @@ void WindowSceneLayoutManager::TraverseTree(const RefPtr<FrameNode>& rootNode, T
             DumpNodeInfo(node, rootNode, "AfterFillWindowSceneInfo");
         }
 
-        res.zOrderCnt = currentZorder; // use cnt++ for next zorder cnt
+        res.zOrderCnt_ = currentZorder; // use cnt++ for next zorder cnt
         auto type = node->GetWindowPatternType();
         if (!WindowSceneHelper::IsSystemWindowScene(type) && WindowSceneHelper::IsSystemWindowScene(parentType)) {
             TAG_LOGD(AceLogTag::ACE_WINDOW_PIPELINE, "name:%{public}s child of systemScene continue",
@@ -439,7 +375,7 @@ void WindowSceneLayoutManager::TraverseTree(const RefPtr<FrameNode>& rootNode, T
                 "isAncestorDirty:%{public}d hasWindowSession:%{public}d, notSyncPosition:%{public}d "
                 "transScenePosX:%{public}d, transScenePosY:%{public}d",
                 GetWindowId(node), GetWindowName(node).c_str(),
-                node->GetInspectorId()->c_str(), node->GetTag().c_str(), res.zOrderCnt,
+                node->GetInspectorId()->c_str(), node->GetTag().c_str(), res.zOrderCnt_,
                 ancestorInfo.isAncestorRecent, ancestorInfo.isAncestorDirty, hasWindowSession,
                 ancestorInfo.notSyncPosition, ancestorInfo.transScenePosX, ancestorInfo.transScenePosY);
         }
@@ -469,7 +405,7 @@ uint32_t WindowSceneLayoutManager::GetWindowId(const RefPtr<FrameNode>& node)
 
     auto type = static_cast<WindowPatternType>(node->GetWindowPatternType());
     switch (type) {
-        case WindowPatternType::DEFAULT: // fallthrough
+        case WindowPatternType::DEFAULT:
         case WindowPatternType::TRANSFORM_SCENE:
             return 0; // invalid window Id
         case WindowPatternType::PANEL_SCENE:
@@ -545,7 +481,7 @@ void WindowSceneLayoutManager::DumpFlushInfo(uint64_t screenId, TraverseResult& 
     if (!isCoreDebugEnable_) {
         return;
     }
-    for (auto& [winId, uiParam] : res.uiParams) {
+    for (auto& [winId, uiParam] : res.uiParams_) {
         TAG_LOGI(AceLogTag::ACE_WINDOW_PIPELINE, "DumpFlushInfo screenId:%{public}" PRIu64 " windowId:%{public}d "
             "name:%{public}s rect:%{public}s, scaleX:%{public}f, scaleY:%{public}f, transX:%{public}f "
             "transY:%{public}f pivotX:%{public}f, pivotY:%{public}f zOrder:%{public}u, interactive:%{public}d",
@@ -576,7 +512,7 @@ void WindowSceneLayoutManager::DumpNodeInfo(const RefPtr<FrameNode>& node,
     if (!nodeGeometry) {
         TAG_LOGW(AceLogTag::ACE_WINDOW_PIPELINE,
             "reason:%{public}s globalGeometry name:%{public}s lrsId:%{public}" PRIu64 " %{public}d"
-            "parentRSId:%{public}" PRIu64 " frameNodeId:%{public}d global geFnoMetry is null",
+            "parentRSId:%{public}" PRIu64 " frameNodeId:%{public}d global geoMetry is null",
             reason.c_str(), GetWindowName(node).c_str(), GetRSNodeId(node), node->GetId(),
             GetRSNodeId(parentNode), parentId);
         return;
@@ -584,7 +520,7 @@ void WindowSceneLayoutManager::DumpNodeInfo(const RefPtr<FrameNode>& node,
     auto nodeLocalGeometry = rsNode->GetLocalGeometry();
     if (!nodeLocalGeometry) {
         TAG_LOGW(AceLogTag::ACE_WINDOW_PIPELINE,
-            "reason:%{public}s localGeometry name:%{public}s lrsId:%{public}" PRIu64 " parentRSId:%{public}" PRIu64
+            "reason:%{public}s localGeometry name:%{public}s lrsId:%{public}" PRIu64 " parentRSId:%{public}" PRIu64 ""
             " localGeo is null", reason.c_str(), GetWindowName(node).c_str(),
             GetRSNodeId(node), GetRSNodeId(parentNode));
         return;
@@ -609,8 +545,8 @@ void WindowSceneLayoutManager::DumpNodeInfo(const RefPtr<FrameNode>& node,
     float globalPosX = rsNode->GetGlobalPositionX();
     float globalPosY = rsNode->GetGlobalPositionY();
     TAG_LOGI(AceLogTag::ACE_WINDOW_PIPELINE,
-        "DumpNodeInfo reason:%{public}s name:%{public}s lrsId:%{public}" PRIu64 " parentRSId:%{public}" PRIu64 ""
-        " frameNodeId:%{public}d [Rect:%{public}s lTransX:%{public}f lTransY:%{public}f absLocalRect:%{public}s, "
+        "DumpNodeInfo reason:%{public}s name:%{public}s lrsId:%{public}" PRIu64 " parentRSId:%{public}" PRIu64 " "
+        "frameNodeId:%{public}d [Rect:%{public}s lTransX:%{public}f lTransY:%{public}f absLocalRect:%{public}s, "
         "gRect:%{public}s gTransX:%{public}f gTransY:%{public}f globalPosX:%{public}f, globalPosY:%{public}f, "
         "absGlobalRect:%{public}s lScaleX:%{public}f lScaleY:%{public}f gScaleX:%{public}f gScaleY:%{public}f]",
         GetWindowName(node).c_str(), reason.c_str(), GetRSNodeId(node), GetRSNodeId(parentNode), parentId,
@@ -668,6 +604,8 @@ void WindowSceneLayoutManager::GetUINodeInfo(const RefPtr<FrameNode>& node,
         oss << " globalPos: [" << rsNode->GetGlobalPositionX() << ", " << rsNode->GetGlobalPositionY() << "],";
         oss << " pivot: [" << globalGeometry->GetPivotX() << ", " << globalGeometry->GetPivotY() << "],";
     } else {
+        TAG_LOGE(AceLogTag::ACE_WINDOW_PIPELINE, "globalGeometry null. screenId:%{public}" PRIu64 " tag:%{public}s"
+            "Id:%{public}d parentId:%{public}d", GetScreenId(node), node->GetTag().c_str(), node->GetId(), parentId);
         oss << " globalGeometry: [null],";
     }
     if (localGeometry) {
@@ -682,13 +620,11 @@ void WindowSceneLayoutManager::GetUINodeInfo(const RefPtr<FrameNode>& node,
         oss << " localPos: [" << localGeometry->GetX() << ", "
             << localGeometry->GetY() << "],";
     } else {
+        TAG_LOGE(AceLogTag::ACE_WINDOW_PIPELINE, "localGeometry null. screenId:%{public}" PRIu64 " tag:%{public}s"
+            "Id:%{public}d parentId:%{public}d", GetScreenId(node), node->GetTag().c_str(), node->GetId(), parentId);
         oss << " localGeometry: [null],";
     }
     oss << " requestZIndex: " << context->GetZIndexValue(ZINDEX_DEFAULT_VALUE);
-    oss << " blendMode: [" << static_cast<int16_t>(context->GetBackBlendMode().value_or(BlendMode::NONE)) << ", "
-        << static_cast<int16_t>(context->GetBackBlendApplyType().value_or(BlendApplyType::FAST)) << ", "
-        << static_cast<int16_t>(rsNode->GetStagingProperties().GetColorBlendMode()) << ", "
-        << static_cast<int16_t>(rsNode->GetStagingProperties().GetColorBlendApplyType()) << "]";
     oss << " rsId: " << GetRSNodeId(node);
     oss << " frameNodeId: " << node->GetId();
     oss << " parentFrameNodeId: " << parentId << std::endl;
@@ -788,7 +724,7 @@ void WindowSceneLayoutManager::GetRSNodeTreeInfo(const std::shared_ptr<RSNode>& 
     GetRSNodeInfo(rsNode, oss);
     auto children = rsNode->GetChildren();
     for (auto child : children) {
-        if (auto childPtr = child.lock()) {
+        if (auto childPtr = Rosen::RSNodeMap::Instance().GetNode(child)) {
             GetRSNodeTreeInfo(childPtr, depth + 1, oss);
         }
     }
@@ -811,7 +747,6 @@ void WindowSceneLayoutManager::GetRSNodeInfo(const std::shared_ptr<RSNode>& rsNo
     auto translate = rsNode->GetStagingProperties().GetTranslate();
     oss << ", Translate: [" << translate[0] << ", " << translate[1] << ", "
         << rsNode->GetStagingProperties().GetTranslateZ() << "]";
-
     oss << ", Rotation: " << rsNode->GetStagingProperties().GetRotation();
     oss << ", Alpha: " << rsNode->GetStagingProperties().GetAlpha();
     oss << ", ClipToBounds: " << rsNode->GetStagingProperties().GetClipBounds();
@@ -841,62 +776,5 @@ void WindowSceneLayoutManager::GetRSNodeInfo(const std::shared_ptr<RSNode>& rsNo
         oss << "localGeometry: [null],";
     }
     oss << std::endl;
-}
-
-void WindowSceneLayoutManager::TraverseTreeFindTransformScene(const RefPtr<FrameNode>& rootNode,
-    uint32_t targetZOrder, std::vector<std::pair<RefPtr<FrameNode>, uint32_t>>& scenePanelNodeArr)
-{
-    CHECK_NULL_VOID(rootNode);
-    auto nodeType = rootNode->GetWindowPatternType();
-    TAG_LOGD(AceLogTag::ACE_WINDOW_PIPELINE, "Nodetype: %{public}u", nodeType);
-    if (WindowSceneHelper::IsTransformScene(nodeType)) {
-        auto parentNode = rootNode->GetParentFrameNode();
-        if (!parentNode) {
-            return;
-        }
-        int32_t nodeZOrder = GetNodeZIndex(rootNode);
-        TAG_LOGD(AceLogTag::ACE_WINDOW_PIPELINE, "ParentZindex: %{public}d, nodeZOrder: %{public}d",
-            GetNodeZIndex(parentNode), nodeZOrder);
-        nodeZOrder = std::max(GetNodeZIndex(parentNode) + 1, nodeZOrder);
-        if (static_cast<uint32_t>(nodeZOrder) > targetZOrder) {
-            return;
-        }
-        scenePanelNodeArr.emplace_back(std::make_pair(rootNode, nodeZOrder));
-        return;
-    }
-    for (const auto& weakNode: rootNode->GetFrameChildren()) {
-        auto node = weakNode.Upgrade();
-        if (!node) {
-            continue;
-        }
-        TraverseTreeFindTransformScene(node, targetZOrder, scenePanelNodeArr);
-    }
-}
-
-std::shared_ptr<Rosen::RSNode> WindowSceneLayoutManager::FindScenePanelRsNodeByZOrder(uint64_t screenId,
-    uint32_t targetZOrder)
-{
-    TAG_LOGI(AceLogTag::ACE_WINDOW_PIPELINE, "ScreenId: %{public}" PRIu64 ", zOrder: %{public}d",
-        screenId, targetZOrder);
-    auto iter = screenNodeMap_.find(screenId);
-    if (iter == screenNodeMap_.end()) {
-        TAG_LOGE(AceLogTag::ACE_WINDOW_PIPELINE, "Screen node is null");
-        return nullptr;
-    }
-    RefPtr<FrameNode> screenNode = iter->second.Upgrade();
-    std::vector<std::pair<RefPtr<FrameNode>, uint32_t>> scenePanelNodeArr;
-    TraverseTreeFindTransformScene(screenNode, targetZOrder, scenePanelNodeArr);
-    if (scenePanelNodeArr.empty()) {
-        TAG_LOGE(AceLogTag::ACE_WINDOW_PIPELINE, "No transform scene node found");
-        return nullptr;
-    }
-    RefPtr<FrameNode> retNode = nullptr;
-    std::sort(scenePanelNodeArr.begin(), scenePanelNodeArr.end(),
-        [](const auto& a, const auto& b) {
-            return a.second > b.second;
-        }
-    );
-    TAG_LOGI(AceLogTag::ACE_WINDOW_PIPELINE, "Find node zOrder: %{public}d", scenePanelNodeArr.front().second);
-    return GetRSNode(scenePanelNodeArr.front().first);
 }
 } // namespace OHOS::Ace::NG

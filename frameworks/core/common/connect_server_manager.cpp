@@ -28,17 +28,22 @@ namespace OHOS::Ace {
 namespace {
 
 using StartServer = bool (*)(const std::string& packageName);
-using StartServerForSocketPair = bool (*)(int32_t);
+using StartServerForSocketPair = void (*)(int32_t);
 using SendMessage = void (*)(const std::string& message);
+using SendLayoutMessage = void (*)(const std::string& message);
 using StopServer = void (*)(const std::string& packageName);
 using StoreMessage = void (*)(int32_t instanceId, const std::string& message);
+using StoreInspectorInfo = void (*)(const std::string& jsonTreeStr, const std::string& jsonSnapshotStr);
 using RemoveMessage = void (*)(int32_t instanceId);
 using WaitForConnection = bool (*)();
-using SetSwitchCallBack = void (*)(const std::function<void(int32_t)>& createLayoutInfo, int32_t instanceId);
+using SetSwitchCallBack = void (*)(const std::function<void(bool)>& setStatus,
+    const std::function<void(int32_t)>& createLayoutInfo, int32_t instanceId);
 using SetDebugModeCallBack = void (*)(const std::function<void()>& setDebugMode);
 
 SendMessage g_sendMessage = nullptr;
+SendLayoutMessage g_sendLayoutMessage = nullptr;
 RemoveMessage g_removeMessage = nullptr;
+StoreInspectorInfo g_storeInspectorInfo = nullptr;
 StoreMessage g_storeMessage = nullptr;
 SetSwitchCallBack g_setSwitchCallBack = nullptr;
 SetDebugModeCallBack g_setDebugModeCallBack = nullptr;
@@ -95,6 +100,8 @@ bool ConnectServerManager::InitFunc()
     g_setSwitchCallBack = reinterpret_cast<SetSwitchCallBack>(dlsym(handlerConnectServerSo_, "SetSwitchCallBack"));
     g_setDebugModeCallBack =
         reinterpret_cast<SetDebugModeCallBack>(dlsym(handlerConnectServerSo_, "SetDebugModeCallBack"));
+    g_sendLayoutMessage = reinterpret_cast<SendLayoutMessage>(dlsym(handlerConnectServerSo_, "SendLayoutMessage"));
+    g_storeInspectorInfo = reinterpret_cast<StoreInspectorInfo>(dlsym(handlerConnectServerSo_, "StoreInspectorInfo"));
     g_waitForConnection = reinterpret_cast<WaitForConnection>(dlsym(handlerConnectServerSo_, "WaitForConnection"));
 #else
     using namespace OHOS::ArkCompiler;
@@ -103,6 +110,8 @@ bool ConnectServerManager::InitFunc()
     g_removeMessage = reinterpret_cast<RemoveMessage>(&Toolchain::RemoveMessage);
     g_setSwitchCallBack = reinterpret_cast<SetSwitchCallBack>(&Toolchain::SetSwitchCallBack);
     g_setDebugModeCallBack = reinterpret_cast<SetDebugModeCallBack>(&Toolchain::SetDebugModeCallBack);
+    g_sendLayoutMessage = reinterpret_cast<SendLayoutMessage>(&Toolchain::SendLayoutMessage);
+    g_storeInspectorInfo = reinterpret_cast<StoreInspectorInfo>(&Toolchain::StoreInspectorInfo);
     g_waitForConnection = reinterpret_cast<WaitForConnection>(&Toolchain::WaitForConnection);
 #endif
     if (!InitSuccess()) {
@@ -120,9 +129,7 @@ void ConnectServerManager::InitConnectServer()
 #else
     const std::string soDir = "libark_connect_inspector.z.so";
 #endif // ANDROID_PLATFORM
-    if (handlerConnectServerSo_ == nullptr) {
-        handlerConnectServerSo_ = dlopen(soDir.c_str(), RTLD_LAZY);
-    }
+    handlerConnectServerSo_ = dlopen(soDir.c_str(), RTLD_LAZY);
     if (handlerConnectServerSo_ == nullptr) {
         LOGE("Cannot find %{public}s", soDir.c_str());
         return;
@@ -148,7 +155,9 @@ bool ConnectServerManager::InitSuccess() const
         {"g_storeMessage", reinterpret_cast<void*>(g_storeMessage)},
         {"g_removeMessage", reinterpret_cast<void*>(g_removeMessage)},
         {"g_setDebugModeCallBack", reinterpret_cast<void*>(g_setDebugModeCallBack)},
+        {"g_sendLayoutMessage", reinterpret_cast<void*>(g_sendLayoutMessage)},
         {"g_setSwitchCallBack", reinterpret_cast<void*>(g_setSwitchCallBack)},
+        {"g_storeInspectorInfo", reinterpret_cast<void*>(g_storeInspectorInfo)},
         {"g_waitForConnection", reinterpret_cast<void*>(g_waitForConnection)},
     };
 
@@ -166,9 +175,7 @@ bool ConnectServerManager::InitSuccess() const
 
 void ConnectServerManager::StartConnectServerWithSocketPair(int32_t socketFd)
 {
-    if (handlerConnectServerSo_ == nullptr) {
-        handlerConnectServerSo_ = dlopen("libark_connect_inspector.z.so", RTLD_LAZY);
-    }
+    handlerConnectServerSo_ = dlopen("libark_connect_inspector.z.so", RTLD_LAZY);
     CHECK_NULL_VOID(handlerConnectServerSo_);
 
     auto startServerForSocketPair =
@@ -234,18 +241,21 @@ void ConnectServerManager::AddInstance(
         g_sendMessage(message); // if connected, message will be sent immediately.
     }
     CHECK_NULL_VOID(createLayoutInfo_);
-
+    auto setStatus = [this](bool status) {
+        setStatus_(status);
+    };
     auto createLayoutInfo = [this](int32_t containerId) {
         createLayoutInfo_(containerId);
     };
-    g_setSwitchCallBack(createLayoutInfo, instanceId);
+    g_setSwitchCallBack(setStatus, createLayoutInfo, instanceId);
 }
 
 void ConnectServerManager::SendInspector(const std::string& jsonTreeStr, const std::string& jsonSnapshotStr)
 {
     LOGI("ConnectServerManager SendInspector Start");
-    g_sendMessage(jsonTreeStr);
-    g_sendMessage(jsonSnapshotStr);
+    g_sendLayoutMessage(jsonTreeStr);
+    g_sendLayoutMessage(jsonSnapshotStr);
+    g_storeInspectorInfo(jsonTreeStr, jsonSnapshotStr);
 }
 
 void ConnectServerManager::RemoveInstance(int32_t instanceId)
@@ -291,9 +301,11 @@ std::string ConnectServerManager::GetInstanceMapMessage(
     return message->ToString();
 }
 
-void ConnectServerManager::SetLayoutInspectorCallback(const std::function<void(int32_t)>& createLayoutInfo)
+void ConnectServerManager::SetLayoutInspectorCallback(
+    const std::function<void(int32_t)>& createLayoutInfo, const std::function<void(bool)>& setStatus)
 {
     createLayoutInfo_ = createLayoutInfo;
+    setStatus_ = setStatus;
 }
 
 std::function<void(int32_t)> ConnectServerManager::GetLayoutInspectorCallback()

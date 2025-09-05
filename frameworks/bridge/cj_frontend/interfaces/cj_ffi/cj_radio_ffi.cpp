@@ -15,9 +15,12 @@
 
 #include "bridge/cj_frontend/interfaces/cj_ffi/cj_radio_ffi.h"
 
-#include "cj_lambda.h"
+#include <optional>
+#include <string>
 
-#include "core/components_ng/base/view_abstract_model.h"
+#include "cj_lambda.h"
+#include "bridge/cj_frontend/interfaces/cj_ffi/utils.h"
+#include "bridge/declarative_frontend/view_stack_processor.h"
 #include "core/components_ng/pattern/radio/radio_model_ng.h"
 
 using namespace OHOS::Ace;
@@ -28,58 +31,10 @@ void FfiOHOSAceFrameworkRadioCreate(const char* group, const char* value)
     std::optional<int32_t> indicator;
     RadioModel::GetInstance()->Create(std::optional<std::string>(value), std::optional<std::string>(group), indicator);
 }
-
-void FfiOHOSAceFrameworkRadioWithIndicatorCreate(
-    const char* group, const char* value, int32_t indicatorType, void (*indicatorBuilder)())
-{
-    std::optional<int32_t> indicator(indicatorType);
-    RadioModel::GetInstance()->Create(std::optional<std::string>(value), std::optional<std::string>(group), indicator);
-    RadioModel::GetInstance()->SetBuilder(CJLambda::Create(indicatorBuilder));
-}
-
 void FfiOHOSAceFrameworkRadioChecked(bool value)
 {
     RadioModel::GetInstance()->SetChecked(value);
 }
-
-void FfiOHOSAceFrameworkRadioSetStyle(
-    uint32_t checkedBackgroundColor, uint32_t uncheckedBorderColor, uint32_t indicatorColor)
-{
-    RadioModel::GetInstance()->SetCheckedBackgroundColor(Color(checkedBackgroundColor));
-    RadioModel::GetInstance()->SetUncheckedBorderColor(Color(uncheckedBorderColor));
-    RadioModel::GetInstance()->SetIndicatorColor(Color(indicatorColor));
-}
-
-void FfiOHOSAceFrameworkRadioSetSize(double width, int32_t widthUnit, double height, int32_t heightUnit)
-{
-    Dimension widthValue(width, static_cast<DimensionUnit>(widthUnit));
-    Dimension heightValue(height, static_cast<DimensionUnit>(heightUnit));
-    ViewAbstractModel::GetInstance()->SetWidth(widthValue);
-    ViewAbstractModel::GetInstance()->SetHeight(heightValue);
-}
-
-void FfiOHOSAceFrameworkRadioSetPaddings(CJEdge params)
-{
-    NG::PaddingPropertyF oldPaddings({ 0.0f, 0.0f, 0.0f, 0.0f });
-    NG::PaddingProperty paddings;
-    paddings.top = NG::CalcLength(Dimension(params.top, static_cast<DimensionUnit>(params.topUnit)));
-    paddings.right = NG::CalcLength(Dimension(params.right, static_cast<DimensionUnit>(params.rightUnit)));
-    paddings.bottom = NG::CalcLength(Dimension(params.bottom, static_cast<DimensionUnit>(params.bottomUnit)));
-    paddings.left = NG::CalcLength(Dimension(params.left, static_cast<DimensionUnit>(params.leftUnit)));
-    RadioModel::GetInstance()->SetPadding(oldPaddings, paddings);
-}
-
-void FfiOHOSAceFrameworkRadioSetPadding(double padding, uint32_t unit)
-{
-    Dimension value(padding, static_cast<DimensionUnit>(unit));
-    NG::ViewAbstract::SetPadding(NG::CalcLength(value));
-}
-
-void FfiOHOSAceFrameworkRadioSetHoverEffect(int32_t value)
-{
-    RadioModel::GetInstance()->SetHoverEffect(static_cast<HoverEffectType>(value));
-}
-
 void FfiOHOSAceFrameworkRadioOnChange(void (*callback)(bool isChecked))
 {
     RadioModel::GetInstance()->SetOnChange(CJLambda::Create(callback));

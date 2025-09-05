@@ -27,8 +27,6 @@ void DialogTheme::Builder::ParsePattern(
     if (!dialogPattern) {
         return;
     }
-    auto isWatch = SystemProperties::GetDeviceType() == DeviceType::WEARABLE ||
-        SystemProperties::GetDeviceType() == DeviceType::WATCH;
     theme->titleTextStyle_.SetTextColor(dialogPattern->GetAttr<Color>("title_text_color", Color::BLACK));
     theme->titleTextStyle_.SetFontSize(dialogPattern->GetAttr<Dimension>("title_text_font_size", 20.0_fp));
     theme->titleTextStyle_.SetFontWeight(FontWeight::MEDIUM);
@@ -36,7 +34,7 @@ void DialogTheme::Builder::ParsePattern(
     theme->subtitleTextStyle_.SetFontSize(dialogPattern->GetAttr<Dimension>("subtitle_text_font_size", 14.0_fp));
     theme->contentTextStyle_.SetTextColor(dialogPattern->GetAttr<Color>("content_text_color", Color::BLACK));
     theme->contentTextStyle_.SetFontSize(dialogPattern->GetAttr<Dimension>("content_text_font_size", 16.0_fp));
-    if (Container::GreatOrEqualAPIVersion(PlatformVersion::VERSION_TWELVE) && !isWatch) {
+    if (Container::GreatOrEqualAPIVersion(PlatformVersion::VERSION_TWELVE)) {
         theme->radius_ = Radius(dialogPattern->GetAttr<Dimension>("dialog_container_radius", 32.0_vp));
         theme->backgroundColor_ = dialogPattern->GetAttr<Color>("bg_color_version_twelve", Color(0xffffff));
     } else {
@@ -95,6 +93,8 @@ void DialogTheme::Builder::ParsePattern(
     theme->titleDefaultPadding_ = Edge(defaultPadding, titlePadding, defaultPadding, titlePadding);
     theme->defaultPadding_ = Edge(defaultPadding, defaultPadding, defaultPadding, defaultPadding);
     theme->adjustPadding_ = Edge(defaultPadding, defaultPadding, defaultPadding, 0.0_vp);
+    theme->contentDefaultPadding_ = Edge(defaultPadding, 0.0_vp, defaultPadding, defaultPadding);
+    theme->contentAdjustPadding_ = Edge(defaultPadding, 0.0_vp, defaultPadding, 0.0_vp);
     theme->buttonHeight_ = dialogPattern->GetAttr<Dimension>(DIALOG_BUTTON_HEIGHT, 0.0_vp);
     theme->titleMaxLines_ =
         static_cast<uint32_t>(dialogPattern->GetAttr<int32_t>(DIALOG_TITLE_MAX_LINES, DIALOG_TITLE_MAX_LINES_VALUE));
@@ -123,18 +123,6 @@ void DialogTheme::Builder::ParseNewPattern(
     if (!dialogPattern) {
         return;
     }
-    theme->text_align_content_ = dialogPattern->GetAttr<int>("text_align_content", 0);
-    theme->text_align_title_ = dialogPattern->GetAttr<int>("text_align_title", 0);
-    theme->button_type_ = dialogPattern->GetAttr<int>("button_type", 0);
-    theme->shadowDialog_ = static_cast<uint32_t>(dialogPattern->GetAttr<double>("shadow_dialog", SHADOW_NONE));
-    theme->alignDialog_ = static_cast<int32_t>(dialogPattern->GetAttr<double>("align_dialog", DEFAULT_ALIGN_DIALOG));
-    theme->colorBgWithBlur_ = dialogPattern->GetAttr<Color>("color_bg_with_blur", Color::TRANSPARENT);
-    theme->paddingTopTitle_ = dialogPattern->GetAttr<Dimension>("padding_top_title", 16.0_vp);
-    theme->paddingSingleTitle_ = dialogPattern->GetAttr<Dimension>("padding_single_title", 0.0_vp);
-    theme->backgroundBorderColor_ = dialogPattern->GetAttr<Color>("border_color", Color::TRANSPARENT);
-    theme->backgroundBorderWidth_ = dialogPattern->GetAttr<Dimension>("border_width", 0.0_vp);
-    theme->normalButtonFontSize_ = dialogPattern->GetAttr<Dimension>("normal_button_text_font_size", 16.0_fp);
-    theme->dialogRatioHeight_ = dialogPattern->GetAttr<double>("dialog_ratio_height", 0.9f);
     theme->titleMinFontSize_ = dialogPattern->GetAttr<Dimension>("dialog_title_text_font_size_min", 15.0_fp);
     theme->contentMinFontSize_ = dialogPattern->GetAttr<Dimension>("content_text_font_size_min", 16.0_fp);
     auto titleMaxLines = dialogPattern->GetAttr<int>("dialog_title_text_max_lines", 2);
@@ -213,16 +201,5 @@ void DialogTheme::Builder::ParseNewPattern(
         dialogPattern->GetAttr<int>("dialog_scroll_flex_align", DEFAULT_DIALOG_SCROLL_FLEX_ALIGN));
     theme->columnMeasureType_ = static_cast<NG::MeasureType>(
         dialogPattern->GetAttr<int>("dialog_column_measure_type", DEFAULT_DIALOG_COLUMN_MEASURE_TYPE));
-    theme->buttonBottomTopMargin_ = dialogPattern->GetAttr<Dimension>("button_bottom_top_margin", 10.0_vp);
-    theme->titlePaddingHorizontal_ = dialogPattern->GetAttr<Dimension>("title_padding_horizontal", 16.0_vp);
-    theme->dialogDoubleBorderEnable_ = dialogPattern->GetAttr<int>("dialog_double_border_enable", 0);
-    theme->dialogOuterBorderColor_ = dialogPattern->GetAttr<Color>("dialog_outer_border_color", Color::TRANSPARENT);
-    theme->dialogOuterBorderWidth_ = dialogPattern->GetAttr<double>("dialog_outer_border_width", 0.0f);
-    theme->dialogInnerBorderColor_ = dialogPattern->GetAttr<Color>("dialog_inner_border_color", Color::TRANSPARENT);
-    theme->dialogInnerBorderWidth_ = dialogPattern->GetAttr<double>("dialog_inner_border_width", 0.0f);
-    theme->dialogBackgroundBlurStyle_ =
-        dialogPattern->GetAttr<int>("dialog_background_blur_style", static_cast<int>(BlurStyle::COMPONENT_ULTRA_THICK));
-    theme->cancelText_ = dialogPattern->GetAttr<std::string>("common_cancel_text", "");
-    theme->confirmText_ = dialogPattern->GetAttr<std::string>("common_ok_text", "");
 }
 } // namespace OHOS::Ace

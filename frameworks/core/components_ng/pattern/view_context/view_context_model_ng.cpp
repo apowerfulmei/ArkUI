@@ -15,12 +15,14 @@
 
 #include "core/components_ng/pattern/view_context/view_context_model_ng.h"
 
+#include "base/error/error_code.h"
+#include "core/common/ace_engine.h"
+#include "core/common/container.h"
+#include "core/components_ng/base/view_stack_processor.h"
 #include "core/components_ng/pattern/overlay/sheet_manager.h"
 #include "core/pipeline_ng/pipeline_context.h"
 
 namespace OHOS::Ace::NG {
-thread_local std::set<FrameNode*> ViewContextModelNG::pendingAnimationNodes_;
-
 void ViewContextModelNG::closeAnimation(const AnimationOption& option, bool needFlush)
 {
     NG::ViewStackProcessor::GetInstance()->SetImplicitAnimationOption(option);
@@ -31,19 +33,7 @@ void ViewContextModelNG::closeAnimation(const AnimationOption& option, bool need
     CHECK_NULL_VOID(container);
     auto pipelineContext = AceType::DynamicCast<PipelineContext>(container->GetPipelineContext());
     CHECK_NULL_VOID(pipelineContext);
-    auto frameNode = NG::ViewStackProcessor::GetInstance()->GetMainFrameNode();
-    if (!pipelineContext->HasPendingAnimation()) {
-        if (pendingAnimationNodes_.find(frameNode) != pendingAnimationNodes_.end()) {
-            ACE_SCOPED_TRACE("Close current nested animation");
-            TAG_LOGW(AceLogTag::ACE_ANIMATION, "Animation nested. Try to close current animation.");
-            AnimationUtils::CloseImplicitAnimation();
-            pendingAnimationNodes_.erase(frameNode);
-        }
-    }
     pipelineContext->CloseFrontendAnimation();
-    if (pendingAnimationNodes_.find(frameNode) != pendingAnimationNodes_.end()) {
-        pendingAnimationNodes_.erase(frameNode);
-    }
 }
 
 void ViewContextModelNG::openAnimation(const AnimationOption& option)
@@ -55,17 +45,7 @@ void ViewContextModelNG::openAnimation(const AnimationOption& option)
     CHECK_NULL_VOID(container);
     auto pipelineContext = AceType::DynamicCast<PipelineContext>(container->GetPipelineContext());
     CHECK_NULL_VOID(pipelineContext);
-    auto frameNode = NG::ViewStackProcessor::GetInstance()->GetMainFrameNode();
     pipelineContext->OpenFrontendAnimation(option, option.GetCurve(), option.GetOnFinishEvent());
-    pendingAnimationNodes_.emplace(frameNode);
-    bool isDirtyLayoutNodesEmpty = pipelineContext->IsDirtyLayoutNodesEmpty();
-    bool isDirtyPropertyNodesEmpty = pipelineContext->IsDirtyPropertyNodesEmpty();
-    if (option.GetIteration() == ANIMATION_REPEAT_INFINITE && !pipelineContext->IsLayouting()
-        && (!isDirtyLayoutNodesEmpty || !isDirtyPropertyNodesEmpty)) {
-        TAG_LOGW(AceLogTag::ACE_ANIMATION, "openAnimation: option:%{public}s,"
-            "dirtyLayoutNodes is empty:%{public}d, dirtyPropertyNodes is empty:%{public}d",
-            option.ToString().c_str(), isDirtyLayoutNodesEmpty, isDirtyPropertyNodesEmpty);
-    }
 }
 
 int32_t ViewContextModelNG::OpenBindSheet(
@@ -85,7 +65,7 @@ int32_t ViewContextModelNG::OpenBindSheet(
 }
 
 int32_t ViewContextModelNG::UpdateBindSheet(const RefPtr<NG::FrameNode>& sheetContentNode,
-    const NG::SheetStyle& sheetStyle, bool isPartialUpdate, int32_t currentInstanceId)
+    NG::SheetStyle& sheetStyle, bool isPartialUpdate, int32_t currentInstanceId)
 {
     return SheetManager::GetInstance().UpdateBindSheetByUIContext(
         sheetContentNode, sheetStyle, isPartialUpdate, currentInstanceId);

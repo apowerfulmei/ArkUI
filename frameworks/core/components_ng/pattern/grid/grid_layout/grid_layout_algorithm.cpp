@@ -15,7 +15,15 @@
 
 #include "core/components_ng/pattern/grid/grid_layout/grid_layout_algorithm.h"
 
+#include <cstdint>
+
+#include "base/geometry/ng/offset_t.h"
+#include "base/geometry/ng/size_t.h"
+#include "base/utils/utils.h"
+#include "core/components_ng/layout/layout_wrapper.h"
+#include "core/components_ng/pattern/grid/grid_item_pattern.h"
 #include "core/components_ng/pattern/grid/grid_utils.h"
+#include "core/components_ng/property/measure_utils.h"
 #include "core/components_ng/property/templates_parser.h"
 
 namespace OHOS::Ace::NG {
@@ -53,7 +61,6 @@ LayoutConstraintF GridLayoutAlgorithm::CreateChildConstraint(const SizeF& idealS
     if (!childLayoutProperty || !childLayoutProperty->GetCalcLayoutConstraint()) {
         layoutConstraint.selfIdealSize.UpdateIllegalSizeWithCheck(layoutConstraint.maxSize);
     }
-    layoutConstraint.parentIdealSize = OptionalSizeF(colLen, rowLen);
     return layoutConstraint;
 }
 
@@ -85,7 +92,7 @@ void GridLayoutAlgorithm::InitGridCeils(LayoutWrapper* layoutWrapper, const Size
     }
     if (static_cast<uint32_t>(crossCount_) != colsLen.size()) {
         crossCount_ = static_cast<int32_t>(colsLen.size());
-        info_.crossCount_ = crossCount_;
+        gridLayoutInfo_.crossCount_ = crossCount_;
     }
 
     gridCells_.clear();
@@ -102,8 +109,8 @@ void GridLayoutAlgorithm::InitGridCeils(LayoutWrapper* layoutWrapper, const Size
 
 bool GridLayoutAlgorithm::CheckGridPlaced(int32_t index, int32_t row, int32_t col, int32_t& rowSpan, int32_t& colSpan)
 {
-    auto rowIter = info_.gridMatrix_.find(row);
-    if (rowIter != info_.gridMatrix_.end()) {
+    auto rowIter = gridLayoutInfo_.gridMatrix_.find(row);
+    if (rowIter != gridLayoutInfo_.gridMatrix_.end()) {
         auto colIter = rowIter->second.find(col);
         if (colIter != rowIter->second.end()) {
             return false;
@@ -115,8 +122,8 @@ bool GridLayoutAlgorithm::CheckGridPlaced(int32_t index, int32_t row, int32_t co
     int32_t cSpan = 0;
     int32_t retColSpan = 1;
     while (rSpan < rowSpan) {
-        rowIter = info_.gridMatrix_.find(rSpan + row);
-        if (rowIter != info_.gridMatrix_.end()) {
+        rowIter = gridLayoutInfo_.gridMatrix_.find(rSpan + row);
+        if (rowIter != gridLayoutInfo_.gridMatrix_.end()) {
             cSpan = 0;
             while (cSpan < colSpan) {
                 if (rowIter->second.find(cSpan + col) != rowIter->second.end()) {
@@ -139,14 +146,14 @@ bool GridLayoutAlgorithm::CheckGridPlaced(int32_t index, int32_t row, int32_t co
     colSpan = retColSpan;
     for (int32_t i = row; i < row + rowSpan; ++i) {
         std::map<int32_t, int32_t> rowMap;
-        auto iter = info_.gridMatrix_.find(i);
-        if (iter != info_.gridMatrix_.end()) {
+        auto iter = gridLayoutInfo_.gridMatrix_.find(i);
+        if (iter != gridLayoutInfo_.gridMatrix_.end()) {
             rowMap = iter->second;
         }
         for (int32_t j = col; j < col + colSpan; ++j) {
             rowMap.emplace(std::make_pair(j, index));
         }
-        info_.gridMatrix_[i] = rowMap;
+        gridLayoutInfo_.gridMatrix_[i] = rowMap;
     }
     return true;
 }
@@ -251,10 +258,10 @@ void GridLayoutAlgorithm::Measure(LayoutWrapper* layoutWrapper)
 {
     auto gridLayoutProperty = AceType::DynamicCast<GridLayoutProperty>(layoutWrapper->GetLayoutProperty());
     CHECK_NULL_VOID(gridLayoutProperty);
-    Axis axis = info_.axis_;
+    Axis axis = gridLayoutInfo_.axis_;
     auto idealSize =
         CreateIdealSize(gridLayoutProperty->GetLayoutConstraint().value(), axis, MeasureType::MATCH_PARENT, true);
-    if (GreatOrEqual(GetMainAxisSize(idealSize, axis), LayoutInfinity<float>())) {
+    if (GreatOrEqual(GetMainAxisSize(idealSize, axis), Infinity<float>())) {
         idealSize = gridLayoutProperty->GetLayoutConstraint().value().percentReference;
         TAG_LOGI(AceLogTag::ACE_GRID, "size of main axis value is infinity, use percent reference");
     }
@@ -268,9 +275,9 @@ void GridLayoutAlgorithm::Measure(LayoutWrapper* layoutWrapper)
     int32_t colIndex = 0;
     int32_t itemIndex = 0;
     itemsPosition_.clear();
-    info_.gridMatrix_.clear();
-    info_.startIndex_ = 0;
-    info_.hasBigItem_ = false;
+    gridLayoutInfo_.gridMatrix_.clear();
+    gridLayoutInfo_.startIndex_ = 0;
+    gridLayoutInfo_.hasBigItem_ = false;
     for (int32_t index = 0; index < mainCount_ * crossCount_; ++index) {
         auto childLayoutWrapper = layoutWrapper->GetOrCreateChildByIndex(index);
         if (!childLayoutWrapper) {
@@ -288,7 +295,7 @@ void GridLayoutAlgorithm::Measure(LayoutWrapper* layoutWrapper)
         int32_t itemRowSpan = rect.rowSpan;
         int32_t itemColSpan = rect.columnSpan;
         if (itemRowSpan > 1 || itemColSpan > 1) {
-            info_.hasBigItem_ = true;
+            gridLayoutInfo_.hasBigItem_ = true;
         }
 
         if (itemRowStart >= 0 && itemRowStart < mainCount_ && itemColStart >= 0 && itemColStart < crossCount_ &&
@@ -296,7 +303,7 @@ void GridLayoutAlgorithm::Measure(LayoutWrapper* layoutWrapper)
             childLayoutWrapper->Measure(CreateChildConstraint(idealSize, gridLayoutProperty, itemRowStart, itemColStart,
                 itemRowSpan, itemColSpan, childLayoutProperty));
             itemsPosition_.try_emplace(index, ComputeItemPosition(layoutWrapper, itemRowStart, itemColStart,
-                                                  itemRowSpan, itemColSpan, childLayoutWrapper));
+                itemRowSpan, itemColSpan, childLayoutWrapper));
         } else {
             while (!CheckGridPlaced(itemIndex, rowIndex, colIndex, itemRowSpan, itemColSpan)) {
                 GetNextGrid(rowIndex, colIndex);
@@ -322,16 +329,16 @@ void GridLayoutAlgorithm::Measure(LayoutWrapper* layoutWrapper)
 
         ++itemIndex;
     }
-    info_.endIndex_ = itemIndex - 1;
+    gridLayoutInfo_.endIndex_ = itemIndex - 1;
     UpdateGridLayoutInfo();
 }
 
 void GridLayoutAlgorithm::UpdateGridLayoutInfo()
 {
-    auto startIter = info_.gridMatrix_.begin();
-    info_.startMainLineIndex_ = (startIter == info_.gridMatrix_.end() ? 0 : startIter->first);
-    auto endIter = info_.gridMatrix_.rbegin();
-    info_.endMainLineIndex_ = (endIter == info_.gridMatrix_.rend() ? -1 : endIter->first);
+    auto startIter = gridLayoutInfo_.gridMatrix_.begin();
+    gridLayoutInfo_.startMainLineIndex_ = (startIter == gridLayoutInfo_.gridMatrix_.end() ? 0 : startIter->first);
+    auto endIter = gridLayoutInfo_.gridMatrix_.rbegin();
+    gridLayoutInfo_.endMainLineIndex_ = (endIter == gridLayoutInfo_.gridMatrix_.rend() ? -1 : endIter->first);
 }
 
 void GridLayoutAlgorithm::Layout(LayoutWrapper* layoutWrapper)
@@ -357,7 +364,7 @@ void GridLayoutAlgorithm::Layout(LayoutWrapper* layoutWrapper)
         }
     }
 
-    for (const auto& mainLine : info_.gridMatrix_) {
+    for (const auto& mainLine : gridLayoutInfo_.gridMatrix_) {
         int32_t itemIndex = -1;
         for (const auto& crossLine : mainLine.second) {
             // If item index is the same, must be the same GridItem, needn't layout again.
@@ -373,7 +380,6 @@ void GridLayoutAlgorithm::Layout(LayoutWrapper* layoutWrapper)
             CHECK_NULL_VOID(layoutProperty);
             auto gridItemLayoutProperty = AceType::DynamicCast<GridItemLayoutProperty>(layoutProperty);
             CHECK_NULL_VOID(gridItemLayoutProperty);
-            gridItemLayoutProperty->UpdateIndex(itemIndex);
             gridItemLayoutProperty->UpdateMainIndex(mainLine.first);
             gridItemLayoutProperty->UpdateCrossIndex(crossLine.first);
             UpdateRealGridItemPositionInfo(wrapper, mainLine.first, crossLine.first);

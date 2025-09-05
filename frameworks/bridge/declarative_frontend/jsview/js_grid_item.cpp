@@ -151,22 +151,13 @@ void JSGridItem::SetSelected(const JSCallbackInfo& info)
         return;
     }
     bool select = false;
-    JSRef<JSVal> changeEventVal;
-    auto selectedVal = info[0];
-    if (selectedVal->IsObject()) {
-        JSRef<JSObject> obj = JSRef<JSObject>::Cast(selectedVal);
-        selectedVal = obj->GetProperty("value");
-        changeEventVal = obj->GetProperty("$value");
-    } else if (info.Length() > 1) {
-        changeEventVal = info[1];
-    }
-    if (selectedVal->IsBoolean()) {
-        select = selectedVal->ToBoolean();
+    if (info[0]->IsBoolean()) {
+        select = info[0]->ToBoolean();
     }
     GridItemModel::GetInstance()->SetSelected(select);
 
-    if (changeEventVal->IsFunction()) {
-        auto jsFunc = AceType::MakeRefPtr<JsFunction>(JSRef<JSObject>(), JSRef<JSFunc>::Cast(changeEventVal));
+    if (info.Length() > 1 && info[1]->IsFunction()) {
+        auto jsFunc = AceType::MakeRefPtr<JsFunction>(JSRef<JSObject>(), JSRef<JSFunc>::Cast(info[1]));
         auto targetNode = AceType::WeakClaim(NG::ViewStackProcessor::GetInstance()->GetMainFrameNode());
         auto changeEvent = [execCtx = info.GetExecutionContext(), func = std::move(jsFunc), node = targetNode](
                                bool param) {

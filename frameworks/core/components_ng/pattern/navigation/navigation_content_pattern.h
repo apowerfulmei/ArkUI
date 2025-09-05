@@ -17,14 +17,13 @@
 #define FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_PATTERNS_NAVIGATION_NAVIGATION_CONTENT_PATTERN_H
 
 #include "base/utils/noncopyable.h"
-#include "core/components_ng/pattern/navigation/custom_safe_area_expander.h"
 #include "core/components_ng/pattern/navigation/navigation_content_layout_algorithm.h"
 #include "core/components_ng/pattern/pattern.h"
 
 namespace OHOS::Ace::NG {
 // NavigationContentPattern is the content container for navigation destination
-class ACE_EXPORT NavigationContentPattern : public Pattern, public CustomSafeAreaExpander {
-    DECLARE_ACE_TYPE(NavigationContentPattern, Pattern, CustomSafeAreaExpander);
+class ACE_EXPORT NavigationContentPattern : public Pattern {
+    DECLARE_ACE_TYPE(NavigationContentPattern, Pattern);
 
 public:
     NavigationContentPattern() = default;
@@ -50,28 +49,6 @@ public:
                 .edges = SAFE_AREA_EDGE_ALL };
             host->GetLayoutProperty()->UpdateSafeAreaExpandOpts(opts);
         }
-    }
-
-    bool CustomizeExpandSafeArea() override
-    {
-        auto host = GetHost();
-        CHECK_NULL_RETURN(host, false);
-        return RunCustomizeExpandIfNeeded(host);
-    }
-
-    bool IsEnableMatchParent() override
-    {
-        return true;
-    }
-
-    bool IsEnableFix() override
-    {
-        return true;
-    }
-
-    bool IsEnableChildrenMatchParent() override
-    {
-        return true;
     }
 
     ACE_DISALLOW_COPY_AND_MOVE(NavigationContentPattern);

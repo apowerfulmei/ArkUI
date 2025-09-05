@@ -29,7 +29,7 @@ namespace OHOS::Ace::NG {
 class GestureEventHub;
 
 class ClickEvent : public AceType {
-    DECLARE_ACE_TYPE(ClickEvent, AceType);
+    DECLARE_ACE_TYPE(ClickEvent, AceType)
 public:
     explicit ClickEvent(GestureEventFunc&& callback) : callback_(std::move(callback)) {}
     ~ClickEvent() override = default;
@@ -73,7 +73,7 @@ private:
 };
 
 class ACE_EXPORT ClickEventActuator : public GestureEventActuator {
-    DECLARE_ACE_TYPE(ClickEventActuator, GestureEventActuator);
+    DECLARE_ACE_TYPE(ClickEventActuator, GestureEventActuator)
 public:
     explicit ClickEventActuator(const WeakPtr<GestureEventHub>& gestureEventHub);
     ~ClickEventActuator() override = default;
@@ -96,11 +96,6 @@ public:
         return userCallback_ != nullptr;
     }
 
-    bool IsComponentClickable() const
-    {
-        return !(clickEvents_.empty() && !clickAfterEvents_ && !userCallback_ && !jsFrameNodeCallback_);
-    }
-
     void AddClickEvent(const RefPtr<ClickEvent>& clickEvent)
     {
         if (clickEvents_.empty()) {
@@ -114,18 +109,9 @@ public:
 
     void AddDistanceThreshold(double distanceThreshold)
     {
-        distanceThreshold_ = Dimension(
-            Dimension(distanceThreshold, DimensionUnit::PX).ConvertToVp(), DimensionUnit::VP);
-        if (distanceThreshold_.ConvertToPx() <= 0) {
-            distanceThreshold_ = Dimension(std::numeric_limits<double>::infinity(), DimensionUnit::PX);
-        }
-    }
-
-    void AddDistanceThreshold(Dimension distanceThreshold)
-    {
         distanceThreshold_ = distanceThreshold;
-        if (distanceThreshold_.ConvertToPx() <= 0) {
-            distanceThreshold_ = Dimension(std::numeric_limits<double>::infinity(), DimensionUnit::PX);
+        if (LessOrEqual(distanceThreshold_, 0)) {
+            distanceThreshold_ = std::numeric_limits<double>::infinity();
         }
     }
 
@@ -203,7 +189,7 @@ private:
     RefPtr<ClickEvent> userCallback_;
     RefPtr<ClickEvent> jsFrameNodeCallback_;
     RefPtr<ClickRecognizer> clickRecognizer_;
-    Dimension distanceThreshold_ = Dimension(std::numeric_limits<double>::infinity(), DimensionUnit::PX);
+    double distanceThreshold_ = std::numeric_limits<double>::infinity();
 
     ACE_DISALLOW_COPY_AND_MOVE(ClickEventActuator);
 };

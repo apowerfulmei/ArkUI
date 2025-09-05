@@ -64,9 +64,6 @@ class RichEditorOnIMEInputCompleteModifier extends ModifierWithKey<(value:RichEd
 }
 
 class RichEditorCopyOptionsModifier extends ModifierWithKey<CopyOptions> {
-  constructor(value: CopyOptions) {
-    super(value);
-  }
   static identity: Symbol = Symbol('richEditorCopyOptions');
   applyPeer(node: KNode, reset: boolean): void {
     if (reset) {
@@ -170,65 +167,6 @@ class RichEditorAboutToIMEInputModifier extends ModifierWithKey<(value: RichEdit
   }
 }
 
-class RichEditorOnWillChangeModifier extends ModifierWithKey<(value: RichEditorChangeValue) => boolean> {
-  constructor(value: (value: RichEditorChangeValue) => boolean) {
-    super(value);
-  }
-  static identity = Symbol('richEditorOnWillChange');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().richEditor.resetOnWillChange(node);
-    } else {
-      getUINativeModule().richEditor.setOnWillChange(node, this.value);
-    }
-  }
-}
-
-class RichEditorOnDidChangeModifier extends ModifierWithKey<OnDidChangeCallback> {
-  constructor(value: OnDidChangeCallback) {
-    super(value);
-  }
-  static identity = Symbol('richEditorOnDidChange');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().richEditor.resetOnDidChange(node);
-    } else {
-      getUINativeModule().richEditor.setOnDidChange(node, this.value);
-    }
-  }
-}
-
-class RichEditorPlaceholderModifier extends ModifierWithKey<ArkPlaceholder> {
-  constructor(value: ArkPlaceholder) {
-    super(value);
-  }
-  static identity = Symbol('richEditorPlaceholder');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().richEditor.resetPlaceholder(node);
-    } else {
-      getUINativeModule().richEditor.setPlaceholder(node, this.value.value, this.value.style);
-    }
-  }
-  checkObjectDiff(): boolean {
-    return !(this.stageValue as ArkPlaceholder).isEqual(this.value as ArkPlaceholder);
-  }
-}
-
-class RichEditorAboutToDeleteModifier extends ModifierWithKey<(value: RichEditorDeleteValue) => boolean> {
-  constructor(value: (value: RichEditorDeleteValue) => boolean) {
-    super(value);
-  }
-  static identity = Symbol('richEditorAboutToDelete');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().richEditor.resetAboutToDelete(node);
-    } else {
-      getUINativeModule().richEditor.setAboutToDelete(node, this.value);
-    }
-  }
-}
-
 class RichEditorOnReadyModifier extends ModifierWithKey<() => void> {
   constructor(value: () => void) {
     super(value);
@@ -313,6 +251,7 @@ class RichEditorOnCopyModifier extends ModifierWithKey<Callback<CopyEvent>> {
   }
 }
 
+
 class RichEditorEnterKeyTypeModifier extends ModifierWithKey<EnterKeyType> {
   constructor(value: EnterKeyType) {
     super(value);
@@ -327,155 +266,6 @@ class RichEditorEnterKeyTypeModifier extends ModifierWithKey<EnterKeyType> {
   }
   checkObjectDiff(): boolean {
     return this.stageValue !== this.value;
-  }
-}
-
-class RichEditorEnableKeyboardOnFocusModifier extends ModifierWithKey<boolean> {
-  constructor(value: boolean) {
-    super(value);
-  }
-  static identity = Symbol('richEditorEnableKeyboardOnFocus');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().richEditor.resetEnableKeyboardOnFocus(node);
-    } else {
-      getUINativeModule().richEditor.setEnableKeyboardOnFocus(node, this.value);
-    }
-  }
-}
-
-class RichEditorEnablePreviewTextModifier extends ModifierWithKey<boolean> {
-  constructor(value: boolean) {
-    super(value);
-  }
-  static identity = Symbol('richEditorEnablePreviewText');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().richEditor.resetEnablePreviewText(node);
-    } else {
-      getUINativeModule().richEditor.setEnablePreviewText(node, this.value);
-    }
-  }
-}
-
-class RichEditorEditMenuOptionsModifier extends ModifierWithKey<EditMenuOptions> {
-  constructor(value: EditMenuOptions) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('richEditorEditMenuOptions');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().richEditor.resetEditMenuOptions(node);
-    } else {
-      getUINativeModule().richEditor.setEditMenuOptions(node, this.value);
-    }
-  }
-}
-
-class RichEditorBarStateModifier extends ModifierWithKey<BarState> {
-  constructor(value: BarState) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('richEditorBarState');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().richEditor.resetBarState(node);
-    } else {
-      getUINativeModule().richEditor.setBarState(node, this.value);
-    }
-  }
-}
-
-class RichEditorMaxLengthModifier extends ModifierWithKey<number> {
-  constructor(value: number) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('richEditorMaxLength');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().richEditor.resetMaxLength(node);
-    } else {
-      getUINativeModule().richEditor.setMaxLength(node, this.value!);
-    }
-  }
-  checkObjectDiff(): boolean {
-    return !isBaseOrResourceEqual(this.stageValue, this.value);
-  }
-}
-
-class RichEditorMaxLinesModifier extends ModifierWithKey<number | undefined> {
-  constructor(value: number | undefined) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('richEditorMaxLines');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().richEditor.resetMaxLines(node);
-    } else {
-      getUINativeModule().richEditor.setMaxLines(node, this.value!);
-    }
-  }
-  checkObjectDiff(): boolean {
-    return !isBaseOrResourceEqual(this.stageValue, this.value);
-  }
-}
-
-class RichEditorOnDidIMEInputModifier extends ModifierWithKey<(value: TextRange) => void> {
-  constructor(value: (value: TextRange) => void) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('richEditorOnDidIMEInput');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().richEditor.resetOnDidIMEInput(node);
-    } else {
-      getUINativeModule().richEditor.setOnDidIMEInput(node, this.value);
-    }
-  }
-}
-
-class RichEditorEnableHapticFeedbackModifier extends ModifierWithKey<boolean> {
-  constructor(value: boolean) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('richEditorEnableHapticFeedback');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().richEditor.resetEnableHapticFeedback(node);
-    } else {
-      getUINativeModule().richEditor.setEnableHapticFeedback(node, this.value!);
-    }
-  }
-  checkObjectDiff(): boolean {
-    return !isBaseOrResourceEqual(this.stageValue, this.value);
-  }
-}
-
-class RichEditorEnableAutoSpacingModifier extends ModifierWithKey<Optional<boolean>> {
-  constructor(value: Optional<boolean>) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('richEditorEnableAutoSpacing');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().richEditor.resetEnableAutoSpacing(node);
-    } else {
-      getUINativeModule().richEditor.setEnableAutoSpacing(node, this.value);
-    }
-  }
-}
-
-class RichEditorUndoStyleModifier extends ModifierWithKey<Optional<UndoStyle>> {
-  constructor(value: Optional<UndoStyle>) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('richEditorUndoStyle');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().richEditor.resetUndoStyle(node);
-    } else {
-      getUINativeModule().richEditor.setUndoStyle(node, this.value);
-    }
   }
 }
 
@@ -524,12 +314,17 @@ class ArkRichEditorComponent extends ArkComponent implements CommonMethod<RichEd
     modifierWithKey(this._modifiersWithKeys, RichEditorOnSelectModifier.identity, RichEditorOnSelectModifier, callback);
     return this;
   }
+
   onSubmit(callback: SubmitCallback): RichEditorAttribute {
     modifierWithKey(this._modifiersWithKeys, RichEditorOnSubmitModifier.identity, RichEditorOnSubmitModifier, callback);
     return this;
   }
   onSelectionChange(callback: (value: RichEditorRange) => void): RichEditorAttribute {
     modifierWithKey(this._modifiersWithKeys, RichEditorOnSelectionChangeModifier.identity, RichEditorOnSelectionChangeModifier, callback);
+    return this;
+  }
+  onSubmit(callback: SubmitCallback): RichEditorAttribute {
+    modifierWithKey(this._modifiersWithKeys, RichEditorOnSubmitModifier.identity, RichEditorOnSubmitModifier, callback);
     return this;
   }
   aboutToIMEInput(callback: (value: RichEditorInsertValue) => boolean): RichEditorAttribute {
@@ -540,24 +335,8 @@ class ArkRichEditorComponent extends ArkComponent implements CommonMethod<RichEd
     modifierWithKey(this._modifiersWithKeys, RichEditorOnIMEInputCompleteModifier.identity, RichEditorOnIMEInputCompleteModifier, callback);
     return this;
   }
-  onWillChange(callback: (value: RichEditorChangeValue) => boolean): RichEditorAttribute {
-    modifierWithKey(this._modifiersWithKeys, RichEditorOnWillChangeModifier.identity, RichEditorOnWillChangeModifier, callback);
-    return this;
-  }
-  onDidChange(callback: OnDidChangeCallback): RichEditorAttribute {
-    modifierWithKey(this._modifiersWithKeys, RichEditorOnDidChangeModifier.identity, RichEditorOnDidChangeModifier, callback);
-    return this;
-  }
-  placeholder(value: ResourceStr, style?: PlaceholderStyle): RichEditorAttribute {
-    let placeholder: ArkPlaceholder = new ArkPlaceholder();
-    placeholder.value = value;
-    placeholder.style = style;
-    modifierWithKey(this._modifiersWithKeys, RichEditorPlaceholderModifier.identity, RichEditorPlaceholderModifier, placeholder);
-    return this;
-  }
   aboutToDelete(callback: (value: RichEditorDeleteValue) => boolean): RichEditorAttribute {
-    modifierWithKey(this._modifiersWithKeys, RichEditorAboutToDeleteModifier.identity, RichEditorAboutToDeleteModifier, callback);
-    return this;
+    throw new Error('Method not implemented.');
   }
   onDeleteComplete(callback: () => void): RichEditorAttribute {
     modifierWithKey(this._modifiersWithKeys, RichEditorOnDeleteCompleteModifier.identity, RichEditorOnDeleteCompleteModifier, callback);
@@ -583,46 +362,6 @@ class ArkRichEditorComponent extends ArkComponent implements CommonMethod<RichEd
   }
   enterKeyType(value: EnterKeyType): RichEditorAttribute {
     modifierWithKey(this._modifiersWithKeys, RichEditorEnterKeyTypeModifier.identity, RichEditorEnterKeyTypeModifier, value);
-    return this;
-  }
-  enableKeyboardOnFocus(value: boolean): RichEditorAttribute {
-    modifierWithKey(this._modifiersWithKeys, RichEditorEnableKeyboardOnFocusModifier.identity, RichEditorEnableKeyboardOnFocusModifier, value);
-    return this;
-  }
-  enablePreviewText(value: boolean): RichEditorAttribute {
-    modifierWithKey(this._modifiersWithKeys, RichEditorEnablePreviewTextModifier.identity, RichEditorEnablePreviewTextModifier, value);
-    return this;
-  }
-  editMenuOptions(value: EditMenuOptions): RichEditorAttribute {
-    modifierWithKey(this._modifiersWithKeys, RichEditorEditMenuOptionsModifier.identity, RichEditorEditMenuOptionsModifier, value);
-    return this;
-  }
-  barState(value: BarState): RichEditorAttribute {
-    modifierWithKey(this._modifiersWithKeys, RichEditorBarStateModifier.identity, RichEditorBarStateModifier, value);
-    return this;
-  }
-  maxLength(value: number): RichEditorAttribute {
-    modifierWithKey(this._modifiersWithKeys, RichEditorMaxLengthModifier.identity, RichEditorMaxLengthModifier, value);
-    return this;
-  }
-  maxLines(value: number): RichEditorAttribute {
-    modifierWithKey(this._modifiersWithKeys, RichEditorMaxLinesModifier.identity, RichEditorMaxLinesModifier, value);
-    return this;
-  }
-  onDidIMEInput(callback: (value: TextRange) => void): RichEditorAttribute {
-    modifierWithKey(this._modifiersWithKeys, RichEditorOnDidIMEInputModifier.identity, RichEditorOnDidIMEInputModifier, callback);
-    return this;
-  }
-  enableHapticFeedback(value: boolean): this {
-    modifierWithKey(this._modifiersWithKeys, RichEditorEnableHapticFeedbackModifier.identity, RichEditorEnableHapticFeedbackModifier, value);
-    return this;
-  }
-  enableAutoSpacing(enable: Optional<boolean>): RichEditorAttribute {
-    modifierWithKey(this._modifiersWithKeys, RichEditorEnableAutoSpacingModifier.identity, RichEditorEnableAutoSpacingModifier, enable);
-    return this;
-  }
-  undoStyle(style: Optional<UndoStyle>): RichEditorAttribute {
-    modifierWithKey(this._modifiersWithKeys, RichEditorUndoStyleModifier.identity, RichEditorUndoStyleModifier, style);
     return this;
   }
 }

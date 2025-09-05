@@ -48,21 +48,6 @@ enum class ContextMenuRegisterType : char {
     CUSTOM_TYPE = 1,
 };
 
-struct MenuMaskType {
-    std::optional<Color> maskColor;
-    std::optional<BlurStyle> maskBackGroundBlurStyle;
-};
-
-enum class PreviewScaleMode {
-    AUTO = 0,
-    CONSTANT = 1,
-    MAINTAIN = 2,
-};
-
-enum class AvailableLayoutAreaMode {
-    SAFE_AREA = 0,
-};
-
 struct MenuParam {
     std::string title;
     OffsetF positionOffset;
@@ -72,15 +57,10 @@ struct MenuParam {
     ContextMenuRegisterType contextMenuRegisterType = ContextMenuRegisterType::NORMAL_TYPE;
     std::function<void(const std::string&)> onStateChange;
     std::optional<Placement> placement;
-    std::optional<bool> enableHoverMode = std::nullopt;
     std::function<void()> onAppear;
     std::function<void()> onDisappear;
     std::function<void()> aboutToAppear;
     std::function<void()> aboutToDisappear;
-    std::function<void()> onWillAppear;
-    std::function<void()> onDidAppear;
-    std::function<void()> onWillDisappear;
-    std::function<void()> onDidDisappear;
     std::optional<bool> enableArrow;
     std::optional<Dimension> arrowOffset;
     bool isShowInSubWindow = true;
@@ -92,73 +72,15 @@ struct MenuParam {
     MenuPreviewMode previewMode = MenuPreviewMode::NONE;
     MenuPreviewAnimationOptions previewAnimationOptions;
     bool isShowHoverImage = false;
-    bool hoverScaleInterruption = false;
     MenuPreviewAnimationOptions hoverImageAnimationOptions;
     std::optional<EffectOption> backgroundEffectOption;
     std::optional<Color> backgroundColor;
     std::optional<int32_t> backgroundBlurStyle;
-    std::optional<BlurStyleOption> backgroundBlurStyleOption;
     std::optional<NG::BorderRadiusProperty> borderRadius;
     std::optional<NG::BorderRadiusProperty> previewBorderRadius;
     std::optional<NG::MarginProperty> layoutRegionMargin;
     bool isPreviewContainScale = false;
-    std::optional<BlurStyleOption> blurStyleOption;
-    std::optional<EffectOption> effectOption;
-    HapticFeedbackMode hapticFeedbackMode = HapticFeedbackMode::DISABLED;
     bool disappearScaleToTarget = false;
-    std::optional<NG::BorderWidthProperty> outlineWidth;
-    std::optional<NG::BorderColorProperty> outlineColor;
-    std::optional<bool> maskEnable;
-    std::optional<MenuMaskType> maskType;
-    std::optional<OffsetF> anchorPosition;
-    std::optional<ModalMode> modalMode;
-    std::optional<PreviewScaleMode> previewScaleMode;
-    std::optional<AvailableLayoutAreaMode> availableLayoutAreaMode;
-    bool isDarkMode = false;
-    bool isWithTheme = false;
-    struct resourceUpdater {
-        RefPtr<ResourceObject> resObj;
-        std::function<void(const RefPtr<ResourceObject>&, MenuParam&)> updateFunc;
-    };
-    std::unordered_map<std::string, resourceUpdater> resMap_;
-
-    void AddResource(const std::string& key, const RefPtr<ResourceObject>& resObj,
-        std::function<void(const RefPtr<ResourceObject>&, MenuParam&)>&& updateFunc)
-    {
-        if (resObj == nullptr || !updateFunc) {
-            return;
-        }
-        resMap_[key] = { resObj, std::move(updateFunc) };
-    }
-
-    void AddResourceNoUpdate(const std::string& key, const RefPtr<ResourceObject>& resObj)
-    {
-        if (resObj == nullptr) {
-            return;
-        }
-        resMap_[key] = { resObj, std::move(nullptr) };
-    }
-
-    const RefPtr<ResourceObject> GetResource(const std::string& key) const
-    {
-        auto iter = resMap_.find(key);
-        if (iter != resMap_.end()) {
-            return iter->second.resObj;
-        }
-        return nullptr;
-    }
-
-    bool HasResources() const
-    {
-        return !resMap_.empty();
-    }
-
-    void ReloadResources()
-    {
-        for (const auto& [key, resourceUpdater] : resMap_) {
-            resourceUpdater.updateFunc(resourceUpdater.resObj, *this);
-        }
-    }
 };
 
 } // namespace OHOS::Ace::NG

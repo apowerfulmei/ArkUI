@@ -21,7 +21,6 @@
 #include "test/mock/core/rosen/testing_brush.h"
 #include "test/mock/core/rosen/testing_camera.h"
 #include "test/mock/core/rosen/testing_canvas.h"
-#include "test/mock/core/rosen/testing_canvas_utils.h"
 #include "test/mock/core/rosen/testing_color.h"
 #include "test/mock/core/rosen/testing_color_filter.h"
 #include "test/mock/core/rosen/testing_color_matrix.h"
@@ -48,19 +47,16 @@
 #include "test/mock/core/rosen/testing_scalar.h"
 #include "test/mock/core/rosen/testing_shader_effect.h"
 #include "test/mock/core/rosen/testing_shadowflags.h"
-#include "test/mock/core/rosen/testing_surface.h"
 #include "test/mock/core/rosen/testing_text_blob.h"
 #include "test/mock/core/rosen/testing_text_style.h"
 #include "test/mock/core/rosen/testing_typeface.h"
 #include "test/mock/core/rosen/testing_typography.h"
 #include "test/mock/core/rosen/testing_typography_create.h"
 #include "test/mock/core/rosen/testing_typography_style.h"
-#include "test/mock/core/rosen/testing_picture_recorder.h"
 
 namespace OHOS::Ace {
 namespace RSDrawing = Testing;
 using RSCanvas = Testing::TestingCanvas;
-using RSCanvasUtils = Testing::TestingCanvasUtils;
 using RSPen = Testing::TestingPen;
 using RSBrush = Testing::TestingBrush;
 using RSPath = Testing::TestingPath;
@@ -115,7 +111,6 @@ using RSColorSpace = Testing::TestingColorSpace;
 using RSData = Testing::TestingData;
 using RSRecordingCanvas = Testing::TestingRecordingCanvas;
 using RSDrawCmdList = Testing::TestingDrawCmdList;
-using RSHybridRenderType = Testing::TestingHybridRenderType;
 using RSFilterMode = Testing::FilterMode;
 using RSMipmapMode = Testing::MipmapMode;
 using RSRecordingPath = Testing::TestingPath;
@@ -128,18 +123,16 @@ using RSTextEncoding = Testing::TestingTextEncoding;
 using RSSaveLayerOps = Testing::TestingSaveLayerOps;
 using RSSrcRectConstraint = Testing::SrcRectConstraint;
 using RSImageBlurType = Testing::ImageBlurType;
-using RSSurface = Testing::TestingSurface;
-using RSPictureRecorder =Testing::TestingPictureRecorder;
+#ifdef USE_ROSEN_DRAWING
 using RSRecordingColorFilter = Testing::TestingColorFilter;
 using RSRecordingImageFilter = Testing::TestingImageFilter;
 using RSRecordingShaderEffect = Testing::TestingShaderEffect;
 using RSPicture = Testing::TestingPicture;
+#endif
+#ifdef USE_GRAPHIC_TEXT_GINE
 using RSTextRectHeightStyle = Testing::TestingTypographyProperties::TextRectHeightStyle;
 using RSTextRectWidthStyle = Testing::TestingTypographyProperties::TextRectWidthStyle;
 using RSTextRect = Testing::TestingTypographyProperties::TextRect;
-using RSColor4f = Testing::TestingColor4f;
-using RSCMSTransferFuncType = Testing::TestingCMSTransferFuncType;
-using RSCMSMatrixType = Testing::TestingCMSMatrixType;
-using RSClamp = Testing::TestingClamp;
+#endif
 } // namespace OHOS::Ace
 #endif // FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_RENDER_DRAWING_MOCK_H

@@ -14,9 +14,12 @@
  */
 #include "core/interfaces/native/node/column_modifier.h"
 
+#include "core/components/common/layout/constants.h"
+#include "core/components/common/properties/alignment.h"
+#include "core/components_ng/base/frame_node.h"
 #include "core/components_ng/base/view_abstract.h"
 #include "core/components_ng/pattern/linear_layout/column_model_ng.h"
-#include "core/common/container.h"
+#include "core/pipeline/base/element_register.h"
 
 namespace OHOS::Ace::NG {
 constexpr FlexAlign DEFAULT_JUSTIFY_CONTENT = FlexAlign::FLEX_START;
@@ -72,26 +75,18 @@ ArkUI_Int32 GetColumnAlignItems(ArkUINodeHandle node)
     return static_cast<ArkUI_Int32>(ColumnModelNG::GetAlignItems(frameNode));
 }
 
-void SetColumnSpace(ArkUINodeHandle node, ArkUI_Float32 value, ArkUI_Int32 unit, void* spaceRawPtr)
+void SetColumnSpace(ArkUINodeHandle node, ArkUI_Float32 value, ArkUI_Int32 unit)
 {
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
-    ColumnModelNG::ResetResObj(frameNode, "column.space");
-    if (SystemProperties::ConfigChangePerform() && spaceRawPtr) {
-        auto* space = reinterpret_cast<ResourceObject*>(spaceRawPtr);
-        auto spaceResObj = AceType::Claim(space);
-        ColumnModelNG::SetSpace(frameNode, spaceResObj);
-    } else {
-        const auto space = CalcDimension(value, static_cast<OHOS::Ace::DimensionUnit>(unit));
-        ColumnModelNG::SetSpace(frameNode, space);
-    }
+    const auto space = CalcDimension(value, static_cast<OHOS::Ace::DimensionUnit>(unit));
+    ColumnModelNG::SetSpace(frameNode, space);
 }
 
 void ResetColumnSpace(ArkUINodeHandle node)
 {
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
-    ColumnModelNG::ResetResObj(frameNode, "column.space");
     const auto space = CalcDimension(0.0, DimensionUnit::PX);
     ColumnModelNG::SetSpace(frameNode, space);
 }
@@ -113,37 +108,33 @@ void ResetColumnReverse(ArkUINodeHandle node)
 namespace NodeModifier {
 const ArkUIColumnModifier* GetColumnModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
     static const ArkUIColumnModifier modifier = {
-        .setColumnJustifyContent = SetColumnJustifyContent,
-        .resetColumnJustifyContent = ResetColumnJustifyContent,
-        .setColumnAlignItems = SetColumnAlignItems,
-        .resetColumnAlignItems = ResetColumnAlignItems,
-        .getColumnJustifyContent = GetColumnJustifyContent,
-        .getColumnAlignItems = GetColumnAlignItems,
-        .setColumnSpace = SetColumnSpace,
-        .resetColumnSpace = ResetColumnSpace,
-        .setColumnReverse = SetColumnReverse,
-        .resetColumnReverse = ResetColumnReverse,
+        SetColumnJustifyContent,
+        ResetColumnJustifyContent,
+        SetColumnAlignItems,
+        ResetColumnAlignItems,
+        GetColumnJustifyContent,
+        GetColumnAlignItems,
+        SetColumnSpace,
+        ResetColumnSpace,
+        SetColumnReverse,
+        ResetColumnReverse,
     };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
     return &modifier;
 }
 
 const CJUIColumnModifier* GetCJUIColumnModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
     static const CJUIColumnModifier modifier = {
-        .setColumnJustifyContent = SetColumnJustifyContent,
-        .resetColumnJustifyContent = ResetColumnJustifyContent,
-        .setColumnAlignItems = SetColumnAlignItems,
-        .resetColumnAlignItems = ResetColumnAlignItems,
-        .getColumnJustifyContent = GetColumnJustifyContent,
-        .getColumnAlignItems = GetColumnAlignItems,
-        .setColumnSpace = SetColumnSpace,
-        .resetColumnSpace = ResetColumnSpace,
+        SetColumnJustifyContent,
+        ResetColumnJustifyContent,
+        SetColumnAlignItems,
+        ResetColumnAlignItems,
+        GetColumnJustifyContent,
+        GetColumnAlignItems,
+        SetColumnSpace,
+        ResetColumnSpace,
     };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
     return &modifier;
 }
 }

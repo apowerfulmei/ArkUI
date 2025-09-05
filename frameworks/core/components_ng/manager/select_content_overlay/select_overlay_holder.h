@@ -131,18 +131,12 @@ public:
         return true;
     }
 
-    virtual bool GetIsHostNodeEnableSubWindowMenu() const
-    {
-        return true;
-    }
-
-    virtual void IsAIMenuOptionChanged(SelectMenuInfo& menuInfo) {}
-
 protected:
     virtual RectF GetSelectAreaFromRects(SelectRectsType pos)
     {
         return {};
     }
+
 private:
     WeakPtr<AceType> bindManager_;
 

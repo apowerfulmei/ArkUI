@@ -42,6 +42,7 @@ constexpr int32_t BUBBLE_DISPLAY_SIZE_CHANGE_TIMER = 250;
 constexpr int32_t BUBBLE_DISPLAY_OPACITY_CHANGE_TIMER = 150;
 constexpr int32_t BUBBLE_DISAPPEAR_SIZE_CHANGE_TIMER = 250;
 constexpr int32_t BUBBLE_DISAPPEAR_OPACITY_CHANGE_TIMER = 250;
+constexpr int32_t BUBBLE_DISAPPEAR_DELAY_TIMER = 2000;
 constexpr Dimension BUBBLE_VERTICAL_WIDTH = 62.0_vp;
 constexpr Dimension BUBBLE_VERTICAL_HEIGHT = 32.0_vp;
 constexpr Dimension BUBBLE_HORIZONTAL_WIDTH = 48.0_vp;
@@ -84,11 +85,6 @@ SliderTipModifier::SliderTipModifier(std::function<std::pair<OffsetF, float>()> 
 }
 
 SliderTipModifier::~SliderTipModifier() {}
-
-void SliderTipModifier::UpdateThemeParams(const RefPtr<SliderTheme>& theme)
-{
-    tipDelayTime_ = theme->GetTipDelayTime();
-}
 
 void SliderTipModifier::PaintTip(DrawingContext& context)
 {
@@ -391,9 +387,8 @@ void SliderTipModifier::onDraw(DrawingContext& context)
     }
 }
 
-void SliderTipModifier::SetBubbleDisplayAnimation(const RefPtr<FrameNode>& host)
+void SliderTipModifier::SetBubbleDisplayAnimation()
 {
-    CHECK_NULL_VOID(host);
     auto weak = AceType::WeakClaim(this);
     AnimationOption option = AnimationOption();
     option.SetDuration(BUBBLE_DISPLAY_SIZE_CHANGE_TIMER);
@@ -402,7 +397,7 @@ void SliderTipModifier::SetBubbleDisplayAnimation(const RefPtr<FrameNode>& host)
         auto self = weak.Upgrade();
         CHECK_NULL_VOID(self);
         self->sizeScale_->Set(BUBBLE_SIZE_MAX_SCALE);
-    }, nullptr, nullptr, host->GetContextRefPtr());
+    });
 
     option.SetDuration(BUBBLE_DISPLAY_OPACITY_CHANGE_TIMER);
     option.SetCurve(Curves::SHARP);
@@ -410,12 +405,11 @@ void SliderTipModifier::SetBubbleDisplayAnimation(const RefPtr<FrameNode>& host)
         auto self = weak.Upgrade();
         CHECK_NULL_VOID(self);
         self->opacityScale_->Set(BUBBLE_OPACITY_MAX_SCALE);
-    }, nullptr, nullptr, host->GetContextRefPtr());
+    });
 }
 
-void SliderTipModifier::SetBubbleDisappearAnimation(const RefPtr<FrameNode>& host)
+void SliderTipModifier::SetBubbleDisappearAnimation()
 {
-    CHECK_NULL_VOID(host);
     auto weak = AceType::WeakClaim(this);
     AnimationOption option = AnimationOption();
     option.SetDuration(BUBBLE_DISAPPEAR_SIZE_CHANGE_TIMER);
@@ -424,7 +418,7 @@ void SliderTipModifier::SetBubbleDisappearAnimation(const RefPtr<FrameNode>& hos
         auto self = weak.Upgrade();
         CHECK_NULL_VOID(self);
         self->sizeScale_->Set(BUBBLE_SIZE_MIN_SCALE);
-    }, nullptr, nullptr, host->GetContextRefPtr());
+    });
 
     option.SetDuration(BUBBLE_DISAPPEAR_OPACITY_CHANGE_TIMER);
     option.SetCurve(Curves::SHARP);
@@ -432,10 +426,10 @@ void SliderTipModifier::SetBubbleDisappearAnimation(const RefPtr<FrameNode>& hos
         auto self = weak.Upgrade();
         CHECK_NULL_VOID(self);
         self->opacityScale_->Set(BUBBLE_OPACITY_MIN_SCALE);
-    }, nullptr, nullptr, host->GetContextRefPtr());
+    });
 }
 
-void SliderTipModifier::SetTipFlag(bool flag, const RefPtr<FrameNode>& host)
+void SliderTipModifier::SetTipFlag(bool flag)
 {
     CHECK_NULL_VOID(tipFlag_);
     if (tipFlag_->Get() == flag) {
@@ -443,29 +437,25 @@ void SliderTipModifier::SetTipFlag(bool flag, const RefPtr<FrameNode>& host)
     }
     taskId_++;
     if (flag) {
-        SetBubbleDisplayAnimation(host);
-    } else if (tipDelayTime_ > 0) {
+        SetBubbleDisplayAnimation();
+    } else {
         auto pipeline = PipelineBase::GetCurrentContext();
         CHECK_NULL_VOID(pipeline);
         auto taskExecutor = pipeline->GetTaskExecutor();
         CHECK_NULL_VOID(taskExecutor);
         taskExecutor->PostDelayedTask(
-            [weak = WeakClaim(this), taskId = taskId_, weakHost = AceType::WeakClaim(AceType::RawPtr(host))]() {
+            [weak = WeakClaim(this), taskId = taskId_]() {
                 auto modifier = weak.Upgrade();
                 CHECK_NULL_VOID(modifier);
-                auto host = weakHost.Upgrade();
-                CHECK_NULL_VOID(host);
                 if (modifier->taskId_ != taskId) {
                     return;
                 }
-                modifier->SetBubbleDisappearAnimation(host);
-                auto pipeline = host->GetContextRefPtr();
+                modifier->SetBubbleDisappearAnimation();
+                auto pipeline = PipelineBase::GetCurrentContext();
                 CHECK_NULL_VOID(pipeline);
                 pipeline->RequestFrame();
             },
-            TaskExecutor::TaskType::UI, tipDelayTime_, "ArkUISliderSetBubbleDisappearAnimation");
-    } else {
-        SetBubbleDisappearAnimation(host);
+            TaskExecutor::TaskType::UI, BUBBLE_DISAPPEAR_DELAY_TIMER, "ArkUISliderSetBubbleDisappearAnimation");
     }
     tipFlag_->Set(flag);
 }
@@ -484,9 +474,7 @@ void SliderTipModifier::BuildParagraph()
         textFontSize_ = SUITABLEAGING_LEVEL_2_TEXT_FONT_SIZE;
     }
     fontStyle->UpdateFontSize(textFontSize_);
-    auto theme = pipeline->GetTheme<TextTheme>();
-    CHECK_NULL_VOID(theme);
-    TextStyle textStyle = CreateTextStyleUsingTheme(fontStyle, nullptr, theme);
+    TextStyle textStyle = CreateTextStyleUsingTheme(fontStyle, nullptr, pipeline->GetTheme<TextTheme>());
     auto content = content_->Get();
     auto fontManager = pipeline->GetFontManager();
     if (fontManager && fontManager->IsUseAppCustomFont()) {
@@ -609,11 +597,11 @@ bool SliderTipModifier::UpdateOverlayRect(const SizeF& frameSize)
         auto maxWidth = std::max(circleSize.Width(), frameSize.Width());
         if (sliderGlobalOffset_->Get().GetX() + vertex.GetX() < bubbleSize_.Width()) {
             rect.SetOffset(OffsetF(AceApplicationInfo::GetInstance().IsRightToLeft()
-                ? (sliderOffsetX - bubbleSize_.Width() - distance)
+                ? (sliderOffsetX + bubbleSize_.Width() + distance)
                 : (bubbleSize_.Width() + distance), -bubbleSize_.Height()));
         } else {
             rect.SetOffset(OffsetF(AceApplicationInfo::GetInstance().IsRightToLeft()
-                ? (sliderOffsetX + bubbleSize_.Width() + distance)
+                ? (sliderOffsetX - bubbleSize_.Width() - distance)
                 : (-bubbleSize_.Width() - distance), -bubbleSize_.Height()));
         }
         rect.SetSize(

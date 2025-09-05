@@ -29,7 +29,7 @@ class EventHub;
 
 // The gesture event hub is mainly used to handle common gesture events.
 class ACE_EXPORT InputEventHub : public virtual AceType {
-    DECLARE_ACE_TYPE(InputEventHub, AceType);
+    DECLARE_ACE_TYPE(InputEventHub, AceType)
 public:
     explicit InputEventHub(const WeakPtr<EventHub>& eventHub);
     ~InputEventHub() override = default;
@@ -42,7 +42,7 @@ public:
         }
         mouseEventActuator_->ReplaceInputEvent(std::move(onMouseEventFunc));
     }
-    void SetFrameNodeCommonOnMouseEvent(OnMouseEventFunc&& onMouseEventFunc)
+    void SetJSFrameNodeOnMouseEvent(OnMouseEventFunc&& onMouseEventFunc)
     {
         if (!mouseEventActuator_) {
             mouseEventActuator_ = MakeRefPtr<InputEventActuator>(WeakClaim(this));
@@ -64,14 +64,6 @@ public:
             return;
         }
         mouseEventActuator_->RemoveInputEvent(onMouseEvent);
-    }
-
-    void RemoveAllTipsMouseEvents()
-    {
-        if (!mouseEventActuator_) {
-            return;
-        }
-        mouseEventActuator_->RemoveAllTipsEvents();
     }
 
     void SetHoverEffect(HoverEffectType type);
@@ -120,15 +112,7 @@ public:
         accessibilityHoverEventActuator_->ReplaceInputEvent(std::move(onAccessibilityHoverEventFunc));
     }
 
-    bool HasAccessibilityHoverEvent()
-    {
-        if (accessibilityHoverEventActuator_) {
-            return accessibilityHoverEventActuator_->HasUserCallback();
-        }
-        return false;
-    }
-
-    void SetFrameNodeCommonOnHoverEvent(OnHoverFunc&& onHoverEventFunc)
+    void SetJSFrameNodeOnHoverEvent(OnHoverFunc&& onHoverEventFunc)
     {
         if (!hoverEventActuator_) {
             hoverEventActuator_ = MakeRefPtr<InputEventActuator>(WeakClaim(this));
@@ -136,7 +120,7 @@ public:
         hoverEventActuator_->ReplaceJSFrameNodeInputEvent(std::move(onHoverEventFunc));
     }
 
-    void SetFrameNodeCommonOnHoverMoveEvent(OnHoverMoveFunc&& onHoverMoveEventFunc)
+    void SetJSFrameNodeOnHoverMoveEvent(OnHoverMoveFunc&& onHoverMoveEventFunc)
     {
         if (!hoverMoveEventActuator_) {
             hoverMoveEventActuator_ = MakeRefPtr<InputEventActuator>(WeakClaim(this));
@@ -159,15 +143,7 @@ public:
         }
         hoverEventActuator_->RemoveInputEvent(onHoverEvent);
     }
-
-    void RemoveAllTipsHoverEvents()
-    {
-        if (!hoverEventActuator_) {
-            return;
-        }
-        hoverEventActuator_->RemoveAllTipsEvents();
-    }
-
+    
     void AddOnHoverMoveEvent(const RefPtr<InputEvent>& onHoverMoveEvent)
     {
         if (!hoverMoveEventActuator_) {
@@ -182,14 +158,6 @@ public:
             return;
         }
         hoverMoveEventActuator_->RemoveInputEvent(onHoverMoveEvent);
-    }
-
-    void SetAxisEvent(OnAxisEventFunc&& onAxisEventFunc)
-    {
-        if (!axisEventActuator_) {
-            axisEventActuator_ = MakeRefPtr<InputEventActuator>(WeakClaim(this));
-        }
-        axisEventActuator_->ReplaceInputEvent(std::move(onAxisEventFunc));
     }
 
     void AddOnAxisEvent(const RefPtr<InputEvent>& onAxisEvent)
@@ -210,7 +178,6 @@ public:
 
     // the return value means prevents event bubbling.
     bool ProcessMouseTestHit(const OffsetF& coordinateOffset, TouchTestResult& result);
-    bool ProcessTipsMouseTestHit(const OffsetF& coordinateOffset, TouchTestResult& result);
 
     bool ProcessPenHoverTestHit(const OffsetF& coordinateOffset, TouchTestResult& result);
 
@@ -269,13 +236,6 @@ public:
     {
         if (mouseEventActuator_) {
             mouseEventActuator_->ClearJSFrameNodeCallback();
-        }
-    }
-
-    void ClearUserOnAxisEvent()
-    {
-        if (axisEventActuator_) {
-            axisEventActuator_->ClearUserCallback();
         }
     }
 

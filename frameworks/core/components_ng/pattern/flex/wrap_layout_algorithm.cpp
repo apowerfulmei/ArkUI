@@ -15,7 +15,23 @@
 
 #include "core/components_ng/pattern/flex/wrap_layout_algorithm.h"
 
+#include <algorithm>
+
+#include "base/geometry/axis.h"
+#include "base/geometry/ng/size_t.h"
+#include "base/log/ace_trace.h"
+#include "base/memory/referenced.h"
+#include "base/utils/utils.h"
+#include "core/common/container.h"
+#include "core/components/common/layout/constants.h"
+#include "core/components/common/properties/alignment.h"
+#include "core/components_ng/base/frame_node.h"
+#include "core/components_ng/base/geometry_node.h"
+#include "core/components_ng/layout/layout_property.h"
+#include "core/components_ng/layout/layout_wrapper.h"
 #include "core/components_ng/pattern/flex/flex_layout_property.h"
+#include "core/components_ng/property/layout_constraint.h"
+#include "core/components_ng/property/measure_property.h"
 #include "core/components_ng/property/measure_utils.h"
 
 namespace OHOS::Ace::NG {
@@ -52,15 +68,13 @@ bool IsColumnReverse(WrapDirection direction)
     }
 }
 
-void WrapLayoutAlgorithm::UpdatePercentSensitive(
-    LayoutWrapper *layoutWrapper, bool usingWidthPercent, bool usingHeightPercent)
+void WrapLayoutAlgorithm::UpdatePercentSensitive(LayoutWrapper *layoutWrapper)
 {
-    if (usingWidthPercent) {
-        SetWidthPercentSensitive(layoutWrapper);
-    }
-    if (usingHeightPercent) {
-        SetHeightPercentSensitive(layoutWrapper);
-    }
+    CHECK_NULL_VOID(layoutWrapper && layoutWrapper->GetHostTag() == V2::FLEX_ETS_TAG);
+    auto layoutAlgorithmWrapper = layoutWrapper->GetLayoutAlgorithm();
+    CHECK_NULL_VOID(layoutAlgorithmWrapper);
+    layoutAlgorithmWrapper->SetPercentWidth(true);
+    layoutAlgorithmWrapper->SetPercentHeight(true);
 }
 
 void WrapLayoutAlgorithm::Measure(LayoutWrapper* layoutWrapper)
@@ -74,6 +88,7 @@ void WrapLayoutAlgorithm::Measure(LayoutWrapper* layoutWrapper)
     outOfLayoutChildren_.clear();
     auto flexProp = AceType::DynamicCast<FlexLayoutProperty>(layoutWrapper->GetLayoutProperty());
     CHECK_NULL_VOID(flexProp);
+    UpdatePercentSensitive(layoutWrapper);
     direction_ = flexProp->GetWrapDirection().value_or(WrapDirection::HORIZONTAL);
     // alignment for alignContent, alignment when cross axis has extra space
     alignment_ = flexProp->GetAlignment().value_or(WrapAlignment::START);
@@ -90,7 +105,6 @@ void WrapLayoutAlgorithm::Measure(LayoutWrapper* layoutWrapper)
     isRightDirection_ = textDir_ == TextDirection::RTL;
     isColumnReverse_ = IsColumnReverse(direction_);
     PerformLayoutInitialize(flexProp);
-    UpdatePercentSensitive(layoutWrapper, isWidthPercentSensitive_, isHeightPercentSensitive_);
     totalMainLength_ = 0.0f;
     totalCrossLength_ = 0.0f;
     auto realMaxSize = GetLeftSize(0.0f, mainLengthLimit_, crossLengthLimit_);
@@ -115,11 +129,6 @@ void WrapLayoutAlgorithm::Measure(LayoutWrapper* layoutWrapper)
     float baselineDistance = 0.0f;
     contentList_.clear();
     std::list<RefPtr<LayoutWrapper>> currentMainAxisItemsList;
-    auto host = layoutWrapper->GetHostNode();
-    CHECK_NULL_VOID(host);
-    auto pipeline = host->GetContext();
-    isPixelRoundAfterMeasure_ =
-        pipeline && pipeline->GetPixelRoundMode() == PixelRoundMode::PIXEL_ROUND_AFTER_MEASURE;
     for (auto& item : children) {
         if (item->GetLayoutProperty()->GetVisibilityValue(VisibleType::VISIBLE) == VisibleType::GONE) {
             continue;
@@ -130,12 +139,10 @@ void WrapLayoutAlgorithm::Measure(LayoutWrapper* layoutWrapper)
             continue;
         }
         // can place current child at current row
-        float itemMainAxisLength = GetItemMainAxisLength(item->GetGeometryNode());
-        float itemCrossAxisLength = GetItemCrossAxisLength(item->GetGeometryNode());
-        if (GreatOrEqual(mainLengthLimit_, currentMainLength + itemMainAxisLength)) {
-            currentMainLength += itemMainAxisLength;
+        if (GreatOrEqual(mainLengthLimit_, currentMainLength + GetItemMainAxisLength(item->GetGeometryNode()))) {
+            currentMainLength += GetItemMainAxisLength(item->GetGeometryNode());
             currentMainLength += spacing;
-            currentCrossLength = std::max(currentCrossLength, itemCrossAxisLength);
+            currentCrossLength = std::max(currentCrossLength, GetItemCrossAxisLength(item->GetGeometryNode()));
             if (crossAlignment_ == WrapAlignment::BASELINE) {
                 baselineDistance = std::max(baselineDistance, item->GetBaselineDistance());
             }
@@ -156,8 +163,8 @@ void WrapLayoutAlgorithm::Measure(LayoutWrapper* layoutWrapper)
             // place current item on a new main axis
             totalMainLength_ = std::max(currentMainLength, totalMainLength_);
             totalCrossLength_ += currentCrossLength + contentSpace;
-            currentMainLength = itemMainAxisLength + spacing;
-            currentCrossLength = itemCrossAxisLength;
+            currentMainLength = GetItemMainAxisLength(item->GetGeometryNode()) + spacing;
+            currentCrossLength = GetItemCrossAxisLength(item->GetGeometryNode());
             if (crossAlignment_ == WrapAlignment::BASELINE) {
                 baselineDistance = item->GetBaselineDistance();
             }
@@ -215,9 +222,7 @@ void WrapLayoutAlgorithm::StretchItemsInContent(LayoutWrapper* layoutWrapper, co
     if (crossAlignment_ != WrapAlignment::STRETCH) {
         return;
     }
-    const auto& layoutProperty = layoutWrapper->GetLayoutProperty();
-    CHECK_NULL_VOID(layoutProperty);
-    auto childLayoutConstraint = layoutProperty->CreateChildConstraint();
+    auto childLayoutConstraint = layoutWrapper->GetLayoutProperty()->CreateChildConstraint();
     for (const auto& item : content.itemList) {
         auto itemCrossAxisLength = GetItemCrossAxisLength(item->GetGeometryNode());
         // if content cross axis size is larger than item cross axis size,
@@ -286,8 +291,6 @@ void WrapLayoutAlgorithm::PerformLayoutInitialize(const RefPtr<LayoutProperty>& 
             mainLengthLimit_ = std::min(constraint->maxSize.Height(), constraint->percentReference.Height());
             crossLengthLimit_ = std::min(constraint->maxSize.Width(), constraint->percentReference.Width());
         }
-        isWidthPercentSensitive_ = GreaterOrEqualToInfinity(constraint->maxSize.Width());
-        isHeightPercentSensitive_ = GreaterOrEqualToInfinity(constraint->maxSize.Height());
     } else {
         if (isHorizontal_) {
             mainLengthLimit_ = constraint->maxSize.Width();
@@ -309,9 +312,6 @@ SizeF WrapLayoutAlgorithm::GetLeftSize(float crossLength, float mainLeftLength, 
 
 float WrapLayoutAlgorithm::GetItemMainAxisLength(const RefPtr<GeometryNode>& item) const
 {
-    if (isPixelRoundAfterMeasure_) {
-        return isHorizontal_ ? item->GetMarginPreFrameSize().Width() : item->GetMarginPreFrameSize().Height();
-    }
     return isHorizontal_ ? item->GetMarginFrameSize().Width() : item->GetMarginFrameSize().Height();
 }
 

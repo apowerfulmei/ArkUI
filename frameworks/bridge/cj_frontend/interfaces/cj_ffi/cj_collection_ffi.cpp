@@ -17,15 +17,15 @@
 
 #include "cj_lambda.h"
 
+#include <string>
+#include <vector>
+
 NavigationItem::NavigationItem(const NavigationItemFFI& source)
 {
     value = source.value;
     icon = source.icon;
-    isEnable = source.isEnable;
-    actionFFI = source.action;
-    action = CJLambda::Create(reinterpret_cast<void (*)()>(actionFFI));
-    status = source.status;
-    activeIcon = source.activeIcon;
+    builderFFI = source.builder;
+    builder = CJLambda::Create(reinterpret_cast<void(*)()>(builderFFI));
 }
 
 extern "C" {

@@ -16,10 +16,11 @@
 #include "bridge/cj_frontend/interfaces/cj_ffi/cj_gauge_ffi.h"
 
 #include "cj_lambda.h"
+#include "base/log/ace_scoring_log.h"
+#include "base/memory/ace_type.h"
+#include "core/common/container.h"
 #include "core/components_ng/base/view_stack_model.h"
 #include "core/components_ng/pattern/gauge/gauge_model_ng.h"
-#include "core/components_ng/base/view_abstract_model_ng.h"
-#include "bridge/declarative_frontend/jsview/models/view_abstract_model_impl.h"
 
 using namespace OHOS::Ace;
 
@@ -27,15 +28,6 @@ namespace {
 const std::string INDICATOR_DEFAULT = "default";
 const std::string INDICATOR_NULL = "null";
 }  // namespace
-
-namespace OHOS::Ace {
-ViewAbstractModel* ViewAbstractModel::GetInstance()
-{
-    static NG::ViewAbstractModelNG instance;
-    return &instance;
-}
-}
-
 extern "C" {
 VectorColorStops FFICJCreateVectorColorStop(int64_t size)
 {
@@ -282,10 +274,5 @@ void FfiOHOSAceFrameworkGaugeSetDescription(void (*builder)())
         customNode = ViewStackModel::GetInstance()->Finish();
     }
     GaugeModel::GetInstance()->SetDescription(customNode);
-}
-
-void FfiOHOSAceFrameworkSetPrivacySensitive(bool isprivacySensitiveMode)
-{
-    ViewAbstractModel::GetInstance()->SetPrivacySensitive(isprivacySensitiveMode);
 }
 }

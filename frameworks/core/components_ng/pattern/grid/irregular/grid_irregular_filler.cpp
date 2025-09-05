@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2023-2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -15,7 +15,11 @@
 
 #include "core/components_ng/pattern/grid/irregular/grid_irregular_filler.h"
 
+#include "base/geometry/axis.h"
+#include "base/geometry/ng/size_t.h"
+#include "core/components_ng/pattern/grid/grid_item_layout_property.h"
 #include "core/components_ng/pattern/grid/grid_item_pattern.h"
+#include "core/components_ng/pattern/grid/grid_layout_property.h"
 #include "core/components_ng/pattern/grid/irregular/grid_layout_utils.h"
 
 namespace OHOS::Ace::NG {
@@ -36,8 +40,7 @@ Result GridIrregularFiller::Fill(const FillParameters& params, float targetLen, 
     int32_t idx = InitPos(startingLine);
     // no gap on first row
     float len = -params.mainGap;
-    auto childrenCount = info_->GetChildrenCount();
-    while (idx < (childrenCount - 1)) {
+    while (idx < info_->childrenCount_ - 1) {
         int32_t prevRow = posY_;
         if (!FindNextItem(++idx)) {
             FillOne(idx);
@@ -65,11 +68,8 @@ Result GridIrregularFiller::Fill(const FillParameters& params, float targetLen, 
 
 void GridIrregularFiller::FillToTarget(const FillParameters& params, int32_t targetIdx, int32_t startingLine)
 {
-    if (startingLine < 0) {
-        startingLine = 0;
-    }
-    if (targetIdx >= info_->GetChildrenCount()) {
-        targetIdx = info_->GetChildrenCount() - 1;
+    if (targetIdx >= info_->childrenCount_) {
+        targetIdx = info_->childrenCount_ - 1;
     }
     int32_t idx = InitPos(startingLine);
     while (idx < targetIdx) {
@@ -144,8 +144,6 @@ void GridIrregularFiller::FillOne(const int32_t idx)
 bool GridIrregularFiller::FindNextItem(int32_t target)
 {
     const auto& mat = info_->gridMatrix_;
-    // start from first cross everytime, for the current target might be before the previous target
-    posX_ = -1;
     while (AdvancePos()) {
         if (mat.at(posY_).at(posX_) == target) {
             return true;
@@ -216,18 +214,15 @@ std::pair<float, LayoutConstraintF> GridIrregularFiller::MeasureItem(
     crossLen += params.crossGap * (itemSize.columns - 1);
     constraint.percentReference.SetCrossSize(crossLen, info_->axis_);
     if (info_->axis_ == Axis::VERTICAL) {
-        constraint.maxSize = SizeF { crossLen, LayoutInfinity<float>() };
+        constraint.maxSize = SizeF { crossLen, Infinity<float>() };
         constraint.parentIdealSize = OptionalSizeF(crossLen, std::nullopt);
     } else {
-        constraint.maxSize = SizeF { LayoutInfinity<float>(), crossLen };
+        constraint.maxSize = SizeF { Infinity<float>(), crossLen };
         constraint.parentIdealSize = OptionalSizeF(std::nullopt, crossLen);
     }
-    
-    if (isCache) {
-        child->SetActive();
-    }
+
     child->Measure(constraint);
-    SetItemInfo(child, itemIdx, row, col, itemSize);
+    SetItemInfo(itemIdx, row, col, itemSize);
 
     float childHeight = child->GetGeometryNode()->GetMarginFrameSize().MainSize(info_->axis_);
     // spread height to each row.
@@ -248,8 +243,8 @@ int32_t GridIrregularFiller::InitPosToLastItem(int32_t lineIdx)
 
 int32_t GridIrregularFiller::FillMatrixOnly(int32_t targetIdx)
 {
-    if (targetIdx >= info_->GetChildrenCount()) {
-        targetIdx = info_->GetChildrenCount() - 1;
+    if (targetIdx >= info_->childrenCount_) {
+        targetIdx = info_->childrenCount_ - 1;
     }
     int32_t idx = InitPosToLastItem(static_cast<int32_t>(info_->gridMatrix_.size()) - 1);
     while (idx < targetIdx) {
@@ -263,8 +258,7 @@ int32_t GridIrregularFiller::FillMatrixOnly(int32_t targetIdx)
 int32_t GridIrregularFiller::FillMatrixByLine(int32_t startingLine, int32_t targetLine)
 {
     int32_t idx = InitPosToLastItem(startingLine);
-    auto childrenCount = info_->GetChildrenCount();
-    while (posY_ < targetLine && idx < (childrenCount - 1)) {
+    while (posY_ < targetLine && idx < info_->childrenCount_ - 1) {
         if (!FindNextItem(++idx)) {
             FillOne(idx);
         }
@@ -364,24 +358,21 @@ int32_t GridIrregularFiller::FindItemTopRow(int32_t row, int32_t col) const
     return row;
 }
 
-void GridIrregularFiller::SetItemInfo(
-    const RefPtr<LayoutWrapper>& item, int32_t idx, int32_t row, int32_t col, GridItemSize size)
+void GridIrregularFiller::SetItemInfo(int32_t idx, int32_t row, int32_t col, GridItemSize size)
 {
-    CHECK_NULL_VOID(item);
     if (info_->axis_ == Axis::HORIZONTAL) {
         std::swap(row, col);
         std::swap(size.rows, size.columns);
     }
+    auto item = wrapper_->GetChildByIndex(idx);
+    CHECK_NULL_VOID(item);
     auto pattern = item->GetHostNode()->GetPattern<GridItemPattern>();
     CHECK_NULL_VOID(pattern);
     auto props = pattern->GetLayoutProperty<GridItemLayoutProperty>();
-    CHECK_NULL_VOID(props);
-    props->UpdateIndex(idx);
     props->UpdateMainIndex(row);
     props->UpdateCrossIndex(col);
 
     if (size.rows == 1 && size.columns == 1) {
-        pattern->ResetGridItemInfo();
         return;
     }
     pattern->SetIrregularItemInfo({ .mainIndex = row,

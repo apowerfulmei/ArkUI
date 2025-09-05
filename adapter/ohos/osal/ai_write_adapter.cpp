@@ -19,11 +19,17 @@
 #include "bool_wrapper.h"
 #include "int_wrapper.h"
 #include "want.h"
+#include "want_params.h"
+#include "core/components_ng/layout/layout_property.h"
 #include "core/components_ng/pattern/text/span/span_string.h"
+#include "core/components_ng/pattern/ui_extension/session_wrapper.h"
+#include "core/components_ng/pattern/ui_extension/session_wrapper_factory.h"
+#include "core/components_ng/pattern/ui_extension/ui_extension_pattern.h"
+#include "core/components_ng/pattern/ui_extension/modal_ui_extension_proxy_impl.h"
 
 namespace OHOS::Ace {
 const std::pair<std::string, std::string> UI_ENTENSION_TYPE = {"ability.want.params.uiExtensionType", "sys/commonUI"};
-const std::u16string BOUNDARY_SYMBOLS = u",.?，。？！";
+const std::wstring BOUNDARY_SYMBOLS = L",.?，。？！";
 const std::string API_VERSION = "apiVersion";
 const std::string RESULT_BUFFER = "resultBuffer";
 const std::string SHEET_DISMISS = "sheetDismiss";
@@ -31,7 +37,7 @@ const std::string PROCESS_ID = "processId";
 const std::string MAX_CONTENT_LENGTH = "maxContentLength";
 const std::string FIRST_HANDLE_RECT = "firstHandleRect";
 const std::string SECOND_HANDLE_RECT = "secondHandleRect";
-const std::string IS_AI_SUPPORT_METADATA = "isAiSupport";
+const std::string IS_AI_SUPPORT_METADATA = "isAiWritingSupport";
 const std::string SELECT_CONTENT_LENGTH = "selectContentLength";
 const std::string REQUEST_LONG_CONTENT = "requestLongContent";
 const std::string LONG_SENTENCE_BUFFER = "longSentenceBuffer";
@@ -40,9 +46,9 @@ const std::string LONG_SELECT_END = "longSelectEnd";
 const std::string KEY_PACKAGE_NAME = "keyPackageApp";
 const std::string START_COMPONONT_TYPE = "startComponentType";
 
-bool AIWriteAdapter::IsSentenceBoundary(const char16_t value)
+bool AIWriteAdapter::IsSentenceBoundary(const wchar_t value)
 {
-    for (char16_t item: BOUNDARY_SYMBOLS) {
+    for (wchar_t item: BOUNDARY_SYMBOLS) {
         if (value == item) {
             return true;
         }
@@ -50,11 +56,11 @@ bool AIWriteAdapter::IsSentenceBoundary(const char16_t value)
     return false;
 }
 
-uint32_t AIWriteAdapter::GetSelectLengthOnlyText(const std::u16string& content)
+uint32_t AIWriteAdapter::GetSelectLengthOnlyText(const std::wstring& content)
 {
     uint32_t length = 0;
     for (uint32_t i = 0; i < content.length(); i++) {
-        if (content[i] != u' ' && content[i] != u'\n') {
+        if (content[i] != L' ' && content[i] != L'\n') {
             length++;
         }
     }
@@ -92,8 +98,6 @@ void AIWriteAdapter::ShowModalUIExtension(const AIWriteInfo& info,
 
 void AIWriteAdapter::SetWantParams(const AIWriteInfo& info, AAFwk::Want& want)
 {
-    auto context = pipelineContext_.Upgrade();
-    CHECK_NULL_VOID(context);
     auto apiVersion = AceApplicationInfo::GetInstance().GetApiTargetVersion();
     want.SetElementName(bundleName_, abilityName_);
     want.SetParam(UI_ENTENSION_TYPE.first, UI_ENTENSION_TYPE.second);
@@ -103,7 +107,7 @@ void AIWriteAdapter::SetWantParams(const AIWriteInfo& info, AAFwk::Want& want)
     want.SetParam(SELECT_CONTENT_LENGTH, info.selectLength);
     want.SetParam(FIRST_HANDLE_RECT, info.firstHandle);
     want.SetParam(SECOND_HANDLE_RECT, info.secondHandle);
-    want.SetParam(KEY_PACKAGE_NAME, context->GetBundleName());
+    want.SetParam(KEY_PACKAGE_NAME, AceApplicationInfo::GetInstance().GetPackageName());
     want.SetParam(START_COMPONONT_TYPE, info.componentType);
 }
 

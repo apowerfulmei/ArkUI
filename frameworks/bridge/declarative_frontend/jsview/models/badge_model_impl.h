@@ -22,15 +22,6 @@ namespace OHOS::Ace::Framework {
 class BadgeModelImpl : public OHOS::Ace::BadgeModel {
 public:
     void Create(BadgeParameters& badgeParameters) override;
-    void CreateByFrameNode(const RefPtr<NG::FrameNode>& frameNode, BadgeParameters& badgeParameters) override
-    {
-        Create(badgeParameters);
-    };
-    
-    RefPtr<NG::FrameNode> CreateBadgeFrameNode() override
-    {
-        return nullptr;
-    };
     void SetIsDefault(bool isDefaultFontSize, bool isDefaultBadgeSize) override {};
 
 private:

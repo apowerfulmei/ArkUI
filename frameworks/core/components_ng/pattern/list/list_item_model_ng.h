@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -23,11 +23,10 @@
 #include "core/components_ng/pattern/list/list_item_model.h"
 
 namespace OHOS::Ace::NG {
-class ACE_FORCE_EXPORT ListItemModelNG : public ListItemModel {
+class ACE_EXPORT ListItemModelNG : public ListItemModel {
 public:
-    void Create(std::function<void(int32_t)>&& deepRenderFunc, V2::ListItemStyle listItemStyle,
-        bool isCreateArc = false) override;
-    void Create(bool isCreateArc = false) override;
+    void Create(std::function<void(int32_t)>&& deepRenderFunc, V2::ListItemStyle listItemStyle) override;
+    void Create() override;
     void OnDidPop() override;
     void SetBorderRadius(const Dimension& borderRadius) override {}
     void SetType(const std::string& type) override {}
@@ -38,22 +37,13 @@ public:
     void SetSelected(bool selected) override;
     void SetSelectChangeEvent(std::function<void(bool)>&& changeEvent) override;
     void SetSwiperAction(std::function<void()>&& startAction, std::function<void()>&& endAction,
-        OnOffsetChangeFunc&& onOffsetChangeFunc, V2::SwipeEdgeEffect edgeEffect,
-        NG::FrameNode* node = nullptr) override;
+        OnOffsetChangeFunc&& onOffsetChangeFunc, V2::SwipeEdgeEffect edgeEffect) override;
     void SetSelectCallback(OnSelectFunc&& selectCallback) override;
     void SetOnDragStart(NG::OnDragStartFunc&& onDragStart) override {}
     void SetDeleteArea(std::function<void()>&& builderAction, OnDeleteEvent&& onDelete,
         OnEnterDeleteAreaEvent&& onEnterDeleteArea, OnExitDeleteAreaEvent&& onExitDeleteArea,
-        OnStateChangedEvent&& onStateChangeEvent, const Dimension& length, bool isStartArea,
-        NG::FrameNode* node = nullptr) override;
-    void SetAutoScale(bool autoScale) override;
-    void SetDeleteAreaWithFrameNode(const RefPtr<NG::UINode>& builderComponent, OnDeleteEvent&& onDelete,
-        OnEnterDeleteAreaEvent&& onEnterDeleteArea, OnExitDeleteAreaEvent&& onExitDeleteArea,
-        OnStateChangedEvent&& onStateChange, const Dimension& length, bool isStartArea,
-        NG::FrameNode* node = nullptr) override;
-    void ParseResObjStartArea(const RefPtr<ResourceObject>& resObj) override;
-    void ParseResObjEndArea(const RefPtr<ResourceObject>& resObj) override;
-
+        OnStateChangedEvent&& onStateChangeEvent, const Dimension& length, bool isStartArea) override;
+        
     static void SetDeleteArea(FrameNode* frameNode, FrameNode* footerNode, OnDeleteEvent&& onDelete,
         OnEnterDeleteAreaEvent&& onEnterDeleteArea, OnExitDeleteAreaEvent&& onExitDeleteArea,
         OnStateChangedEvent&& onStateChangeEvent, const Dimension& length, bool isStartArea);
@@ -62,10 +52,8 @@ public:
         V2::SwipeEdgeEffect edgeEffect);
     static void SetSelected(FrameNode* frameNode, bool selected);
     static void SetSelectable(FrameNode* frameNode, bool selectable);
-    static void SetAutoScale(FrameNode* frameNode, bool autoScale);
-    static RefPtr<FrameNode> CreateFrameNode(int32_t nodeId, bool isCreateArc = false);
+    static RefPtr<FrameNode> CreateFrameNode(int32_t nodeId);
     static void SetSelectCallback(FrameNode* frameNode, OnSelectFunc&& selectCallback);
-    static void SetStyle(FrameNode* frameNode, V2::ListItemStyle style);
 private:
     void InstallSwiperCallBack(RefPtr<ListItemEventHub> eventHub,
                                OnDeleteEvent&& onDelete,

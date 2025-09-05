@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -57,21 +57,21 @@ private:
 };
 
 class ACE_FORCE_EXPORT RichEditorInsertValue : public BaseEventInfo {
-    DECLARE_ACE_TYPE(RichEditorInsertValue, BaseEventInfo);
+    DECLARE_ACE_TYPE(RichEditorInsertValue, BaseEventInfo)
 public:
     RichEditorInsertValue() : BaseEventInfo("RichEditorInsertValue") {}
     ~RichEditorInsertValue() override = default;
     void SetInsertOffset(int32_t insertOffset);
     int32_t GetInsertOffset() const;
-    void SetInsertValue(const std::u16string& insertValue);
-    void SetPreviewText(const std::u16string& previewText);
-    const std::u16string& GetInsertValue() const;
-    const std::u16string& GetPreviewText() const;
+    void SetInsertValue(const std::string& insertValue);
+    void SetPreviewText(const std::string& previewText);
+    const std::string& GetInsertValue() const;
+    const std::string& GetPreviewText() const;
 
 private:
     int32_t insertOffset_ = 0;
-    std::u16string insertValue_;
-    std::u16string previewText_;
+    std::string insertValue_;
+    std::string previewText_;
 };
 
 enum class SpanResultType { TEXT, IMAGE, SYMBOL };
@@ -92,10 +92,10 @@ public:
     int32_t OffsetInSpan() const;
     void SetEraseLength(int32_t eraseLength);
     int32_t GetEraseLength() const;
-    void SetValue(const std::u16string& value);
-    const std::u16string& GetValue() const;
-    void SetPreviewText(const std::u16string& previewText);
-    const std::u16string& GetPreviewText() const;
+    void SetValue(const std::string& value);
+    const std::string& GetValue() const;
+    void SetPreviewText(const std::string& previewText);
+    const std::string& GetPreviewText() const;
     void SetFontColor(const std::string& fontColor);
     const std::string& GetFontColor() const;
     void SetFontFeature(const FONT_FEATURES_LIST& fontFeature);
@@ -110,8 +110,6 @@ public:
     const SymbolSpanStyle GetSymbolSpanStyle() const;
     void SetLineHeight(double lineHeight);
     double GetLineHeight() const;
-    void SetHalfLeading(bool halfLeading);
-    bool GetHalfLeading() const;
     void SetLetterspacing(double letterSpacing);
     double GetLetterspacing() const;
     void SetTextStyle(TextStyleResult textStyle);
@@ -126,8 +124,6 @@ public:
     const std::string& GetColor() const;
     void SetTextDecorationStyle(TextDecorationStyle textDecorationStyle);
     TextDecorationStyle GetTextDecorationStyle() const;
-    void SetLineThicknessScale(float thicknessScale);
-    float GetLineThicknessScale() const;
     void SetValuePixelMap(const RefPtr<PixelMap>& valuePixelMap);
     const RefPtr<PixelMap>& GetValuePixelMap() const;
     void SetValueResourceStr(const std::string valueResourceStr);
@@ -140,8 +136,6 @@ public:
     VerticalAlign GetVerticalAlign() const;
     void SetImageFit(ImageFit objectFit);
     ImageFit GetObjectFit() const;
-    void SetUrlAddress(const std::u16string& urlAddress);
-    const std::u16string& GetUrlAddress() const;
     void SetBorderRadius(const std::string& borderRadius)
     {
         borderRadius_ = borderRadius;
@@ -171,7 +165,6 @@ public:
 private:
     TextStyleResult textStyle_;
     double lineHeight_ = 0.0;
-    bool halfLeading_ = false;
     double letterSpacing_ = 0.0;
     int32_t spanIndex_ = 0;
     int32_t spanRangeStart_ = 0;
@@ -179,9 +172,8 @@ private:
     SpanResultType spanType_;
     int32_t offsetInSpan_ = 0;
     int32_t eraseLength_ = 0;
-    std::u16string value_;
-    std::u16string previewText_;
-    std::u16string urlAddress_;
+    std::string value_;
+    std::string previewText_;
     std::string fontColor_;
     FONT_FEATURES_LIST fontFeature_;
     double fontSize_ = 0.0;
@@ -191,7 +183,6 @@ private:
     TextDecoration textDecoration_;
     std::string color_;
     TextDecorationStyle textDecorationStyle_;
-    float lineThicknessScale_ = 1.0f;
     RefPtr<PixelMap> valuePixelMap_;
     std::string valueResourceStr_;
     int32_t width_ = 0;
@@ -208,7 +199,7 @@ private:
 enum class RichEditorDeleteDirection { BACKWARD = 0, FORWARD };
 
 class ACE_FORCE_EXPORT RichEditorDeleteValue : public BaseEventInfo {
-    DECLARE_ACE_TYPE(RichEditorDeleteValue, BaseEventInfo);
+    DECLARE_ACE_TYPE(RichEditorDeleteValue, BaseEventInfo)
 public:
     RichEditorDeleteValue() : BaseEventInfo("RichEditorDeleteValue") {}
     ~RichEditorDeleteValue() = default;
@@ -230,18 +221,9 @@ private:
 };
 
 class ACE_FORCE_EXPORT RichEditorChangeValue : public BaseEventInfo {
-    DECLARE_ACE_TYPE(RichEditorChangeValue, BaseEventInfo);
-#ifndef ACE_UNITTEST
-private:
-#else
+    DECLARE_ACE_TYPE(RichEditorChangeValue, BaseEventInfo)
 public:
-#endif
     RichEditorChangeValue() : BaseEventInfo("RichEditorChangeValue") {}
-public:
-    RichEditorChangeValue(TextChangeReason reason) : RichEditorChangeValue()
-    {
-        changeReason_ = reason;
-    }
     ~RichEditorChangeValue() = default;
 
     void SetRichEditorOriginalSpans(const RichEditorAbstractSpanResult& span);
@@ -262,8 +244,6 @@ public:
     void SetRangeAfter(const TextRange& rangeAfter);
     TextRange GetRangeAfter() const;
 
-    TextChangeReason GetChangeReason() const;
-
     void reset()
     {
         originalSpans_.clear();
@@ -272,7 +252,6 @@ public:
         replacedSymbolSpans_.clear();
         rangeBefore_ = TextRange();
         rangeAfter_ = TextRange();
-        changeReason_ = TextChangeReason::UNKNOWN;
     }
 
 private:
@@ -282,11 +261,10 @@ private:
     std::vector<RichEditorAbstractSpanResult> replacedSymbolSpans_;
     TextRange rangeBefore_;
     TextRange rangeAfter_;
-    TextChangeReason changeReason_ = TextChangeReason::UNKNOWN;
 };
 
 class StyledStringChangeValue : public BaseEventInfo {
-    DECLARE_ACE_TYPE(StyledStringChangeValue, BaseEventInfo);
+    DECLARE_ACE_TYPE(StyledStringChangeValue, BaseEventInfo)
 public:
     StyledStringChangeValue() : BaseEventInfo("StyledStringChangeValue") {}
     ~StyledStringChangeValue() = default;
@@ -300,18 +278,14 @@ public:
     void SetReplacementString(const RefPtr<SpanStringBase>& styledString);
     const RefPtr<SpanStringBase> GetReplacementString() const;
 
-    void SetPreviewText(const RefPtr<SpanStringBase>& previewText);
-    const RefPtr<SpanStringBase> GetPreviewText() const;
-
 private:
     TextRange rangeBefore_;
     TextRange rangeAfter_;
     RefPtr<SpanStringBase> replacementString_;
-    RefPtr<SpanStringBase> previewText_;
 };
 
 class RichEditorEventHub : public EventHub {
-    DECLARE_ACE_TYPE(RichEditorEventHub, EventHub);
+    DECLARE_ACE_TYPE(RichEditorEventHub, EventHub)
 
 public:
     RichEditorEventHub() = default;
@@ -329,7 +303,7 @@ public:
     void SetOnDeleteComplete(std::function<void()>&& func);
     void FireOnDeleteComplete();
     std::string GetDragExtraParams(const std::string& extraInfo, const Point& point, DragEventType type) override;
-    void SetOnEditingChange(std::function<void(const bool&)> && func);
+    void SetOnEditingChange(std::function<void(const bool&)>&& func);
     void FireOnEditingChange(bool isEditing);
     void SetOnSelect(std::function<void(const BaseEventInfo*)>&& func)
     {
@@ -384,22 +358,20 @@ public:
         }
     }
 
-    void SetOnWillChange(std::function<bool(const RichEditorChangeValue&)> && func);
+    void SetOnWillChange(std::function<bool(const RichEditorChangeValue&)>&& func);
     bool FireOnWillChange(const RichEditorChangeValue& info);
     bool HasOnWillChange() const;
-    void SetOnDidChange(std::function<void(const RichEditorChangeValue&)> && func);
-    void FireOnDidChange(const RichEditorChangeValue& range);
+    void SetOnDidChange(std::function<void(const RichEditorChangeValue&)>&& func);
+    void FireOnDidChange(const RichEditorChangeValue& info);
     bool HasOnDidChange() const;
-    void SetOnCut(std::function<void(NG::TextCommonEvent&)> && func);
+    void SetOnCut(std::function<void(NG::TextCommonEvent&)>&& func);
     void FireOnCut(NG::TextCommonEvent& value);
-    void SetOnCopy(std::function<void(NG::TextCommonEvent&)> && func);
+    void SetOnCopy(std::function<void(NG::TextCommonEvent&)>&& func);
     void FireOnCopy(NG::TextCommonEvent& value);
-    void SetOnShare(std::function<void(NG::TextCommonEvent&)>&& func);
-    void FireOnShare(NG::TextCommonEvent& value);
-    void SetOnStyledStringWillChange(std::function<bool(const StyledStringChangeValue&)> && func);
+    void SetOnStyledStringWillChange(std::function<bool(const StyledStringChangeValue&)>&& func);
     bool FireOnStyledStringWillChange(const StyledStringChangeValue& info);
     bool HasOnStyledStringWillChange() const;
-    void SetOnStyledStringDidChange(std::function<void(const StyledStringChangeValue&)> && func);
+    void SetOnStyledStringDidChange(std::function<void(const StyledStringChangeValue&)>&& func);
     void FireOnStyledStringDidChange(const StyledStringChangeValue& info);
     bool HasOnStyledStringDidChange() const;
 
@@ -414,13 +386,12 @@ private:
     std::function<void(const TextRange&)> onDidIMEInput_;
     std::function<bool(const RichEditorDeleteValue&)> aboutToDelete_;
     std::function<void()> onDeleteComplete_;
-    std::function<void(const bool&)> onEditingChange_;
     std::function<void(int32_t, NG::TextFieldCommonEvent&)> onSubmit_;
+    std::function<void(const bool&)> onEditingChange_;
     std::function<bool(const RichEditorChangeValue&)> onWillChange_;
     std::function<void(const RichEditorChangeValue&)> onDidChange_;
     std::function<void(NG::TextCommonEvent&)> onCut_;
     std::function<void(NG::TextCommonEvent&)> onCopy_;
-    std::function<void(NG::TextCommonEvent&)> onShare_;
     std::function<bool(const StyledStringChangeValue&)> onStyledStringWillChange_;
     std::function<void(const StyledStringChangeValue&)> onStyledStringDidChange_;
     ACE_DISALLOW_COPY_AND_MOVE(RichEditorEventHub);

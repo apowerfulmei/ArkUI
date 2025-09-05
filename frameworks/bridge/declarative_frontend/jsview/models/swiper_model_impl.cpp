@@ -18,10 +18,11 @@
 #include "bridge/declarative_frontend/jsview/js_interactable_view.h"
 #include "bridge/declarative_frontend/view_stack_processor.h"
 #include "core/components/swiper/swiper_component.h"
+#include "core/components_ng/base/view_abstract_model.h"
 
 namespace OHOS::Ace::Framework {
 
-RefPtr<SwiperController> SwiperModelImpl::Create(bool isCreateArc)
+RefPtr<SwiperController> SwiperModelImpl::Create()
 {
     std::list<RefPtr<OHOS::Ace::Component>> componentChildren;
     RefPtr<OHOS::Ace::SwiperComponent> component = AceType::MakeRefPtr<OHOS::Ace::SwiperComponent>(componentChildren);

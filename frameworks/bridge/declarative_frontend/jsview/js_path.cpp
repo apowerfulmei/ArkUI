@@ -23,21 +23,29 @@
 #include "frameworks/bridge/declarative_frontend/view_stack_processor.h"
 
 namespace OHOS::Ace {
+
+std::unique_ptr<PathModel> PathModel::instance_ = nullptr;
+std::mutex PathModel::mutex_;
+
 PathModel* PathModel::GetInstance()
 {
+    if (!instance_) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (!instance_) {
 #ifdef NG_BUILD
-    static NG::PathModelNG instance;
-    return &instance;
+            instance_.reset(new NG::PathModelNG());
 #else
-    if (Container::IsCurrentUseNewPipeline()) {
-        static NG::PathModelNG instance;
-        return &instance;
-    } else {
-        static Framework::PathModelImpl instance;
-        return &instance;
-    }
+            if (Container::IsCurrentUseNewPipeline()) {
+                instance_.reset(new NG::PathModelNG());
+            } else {
+                instance_.reset(new Framework::PathModelImpl());
+            }
 #endif
+        }
+    }
+    return instance_.get();
 }
+
 } // namespace OHOS::Ace
 
 namespace OHOS::Ace::Framework {
@@ -49,42 +57,15 @@ void JSPath::Create(const JSCallbackInfo& info)
     if (info.Length() > 0 && info[0]->IsObject()) {
         JSRef<JSObject> obj = JSRef<JSObject>::Cast(info[0]);
         JSRef<JSVal> commands = obj->GetProperty("commands");
-        std::string strRet;
-        RefPtr<ResourceObject> commandsResObj;
-        if (!ParseJsString(commands, strRet, commandsResObj)) {
-            return;
+        if (commands->IsString()) {
+            SetCommands(commands->ToString());
         }
-        UnRegisterResource("PathCommands");
-        if (SystemProperties::ConfigChangePerform() && commandsResObj) {
-            RegisterResource<std::string>("PathCommands", commandsResObj, strRet);
-        }
-        PathModel::GetInstance()->SetCommands(strRet);
     }
 }
 
-void JSPath::SetCommands(const JSCallbackInfo& info)
+void JSPath::SetCommands(const std::string& commands)
 {
-    if (info.Length() < 1) {
-        return;
-    }
-
-    UnRegisterResource("PathCommands");
-    if (info[0]->IsUndefined()) {
-        PathModel::GetInstance()->SetCommands("undefined");
-    } else if (info[0]->IsObject()) {
-        JSRef<JSObject> commandsObj = JSRef<JSObject>::Cast(info[0]);
-        std::string strRet;
-        RefPtr<ResourceObject> commandsResObj;
-        if (!ParseJsString(commandsObj, strRet, commandsResObj)) {
-            return;
-        }
-        if (SystemProperties::ConfigChangePerform() && commandsResObj) {
-            RegisterResource<std::string>("PathCommands", commandsResObj, strRet);
-        }
-        PathModel::GetInstance()->SetCommands(strRet);
-    } else if (info[0]->IsString()) {
-        PathModel::GetInstance()->SetCommands(info[0]->ToString());
-    }
+    PathModel::GetInstance()->SetCommands(commands);
 }
 
 void JSPath::ObjectCommands(const JSCallbackInfo& info)

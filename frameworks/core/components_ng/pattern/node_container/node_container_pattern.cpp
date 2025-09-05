@@ -15,9 +15,9 @@
 
 #include "core/components_ng/pattern/node_container/node_container_pattern.h"
 
-#include "core/common/builder_util.h"
+#include "base/utils/utils.h"
+#include "core/components_v2/inspector/inspector_constants.h"
 #include "core/pipeline_ng/pipeline_context.h"
-#include "core/pipeline/base/element_register.h"
 
 namespace OHOS::Ace::NG {
 namespace {
@@ -46,23 +46,14 @@ void NodeContainerPattern::RemakeNode()
     auto host = GetHost();
     CHECK_NULL_VOID(host);
     auto newNode = FireMakeFunction();
-    AddBaseNode(newNode);
-}
-
-void NodeContainerPattern::AddBaseNode(const RefPtr<UINode>& newNode)
-{
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
     auto oldChild = host->GetChildAtIndex(0);
     if ((!oldChild && !newNode) || (oldChild && oldChild == newNode)) {
         return;
     }
     host->RemoveChildAtIndex(0);
-    BuilderUtils::RemoveBuilderFromParent(host, oldChild);
     if (newNode) {
         CHECK_NULL_VOID(CheckBeforeAddNode(host, newNode));
         host->AddChild(newNode, 0);
-        BuilderUtils::AddBuilderToParent(host, newNode);
         newNode->UpdateGeometryTransition();
     }
     OnAddBaseNode();
@@ -99,8 +90,7 @@ bool NodeContainerPattern::OnDirtyLayoutWrapperSwap(const RefPtr<LayoutWrapper>&
         context->AddAfterLayoutTask([weak = WeakClaim(this)]() {
             auto pattern = weak.Upgrade();
             CHECK_NULL_VOID(pattern);
-            auto host = pattern->GetHost();
-            auto ret = pattern->HandleTextureExport(false, Referenced::RawPtr(host));
+            auto ret = pattern->HandleTextureExport(false);
             if (!ret) {
                 TAG_LOGW(AceLogTag::ACE_NODE_CONTAINER, "DoTextureExport fail");
             }
@@ -109,33 +99,27 @@ bool NodeContainerPattern::OnDirtyLayoutWrapperSwap(const RefPtr<LayoutWrapper>&
     return false;
 }
 
-bool NodeContainerPattern::HandleTextureExport(bool isStop, FrameNode* frameNode)
+bool NodeContainerPattern::HandleTextureExport(bool isStop)
 {
     auto exportTextureNode = GetExportTextureNode();
     CHECK_NULL_RETURN(exportTextureNode, false);
     auto exportTextureRenderContext = exportTextureNode->GetRenderContext();
     CHECK_NULL_RETURN(exportTextureRenderContext, false);
-    if (frameNode) {
-        auto renderContext = frameNode->GetRenderContext();
+    auto host = GetHost();
+    if (host) {
+        auto renderContext = host->GetRenderContext();
         CHECK_NULL_RETURN(renderContext, false);
         renderContext->SetIsNeedRebuildRSTree(isStop);
     }
-    auto elementRegister = ElementRegister::GetInstance();
     if (isStop) {
-        if (elementRegister) {
-            elementRegister->UnregisterEmbedNode(surfaceId_, WeakPtr(exportTextureNode));
-        }
         return exportTextureRenderContext->StopTextureExport();
-    }
-    if (elementRegister) {
-        elementRegister->RegisterEmbedNode(surfaceId_, WeakPtr(exportTextureNode));
     }
     return exportTextureRenderContext->DoTextureExport(surfaceId_);
 }
 
-void NodeContainerPattern::OnDetachFromFrameNode(FrameNode* frameNode)
+void NodeContainerPattern::OnDetachFromFrameNode(FrameNode* /* frameNode */)
 {
-    HandleTextureExport(true, frameNode);
+    HandleTextureExport(true);
 }
 
 RefPtr<FrameNode> NodeContainerPattern::GetExportTextureNode() const
@@ -186,54 +170,12 @@ void NodeContainerPattern::SetExportTextureInfoIfNeeded()
 
 void NodeContainerPattern::OnAddBaseNode()
 {
-    auto host = GetHost();
-    HandleTextureExport(true, Referenced::RawPtr(host));
+    HandleTextureExport(true);
     SetExportTextureInfoIfNeeded();
 }
 
 void NodeContainerPattern::OnMountToParentDone()
 {
     SetExportTextureInfoIfNeeded();
-}
-
-RefPtr<NodeContainerEventHub> NodeContainerPattern::GetNodeContainerEventHub()
-{
-    auto frameNode = ViewStackProcessor::GetInstance()->GetMainFrameNode();
-    if (frameNode) {
-        return frameNode->GetEventHub<NodeContainerEventHub>();
-    }
-    return nullptr;
-}
-
-void NodeContainerPattern::FireOnWillBind(int32_t containerId)
-{
-    auto nodeContainerEventHub = GetNodeContainerEventHub();
-    if (nodeContainerEventHub) {
-        nodeContainerEventHub->FireOnWillBind(containerId);
-    }
-}
-
-void NodeContainerPattern::FireOnWillUnbind(int32_t containerId)
-{
-    auto nodeContainerEventHub = GetNodeContainerEventHub();
-    if (nodeContainerEventHub) {
-        nodeContainerEventHub->FireOnWillUnbind(containerId);
-    }
-}
-
-void NodeContainerPattern::FireOnBind(int32_t containerId)
-{
-    auto nodeContainerEventHub = GetNodeContainerEventHub();
-    if (nodeContainerEventHub) {
-        nodeContainerEventHub->FireOnBind(containerId);
-    }
-}
-
-void NodeContainerPattern::FireOnUnbind(int32_t containerId)
-{
-    auto nodeContainerEventHub = GetNodeContainerEventHub();
-    if (nodeContainerEventHub) {
-        nodeContainerEventHub->FireOnUnbind(containerId);
-    }
 }
 } // namespace OHOS::Ace::NG

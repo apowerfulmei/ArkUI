@@ -12,7 +12,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-/// <reference path="./state_mgmt_profiler.native.d.ts" />
 class stateMgmtProfiler {
     private static instance: StateMgmtProfiler = undefined;
     public static begin(blockName: string): void {

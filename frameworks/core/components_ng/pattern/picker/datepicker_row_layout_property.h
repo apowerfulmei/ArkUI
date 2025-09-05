@@ -18,7 +18,6 @@
 
 #include <string>
 #include <vector>
-
 #include "base/geometry/dimension.h"
 #include "base/i18n/localization.h"
 #include "base/json/json_util.h"
@@ -26,49 +25,78 @@
 #include "core/components_ng/base/inspector_filter.h"
 #include "core/components_ng/layout/layout_property.h"
 #include "core/components_ng/pattern/linear_layout/linear_layout_property.h"
-#include "core/components_ng/pattern/picker_utils/picker_layout_property.h"
 #include "core/components_ng/pattern/text/text_styles.h"
 #include "core/components_ng/property/property.h"
 #include "core/components_v2/inspector/utils.h"
 
 namespace OHOS::Ace::NG {
-class ACE_EXPORT DataPickerRowLayoutProperty : public PickerLayoutProperty {
-    DECLARE_ACE_TYPE(DataPickerRowLayoutProperty, PickerLayoutProperty);
+class ACE_EXPORT DataPickerRowLayoutProperty : public LinearLayoutProperty {
+    DECLARE_ACE_TYPE(DataPickerRowLayoutProperty, LinearLayoutProperty);
 
 public:
-    DataPickerRowLayoutProperty() = default;
+    DataPickerRowLayoutProperty() : LinearLayoutProperty(false) {};
     ~DataPickerRowLayoutProperty() override = default;
 
     RefPtr<LayoutProperty> Clone() const override
     {
         auto value = MakeRefPtr<DataPickerRowLayoutProperty>();
-        Clone(value);
         value->LayoutProperty::UpdateLayoutProperty(DynamicCast<LayoutProperty>(this));
         value->propSelectedDate_ = CloneSelectedDate();
         value->propLunar_ = CloneLunar();
-        value->propCanLoop_ = CloneCanLoop();
         value->propStartDate_ = CloneStartDate();
         value->propEndDate_ = CloneEndDate();
-        value->propMode_ = CloneMode();
+        value->propDisappearTextStyle_ = CloneDisappearTextStyle();
+        value->propTextStyle_ = CloneTextStyle();
+        value->propSelectedTextStyle_ = CloneSelectedTextStyle();
         return value;
     }
 
     void Reset() override
     {
-        PickerLayoutProperty::Reset();
+        LinearLayoutProperty::Reset();
         ResetSelectedDate();
         ResetStartDate();
         ResetEndDate();
-        ResetMode();
         ResetLunar();
-        ResetCanLoop();
+        ResetDisappearTextStyle();
+        ResetTextStyle();
+        ResetSelectedTextStyle();
     }
 
     void ToJsonValue(std::unique_ptr<JsonValue>& json, const InspectorFilter& filter) const override
     {
-        PickerLayoutProperty::ToJsonValue(json, filter);
+        LayoutProperty::ToJsonValue(json, filter);
+        /* no fixed attr below, just return */
+        if (filter.IsFastFilter()) {
+            return;
+        }
         json->PutExtAttr("lunar", V2::ConvertBoolToString(GetLunar().value_or(false)).c_str(), filter);
-        json->PutExtAttr("canLoop", V2::ConvertBoolToString(GetCanLoopValue(true)).c_str(), filter);
+
+        auto disappearFont = JsonUtil::Create(true);
+        disappearFont->Put("size", GetDisappearFontSizeValue(Dimension(0)).ToString().c_str());
+        disappearFont->Put("weight", V2::ConvertWrapFontWeightToStirng(
+            GetDisappearWeight().value_or(FontWeight::NORMAL)).c_str());
+        auto disappearTextStyle = JsonUtil::Create(true);
+        disappearTextStyle->Put("color", GetDisappearColor().value_or(Color::BLACK).ColorToString().c_str());
+        disappearTextStyle->Put("font", disappearFont);
+        json->PutExtAttr("disappearTextStyle", disappearTextStyle, filter);
+
+        auto normalFont = JsonUtil::Create(true);
+        normalFont->Put("size", GetFontSizeValue(Dimension(0)).ToString().c_str());
+        normalFont->Put("weight", V2::ConvertWrapFontWeightToStirng(GetWeight().value_or(FontWeight::NORMAL)).c_str());
+        auto normalTextStyle = JsonUtil::Create(true);
+        normalTextStyle->Put("color", GetColor().value_or(Color::BLACK).ColorToString().c_str());
+        normalTextStyle->Put("font", normalFont);
+        json->PutExtAttr("textStyle", normalTextStyle, filter);
+
+        auto selectedFont = JsonUtil::Create(true);
+        selectedFont->Put("size", GetSelectedFontSizeValue(Dimension(0)).ToString().c_str());
+        selectedFont->Put("weight", V2::ConvertWrapFontWeightToStirng(
+            GetSelectedWeight().value_or(FontWeight::NORMAL)).c_str());
+        auto selectedTextStyle = JsonUtil::Create(true);
+        selectedTextStyle->Put("color", GetSelectedColor().value_or(Color::BLACK).ColorToString().c_str());
+        selectedTextStyle->Put("font", selectedFont);
+        json->PutExtAttr("selectedTextStyle", selectedTextStyle, filter);
     }
 
     std::string GetDateStart() const
@@ -113,36 +141,46 @@ public:
         return "";
     }
 
-    std::string GetDatePickerMode() const
-    {
-        std::string mode = "";
-        if (HasMode()) {
-            if (GetMode() == DatePickerMode::DATE) {
-                mode = "DatePickerMode.DATE";
-            } else if (GetMode() == DatePickerMode::YEAR_AND_MONTH) {
-                mode = "DatePickerMode.YEAR_AND_MONTH";
-            } else if (GetMode() == DatePickerMode::MONTH_AND_DAY) {
-                mode = "DatePickerMode.MONTH_AND_DAY";
-            }
-        }
-        return mode;
-    }
-
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(SelectedDate, LunarDate, PROPERTY_UPDATE_RENDER);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(Lunar, bool, PROPERTY_UPDATE_RENDER);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(StartDate, LunarDate, PROPERTY_UPDATE_RENDER);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(EndDate, LunarDate, PROPERTY_UPDATE_RENDER);
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(Mode, DatePickerMode, PROPERTY_UPDATE_RENDER);
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(CanLoop, bool, PROPERTY_UPDATE_MEASURE);
 
-protected:
-    void Clone(RefPtr<LayoutProperty> property) const override
-    {
-        auto value = DynamicCast<DataPickerRowLayoutProperty>(property);
-        CHECK_NULL_VOID(value);
-        PickerLayoutProperty::Clone(value);
-    }
+    ACE_DEFINE_PROPERTY_GROUP(DisappearTextStyle, FontStyle);
+    ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP_ITEM(
+        DisappearTextStyle, FontSize, DisappearFontSize, Dimension, PROPERTY_UPDATE_MEASURE);
+    ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP_ITEM(
+        DisappearTextStyle, TextColor, DisappearColor, Color, PROPERTY_UPDATE_MEASURE_SELF);
+    ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP_ITEM(
+        DisappearTextStyle, FontWeight, DisappearWeight, FontWeight, PROPERTY_UPDATE_MEASURE);
+    ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP_ITEM(
+        DisappearTextStyle, FontFamily, DisappearFontFamily, std::vector<std::string>, PROPERTY_UPDATE_MEASURE);
+    ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP_ITEM(
+        DisappearTextStyle, ItalicFontStyle, DisappearFontStyle, Ace::FontStyle, PROPERTY_UPDATE_MEASURE);
 
+    ACE_DEFINE_PROPERTY_GROUP(TextStyle, FontStyle);
+    ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP_ITEM(
+        TextStyle, FontSize, FontSize, Dimension, PROPERTY_UPDATE_MEASURE);
+    ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP_ITEM(
+        TextStyle, TextColor, Color, Color, PROPERTY_UPDATE_MEASURE_SELF);
+    ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP_ITEM(
+        TextStyle, FontWeight, Weight, FontWeight, PROPERTY_UPDATE_MEASURE);
+    ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP_ITEM(
+        TextStyle, FontFamily, FontFamily, std::vector<std::string>, PROPERTY_UPDATE_MEASURE);
+    ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP_ITEM(
+        TextStyle, ItalicFontStyle, FontStyle, Ace::FontStyle, PROPERTY_UPDATE_MEASURE);
+
+    ACE_DEFINE_PROPERTY_GROUP(SelectedTextStyle, FontStyle);
+    ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP_ITEM(
+        SelectedTextStyle, FontSize, SelectedFontSize, Dimension, PROPERTY_UPDATE_MEASURE);
+    ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP_ITEM(
+        SelectedTextStyle, TextColor, SelectedColor, Color, PROPERTY_UPDATE_MEASURE_SELF);
+    ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP_ITEM(
+        SelectedTextStyle, FontWeight, SelectedWeight, FontWeight, PROPERTY_UPDATE_MEASURE);
+    ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP_ITEM(
+        SelectedTextStyle, FontFamily, SelectedFontFamily, std::vector<std::string>, PROPERTY_UPDATE_MEASURE);
+    ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP_ITEM(
+        SelectedTextStyle, ItalicFontStyle, SelectedFontStyle, Ace::FontStyle, PROPERTY_UPDATE_MEASURE);
 private:
     ACE_DISALLOW_COPY_AND_MOVE(DataPickerRowLayoutProperty);
 };

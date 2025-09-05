@@ -16,8 +16,6 @@
 #include "core/gestures/velocity_tracker.h"
 
 namespace OHOS::Ace {
-int32_t VelocityTracker::POINT_NUMBER = SystemProperties::GetVelocityTrackerPointNumber();
-
 namespace {
 static constexpr int32_t MAX_INDEX = 4;
 
@@ -104,20 +102,13 @@ void CorrectMonotonicAxisVelocity(const LeastSquareImpl& axis, double& v, double
     v = GetLinearSlope(axis);
     CheckExtremePoint(axis, extremX, valSize);
 }
-} // namespace
 
-double VelocityTracker::UpdateAxisVelocity(LeastSquareImpl& axisRaw)
+double UpdateAxisVelocity(LeastSquareImpl& axis)
 {
-    LeastSquareImpl axis = axisRaw;
-    if (SystemProperties::IsVelocityWithinTimeWindow()) {
-        auto xTimes = axisRaw.GetXVals();
-        auto timeThreshold = xTimes.back() - VelocityTracker::DURATION_LONGEST_THRESHOLD;
-        int32_t cnt = (std::lower_bound(xTimes.begin(), xTimes.end(), timeThreshold) - xTimes.begin());
-        axis.ResetValsFromRaw(axisRaw, cnt);
-    }
     std::vector<double> param(VelocityTracker::LEAST_SQUARE_PARAM_NUM, 0);
     auto x = axis.GetXVals().back();
-    // the velocity is 2 * param[0] * x + param[1]; with param[2] unused
+    // curve is param[0] * x^2 + param[1] * x + param[2]
+    // the velocity is 2 * param[0] * x + param[1];
     double velocity = 0.0;
     if (axis.GetLeastSquareParams(param)) {
         velocity = 2 * param[0] * x + param[1];      // 2: const of formula
@@ -128,12 +119,10 @@ double VelocityTracker::UpdateAxisVelocity(LeastSquareImpl& axisRaw)
     }
     return velocity;
 }
+} // namespace
 
-void VelocityTracker::UpdateTouchPoint(const TouchEvent& event, bool end, float range)
+void VelocityTracker::UpdateTouchPoint(const TouchEvent& event, bool end)
 {
-    if (end && SystemProperties::IsVelocityWithoutUpPoint()) {
-        return;
-    }
     if (isFirstPoint_) {
         firstTrackPoint_ = event;
         isFirstPoint_ = false;
@@ -147,6 +136,8 @@ void VelocityTracker::UpdateTouchPoint(const TouchEvent& event, bool end, float 
     std::chrono::duration<double> diffTime = event.time - lastTimePoint_;
     lastTimePoint_ = event.time;
     lastPosition_ = event.GetOffset();
+    // judge duration is 500ms.
+    static const double range = 0.5;
     if (end) {
         Offset oriDelta;
         if (isFirstPoint_) {
@@ -213,23 +204,13 @@ void VelocityTracker::DumpVelocityPoints() const
     auto func = [](const LeastSquareImpl &axis, const char* str) {
         const auto& xVal = axis.GetXVals();
         const auto& yVal = axis.GetYVals();
-        if (xVal.size() == 0 || yVal.size() == 0)
-            return;
         int32_t i = static_cast<int32_t>(xVal.size());
         auto baseVal = yVal[0];
-        std::stringstream oss;
-        oss << std::string(str);
         for (int32_t cnt = VelocityTracker::POINT_NUMBER; i > 0 && cnt > 0; --cnt) {
             --i;
-            if (SystemProperties::GetDebugEnabled()) {
-                TAG_LOGI(AceLogTag::ACE_GESTURE, "%{public}s last tracker point[%{public}d] x=%{public}f y=%{public}f",
-                    str, cnt, xVal[i], yVal[i] - baseVal);
-            } else {
-                oss << " [" << std::to_string(cnt) << "] x " << std::to_string(xVal[i]) <<
-                    " y " << std::to_string(yVal[i] - baseVal);
-            }
+            LOGI("%{public}s last tracker points[%{public}d] x=%{public}f y=%{public}f", str, cnt, xVal[i],
+                yVal[i] - baseVal);
         }
-        TAG_LOGI(AceLogTag::ACE_GESTURE, "%{public}s", oss.str().c_str());
     };
     func(xAxis_, "xAxis");
     func(yAxis_, "yAxis");

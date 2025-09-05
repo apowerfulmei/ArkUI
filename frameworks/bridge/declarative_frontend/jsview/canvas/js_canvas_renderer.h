@@ -33,7 +33,7 @@
 namespace OHOS::Ace::Framework {
 
 class JSCanvasRenderer : public JSRenderingContextBase {
-    DECLARE_ACE_TYPE(JSCanvasRenderer, JSRenderingContextBase);
+    DECLARE_ACE_TYPE(JSCanvasRenderer, JSRenderingContextBase)
 public:
     JSCanvasRenderer();
     ~JSCanvasRenderer() override;
@@ -72,7 +72,6 @@ public:
     void JsStroke(const JSCallbackInfo& info);
     void JsClip(const JSCallbackInfo& info);
     void JsRect(const JSCallbackInfo& info);
-    void JsRoundRect(const JSCallbackInfo& info);
     void JsBeginPath(const JSCallbackInfo& info);
     void JsClosePath(const JSCallbackInfo& info);
     void JsRestore(const JSCallbackInfo& info);
@@ -122,7 +121,6 @@ public:
     void JsSetFilter(const JSCallbackInfo& info);
     void JsSetDirection(const JSCallbackInfo& info);
     void JsReset(const JSCallbackInfo& info);
-    void JsSetLetterSpacing(const JSCallbackInfo& info);
 
     void JSGetEmpty(const JSCallbackInfo& info)
     {
@@ -186,7 +184,6 @@ public:
 
     void SetTransform(unsigned int id, const TransformParam&);
 
-    void ResetPaintState();
     ACE_DISALLOW_COPY_AND_MOVE(JSCanvasRenderer);
 
 protected:
@@ -194,18 +191,15 @@ protected:
     void ParseFillPattern(const JSCallbackInfo& info);
     void ParseStorkeGradient(const JSCallbackInfo& info);
     void ParseStrokePattern(const JSCallbackInfo& info);
-    JSRenderImage* UnwrapNapiImage(const JSRef<JSObject> jsObject);
+    JSRenderImage* UnwrapNapiImage(const EcmaVM* vm, const JSRef<JSObject> jsObject);
 
 protected:
-    bool isJudgeSpecialValue_ = false;
     RefPtr<RenderingContext2DModel> renderingContext2DModel_;
     bool anti_ = false;
 
     RefPtr<AceType> offscreenPattern_;
 
     int32_t instanceId_ = INSTANCE_ID_UNDEFINED;
-
-    int32_t apiVersion_ = 0;
 
 private:
     void ExtractInfoToImage(CanvasImage& image, const JSCallbackInfo& info, bool isImage);
@@ -216,11 +210,14 @@ private:
 
     PaintState paintState_;
     std::vector<PaintState> savePaintState_;
+    static std::unordered_map<int32_t, std::shared_ptr<Pattern>> pattern_;
+    static unsigned int patternCount_;
+    std::weak_ptr<Ace::Pattern> GetPatternNG(int32_t id);
+    Pattern GetPattern(unsigned int id);
+    std::shared_ptr<Pattern> GetPatternPtr(int32_t id);
     bool isInitializeShadow_ = false;
     bool isOffscreenInitializeShadow_ = false;
     Dimension GetDimensionValue(const std::string& str);
-    bool IsCustomFont(const std::string& fontName);
-    bool IsValidLetterSpacing(const std::string& letterSpacing);
     CanvasUnit unit_ = CanvasUnit::DEFAULT;
     double density_ = 1.0;
     int32_t densityCallbackId_ = 0;

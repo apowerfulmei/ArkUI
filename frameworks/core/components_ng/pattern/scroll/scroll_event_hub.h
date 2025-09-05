@@ -45,7 +45,7 @@ using ScrollEdgeEvent = std::function<void(ScrollEdge)>;
 using ScrollEndEvent = std::function<void()>;
 
 class ScrollEventHub : public ScrollableEventHub {
-    DECLARE_ACE_TYPE(ScrollEventHub, ScrollableEventHub);
+    DECLARE_ACE_TYPE(ScrollEventHub, ScrollableEventHub)
 
 public:
     ScrollEventHub() = default;
@@ -111,101 +111,13 @@ public:
         onScrollBegin_ = std::move(event);
     }
 
-    void SetJSFrameNodeOnScrollWillScroll(ScrollEventWithReturn&& onScroll)
-    {
-        onJSFrameNodeWillScroll_ = std::move(onScroll);
-    }
-
-    void ClearJSFrameNodeOnScrollWillScroll()
-    {
-        if (onJSFrameNodeWillScroll_) {
-            onJSFrameNodeWillScroll_ = nullptr;
-        }
-    }
-
-    const ScrollEventWithReturn& GetJSFrameNodeOnScrollWillScroll()
-    {
-        return onJSFrameNodeWillScroll_;
-    }
-
-    void SetJSFrameNodeOnScrollDidScroll(ScrollEventWithState&& onScroll)
-    {
-        onJSFrameNodeDidScroll_ = std::move(onScroll);
-    }
-
-    void ClearJSFrameNodeOnScrollDidScroll()
-    {
-        if (onJSFrameNodeDidScroll_) {
-            onJSFrameNodeDidScroll_ = nullptr;
-        }
-    }
-
-    const ScrollEventWithState& GetJSFrameNodeOnScrollDidScroll()
-    {
-        return onJSFrameNodeDidScroll_;
-    }
-
-    void SetOnDidZoom(std::function<void(float)>&& event)
-    {
-        onDidZoom_ = std::move(event);
-    }
-
-    void FireOnDidZoom(float scale)
-    {
-        if (onDidZoom_) {
-            onDidZoom_(scale);
-        }
-    }
-
-    void SetOnZoomStart(std::function<void()>&& event)
-    {
-        onZoomStart_ = std::move(event);
-    }
-
-    void FireOnZoomStart()
-    {
-        if (onZoomStart_) {
-            onZoomStart_();
-        }
-    }
-
-    void SetOnZoomStop(std::function<void()>&& event)
-    {
-        onZoomStop_ = std::move(event);
-    }
-
-    void FireOnZoomStop()
-    {
-        if (onZoomStop_) {
-            onZoomStop_();
-        }
-    }
-
-    void SetOnZoomScaleChange(std::function<void(float)>&& event)
-    {
-        onZoomScaleChange_ = std::move(event);
-    }
-
-    void FireOnZoomScaleChange(float scale)
-    {
-        if (onZoomScaleChange_) {
-            onZoomScaleChange_(scale);
-        }
-    }
-
 private:
     ScrollEvent onScroll_;
     ScrollEventWithReturn onWillScroll_;
     ScrollEventWithState onDidScroll_;
-    ScrollEventWithReturn onJSFrameNodeWillScroll_;
-    ScrollEventWithState onJSFrameNodeDidScroll_;
     OnScrollBeginEvent onScrollBegin_;
     ScrollEndEvent onScrollEnd_;
     ScrollEdgeEvent onScrollEdge_;
-    std::function<void(float)> onDidZoom_;
-    std::function<void()> onZoomStart_;
-    std::function<void()> onZoomStop_;
-    std::function<void(float)> onZoomScaleChange_;
 
     ACE_DISALLOW_COPY_AND_MOVE(ScrollEventHub);
 };

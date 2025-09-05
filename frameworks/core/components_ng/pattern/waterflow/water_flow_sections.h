@@ -21,14 +21,13 @@
 #include <optional>
 
 #include "base/geometry/dimension.h"
-#include "base/memory/ace_type.h"
 #include "core/components_ng/property/measure_property.h"
 
 namespace OHOS::Ace::NG {
 using GetItemMainSizeByIndex = std::function<float(int32_t)>;
 
-class ACE_FORCE_EXPORT WaterFlowSections : public virtual AceType {
-    DECLARE_ACE_TYPE(WaterFlowSections, AceType);
+class WaterFlowSections : public virtual AceType {
+    DECLARE_ACE_TYPE(WaterFlowSections, AceType)
 public:
     struct Section {
         bool operator==(const Section& other) const
@@ -65,9 +64,9 @@ public:
     void NotifySectionChange(
         int32_t start, int32_t deleteCount, const std::vector<WaterFlowSections::Section>& newSections);
 
-    void SetNotifySectionChange(std::function<void(int32_t start)>&& func)
+    void SetNotifyDataChange(std::function<void(int32_t start, int32_t count)>&& func)
     {
-        notifySectionChange_ = func;
+        notifyDataChange_ = func;
     }
 
     /**
@@ -97,7 +96,7 @@ private:
     // for comparing and handling special case
     std::vector<Section> prevSections_;
     std::function<void(int32_t start)> onSectionDataChange_;
-    std::function<void(int32_t start)> notifySectionChange_;
+    std::function<void(int32_t start, int32_t count)> notifyDataChange_;
 };
 
 } // namespace OHOS::Ace::NG

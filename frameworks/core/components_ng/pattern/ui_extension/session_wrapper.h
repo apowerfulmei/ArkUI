@@ -61,17 +61,12 @@ enum class SessionType : int32_t {
     UI_EXTENSION_ABILITY = 1,
     CLOUD_CARD = 2,
     SECURITY_UI_EXTENSION_ABILITY = 3,
-    DYNAMIC_COMPONENT = 4,
-    ISOLATED_COMPONENT = 5,
-    PREVIEW_UI_EXTENSION_ABILITY = 6,
-    INVALID_TYPE = 100,
 };
 
 enum class UIExtensionUsage : uint32_t {
     MODAL = 0,
     EMBEDDED = 1,
     CONSTRAINED_EMBEDDED = 2,
-    PREVIEW_EMBEDDED = 3,
 };
 
 struct SessionConfig {
@@ -141,25 +136,16 @@ public:
     virtual void NotifyOriginAvoidArea(const Rosen::AvoidArea& avoidArea, uint32_t type) const = 0;
     virtual bool NotifyOccupiedAreaChangeInfo(
         sptr<Rosen::OccupiedAreaChangeInfo> info, bool needWaitLayout = false) = 0;
-    virtual void SetDensityDpiImpl(bool densityDpi) {}
+    virtual void SetDensityDpiImpl(bool densityDpi) = 0;
 
     // The interface to send the data for ArkTS
     virtual void SendDataAsync(const AAFwk::WantParams& params) const = 0;
     virtual int32_t SendDataSync(const AAFwk::WantParams& wantParams, AAFwk::WantParams& reWantParams) const = 0;
-
-    // The interface to update viewport config
-    virtual void UpdateSessionViewportConfig() {}
-
     // The interface for UEC dump
     virtual uint32_t GetReasonDump() const = 0;
     virtual void NotifyUieDump(const std::vector<std::string>& params, std::vector<std::string>& info) = 0;
-    virtual bool SendBusinessDataSyncReply(UIContentBusinessCode code, const AAFwk::Want& data, AAFwk::Want& reply,
-        RSSubsystemId subSystemId = RSSubsystemId::ARKUI_UIEXT) = 0;
-    virtual bool SendBusinessData(UIContentBusinessCode code, const AAFwk::Want& data, BusinessDataSendType type,
-        RSSubsystemId subSystemId = RSSubsystemId::ARKUI_UIEXT) = 0;
-
-    virtual void NotifyHostWindowMode(int32_t mode) {}
-    virtual void ReDispatchWantParams() {}
+    virtual bool SendBusinessDataSyncReply(UIContentBusinessCode code, AAFwk::Want&& data, AAFwk::Want& reply) = 0;
+    virtual bool SendBusinessData(UIContentBusinessCode code, AAFwk::Want&& data, BusinessDataSendType type) = 0;
 };
 } // namespace OHOS::Ace::NG
 #endif // FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_PATTERN_UI_EXTENSION_SESSION_WRAPPER_H

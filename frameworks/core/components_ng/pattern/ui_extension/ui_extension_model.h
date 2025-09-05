@@ -23,8 +23,8 @@
 #include "base/utils/macros.h"
 #include "base/want/want_wrap.h"
 #include "core/components_ng/base/frame_node.h"
-#include "core/components_ng/pattern/ui_extension/session_wrapper.h"
 #include "core/components_ng/pattern/ui_extension/ui_extension_config.h"
+#include "core/components_ng/pattern/ui_extension/session_wrapper.h"
 
 namespace OHOS::AAFwk {
 class Want;
@@ -40,8 +40,6 @@ struct InnerModalUIExtensionConfig {
     bool isAsyncModalBinding = false;
     bool isModal = true;
     bool isDensityFollowHost = false;
-    bool isWindowModeFollowHost = false;
-    bool isModalRequestFocus = true;
 };
 
 struct UIExtensionConfig {
@@ -50,7 +48,6 @@ struct UIExtensionConfig {
     bool transferringCaller = false;
     bool densityDpi = false;
     NG::SessionType sessionType = NG::SessionType::UI_EXTENSION_ABILITY;
-    bool backgroundTransparent = true;
 };
 }
 
@@ -61,9 +58,11 @@ public:
 
     virtual void Create(const RefPtr<OHOS::Ace::WantWrap>& wantWrap,
         const std::map<NG::PlaceholderType, RefPtr<NG::FrameNode>>& placeholderMap,
-        bool transferringCaller = false, bool densityDpi = false, bool isWindowModeFollowHost = false);
+        bool transferringCaller = false, bool densityDpi = false);
     // for Embedded Component
     virtual void Create(const RefPtr<OHOS::Ace::WantWrap>& wantWrap, NG::SessionType sessionType);
+    // for DynamicComponent
+    virtual void Create();
     virtual void Create(const NG::UIExtensionConfig& config) {}
     virtual void InitializeDynamicComponent(const RefPtr<NG::FrameNode>& frameNode, const std::string& hapPath,
         const std::string& abcPath, const std::string& entryPoint, void* runtime);
@@ -71,10 +70,6 @@ public:
         const RefPtr<OHOS::Ace::WantWrap>& wantWrap, void* runtime);
     virtual void SetAdaptiveWidth(bool state);
     virtual void SetAdaptiveHeight(bool state);
-    virtual std::string GetUiExtensionType(NG::SessionType sessionType)
-    {
-        return "";
-    }
 
     virtual void SetOnRemoteReady(std::function<void(const RefPtr<NG::UIExtensionProxy>&)>&& onRemoteReady);
     virtual void SetOnRelease(std::function<void(int32_t)>&& onRelease);
@@ -90,7 +85,6 @@ public:
         NG::SessionType sessionType = NG::SessionType::UI_EXTENSION_ABILITY);
     virtual void SetPlatformOnError(
         std::function<void(int32_t code, const std::string& name, const std::string& message)>&& onError);
-    virtual void SetOnDrawReady(std::function<void()>&& onDrawReady);
 };
 } // namespace OHOS::Ace
 #endif // FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_PATTERN_UI_EXTENSION_UI_EXTENSION_MODEL_H

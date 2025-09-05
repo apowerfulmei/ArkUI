@@ -15,6 +15,7 @@
 
 #include "core/components/toggle/toggle_component.h"
 
+#include "core/components/toggle/render_toggle.h"
 #include "core/components/toggle/toggle_element.h"
 
 namespace OHOS::Ace {

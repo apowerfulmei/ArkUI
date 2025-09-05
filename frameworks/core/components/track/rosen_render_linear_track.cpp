@@ -26,6 +26,7 @@
 #endif
 
 #include "core/components/slider/render_slider.h"
+#include "core/components/track/render_track.h"
 #include "core/pipeline/base/rosen_render_context.h"
 
 namespace OHOS::Ace {

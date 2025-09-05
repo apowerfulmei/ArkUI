@@ -22,7 +22,7 @@ RefPtr<ImageSource> ImageSource::Create(int32_t /* fd */)
     return nullptr;
 }
 
-RefPtr<ImageSource> ImageSource::Create(const uint8_t* data, uint32_t size, uint32_t& errorCode)
+RefPtr<ImageSource> ImageSource::Create(const uint8_t* data, uint32_t size)
 {
     return nullptr;
 }
@@ -48,13 +48,13 @@ std::string ImageSourcePreview::GetProperty(const std::string& /* key */)
 }
 
 RefPtr<PixelMap> ImageSourcePreview::CreatePixelMap(
-    const Size& size, uint32_t& errorCode, const PixelMapConfig& pixelMapConfig)
+    const Size& size, AIImageQuality imageQuality, bool isHdrDecoderNeed)
 {
     return nullptr;
 }
 
 RefPtr<PixelMap> ImageSourcePreview::CreatePixelMap(
-    uint32_t index, const Size& size, uint32_t& errorCode, const PixelMapConfig& pixelMapConfig)
+    uint32_t index, const Size& size, AIImageQuality imageQuality, bool isHdrDecoderNeed)
 {
     return nullptr;
 }

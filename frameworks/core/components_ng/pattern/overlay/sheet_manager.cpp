@@ -16,14 +16,15 @@
 #include "core/components_ng/pattern/overlay/sheet_manager.h"
 
 #include "base/error/error_code.h"
-#include "base/subwindow/subwindow_manager.h"
+#include "core/common/container.h"
+#include "core/components_ng/base/frame_node.h"
 #include "core/components_ng/pattern/navrouter/navdestination_pattern.h"
 #include "core/components_ng/pattern/overlay/sheet_presentation_pattern.h"
-#include "core/components_ng/pattern/overlay/sheet_wrapper_pattern.h"
-#include "core/components_ng/pattern/sheet/sheet_mask_pattern.h"
+#include "core/components_ng/pattern/stage/page_pattern.h"
 #ifdef WINDOW_SCENE_SUPPORTED
 #include "core/components_ng/pattern/window_scene/scene/system_window_scene.h"
 #endif
+#include "core/pipeline_ng/pipeline_context.h"
 
 namespace OHOS::Ace::NG {
 namespace {
@@ -95,7 +96,7 @@ int32_t GetOverlayAndTargetNode(int32_t targetId, const SheetStyle& sheetStyle, 
             CHECK_NULL_VOID(overlayManager);
             overlayManager->DeleteModal(id);
         };
-    targetNode->PushDestroyCallbackWithTag(destructor, V2::SHEET_WRAPPER_TAG);
+    targetNode->PushDestroyCallback(destructor);
     return ERROR_CODE_NO_ERROR;
 }
 } // namespace
@@ -158,7 +159,7 @@ int32_t SheetManager::OpenBindSheetByUIContext(
 }
 
 int32_t SheetManager::UpdateBindSheetByUIContext(const RefPtr<NG::FrameNode>& sheetContentNode,
-    const NG::SheetStyle& sheetStyle, bool isPartialUpdate, int32_t currentInstanceId)
+    NG::SheetStyle& sheetStyle, bool isPartialUpdate, int32_t currentInstanceId)
 {
     CHECK_NULL_RETURN(sheetContentNode, ERROR_CODE_BIND_SHEET_CONTENT_ERROR);
     SheetContentKey sheetContentKey(currentInstanceId, sheetContentNode->GetId());
@@ -299,79 +300,7 @@ bool SheetManager::RemoveSheetByESC()
     }
     auto overlayManager = sheetPattern->GetOverlayManager();
     CHECK_NULL_RETURN(overlayManager, false);
-    TAG_LOGI(AceLogTag::ACE_SHEET, "sheet will close by esc, id is : %{public}d", sheetFocusId_.value());
+    TAG_LOGI(AceLogTag::ACE_SHEET, "sheet will colse by esc, id is : %{public}d", sheetFocusId_.value());
     return overlayManager->RemoveModalInOverlay();
-}
-
-void SheetManager::CloseSheetInSubWindow(const SheetKey& sheetKey)
-{
-    auto instanceId = Container::CurrentId();
-    TAG_LOGD(AceLogTag::ACE_SHEET, "close sheet in subwindow by user defined");
-    auto manager = SubwindowManager::GetInstance();
-    CHECK_NULL_VOID(manager);
-    auto parentId = manager->GetParentContainerId(instanceId);
-#ifdef OHOS_STANDARD_SYSTEM
-    auto subwindow = manager->GetSubwindowByType(instanceId >= MIN_SUBCONTAINER_ID ?
-        parentId : instanceId, SubwindowType::TYPE_SHEET);
-#else
-    auto subwindow = manager->GetSubwindowByType(parentId != INVALID_SUBWINDOW_ID ?
-        parentId : instanceId, SubwindowType::TYPE_SHEET);
-#endif
-    CHECK_NULL_VOID(subwindow);
-    auto overlay = subwindow->GetOverlayManager();
-    CHECK_NULL_VOID(overlay);
-    overlay->CloseSheet(sheetKey);
-}
-
-void SheetManager::SetMaskInteractive(const RefPtr<FrameNode>& maskNode, bool isInteractive)
-{
-    auto maskPattern = maskNode->GetPattern<SheetMaskPattern>();
-    if (maskPattern) {
-        maskPattern->SetIsMaskInteractive(isInteractive);
-    }
-}
-
-void SheetManager::RegisterDestroyCallback(const RefPtr<FrameNode>& targetNode, NG::SheetStyle& sheetStyle,
-    const int32_t containerId)
-{
-    auto destructor = [id = targetNode->GetId(), rootNodeId = targetNode->GetRootNodeId(),
-        rootNodeType = targetNode->GetRootNodeType(),
-        showInPage = sheetStyle.showInPage.value_or(false), containerId]() {
-        ContainerScope scope(containerId);
-        auto pipeline = NG::PipelineContext::GetCurrentContext();
-        CHECK_NULL_VOID(pipeline);
-        auto overlayManager = pipeline->GetOverlayManager();
-        if (showInPage) {
-            TAG_LOGD(AceLogTag::ACE_SHEET, "To showInPage, get overlayManager from GetOverlayFromPage");
-            overlayManager = SheetManager::GetOverlayFromPage(rootNodeId, rootNodeType);
-        }
-        CHECK_NULL_VOID(overlayManager);
-        overlayManager->DeleteModal(id);
-        SheetManager::GetInstance().DeleteOverlayForWindowScene(rootNodeId, rootNodeType);
-        SheetManager::GetInstance().CloseSheetInSubWindow(SheetKey(id));
-    };
-    targetNode->PushDestroyCallbackWithTag(destructor, V2::SHEET_WRAPPER_TAG);
-}
-
-std::unique_ptr<State> SheetManager::CreateBreakPointState(WidthBreakpoint width,
-    HeightBreakpoint height)
-{
-    if (width == WidthBreakpoint::WIDTH_XS) {
-        return std::make_unique<WidthXSState>();
-    }
-    if (width == WidthBreakpoint::WIDTH_SM) {
-        return std::make_unique<WidthSMState>();
-    }
-    if (width == WidthBreakpoint::WIDTH_MD && height == HeightBreakpoint::HEIGHT_SM) {
-        return std::make_unique<WidthMDHeightSMState>();
-    }
-    if (width == WidthBreakpoint::WIDTH_MD &&
-        (height == HeightBreakpoint::HEIGHT_MD || height == HeightBreakpoint::HEIGHT_LG)) {
-        return std::make_unique<WidthMDHeightMDOrLGState>();
-    }
-    if (width == WidthBreakpoint::WIDTH_XL || width == WidthBreakpoint::WIDTH_LG) {
-        return std::make_unique<WidthLGState>();
-    }
-    return nullptr;
 }
 } // namespace OHOS::Ace::NG

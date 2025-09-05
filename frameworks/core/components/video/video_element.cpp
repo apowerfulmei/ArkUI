@@ -15,32 +15,47 @@
 
 #include "core/components/video/video_element.h"
 
-#include <cstdio>
+#include <algorithm>
 #include <iomanip>
 #include <regex>
 #include <sstream>
 #include <string>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <fcntl.h>
 
 #include "base/i18n/localization.h"
 #include "base/image/file_uri_helper.h"
 #include "base/json/json_util.h"
 #include "base/log/dump_log.h"
+#include "base/log/log.h"
+#include "base/resource/asset_manager.h"
+#include "base/resource/internal_resource.h"
+#include "base/utils/system_properties.h"
+#include "base/utils/utils.h"
+#include "core/common/container_scope.h"
 #include "core/components/align/align_component.h"
+#include "core/components/box/box_component.h"
 #include "core/components/button/button_component.h"
 #include "core/components/flex/flex_component.h"
 #include "core/components/flex/flex_item_component.h"
 #include "core/components/gesture_listener/gesture_listener_component.h"
+#include "core/components/image/image_component.h"
 #include "core/components/padding/padding_component.h"
 #include "core/components/slider/slider_component.h"
 #include "core/components/stage/stage_element.h"
 #include "core/components/text/text_component.h"
+#include "core/components/theme/resource_adapter.h"
+#include "core/components/theme/theme_manager.h"
 #include "core/components/video/render_texture.h"
+#include "core/event/ace_event_helper.h"
+#include "core/event/back_end_event_manager.h"
+#include "core/pipeline/base/composed_component.h"
+#include "core/pipeline/pipeline_context.h"
 
 #ifdef OHOS_STANDARD_SYSTEM
 #include <securec.h>
+
+#include "display_type.h"
 #include "surface.h"
 
 #ifdef ENABLE_ROSEN_BACKEND
@@ -347,7 +362,7 @@ void VideoElement::PreparePlayer()
     }
     producerSurface->SetQueueSize(SURFACE_QUEUE_SIZE);
     producerSurface->SetUserData("SURFACE_STRIDE_ALIGNMENT", SURFACE_STRIDE_ALIGNMENT);
-    producerSurface->SetUserData("SURFACE_FORMAT", std::to_string(GRAPHIC_PIXEL_FMT_RGBA_8888));
+    producerSurface->SetUserData("SURFACE_FORMAT", std::to_string(PIXEL_FMT_RGBA_8888));
     if (mediaPlayer_->SetVideoSurface(producerSurface) != 0) {
         LOGE("Player SetVideoSurface failed");
         return;
@@ -380,18 +395,17 @@ void VideoElement::MediaPlay(const std::string& filePath)
             return;
         }
         auto hapPath = Container::Current()->GetHapPath();
-        std::FILE* hapFp = std::fopen(hapPath.c_str(), "r");
-        if (hapFp == nullptr) {
+        auto hapFd = open(hapPath.c_str(), O_RDONLY);
+        if (hapFd < 0) {
             LOGE("Open hap file failed");
             return;
         }
-        auto hapFd = fileno(hapFp);
         if (mediaPlayer_->SetSource(hapFd, fileInfo.offset, fileInfo.length) != 0) {
             LOGE("Player SetSource failed");
-            std::fclose(hapFp);
+            close(hapFd);
             return;
         }
-        std::fclose(hapFp);
+        close(hapFd);
     }
 }
 
@@ -406,18 +420,17 @@ void VideoElement::RawFilePlay(const std::string& filePath)
         return;
     }
     auto hapPath = Container::Current()->GetHapPath();
-    std::FILE* hapFp = std::fopen(hapPath.c_str(), "r");
-    if (hapFp == nullptr) {
+    auto hapFd = open(hapPath.c_str(), O_RDONLY);
+    if (hapFd < 0) {
         LOGE("Open hap file failed");
         return;
     }
-    auto hapFd = fileno(hapFp);
     if (mediaPlayer_->SetSource(hapFd, fileInfo.offset, fileInfo.length) != 0) {
         LOGE("Player SetSource failed");
-        std::fclose(hapFp);
+        close(hapFd);
         return;
     }
-    std::fclose(hapFp);
+    close(hapFd);
 }
 
 void VideoElement::RelativePathPlay(const std::string& filePath)
@@ -431,18 +444,17 @@ void VideoElement::RelativePathPlay(const std::string& filePath)
         return;
     }
     auto hapPath = Container::Current()->GetHapPath();
-    std::FILE* hapFp = std::fopen(hapPath.c_str(), "r");
-    if (hapFp == nullptr) {
+    auto hapFd = open(hapPath.c_str(), O_RDONLY);
+    if (hapFd < 0) {
         LOGE("Open hap file failed");
         return;
     }
-    auto hapFd = fileno(hapFp);
     if (mediaPlayer_->SetSource(hapFd, fileInfo.offset, fileInfo.length) != 0) {
         LOGE("Player SetSource failed");
-        std::fclose(hapFp);
+        close(hapFd);
         return;
     }
-    std::fclose(hapFp);
+    close(hapFd);
 }
 
 bool VideoElement::GetResourceId(const std::string& path, uint32_t& resId)
@@ -1488,7 +1500,7 @@ const RefPtr<Component> VideoElement::CreateFullScreenBtn()
     button->SetType(ButtonType::ICON);
 
     if (IsDeclarativePara()) {
-        button->SetClickFunction([weak = WeakClaim(this)]() {
+        button->SetClickFunction([weak = WeakClaim(this), isFullScreen = isFullScreen_]() {
             auto videoElement = weak.Upgrade();
             if (videoElement) {
                 videoElement->OnFullScreenBtnClick();

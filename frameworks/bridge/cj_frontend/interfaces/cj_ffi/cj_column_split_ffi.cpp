@@ -15,9 +15,13 @@
 
 #include "bridge/cj_frontend/interfaces/cj_ffi/cj_column_split_ffi.h"
 
-#include "bridge/cj_frontend/cppview/shape_abstract.h"
+#include "bridge/cj_frontend/interfaces/cj_ffi/utils.h"
+#include "bridge/common/utils/utils.h"
 #include "core/components_ng/base/view_abstract_model.h"
+#include "core/common/container.h"
 #include "core/components_ng/pattern/linear_split/linear_split_model.h"
+#include "bridge/cj_frontend/cppview/shape_abstract.h"
+
 
 using namespace OHOS::Ace;
 using namespace OHOS::FFI;
@@ -39,7 +43,7 @@ void FfiOHOSAceFrameworkColumnSplitDivider(DividerParam params)
     Dimension startMarginDime(params.startMargin, static_cast<DimensionUnit>(params.startMarginUnit));
     Dimension endMarginDime(params.endMargin, static_cast<DimensionUnit>(params.endMarginUnit));
 
-    NG::ColumnSplitDivider divider;
+    NG::ItemDivider divider;
     divider.startMargin = startMarginDime;
     divider.endMargin = endMarginDime;
 

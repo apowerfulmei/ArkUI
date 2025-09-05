@@ -18,7 +18,6 @@
 
 #include "focus_state.h"
 #include "core/event/focus_axis_event.h"
-#include "core/event/crown_event.h"
 #include "core/event/key_event.h"
 #include "core/gestures/gesture_event.h"
 namespace OHOS::Ace::NG {
@@ -65,11 +64,10 @@ struct FocusEvent {
     FocusIntension intension;
     const NonPointerEvent& event;
     static FocusIntension GetFocusIntension(const NonPointerEvent& event);
-    static FocusIntension GetFocusIntensionFromKey(KeyIntention keyIntention);
 };
 
 class ACE_EXPORT FocusCallbackEvents : public virtual AceType {
-    DECLARE_ACE_TYPE(FocusCallbackEvents, AceType);
+    DECLARE_ACE_TYPE(FocusCallbackEvents, AceType)
 public:
     FocusCallbackEvents() = default;
     ~FocusCallbackEvents() override = default;
@@ -82,11 +80,8 @@ public:
     OnKeyCallbackFunc onJSFrameNodeKeyEventCallback_;
     OnKeyConsumeFunc onKeyPreImeCallback_;
     GestureEventFunc onClickEventCallback_;
-    GestureEventFunc onSpanLongPressEventCallback_; // used only for span
     OnFocusAxisEventFunc onFocusAxisEventCallback_;
     OnKeyEventDispatchFunc onKeyEventDispatchCallback_;
-    OnCrownCallbackFunc onCrownEventCallback_;
-    OnCrownEventFunc onCrownEventsInternal_;
 
     WeakPtr<FocusHub> defaultFocusNode_;
     bool isDefaultFocus_ = { false };
@@ -104,7 +99,7 @@ enum class OnKeyEventType : int32_t {
 };
 
 class FocusEventHandler : public virtual FocusState {
-    DECLARE_ACE_TYPE(FocusEventHandler, FocusState);
+    DECLARE_ACE_TYPE(FocusEventHandler, FocusState)
 public:
     FocusEventHandler() = default;
     ~FocusEventHandler() override = default;
@@ -119,14 +114,10 @@ public:
     }
     bool OnClick(const KeyEvent& event);
 
-    bool ProcessOnCrownEventInternal(const CrownEvent& event);
-
 protected:
-    bool OnCrownEvent(const CrownEvent& CrownEvent);
     bool OnFocusEvent(const FocusEvent& event);
     virtual bool HandleFocusTravel(const FocusEvent& event) = 0; // bad design which need to be deleted
     int32_t GetKeyProcessingMode();
-
     ACE_DEFINE_FOCUS_EVENT(OnFocusCallback, OnFocusFunc, onFocusCallback)
     ACE_DEFINE_FOCUS_EVENT(OnBlurCallback, OnBlurFunc, onBlurCallback)
     ACE_DEFINE_FOCUS_EVENT(JSFrameNodeOnFocusCallback, OnFocusFunc, onJSFrameNodeFocusCallback)
@@ -135,14 +126,11 @@ protected:
     ACE_DEFINE_FOCUS_EVENT(OnKeyCallback, OnKeyConsumeFunc, onKeyEventCallback)
     ACE_DEFINE_FOCUS_EVENT(OnKeyPreIme, OnKeyConsumeFunc, onKeyPreImeCallback)
     ACE_DEFINE_FOCUS_EVENT(OnClickCallback, GestureEventFunc, onClickEventCallback)
-    ACE_DEFINE_FOCUS_EVENT(OnLongPressCallback, GestureEventFunc, onSpanLongPressEventCallback)
     ACE_DEFINE_FOCUS_EVENT(OnFocusAxisCallback, OnFocusAxisEventFunc, onFocusAxisEventCallback)
     ACE_DEFINE_FOCUS_EVENT(OnKeyEventDispatchCallback, OnKeyEventDispatchFunc, onKeyEventDispatchCallback)
-    ACE_DEFINE_FOCUS_EVENT(OnCrownCallback, OnCrownCallbackFunc, onCrownEventCallback)
-    ACE_DEFINE_FOCUS_EVENT(OnCrownEventInternal, OnCrownEventFunc, onCrownEventsInternal)
 
     std::unordered_map<OnKeyEventType, OnKeyEventFunc> onKeyEventsInternal_;
-    bool isNodeNeedKey_ { false }; // extension use only
+    bool forceProcessOnKeyEventInternal_ { false }; // extension use only
     RefPtr<FocusCallbackEvents> focusCallbackEvents_;
 
 private:
@@ -157,8 +145,6 @@ private:
     bool HandleFocusAxisEvent(const FocusAxisEvent& event);
     bool HasCustomKeyEventDispatch(const FocusEvent& event);
     bool HandleCustomEventDispatch(const FocusEvent& event);
-    bool HandleCrownEvent(const CrownEvent& CrownEvent);
-
     void PrintOnKeyEventUserInfo(const KeyEvent& keyEvent, bool retCallback);
 };
 } // namespace OHOS::Ace::NG

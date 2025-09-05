@@ -29,12 +29,6 @@ class ComposedElement;
 } // namespace OHOS::Ace
 
 namespace OHOS::Ace::Framework {
-enum class PrebuildPhase : int32_t {
-    NONE = 0,
-    BUILD_PREBUILD_CMD = 1,
-    EXECUTE_PREBUILD_CMD = 2,
-    PREBUILD_DONE = 3,
-};
 
 class JSView;
 
@@ -73,17 +67,11 @@ public:
     void ExecuteUpdateWithValueParams(const std::string& jsonData);
     void ExecuteRecycle(const std::string& viewName);
     void ExecuteAboutToRecycle();
-    void ExecuteAboutToReuse(void* params);
-    void ExecuteSetActive(bool active, bool isReuse = false);
+    void ExecuteSetActive(bool active);
     void ExecuteOnDumpInfo(const std::vector<std::string>& params);
     std::string ExecuteOnDumpInfo();
-    void ExecuteClearAllRecycle();
     std::string ExecuteOnFormRecycle();
     void ExecuteOnFormRecover(const std::string &statusData);
-    void ExecutePrebuildComponent();
-    bool ExecuteSetPrebuildPhase(PrebuildPhase prebuildPhase);
-    bool ExecuteIsEnablePrebuildInMultiFrame();
-    void ExecuteOnNewParam(const std::string &newParam);
 
     bool HasPageTransition() const;
     bool HasMeasure() const;
@@ -132,17 +120,11 @@ private:
     JSWeak<JSFunc> jsSetInitiallyProvidedValueFunc_;
     JSWeak<JSFunc> jsRecycleFunc_;
     JSWeak<JSFunc> jsAboutToRecycleFunc_;
-    JSWeak<JSFunc> jsAboutToReuseFunc_;
     JSWeak<JSFunc> jsSetActive_;
     JSWeak<JSFunc> jsOnDumpInfo_;
     JSWeak<JSFunc> jsOnDumpInspector_;
-    JSWeak<JSFunc> jsClearAllRecycle_;
-    JSWeak<JSFunc> jsPrebuildComponent_;
-    JSWeak<JSFunc> jsSetPrebuildPhase_;
-    JSWeak<JSFunc> jsIsEnablePrebuildInMultiFrame_;
-    JSWeak<JSFunc> jsOnFormRecycleFunc_;
-    JSWeak<JSFunc> jsOnFormRecoverFunc_;
-    JSWeak<JSFunc> jsOnNewParam_;
+    JSWeak<JSFunc>jsOnFormRecycleFunc_;
+    JSWeak<JSFunc>jsOnFormRecoverFunc_;
 
     JSExecutionContext context_;
 };

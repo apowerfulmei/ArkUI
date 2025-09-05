@@ -57,8 +57,6 @@ public:
         return tabBarItemId_.value();
     }
 
-    void UpdataTabBarItem();
-
 private:
     void ProcessTabBarItem();
     Axis GetTabBarAxis() const;

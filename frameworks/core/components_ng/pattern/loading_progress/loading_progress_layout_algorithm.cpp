@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2022-2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -15,13 +15,9 @@
 
 #include "core/components_ng/pattern/loading_progress/loading_progress_layout_algorithm.h"
 #include "core/components_ng/pattern/loading_progress/loading_progress_pattern.h"
-#include "core/components/progress/progress_theme.h"
-#include "core/pipeline/pipeline_base.h"
 
 namespace OHOS::Ace::NG {
-namespace {
-constexpr float ZERO_MEASURE_CONTENT_SIZE = 0.0f;
-}
+    
 LoadingProgressLayoutAlgorithm::LoadingProgressLayoutAlgorithm() = default;
 
 std::optional<SizeF> LoadingProgressLayoutAlgorithm::MeasureContent(
@@ -32,35 +28,13 @@ std::optional<SizeF> LoadingProgressLayoutAlgorithm::MeasureContent(
     auto pattern = host->GetPattern<LoadingProgressPattern>();
     CHECK_NULL_RETURN(pattern, std::nullopt);
     if (pattern->UseContentModifier()) {
-        if (host->GreatOrEqualAPITargetVersion(PlatformVersion::VERSION_EIGHTEEN)) {
-            host->GetGeometryNode()->ResetContent();
-        } else {
-            host->GetGeometryNode()->Reset();
-        }
+        host->GetGeometryNode()->Reset();
         return std::nullopt;
     }
-    auto layoutProperty = AceType::DynamicCast<LayoutProperty>(layoutWrapper->GetLayoutProperty());
-    CHECK_NULL_RETURN(layoutProperty, std::nullopt);
-    auto layoutPolicy = layoutProperty->GetLayoutPolicyProperty();
-    if (layoutPolicy.has_value() && (layoutPolicy->IsWrap() || layoutPolicy->IsFix())) {
-        return SizeF(ZERO_MEASURE_CONTENT_SIZE, ZERO_MEASURE_CONTENT_SIZE);
-    }
-    auto pipeline = host->GetContext();
-    CHECK_NULL_RETURN(pipeline, std::nullopt);
-    auto progressTheme = pipeline->GetTheme<ProgressTheme>(host->GetThemeScopeId());
-    CHECK_NULL_RETURN(progressTheme, std::nullopt);
-
-    float defaultHeight = contentConstraint.percentReference.Height();
-    float defaultWidth = contentConstraint.percentReference.Width();
-    float defaultLoadingSize = pipeline->NormalizeToPx(progressTheme->GetLoadingDefaultSize());
-    if (LessNotEqual(0.0f, defaultLoadingSize)) {
-        defaultHeight = defaultLoadingSize;
-        defaultWidth = defaultLoadingSize;
-    }
     float height_ = (contentConstraint.selfIdealSize.Height()) ? contentConstraint.selfIdealSize.Height().value()
-                                                               : defaultHeight;
+                                                               : contentConstraint.percentReference.Height();
     float width_ = (contentConstraint.selfIdealSize.Width()) ? contentConstraint.selfIdealSize.Width().value()
-                                                             : defaultWidth;
+                                                             : contentConstraint.percentReference.Width();
     auto diameter = std::min(width_, height_);
     return SizeF(diameter, diameter);
 }

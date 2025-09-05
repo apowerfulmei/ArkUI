@@ -80,27 +80,6 @@ declare class ViewStackProcessor {
 
   // Gets the framenode with tag and elmtId then pushes to the view stack.
   public static GetAndPushFrameNode(tag: string, elmtId: number): void;
-
-  // move deleted elmtIds from ElementRegistery in C++ to the caller
+  /** move deleted elmtIds from ElementRegistery in C++ to the caller */
   public static moveDeletedElmtIds(elmtIds : Array<number>);
-
-  /**
-   * Orders frame and registers for update on next vsync.
-   * PipelineContext passes the containerId in the callback.
-  */
-  public static scheduleUpdateOnNextVSync(cbFunc: ((containerId: number) => boolean) | null, containerId?: number): void;
-
-  // get Api version
-  public static getApiVersion(): number;
-
-  public static PushPrebuildCompCmd(): void;
-
-  public static CheckIsPrebuildTimeout(): boolean;
-
-  // get send state info to profiler
-  public static sendStateInfo(stateInfo: string): void;
-  
-  public static push(pointer: number): void;
-
-  public static pop(): void;
 }

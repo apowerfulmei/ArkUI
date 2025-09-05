@@ -42,8 +42,7 @@ public:
 };
 
 void AnimationUtils::OpenImplicitAnimation(
-    const AnimationOption& option, const RefPtr<Curve>& curve,
-    const std::function<void()>& wrapFinishCallback, const RefPtr<PipelineBase>& context)
+    const AnimationOption& option, const RefPtr<Curve>& curve, const std::function<void()>& wrapFinishCallback)
 {
 #ifdef ENHANCED_ANIMATION
     AnimManager::GetInstance().OpenAnimation();
@@ -53,7 +52,7 @@ void AnimationUtils::OpenImplicitAnimation(
     }
 }
 
-bool AnimationUtils::CloseImplicitAnimation(const RefPtr<PipelineBase>& context)
+bool AnimationUtils::CloseImplicitAnimation()
 {
 #ifdef ENHANCED_ANIMATION
     AnimManager::GetInstance().CloseAnimation();
@@ -61,32 +60,16 @@ bool AnimationUtils::CloseImplicitAnimation(const RefPtr<PipelineBase>& context)
     return false;
 }
 
-bool AnimationUtils::CloseImplicitCancelAnimation(const RefPtr<PipelineBase>& context)
-{
-#ifdef ENHANCED_ANIMATION
-    AnimManager::GetInstance().CloseAnimation();
-#endif
-    return true;
-}
-
-CancelAnimationStatus AnimationUtils::CloseImplicitCancelAnimationReturnStatus(const RefPtr<PipelineBase>& context)
-{
-#ifdef ENHANCED_ANIMATION
-    AnimManager::GetInstance().CloseAnimation();
-#endif
-    return CancelAnimationStatus::SUCCESS;
-}
-
-bool AnimationUtils::IsImplicitAnimationOpen(const RefPtr<PipelineBase>& context)
+bool AnimationUtils::IsImplicitAnimationOpen()
 {
     return false;
 }
 
 void AnimationUtils::Animate(const AnimationOption& option, const PropertyCallback& callback,
-    const FinishCallback& finishCallback, const RepeatCallback& repeatCallback, const RefPtr<PipelineBase>& context)
+    const FinishCallback& finishCallback, const RepeatCallback& repeatCallback)
 {
 #ifdef ENHANCED_ANIMATION
-    AnimManager::GetInstance().SetParams(option, { finishCallback, repeatCallback });
+    AnimManager::GetInstance().SetParams(option.GetDuration(), { finishCallback, repeatCallback });
     AnimManager::GetInstance().OpenAnimation();
 #endif
     if (callback) {
@@ -111,15 +94,13 @@ void AnimationUtils::Animate(const AnimationOption& option, const PropertyCallba
     }
 }
 
-void AnimationUtils::AddKeyFrame(float fraction, const RefPtr<Curve>& curve,
-    const PropertyCallback& callback, const RefPtr<PipelineBase>& context)
+void AnimationUtils::AddKeyFrame(float fraction, const RefPtr<Curve>& curve, const PropertyCallback& callback)
 {
     if (callback) {
         callback();
     }
 }
-void AnimationUtils::AddKeyFrame(float fraction, const PropertyCallback& callback,
-    const RefPtr<PipelineBase>& context)
+void AnimationUtils::AddKeyFrame(float fraction, const PropertyCallback& callback)
 {
     if (callback) {
         callback();
@@ -127,27 +108,15 @@ void AnimationUtils::AddKeyFrame(float fraction, const PropertyCallback& callbac
 }
 
 void AnimationUtils::AnimateWithCurrentOptions(
-    const PropertyCallback& callback, const FinishCallback& finishCallback,
-    bool timingSensitive, const RefPtr<PipelineBase>& context)
+    const PropertyCallback& callback, const FinishCallback& finishCallback, bool timingSensitive)
 {}
-
-void AnimationUtils::AnimateWithCurrentCallback(
-    const AnimationOption& option, const PropertyCallback& callback,
-    const RefPtr<PipelineBase>& context)
-{
-#ifdef ENHANCED_ANIMATION
-    AnimManager::GetInstance().OpenAnimation();
-    callback();
-    AnimManager::GetInstance().CloseAnimation();
-#endif
-}
+void AnimationUtils::AnimateWithCurrentCallback(const AnimationOption& option, const PropertyCallback& callback) {}
 
 std::shared_ptr<AnimationUtils::Animation> AnimationUtils::StartAnimation(const AnimationOption& option,
-    const PropertyCallback& callback, const FinishCallback& finishCallback,
-    const RepeatCallback& repeatCallback, const RefPtr<PipelineBase>& context)
+    const PropertyCallback& callback, const FinishCallback& finishCallback, const RepeatCallback& repeatCallback)
 {
 #ifdef ENHANCED_ANIMATION
-    AnimManager::GetInstance().SetParams(option, { finishCallback, repeatCallback });
+    AnimManager::GetInstance().SetParams(option.GetDuration(), { finishCallback, repeatCallback });
     AnimManager::GetInstance().OpenAnimation();
     if (callback) {
         callback();
@@ -188,7 +157,8 @@ void AnimationUtils::BlendBgColorAnimation(
     RefPtr<NG::RenderContext>& renderContext, const Color& endColor, int32_t duration, const RefPtr<Curve>& curve)
 {}
 
-void AnimationUtils::PauseAnimation(const std::shared_ptr<AnimationUtils::Animation>& animation) {
+void AnimationUtils::PauseAnimation(const std::shared_ptr<AnimationUtils::Animation>& animation)
+{
 #ifdef ENHANCED_ANIMATION
     CHECK_NULL_VOID(animation);
     for (auto&& anim : animation->impls_) {
@@ -197,7 +167,8 @@ void AnimationUtils::PauseAnimation(const std::shared_ptr<AnimationUtils::Animat
 #endif
 }
 
-void AnimationUtils::ResumeAnimation(const std::shared_ptr<AnimationUtils::Animation>& animation) {
+void AnimationUtils::ResumeAnimation(const std::shared_ptr<AnimationUtils::Animation>& animation)
+{
 #ifdef ENHANCED_ANIMATION
     CHECK_NULL_VOID(animation);
     for (auto&& anim : animation->impls_) {
@@ -206,8 +177,7 @@ void AnimationUtils::ResumeAnimation(const std::shared_ptr<AnimationUtils::Anima
 #endif
 }
 
-void AnimationUtils::ExecuteWithoutAnimation(const PropertyCallback& callback,
-    const RefPtr<PipelineBase>& context)
+void AnimationUtils::ExecuteWithoutAnimation(const PropertyCallback& callback)
 {
 #ifdef ENHANCED_ANIMATION
     if (AnimManager::GetInstance().IsAnimationOpen()) {

@@ -15,15 +15,15 @@
 
 #include "core/components_ng/pattern/stage/stage_layout_algorithm.h"
 
+#include "core/components_ng/layout/box_layout_algorithm.h"
+#include "core/components_ng/layout/layout_wrapper.h"
 #include "core/pipeline_ng/pipeline_context.h"
 
 namespace OHOS::Ace::NG {
 void StageLayoutAlgorithm::Measure(LayoutWrapper* layoutWrapper)
 {
     // apply safe area to page nodes
-    auto layoutProperty = layoutWrapper->GetLayoutProperty();
-    CHECK_NULL_VOID(layoutProperty);
-    auto layoutConstraint = layoutProperty->CreateChildConstraint();
+    auto layoutConstraint = layoutWrapper->GetLayoutProperty()->CreateChildConstraint();
     auto pipeline = PipelineContext::GetCurrentContext();
     childInsets_ = pipeline->GetSafeArea();
     LayoutWrapper::ApplySafeArea(childInsets_, layoutConstraint);

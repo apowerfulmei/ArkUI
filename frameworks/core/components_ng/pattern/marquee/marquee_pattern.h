@@ -82,34 +82,21 @@ public:
     void OnWindowSizeChanged(int32_t width, int32_t height, WindowSizeChangeReason type) override;
     void OnColorConfigurationUpdate() override;
     void DumpInfo() override;
-    
-    void DumpSimplifyInfo(std::shared_ptr<JsonValue>& json) override {}
-    void DumpInfo(std::unique_ptr<JsonValue>& json) override;
     void OnVisibleChange(bool isVisible) override;
     void OnWindowHide() override;
     void OnWindowShow() override;
+    TextDirection GetTextDirection(const std::string& content, TextDirection direction);
     void SetMarqueeFrameRateRange(const RefPtr<FrameRateRange>& rateRange, MarqueeDynamicSyncSceneType type)
     {
         frameRateRange_[type] = rateRange;
     }
-    TextDirection GetTextDirection(const std::string& content, TextDirection direction);
-    void OnFontScaleConfigurationUpdate() override;
-    void OnColorModeChange(uint32_t colorMode) override;
 
 protected:
     void OnDetachFromFrameNode(FrameNode* frameNode) override;
-    void UpdatePropertyImpl(const std::string& key, RefPtr<PropertyValueBase> value) override;
 
 private:
     void OnModifyDone() override;
     void OnAttachToFrameNode() override;
-    void OnAttachToMainTree() override;
-    void OnDetachFromMainTree() override;
-
-    void OnAttachToFrameNodeMultiThread() {}
-    void OnDetachFromFrameNodeMultiThread(FrameNode* frameNode) {}
-    void OnAttachToMainTreeMultiThread();
-    void OnDetachFromMainTreeMultiThread();
 
     void FireStartEvent() const;
     void FireBounceEvent() const;
@@ -117,13 +104,11 @@ private:
 
     void StartMarqueeAnimation();
     void StopMarqueeAnimation(bool stopAndStart);
-    void UpdateTextTranslateXY(float offsetX, bool cancel = false);
-    void PropertyCancelAnimationFinish();
+    void SetTextOffset(float offsetX);
     bool OnlyPlayStatusChange();
     void ChangeAnimationPlayStatus();
     void StoreProperties();
-    void PlayMarqueeAnimation(float start, int32_t playCount, bool needSecondPlay, bool isFirst = true);
-    void StopAndResetAnimation();
+    void PlayMarqueeAnimation(float start, int32_t playCount, bool needSecondPlay);
     void OnAnimationFinish();
     float CalculateStart();
     float CalculateEnd();
@@ -136,10 +121,6 @@ private:
         const RefPtr<MarqueeLayoutProperty>& layoutProperty, const RefPtr<TextLayoutProperty>& textLayoutProperty);
     void ActionAnimation(AnimationOption& option, float end, int32_t playCount, bool needSecondPlay);
     bool IsRunMarquee();
-    void ProcessVisibleAreaCallback();
-    void PauseAnimation();
-    void ResumeAnimation();
-
     bool measureChanged_ = false;
     int32_t animationId_ = 0;
     std::shared_ptr<AnimationUtils::Animation> animation_;
@@ -149,10 +130,10 @@ private:
     MarqueeDirection direction_ = MarqueeDirection::LEFT;
     TextDirection currentTextDirection_ = TextDirection::LTR;
     ACE_DISALLOW_COPY_AND_MOVE(MarqueePattern);
+    LastAnimationParam lastAnimationParam_;
     int32_t lastWindowHeight_ = 0.0;
     int32_t lastWindowWidth_ = 0.0;
     float marqueeWidth_ = 0.0f;
-    std::optional<OffsetF> lastAnimationOffset_;
     std::unordered_map<MarqueeDynamicSyncSceneType, RefPtr<FrameRateRange>> frameRateRange_ ;
 };
 } // namespace OHOS::Ace::NG

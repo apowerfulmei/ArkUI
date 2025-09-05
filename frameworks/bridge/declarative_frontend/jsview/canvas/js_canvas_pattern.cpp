@@ -47,22 +47,26 @@ void JSCanvasPattern::JSSetTransform(const JSCallbackInfo& info)
     if (info.Length() != SET_TRANSFORM_PARAMETER_SIZE || !info[0]->IsObject()) {
         return;
     }
-    CHECK_NULL_VOID(pattern_);
-    TransformParam transform;
     if (Container::GreatOrEqualAPITargetVersion(PlatformVersion::VERSION_TEN)) {
         auto* matrix = JSRef<JSObject>::Cast(info[0])->Unwrap<JSMatrix2d>();
-        CHECK_NULL_VOID(matrix);
-        transform = matrix->GetTransform();
-    } else {
-        JSRef<JSObject> jsObj = JSRef<JSObject>::Cast(info[0]);
-        transform = JSMatrix2d::GetTransformInfo(jsObj);
+        if (matrix) {
+            auto canvasRenderer = canvasRenderWeak_.Upgrade();
+            if (canvasRenderer) {
+                canvasRenderer->SetTransform(GetId(), matrix->GetTransform());
+            }
+        }
+        return;
     }
-    pattern_->SetScaleX(transform.scaleX);
-    pattern_->SetScaleY(transform.scaleY);
-    pattern_->SetSkewX(transform.skewX);
-    pattern_->SetSkewY(transform.skewY);
-    pattern_->SetTranslateX(transform.translateX);
-    pattern_->SetTranslateY(transform.translateY);
+
+    JSRef<JSObject> jsObj = JSRef<JSObject>::Cast(info[0]);
+    TransformParam param = JSMatrix2d::GetTransformInfo(jsObj);
+    double density = GetDensity();
+    param.translateX *= density;
+    param.translateY *= density;
+    auto canvasRenderer = canvasRenderWeak_.Upgrade();
+    if (canvasRenderer) {
+        canvasRenderer->SetTransform(GetId(), param);
+    }
 }
 } // namespace OHOS::Ace::Framework
 

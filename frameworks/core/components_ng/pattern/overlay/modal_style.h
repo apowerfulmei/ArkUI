@@ -19,7 +19,6 @@
 #include <optional>
 
 #include "core/components/common/properties/color.h"
-#include "core/common/resource/resource_object.h"
 
 namespace OHOS::Ace::NG {
 enum ModalTransition {
@@ -33,32 +32,15 @@ struct ModalStyle {
     std::optional<Color> backgroundColor;
     bool isUIExtension = false;
     bool prohibitedRemoveByRouter = false;
-    bool isAllowAddChildBelowModalUec = true;
     bool prohibitedRemoveByNavigation = true;
-    bool isModalRequestFocus = true;
 
     bool operator==(const ModalStyle& modelStyle) const
     {
-        return !(modalTransition != modelStyle.modalTransition ||
-            backgroundColor != modelStyle.backgroundColor ||
+        return !(modalTransition != modelStyle.modalTransition || backgroundColor != modelStyle.backgroundColor ||
             isUIExtension != modelStyle.isUIExtension ||
             prohibitedRemoveByRouter != modelStyle.prohibitedRemoveByRouter ||
-            isAllowAddChildBelowModalUec != modelStyle.isAllowAddChildBelowModalUec ||
-            prohibitedRemoveByNavigation != modelStyle.prohibitedRemoveByNavigation ||
-            isModalRequestFocus != modelStyle.isModalRequestFocus);
+            prohibitedRemoveByNavigation != modelStyle.prohibitedRemoveByNavigation);
     }
-
-    void SetBackgroundColorResObj(RefPtr<ResourceObject>& obj)
-    {
-        backgroundColorObj_ = obj;
-    }
-
-    const RefPtr<ResourceObject>& GetBackgroundColorResObj()
-    {
-        return backgroundColorObj_;
-    }
-
-    RefPtr<ResourceObject> backgroundColorObj_;
 };
 } // namespace OHOS::Ace::NG
 

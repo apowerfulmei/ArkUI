@@ -32,7 +32,6 @@ using ChangeIndexImpl = std::function<void(const int32_t, bool)>;
 using ChangeIndexWithModeImpl = std::function<void(const int32_t, SwiperAnimationMode)>;
 using PreloadItemsFunc = std::function<void(const std::set<int32_t>)>;
 using PreloadItemsFinishFunc = std::function<void(const int32_t, const std::string)>;
-using OnChangeFunc = std::function<void(int32_t index)>;
 
 class SwiperController : public virtual AceType {
     DECLARE_ACE_TYPE(SwiperController, AceType);
@@ -239,18 +238,6 @@ public:
         }
     }
 
-    void SetOnChangeImpl(const OnChangeFunc& onChangeImpl)
-    {
-        onChangeImpl_ = onChangeImpl;
-    }
-
-    void FireOnChangeEvent(int32_t index)
-    {
-        if (onChangeImpl_) {
-            onChangeImpl_(index);
-        }
-    }
-
 private:
     SwipeToImpl swipeToImpl_;
     SwipeToWithoutAnimationImpl swipeToWithoutAnimationImpl_;
@@ -270,7 +257,6 @@ private:
     CommonFunc surfaceChangeCallback_;
     PreloadItemsFinishFunc preloadFinishCallback_;
     PreloadItemsFunc preloadItemsImpl_;
-    OnChangeFunc onChangeImpl_;
 };
 
 } // namespace OHOS::Ace

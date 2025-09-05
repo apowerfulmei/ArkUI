@@ -44,13 +44,10 @@ ArkUINativeModuleValue SideBarContainerBridge::SetSideBarWidth(ArkUIRuntimeCallI
     Local<JSValueRef> sideBarWidthArg = runtimeCallInfo->GetCallArgRef(NUM_1);
     auto nativeNode = nodePtr(nativeNodeArg->ToNativePointer(vm)->Value());
     CalcDimension sideBarWidth;
-    RefPtr<ResourceObject> sideBarWidthResObj;
-    if (ArkTSUtils::ParseJsDimensionNG(
-        vm, sideBarWidthArg, sideBarWidth, DimensionUnit::VP, sideBarWidthResObj, true) &&
+    if (ArkTSUtils::ParseJsDimensionNG(vm, sideBarWidthArg, sideBarWidth, DimensionUnit::VP, true) &&
         sideBarWidth.Value() >= 0) {
-        auto widthRawPtr = AceType::RawPtr(sideBarWidthResObj);
         GetArkUINodeModifiers()->getSideBarContainerModifier()->setSideBarWidth(
-            nativeNode, sideBarWidth.Value(), static_cast<int32_t>(sideBarWidth.Unit()), widthRawPtr);
+            nativeNode, sideBarWidth.Value(), static_cast<int32_t>(sideBarWidth.Unit()));
     } else {
         GetArkUINodeModifiers()->getSideBarContainerModifier()->resetSideBarWidth(nativeNode);
     }
@@ -75,13 +72,10 @@ ArkUINativeModuleValue SideBarContainerBridge::SetMinSideBarWidth(ArkUIRuntimeCa
     Local<JSValueRef> minSideBarWidthArg = runtimeCallInfo->GetCallArgRef(NUM_1);
     auto nativeNode = nodePtr(nativeNodeArg->ToNativePointer(vm)->Value());
     CalcDimension minSideBarWidth;
-    RefPtr<ResourceObject> minSideBarWidthObj;
-    if (ArkTSUtils::ParseJsDimensionNG(
-        vm, minSideBarWidthArg, minSideBarWidth, DimensionUnit::VP, minSideBarWidthObj, true) &&
+    if (ArkTSUtils::ParseJsDimensionNG(vm, minSideBarWidthArg, minSideBarWidth, DimensionUnit::VP, true) &&
         minSideBarWidth.Value() >= 0) {
-        auto minWidthRawPtr = AceType::RawPtr(minSideBarWidthObj);
         GetArkUINodeModifiers()->getSideBarContainerModifier()->setMinSideBarWidth(
-            nativeNode, minSideBarWidth.Value(), static_cast<int32_t>(minSideBarWidth.Unit()), minWidthRawPtr);
+            nativeNode, minSideBarWidth.Value(), static_cast<int32_t>(minSideBarWidth.Unit()));
     } else {
         GetArkUINodeModifiers()->getSideBarContainerModifier()->resetMinSideBarWidth(nativeNode);
     }
@@ -143,26 +137,19 @@ ArkUINativeModuleValue SideBarContainerBridge::SetControlButton(ArkUIRuntimeCall
     std::string iconsShown;
     std::string iconsHidden;
     std::string iconsSwitching;
-    RefPtr<ResourceObject> iconsShownObj;
-    RefPtr<ResourceObject> iconsHiddenObj;
-    RefPtr<ResourceObject> iconsSwitchingObj;
     struct ArkUIIconsStruct iconsStruct {
         nullptr, nullptr, nullptr
     };
-    if (ArkTSUtils::ParseJsMedia(vm, iconsShownArg, iconsShown, iconsShownObj)) {
+    if (ArkTSUtils::ParseJsMedia(vm, iconsShownArg, iconsShown)) {
         iconsStruct.ShowIconInfo = iconsShown.c_str();
     }
-    if (ArkTSUtils::ParseJsMedia(vm, iconsHiddenArg, iconsHidden, iconsHiddenObj)) {
+    if (ArkTSUtils::ParseJsMedia(vm, iconsHiddenArg, iconsHidden)) {
         iconsStruct.HiddenIconInfo = iconsHidden.c_str();
     }
-    if (ArkTSUtils::ParseJsMedia(vm, iconsSwitchingArg, iconsSwitching, iconsSwitchingObj)) {
+    if (ArkTSUtils::ParseJsMedia(vm, iconsSwitchingArg, iconsSwitching)) {
         iconsStruct.SwitchingIconInfo = iconsSwitching.c_str();
     }
-    auto iconsShownPtr = AceType::RawPtr(iconsShownObj);
-    auto iconsHiddenPtr = AceType::RawPtr(iconsHiddenObj);
-    auto iconsSwitchingPtr = AceType::RawPtr(iconsSwitchingObj);
-    GetArkUINodeModifiers()->getSideBarContainerModifier()->setControlButton(nativeNode, values, NUM_4, &iconsStruct,
-        iconsShownPtr, iconsHiddenPtr, iconsSwitchingPtr);
+    GetArkUINodeModifiers()->getSideBarContainerModifier()->setControlButton(nativeNode, values, NUM_4, &iconsStruct);
     return panda::JSValueRef::Undefined(vm);
 }
 
@@ -237,13 +224,10 @@ ArkUINativeModuleValue SideBarContainerBridge::SetMaxSideBarWidth(ArkUIRuntimeCa
     Local<JSValueRef> maxSideBarWidthArg = runtimeCallInfo->GetCallArgRef(NUM_1);
     auto nativeNode = nodePtr(nativeNodeArg->ToNativePointer(vm)->Value());
     CalcDimension maxSideBarWidth(DEFAULT_MAX_SIDE_BAR_WIDTH);
-    RefPtr<ResourceObject> maxSideBarWidthObj;
-    if (ArkTSUtils::ParseJsDimensionNG(
-        vm, maxSideBarWidthArg, maxSideBarWidth, DimensionUnit::VP, maxSideBarWidthObj, true) &&
+    if (ArkTSUtils::ParseJsDimensionNG(vm, maxSideBarWidthArg, maxSideBarWidth, DimensionUnit::VP, true) &&
         maxSideBarWidth.Value() >= 0) {
-        auto maxSideBarWidthPtr = AceType::RawPtr(maxSideBarWidthObj);
         GetArkUINodeModifiers()->getSideBarContainerModifier()->setSideBarContainerMaxSideBarWidth(
-            nativeNode, maxSideBarWidth.Value(), static_cast<int32_t>(maxSideBarWidth.Unit()), maxSideBarWidthPtr);
+            nativeNode, maxSideBarWidth.Value(), static_cast<int32_t>(maxSideBarWidth.Unit()));
     } else {
         GetArkUINodeModifiers()->getSideBarContainerModifier()->resetSideBarContainerMaxSideBarWidth(nativeNode);
     }
@@ -268,13 +252,10 @@ ArkUINativeModuleValue SideBarContainerBridge::SetMinContentWidth(ArkUIRuntimeCa
     Local<JSValueRef> minContentWidthArg = runtimeCallInfo->GetCallArgRef(NUM_1);
     auto nativeNode = nodePtr(nativeNodeArg->ToNativePointer(vm)->Value());
     CalcDimension minContentWidth(DEFAULT_SIDE_BAR_MIN_CONTENT_WIDTH);
-    RefPtr<ResourceObject> minContentWidthObj;
-    if (ArkTSUtils::ParseJsDimensionNG(
-        vm, minContentWidthArg, minContentWidth, DimensionUnit::VP, minContentWidthObj, true) &&
+    if (ArkTSUtils::ParseJsDimensionNG(vm, minContentWidthArg, minContentWidth, DimensionUnit::VP, true) &&
         minContentWidth.Value() >= 0) {
-        auto minContentWidthPtr = AceType::RawPtr(minContentWidthObj);
         GetArkUINodeModifiers()->getSideBarContainerModifier()->setSideBarContainerMinContentWidth(
-            nativeNode, minContentWidth.Value(), static_cast<int32_t>(minContentWidth.Unit()), minContentWidthPtr);
+            nativeNode, minContentWidth.Value(), static_cast<int32_t>(minContentWidth.Unit()));
     } else {
         GetArkUINodeModifiers()->getSideBarContainerModifier()->resetSideBarContainerMinContentWidth(nativeNode);
     }
@@ -360,13 +341,9 @@ ArkUINativeModuleValue SideBarContainerBridge::SetDivider(ArkUIRuntimeCallInfo* 
     CalcDimension strokeWidth;
     CalcDimension startMargin;
     CalcDimension endMargin;
-    RefPtr<ResourceObject> strokeWidthObj;
-    RefPtr<ResourceObject> startMarginObj;
-    RefPtr<ResourceObject> endMarginObj;
-    RefPtr<ResourceObject> colorObj;
     ArkUI_Float32 values[NUM_3] = { 1.0, 0.0, 0.0 };
     int32_t units[NUM_3] = { static_cast<int32_t>(DimensionUnit::VP) };
-    if (ArkTSUtils::ParseJsDimensionNG(vm, strokeWidthArg, strokeWidth, DimensionUnit::VP, strokeWidthObj, true) &&
+    if (ArkTSUtils::ParseJsDimensionNG(vm, strokeWidthArg, strokeWidth, DimensionUnit::VP, true) &&
         strokeWidth.Value() >= 0) {
         values[NUM_0] = strokeWidth.Value();
         units[NUM_0] = static_cast<int32_t>(strokeWidth.Unit());
@@ -374,7 +351,7 @@ ArkUINativeModuleValue SideBarContainerBridge::SetDivider(ArkUIRuntimeCallInfo* 
         strokeWidth.SetValue(1.0);
         strokeWidth.SetUnit(DimensionUnit::VP);
     }
-    if (ArkTSUtils::ParseJsDimensionNG(vm, startMarginArg, startMargin, DimensionUnit::VP, startMarginObj, true) &&
+    if (ArkTSUtils::ParseJsDimensionNG(vm, startMarginArg, startMargin, DimensionUnit::VP, true) &&
         startMargin.Value() >= 0) {
         values[NUM_1] = startMargin.Value();
         units[NUM_1] = static_cast<int32_t>(startMargin.Unit());
@@ -382,7 +359,7 @@ ArkUINativeModuleValue SideBarContainerBridge::SetDivider(ArkUIRuntimeCallInfo* 
         startMargin.SetValue(0.0);
         startMargin.SetUnit(DimensionUnit::VP);
     }
-    if (ArkTSUtils::ParseJsDimensionNG(vm, endMarginArg, endMargin, DimensionUnit::VP, endMarginObj, true) &&
+    if (ArkTSUtils::ParseJsDimensionNG(vm, endMarginArg, endMargin, DimensionUnit::VP, true) &&
         endMargin.Value() >= 0) {
         values[NUM_2] = endMargin.Value();
         units[NUM_2] = static_cast<int32_t>(endMargin.Unit());
@@ -392,16 +369,11 @@ ArkUINativeModuleValue SideBarContainerBridge::SetDivider(ArkUIRuntimeCallInfo* 
     }
 
     Color color(DEFAULT_SIDE_BAR_DIVIDER_COLOR);
-    auto nodeInfo = ArkTSUtils::MakeNativeNodeInfo(nativeNode);
-    if (!ArkTSUtils::ParseJsColorAlpha(vm, colorArg, color, colorObj, nodeInfo)) {
+    if (!ArkTSUtils::ParseJsColorAlpha(vm, colorArg, color)) {
         color.SetValue(DEFAULT_SIDE_BAR_DIVIDER_COLOR);
     }
-    auto strokeWidthPtr = AceType::RawPtr(strokeWidthObj);
-    auto startMarginPtr = AceType::RawPtr(startMarginObj);
-    auto endMarginPtr = AceType::RawPtr(endMarginObj);
-    auto colorPtr = AceType::RawPtr(colorObj);
     GetArkUINodeModifiers()->getSideBarContainerModifier()->setSideBarContainerDivider(
-        nativeNode, values, units, NUM_3, color.GetValue(), strokeWidthPtr, startMarginPtr, endMarginPtr, colorPtr);
+        nativeNode, values, units, NUM_3, color.GetValue());
     return panda::JSValueRef::Undefined(vm);
 }
 
@@ -412,48 +384,6 @@ ArkUINativeModuleValue SideBarContainerBridge::ResetDivider(ArkUIRuntimeCallInfo
     Local<JSValueRef> nativeNodeArg = runtimeCallInfo->GetCallArgRef(NUM_0);
     auto nativeNode = nodePtr(nativeNodeArg->ToNativePointer(vm)->Value());
     GetArkUINodeModifiers()->getSideBarContainerModifier()->resetSideBarContainerDivider(nativeNode);
-    return panda::JSValueRef::Undefined(vm);
-}
-
-ArkUINativeModuleValue SideBarContainerBridge::SetSideBarOnChange(ArkUIRuntimeCallInfo* runtimeCallInfo)
-{
-    EcmaVM* vm = runtimeCallInfo->GetVM();
-    CHECK_NULL_RETURN(vm, panda::NativePointerRef::New(vm, nullptr));
-    Local<JSValueRef> firstArg = runtimeCallInfo->GetCallArgRef(0);
-    Local<JSValueRef> callbackArg = runtimeCallInfo->GetCallArgRef(1);
-    auto nativeNode = nodePtr(firstArg->ToNativePointer(vm)->Value());
-    auto frameNode = reinterpret_cast<FrameNode*>(nativeNode);
-    CHECK_NULL_RETURN(frameNode, panda::NativePointerRef::New(vm, nullptr));
-    auto nodeModifiers = GetArkUINodeModifiers();
-    CHECK_NULL_RETURN(nodeModifiers, panda::NativePointerRef::New(vm, nullptr));
-    if (callbackArg->IsUndefined() || callbackArg->IsNull() || !callbackArg->IsFunction(vm)) {
-        nodeModifiers->getSideBarContainerModifier()->resetSideBarOnChange(nativeNode);
-        return panda::JSValueRef::Undefined(vm);
-    }
-    panda::Local<panda::FunctionRef> func = callbackArg->ToObject(vm);
-    std::function<void(bool)> callback = [vm, frameNode,
-        func = panda::CopyableGlobal(vm, func)](bool isOnChange) {
-        panda::LocalScope pandaScope(vm);
-        panda::TryCatch trycatch(vm);
-        PipelineContext::SetCallBackNode(AceType::WeakClaim(frameNode));
-        panda::Local<panda::JSValueRef> params[1] = {
-            panda::BooleanRef::New(vm, isOnChange) };
-        func->Call(vm, func.ToLocal(), params, 1);
-    };
-    nodeModifiers->getSideBarContainerModifier()->setSideBarOnChange(
-        nativeNode, reinterpret_cast<void*>(&callback));
-    return panda::JSValueRef::Undefined(vm);
-}
-
-ArkUINativeModuleValue SideBarContainerBridge::ResetSideBarOnChange(ArkUIRuntimeCallInfo* runtimeCallInfo)
-{
-    EcmaVM* vm = runtimeCallInfo->GetVM();
-    CHECK_NULL_RETURN(vm, panda::NativePointerRef::New(vm, nullptr));
-    Local<JSValueRef> firstArg = runtimeCallInfo->GetCallArgRef(0);
-    auto nativeNode = nodePtr(firstArg->ToNativePointer(vm)->Value());
-    auto nodeModifiers = GetArkUINodeModifiers();
-    CHECK_NULL_RETURN(nodeModifiers, panda::NativePointerRef::New(vm, nullptr));
-    nodeModifiers->getSideBarContainerModifier()->resetSideBarOnChange(nativeNode);
     return panda::JSValueRef::Undefined(vm);
 }
 } // namespace OHOS::Ace::NG

@@ -15,7 +15,12 @@
 
 #include "core/components_ng/pattern/canvas/canvas_rendering_context_2d_model_ng.h"
 
+#include <cstring>
+
 #include "securec.h"
+
+#include "core/components/common/properties/paint_state.h"
+#include "core/components_ng/pattern/canvas/offscreen_canvas_pattern.h"
 
 #ifdef PIXEL_MAP_SUPPORTED
 #include "pixel_map.h"
@@ -148,13 +153,6 @@ void CanvasRenderingContext2DModelNG::SetFontSize(const Dimension& size)
     auto pattern = weakPattern_.Upgrade();
     CHECK_NULL_VOID(pattern);
     pattern->UpdateFontSize(size);
-}
-
-void CanvasRenderingContext2DModelNG::SetLetterSpacing(const Dimension& letterSpacing)
-{
-    auto pattern = weakPattern_.Upgrade();
-    CHECK_NULL_VOID(pattern);
-    pattern->UpdateLetterSpacing(letterSpacing);
 }
 
 std::vector<double> CanvasRenderingContext2DModelNG::GetLineDash()
@@ -472,13 +470,6 @@ void CanvasRenderingContext2DModelNG::AddRect(const Rect& rect)
     pattern->AddRect(rect);
 }
 
-void CanvasRenderingContext2DModelNG::AddRoundRect(const Rect& rect, const std::vector<double>& radii)
-{
-    auto pattern = weakPattern_.Upgrade();
-    CHECK_NULL_VOID(pattern);
-    pattern->AddRoundRect(rect, radii);
-}
-
 void CanvasRenderingContext2DModelNG::BeginPath()
 {
     auto pattern = weakPattern_.Upgrade();
@@ -691,14 +682,6 @@ void CanvasRenderingContext2DModelNG::Reset()
     auto pattern = weakPattern_.Upgrade();
     CHECK_NULL_VOID(pattern);
     pattern->Reset();
-}
-
-void CanvasRenderingContext2DModelNG::SetTransform(
-    std::shared_ptr<Ace::Pattern> acePattern, const TransformParam& transform)
-{
-    auto pattern = weakPattern_.Upgrade();
-    CHECK_NULL_VOID(pattern);
-    pattern->SetTransform(acePattern, transform);
 }
 
 // All interfaces that only the 'CanvasRenderingContext2D' has.

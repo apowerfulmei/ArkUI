@@ -78,10 +78,6 @@ public:
 
     void SetAnimationEndEvent(AnimationEndEvent&& event);
 
-    void SetOnSelectedEvent(std::function<void(const BaseEventInfo*)>&& event);
-
-    void SetOnUnselectedEvent(std::function<void(const BaseEventInfo*)>&& event);
-
     ChangeEventPtr GetTabBarClickEvent()
     {
         return onTabBarClickEvent_;
@@ -94,8 +90,6 @@ public:
     void OnRestoreInfo(const std::string& restoreInfo) override;
 
     void AddInnerOnGestureRecognizerJudgeBegin(GestureRecognizerJudgeFunc&& gestureRecognizerJudgeFunc) override;
-
-    void RecoverInnerOnGestureRecognizerJudgeBegin() override;
 
     void SetOnIndexChangeEvent(std::function<void(const BaseEventInfo*)>&& event);
 
@@ -155,17 +149,6 @@ public:
     void UpdateSelectedState(const RefPtr<FrameNode>& swiperNode, const RefPtr<TabBarPattern>& tabBarPattern,
         const RefPtr<TabsLayoutProperty>& tabsLayoutProperty, int index);
 
-    void UpdateDividerStrokeWidth()
-    {
-        OnUpdateShowDivider();
-    }
-    void UpdateDividerColor()
-    {
-        OnUpdateShowDivider();
-    }
-
-    void OnColorModeChange(uint32_t colorMode) override;
-
 private:
     void OnAttachToFrameNode() override;
     void OnAfterModifyDone() override;
@@ -181,7 +164,8 @@ private:
         const RefPtr<FrameNode>& swiperNode, const RefPtr<TabsLayoutProperty>& tabsLayoutProperty);
     void InitFocusEvent();
     RefPtr<FocusHub> GetCurrentFocusNode(FocusIntension intension);
-    void InitAccessibilityZIndex();
+    void SetLastWeakFocusNode(const RefPtr<FrameNode>& tabsNode, const RefPtr<FrameNode>& tabBarNode,
+        const RefPtr<TabsLayoutProperty>& tabsLayoutProperty, int32_t index);
 
     bool isCustomAnimation_ = false;
     bool isDisableSwipe_ = false;
@@ -189,15 +173,12 @@ private:
 
     TabAnimateMode animateMode_ = TabAnimateMode::CONTENT_FIRST;
     ChangeEventWithPreIndexPtr onChangeEvent_;
-    ChangeEventPtr selectedEvent_;
-    ChangeEventPtr unselectedEvent_;
     ChangeEventPtr onTabBarClickEvent_;
     ChangeEventPtr onIndexChangeEvent_;
     AnimationStartEventPtr animationStartEvent_;
     AnimationEndEventPtr animationEndEvent_;
     std::function<bool(int32_t, int32_t)> callback_;
     bool interceptStatus_ = false;
-    BarPosition barPosition_ = BarPosition::END; // default accessibilityZIndex is consistent with BarPosition::END
 };
 
 } // namespace OHOS::Ace::NG

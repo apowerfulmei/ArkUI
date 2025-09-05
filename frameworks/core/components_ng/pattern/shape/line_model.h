@@ -29,9 +29,11 @@ public:
 
     virtual void Create();
     virtual void StartPoint(const ShapePoint& value);
-    virtual void StartPoint(const ShapePoint& value, const std::vector<RefPtr<ResourceObject>>& resObjArray) {};
     virtual void EndPoint(const ShapePoint& value);
-    virtual void EndPoint(const ShapePoint& value, const std::vector<RefPtr<ResourceObject>>& resObjArray) {};
+
+private:
+    static std::unique_ptr<LineModel> instance_;
+    static std::mutex mutex_;
 };
 } // namespace OHOS::Ace
 #endif // FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_PATTERN_LINE_LINE_MODEL_H

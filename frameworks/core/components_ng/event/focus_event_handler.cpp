@@ -15,12 +15,10 @@
 #include "focus_event_handler.h"
 
 #include "core/components_ng/base/frame_node.h"
-#include "core/components_ng/event/event_constants.h"
-#include "core/components/theme/app_theme.h"
 #include "core/event/focus_axis_event.h"
-#include "core/event/key_event.h"
 #include "core/pipeline_ng/pipeline_context.h"
-#include "core/event/crown_event.h"
+#include "core/event/key_event.h"
+#include "core/components_ng/event/event_constants.h"
 namespace OHOS::Ace::NG {
 FocusIntension FocusEvent::GetFocusIntension(const NonPointerEvent& event)
 {
@@ -31,19 +29,6 @@ FocusIntension FocusEvent::GetFocusIntension(const NonPointerEvent& event)
     if (keyEvent.isPreIme || keyEvent.action != KeyAction::DOWN) {
         return FocusIntension::NONE;
     }
-    // Arrow key event is used to trasfer focus regardless of its pressed keys
-    switch (keyEvent.code) {
-        case KeyCode::KEY_DPAD_UP:
-            return FocusIntension::UP;
-        case KeyCode::KEY_DPAD_DOWN:
-            return FocusIntension::DOWN;
-        case KeyCode::KEY_DPAD_LEFT:
-            return FocusIntension::LEFT;
-        case KeyCode::KEY_DPAD_RIGHT:
-            return FocusIntension::RIGHT;
-        default:;
-    }
-
     if (keyEvent.pressedCodes.size() != 1) {
         return keyEvent.IsExactlyShiftWith(KeyCode::KEY_TAB) ? FocusIntension::SHIFT_TAB : FocusIntension::NONE;
     }
@@ -61,12 +46,15 @@ FocusIntension FocusEvent::GetFocusIntension(const NonPointerEvent& event)
             return FocusIntension::SPACE;
         default:;
     }
-    return GetFocusIntensionFromKey(keyEvent.keyIntention);
-}
-
-FocusIntension FocusEvent::GetFocusIntensionFromKey(KeyIntention keyIntention)
-{
-    switch (keyIntention) {
+    switch (keyEvent.keyIntention) {
+        case KeyIntention::INTENTION_UP:
+            return FocusIntension::UP;
+        case KeyIntention::INTENTION_DOWN:
+            return FocusIntension::DOWN;
+        case KeyIntention::INTENTION_LEFT:
+            return FocusIntension::LEFT;
+        case KeyIntention::INTENTION_RIGHT:
+            return FocusIntension::RIGHT;
         case KeyIntention::INTENTION_SELECT:
             return FocusIntension::SELECT;
         case KeyIntention::INTENTION_ESCAPE:
@@ -104,16 +92,11 @@ bool FocusEventHandler::HandleCustomEventDispatch(const FocusEvent& event)
 bool FocusEventHandler::OnFocusEvent(const FocusEvent& event)
 {
     if (!IsCurrentFocus()) {
-        TAG_LOGI(AceLogTag::ACE_FOCUS,
-            "node: %{public}s/%{public}d cannot handle key event because is not current focus",
-            GetFrameName().c_str(), GetFrameId());
         return false;
     }
-
     if (HasCustomKeyEventDispatch(event)) {
         return HandleCustomEventDispatch(event);
     }
-
     if (focusType_ == FocusType::SCOPE) {
         return OnFocusEventScope(event);
     }
@@ -130,9 +113,9 @@ bool FocusEventHandler::OnFocusEventScope(const FocusEvent& event)
     auto lastFocusNode = lastWeakFocusNode_.Upgrade();
     if (lastFocusNode && lastFocusNode->OnFocusEvent(event)) {
         TAG_LOGD(AceLogTag::ACE_FOCUS,
-            "OnKeyEvent: Node %{public}s/%{public}d will not handle Event(type:%{private}d). "
+            "OnKeyEvent: Node %{public}s/%{public}d will not handle KeyEvent. "
             "Because its child %{public}s/%{public}d already has consumed this event.",
-            GetFrameName().c_str(), GetFrameId(), event.event.eventType, lastFocusNode->GetFrameName().c_str(),
+            GetFrameName().c_str(), GetFrameId(), lastFocusNode->GetFrameName().c_str(),
             lastFocusNode->GetFrameId());
         return true;
     }
@@ -152,10 +135,6 @@ bool FocusEventHandler::OnFocusEventNode(const FocusEvent& focusEvent)
         const FocusAxisEvent& focusAxisEvent = static_cast<const FocusAxisEvent&>(focusEvent.event);
         return HandleFocusAxisEvent(focusAxisEvent);
     }
-    if (focusEvent.event.eventType == UIInputEventType::CROWN) {
-        const CrownEvent& crownEvent = static_cast<const CrownEvent&>(focusEvent.event);
-        return HandleCrownEvent(crownEvent);
-    }
 
     auto keyProcessingMode = static_cast<KeyProcessingMode>(GetKeyProcessingMode());
     if (keyProcessingMode == KeyProcessingMode::ANCESTOR_EVENT) {
@@ -171,7 +150,8 @@ int32_t FocusEventHandler::GetKeyProcessingMode()
     auto context = frameNode->GetContextRefPtr();
     CHECK_NULL_RETURN(context, static_cast<int32_t>(KeyProcessingMode::FOCUS_NAVIGATION));
     auto focusManager = context->GetOrCreateFocusManager();
-    CHECK_NULL_RETURN(focusManager, static_cast<int32_t>(KeyProcessingMode::FOCUS_NAVIGATION));
+    CHECK_NULL_RETURN(context, static_cast<int32_t>(KeyProcessingMode::FOCUS_NAVIGATION));
+
     return static_cast<int32_t>(focusManager->GetKeyProcessingMode());
 }
 
@@ -200,10 +180,8 @@ bool FocusEventHandler::HandleKeyEvent(const KeyEvent& event, FocusIntension int
         return true;
     }
     // Handle on click
-    auto appTheme = pipeline->GetTheme<AppTheme>();
-    CHECK_NULL_RETURN(appTheme, false);
-    if (!pipeline->GetIsFocusActive() && (Container::GreatOrEqualAPITargetVersion(PlatformVersion::VERSION_EIGHTEEN) ||
-                                             !appTheme->NeedFocusHandleClick())) {
+    if (Container::GreatOrEqualAPITargetVersion(PlatformVersion::VERSION_FOURTEEN) &&
+        !pipeline->GetIsFocusActive()) {
         return false;
     }
     if (intension == FocusIntension::SELECT && !IsTabStop()) {
@@ -213,9 +191,8 @@ bool FocusEventHandler::HandleKeyEvent(const KeyEvent& event, FocusIntension int
     if (intension == FocusIntension::SPACE) {
         ret = OnClick(event);
         TAG_LOGI(AceLogTag::ACE_FOCUS,
-            "OnClick: Node %{public}s/%{public}d handle KeyEvent("
-            SEC_PLD(%{private}d) ", %{public}d) return: %{public}d",
-            GetFrameName().c_str(), GetFrameId(), SEC_PARAM(event.code), event.action, ret);
+            "OnClick: Node %{public}s/%{public}d handle KeyEvent(%{private}d, %{public}d) return: %{public}d",
+            GetFrameName().c_str(), GetFrameId(), event.code, event.action, ret);
     }
     return ret;
 }
@@ -229,7 +206,7 @@ bool FocusEventHandler::HandleFocusAxisEvent(const FocusAxisEvent& event)
     auto onFocusAxisCallback = GetOnFocusAxisCallback();
     CHECK_NULL_RETURN(onFocusAxisCallback, false);
     auto info = FocusAxisEventInfo(event);
-    auto eventHub = node->GetEventHub<EventHub>();
+    auto eventHub = eventHub_.Upgrade();
     if (eventHub) {
         auto targetImpl = eventHub->CreateGetEventTargetImpl();
         info.SetTarget(targetImpl().value_or(EventTarget()));
@@ -238,44 +215,8 @@ bool FocusEventHandler::HandleFocusAxisEvent(const FocusAxisEvent& event)
     return info.IsStopPropagation();
 }
 
-bool FocusEventHandler::HandleCrownEvent(const CrownEvent& CrownEvent)
-{
-    ACE_DCHECK(IsCurrentFocus());
-    bool retCallback = false;
-    auto onCrownEventCallback = GetOnCrownCallback();
-    if (onCrownEventCallback) {
-        CrownEventInfo crownInfo(CrownEvent);
-        onCrownEventCallback(crownInfo);
-        retCallback = crownInfo.IsStopPropagation();
-        TAG_LOGI(AceLogTag::ACE_FOCUS,
-            "OnCrownEventUser: Node %{public}s/%{public}d handle CrownAction:%{public}d",
-            GetFrameName().c_str(), GetFrameId(), CrownEvent.action);
-    } else {
-        retCallback = ProcessOnCrownEventInternal(CrownEvent);
-        TAG_LOGI(AceLogTag::ACE_FOCUS,
-            "OnCrownEventInternal: Node %{public}s/%{public}d handle CrownAction:%{public}d",
-            GetFrameName().c_str(), GetFrameId(), CrownEvent.action);
-    }
-    return retCallback;
-}
-
-bool FocusEventHandler::ProcessOnCrownEventInternal(const CrownEvent& event)
-{
-    bool result = false;
-    auto onCrownEventCallbackInternal = GetOnCrownEventInternal();
-    if (onCrownEventCallbackInternal) {
-        onCrownEventCallbackInternal(event);
-        result = true;
-    }
-    return result;
-}
-
 bool FocusEventHandler::OnKeyPreIme(KeyEventInfo& info, const KeyEvent& keyEvent)
 {
-    TAG_LOGD(AceLogTag::ACE_FOCUS,
-        "node: %{public}s/%{public}d try to handle OnKeyPreIme by "
-        "code:%{private}d/action:%{public}d/isPreIme:%{public}d",
-        GetFrameName().c_str(), GetFrameId(), keyEvent.code, keyEvent.action, keyEvent.isPreIme);
     auto onKeyPreIme = GetOnKeyPreIme();
     if (onKeyPreIme) {
         bool retPreIme = onKeyPreIme(info);
@@ -284,14 +225,8 @@ bool FocusEventHandler::OnKeyPreIme(KeyEventInfo& info, const KeyEvent& keyEvent
         if (eventManager) {
             eventManager->SetIsKeyConsumed(retPreIme);
         }
-        TAG_LOGI(AceLogTag::ACE_FOCUS, "node: %{public}s/%{public}d handle OnKeyPreIme",
-            GetFrameName().c_str(), GetFrameId());
         return info.IsStopPropagation();
-    } else if (GetFrameName() == V2::UI_EXTENSION_COMPONENT_ETS_TAG ||
-               GetFrameName() == V2::EMBEDDED_COMPONENT_ETS_TAG ||
-               GetFrameName() == V2::DYNAMIC_COMPONENT_ETS_TAG) {
-        TAG_LOGI(AceLogTag::ACE_FOCUS, "node: %{public}s/%{public}d try to process OnKeyEventInternal",
-            GetFrameName().c_str(), GetFrameId());
+    } else if (GetFrameName() == V2::UI_EXTENSION_COMPONENT_ETS_TAG) {
         return ProcessOnKeyEventInternal(keyEvent);
     } else {
         return false;
@@ -313,24 +248,19 @@ bool FocusEventHandler::OnClick(const KeyEvent& event)
         info.SetLocalLocation(centerToNode);
         info.SetSourceDevice(event.sourceType);
         info.SetDeviceId(event.deviceId);
-        info.SetInputEventType(InputEventType::KEYBOARD);
         auto node = GetFrameNode();
         CHECK_NULL_RETURN(node, false);
         auto pipelineContext = node->GetContextRefPtr();
         if (pipelineContext) {
             auto windowOffset = pipelineContext->GetCurrentWindowRect().GetOffset() + centerToWindow;
-            auto globalWindowOffset = pipelineContext->GetGlobalDisplayWindowRect().GetOffset() + centerToWindow;
             info.SetScreenLocation(windowOffset);
-            info.SetGlobalDisplayLocation(globalWindowOffset);
         }
         info.SetSourceTool(SourceTool::UNKNOWN);
-        info.SetPatternName(node->GetTag().c_str());
-        auto eventHub = node->GetEventHub<EventHub>();
+        auto eventHub = eventHub_.Upgrade();
         if (eventHub) {
             auto targetImpl = eventHub->CreateGetEventTargetImpl();
             info.SetTarget(targetImpl().value_or(EventTarget()));
         }
-        info.SetTargetDisplayId(event.targetDisplayId);
         onClickCallback(info);
         return true;
     }
@@ -345,20 +275,15 @@ bool FocusEventHandler::OnKeyEventNodeInternal(const KeyEvent& keyEvent)
     CHECK_NULL_RETURN(pipeline, false);
     bool isBypassInner = keyEvent.IsKey({ KeyCode::KEY_TAB }) && pipeline && pipeline->IsTabJustTriggerOnKeyEvent();
     auto retInternal = false;
-    if (isNodeNeedKey_) {
-        retInternal =  ProcessOnKeyEventInternal(keyEvent);
-        TAG_LOGI(AceLogTag::ACE_FOCUS,
-            "OnKeyEventInteral Node process self: Node %{public}s/%{public}d handle KeyEvent(%{private}d, %{public}d) "
-            "return: %{public}d",
-            GetFrameName().c_str(), GetFrameId(), keyEvent.code, keyEvent.action, retInternal);
-        return retInternal;
+    if ((GetFrameName() == V2::UI_EXTENSION_COMPONENT_ETS_TAG || GetFrameName() == V2::ISOLATED_COMPONENT_ETS_TAG)
+        && !IsCurrentFocus()) {
+        isBypassInner = false;
     }
     if (!isBypassInner && !onKeyEventsInternal_.empty()) {
         retInternal = ProcessOnKeyEventInternal(keyEvent);
         TAG_LOGI(AceLogTag::ACE_FOCUS,
-            "OnKeyEventInteral Node process self: Node %{public}s/%{public}d"
-            "handle KeyEvent(" SEC_PLD(%{private}d) ", %{public}d) "
-            "return: %{public}d",
+            "OnKeyEventInteral: Node %{public}s/%{public}d handle KeyEvent("
+            SEC_PLD(%{public}d)", %{public}d) return: %{public}d",
             GetFrameName().c_str(), GetFrameId(), SEC_PARAM(keyEvent.code), keyEvent.action, retInternal);
     }
     return retInternal;
@@ -391,8 +316,8 @@ bool FocusEventHandler::OnKeyEventNodeUser(KeyEventInfo& info, const KeyEvent& k
 void FocusEventHandler::PrintOnKeyEventUserInfo(const KeyEvent& keyEvent, bool retCallback)
 {
     TAG_LOGI(AceLogTag::ACE_FOCUS,
-        "OnKeyEventUser: Node %{public}s/%{public}d"
-        "handle KeyEvent(" SEC_PLD(%{private}d) ", %{public}d) return: %{public}d",
+        "OnKeyEventUser: Node %{public}s/%{public}d handle KeyEvent("
+        SEC_PLD(%{public}d) ", %{public}d) return: %{public}d",
         GetFrameName().c_str(), GetFrameId(), SEC_PARAM(keyEvent.code), keyEvent.action, retCallback);
 }
 

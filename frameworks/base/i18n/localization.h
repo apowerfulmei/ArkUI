@@ -130,12 +130,6 @@ public:
         return hasZero;
     }
 
-    bool IsInit() const
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
-        return isInit_;
-    }
-
     std::string GetLanguage();
     std::string GetLanguageTag();
     std::string GetFontLocale();

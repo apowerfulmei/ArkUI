@@ -22,26 +22,22 @@
 #include <sstream>
 
 #include "base/log/ace_trace.h"
-#include "base/log/jank_frame_report.h"
 #include "base/utils/system_properties.h"
 #include "base/utils/utils.h"
+#include "base/log/jank_frame_report.h"
 #include "bridge/common/utils/engine_helper.h"
 #include "bridge/common/utils/utils.h"
-#include "bridge/declarative_frontend/engine/functions/js_animation_on_finish_function.h"
+#include "bridge/declarative_frontend/engine/functions/js_function.h"
 #include "bridge/declarative_frontend/engine/js_converter.h"
-#include "bridge/declarative_frontend/jsview/js_view_abstract.h"
 #include "bridge/declarative_frontend/jsview/js_tabs_feature.h"
+#include "bridge/declarative_frontend/jsview/js_view_abstract.h"
 #include "bridge/declarative_frontend/jsview/models/view_context_model_impl.h"
 #include "core/animation/animation_pub.h"
 #include "core/common/ace_engine.h"
-#include "core/common/recorder/event_recorder.h"
 #include "core/components/common/properties/animation_option.h"
 #include "core/components_ng/base/view_stack_model.h"
 #include "core/components_ng/base/view_stack_processor.h"
 #include "core/components_ng/pattern/view_context/view_context_model_ng.h"
-#include "core/components_ng/pattern/menu/wrapper/menu_wrapper_pattern.h"
-#include "bridge/declarative_frontend/jsview/js_search.h"
-#include "bridge/declarative_frontend/jsview/js_textfield.h"
 
 #ifdef USE_ARK_ENGINE
 #include "bridge/declarative_frontend/engine/jsi/jsi_declarative_engine.h"
@@ -85,9 +81,10 @@ constexpr int32_t LENGTH_ONE = 1;
 constexpr int32_t LENGTH_TWO = 2;
 constexpr int32_t LENGTH_THREE = 3;
 constexpr int32_t MAX_FLUSH_COUNT = 2;
+int32_t g_animationCount = 0;
 constexpr uint32_t DEBUG_DURATION = 150;
 
-std::unordered_map<int32_t, std::string> UICONTEXT_ERROR_MAP = {
+std::unordered_map<int32_t, std::string> BIND_SHEET_ERROR_MAP = {
     { ERROR_CODE_BIND_SHEET_CONTENT_ERROR, "The bindSheetContent is incorrect." },
     { ERROR_CODE_BIND_SHEET_CONTENT_ALREADY_EXIST, "The bindSheetContent already exists." },
     { ERROR_CODE_BIND_SHEET_CONTENT_NOT_FOUND, "The bindSheetContent cannot be found." },
@@ -97,12 +94,7 @@ std::unordered_map<int32_t, std::string> UICONTEXT_ERROR_MAP = {
         "The node of targetId is not a child of the page node or NavDestination node." },
     { ERROR_CODE_INTERNAL_ERROR, "Internal error." },
     { ERROR_CODE_PARAM_INVALID, "Parameter error. Possible causes: 1. Mandatory parameters are left unspecified;"
-        "2. Incorrect parameter types; 3. Parameter verification failed." },
-    { ERROR_CODE_DIALOG_CONTENT_ERROR, "The ComponentContent is incorrect. " },
-    { ERROR_CODE_DIALOG_CONTENT_ALREADY_EXIST, "The ComponentContent already exists. " },
-    { ERROR_CODE_DIALOG_CONTENT_NOT_FOUND, "The ComponentContent cannot be found. " },
-    { ERROR_CODE_TARGET_INFO_NOT_EXIST, "The targetId does not exist. " },
-    { ERROR_CODE_TARGET_NOT_ON_COMPONENT_TREE, "The node of targetId is not in the component tree. " }
+        "2. Incorrect parameter types; 3. Parameter verification failed." }
 };
 
 void PrintAnimationInfo(const AnimationOption& option, AnimationInterface interface, const std::optional<int32_t>& cnt)
@@ -116,7 +108,7 @@ void PrintAnimationInfo(const AnimationOption& option, AnimationInterface interf
                 option.GetDuration());
         } else {
             TAG_LOGI(AceLogTag::ACE_ANIMATION,
-                "%{public}s iteration is infinite. duration:%{public}d, curve:%{public}s",
+                "%{public}s iteration is infinite, remember to stop it. duration:%{public}d, curve:%{public}s",
                 animationInterfaceName, option.GetDuration(), option.GetCurve()->ToString().c_str());
         }
         return;
@@ -166,17 +158,15 @@ bool GetAnyContextIsLayouting(const RefPtr<PipelineBase>& currentPipeline)
 }
 
 void AnimateToForStageMode(const RefPtr<PipelineBase>& pipelineContext, const AnimationOption& option,
-    JSRef<JSFunc> jsAnimateToFunc, int32_t triggerId, const std::optional<int32_t>& count)
+    JSRef<JSFunc> jsAnimateToFunc, int32_t triggerId)
 {
-    pipelineContext->StartImplicitAnimation(option, option.GetCurve(), option.GetOnFinishEvent(), count);
+    pipelineContext->StartImplicitAnimation(option, option.GetCurve(), option.GetOnFinishEvent());
     auto previousOption = pipelineContext->GetSyncAnimationOption();
     pipelineContext->SetSyncAnimationOption(option);
     // Execute the function.
     jsAnimateToFunc->Call(jsAnimateToFunc);
     pipelineContext->FlushOnceVsyncTask();
-    auto tokenOut = AnimationUtils::GetRSUIContextToken(pipelineContext);
-    AceEngine::Get().NotifyContainersOrderly([triggerId, tokenOut,
-        multiInstanceEnabled = SystemProperties::GetMultiInstanceEnabled()](const RefPtr<Container>& container) {
+    AceEngine::Get().NotifyContainersOrderly([triggerId](const RefPtr<Container>& container) {
         if (!CheckContainer(container)) {
             return;
         }
@@ -187,10 +177,6 @@ void AnimateToForStageMode(const RefPtr<PipelineBase>& pipelineContext, const An
             return;
         }
         context->PrepareCloseImplicitAnimation();
-        auto tokenIn = AnimationUtils::GetRSUIContextToken(context);
-        if (multiInstanceEnabled && (tokenOut != tokenIn)) {
-            AnimationUtils::CloseImplicitAnimation(context);
-        }
     });
     pipelineContext->CloseImplicitAnimation();
     pipelineContext->SetSyncAnimationOption(previousOption);
@@ -206,7 +192,7 @@ void FlushDirtyNodesWhenExist(const RefPtr<PipelineBase>& pipelineContext,
     bool isDirtyLayoutNodesEmpty = pipelineContext->IsDirtyLayoutNodesEmpty();
     while (!isDirtyNodesEmpty || (!isDirtyLayoutNodesEmpty && !pipelineContext->IsLayouting())) {
         if (flushCount >= MAX_FLUSH_COUNT || option.GetIteration() != ANIMATION_REPEAT_INFINITE) {
-            TAG_LOGD(AceLogTag::ACE_ANIMATION, "%{public}s, option:%{public}s, finish cnt:%{public}d,"
+            TAG_LOGW(AceLogTag::ACE_ANIMATION, "%{public}s, option:%{public}s, finish cnt:%{public}d,"
                 "dirtyNodes is empty:%{public}d, dirtyLayoutNodes is empty:%{public}d",
                 animationInterfaceName, option.ToString().c_str(), count.value_or(-1),
                 isDirtyNodesEmpty, isDirtyLayoutNodesEmpty);
@@ -238,9 +224,7 @@ void StartAnimationForStageMode(const RefPtr<PipelineBase>& pipelineContext, con
             "param is [option:%{public}s]", option.ToString().c_str());
     }
     NG::ScopedViewStackProcessor scopedProcessor;
-    auto tokenOut = AnimationUtils::GetRSUIContextToken(pipelineContext);
-    AceEngine::Get().NotifyContainersOrderly([triggerId, &option, tokenOut,
-        multiInstanceEnabled = SystemProperties::GetMultiInstanceEnabled()](const RefPtr<Container>& container) {
+    AceEngine::Get().NotifyContainersOrderly([triggerId](const RefPtr<Container>& container) {
         if (!CheckContainer(container)) {
             return;
         }
@@ -251,18 +235,14 @@ void StartAnimationForStageMode(const RefPtr<PipelineBase>& pipelineContext, con
             return;
         }
         context->PrepareOpenImplicitAnimation();
-        auto tokenIn = AnimationUtils::GetRSUIContextToken(context);
-        if (multiInstanceEnabled && (tokenOut != tokenIn)) {
-            AnimationUtils::OpenImplicitAnimation(option, option.GetCurve(), nullptr, context);
-        }
     });
     pipelineContext->PrepareOpenImplicitAnimation();
     FlushDirtyNodesWhenExist(pipelineContext, option, count,
         immediately ? AnimationInterface::ANIMATE_TO_IMMEDIATELY : AnimationInterface::ANIMATE_TO);
-    if (!pipelineContext->CatchInteractiveAnimations([pipelineContext, option, jsAnimateToFunc, triggerId, count]() {
-        AnimateToForStageMode(pipelineContext, option, jsAnimateToFunc, triggerId, count);
+    if (!pipelineContext->CatchInteractiveAnimations([pipelineContext, option, jsAnimateToFunc, triggerId]() {
+        AnimateToForStageMode(pipelineContext, option, jsAnimateToFunc, triggerId);
     })) {
-        AnimateToForStageMode(pipelineContext, option, jsAnimateToFunc, triggerId, count);
+        AnimateToForStageMode(pipelineContext, option, jsAnimateToFunc, triggerId);
     }
     pipelineContext->FlushAfterLayoutCallbackInImplicitAnimationTask();
     if (immediately) {
@@ -314,7 +294,7 @@ int64_t GetFormAnimationTimeInterval(const RefPtr<PipelineBase>& pipelineContext
 bool CheckIfSetFormAnimationDuration(const RefPtr<PipelineBase>& pipelineContext, const AnimationOption& option)
 {
     CHECK_NULL_RETURN(pipelineContext, false);
-    return pipelineContext->IsFormAnimationFinishCallback() && pipelineContext->IsFormRenderExceptDynamicComponent() &&
+    return pipelineContext->IsFormAnimationFinishCallback() && pipelineContext->IsFormRender() &&
         option.GetDuration() > (DEFAULT_DURATION - GetFormAnimationTimeInterval(pipelineContext));
 }
 
@@ -347,37 +327,24 @@ struct KeyframeParam {
     std::function<void()> animationClosure;
 };
 
-AnimationOption ParseKeyframeOverallParam(const JSExecutionContext& executionContext,
-    const JSRef<JSObject>& obj, std::optional<int32_t>& count)
+AnimationOption ParseKeyframeOverallParam(const JSExecutionContext& executionContext, const JSRef<JSObject>& obj)
 {
     JSRef<JSVal> onFinish = obj->GetProperty("onFinish");
     AnimationOption option;
     if (onFinish->IsFunction()) {
-        count = GetAnimationFinishCount();
-        auto jsFunc = AceType::MakeRefPtr<JsAnimationOnFinishFunction>(JSRef<JSFunc>::Cast(onFinish));
+        RefPtr<JsFunction> jsFunc = AceType::MakeRefPtr<JsFunction>(JSRef<JSObject>(), JSRef<JSFunc>::Cast(onFinish));
         std::function<void()> onFinishEvent = [execCtx = executionContext, func = std::move(jsFunc),
                             id = Container::CurrentIdSafely()]() mutable {
             CHECK_NULL_VOID(func);
             ContainerScope scope(id);
             JAVASCRIPT_EXECUTION_SCOPE_WITH_CHECK(execCtx);
-            func->Execute(false);
+            func->Execute();
             func = nullptr;
         };
         option.SetOnFinishEvent(onFinishEvent);
     }
     auto delay = obj->GetPropertyValue<int32_t>("delay", 0);
     auto iterations = obj->GetPropertyValue<int32_t>("iterations", 1);
-    JSRef<JSVal> rateRangeObjectArgs = obj->GetProperty("expectedFrameRateRange");
-    if (rateRangeObjectArgs->IsObject()) {
-        JSRef<JSObject> rateRangeObj = JSRef<JSObject>::Cast(rateRangeObjectArgs);
-        int32_t fRRmin = rateRangeObj->GetPropertyValue<int32_t>("min", -1);
-        int32_t fRRmax = rateRangeObj->GetPropertyValue<int32_t>("max", -1);
-        int32_t fRRExpected = rateRangeObj->GetPropertyValue<int32_t>("expected", -1);
-        TAG_LOGD(AceLogTag::ACE_ANIMATION, "[keyframe] SetExpectedFrameRateRange"
-            "{%{public}d, %{public}d, %{public}d}", fRRmin, fRRmax, fRRExpected);
-        RefPtr<FrameRateRange> frameRateRange = AceType::MakeRefPtr<FrameRateRange>(fRRmin, fRRmax, fRRExpected);
-        option.SetFrameRateRange(frameRateRange);
-    }
     option.SetDelay(delay);
     option.SetIteration(iterations);
     return option;
@@ -426,7 +393,7 @@ napi_value CreateErrorValue(napi_env env, int32_t errCode, const std::string& er
     return error;
 }
 
-RefPtr<NG::FrameNode> ParseContentNode(const JSCallbackInfo& info)
+RefPtr<NG::FrameNode> ParseSheeetContentNode(const JSCallbackInfo& info)
 {
     EcmaVM* vm = info.GetVm();
     CHECK_NULL_RETURN(vm, nullptr);
@@ -449,7 +416,7 @@ void ReturnPromise(const JSCallbackInfo& info, int32_t errCode)
     napi_create_promise(env, &deferred, &promise);
 
     if (errCode != ERROR_CODE_NO_ERROR) {
-        napi_value result = CreateErrorValue(env, errCode, UICONTEXT_ERROR_MAP[errCode]);
+        napi_value result = CreateErrorValue(env, errCode, BIND_SHEET_ERROR_MAP[errCode]);
         napi_reject_deferred(env, deferred, result);
     } else {
         napi_value result = nullptr;
@@ -465,8 +432,8 @@ void ReturnPromise(const JSCallbackInfo& info, int32_t errCode)
     info.SetReturnValue(JSRef<JSObject>::Cast(jsPromise));
 }
 
-void StartKeyframeAnimation(const RefPtr<PipelineBase>& pipelineContext, AnimationOption& overallAnimationOption,
-    std::vector<KeyframeParam>& keyframes, const std::optional<int32_t>& count)
+void StartKeyframeAnimation(const RefPtr<PipelineBase>& pipelineContext,
+    AnimationOption& overallAnimationOption, std::vector<KeyframeParam>& keyframes)
 {
     // flush build and flush ui tasks before open animation closure.
     pipelineContext->FlushBuild();
@@ -475,12 +442,12 @@ void StartKeyframeAnimation(const RefPtr<PipelineBase>& pipelineContext, Animati
     }
 
     // flush build when exist dirty nodes, flush ui tasks when exist dirty layout nodes.
-    FlushDirtyNodesWhenExist(pipelineContext,
-        overallAnimationOption, count, AnimationInterface::KEYFRAME_ANIMATE_TO);
-
+    FlushDirtyNodesWhenExist(pipelineContext, overallAnimationOption, std::nullopt,
+        AnimationInterface::KEYFRAME_ANIMATE_TO);
+    
     // start KeyframeAnimation.
     pipelineContext->StartImplicitAnimation(
-        overallAnimationOption, overallAnimationOption.GetCurve(), overallAnimationOption.GetOnFinishEvent(), count);
+        overallAnimationOption, overallAnimationOption.GetCurve(), overallAnimationOption.GetOnFinishEvent());
     for (auto& keyframe : keyframes) {
         if (!keyframe.animationClosure) {
             continue;
@@ -577,7 +544,7 @@ const AnimationOption JSViewContext::CreateAnimation(const JSRef<JSObject>& anim
         fRRmin = rateRangeObj->GetPropertyValue<int32_t>("min", -1);
         fRRmax = rateRangeObj->GetPropertyValue<int32_t>("max", -1);
         fRRExpected = rateRangeObj->GetPropertyValue<int32_t>("expected", -1);
-        TAG_LOGD(AceLogTag::ACE_ANIMATION, "[animation/animateTo] SetExpectedFrameRateRange"
+        TAG_LOGI(AceLogTag::ACE_ANIMATION, "[animation/animateTo] SetExpectedFrameRateRange"
             "{%{public}d, %{public}d, %{public}d}", fRRmin, fRRmax, fRRExpected);
     }
     RefPtr<FrameRateRange> frameRateRange = AceType::MakeRefPtr<FrameRateRange>(fRRmin, fRRmax, fRRExpected);
@@ -610,8 +577,7 @@ void JSViewContext::JSAnimation(const JSCallbackInfo& info)
     CHECK_NULL_VOID(container);
     auto pipelineContextBase = container->GetPipelineContext();
     CHECK_NULL_VOID(pipelineContextBase);
-    if (pipelineContextBase->IsFormAnimationFinishCallback() &&
-        pipelineContextBase->IsFormRenderExceptDynamicComponent() &&
+    if (pipelineContextBase->IsFormAnimationFinishCallback() && pipelineContextBase->IsFormRender() &&
         GetFormAnimationTimeInterval(pipelineContextBase) > DEFAULT_DURATION) {
         TAG_LOGW(
             AceLogTag::ACE_FORM, "[Form animation] Form finish callback triggered animation cannot exceed 1000ms.");
@@ -640,9 +606,8 @@ void JSViewContext::JSAnimation(const JSCallbackInfo& info)
         };
     }
 
-    option = CreateAnimation(obj, pipelineContextBase->IsFormRenderExceptDynamicComponent());
-    if (pipelineContextBase->IsFormAnimationFinishCallback() &&
-        pipelineContextBase->IsFormRenderExceptDynamicComponent() &&
+    option = CreateAnimation(obj, pipelineContextBase->IsFormRender());
+    if (pipelineContextBase->IsFormAnimationFinishCallback() && pipelineContextBase->IsFormRender() &&
         option.GetDuration() > (DEFAULT_DURATION - GetFormAnimationTimeInterval(pipelineContextBase))) {
         option.SetDuration(DEFAULT_DURATION - GetFormAnimationTimeInterval(pipelineContextBase));
         TAG_LOGW(AceLogTag::ACE_FORM, "[Form animation]  Form animation SetDuration: %{public}lld ms",
@@ -656,7 +621,6 @@ void JSViewContext::JSAnimation(const JSCallbackInfo& info)
     PrintAnimationInfo(option, AnimationInterface::ANIMATION, std::nullopt);
     AceScopedTrace paramTrace("duration:%d, curve:%s, iteration:%d", option.GetDuration(),
         option.GetCurve()->ToString().c_str(), option.GetIteration());
-    option.SetAnimationInterface(AnimationInterface::ANIMATION);
     ViewContextModel::GetInstance()->openAnimation(option);
     JankFrameReport::GetInstance().ReportJSAnimation();
 }
@@ -673,40 +637,15 @@ void JSViewContext::JSAnimateToImmediately(const JSCallbackInfo& info)
     AnimateToInner(info, true);
 }
 
-void RecordAnimationFinished(int32_t count)
-{
-    if (Recorder::EventRecorder::Get().IsRecordEnable(Recorder::EventCategory::CATEGORY_ANIMATION)) {
-        Recorder::EventParamsBuilder builder;
-        builder.SetEventCategory(Recorder::EventCategory::CATEGORY_ANIMATION)
-            .SetEventType(Recorder::EventType::ANIMATION_FINISHED)
-            .SetExtra(Recorder::KEY_COUNT, std::to_string(count));
-        Recorder::EventRecorder::Get().OnEvent(std::move(builder));
-    }
-}
-
 void JSViewContext::AnimateToInner(const JSCallbackInfo& info, bool immediately)
 {
-    auto currentId = Container::CurrentIdSafelyWithCheck();
-    bool needCheck = false;
-    if (!Container::CheckRunOnThreadByThreadId(currentId, false)) {
-        // fix DynamicComponent get wrong container when calling the animateTo function.
-        auto localContainerId = ContainerScope::CurrentLocalId();
-        TAG_LOGI(AceLogTag::ACE_ANIMATION,
-            "AnimateToInner not run on running thread, currentId: %{public}d, localId: %{public}d",
-            currentId, localContainerId);
-        if (localContainerId > 0 && Container::CheckRunOnThreadByThreadId(localContainerId, false)) {
-            currentId = localContainerId;
-        } else {
-            needCheck = true;
-        }
-    }
-    ContainerScope scope(currentId);
+    ContainerScope scope(Container::CurrentIdSafelyWithCheck());
     auto scopedDelegate = EngineHelper::GetCurrentDelegateSafely();
     if (!scopedDelegate) {
         // this case usually means there is no foreground container, need to figure out the reason.
         const char* funcName = immediately ? "animateToImmediately" : "animateTo";
         TAG_LOGW(AceLogTag::ACE_ANIMATION,
-            "can not find current context ,%{public}s faild, please use uiContext.%{public}s to specify the context",
+            "can not find current context, %{public}s failed, please use uiContext.%{public}s to specify the context",
             funcName, funcName);
         return;
     }
@@ -723,17 +662,9 @@ void JSViewContext::AnimateToInner(const JSCallbackInfo& info, bool immediately)
 
     auto container = Container::CurrentSafely();
     CHECK_NULL_VOID(container);
-    if (needCheck && !Container::CheckRunOnThreadByThreadId(container->GetInstanceId(), false)) {
-        const char* funcName = immediately ? "animateToImmediately" : "animateTo";
-        TAG_LOGW(AceLogTag::ACE_ANIMATION,
-            "the context found cannot run on current thread, %{public}s failed, "
-            "please use uiContext.%{public}s to specify the context",
-            funcName, funcName);
-        return;
-    }
     auto pipelineContext = container->GetPipelineContext();
     CHECK_NULL_VOID(pipelineContext);
-    if (pipelineContext->IsFormAnimationFinishCallback() && pipelineContext->IsFormRenderExceptDynamicComponent() &&
+    if (pipelineContext->IsFormAnimationFinishCallback() && pipelineContext->IsFormRender() &&
         GetFormAnimationTimeInterval(pipelineContext) > DEFAULT_DURATION) {
         TAG_LOGW(
             AceLogTag::ACE_FORM, "[Form animation] Form finish callback triggered animation cannot exceed 1000ms.");
@@ -741,22 +672,20 @@ void JSViewContext::AnimateToInner(const JSCallbackInfo& info, bool immediately)
     }
 
     JSRef<JSObject> obj = JSRef<JSObject>::Cast(info[0]);
-    AnimationOption option = CreateAnimation(obj, pipelineContext->IsFormRenderExceptDynamicComponent());
-    auto iterations = option.GetIteration();
     JSRef<JSVal> onFinish = obj->GetProperty("onFinish");
     std::function<void()> onFinishEvent;
     std::optional<int32_t> count;
     auto traceStreamPtr = std::make_shared<std::stringstream>();
+    AnimationOption option = CreateAnimation(obj, pipelineContext->IsFormRender());
     RefPtr<Curve> debugCurve = Curves::FAST_OUT_LINEAR_IN;
     auto isDebugAnim = option.GetDuration() == DEBUG_DURATION && debugCurve->IsEqual(option.GetCurve());
     if (onFinish->IsFunction()) {
-        count = GetAnimationFinishCount();
+        count = g_animationCount++;
         auto frameNode = AceType::WeakClaim(NG::ViewStackProcessor::GetInstance()->GetMainFrameNode());
-        auto jsFunc = AceType::MakeRefPtr<JsAnimationOnFinishFunction>(JSRef<JSFunc>::Cast(onFinish));
+        RefPtr<JsFunction> jsFunc = AceType::MakeRefPtr<JsFunction>(JSRef<JSObject>(), JSRef<JSFunc>::Cast(onFinish));
         onFinishEvent = [execCtx = info.GetExecutionContext(), func = std::move(jsFunc),
                             id = Container::CurrentIdSafely(), traceStreamPtr, node = frameNode, count,
-                            iterations, isDebugAnim]() mutable {
-            RecordAnimationFinished(iterations);
+                            isDebugAnim]() mutable {
             CHECK_NULL_VOID(func);
             ContainerScope scope(id);
             JAVASCRIPT_EXECUTION_SCOPE_WITH_CHECK(execCtx);
@@ -765,7 +694,7 @@ void JSViewContext::AnimateToInner(const JSCallbackInfo& info, bool immediately)
             CHECK_NULL_VOID(pipelineContext);
             pipelineContext->UpdateCurrentActiveNode(node);
             TAG_LOGI(AceLogTag::ACE_ANIMATION, "animateTo finish, cnt:%{public}d", count.value());
-            func->Execute(isDebugAnim);
+            func->ExecuteJS(0, nullptr, isDebugAnim);
             if (isDebugAnim) {
                 TAG_LOGI(AceLogTag::ACE_ANIMATION, "animateTo finish after ExecuteJS, cnt:%{public}d", count.value());
             }
@@ -773,15 +702,12 @@ void JSViewContext::AnimateToInner(const JSCallbackInfo& info, bool immediately)
             AceAsyncTraceEnd(0, traceStreamPtr->str().c_str(), true);
         };
     } else {
-        onFinishEvent = [traceStreamPtr, iterations]() {
-            RecordAnimationFinished(iterations);
+        onFinishEvent = [traceStreamPtr]() {
             AceAsyncTraceEnd(0, traceStreamPtr->str().c_str(), true);
         };
     }
 
     option.SetOnFinishEvent(onFinishEvent);
-    option.SetAnimationInterface(
-        immediately ? AnimationInterface::ANIMATE_TO_IMMEDIATELY : AnimationInterface::ANIMATE_TO);
     *traceStreamPtr << "AnimateTo, Options"
                     << " duration:" << option.GetDuration()
                     << ",iteration:" << option.GetIteration()
@@ -800,7 +726,7 @@ void JSViewContext::AnimateToInner(const JSCallbackInfo& info, bool immediately)
         if (usingSharedRuntime) {
             if (GetAnyContextIsLayouting(pipelineContext)) {
                 TAG_LOGW(AceLogTag::ACE_ANIMATION,
-                    "Pipeline layouting, post animateTo, dur:%{public}d, curve:%{public}s",
+                    "pipeline is layouting, post animateTo, duration:%{public}d, curve:%{public}s",
                     option.GetDuration(), option.GetCurve() ? option.GetCurve()->ToString().c_str() : "");
                 pipelineContext->GetTaskExecutor()->PostTask(
                     [id = Container::CurrentIdSafely(), option, func = JSRef<JSFunc>::Cast(info[1]), count,
@@ -855,16 +781,10 @@ void JSViewContext::JSKeyframeAnimateTo(const JSCallbackInfo& info)
 
     auto container = Container::CurrentSafely();
     CHECK_NULL_VOID(container);
-    if (!Container::CheckRunOnThreadByThreadId(container->GetInstanceId(), false)) {
-        TAG_LOGW(AceLogTag::ACE_ANIMATION, "the context found cannot run current thread, KeyframeAnimateTo "
-                                           "failed, please use correct ui context.");
-        return;
-    }
     auto pipelineContext = container->GetPipelineContext();
     CHECK_NULL_VOID(pipelineContext);
     JSRef<JSObject> obj = JSRef<JSObject>::Cast(info[0]);
-    std::optional<int32_t> count;
-    auto overallAnimationOption = ParseKeyframeOverallParam(info.GetExecutionContext(), obj, count);
+    auto overallAnimationOption = ParseKeyframeOverallParam(info.GetExecutionContext(), obj);
     auto keyframes = ParseKeyframes(info.GetExecutionContext(), keyframeArr);
     int duration = 0;
     for (auto& keyframe : keyframes) {
@@ -875,8 +795,7 @@ void JSViewContext::JSKeyframeAnimateTo(const JSCallbackInfo& info)
     overallAnimationOption.SetCurve(Curves::EASE_IN_OUT);
     AceScopedTrace trace("KeyframeAnimateTo iteration:%d, delay:%d",
                          overallAnimationOption.GetIteration(), overallAnimationOption.GetDelay());
-    PrintAnimationInfo(overallAnimationOption, AnimationInterface::KEYFRAME_ANIMATE_TO, count);
-    overallAnimationOption.SetAnimationInterface(AnimationInterface::KEYFRAME_ANIMATE_TO);
+    PrintAnimationInfo(overallAnimationOption, AnimationInterface::KEYFRAME_ANIMATE_TO, std::nullopt);
     if (!ViewStackModel::GetInstance()->IsEmptyStack()) {
         TAG_LOGW(AceLogTag::ACE_ANIMATION,
             "when call keyframeAnimateTo, node stack is not empty, not suitable for keyframeAnimateTo."
@@ -885,7 +804,7 @@ void JSViewContext::JSKeyframeAnimateTo(const JSCallbackInfo& info)
             overallAnimationOption.GetIteration());
     }
     NG::ScopedViewStackProcessor scopedProcessor;
-    StartKeyframeAnimation(pipelineContext, overallAnimationOption, keyframes, count);
+    StartKeyframeAnimation(pipelineContext, overallAnimationOption, keyframes);
     pipelineContext->FlushAfterLayoutCallbackInImplicitAnimationTask();
 }
 
@@ -914,7 +833,7 @@ void JSViewContext::JSOpenBindSheet(const JSCallbackInfo& info)
         return;
     }
 
-    auto sheetContentNode = ParseContentNode(info);
+    auto sheetContentNode = ParseSheeetContentNode(info);
     if (sheetContentNode == nullptr) {
         ReturnPromise(info, ERROR_CODE_BIND_SHEET_CONTENT_ERROR);
         return;
@@ -957,6 +876,7 @@ void JSViewContext::JSOpenBindSheet(const JSCallbackInfo& info)
             return;
         }
     }
+    sheetStyle.instanceId = Container::CurrentId();
     TAG_LOGI(AceLogTag::ACE_SHEET, "paramCnt: %{public}d, contentId: %{public}d, targetId: %{public}d",
         paramCnt, sheetContentNode->GetId(), targetId);
     auto ret = ViewContextModel::GetInstance()->OpenBindSheet(sheetContentNode,
@@ -977,7 +897,7 @@ void JSViewContext::JSUpdateBindSheet(const JSCallbackInfo& info)
         ReturnPromise(info, ERROR_CODE_PARAM_INVALID);
         return;
     }
-    auto sheetContentNode = ParseContentNode(info);
+    auto sheetContentNode = ParseSheeetContentNode(info);
     if (sheetContentNode == nullptr) {
         ReturnPromise(info, ERROR_CODE_BIND_SHEET_CONTENT_ERROR);
         return;
@@ -1019,7 +939,7 @@ void JSViewContext::JSCloseBindSheet(const JSCallbackInfo& info)
         return;
     }
 
-    auto sheetContentNode = ParseContentNode(info);
+    auto sheetContentNode = ParseSheeetContentNode(info);
     if (sheetContentNode == nullptr) {
         ReturnPromise(info, ERROR_CODE_BIND_SHEET_CONTENT_ERROR);
         return;
@@ -1031,309 +951,6 @@ void JSViewContext::JSCloseBindSheet(const JSCallbackInfo& info)
     ReturnPromise(info, ret);
     return;
 }
-
-int32_t ParseTargetInfo(const JSRef<JSObject>& obj, int32_t& targetId)
-{
-    CHECK_EQUAL_RETURN(obj->IsEmpty(), true, ERROR_CODE_PARAM_INVALID);
-    auto targetInfoID = obj->GetProperty("id");
-    if (targetInfoID->IsNumber()) {
-        targetId = targetInfoID->ToNumber<int32_t>();
-    } else if (targetInfoID->IsString()) {
-        std::string targetIdString = targetInfoID->ToString();
-        auto targetInfoComponentId = obj->GetProperty("componentId");
-        if (targetInfoComponentId->IsNumber()) {
-            auto componentId = targetInfoComponentId->ToNumber<int32_t>();
-            auto targetComponentIdNode =
-                ElementRegister::GetInstance()->GetSpecificItemById<NG::FrameNode>(componentId);
-            CHECK_NULL_RETURN(targetComponentIdNode, ERROR_CODE_TARGET_INFO_NOT_EXIST);
-            if (targetComponentIdNode->GetInspectorId().value_or("") == targetIdString) {
-                targetId = targetComponentIdNode->GetId();
-                return ERROR_CODE_NO_ERROR;
-            }
-            auto targetNode = NG::FrameNode::FindChildByName(targetComponentIdNode, targetIdString);
-            CHECK_NULL_RETURN(targetNode, ERROR_CODE_TARGET_INFO_NOT_EXIST);
-            targetId = targetNode->GetId();
-        } else {
-            auto targetNode = ElementRegister::GetInstance()->GetAttachedFrameNodeById(targetIdString);
-            CHECK_NULL_RETURN(targetNode, ERROR_CODE_TARGET_INFO_NOT_EXIST);
-            targetId = targetNode->GetId();
-        }
-    }
-    if (targetId < 0) {
-        return ERROR_CODE_PARAM_INVALID;
-    }
-    return ERROR_CODE_NO_ERROR;
-}
-
-void JSViewContext::JSOpenPopup(const JSCallbackInfo& info)
-{
-    auto paramCnt = info.Length();
-    if (paramCnt < LENGTH_TWO) {
-        ReturnPromise(info, ERROR_CODE_PARAM_INVALID);
-        return;
-    }
-    auto popupContentNode = ParseContentNode(info);
-    if (popupContentNode == nullptr) {
-        ReturnPromise(info, ERROR_CODE_DIALOG_CONTENT_ERROR);
-        return;
-    }
-    auto popupParam = AceType::MakeRefPtr<PopupParam>();
-    CHECK_NULL_VOID(popupParam);
-    popupParam->SetIsShow(true);
-    popupParam->SetUseCustomComponent(true);
-    if (info[INDEX_ONE]->IsObject()) {
-        auto popupObj = JSRef<JSObject>::Cast(info[INDEX_ONE]);
-        int32_t targetId = INVALID_ID;
-        auto result = ParseTargetInfo(popupObj, targetId);
-        if (result == ERROR_CODE_NO_ERROR) {
-            popupParam->SetTargetId(std::to_string(targetId));
-        } else {
-            ReturnPromise(info, result);
-            return;
-        }
-    } else {
-        ReturnPromise(info, ERROR_CODE_PARAM_INVALID);
-        return;
-    }
-    if (paramCnt == LENGTH_THREE && info[INDEX_TWO]->IsObject()) {
-        auto popupObj = JSRef<JSObject>::Cast(info[INDEX_TWO]);
-        JSViewAbstract::ParseContentPopupCommonParam(info, popupObj, popupParam);
-    } else {
-        JSRef<JSObject> popupObj = JSRef<JSObject>::New();
-        JSViewAbstract::ParseContentPopupCommonParam(info, popupObj, popupParam);
-    }
-    auto ret = JSViewAbstract::OpenPopup(popupParam, popupContentNode);
-    if (ret == ERROR_CODE_INTERNAL_ERROR) {
-        ret = ERROR_CODE_NO_ERROR;
-    }
-    ReturnPromise(info, ret);
-    return;
-}
-
-bool UpdateParsePopupParam(const JSCallbackInfo& info, RefPtr<PopupParam>& popupParam,
-    const RefPtr<NG::UINode>& customNode, bool isPartialUpdate)
-{
-    if ((!popupParam) || (!customNode)) {
-        return false;
-    }
-    auto paramCnt = info.Length();
-    if (!(paramCnt >= LENGTH_TWO && info[INDEX_ONE]->IsObject())) {
-        ReturnPromise(info, ERROR_CODE_PARAM_INVALID);
-        return false;
-    }
-    auto param = AceType::MakeRefPtr<PopupParam>();
-    CHECK_NULL_RETURN(param, false);
-    auto result = JSViewAbstract::GetPopupParam(param, customNode);
-    if (result == ERROR_CODE_NO_ERROR) {
-        if (isPartialUpdate) {
-            popupParam = param;
-        } else {
-            popupParam->SetTargetId(param->GetTargetId());
-        }
-    } else {
-        if (result == ERROR_CODE_INTERNAL_ERROR) {
-            result = ERROR_CODE_NO_ERROR;
-        }
-        ReturnPromise(info, result);
-        return false;
-    }
-    auto isShowInSubWindow = param->IsShowInSubWindow();
-    auto focusable = param->GetFocusable();
-    popupParam->SetIsShow(true);
-    popupParam->SetUseCustomComponent(true);
-    popupParam->SetIsPartialUpdate(isPartialUpdate);
-    auto popupObj = JSRef<JSObject>::Cast(info[INDEX_ONE]);
-    JSViewAbstract::ParseContentPopupCommonParam(info, popupObj, popupParam);
-    popupParam->SetShowInSubWindow(isShowInSubWindow);
-    popupParam->SetFocusable(focusable);
-    return true;
-}
-
-void JSViewContext::JSUpdatePopup(const JSCallbackInfo& info)
-{
-    auto paramCnt = info.Length();
-    if (paramCnt < LENGTH_TWO) {
-        ReturnPromise(info, ERROR_CODE_PARAM_INVALID);
-        return;
-    }
-    auto popupContentNode = ParseContentNode(info);
-    if (popupContentNode == nullptr) {
-        ReturnPromise(info, ERROR_CODE_DIALOG_CONTENT_ERROR);
-        return;
-    }
-    auto popupParam = AceType::MakeRefPtr<PopupParam>();
-    CHECK_NULL_VOID(popupParam);
-    bool isPartialUpdate = false;
-    if (paramCnt == LENGTH_THREE) {
-        if (!info[INDEX_TWO]->IsBoolean()) {
-            ReturnPromise(info, ERROR_CODE_PARAM_INVALID);
-            return;
-        }
-        isPartialUpdate = info[INDEX_TWO]->ToBoolean();
-    }
-    auto result = UpdateParsePopupParam(info, popupParam, popupContentNode, isPartialUpdate);
-    if (!result) {
-        return;
-    }
-    auto ret = JSViewAbstract::UpdatePopup(popupParam, popupContentNode);
-    if (ret == ERROR_CODE_INTERNAL_ERROR) {
-        ret = ERROR_CODE_NO_ERROR;
-    }
-    ReturnPromise(info, ret);
-    return;
-}
-
-void JSViewContext::JSClosePopup(const JSCallbackInfo& info)
-{
-    auto paramCnt = info.Length();
-    if (paramCnt < LENGTH_ONE) {
-        ReturnPromise(info, ERROR_CODE_PARAM_INVALID);
-        return;
-    }
-    auto popupContentNode = ParseContentNode(info);
-    if (popupContentNode == nullptr) {
-        ReturnPromise(info, ERROR_CODE_DIALOG_CONTENT_ERROR);
-        return;
-    }
-    auto ret = JSViewAbstract::ClosePopup(popupContentNode);
-    if (ret == ERROR_CODE_INTERNAL_ERROR) {
-        ret = ERROR_CODE_NO_ERROR;
-    }
-    ReturnPromise(info, ret);
-    return;
-}
-
-int32_t GetMenuParam(NG::MenuParam& menuParam, const RefPtr<NG::UINode>& node)
-{
-    if (!node) {
-        TAG_LOGE(AceLogTag::ACE_DIALOG, "Content of menu is null.");
-        return ERROR_CODE_DIALOG_CONTENT_ERROR;
-    }
-    auto context = node->GetContextWithCheck();
-    CHECK_NULL_RETURN(context, ERROR_CODE_INTERNAL_ERROR);
-    auto overlayManager = context->GetOverlayManager();
-    if (!overlayManager) {
-        return ERROR_CODE_INTERNAL_ERROR;
-    }
-    auto menuNode = overlayManager->GetMenuNodeWithExistContent(node);
-    if (!menuNode) {
-        TAG_LOGE(AceLogTag::ACE_DIALOG, "GetMenuParam failed because cannot find menuNode.");
-        return ERROR_CODE_DIALOG_CONTENT_NOT_FOUND;
-    }
-    auto wrapperPattern = AceType::DynamicCast<NG::MenuWrapperPattern>(menuNode->GetPattern());
-    CHECK_NULL_RETURN(wrapperPattern, ERROR_CODE_INTERNAL_ERROR);
-    auto menuProperties = wrapperPattern->GetMenuParam();
-    menuParam = menuProperties;
-    return ERROR_CODE_NO_ERROR;
-}
-
-void JSViewContext::JSOpenMenu(const JSCallbackInfo& info)
-{
-    auto paramCnt = info.Length();
-    if (paramCnt < LENGTH_TWO) {
-        ReturnPromise(info, ERROR_CODE_PARAM_INVALID);
-        return;
-    }
-    auto menuContentNode = ParseContentNode(info);
-    if (menuContentNode == nullptr) {
-        ReturnPromise(info, ERROR_CODE_DIALOG_CONTENT_ERROR);
-        return;
-    }
-    int32_t targetId = INVALID_ID;
-    if (info[INDEX_ONE]->IsObject()) {
-        auto menuObj = JSRef<JSObject>::Cast(info[INDEX_ONE]);
-        auto result = ParseTargetInfo(menuObj, targetId);
-        if (result != ERROR_CODE_NO_ERROR) {
-            ReturnPromise(info, result);
-            return;
-        }
-    } else {
-        ReturnPromise(info, ERROR_CODE_PARAM_INVALID);
-        return;
-    }
-    NG::MenuParam menuParam;
-    JSRef<JSObject> menuObj;
-    if (paramCnt == LENGTH_THREE && info[INDEX_TWO]->IsObject()) {
-        menuObj = JSRef<JSObject>::Cast(info[INDEX_TWO]);
-    }
-    JSViewAbstract::ParseContentMenuCommonParam(info, menuObj, menuParam);
-    auto ret = JSViewAbstract::OpenMenu(menuParam, menuContentNode, targetId);
-    if (ret == ERROR_CODE_INTERNAL_ERROR) {
-        ret = ERROR_CODE_NO_ERROR;
-    }
-    ReturnPromise(info, ret);
-    return;
-}
-
-void JSViewContext::JSUpdateMenu(const JSCallbackInfo& info)
-{
-    auto paramCnt = info.Length();
-    if (paramCnt < LENGTH_TWO) {
-        ReturnPromise(info, ERROR_CODE_PARAM_INVALID);
-        return;
-    }
-    auto menuContentNode = ParseContentNode(info);
-    if (menuContentNode == nullptr) {
-        ReturnPromise(info, ERROR_CODE_DIALOG_CONTENT_ERROR);
-        return;
-    }
-    bool isPartialUpdate = false;
-    if (paramCnt == LENGTH_THREE) {
-        if (!info[INDEX_TWO]->IsBoolean()) {
-            ReturnPromise(info, ERROR_CODE_PARAM_INVALID);
-            return;
-        }
-        isPartialUpdate = info[INDEX_TWO]->ToBoolean();
-    }
-    NG::MenuParam menuParam;
-    if (paramCnt >= LENGTH_TWO && info[INDEX_ONE]->IsObject()) {
-        NG::MenuParam menuParamOpen;
-        //Get current param config
-        auto result = GetMenuParam(menuParamOpen, menuContentNode);
-        if (result != ERROR_CODE_NO_ERROR && result != ERROR_CODE_INTERNAL_ERROR) {
-            ReturnPromise(info, result);
-            return;
-        }
-        if (isPartialUpdate) {
-            menuParam = menuParamOpen;
-        }
-        auto menuObj = JSRef<JSObject>::Cast(info[INDEX_ONE]);
-        JSViewAbstract::ParseContentMenuCommonParam(info, menuObj, menuParam);
-        //Updating these parameters is not supported
-        menuParam.isShowInSubWindow = menuParamOpen.isShowInSubWindow;
-        menuParam.previewMode = menuParamOpen.previewMode;
-    } else {
-        ReturnPromise(info, ERROR_CODE_PARAM_INVALID);
-        return;
-    }
-    auto ret = JSViewAbstract::UpdateMenu(menuParam, menuContentNode);
-    if (ret == ERROR_CODE_INTERNAL_ERROR) {
-        ret = ERROR_CODE_NO_ERROR;
-    }
-    ReturnPromise(info, ret);
-    return;
-}
-
-void JSViewContext::JSCloseMenu(const JSCallbackInfo& info)
-{
-    auto paramCnt = info.Length();
-    if (paramCnt < LENGTH_ONE) {
-        ReturnPromise(info, ERROR_CODE_PARAM_INVALID);
-        return;
-    }
-    auto menuContentNode = ParseContentNode(info);
-    if (menuContentNode == nullptr) {
-        ReturnPromise(info, ERROR_CODE_DIALOG_CONTENT_ERROR);
-        return;
-    }
-    auto ret = JSViewAbstract::CloseMenu(menuContentNode);
-    if (ret == ERROR_CODE_INTERNAL_ERROR) {
-        ret = ERROR_CODE_NO_ERROR;
-    }
-    ReturnPromise(info, ret);
-    return;
-}
-
 void JSViewContext::IsFollowingSystemFontScale(const JSCallbackInfo& info)
 {
     auto container = Container::CurrentSafely();
@@ -1358,40 +975,6 @@ void JSViewContext::GetMaxFontScale(const JSCallbackInfo& info)
     return;
 }
 
-void JSViewContext::SetEnableSwipeBack(const JSCallbackInfo& info)
-{
-    if (info.Length() < 1) {
-        return;
-    }
-    if (!info[0]->IsBoolean()) {
-        return;
-    }
-    auto container = Container::CurrentSafely();
-    CHECK_NULL_VOID(container);
-    auto pipelineContext = container->GetPipelineContext();
-    CHECK_NULL_VOID(pipelineContext);
-    pipelineContext->SetEnableSwipeBack(info[0]->ToBoolean());
-}
-
-void JSViewContext::JSSetKeyboardAppearanceConfig(const JSCallbackInfo& info)
-{
-    EcmaVM* vm = info.GetVm();
-    CHECK_NULL_VOID(vm);
-    auto jsTargetNode = info[0];
-    auto* targetNodePtr = jsTargetNode->GetLocalHandle()->ToNativePointer(vm)->Value();
-    auto* frameNode = reinterpret_cast<NG::FrameNode*>(targetNodePtr);
-    CHECK_NULL_VOID(frameNode);
-    if (!info[1]->IsObject()) {
-        return;
-    }
-    auto nodeTag = frameNode->GetTag();
-    if (nodeTag == V2::TEXTINPUT_ETS_TAG) {
-        JSTextField::SetKeyboardAppearanceConfig(info);
-    } else if (nodeTag == V2::SEARCH_ETS_TAG) {
-        JSSearch::SetKeyboardAppearanceConfig(info);
-    }
-}
-
 void JSViewContext::JSBind(BindingTarget globalObj)
 {
     JSClass<JSViewContext>::Declare("Context");
@@ -1403,12 +986,6 @@ void JSViewContext::JSBind(BindingTarget globalObj)
     JSClass<JSViewContext>::StaticMethod("openBindSheet", JSOpenBindSheet);
     JSClass<JSViewContext>::StaticMethod("updateBindSheet", JSUpdateBindSheet);
     JSClass<JSViewContext>::StaticMethod("closeBindSheet", JSCloseBindSheet);
-    JSClass<JSViewContext>::StaticMethod("openPopup", JSOpenPopup);
-    JSClass<JSViewContext>::StaticMethod("updatePopup", JSUpdatePopup);
-    JSClass<JSViewContext>::StaticMethod("closePopup", JSClosePopup);
-    JSClass<JSViewContext>::StaticMethod("openMenu", JSOpenMenu);
-    JSClass<JSViewContext>::StaticMethod("updateMenu", JSUpdateMenu);
-    JSClass<JSViewContext>::StaticMethod("closeMenu", JSCloseMenu);
     JSClass<JSViewContext>::StaticMethod("isFollowingSystemFontScale", IsFollowingSystemFontScale);
     JSClass<JSViewContext>::StaticMethod("getMaxFontScale", GetMaxFontScale);
     JSClass<JSViewContext>::StaticMethod("bindTabsToScrollable", JSTabsFeature::BindTabsToScrollable);
@@ -1416,8 +993,6 @@ void JSViewContext::JSBind(BindingTarget globalObj)
     JSClass<JSViewContext>::StaticMethod("bindTabsToNestedScrollable", JSTabsFeature::BindTabsToNestedScrollable);
     JSClass<JSViewContext>::StaticMethod(
         "unbindTabsFromNestedScrollable", JSTabsFeature::UnbindTabsFromNestedScrollable);
-    JSClass<JSViewContext>::StaticMethod("enableSwipeBack", JSViewContext::SetEnableSwipeBack);
-    JSClass<JSViewContext>::StaticMethod("setKeyboardAppearanceConfig", JSViewContext::JSSetKeyboardAppearanceConfig);
     JSClass<JSViewContext>::Bind<>(globalObj);
 }
 

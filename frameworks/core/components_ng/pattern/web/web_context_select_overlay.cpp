@@ -20,6 +20,7 @@
 
 #include "base/utils/utils.h"
 #include "core/components_ng/manager/select_content_overlay/select_content_overlay_manager.h"
+#include "core/components_ng/pattern/select_overlay/select_overlay_property.h"
 #include "core/components_ng/pattern/web/web_pattern.h"
 
 namespace OHOS::Ace::NG {
@@ -33,7 +34,6 @@ bool WebContextSelectOverlay::PreProcessOverlay(const OverlayRequest& request)
     auto host = pattern->GetHost();
     CHECK_NULL_RETURN(host, false);
     pipeline->AddOnAreaChangeNode(host->GetId());
-    SetEnableSubWindowMenu(true);
     return true;
 }
 

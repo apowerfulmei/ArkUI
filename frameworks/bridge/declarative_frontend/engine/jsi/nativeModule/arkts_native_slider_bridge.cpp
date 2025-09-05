@@ -15,57 +15,15 @@
 #include "bridge/declarative_frontend/engine/jsi/nativeModule/arkts_native_slider_bridge.h"
 #include "bridge/declarative_frontend/engine/jsi/nativeModule/arkts_utils.h"
 #include "bridge/declarative_frontend/jsview/js_shape_abstract.h"
-#include "bridge/declarative_frontend/jsview/js_linear_gradient.h"
 #include "core/components_ng/base/frame_node.h"
 #include "core/components_ng/pattern/slider/slider_model_ng.h"
-#include "frameworks/bridge/common/utils/engine_helper.h"
 #include "frameworks/bridge/declarative_frontend/engine/jsi/nativeModule/arkts_utils.h"
 
 namespace OHOS::Ace::NG {
 constexpr int NUM_0 = 0;
 constexpr int NUM_1 = 1;
 constexpr int NUM_2 = 2;
-constexpr int32_t NUM_3 = 3;
-constexpr int32_t NUM_4 = 4;
-constexpr int32_t NUM_5 = 5;
-constexpr int32_t NUM_6 = 6;
-constexpr int NUM_8 = 8;
-constexpr int SLIDER_MIN = 0;
-constexpr int SLIDER_MAX = 100;
-constexpr int PARAM_ARR_LENGTH_2 = 2;
 const char* SLIDER_NODEPTR_OF_UINODE = "nodePtr_";
-constexpr char STEPS_STRING[] = "stepsAccessibility";
-constexpr char ENTRIES_STRING[] = "entries";
-constexpr char NEXT_STRING[] = "next";
-constexpr char VALUE_STRING[] = "value";
-constexpr char TEXT_STRING[] = "text";
-constexpr char DONE_STRING[] = "done";
-namespace {
-bool ConvertSliderGradientColor(const EcmaVM* vm, const Local<JSValueRef>& value, OHOS::Ace::NG::Gradient& gradient)
-{
-    if (!value->IsObject(vm)) {
-        return false;
-    }
-    Framework::JSLinearGradient* jsLinearGradient =
-        static_cast<Framework::JSLinearGradient*>(value->ToObject(vm)->GetNativePointerField(vm, 0));
-    if (!jsLinearGradient) {
-        return false;
-    }
-
-    size_t colorLength = jsLinearGradient->GetGradient().size();
-    if (colorLength == 0) {
-        return false;
-    }
-    for (size_t colorIndex = 0; colorIndex < colorLength; ++colorIndex) {
-        OHOS::Ace::NG::GradientColor gradientColor;
-        gradientColor.SetLinearColor(LinearColor(jsLinearGradient->GetGradient().at(colorIndex).first));
-        gradientColor.SetDimension(jsLinearGradient->GetGradient().at(colorIndex).second);
-        gradient.AddColor(gradientColor);
-    }
-    return true;
-}
-} // namespace
-
 panda::Local<panda::JSValueRef> JsSliderChangeCallback(panda::JsiRuntimeCallInfo* runtimeCallInfo)
 {
     auto vm = runtimeCallInfo->GetVM();
@@ -106,12 +64,10 @@ ArkUINativeModuleValue SliderBridge::SetShowTips(ArkUIRuntimeCallInfo* runtimeCa
     }
     
     std::string content;
-    RefPtr<ResourceObject> strResObj;
-    if (ArkTSUtils::ParseJsString(vm, contentArg, content, strResObj)) {
-        auto strRawPtr = AceType::RawPtr(strResObj);
-        GetArkUINodeModifiers()->getSliderModifier()->setShowTipsPtr(nativeNode, showTips, content.c_str(), strRawPtr);
+    if (ArkTSUtils::ParseJsString(vm, contentArg, content)) {
+        GetArkUINodeModifiers()->getSliderModifier()->setShowTips(nativeNode, showTips, content.c_str());
     } else {
-        GetArkUINodeModifiers()->getSliderModifier()->setShowTipsPtr(nativeNode, showTips, nullptr, nullptr);
+        GetArkUINodeModifiers()->getSliderModifier()->setShowTips(nativeNode, showTips, nullptr);
     }
     return panda::JSValueRef::Undefined(vm);
 }
@@ -236,13 +192,10 @@ ArkUINativeModuleValue SliderBridge::SetStepColor(ArkUIRuntimeCallInfo* runtimeC
     Local<JSValueRef> secondArg = runtimeCallInfo->GetCallArgRef(NUM_1);
     auto nativeNode = nodePtr(firstArg->ToNativePointer(vm)->Value());
     Color color;
-    RefPtr<ResourceObject> colorResObj;
-    auto nodeInfo = ArkTSUtils::MakeNativeNodeInfo(nativeNode);
-    if (!ArkTSUtils::ParseJsColorAlpha(vm, secondArg, color, colorResObj, nodeInfo)) {
+    if (!ArkTSUtils::ParseJsColorAlpha(vm, secondArg, color)) {
         GetArkUINodeModifiers()->getSliderModifier()->resetStepColor(nativeNode);
     } else {
-        auto colorRawPtr = AceType::RawPtr(colorResObj);
-        GetArkUINodeModifiers()->getSliderModifier()->setStepColorPtr(nativeNode, color.GetValue(), colorRawPtr);
+        GetArkUINodeModifiers()->getSliderModifier()->setStepColor(nativeNode, color.GetValue());
     }
 
     return panda::JSValueRef::Undefined(vm);
@@ -266,13 +219,10 @@ ArkUINativeModuleValue SliderBridge::SetBlockBorderColor(ArkUIRuntimeCallInfo* r
     Local<JSValueRef> secondArg = runtimeCallInfo->GetCallArgRef(NUM_1);
     auto nativeNode = nodePtr(firstArg->ToNativePointer(vm)->Value());
     Color color;
-    RefPtr<ResourceObject> colorResObj;
-    auto nodeInfo = ArkTSUtils::MakeNativeNodeInfo(nativeNode);
-    if (!ArkTSUtils::ParseJsColorAlpha(vm, secondArg, color, colorResObj, nodeInfo)) {
+    if (!ArkTSUtils::ParseJsColorAlpha(vm, secondArg, color)) {
         GetArkUINodeModifiers()->getSliderModifier()->resetBlockBorderColor(nativeNode);
     } else {
-        auto colorRawPtr = AceType::RawPtr(colorResObj);
-        GetArkUINodeModifiers()->getSliderModifier()->setBlockBorderColorPtr(nativeNode, color.GetValue(), colorRawPtr);
+        GetArkUINodeModifiers()->getSliderModifier()->setBlockBorderColor(nativeNode, color.GetValue());
     }
     return panda::JSValueRef::Undefined(vm);
 }
@@ -329,13 +279,10 @@ ArkUINativeModuleValue SliderBridge::SetBlockColor(ArkUIRuntimeCallInfo* runtime
     Local<JSValueRef> secondArg = runtimeCallInfo->GetCallArgRef(NUM_1);
     auto nativeNode = nodePtr(firstArg->ToNativePointer(vm)->Value());
     Color color;
-    RefPtr<ResourceObject> colorResObj;
-    auto nodeInfo = ArkTSUtils::MakeNativeNodeInfo(nativeNode);
-    if (!ArkTSUtils::ParseJsColorAlpha(vm, secondArg, color, colorResObj, nodeInfo)) {
+    if (!ArkTSUtils::ParseJsColorAlpha(vm, secondArg, color)) {
         GetArkUINodeModifiers()->getSliderModifier()->resetBlockColor(nativeNode);
     } else {
-        auto colorRawPtr = AceType::RawPtr(colorResObj);
-        GetArkUINodeModifiers()->getSliderModifier()->setBlockColorPtr(nativeNode, color.GetValue(), colorRawPtr);
+        GetArkUINodeModifiers()->getSliderModifier()->setBlockColor(nativeNode, color.GetValue());
     }
     return panda::JSValueRef::Undefined(vm);
 }
@@ -357,36 +304,11 @@ ArkUINativeModuleValue SliderBridge::SetTrackBackgroundColor(ArkUIRuntimeCallInf
     Local<JSValueRef> firstArg = runtimeCallInfo->GetCallArgRef(NUM_0);
     Local<JSValueRef> secondArg = runtimeCallInfo->GetCallArgRef(NUM_1);
     auto nativeNode = nodePtr(firstArg->ToNativePointer(vm)->Value());
-    Gradient gradient;
     Color color;
-    RefPtr<ResourceObject> colorResObj;
-    auto nodeInfo = ArkTSUtils::MakeNativeNodeInfo(nativeNode);
-    if (ConvertSliderGradientColor(vm, secondArg, gradient)) {
-        ArkUIGradientType gradientObj;
-        auto colorLength = gradient.GetColors().size();
-        std::vector<uint32_t> colorValues;
-        std::vector<ArkUILengthType> offsetValues;
+    if (!ArkTSUtils::ParseJsColorAlpha(vm, secondArg, color)) {
         GetArkUINodeModifiers()->getSliderModifier()->resetTrackBackgroundColor(nativeNode);
-        if (colorLength <= 0) {
-            return panda::JSValueRef::Undefined(vm);
-        }
-        for (int32_t i = 0; i < static_cast<int32_t>(colorLength); i++) {
-            colorValues.push_back(gradient.GetColors()[i].GetLinearColor().GetValue());
-            offsetValues.push_back(ArkUILengthType {
-                .number = static_cast<ArkUI_Float32>(gradient.GetColors()[i].GetDimension().Value()),
-                .unit = static_cast<int8_t>(gradient.GetColors()[i].GetDimension().Unit()) });
-        }
-
-        gradientObj.color = &(*colorValues.begin());
-        gradientObj.offset = &(*offsetValues.begin());
-        GetArkUINodeModifiers()->getSliderModifier()->setLinearTrackBackgroundColor(
-            nativeNode, &gradientObj, colorLength);
-    } else if (ArkTSUtils::ParseJsColorAlpha(vm, secondArg, color, colorResObj, nodeInfo)) {
-        auto colorRawPtr = AceType::RawPtr(colorResObj);
-        GetArkUINodeModifiers()->getSliderModifier()->setTrackBackgroundColorPtr(
-            nativeNode, color.GetValue(), colorRawPtr);
     } else {
-        GetArkUINodeModifiers()->getSliderModifier()->resetTrackBackgroundColor(nativeNode);
+        GetArkUINodeModifiers()->getSliderModifier()->setTrackBackgroundColor(nativeNode, color.GetValue());
     }
     return panda::JSValueRef::Undefined(vm);
 }
@@ -408,35 +330,11 @@ ArkUINativeModuleValue SliderBridge::SetSelectColor(ArkUIRuntimeCallInfo* runtim
     Local<JSValueRef> firstArg = runtimeCallInfo->GetCallArgRef(NUM_0);
     Local<JSValueRef> secondArg = runtimeCallInfo->GetCallArgRef(NUM_1);
     auto nativeNode = nodePtr(firstArg->ToNativePointer(vm)->Value());
-    Gradient gradient;
-    Color color;
-    RefPtr<ResourceObject> colorResObj;
-    auto nodeInfo = ArkTSUtils::MakeNativeNodeInfo(nativeNode);
-    if (ConvertSliderGradientColor(vm, secondArg, gradient)) {
-        ArkUIGradientType gradientObj;
-        auto colorLength = gradient.GetColors().size();
-        std::vector<uint32_t> colorValues;
-        std::vector<ArkUILengthType> offsetValues;
-        if (colorLength <= 0) {
-            GetArkUINodeModifiers()->getSliderModifier()->resetSelectColor(nativeNode);
-            return panda::JSValueRef::Undefined(vm);
-        }
-
-        for (int32_t i = 0; i < static_cast<int32_t>(colorLength); i++) {
-            colorValues.push_back(gradient.GetColors()[i].GetLinearColor().GetValue());
-            offsetValues.push_back(ArkUILengthType {
-                .number = static_cast<ArkUI_Float32>(gradient.GetColors()[i].GetDimension().Value()),
-                .unit = static_cast<int8_t>(gradient.GetColors()[i].GetDimension().Unit()) });
-        }
-
-        gradientObj.color = &(*colorValues.begin());
-        gradientObj.offset = &(*offsetValues.begin());
-        GetArkUINodeModifiers()->getSliderModifier()->setLinearSelectColor(nativeNode, &gradientObj, colorLength);
-    } else if (ArkTSUtils::ParseJsColorAlpha(vm, secondArg, color, colorResObj, nodeInfo)) {
-        auto colorRawPtr = AceType::RawPtr(colorResObj);
-        GetArkUINodeModifiers()->getSliderModifier()->setSelectColorPtr(nativeNode, color.GetValue(), colorRawPtr);
-    } else {
+        Color color;
+    if (!ArkTSUtils::ParseJsColorAlpha(vm, secondArg, color)) {
         GetArkUINodeModifiers()->getSliderModifier()->resetSelectColor(nativeNode);
+    } else {
+        GetArkUINodeModifiers()->getSliderModifier()->setSelectColor(nativeNode, color.GetValue());
     }
     return panda::JSValueRef::Undefined(vm);
 }
@@ -459,28 +357,7 @@ ArkUINativeModuleValue SliderBridge::SetShowSteps(ArkUIRuntimeCallInfo* runtimeC
     Local<JSValueRef> secondArg = runtimeCallInfo->GetCallArgRef(NUM_1);
     auto nativeNode = nodePtr(firstArg->ToNativePointer(vm)->Value());
     bool flag = secondArg->ToBoolean(vm)->Value();
-    Framework::JsiCallbackInfo info = Framework::JsiCallbackInfo(runtimeCallInfo);
-    if ((info.Length() < NUM_3) || (!info[NUM_2]->IsObject())) {
-        GetArkUINodeModifiers()->getSliderModifier()->setShowSteps(nativeNode, flag);
-        return panda::JSValueRef::Undefined(vm);
-    }
-    StepOptions optionsMap{};
-    auto optionsObject = Framework::JSRef<Framework::JSObject>::Cast(info[NUM_2]);
-    Framework::JSRef<Framework::JSVal> jsOptionsMap = optionsObject->GetProperty(STEPS_STRING);
-    if (jsOptionsMap->IsObject()) {
-        SliderBridge::ParseStepOptionsMap(vm, jsOptionsMap, optionsMap);
-    }
-    if (optionsMap.size() > 0) {
-        auto optionLength = NUM_0;
-        auto options = new ArkUISliderShowStepOptions[optionsMap.size()];
-        for (auto& option : optionsMap) {
-            options[optionLength].step = option.first;
-            options[optionLength].text = option.second.c_str();
-            optionLength++;
-        }
-        GetArkUINodeModifiers()->getSliderModifier()->setShowStepsWithOptions(nativeNode, flag, options, optionLength);
-        delete[] options;
-    }
+    GetArkUINodeModifiers()->getSliderModifier()->setShowSteps(nativeNode, flag);
     return panda::JSValueRef::Undefined(vm);
 }
 
@@ -544,9 +421,8 @@ ArkUINativeModuleValue SliderBridge::SetBlockStyle(ArkUIRuntimeCallInfo* runtime
     auto type = static_cast<SliderModel::BlockStyleType>(getType->ToNumber<int32_t>());
     if (type == SliderModel::BlockStyleType::IMAGE) {
         std::string src;
-        RefPtr<ResourceObject> mediaResObj;
         auto image = jsObj->GetProperty("image");
-        if (!Framework::JSShapeAbstract::ParseJsMedia(image, src, mediaResObj)) {
+        if (!Framework::JSShapeAbstract::ParseJsMedia(image, src)) {
             SliderBridge::ResetBlockStyle(runtimeCallInfo);
             return panda::JSValueRef::Undefined(vm);
         }
@@ -554,9 +430,6 @@ ArkUINativeModuleValue SliderBridge::SetBlockStyle(ArkUIRuntimeCallInfo* runtime
         std::string moduleName;
         Framework::JSViewAbstract::GetJsMediaBundleInfo(image, bundleName, moduleName);
         SliderModelNG::SetBlockImage(frameNode, src, bundleName, moduleName);
-        if (SystemProperties::ConfigChangePerform()) {
-            SliderModelNG::CreateWithMediaResourceObj(frameNode, mediaResObj, bundleName, moduleName);
-        }
     } else if (type == SliderModel::BlockStyleType::SHAPE) {
         auto shape = jsObj->GetProperty("shape");
         if (!shape->IsObject()) {
@@ -761,426 +634,5 @@ ArkUINativeModuleValue SliderBridge::SetContentModifierBuilder(ArkUIRuntimeCallI
             return AceType::Claim(frameNode);
         });
     return panda::JSValueRef::Undefined(vm);
-}
-
-ArkUINativeModuleValue SliderBridge::SetOnChange(ArkUIRuntimeCallInfo* runtimeCallInfo)
-{
-    EcmaVM* vm = runtimeCallInfo->GetVM();
-    CHECK_NULL_RETURN(vm, panda::NativePointerRef::New(vm, nullptr));
-    uint32_t argsNumber = runtimeCallInfo->GetArgsNumber();
-    if (argsNumber != NUM_2) {
-        return panda::JSValueRef::Undefined(vm);
-    }
-    Local<JSValueRef> nativeNodeArg = runtimeCallInfo->GetCallArgRef(NUM_0);
-    Local<JSValueRef> callbackArg = runtimeCallInfo->GetCallArgRef(NUM_1);
-    auto nativeNode = nodePtr(nativeNodeArg->ToNativePointer(vm)->Value());
-    auto frameNode = reinterpret_cast<FrameNode*>(nativeNode);
-    CHECK_NULL_RETURN(frameNode, panda::NativePointerRef::New(vm, nullptr));
-    if (callbackArg->IsUndefined() || callbackArg->IsNull() || !callbackArg->IsFunction(vm)) {
-        GetArkUINodeModifiers()->getToggleModifier()->resetToggleOnChange(nativeNode);
-        return panda::JSValueRef::Undefined(vm);
-    }
-    panda::Local<panda::FunctionRef> func = callbackArg->ToObject(vm);
-    std::function<void(float, int32_t)> callback = [vm, frameNode, func = panda::CopyableGlobal(vm, func)](
-                                                       float number, int32_t mode) {
-        panda::LocalScope pandaScope(vm);
-        panda::TryCatch trycatch(vm);
-        PipelineContext::SetCallBackNode(AceType::WeakClaim(frameNode));
-
-        panda::Local<panda::NumberRef> numberParam = panda::NumberRef::New(vm, number);
-        panda::Local<panda::NumberRef> modeParam = panda::NumberRef::New(vm, mode);
-        panda::Local<panda::JSValueRef> params[PARAM_ARR_LENGTH_2] = { numberParam, modeParam };
-        func->Call(vm, func.ToLocal(), params, PARAM_ARR_LENGTH_2);
-    };
-    GetArkUINodeModifiers()->getSliderModifier()->setOnChange(nativeNode, reinterpret_cast<void*>(&callback));
-    return panda::JSValueRef::Undefined(vm);
-}
-
-ArkUINativeModuleValue SliderBridge::ResetOnChange(ArkUIRuntimeCallInfo* runtimeCallInfo)
-{
-    EcmaVM* vm = runtimeCallInfo->GetVM();
-    CHECK_NULL_RETURN(vm, panda::NativePointerRef::New(vm, nullptr));
-    Local<JSValueRef> nativeNodeArg = runtimeCallInfo->GetCallArgRef(NUM_0);
-    auto nativeNode = nodePtr(nativeNodeArg->ToNativePointer(vm)->Value());
-    GetArkUINodeModifiers()->getSliderModifier()->resetOnChange(nativeNode);
-    return panda::JSValueRef::Undefined(vm);
-}
-
-struct SliderOptions {
-    double value = 0;
-    double min = 0;
-    double max = 100;
-    double step = 1;
-    bool reverse = false;
-    int32_t style = 0;
-    int32_t direction = 1;
-};
-
-static void GetStep(SliderOptions& options)
-{
-    if (LessOrEqual(options.step, 0.0) || options.step > options.max - options.min) {
-        options.step = 1;
-    }
-}
-
-static void GetValue(SliderOptions& options)
-{
-    if (options.value < options.min) {
-        options.value = options.min;
-    }
-
-    if (options.value > options.max) {
-        options.value = options.max;
-    }
-}
-
-static void ParseStyleOptions(ArkUIRuntimeCallInfo* runtimeCallInfo, SliderOptions& options)
-{
-    EcmaVM* vm = runtimeCallInfo->GetVM();
-    CHECK_NULL_VOID(vm);
-    Local<JSValueRef> styleArg = runtimeCallInfo->GetCallArgRef(5);     // 5: parameter index
-    Local<JSValueRef> directionArg = runtimeCallInfo->GetCallArgRef(6); // 6: parameter index
-    Local<JSValueRef> reverseArg = runtimeCallInfo->GetCallArgRef(7);   // 7: parameter index
-
-    if (!reverseArg.IsNull() && !reverseArg->IsUndefined() && reverseArg->IsBoolean()) {
-        options.reverse = reverseArg->ToBoolean(vm)->Value();
-    }
-    if (!styleArg.IsNull() && !styleArg->IsUndefined() && styleArg->IsNumber()) {
-        auto tempStyle = styleArg->Int32Value(vm);
-        if (tempStyle >= static_cast<int32_t>(SliderMode::OUTSET) &&
-                tempStyle <= static_cast<int32_t>(SliderMode::CAPSULE)) {
-            options.style = tempStyle;
-        }
-    }
-    if (!directionArg.IsNull() && !directionArg->IsUndefined() && directionArg->IsNumber()) {
-        auto tempDirection = directionArg->Int32Value(vm);
-        if (tempDirection >= static_cast<int32_t>(Axis::VERTICAL) &&
-                tempDirection <= static_cast<int32_t>(Axis::HORIZONTAL)) {
-            options.direction = tempDirection;
-        }
-    }
-}
-
-static void ParseOptions(ArkUIRuntimeCallInfo* runtimeCallInfo, SliderOptions& options)
-{
-    static const double valueMin = -1000000.0f;
-    options.value = valueMin;
-    EcmaVM* vm = runtimeCallInfo->GetVM();
-    CHECK_NULL_VOID(vm);
-    Local<JSValueRef> valueArg = runtimeCallInfo->GetCallArgRef(1); // 1: parameter index
-    Local<JSValueRef> minArg = runtimeCallInfo->GetCallArgRef(2);   // 2: parameter index
-    Local<JSValueRef> maxArg = runtimeCallInfo->GetCallArgRef(3);   // 3: parameter index
-    Local<JSValueRef> stepArg = runtimeCallInfo->GetCallArgRef(4);  // 4: parameter index
-    if (!valueArg.IsNull() && !valueArg->IsUndefined() && valueArg->IsNumber()) {
-        options.value = valueArg->ToNumber(vm)->Value();
-    }
-    if (!minArg.IsNull() && !minArg->IsUndefined() && minArg->IsNumber()) {
-        options.min = minArg->ToNumber(vm)->Value();
-    }
-    if (!maxArg.IsNull() && !maxArg->IsUndefined() && maxArg->IsNumber()) {
-        options.max = maxArg->ToNumber(vm)->Value();
-    }
-    if (!stepArg.IsNull() && !stepArg->IsUndefined() && stepArg->IsNumber()) {
-        options.step = stepArg->ToNumber(vm)->Value();
-    }
-
-    if (GreatOrEqual(options.min, options.max)) {
-        options.min = SLIDER_MIN;
-        options.max = SLIDER_MAX;
-    }
-
-    GetStep(options);
-    GetValue(options);
-    ParseStyleOptions(runtimeCallInfo, options);
-}
-
-ArkUINativeModuleValue SliderBridge::SetSliderOptions(ArkUIRuntimeCallInfo* runtimeCallInfo)
-{
-    auto sliderModifier = GetArkUINodeModifiers()->getSliderModifier();
-    EcmaVM* vm = runtimeCallInfo->GetVM();
-    CHECK_EQUAL_RETURN(runtimeCallInfo->GetArgsNumber() != NUM_8, true, panda::JSValueRef::Undefined(vm));
-    SliderOptions options;
-    ParseOptions(runtimeCallInfo, options);
-    Local<JSValueRef> nodeArg = runtimeCallInfo->GetCallArgRef(NUM_0);
-    CHECK_NULL_RETURN(vm, panda::JSValueRef::Undefined(vm));
-    auto pointer = nodeArg->ToNativePointer(vm);
-    CHECK_EQUAL_RETURN(pointer.IsEmpty(), true, panda::JSValueRef::Undefined(vm));
-    auto nativeNode = nodePtr(pointer->Value());
-    CHECK_NULL_RETURN(nativeNode, panda::JSValueRef::Undefined(vm));
-    sliderModifier->setStep(nativeNode, options.step);
-    sliderModifier->setMinLabel(nativeNode, options.min);
-    sliderModifier->setMaxLabel(nativeNode, options.max);
-    sliderModifier->setSliderValue(nativeNode, options.value);
-    sliderModifier->setSliderStyle(nativeNode, options.style);
-    sliderModifier->setDirection(nativeNode, options.direction);
-    sliderModifier->setReverse(nativeNode, options.reverse);
-    return panda::JSValueRef::Undefined(vm);
-}
-
-ArkUINativeModuleValue SliderBridge::SetEnableHapticFeedback(ArkUIRuntimeCallInfo* runtimeCallInfo)
-{
-    EcmaVM* vm = runtimeCallInfo->GetVM();
-    CHECK_NULL_RETURN(vm, panda::NativePointerRef::New(vm, nullptr));
-    Local<JSValueRef> nodeArg = runtimeCallInfo->GetCallArgRef(NUM_0);
-    Local<JSValueRef> enableHapticFeedbackArg = runtimeCallInfo->GetCallArgRef(NUM_1);
-    auto nativeNode = nodePtr(nodeArg->ToNativePointer(vm)->Value());
-    CHECK_NULL_RETURN(nativeNode, panda::NativePointerRef::New(vm, nullptr));
-    auto nodeModifiers = GetArkUINodeModifiers();
-    CHECK_NULL_RETURN(nodeModifiers, panda::NativePointerRef::New(vm, nullptr));
-    auto SliderModifier = nodeModifiers->getSliderModifier();
-    CHECK_NULL_RETURN(SliderModifier, panda::NativePointerRef::New(vm, nullptr));
-    if (enableHapticFeedbackArg->IsBoolean()) {
-        bool value = enableHapticFeedbackArg->ToBoolean(vm)->Value();
-        SliderModifier->setEnableHapticFeedback(nativeNode, value);
-    } else {
-        SliderModifier->resetEnableHapticFeedback(nativeNode);
-    }
-    return panda::JSValueRef::Undefined(vm);
-}
-
-ArkUINativeModuleValue SliderBridge::ResetEnableHapticFeedback(ArkUIRuntimeCallInfo* runtimeCallInfo)
-{
-    EcmaVM* vm = runtimeCallInfo->GetVM();
-    CHECK_NULL_RETURN(vm, panda::NativePointerRef::New(vm, nullptr));
-    Local<JSValueRef> nodeArg = runtimeCallInfo->GetCallArgRef(NUM_0);
-    auto nativeNode = nodePtr(nodeArg->ToNativePointer(vm)->Value());
-    CHECK_NULL_RETURN(nativeNode, panda::NativePointerRef::New(vm, nullptr));
-    auto nodeModifiers = GetArkUINodeModifiers();
-    CHECK_NULL_RETURN(nodeModifiers, panda::NativePointerRef::New(vm, nullptr));
-    auto SliderModifier = nodeModifiers->getSliderModifier();
-    CHECK_NULL_RETURN(SliderModifier, panda::NativePointerRef::New(vm, nullptr));
-    SliderModifier->resetEnableHapticFeedback(nativeNode);
-    return panda::JSValueRef::Undefined(vm);
-}
-
-static void ParsePrefixOrSuffixOptions(ArkUIRuntimeCallInfo* runtimeCallInfo, ArkUISliderCustomContentOptions& options)
-{
-    EcmaVM* vm = runtimeCallInfo->GetVM();
-    CHECK_NULL_VOID(vm);
-    if (runtimeCallInfo->GetArgsNumber() < NUM_6) {
-        return;
-    }
-    Local<JSValueRef> textArg = runtimeCallInfo->GetCallArgRef(NUM_2);
-    Local<JSValueRef> descriptionArg = runtimeCallInfo->GetCallArgRef(NUM_3);
-    Local<JSValueRef> levelArg = runtimeCallInfo->GetCallArgRef(NUM_4);
-    Local<JSValueRef> groupArg = runtimeCallInfo->GetCallArgRef(NUM_5);
-    CalcDimension dimension;
-    if (!textArg.IsNull() && !textArg->IsUndefined()) {
-        if (textArg->IsString(vm)) {
-            options.accessibilityText = textArg->ToString(vm)->ToString(vm).c_str();
-        } else if (ArkTSUtils::ParseJsResource(vm, textArg, dimension)) {
-            options.accessibilityText = dimension.ToString().c_str();
-        }
-    }
-
-    if (!descriptionArg.IsNull() && !descriptionArg->IsUndefined()) {
-        if (descriptionArg->IsString(vm)) {
-            options.accessibilityDescription = descriptionArg->ToString(vm)->ToString(vm).c_str();
-        } else if (ArkTSUtils::ParseJsResource(vm, descriptionArg, dimension)) {
-            options.accessibilityDescription = dimension.ToString().c_str();
-        }
-    }
-
-    if (!levelArg.IsNull() && !levelArg->IsUndefined()) {
-        if (levelArg->IsString(vm)) {
-            options.accessibilityLevel = levelArg->ToString(vm)->ToString(vm).c_str();
-        } else if (ArkTSUtils::ParseJsResource(vm, levelArg, dimension)) {
-            options.accessibilityLevel = dimension.ToString().c_str();
-        }
-    }
-    if (!groupArg.IsNull() && !groupArg->IsUndefined() && groupArg->IsBoolean()) {
-        options.accessibilityGroup = groupArg->ToBoolean(vm)->Value();
-    }
-}
-
-ArkUINativeModuleValue SliderBridge::SetPrefix(ArkUIRuntimeCallInfo* runtimeCallInfo)
-{
-    EcmaVM* vm = runtimeCallInfo->GetVM();
-    CHECK_NULL_RETURN(vm, panda::NativePointerRef::New(vm, nullptr));
-    if (runtimeCallInfo->GetArgsNumber() < NUM_3) {
-        return panda::JSValueRef::Undefined(vm);
-    }
-
-    Local<JSValueRef> nodeArg = runtimeCallInfo->GetCallArgRef(NUM_0);
-    auto nativeNode = nodePtr(nodeArg->ToNativePointer(vm)->Value());
-    CHECK_NULL_RETURN(nativeNode, panda::NativePointerRef::New(vm, nullptr));
-
-    Local<JSValueRef> prefixArg = runtimeCallInfo->GetCallArgRef(NUM_1);
-    auto prefixNode = nodePtr(prefixArg->ToNativePointer(vm)->Value());
-    CHECK_NULL_RETURN(prefixNode, panda::NativePointerRef::New(vm, nullptr));
-
-    ArkUISliderCustomContentOptions options;
-    ParsePrefixOrSuffixOptions(runtimeCallInfo, options);
-
-    auto nodeModifiers = GetArkUINodeModifiers();
-    CHECK_NULL_RETURN(nodeModifiers, panda::NativePointerRef::New(vm, nullptr));
-    auto SliderModifier = nodeModifiers->getSliderModifier();
-    CHECK_NULL_RETURN(SliderModifier, panda::NativePointerRef::New(vm, nullptr));
-    SliderModifier->setPrefix(nativeNode, prefixNode, static_cast<ArkUISliderCustomContentOptions*>(&options));
-    return panda::JSValueRef::Undefined(vm);
-}
-
-ArkUINativeModuleValue SliderBridge::ResetPrefix(ArkUIRuntimeCallInfo* runtimeCallInfo)
-{
-    EcmaVM* vm = runtimeCallInfo->GetVM();
-    CHECK_NULL_RETURN(vm, panda::NativePointerRef::New(vm, nullptr));
-
-    Local<JSValueRef> nodeArg = runtimeCallInfo->GetCallArgRef(NUM_0);
-    auto nativeNode = nodePtr(nodeArg->ToNativePointer(vm)->Value());
-    CHECK_NULL_RETURN(nativeNode, panda::NativePointerRef::New(vm, nullptr));
-
-    Local<JSValueRef> prefixArg = runtimeCallInfo->GetCallArgRef(NUM_1);
-    auto prefixNode = nodePtr(prefixArg->ToNativePointer(vm)->Value());
-    CHECK_NULL_RETURN(prefixNode, panda::NativePointerRef::New(vm, nullptr));
-
-    auto nodeModifiers = GetArkUINodeModifiers();
-    CHECK_NULL_RETURN(nodeModifiers, panda::NativePointerRef::New(vm, nullptr));
-
-    auto SliderModifier = nodeModifiers->getSliderModifier();
-    CHECK_NULL_RETURN(SliderModifier, panda::NativePointerRef::New(vm, nullptr));
-    SliderModifier->resetPrefix(nativeNode);
-    return panda::JSValueRef::Undefined(vm);
-}
-
-ArkUINativeModuleValue SliderBridge::SetSuffix(ArkUIRuntimeCallInfo* runtimeCallInfo)
-{
-    EcmaVM* vm = runtimeCallInfo->GetVM();
-    CHECK_NULL_RETURN(vm, panda::NativePointerRef::New(vm, nullptr));
-    if (runtimeCallInfo->GetArgsNumber() < NUM_3) {
-        return panda::JSValueRef::Undefined(vm);
-    }
-
-    Local<JSValueRef> nodeArg = runtimeCallInfo->GetCallArgRef(NUM_0);
-    auto nativeNode = nodePtr(nodeArg->ToNativePointer(vm)->Value());
-    CHECK_NULL_RETURN(nativeNode, panda::NativePointerRef::New(vm, nullptr));
-
-    Local<JSValueRef> suffixtArg = runtimeCallInfo->GetCallArgRef(NUM_1);
-    auto suffixNode = nodePtr(suffixtArg->ToNativePointer(vm)->Value());
-    CHECK_NULL_RETURN(suffixNode, panda::NativePointerRef::New(vm, nullptr));
-
-    ArkUISliderCustomContentOptions options;
-    ParsePrefixOrSuffixOptions(runtimeCallInfo, options);
-
-    auto nodeModifiers = GetArkUINodeModifiers();
-    CHECK_NULL_RETURN(nodeModifiers, panda::NativePointerRef::New(vm, nullptr));
-    auto SliderModifier = nodeModifiers->getSliderModifier();
-    CHECK_NULL_RETURN(SliderModifier, panda::NativePointerRef::New(vm, nullptr));
-    SliderModifier->setSuffix(nativeNode, suffixNode, static_cast<ArkUISliderCustomContentOptions*>(&options));
-    return panda::JSValueRef::Undefined(vm);
-}
-
-ArkUINativeModuleValue SliderBridge::ResetSuffix(ArkUIRuntimeCallInfo* runtimeCallInfo)
-{
-    EcmaVM* vm = runtimeCallInfo->GetVM();
-    CHECK_NULL_RETURN(vm, panda::NativePointerRef::New(vm, nullptr));
-
-    Local<JSValueRef> nodeArg = runtimeCallInfo->GetCallArgRef(NUM_0);
-    auto nativeNode = nodePtr(nodeArg->ToNativePointer(vm)->Value());
-    CHECK_NULL_RETURN(nativeNode, panda::NativePointerRef::New(vm, nullptr));
-
-    Local<JSValueRef> suffixtArg = runtimeCallInfo->GetCallArgRef(NUM_1);
-    auto suffixNode = nodePtr(suffixtArg->ToNativePointer(vm)->Value());
-    CHECK_NULL_RETURN(suffixNode, panda::NativePointerRef::New(vm, nullptr));
-
-    auto nodeModifiers = GetArkUINodeModifiers();
-    CHECK_NULL_RETURN(nodeModifiers, panda::NativePointerRef::New(vm, nullptr));
-
-    auto SliderModifier = nodeModifiers->getSliderModifier();
-    CHECK_NULL_RETURN(SliderModifier, panda::NativePointerRef::New(vm, nullptr));
-    SliderModifier->resetSuffix(nativeNode);
-    return panda::JSValueRef::Undefined(vm);
-}
-
-napi_value SliderBridge::GetIteratorNext(const napi_env env, napi_value iterator, napi_value func, bool *done)
-{
-    napi_value next = nullptr;
-    NAPI_CALL_BASE(env, napi_call_function(env, iterator, func, 0, nullptr, &next), nullptr);
-    CHECK_NULL_RETURN(next, nullptr);
-    napi_value doneValue = nullptr;
-    NAPI_CALL_BASE(env, napi_get_named_property(env, next, DONE_STRING, &doneValue), nullptr);
-    CHECK_NULL_RETURN(doneValue, nullptr);
-    NAPI_CALL_BASE(env, napi_get_value_bool(env, doneValue, done), nullptr);
-    return next;
-}
-
-int32_t SliderBridge::ParseStepOptionItemKey(const napi_env env, napi_value item)
-{
-    int32_t result = INT32_MIN;
-    napi_value entry = nullptr;
-    napi_value key = nullptr;
-    napi_valuetype kType = napi_undefined;
-    NAPI_CALL_BASE(env, napi_get_named_property(env, item, VALUE_STRING, &entry), result);
-    CHECK_NULL_RETURN(entry, result);
-    NAPI_CALL_BASE(env, napi_get_element(env, entry, NUM_0, &key), result);
-    CHECK_NULL_RETURN(key, result);
-    NAPI_CALL_BASE(env, napi_typeof(env, key, &kType), result);
-    CHECK_NULL_RETURN(kType, result);
-    if (napi_number == kType) {
-        double step = NUM_0;
-        NAPI_CALL_BASE(env, napi_get_value_double(env, key, &step), result);
-        if ((step >= 0) && (NearZero(std::abs(step - std::floor(step)))) && (step <= INT32_MAX)) {
-            result = static_cast<int32_t>(step);
-        }
-    }
-    return result;
-}
-
-bool SliderBridge::ParseStepOptionItemValue(EcmaVM* vm, const napi_env env, napi_value item, std::string& stepText)
-{
-    bool result = false;
-    CHECK_NULL_RETURN(vm, result);
-    napi_value entry = nullptr;
-    napi_value value = nullptr;
-    napi_value textObject = nullptr;
-    napi_valuetype vType = napi_undefined;
-    NAPI_CALL_BASE(env, napi_get_named_property(env, item, VALUE_STRING, &entry), result);
-    CHECK_NULL_RETURN(entry, result);
-    NAPI_CALL_BASE(env, napi_get_element(env, entry, NUM_1, &value), result);
-    CHECK_NULL_RETURN(value, result);
-    NAPI_CALL_BASE(env, napi_typeof(env, value, &vType), result);
-    CHECK_NULL_RETURN(vType, result);
-    if (napi_object == vType) {
-        NAPI_CALL_BASE(env, napi_get_named_property(env, value, TEXT_STRING, &textObject), result);
-        CHECK_NULL_RETURN(textObject, result);
-        panda::Local<panda::JSValueRef> localValue = NapiValueToLocalValue(textObject);
-        result = ArkTSUtils::ParseJsString(vm, localValue, stepText);
-    }
-    return result;
-}
-
-napi_value SliderBridge::ParseStepOptionsMap(
-    EcmaVM* vm, Framework::JSRef<Framework::JSVal> jsStepOptionsMap, StepOptions& stepOptionsMap)
-{
-    CHECK_NULL_RETURN(vm, nullptr);
-    auto engine = EngineHelper::GetCurrentEngine();
-    CHECK_NULL_RETURN(engine, nullptr);
-    NativeEngine* nativeEngine = engine->GetNativeEngine();
-    CHECK_NULL_RETURN(nativeEngine, nullptr);
-    auto env = reinterpret_cast<napi_env>(nativeEngine);
-    panda::Local<Framework::JsiValue> localValue = jsStepOptionsMap.Get().GetLocalHandle();
-    JSValueWrapper valueWrapper = localValue;
-    napi_value nativeValue = nativeEngine->ValueToNapiValue(valueWrapper);
-    napi_value entriesFunc = nullptr;
-    napi_value iterator = nullptr;
-    napi_value nextFunc = nullptr;
-    bool done = false;
-    NAPI_CALL_BASE(env, napi_get_named_property(env, nativeValue, ENTRIES_STRING, &entriesFunc), nullptr);
-    CHECK_NULL_RETURN(entriesFunc, nullptr);
-    NAPI_CALL_BASE(env, napi_call_function(env, nativeValue, entriesFunc, NUM_0, nullptr, &iterator), nullptr);
-    CHECK_NULL_RETURN(iterator, nullptr);
-    NAPI_CALL_BASE(env, napi_get_named_property(env, iterator, NEXT_STRING, &nextFunc), nullptr);
-    CHECK_NULL_RETURN(nextFunc, nullptr);
-    napi_value next = SliderBridge::GetIteratorNext(env, iterator, nextFunc, &done);
-    while ((nullptr != next) && !done) {
-        auto optionKey = SliderBridge::ParseStepOptionItemKey(env, next);
-        std::string optionStr = "";
-        auto praseResult = SliderBridge::ParseStepOptionItemValue(vm, env, next, optionStr);
-        next = SliderBridge::GetIteratorNext(env, iterator, nextFunc, &done);
-        if ((optionKey < 0) || (!praseResult)) {
-            continue;
-        }
-        stepOptionsMap[static_cast<uint32_t>(optionKey)] = optionStr;
-    }
-    return next;
 }
 } // namespace OHOS::Ace::NG

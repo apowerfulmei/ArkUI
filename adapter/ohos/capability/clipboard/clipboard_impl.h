@@ -65,8 +65,8 @@ private:
     void GetDataAsync(const std::function<void(const std::string&, bool isLastRecord)>& textCallback,
         const std::function<void(const RefPtr<PixelMap>&, bool isLastRecord)>& pixelMapCallback,
         const std::function<void(const std::string&, bool isLastRecord)>& urlCallback);
-    void ProcessPasteDataRecord(const std::shared_ptr<MiscServices::PasteDataRecord>& pasteDataRecord,
-        std::string& resText, bool& hasPlainRecord);
+    bool ProcessPasteDataRecord(const std::shared_ptr<MiscServices::PasteDataRecord>& pasteDataRecord,
+        std::string& resText);
     void GetPixelMapDataSync(const std::function<void(const RefPtr<PixelMap>&)>& callback);
     void GetPixelMapDataAsync(const std::function<void(const RefPtr<PixelMap>&)>& callback);
     void GetSpanStringDataHelper(
@@ -117,18 +117,15 @@ public:
     void SetPlainText(const std::string plainText);
     void SetUri(const std::string uri);
     void SetPixelMap(RefPtr<PixelMap> pixelMap);
-    void SetHtmlText(const std::string& htmlText);
     const RefPtr<PixelMap> GetPixelMap();
     const std::string GetPlainText();
     const std::string GetUri();
-    const std::string GetHtmlText();
     std::vector<uint8_t>& GetSpanStringBuffer();
 
 private:
     RefPtr<PixelMap> pixelMap_;
     std::string plainText_;
     std::string uri_;
-    std::string htmlText_;
     std::vector<uint8_t> spanStringBuffer_;
 };
 } // namespace OHOS::Ace

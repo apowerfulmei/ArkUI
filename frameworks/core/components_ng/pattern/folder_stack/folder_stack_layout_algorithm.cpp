@@ -13,12 +13,26 @@
  * limitations under the License.
  */
 
-#include "core/components_ng/pattern/folder_stack/folder_stack_layout_algorithm.h"
+#include "frameworks/core/components_ng/pattern/folder_stack/folder_stack_layout_algorithm.h"
 
+#include "base/memory/ace_type.h"
 #include "base/log/event_report.h"
+#include "base/subwindow/subwindow_manager.h"
+#include "base/utils/utils.h"
+#include "core/common/container.h"
+#include "core/common/display_info.h"
+#include "core/components/common/layout/constants.h"
+#include "core/components_ng/layout/layout_wrapper.h"
+#include "core/components_ng/pattern/folder_stack/control_parts_stack_node.h"
+#include "core/components_ng/pattern/folder_stack/folder_stack_group_node.h"
+#include "core/components_ng/pattern/folder_stack/folder_stack_layout_property.h"
 #include "core/components_ng/pattern/folder_stack/folder_stack_pattern.h"
+#include "core/components_ng/pattern/folder_stack/hover_stack_node.h"
+#include "core/components_ng/pattern/stack/stack_layout_algorithm.h"
+#include "core/components_ng/pattern/stack/stack_layout_property.h"
+#include "core/components_ng/syntax/if_else_model.h"
+#include "core/pipeline/pipeline_base.h"
 #include "core/pipeline_ng/pipeline_context.h"
-#include "core/components_ng/property/measure_utils.h"
 
 namespace OHOS::Ace::NG {
 namespace {
@@ -41,7 +55,7 @@ void FolderStackLayoutAlgorithm::Layout(LayoutWrapper* layoutWrapper)
     }
     if (!isIntoFolderStack_) {
         auto childLayoutProperty = AceType::DynamicCast<StackLayoutProperty>(layoutWrapper->GetLayoutProperty());
-        if (childLayoutProperty && childLayoutProperty->GetPositionProperty()) {
+        if (childLayoutProperty->GetPositionProperty()) {
             childLayoutProperty->GetPositionProperty()->UpdateAlignment(align);
         }
         StackLayoutAlgorithm::Layout(layoutWrapper);
@@ -56,10 +70,8 @@ void FolderStackLayoutAlgorithm::LayoutHoverStack(LayoutWrapper* layoutWrapper,
 {
     auto folderStackGeometryNode = layoutWrapper->GetGeometryNode();
     auto size = folderStackGeometryNode->GetFrameSize();
-    const auto& layoutProperty = layoutWrapper->GetLayoutProperty();
-    CHECK_NULL_VOID(layoutProperty);
-    const auto& padding = layoutProperty->CreatePaddingAndBorder();
-    auto layoutDirection = layoutProperty->GetLayoutDirection();
+    const auto& padding = layoutWrapper->GetLayoutProperty()->CreatePaddingAndBorder();
+    auto layoutDirection = layoutWrapper->GetLayoutProperty()->GetLayoutDirection();
     if (layoutDirection == TextDirection::AUTO) {
         layoutDirection = AceApplicationInfo::GetInstance().IsRightToLeft() ? TextDirection::RTL : TextDirection::LTR;
     }
@@ -94,9 +106,7 @@ void FolderStackLayoutAlgorithm::LayoutControlPartsStack(LayoutWrapper* layoutWr
     const RefPtr<FolderStackGroupNode>& hostNode, const RefPtr<FolderStackLayoutProperty>& folderStackLayoutProperty)
 {
     auto folderStackGeometryNode = layoutWrapper->GetGeometryNode();
-    const auto& layoutProperty = layoutWrapper->GetLayoutProperty();
-    CHECK_NULL_VOID(layoutProperty);
-    auto layoutDirection = layoutProperty->GetLayoutDirection();
+    auto layoutDirection = layoutWrapper->GetLayoutProperty()->GetLayoutDirection();
     if (layoutDirection == TextDirection::AUTO) {
         layoutDirection = AceApplicationInfo::GetInstance().IsRightToLeft() ? TextDirection::RTL : TextDirection::LTR;
     }
@@ -111,7 +121,7 @@ void FolderStackLayoutAlgorithm::LayoutControlPartsStack(LayoutWrapper* layoutWr
     auto geometryNode = controlPartsStackWrapper->GetGeometryNode();
     auto controlPartsStackRect = GetControlPartsStackRect();
     geometryNode->SetMarginFrameOffset(controlPartsStackRect);
-    
+
     controlPartsStackWrapper->Layout();
 }
 
@@ -120,8 +130,6 @@ void FolderStackLayoutAlgorithm::Measure(LayoutWrapper* layoutWrapper)
     CHECK_NULL_VOID(layoutWrapper);
     auto hostNode = AceType::DynamicCast<FolderStackGroupNode>(layoutWrapper->GetHostNode());
     CHECK_NULL_VOID(hostNode);
-    auto pattern = layoutWrapper->GetHostNode()->GetPattern<FolderStackPattern>();
-    CHECK_NULL_VOID(pattern);
     const auto& layoutProperty = DynamicCast<FolderStackLayoutProperty>(layoutWrapper->GetLayoutProperty());
     CHECK_NULL_VOID(layoutProperty);
     const auto& layoutConstraint = layoutProperty->GetLayoutConstraint();
@@ -135,19 +143,7 @@ void FolderStackLayoutAlgorithm::Measure(LayoutWrapper* layoutWrapper)
     OnHoverStatusChange(layoutWrapper);
     if (!isIntoFolderStack_) {
         MeasureByStack(hostNode, layoutWrapper);
-        pattern->SetNeedCallBack(false);
         return;
-    }
-    if (!pattern->GetNeedCallBack()) {
-        pattern->SetNeedCallBack(true);
-        auto displayInfo = pattern->GetDisplayInfo();
-        if (displayInfo) {
-            FolderEventInfo event(displayInfo->GetFoldStatus());
-            auto eventHub = layoutWrapper->GetHostNode()->GetEventHub<FolderStackEventHub>();
-            if (eventHub) {
-                eventHub->OnFolderStateChange(event);
-            }
-        }
     }
     RangeCalculation(hostNode, layoutProperty, size);
     MeasureHoverStack(layoutWrapper, hostNode, layoutProperty, size);
@@ -179,17 +175,14 @@ void FolderStackLayoutAlgorithm::MeasureControlPartsStack(LayoutWrapper* layoutW
     CHECK_NULL_VOID(controlPartsWrapper);
     auto constraint = foldStackLayoutProperty->CreateChildConstraint();
     constraint.selfIdealSize = OptionalSizeF(size.Width(), preControlPartsStackHeight_);
-    const auto& layoutProperty = layoutWrapper->GetLayoutProperty();
-    CHECK_NULL_VOID(layoutProperty);
-    const auto& padding = layoutProperty->CreatePaddingAndBorder();
+
+    const auto& padding = layoutWrapper->GetLayoutProperty()->CreatePaddingAndBorder();
     PaddingProperty controlPartsPadding;
     controlPartsPadding.left = CalcLength(padding.left.value_or(0));
     controlPartsPadding.right = CalcLength(padding.right.value_or(0));
     controlPartsPadding.top = CalcLength(padding.top.value_or(0));
     controlPartsPadding.bottom = CalcLength(padding.bottom.value_or(0));
-    const auto& controlPartsLayoutProperty = controlPartsWrapper->GetLayoutProperty();
-    CHECK_NULL_VOID(controlPartsLayoutProperty);
-    controlPartsLayoutProperty->UpdatePadding(controlPartsPadding);
+    controlPartsWrapper->GetLayoutProperty()->UpdatePadding(controlPartsPadding);
     controlPartsWrapper->Measure(constraint);
 }
 
@@ -214,6 +207,7 @@ void FolderStackLayoutAlgorithm::RangeCalculation(const RefPtr<FolderStackGroupN
         creaseY = static_cast<int32_t>(foldCrease.Bottom() - foldCrease.Height());
         creaseHeight = static_cast<int32_t>(foldCrease.Height());
     }
+
     preHoverStackHeight_ = static_cast<float>(creaseY - length);
     preControlPartsStackHeight_ = static_cast<float>(size.Height() - creaseHeight - preHoverStackHeight_);
     controlPartsStackRect_ = OffsetF(0.0f, creaseY - length + creaseHeight);
@@ -226,9 +220,7 @@ bool FolderStackLayoutAlgorithm::IsFullWindow(
     CHECK_NULL_RETURN(host, false);
     auto parent = AceType::DynamicCast<FrameNode>(host->GetParent());
     CHECK_NULL_RETURN(parent, false);
-    const auto& parentLayoutProperty = parent->GetLayoutProperty();
-    CHECK_NULL_RETURN(parentLayoutProperty, false);
-    auto padding = parentLayoutProperty->CreatePaddingAndBorder();
+    auto padding = parent->GetLayoutProperty()->CreatePaddingAndBorder();
     auto pipeline = host->GetContext();
     CHECK_NULL_RETURN(pipeline, false);
     auto windowManager = pipeline->GetWindowManager();
@@ -344,21 +336,13 @@ void FolderStackLayoutAlgorithm::OnHoverStatusChange(LayoutWrapper* layoutWrappe
 void FolderStackLayoutAlgorithm::MeasureByStack(
     const RefPtr<FolderStackGroupNode>& hostNode, LayoutWrapper* layoutWrapper)
 {
-    PaddingProperty padding { .left = CalcLength(0.0f),
-        .right = CalcLength(0.0f),
-        .top = CalcLength(0.0f),
-        .bottom = CalcLength(0.0f),
-        .start = std::nullopt,
-        .end = std::nullopt };
+    PaddingProperty padding { CalcLength(0.0f), CalcLength(0.0f), CalcLength(0.0f), CalcLength(0.0f) };
     auto controlPartsStackNode = hostNode->GetControlPartsStackNode();
     CHECK_NULL_VOID(controlPartsStackNode);
     auto index = hostNode->GetChildIndexById(controlPartsStackNode->GetId());
     auto controlPartsWrapper = layoutWrapper->GetOrCreateChildByIndex(index);
     CHECK_NULL_VOID(controlPartsWrapper);
-    const auto& controlPartsLayoutProperty = controlPartsWrapper->GetLayoutProperty();
-    CHECK_NULL_VOID(controlPartsLayoutProperty);
-    controlPartsLayoutProperty->UpdatePadding(padding);
-    MatchParentWhenChildrenMatch(layoutWrapper, controlPartsWrapper);
+    controlPartsWrapper->GetLayoutProperty()->UpdatePadding(padding);
     StackLayoutAlgorithm::Measure(layoutWrapper);
     auto hoverNode = hostNode->GetHoverNode();
     CHECK_NULL_VOID(hoverNode);
@@ -367,21 +351,5 @@ void FolderStackLayoutAlgorithm::MeasureByStack(
     CHECK_NULL_VOID(hoverStackWrapper);
     auto geometryNode = hoverStackWrapper->GetGeometryNode();
     geometryNode->SetFrameSize(controlPartsWrapper->GetGeometryNode()->GetFrameSize());
-}
-
-
-void FolderStackLayoutAlgorithm::MatchParentWhenChildrenMatch(
-    LayoutWrapper* layoutWrapper, const RefPtr<LayoutWrapper>& controlPartsLayoutWrapper)
-{
-    for (auto&& child : controlPartsLayoutWrapper->GetAllChildrenWithBuild()) {
-        auto childLayoutProperty = child->GetLayoutProperty();
-        CHECK_NULL_CONTINUE(childLayoutProperty);
-        auto layoutPolicy = childLayoutProperty->GetLayoutPolicyProperty();
-        if (layoutPolicy.has_value() && layoutPolicy->IsMatch()) {
-            const auto& controlPartsLayoutProperty = controlPartsLayoutWrapper->GetLayoutProperty();
-            CHECK_NULL_CONTINUE(controlPartsLayoutProperty);
-            controlPartsLayoutProperty->UpdateMeasureType(MeasureType::MATCH_PARENT);
-        }
-    }
 }
 } // namespace OHOS::Ace::NG

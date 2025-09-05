@@ -129,6 +129,43 @@ class ScrollScrollableModifier extends ModifierWithKey<ScrollDirection> {
   }
 }
 
+class ScrollEdgeEffectModifier extends ModifierWithKey<ArkScrollEdgeEffect> {
+  constructor(value: ArkScrollEdgeEffect) {
+    super(value);
+  }
+  static identity: Symbol = Symbol('edgeEffect');
+  applyPeer(node: KNode, reset: boolean): void {
+    if (reset) {
+      getUINativeModule().scroll.resetEdgeEffect(node);
+    } else {
+      getUINativeModule().scroll.setEdgeEffect(node, this.value.value, this.value.options?.alwaysEnabled);
+    }
+  }
+
+  checkObjectDiff(): boolean {
+    return !((this.stageValue.value === this.value.value) &&
+      (this.stageValue.options === this.value.options));
+  }
+}
+
+class ScrollFadingEdgeModifier extends ModifierWithKey<ArkFadingEdge> {
+  constructor(value: ArkFadingEdge) {
+    super(value);
+  }
+  static identity: Symbol = Symbol('scrollFadingEdge');
+  applyPeer(node: KNode, reset: boolean): void {
+    if (reset) {
+      getUINativeModule().scroll.resetFadingEdge(node);
+    } else {
+      getUINativeModule().scroll.setFadingEdge(node, this.value.value!, this.value.options?.fadingEdgeLength);
+    }
+  }
+  checkObjectDiff(): boolean {
+    return !((this.stageValue.value === this.value.value) &&
+      (this.stageValue.options === this.value.options));
+  }
+}
+
 class ScrollScrollBarWidthModifier extends ModifierWithKey<string | number> {
   constructor(value: string | number) {
     super(value);
@@ -290,9 +327,9 @@ class ScrollOnScrollModifier extends ModifierWithKey<(xOffset: number, yOffset: 
   static identity: Symbol = Symbol('scrollOnScroll');
   applyPeer(node: KNode, reset: boolean): void {
     if (reset) {
-      getUINativeModule().scroll.resetScrollOnScroll(node);
+      getUINativeModule().scroll.resetScrollOnScrollModifier(node);
     } else {
-      getUINativeModule().scroll.setScrollOnScroll(node, this.value);
+      getUINativeModule().scroll.setScrollOnScrollModifier(node, this.value);
     }
   }
 }
@@ -358,104 +395,6 @@ class ScrollOnScrollFrameBeginModifier extends ModifierWithKey<(offset: number, 
   }
 }
 
-class ScrollMaxZoomScaleModifier extends ModifierWithKey<number> {
-  static identity: symbol = Symbol('maxZoomScale');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().scroll.resetMaxZoomScale(node);
-    } else {
-      getUINativeModule().scroll.setMaxZoomScale(node, this.value);
-    }
-  }
-  checkObjectDiff(): boolean {
-    return !isBaseOrResourceEqual(this.stageValue, this.value);
-  }
-}
-
-class ScrollMinZoomScaleModifier extends ModifierWithKey<number> {
-  static identity: symbol = Symbol('minZoomScale');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().scroll.resetMinZoomScale(node);
-    } else {
-      getUINativeModule().scroll.setMinZoomScale(node, this.value);
-    }
-  }
-  checkObjectDiff(): boolean {
-    return !isBaseOrResourceEqual(this.stageValue, this.value);
-  }
-}
-
-class ScrollZoomScaleModifier extends ModifierWithKey<number> {
-  static identity: symbol = Symbol('zoomScale');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().scroll.resetZoomScale(node);
-    } else {
-      getUINativeModule().scroll.setZoomScale(node, this.value);
-    }
-  }
-  checkObjectDiff(): boolean {
-    return !isBaseOrResourceEqual(this.stageValue, this.value);
-  }
-}
-
-class ScrollEnableBouncesZoomModifier extends ModifierWithKey<boolean> {
-  static identity: symbol = Symbol('enableBouncesZoom');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().scroll.resetEnableBouncesZoom(node);
-    } else {
-      getUINativeModule().scroll.setEnableBouncesZoom(node, this.value);
-    }
-  }
-  checkObjectDiff(): boolean {
-    return !isBaseOrResourceEqual(this.stageValue, this.value);
-  }
-}
-
-class ScrollOnDidZoomModifier extends ModifierWithKey<(scale: number) => void> {
-  constructor(value: (scale: number) => void) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('scrollOnDidZoom');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().scroll.resetScrollOnDidZoom(node);
-    } else {
-      getUINativeModule().scroll.setScrollOnDidZoom(node, this.value);
-    }
-  }
-}
-
-class ScrollOnZoomStartModifier extends ModifierWithKey<() => void> {
-  constructor(value: () => void) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('scrollOnZoomStart');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().scroll.resetScrollOnZoomStart(node);
-    } else {
-      getUINativeModule().scroll.setScrollOnZoomStart(node, this.value);
-    }
-  }
-}
-
-class ScrollOnZoomStopModifier extends ModifierWithKey<() => void> {
-  constructor(value: () => void) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('scrollOnZoomStop');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().scroll.resetScrollOnZoomStop(node);
-    } else {
-      getUINativeModule().scroll.setScrollOnZoomStop(node, this.value);
-    }
-  }
-}
-
 class ArkScrollComponent extends ArkScrollable<ScrollAttribute> implements ScrollAttribute {
   constructor(nativePtr: KNode, classType?: ModifierType) {
     super(nativePtr, classType);
@@ -511,6 +450,20 @@ class ArkScrollComponent extends ArkScrollable<ScrollAttribute> implements Scrol
   }
   scrollBarWidth(value: string | number): this {
     modifierWithKey(this._modifiersWithKeys, ScrollScrollBarWidthModifier.identity, ScrollScrollBarWidthModifier, value);
+    return this;
+  }
+  edgeEffect(value: EdgeEffect, options?: EdgeEffectOptions): this {
+    let effect: ArkScrollEdgeEffect = new ArkScrollEdgeEffect();
+    effect.value = value;
+    effect.options = options;
+    modifierWithKey(this._modifiersWithKeys, ScrollEdgeEffectModifier.identity, ScrollEdgeEffectModifier, effect);
+    return this;
+  }
+  fadingEdge(value: boolean, options?: FadingEdgeOptions | undefined): this {
+    let fadingEdge: ArkFadingEdge = new ArkFadingEdge();
+    fadingEdge.value = value;
+    fadingEdge.options = options;
+    modifierWithKey(this._modifiersWithKeys, ScrollFadingEdgeModifier.identity, ScrollFadingEdgeModifier, fadingEdge);
     return this;
   }
   onScrollFrameBegin(callback: (offset: number, state: ScrollState) => { offsetRemain: number }): this {
@@ -589,34 +542,6 @@ class ArkScrollComponent extends ArkScrollable<ScrollAttribute> implements Scrol
     modifierWithKey(this._modifiersWithKeys, ScrollFlingSpeedLimitModifier.identity, ScrollFlingSpeedLimitModifier, value);
     return this;
   }
-  maxZoomScale(value: number): this {
-    modifierWithKey(this._modifiersWithKeys, ScrollMaxZoomScaleModifier.identity, ScrollMaxZoomScaleModifier, value);
-    return this;
-  }
-  minZoomScale(value: number): this {
-    modifierWithKey(this._modifiersWithKeys, ScrollMinZoomScaleModifier.identity, ScrollMinZoomScaleModifier, value);
-    return this;
-  }
-  zoomScale(value: number): this {
-    modifierWithKey(this._modifiersWithKeys, ScrollZoomScaleModifier.identity, ScrollZoomScaleModifier, value);
-    return this;
-  }
-  enableBouncesZoom(value: boolean): this {
-    modifierWithKey(this._modifiersWithKeys, ScrollEnableBouncesZoomModifier.identity, ScrollEnableBouncesZoomModifier, value);
-    return this;
-  }
-  onDidZoom(callback: (scale: number) => void): this {
-    modifierWithKey(this._modifiersWithKeys, ScrollOnDidZoomModifier.identity, ScrollOnDidZoomModifier, callback);
-    return this;
-  }
-  onZoomStart(callback: () => void): this {
-    modifierWithKey(this._modifiersWithKeys, ScrollOnZoomStartModifier.identity, ScrollOnZoomStartModifier, callback);
-    return this;
-  }
-  onZoomStop(callback: () => void): this {
-    modifierWithKey(this._modifiersWithKeys, ScrollOnZoomStopModifier.identity, ScrollOnZoomStopModifier, callback);
-    return this;
-  }
 }
 // @ts-ignore
 globalThis.Scroll.attributeModifier = function (modifier: ArkComponent): void {
@@ -625,9 +550,4 @@ globalThis.Scroll.attributeModifier = function (modifier: ArkComponent): void {
   }, (nativePtr: KNode, classType: ModifierType, modifierJS: ModifierJS) => {
     return new modifierJS.ScrollModifier(nativePtr, classType);
   });
-};
-
-globalThis.Scroll.onWillStopDragging = function (value: (velocity: number) => void): void {
-  let nodePtr = getUINativeModule().frameNode.getStackTopNode();
-  getUINativeModule().scrollable.setOnWillStopDragging(nodePtr, value);
 };

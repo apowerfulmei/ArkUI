@@ -16,19 +16,9 @@
 #ifndef FOUNDATION_ACE_FRAMEWORKS_BASE_INPUT_MANAGER_INPUT_MANAGER_H
 #define FOUNDATION_ACE_FRAMEWORKS_BASE_INPUT_MANAGER_INPUT_MANAGER_H
 
-#include <memory>
-#include <set>
-#include <vector>
-
 #include "base/memory/ace_type.h"
 
-namespace OHOS::MMI {
-class PointerEvent;
-} // namespace OHOS::MMI
-
 namespace OHOS::Ace {
-
-using HotKey = std::tuple<std::set<int32_t>, int32_t>;
 
 enum class KeyboardType : int32_t {
     NONE,
@@ -41,19 +31,14 @@ enum class KeyboardType : int32_t {
 };
 
 class ACE_EXPORT InputManager : public AceType {
-    DECLARE_ACE_TYPE(InputManager, AceType);
+    DECLARE_ACE_TYPE(InputManager, AceType)
 
 public:
     static bool GetDeviceIds(std::vector<int32_t>& resDeviceIds);
 
-    static std::shared_ptr<MMI::PointerEvent> CreatePointerEvent(
-        const std::shared_ptr<const MMI::PointerEvent>& pointerEvent);
-
     static KeyboardType GetKeyboardType(int32_t deviceId);
 
     static bool IsKeyboardConnected();
-
-    static bool GetSystemHotkeys(std::vector<HotKey>& hotkeys);
 };
 
 } // namespace OHOS::Ace

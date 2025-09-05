@@ -13,7 +13,6 @@
  * limitations under the License.
  */
 
-#include "core/common/container.h"
 #include "core/common/resource/resource_wrapper.h"
 
 namespace OHOS::Ace {
@@ -29,7 +28,7 @@ ResourceWrapper::ResourceWrapper(
 ResourceWrapper::~ResourceWrapper()
 {
     if (localColorMode_ != ColorMode::COLOR_MODE_UNDEFINED) {
-        resourceAdapter_->UpdateColorMode(Container::CurrentColorMode());
+        resourceAdapter_->UpdateColorMode(SystemProperties::GetColorMode());
     }
 }
 } // namespace OHOS::Ace

@@ -27,6 +27,7 @@
 #include "core/common/platform_window.h"
 
 namespace OHOS::Ace::Platform {
+
 class RSWindow final : public PlatformWindow {
 public:
     void Destroy() override;

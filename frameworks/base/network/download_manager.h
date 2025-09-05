@@ -24,13 +24,11 @@
 #include <optional>
 #include <string>
 
-#include "base/image/image_defines.h"
-
 namespace OHOS::Ace {
 struct DownloadCallback {
     std::function<void(const std::string&&, bool, int32_t)> successCallback;
-    std::function<void(std::string, ImageErrorInfo, bool, int32_t)> failCallback;
-    std::function<void(std::string, ImageErrorInfo, bool, int32_t)> cancelCallback;
+    std::function<void(std::string, bool, int32_t)> failCallback;
+    std::function<void(std::string, bool, int32_t)> cancelCallback;
     std::function<void(uint32_t, uint32_t, bool, int32_t)> onProgressCallback;
 };
 
@@ -39,7 +37,6 @@ struct DownloadCondition {
     std::string dataOut;
     std::mutex downloadMutex;
     std::string errorMsg;
-    ImageErrorInfo errorInfo;
     std::optional<bool> downloadSuccess;
 };
 
@@ -62,16 +59,6 @@ public:
     virtual bool DownloadSync(
         DownloadCallback&& downloadCallback, const std::string& url, int32_t instanceId, int32_t nodeId);
     virtual bool RemoveDownloadTask(const std::string& url, int32_t nodeId, bool isCancel = true);
-    virtual bool RemoveDownloadTaskWithPreload(const std::string& url, bool isCancel = true);
-
-    // use preload module to download the url
-    virtual bool DownloadAsyncWithPreload(
-        DownloadCallback&& downloadCallback, const std::string& url, int32_t instanceId);
-    virtual bool DownloadSyncWithPreload(
-        DownloadCallback&& downloadCallback, const std::string& url, int32_t instanceId);
-    virtual bool IsContains(const std::string& url);
-    // Synchronously queries the cache in the preDownLoad module and assigns the result if found.
-    virtual bool fetchCachedResult(const std::string& url, std::string& result);
 
 private:
     static std::unique_ptr<DownloadManager> instance_;

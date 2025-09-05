@@ -15,7 +15,11 @@
 
 #include "core/components_v2/inspector/span_composed_element.h"
 
+#include <unordered_map>
+
 #include "base/log/dump_log.h"
+#include "core/components/common/layout/constants.h"
+#include "core/components/text_span/text_span_element.h"
 #include "core/components_v2/inspector/utils.h"
 
 namespace OHOS::Ace::V2 {
@@ -75,8 +79,7 @@ std::string SpanComposedElement::GetDeclaration() const
 {
     auto jsonSpanDeclaration = JsonUtil::Create(true);
     auto renderTextSpan = GetRenderTextSpan();
-    auto textDecoration = renderTextSpan ?
-        renderTextSpan->GetSpanStyle().GetTextDecorationFirst() : TextDecoration::NONE;
+    auto textDecoration = renderTextSpan ? renderTextSpan->GetSpanStyle().GetTextDecoration() : TextDecoration::NONE;
     auto textDecorationColor = renderTextSpan ? renderTextSpan->GetSpanStyle().GetTextDecorationColor() : Color::BLACK;
     jsonSpanDeclaration->Put("type", ConvertWrapTextDecorationToStirng(textDecoration).c_str());
     jsonSpanDeclaration->Put("color", ConvertColorToString(textDecorationColor).c_str());

@@ -63,6 +63,7 @@ public:
                 return "NavigationTitleMode.Free";
         }
     }
+
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(TitleMode, NavigationTitleMode, PROPERTY_UPDATE_MEASURE);
 };
 

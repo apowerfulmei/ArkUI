@@ -35,15 +35,11 @@ const RefPtr<SpringProperty> DEFAULT_OVER_SPRING_PROPERTY =
 #ifndef WEARABLE_PRODUCT
 constexpr double FRICTION = 0.6;
 constexpr double VELOCITY_SCALE = 1.0;
-constexpr double MAX_VELOCITY = 800000.0;
-constexpr double MIN_VELOCITY = -800000.0;
 constexpr double ADJUSTABLE_VELOCITY = 3000.0;
 #else
 constexpr double DISTANCE_EPSILON = 1.0;
 constexpr double FRICTION = 0.9;
 constexpr double VELOCITY_SCALE = 0.8;
-constexpr double MAX_VELOCITY = 5000.0;
-constexpr double MIN_VELOCITY = -5000.0;
 constexpr double ADJUSTABLE_VELOCITY = 0.0;
 #endif
 
@@ -148,7 +144,7 @@ void Scrollable::Initialize(const WeakPtr<PipelineBase>& context)
         }
     };
 
-    auto actionCancel = [weakScroll = AceType::WeakClaim(this)](const GestureEvent& info) {
+    auto actionCancel = [weakScroll = AceType::WeakClaim(this)]() {
         auto scroll = weakScroll.Upgrade();
         if (!scroll) {
             return;
@@ -160,10 +156,8 @@ void Scrollable::Initialize(const WeakPtr<PipelineBase>& context)
     };
 
     if (Container::IsCurrentUseNewPipeline()) {
-        PanDistanceMap distanceMap = { { SourceTool::UNKNOWN, DEFAULT_PAN_DISTANCE.ConvertToPx() },
-            { SourceTool::PEN, DEFAULT_PEN_PAN_DISTANCE.ConvertToPx() } };
         panRecognizerNG_ = AceType::MakeRefPtr<NG::PanRecognizer>(
-            DEFAULT_PAN_FINGER, panDirection, distanceMap);
+            DEFAULT_PAN_FINGER, panDirection, DEFAULT_PAN_DISTANCE.ConvertToPx());
         panRecognizerNG_->SetIsAllowMouse(false);
         panRecognizerNG_->SetOnActionStart(actionStart);
         panRecognizerNG_->SetOnActionUpdate(actionUpdate);
@@ -171,7 +165,7 @@ void Scrollable::Initialize(const WeakPtr<PipelineBase>& context)
         panRecognizerNG_->SetOnActionCancel(actionCancel);
     } else {
         panRecognizer_ = AceType::MakeRefPtr<PanRecognizer>(
-            context, DEFAULT_PAN_FINGER, panDirection, 5); /* 5: pan recognizer distance: 5px */
+            context, DEFAULT_PAN_FINGER, panDirection, DEFAULT_PAN_DISTANCE.ConvertToPx());
         panRecognizer_->SetOnActionStart(actionStart);
         panRecognizer_->SetOnActionUpdate(actionUpdate);
         panRecognizer_->SetOnActionEnd(actionEnd);
@@ -606,7 +600,7 @@ void Scrollable::HandleDragEnd(const GestureEvent& info)
     scrollPause_ = false;
     lastVelocity_ = info.GetMainVelocity();
     double correctVelocity =
-        std::clamp(info.GetMainVelocity(), MIN_VELOCITY + slipFactor_, MAX_VELOCITY - slipFactor_);
+        std::clamp(info.GetMainVelocity(), -maxFlingVelocity_ + slipFactor_, maxFlingVelocity_ - slipFactor_);
     SetDragEndPosition(GetMainOffset(Offset(info.GetGlobalPoint().GetX(), info.GetGlobalPoint().GetY())));
     correctVelocity = correctVelocity * sVelocityScale_ * GetGain(GetDragOffset());
     currentVelocity_ = correctVelocity;
@@ -619,8 +613,8 @@ void Scrollable::HandleDragEnd(const GestureEvent& info)
     RelatedEventEnd();
     double mainPosition = GetMainOffset(Offset(info.GetGlobalPoint().GetX(), info.GetGlobalPoint().GetY()));
     if (!moved_ || info.GetInputEventType() == InputEventType::AXIS) {
-        if (calcPredictSnapOffsetCallback_) {
-            std::optional<float> predictSnapOffset = calcPredictSnapOffsetCallback_(0.0f, 0.0f, 0.0f);
+        if (calePredictSnapOffsetCallback_) {
+            std::optional<float> predictSnapOffset = calePredictSnapOffsetCallback_(0.0f, 0.0f, 0.0f);
             if (predictSnapOffset.has_value() && !NearZero(predictSnapOffset.value())) {
                 currentPos_ = mainPosition;
                 ProcessScrollSnapSpringMotion(predictSnapOffset.value(), correctVelocity);
@@ -667,9 +661,9 @@ void Scrollable::StartScrollAnimation(float mainPosition, float correctVelocity)
             }
         });
     }
-    if (calcPredictSnapOffsetCallback_) {
+    if (calePredictSnapOffsetCallback_) {
         std::optional<float> predictSnapOffset =
-          calcPredictSnapOffsetCallback_(motion_->GetFinalPosition() - mainPosition, GetDragOffset(), correctVelocity);
+          calePredictSnapOffsetCallback_(motion_->GetFinalPosition() - mainPosition, GetDragOffset(), correctVelocity);
         if (predictSnapOffset.has_value() && !NearZero(predictSnapOffset.value())) {
             currentPos_ = mainPosition;
             ProcessScrollSnapSpringMotion(predictSnapOffset.value(), correctVelocity);
@@ -999,9 +993,9 @@ void Scrollable::ProcessScrollMotionStop()
     if (snapMotion_ && scrollMotionFRCSceneCallback_) {
         scrollMotionFRCSceneCallback_(snapMotion_->GetCurrentVelocity(), NG::SceneStatus::END);
     }
-    if (needScrollSnapChange_ && calcPredictSnapOffsetCallback_ && motion_) {
+    if (needScrollSnapChange_ && calePredictSnapOffsetCallback_ && motion_) {
         needScrollSnapChange_ = false;
-        auto predictSnapOffset = calcPredictSnapOffsetCallback_(motion_->GetFinalPosition() - currentPos_, 0.0f, 0.0f);
+        auto predictSnapOffset = calePredictSnapOffsetCallback_(motion_->GetFinalPosition() - currentPos_, 0.0f, 0.0f);
         if (predictSnapOffset.has_value() && !NearZero(predictSnapOffset.value())) {
             ProcessScrollSnapSpringMotion(predictSnapOffset.value(), currentVelocity_);
             return;

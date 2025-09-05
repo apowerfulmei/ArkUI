@@ -18,16 +18,11 @@
 
 #include <mutex>
 
-#include "core/common/resource/resource_object.h"
 #include "core/components_ng/pattern/checkbox/checkbox_event_hub.h"
 
 namespace OHOS::Ace {
 enum class CheckBoxStyle { CIRCULAR_STYLE = 0, SQUARE_STYLE };
 enum class OriginalCheckBoxStyle { CIRCULAR_STYLE = 0, SQUARE_STYLE, NONE };
-enum class CheckBoxColorType {
-    SELECTED_COLOR,
-    UN_SELECTED_COLOR
-};
 class ACE_FORCE_EXPORT CheckBoxModel {
 public:
     static CheckBoxModel* GetInstance();
@@ -46,25 +41,9 @@ public:
     virtual void SetWidth(const Dimension& width);
     virtual void SetHeight(const Dimension& height);
     virtual void SetPadding(const NG::PaddingPropertyF& args, const NG::PaddingProperty& newArgs, bool flag);
-    virtual void SetIsUserSetMargin(bool isUserSet) {};
     virtual void SetChangeEvent(std::function<void(bool)>&& changeEvent) = 0;
     virtual void SetResponseRegion(const std::vector<DimensionRect>& responseRegion) {};
     virtual void SetCheckboxStyle(CheckBoxStyle checkboxStyle) {};
-    virtual void ResetSelectedColor() {};
-    virtual void ResetUnSelectedColor() {};
-    virtual void ResetCheckMarkColor() {};
-    virtual void CreateWithColorResourceObj(const RefPtr<ResourceObject>& resObj,
-        const CheckBoxColorType checkBoxColorType) {};
-
-    static inline std::string ToString(const CheckBoxStyle& style)
-    {
-        static const LinearEnumMapNode<CheckBoxStyle, std::string> table[] = {
-            { CheckBoxStyle::CIRCULAR_STYLE, "CIRCULAR" },
-            { CheckBoxStyle::SQUARE_STYLE, "SQUARE" },
-        };
-        auto iter = BinarySearchFindIndex(table, ArraySize(table), style);
-        return iter != -1 ? table[iter].value : "";
-    }
 
 private:
     static std::unique_ptr<CheckBoxModel> instance_;

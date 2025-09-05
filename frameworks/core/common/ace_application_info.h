@@ -18,19 +18,17 @@
 
 #include <chrono>
 #include <cstdint>
-#include <functional>
 #include <mutex>
 #include <set>
 #include <shared_mutex>
 #include <string>
 #include <vector>
 
-#include "interfaces/inner_api/ace/ace_forward_compatibility.h"
-
 #include "base/json/json_util.h"
 #include "base/utils/macros.h"
 #include "base/utils/noncopyable.h"
 #include "base/utils/string_utils.h"
+#include "interfaces/inner_api/ace/ace_forward_compatibility.h"
 
 namespace OHOS::Ace {
 
@@ -45,12 +43,7 @@ enum class PlatformVersion {
     VERSION_TWELVE,
     VERSION_THIRTEEN,
     VERSION_FOURTEEN,
-    VERSION_FIFTEEN,
-    VERSION_SIXTEEN,
-    VERSION_SEVENTEEN,
-    VERSION_EIGHTEEN,
-    VERSION_NINETEEN,
-    VERSION_TWENTY
+    VERSION_FIFTEEN
 };
 struct AceBundleInfo {
     uint32_t versionCode = 0;
@@ -61,11 +54,6 @@ enum class TouchPassMode: int32_t {
     DEFAULT = 0,
     PASS_THROUGH,
     ACCELERATE,
-};
-
-struct TextMenuInfo {
-    uint32_t disableFlags = 0;
-    std::function<bool()> menuOnChangeCallback;
 };
 
 class ACE_FORCE_EXPORT AceApplicationInfo : public NonCopyable {
@@ -162,9 +150,8 @@ public:
         return script_;
     }
 
-    std::string GetLocaleTag()
+    const std::string& GetLocaleTag() const
     {
-        std::shared_lock<std::shared_mutex> lock(localeTagMutex_);
         return localeTag_;
     }
 
@@ -214,14 +201,6 @@ public:
     bool IsAccessibilityEnabled() const
     {
         return isAccessibilityEnabled_;
-    }
-    void SetAccessibilityScreenReadEnabled(bool isEnabled)
-    {
-        isAccessibilityScreenReadEnabled_ = isEnabled;
-    }
-    bool IsAccessibilityScreenReadEnabled() const
-    {
-        return isAccessibilityScreenReadEnabled_;
     }
     void SetPid(int32_t pid)
     {
@@ -273,36 +252,6 @@ public:
         return reusedNodeSkipMeasure_;
     }
 
-    void SetMouseTransformEnable(bool mouseTransformEnable)
-    {
-        mouseTransformEnable_ = mouseTransformEnable;
-    }
-
-    bool IsMouseTransformEnable()
-    {
-        return mouseTransformEnable_;
-    }
-
-    void AddTextMenuDisableFlag(uint32_t flag)
-    {
-        textMenuInfo_.disableFlags |= flag;
-    }
-
-    void SetTextMenuDisableFlags(uint32_t flag)
-    {
-        textMenuInfo_.disableFlags &= flag;
-    }
-
-    void SetTextMenuOnChangeCallback(std::function<bool()>&& callback)
-    {
-        textMenuInfo_.menuOnChangeCallback = std::move(callback);
-    }
-
-    const TextMenuInfo& GetTextMenuInfo()
-    {
-        return textMenuInfo_;
-    }
-
     void SetTouchPadIdChanged(bool touchPadIdChanged)
     {
         touchPadIdChanged_ = touchPadIdChanged;
@@ -312,13 +261,11 @@ public:
     {
         return touchPadIdChanged_;
     }
-
 protected:
     std::string countryOrRegion_;
     std::string language_;
     std::string script_;
     std::string localeTag_;
-    mutable std::shared_mutex localeTagMutex_;
     std::string keywordsAndValues_;
 
     std::string packageName_;
@@ -338,18 +285,15 @@ protected:
 
     int userId_ = 0;
     bool isAccessibilityEnabled_ = false;
-    bool isAccessibilityScreenReadEnabled_ = false;
 
     int32_t apiVersion_ = 0;
     std::string versionName_;
     uint32_t versionCode_ = 0;
     int32_t missionId_ = -1;
     mutable std::shared_mutex eventsPassMutex_;
-    TouchPassMode touchPassMode_ = TouchPassMode::ACCELERATE;
+    TouchPassMode touchPassMode_ = TouchPassMode::DEFAULT;
     bool reusedNodeSkipMeasure_ = false;
-    bool mouseTransformEnable_ = false;
     bool touchPadIdChanged_ = false;
-    TextMenuInfo textMenuInfo_;
 };
 
 } // namespace OHOS::Ace

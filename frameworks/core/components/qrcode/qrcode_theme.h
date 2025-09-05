@@ -44,7 +44,7 @@ public:
 
         RefPtr<QrcodeTheme> Build(const RefPtr<ThemeConstants>& themeConstants) const
         {
-            RefPtr<QrcodeTheme> theme = AceType::MakeRefPtr<QrcodeTheme>();
+            RefPtr<QrcodeTheme> theme = AceType::Claim(new QrcodeTheme());
             if (!themeConstants) {
                 return theme;
             }
@@ -58,7 +58,6 @@ public:
             if (!pattern) {
                 return;
             }
-            theme->qrcodeDefaultSize_ = pattern->GetAttr<Dimension>("default_size", 240.0_vp);
             theme->backgroundColor_ = QRCODE_DEFAULT_BACKGROUND_COLOR;
             if (Container::LessThanAPIVersion(PlatformVersion::VERSION_ELEVEN)) {
                 theme->qrcodeColor_ = Color(0xff000000);
@@ -72,7 +71,6 @@ public:
             theme->qrcodeType_ = QrcodeType(pattern->GetAttr<int>("qrcode_type", 0));
             theme->qrcodeWidth_ = pattern->GetAttr<Dimension>("qrcode_size", 200.0_px);
             theme->qrcodeHeight_ = pattern->GetAttr<Dimension>("qrcode_size", 200.0_px);
-            theme->focusStyleType_ = pattern->GetAttr<double>("qrcode_focus_style_type", 0.0);
         }
     };
 
@@ -108,16 +106,6 @@ public:
         return qrcodeHeight_;
     }
 
-    const Dimension& GetQrcodeDefaultSize() const
-    {
-        return qrcodeDefaultSize_;
-    }
-
-    double GetFocusStyleType() const
-    {
-        return focusStyleType_;
-    }
-
 protected:
     QrcodeTheme() = default;
 
@@ -128,8 +116,6 @@ private:
     QrcodeType qrcodeType_ { QrcodeType::RECT };
     Dimension qrcodeWidth_;
     Dimension qrcodeHeight_;
-    Dimension qrcodeDefaultSize_;
-    double focusStyleType_ = 0.0;
 };
 
 } // namespace OHOS::Ace

@@ -20,22 +20,16 @@
 #include <string>
 
 #include "base/geometry/dimension.h"
-#include "core/common/resource/resource_object.h"
 #include "core/components/common/properties/border.h"
 #include "core/components/common/properties/color.h"
 #include "core/components/common/properties/decoration.h"
 #include "core/components/common/properties/edge.h"
 #include "core/components/common/properties/placement.h"
-#include "core/components/common/properties/text_style.h"
-#include "core/components_ng/event/click_event.h"
 #include "core/components_ng/property/transition_property.h"
-#include "core/components_ng/pattern/select/select_model.h"
 #include "core/event/ace_event_handler.h"
 #include "core/event/touch_event.h"
 
 namespace OHOS::Ace {
-
-using ComposeId = std::string;
 
 struct ButtonProperties {
     bool showButton = false;
@@ -46,30 +40,15 @@ struct ButtonProperties {
     RefPtr<NG::ClickEvent> action; // button click action
 };
 
-struct PopupGradientColor {
-    Color gradientColor;
-    double gradientNumber;
-};
-
-struct PopupLinearGradientProperties {
-    GradientDirection popupDirection = GradientDirection::BOTTOM;
-    std::vector<PopupGradientColor> gradientColors;
-};
-
 enum class PopupKeyboardAvoidMode {
     DEFAULT,
     NONE
 };
 
-enum class TipsAnchorType {
-    TARGET = 0, // anchor to target node
-    CURSOR = 1  // anchor to cursor position
-};
-
 using StateChangeFunc = std::function<void(const std::string&)>;
 using OnWillDismiss = std::function<void(int32_t)>;
 class PopupParam : public AceType {
-    DECLARE_ACE_TYPE(PopupParam, AceType);
+    DECLARE_ACE_TYPE(PopupParam, AceType)
 
 public:
     PopupParam() = default;
@@ -93,16 +72,6 @@ public:
     bool HasAction() const
     {
         return hasAction_;
-    }
-
-    void SetHasPlacement(bool hasPlacement)
-    {
-        hasPlacement_ = hasPlacement;
-    }
-
-    bool HasPlacement() const
-    {
-        return hasPlacement_;
     }
 
     void SetPlacement(const Placement& placement)
@@ -130,46 +99,6 @@ public:
     Placement GetPlacement() const
     {
         return placement_;
-    }
-
-    void SetAppearingTime(int32_t appearingTime)
-    {
-        appearingTime_ = appearingTime;
-    }
-
-    int32_t GetAppearingTime() const
-    {
-        return appearingTime_;
-    }
-
-    void SetDisappearingTime(int32_t disappearingTime)
-    {
-        disappearingTime_ = disappearingTime;
-    }
-
-    int32_t GetDisappearingTime() const
-    {
-        return disappearingTime_;
-    }
-
-    void SetAppearingTimeWithContinuousOperation(int32_t appearingTimeWithContinuousOperation)
-    {
-        appearingTimeWithContinuousOperation_ = appearingTimeWithContinuousOperation;
-    }
-
-    int32_t GetAppearingTimeWithContinuousOperation() const
-    {
-        return appearingTimeWithContinuousOperation_;
-    }
-
-    void SetDisappearingTimeWithContinuousOperation(int32_t disappearingTimeWithContinuousOperation)
-    {
-        disappearingTimeWithContinuousOperation_ = disappearingTimeWithContinuousOperation;
-    }
-
-    int32_t GetDisappearingTimeWithContinuousOperation() const
-    {
-        return disappearingTimeWithContinuousOperation_;
     }
 
     const Color& GetMaskColor() const
@@ -265,21 +194,6 @@ public:
     void SetEnableArrow(bool enableArrow)
     {
         enableArrow_ = enableArrow;
-    }
-
-    bool HasEnableHoverMode() const
-    {
-        return enableHoverMode_.has_value();
-    }
-
-    bool EnableHoverMode() const
-    {
-        return enableHoverMode_.value_or(false);
-    }
-
-    void SetEnableHoverMode(bool enableHoverMode)
-    {
-        enableHoverMode_ = enableHoverMode;
     }
 
     bool IsBlockEvent() const
@@ -541,7 +455,6 @@ public:
     {
         return onWillDismiss_;
     }
-
     void SetHasTransition(bool hasTransition)
     {
         hasTransition_ = hasTransition;
@@ -582,16 +495,6 @@ public:
         return followTransformOfTarget_;
     }
 
-    StateChangeFunc GetDoubleBindCallback()
-    {
-        return doubleBindCallback_;
-    }
-
-    void SetDoubleBindCallback(StateChangeFunc&& callback)
-    {
-        doubleBindCallback_ = callback;
-    }
-
     void SetKeyBoardAvoidMode (PopupKeyboardAvoidMode keyboardAvoidMode)
     {
         keyboardAvoidMode_ = keyboardAvoidMode;
@@ -602,200 +505,9 @@ public:
         return keyboardAvoidMode_;
     }
 
-    void SetAvoidTarget(AvoidanceMode avoidTarget)
-    {
-        avoidTarget_ = avoidTarget;
-    }
-
-    std::optional<AvoidanceMode> GetAvoidTarget() const
-    {
-        return avoidTarget_;
-    }
-
-    std::optional<bool> GetIsPartialUpdate() const
-    {
-        return isPartialUpdate_;
-    }
-
-    void SetIsPartialUpdate(bool isPartialUpdate)
-    {
-        isPartialUpdate_ = isPartialUpdate;
-    }
-
-    void SetTipsFlag(bool isTips)
-    {
-        isTips_ = isTips;
-    }
-
-    bool IsTips() const
-    {
-        return isTips_;
-    }
-
-    void SetOutlineLinearGradient(const PopupLinearGradientProperties& outlineLinearGradient)
-    {
-        outlineLinearGradient_ = outlineLinearGradient;
-    }
-
-    const PopupLinearGradientProperties& GetOutlineLinearGradient() const
-    {
-        return outlineLinearGradient_;
-    }
-
-    void SetOutlineWidth(const std::optional<Dimension>& outlineWidth)
-    {
-        outlineWidth_ = outlineWidth;
-    }
-
-    const std::optional<Dimension>& GetOutlineWidth() const
-    {
-        return outlineWidth_;
-    }
-
-    void SetInnerBorderLinearGradient(const PopupLinearGradientProperties& innerBorderLinearGradient)
-    {
-        innerBorderLinearGradient_ = innerBorderLinearGradient;
-    }
-
-    const PopupLinearGradientProperties& GetInnerBorderLinearGradient() const
-    {
-        return innerBorderLinearGradient_;
-    }
-
-    void SetInnerBorderWidth(const std::optional<Dimension>& innerBorderWidth)
-    {
-        innerBorderWidth_ = innerBorderWidth;
-    }
-
-    const std::optional<Dimension>& GetInnerBorderWidth() const
-    {
-        return innerBorderWidth_;
-    }
-
-    void SetAnchorType(TipsAnchorType anchorType)
-    {
-        anchorType_ = anchorType;
-    }
-
-    TipsAnchorType GetAnchorType() const
-    {
-        return anchorType_;
-    }
-
-    void SetTextColorResourceObject(RefPtr<ResourceObject>& obj)
-    {
-        resourceTextColorObj_ = obj;
-    }
-
-    const RefPtr<ResourceObject>& GetTextColorResourceObject()
-    {
-        return resourceTextColorObj_;
-    }
-
-    void SetPopupColorResourceObject(RefPtr<ResourceObject>& obj)
-    {
-        resourcePopupColorObj_ = obj;
-    }
-
-    const RefPtr<ResourceObject>& GetPopupColorResourceObject()
-    {
-        return resourcePopupColorObj_;
-    }
-
-    void SetMaskColorResourceObject(RefPtr<ResourceObject>& obj)
-    {
-        resourceMaskColorObj_ = obj;
-    }
-
-    const RefPtr<ResourceObject>& GetMaskColorResourceObject()
-    {
-        return resourceMaskColorObj_;
-    }
-
-    void SetMaskResourceObject(RefPtr<ResourceObject>& obj)
-    {
-        resourceMaskObj_ = obj;
-    }
-
-    const RefPtr<ResourceObject>& GetMaskResourceObject()
-    {
-        return resourceMaskObj_;
-    }
-
-    void SetWidthResourceObject(RefPtr<ResourceObject>& obj)
-    {
-        resourceWidthObj_ = obj;
-    }
-
-    const RefPtr<ResourceObject>& GetWidthResourceObject()
-    {
-        return resourceWidthObj_;
-    }
-
-    void SetArrowWidthResourceObject(RefPtr<ResourceObject>& obj)
-    {
-        resourceArrowWidthObj_ = obj;
-    }
-
-    const RefPtr<ResourceObject>& GetArrowWidthResourceObject()
-    {
-        return resourceArrowWidthObj_;
-    }
-
-    void SetArrowHeightResourceObject(RefPtr<ResourceObject>& obj)
-    {
-        resourceArrowHeightObj_ = obj;
-    }
-
-    const RefPtr<ResourceObject>& GetArrowHeightResourceObject()
-    {
-        return resourceArrowHeightObj_;
-    }
-
-    void SetRadiusResourceObject(RefPtr<ResourceObject>& obj)
-    {
-        resourceRadiusObj_ = obj;
-    }
-
-    const RefPtr<ResourceObject>& GetRadiusResourceObject()
-    {
-        return resourceRadiusObj_;
-    }
-
-    void SetOutlineWidthObject(RefPtr<ResourceObject>& obj)
-    {
-        resourceOutlineWidthObj_ = obj;
-    }
-
-    const RefPtr<ResourceObject>& GetOutlineWidthResourceObject()
-    {
-        return resourceOutlineWidthObj_;
-    }
-
-    void SetBorderWidthObject(RefPtr<ResourceObject>& obj)
-    {
-        resourceBorderWidthObj_ = obj;
-    }
-
-    const RefPtr<ResourceObject>& GetBorderWidthResourceObject()
-    {
-        return resourceBorderWidthObj_;
-    }
-
-    void SetIsWithTheme(bool isWithTheme)
-    {
-        isWithTheme_ = isWithTheme;
-    }
-
-    bool GetIsWithTheme()
-    {
-        return isWithTheme_;
-    }
-
 private:
     bool isShow_ = true;
     bool hasAction_ = false;
-    bool hasPlacement_ = false;
     bool enableArrow_ = true;
     bool isMaskColorSetted_ = false;
     bool isBackgroundColorSetted_ = false;
@@ -808,16 +520,7 @@ private:
     bool focusable_ = false;
     bool interactiveDismiss_ = true;
     bool isCaretMode_ = true;
-    std::optional<bool> enableHoverMode_ = std::nullopt;
     bool followTransformOfTarget_ = false;
-    bool isTips_ = false;
-    bool isWithTheme_ = false;
-    TipsAnchorType anchorType_ = TipsAnchorType::TARGET;
-    int32_t appearingTime_ = 700;
-    int32_t disappearingTime_ = 300;
-    int32_t appearingTimeWithContinuousOperation_ = 300;
-    int32_t disappearingTimeWithContinuousOperation_ = 0;
-    std::optional<bool> isPartialUpdate_;
     Color maskColor_;
     Color backgroundColor_;
     Placement placement_ = Placement::BOTTOM;
@@ -850,23 +553,7 @@ private:
     OnWillDismiss onWillDismiss_;
     bool hasTransition_ = false;
     RefPtr<NG::ChainedTransitionEffect> transitionEffects_ = nullptr;
-    StateChangeFunc doubleBindCallback_;
     PopupKeyboardAvoidMode keyboardAvoidMode_ = PopupKeyboardAvoidMode::NONE;
-    std::optional<AvoidanceMode> avoidTarget_ = AvoidanceMode::COVER_TARGET;
-    std::optional<Dimension> outlineWidth_;
-    std::optional<Dimension> innerBorderWidth_;
-    PopupLinearGradientProperties outlineLinearGradient_;
-    PopupLinearGradientProperties innerBorderLinearGradient_;
-    RefPtr<ResourceObject> resourceTextColorObj_;
-    RefPtr<ResourceObject> resourcePopupColorObj_;
-    RefPtr<ResourceObject> resourceMaskColorObj_;
-    RefPtr<ResourceObject> resourceMaskObj_;
-    RefPtr<ResourceObject> resourceWidthObj_;
-    RefPtr<ResourceObject> resourceArrowWidthObj_;
-    RefPtr<ResourceObject> resourceArrowHeightObj_;
-    RefPtr<ResourceObject> resourceRadiusObj_;
-    RefPtr<ResourceObject> resourceOutlineWidthObj_;
-    RefPtr<ResourceObject> resourceBorderWidthObj_;
 };
 
 } // namespace OHOS::Ace

@@ -15,8 +15,6 @@
 
 #include "text_input_base.h"
 
-#include "test/mock/core/rosen/mock_canvas.h"
-
 namespace OHOS::Ace::NG {
 
 namespace {

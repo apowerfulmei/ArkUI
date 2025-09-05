@@ -12,10 +12,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#include <cstring>
+#include <memory>
 
 #include "interfaces/napi/kits/utils/napi_utils.h"
+#include "napi/native_api.h"
+#include "napi/native_node_api.h"
 #include "interfaces/napi/kits/display_sync/js_display_sync.h"
 
+#include "base/log/log.h"
+#include "base/memory/ace_type.h"
+#include "base/memory/referenced.h"
+#include "bridge/common/utils/utils.h"
 
 namespace OHOS::Ace::Napi {
 constexpr size_t STR_MAX_BUFFER_SIZE = 1024;
@@ -164,7 +172,7 @@ napi_value JSSetExpectedFrameRateRange(napi_env env, napi_callback_info info)
     }
 
     uiDisplaySync->SetExpectedFrameRateRange(frameRateRange);
-    TAG_LOGD(AceLogTag::ACE_DISPLAY_SYNC, "Id: %{public}" PRIu64 " SetExpectedFrameRateRange"
+    TAG_LOGI(AceLogTag::ACE_DISPLAY_SYNC, "Id: %{public}" PRIu64 " SetExpectedFrameRateRange"
         "{%{public}d, %{public}d, %{public}d}", uiDisplaySync->GetId(), frameRateRange.min_, frameRateRange.max_,
         frameRateRange.preferred_);
     return NapiGetUndefined(env);
@@ -184,7 +192,7 @@ napi_value JSStart(napi_env env, napi_callback_info info)
     }
 
     uiDisplaySync->AddToPipelineOnContainer();
-    TAG_LOGD(AceLogTag::ACE_DISPLAY_SYNC, "Id: %{public}" PRIu64 " Start", uiDisplaySync->GetId());
+    TAG_LOGI(AceLogTag::ACE_DISPLAY_SYNC, "Id: %{public}" PRIu64 " Start", uiDisplaySync->GetId());
     return NapiGetUndefined(env);
 }
 
@@ -202,7 +210,7 @@ napi_value JSStop(napi_env env, napi_callback_info info)
     }
 
     uiDisplaySync->DelFromPipelineOnContainer();
-    TAG_LOGD(AceLogTag::ACE_DISPLAY_SYNC, "Id: %{public}" PRIu64 " Stop", uiDisplaySync->GetId());
+    TAG_LOGI(AceLogTag::ACE_DISPLAY_SYNC, "Id: %{public}" PRIu64 " Stop", uiDisplaySync->GetId());
     return NapiGetUndefined(env);
 }
 

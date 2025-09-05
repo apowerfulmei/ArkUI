@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2022-2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -28,7 +28,6 @@
 #include "core/components/dialog/dialog_theme.h"
 #include "core/components_ng/manager/focus/focus_view.h"
 #include "core/components_ng/pattern/dialog//dialog_event_hub.h"
-#include "core/components_ng/manager/avoid_info/avoid_info_manager.h"
 #include "core/components_ng/pattern/dialog/dialog_accessibility_property.h"
 #include "core/components_ng/pattern/dialog/dialog_layout_algorithm.h"
 #include "core/components_ng/pattern/dialog/dialog_layout_property.h"
@@ -49,12 +48,8 @@ enum class DialogDismissReason {
     DIALOG_TOUCH_OUTSIDE,
     DIALOG_CLOSE_BUTTON,
 };
-class DialogPattern : public PopupBasePattern,
-                      public FocusView,
-                      public AutoFillTriggerStateHolder,
-                      public IAvoidInfoListener {
-    DECLARE_ACE_TYPE(DialogPattern, PopupBasePattern, FocusView,
-        AutoFillTriggerStateHolder, IAvoidInfoListener);
+class DialogPattern : public PopupBasePattern, public FocusView, public AutoFillTriggerStateHolder {
+    DECLARE_ACE_TYPE(DialogPattern, PopupBasePattern, FocusView, AutoFillTriggerStateHolder);
 
 public:
     DialogPattern(const RefPtr<DialogTheme>& dialogTheme, const RefPtr<UINode>& customNode)
@@ -67,14 +62,9 @@ public:
         return false;
     }
 
-    void SetOnWillDismiss(const std::function<void(const int32_t& info, const int32_t& instanceId)>& onWillDismiss)
+    void SetOnWillDismiss(const std::function<void(const int32_t& info)>& onWillDismiss)
     {
         onWillDismiss_ = onWillDismiss;
-    }
-
-    void SetOnWillDismissRelease(const std::function<void()>& onWillDismissRelease)
-    {
-        onWillDismissRelease_ = onWillDismissRelease;
     }
 
     bool ShouldDismiss() const
@@ -98,10 +88,10 @@ public:
         return false;
     }
 
-    void CallOnWillDismiss(const int32_t reason, const int32_t instanceId)
+    void CallOnWillDismiss(const int32_t reason)
     {
         if (onWillDismiss_ && !isDialogDisposed_) {
-            onWillDismiss_(reason, instanceId);
+            onWillDismiss_(reason);
         }
     }
 
@@ -110,7 +100,10 @@ public:
         return AceType::MakeRefPtr<DialogLayoutProperty>();
     }
 
-    RefPtr<LayoutAlgorithm> CreateLayoutAlgorithm() override;
+    RefPtr<LayoutAlgorithm> CreateLayoutAlgorithm() override
+    {
+        return AceType::MakeRefPtr<DialogLayoutAlgorithm>();
+    }
 
     RefPtr<EventHub> CreateEventHub() override
     {
@@ -183,8 +176,6 @@ public:
         InitHostWindowRect();
     }
 
-    bool GetWindowButtonRect(NG::RectF& floatButtons);
-
     const DialogProperties& GetDialogProperties() const
     {
         return dialogProperties_;
@@ -195,7 +186,7 @@ public:
     void OnLanguageConfigurationUpdate() override;
 
     void DumpInfo() override;
-    void DumpInfo(std::unique_ptr<JsonValue>& json) override;
+    void DumpSimplifyInfo(std::unique_ptr<JsonValue>& json) override;
     bool AvoidBottom() const override
     {
         return false;
@@ -226,8 +217,6 @@ public:
         if (onDidAppearCallback_) {
             onDidAppearCallback_();
         }
-        SetState(PromptActionCommonState::APPEARED);
-        TAG_LOGI(AceLogTag::ACE_DIALOG, "The current state of the dialog is APPEARED.");
     }
 
     void CallDialogDidDisappearCallback()
@@ -235,8 +224,6 @@ public:
         if (onDidDisappearCallback_) {
             onDidDisappearCallback_();
         }
-        SetState(PromptActionCommonState::DISAPPEARED);
-        TAG_LOGI(AceLogTag::ACE_DIALOG, "The current state of the dialog is DISAPPEARED.");
     }
 
     void CallDialogWillAppearCallback()
@@ -244,8 +231,6 @@ public:
         if (onWillAppearCallback_) {
             onWillAppearCallback_();
         }
-        SetState(PromptActionCommonState::APPEARING);
-        TAG_LOGI(AceLogTag::ACE_DIALOG, "The current state of the dialog is APPEARING.");
     }
 
     void CallDialogWillDisappearCallback()
@@ -253,8 +238,6 @@ public:
         if (onWillDisappearCallback_) {
             onWillDisappearCallback_();
         }
-        SetState(PromptActionCommonState::DISAPPEARING);
-        TAG_LOGI(AceLogTag::ACE_DIALOG, "The current state of the dialog is DISAPPEARING.");
     }
 
     bool IsUIExtensionSubWindow() const
@@ -309,8 +292,8 @@ public:
 
     void UpdateDeviceOrientation(const DeviceOrientation& deviceOrientation);
     void InitHostWindowRect();
-    void UpdateHostWindowRect();
     void UpdateFontScale();
+    PipelineContext* GetDialogContext();
 
     bool GetIsSuitOldMeasure()
     {
@@ -332,29 +315,7 @@ public:
         isDialogDisposed_ = isDialogDisposed;
     }
 
-    void SetState(PromptActionCommonState value)
-    {
-        state = value;
-    }
-
-    PromptActionCommonState GetState()
-    {
-        return state;
-    }
-
     bool IsShowInFreeMultiWindow();
-    bool IsShowInFloatingWindow();
-    void AddExtraMaskNode(const DialogProperties& props);
-
-    int32_t getTransitionNodeCount()
-    {
-        return transitionNodeCount_;
-    }
-
-    void addTransitionNodeCount()
-    {
-        transitionNodeCount_++;
-    }
 
     void OverlayDismissDialog(const RefPtr<FrameNode>& dialogNode);
     RefPtr<OverlayManager> GetEmbeddedOverlay(const RefPtr<OverlayManager>& context);
@@ -371,19 +332,14 @@ private:
     void RegisterHoverModeChangeCallback();
     void OnWindowSizeChanged(int32_t width, int32_t height, WindowSizeChangeReason type) override;
     void InitClickEvent(const RefPtr<GestureEventHub>& gestureHub);
-    RectF GetContentRect(const RefPtr<FrameNode>& contentNode);
     void HandleClick(const GestureEvent& info);
     void RegisterOnKeyEvent(const RefPtr<FocusHub>& focusHub);
     bool OnKeyEvent(const KeyEvent& event);
     void InitFocusEvent(const RefPtr<FocusHub>& focusHub);
     void HandleBlurEvent();
     void HandleFocusEvent();
-    void OnAvoidInfoChange(const ContainerModalAvoidInfo& info) override;
-    void RegisterAvoidInfoChangeListener(const RefPtr<FrameNode>& hostNode);
-    void UnRegisterAvoidInfoChangeListener(FrameNode* hostNode);
 
     void PopDialog(int32_t buttonIdx);
-    bool NeedUpdateHostWindowRect();
 
     // set render context properties of content frame
     void UpdateContentRenderContext(const RefPtr<FrameNode>& contentNode, const DialogProperties& props);
@@ -420,16 +376,11 @@ private:
     void RecordEvent(int32_t btnIndex) const;
     void ParseBorderRadius(BorderRadiusProperty& raidus);
     void UpdateSheetIconAndText();
-    void UpdateButtonsPropertyForEachButton(RefPtr<FrameNode> buttonFrameNode, int32_t btnindex);
     void UpdateButtonsProperty();
     void UpdateNodeContent(const RefPtr<FrameNode>& node, std::string& text);
-    void UpdateTitleAndContentColor();
-    void UpdateDialogTextColor(const RefPtr<FrameNode>& textNode, const TextStyle& textStyle);
     void UpdateAlignmentAndOffset();
     void DumpBoolProperty();
-    void DumpBoolProperty(std::unique_ptr<JsonValue>& json);
     void DumpObjectProperty();
-    void DumpObjectProperty(std::unique_ptr<JsonValue>& json);
     void DumpSimplifyBoolProperty(std::unique_ptr<JsonValue>& json);
     void DumpSimplifyObjectProperty(std::unique_ptr<JsonValue>& json);
     void DumpSimplifyBorderProperty(std::unique_ptr<JsonValue>& json);
@@ -442,9 +393,6 @@ private:
     void CheckScrollHeightIsNegative(const RefPtr<UINode>& contentColumn, const DialogProperties& props);
     RefPtr<OverlayManager> GetOverlayManager(const RefPtr<FrameNode>& host);
     void OnAttachToMainTree() override;
-    void OnDetachFromMainTree() override;
-    void AddFollowParentWindowLayoutNode();
-    void RemoveFollowParentWindowLayoutNode();
     RefPtr<DialogTheme> dialogTheme_;
     WeakPtr<UINode> customNode_;
     RefPtr<ClickEvent> onClick_;
@@ -459,8 +407,7 @@ private:
     std::string message_;
     std::string title_;
     std::string subtitle_;
-    std::function<void(const int32_t& info, const int32_t& instanceId)> onWillDismiss_;
-    std::function<void()> onWillDismissRelease_;
+    std::function<void(const int32_t& info)> onWillDismiss_;
     std::function<bool(const int32_t& info)> onWillDismissByNDK_;
 
     DialogProperties dialogProperties_;
@@ -475,10 +422,8 @@ private:
     bool isSuitOldMeasure_ = false;
     bool isScrollHeightNegative_ = false;
     float fontScaleForElderly_ = 1.0f;
-    PromptActionCommonState state = PromptActionCommonState::UNINITIALIZED;
     DeviceOrientation deviceOrientation_ = DeviceOrientation::PORTRAIT;
     RefPtr<FrameNode> titleContainer_;
-    int32_t transitionNodeCount_ = 0;
 
     ACE_DISALLOW_COPY_AND_MOVE(DialogPattern);
 

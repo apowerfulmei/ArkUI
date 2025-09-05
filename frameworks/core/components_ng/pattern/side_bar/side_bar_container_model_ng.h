@@ -17,7 +17,6 @@
 #define FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_PATTERNS_SIDE_BAR_CONTAINER_MODEL_NG_H
 
 #include "core/components_ng/pattern/side_bar/side_bar_container_model.h"
-#include "core/components_ng/pattern/side_bar/side_bar_container_pattern.h"
 
 namespace OHOS::Ace::NG {
 class ACE_EXPORT SideBarContainerModelNG : public SideBarContainerModel {
@@ -26,10 +25,8 @@ public:
     void SetSideBarContainerType(SideBarContainerType type) override;
     void SetShowSideBar(bool isShow) override;
     void SetShowControlButton(bool showControlButton) override;
-    void ParseAndSetWidth(WidthType widthType, Dimension& width, bool isDoubleBind = false) override;
-    void ParseAndSetWidth(WidthType widthType, const RefPtr<ResourceObject>& resObj) override;
-    void SetSideBarWidth(const Dimension& sideBarWidth, bool isDoubleBind = false) override;
-    void ResetResObj(const std::string& key) override;
+    void ParseAndSetWidth(WidthType widthType, Dimension& width) override;
+    void SetSideBarWidth(const Dimension& sideBarWidth) override;
     void SetMinSideBarWidth(const Dimension& minSideBarWidth) override;
     void SetMaxSideBarWidth(const Dimension& maxSideBarWidth) override;
     void SetAutoHide(bool autoHide) override;
@@ -45,27 +42,14 @@ public:
         const std::string& hiddenIconStr, bool isPixelMap, RefPtr<PixelMap> pixMap) override;
     void SetControlButtonSwitchingIconInfo(
         const std::string& switchingIconStr, bool isPixelMap, RefPtr<PixelMap> pixMap) override;
-    void SetControlButtonShowIconInfo(
-        const RefPtr<ResourceObject>& showIconResObj, bool isPixelMap, RefPtr<PixelMap> pixMap) override;
-    void SetControlButtonHiddenIconInfo(
-        const RefPtr<ResourceObject>& hiddenIconResObj, bool isPixelMap, RefPtr<PixelMap> pixMap) override;
-    void SetControlButtonSwitchingIconInfo(
-        const RefPtr<ResourceObject>& switchingIconResObj, bool isPixelMap, RefPtr<PixelMap> pixMap) override;
     void ResetControlButtonIconInfo() override;
     void SetOnChange(std::function<void(const bool)>&& onChange) override;
     void SetDividerStrokeWidth(const Dimension& strokeWidth) override;
     void SetDividerColor(const Color& color) override;
     void SetDividerStartMargin(const Dimension& startMargin) override;
     void SetDividerEndMargin(const Dimension& endMargin) override;
-    void SetDividerStrokeWidth(const RefPtr<ResourceObject>& strokeWidthResObj) override;
-    void SetDividerColor(const RefPtr<ResourceObject>& colorResObj) override;
-    void SetDividerStartMargin(const RefPtr<ResourceObject>& startMarginResObj) override;
-    void SetDividerEndMargin(const RefPtr<ResourceObject>& endMarginResObj) override;
     void SetOnChangeEvent(std::function<void(const bool)>&& onChangeEvent) override;
-    void SetOnSideBarWidthChangeEvent(OnSideBarWidthChangeEvent&& event) override;
     void SetMinContentWidth(const Dimension& minContentWidth) override;
-    void SetMinContentWidth(const RefPtr<ResourceObject>& resObj) override;
-    void ResetControlButton() override;
     static void SetSideBarWidth(FrameNode* frameNode, const Dimension& sideBarWidth);
     static void SetMinSideBarWidth(FrameNode* frameNode, const Dimension& minSideBarWidth);
     static void SetControlButtonWidth(FrameNode* frameNode, const Dimension& width);
@@ -89,32 +73,11 @@ public:
     static void SetDividerColor(FrameNode* frameNode, const Color& color);
     static void SetDividerStartMargin(FrameNode* frameNode, const Dimension& startMargin);
     static void SetDividerEndMargin(FrameNode* frameNode, const Dimension& endMargin);
-    static void SetSideBarWidth(FrameNode* frameNode, const RefPtr<ResourceObject>& resObj);
-    static void SetMinSideBarWidth(FrameNode* frameNode, const RefPtr<ResourceObject>& resObj);
-    static void SetMaxSideBarWidth(FrameNode* frameNode, const RefPtr<ResourceObject>& resObj);
-    static void SetMinContentWidth(FrameNode* frameNode, const RefPtr<ResourceObject>& resObj);
-    static void SetControlButtonShowIconInfo(
-        FrameNode* frameNode, const RefPtr<ResourceObject>& showIconResObj, bool isPixelMap, RefPtr<PixelMap> pixMap);
-    static void SetControlButtonHiddenIconInfo(
-        FrameNode* frameNode, const RefPtr<ResourceObject>& hiddenIconResObj, bool isPixelMap, RefPtr<PixelMap> pixMap);
-    static void SetControlButtonSwitchingIconInfo(FrameNode* frameNode,
-        const RefPtr<ResourceObject>& switchingIconResObj, bool isPixelMap, RefPtr<PixelMap> pixMap);
-    static void SetDividerStrokeWidth(FrameNode* frameNode, const RefPtr<ResourceObject>& strokeWidthResObj);
-    static void SetDividerEndMargin(FrameNode* frameNode, const RefPtr<ResourceObject>& endMarginResObj);
-    static void SetDividerStartMargin(FrameNode* frameNode, const RefPtr<ResourceObject>& startMarginResObj);
-    static void SetDividerColor(FrameNode* frameNode, const RefPtr<ResourceObject>& colorResObj);
     static void ResetControlButtonLeft(FrameNode* frameNode);
     static void ResetControlButtonIconInfo(FrameNode* frameNode);
-    static bool IsDoubleBindBlock(const RefPtr<SideBarContainerPattern>& sideBarContainerPattern);
-    static void SetOnChange(FrameNode* frameNode, std::function<void(const bool)>&& onChange);
-    static void ResetResObj(FrameNode* frameNode, const std::string& key);
 private:
     void MarkNeedInitRealSideBarWidth() override;
-    void SetSideBarWidth(const RefPtr<ResourceObject>& sideBarWidth);
-    void SetMinSideBarWidth(const RefPtr<ResourceObject>& minSideBarWidth);
-    void SetMaxSideBarWidth(const RefPtr<ResourceObject>& maxSideBarWidth);
     static void MarkNeedInitRealSideBarWidth(FrameNode* frameNode);
-    static bool sideBarWidthDoubleBind_;
 };
 } // namespace OHOS::Ace::NG
 #endif // FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_PATTERNS_SIDE_BAR_CONTAINER_MODEL_H

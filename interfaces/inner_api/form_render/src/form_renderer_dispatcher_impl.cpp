@@ -16,25 +16,20 @@
 #include <transaction/rs_interfaces.h>
 #include <transaction/rs_transaction.h>
 #include "base/log/ace_trace.h"
-#include "base/utils/system_properties.h"
-#include "render_service_client/core/ui/rs_ui_context.h"
+
+#include <condition_variable>
+#include <mutex>
+
 #include "form_renderer.h"
 #include "form_renderer_hilog.h"
 #include "wm_common.h"
+#include "core/components_ng/gestures/gesture_group.h"
 
 namespace OHOS {
 namespace Ace {
-namespace {
-#ifdef ARKUI_WEARABLE
-constexpr int32_t PROCESS_WAIT_TIME = 85;
-#else
 constexpr int32_t PROCESS_WAIT_TIME = 20;
-#endif
 constexpr float DOUBLE = 2.0;
-constexpr int32_t DEFAULT_FORM_ROTATION_ANIM_DURATION = 100;
-constexpr int32_t DUMP_WAIT_TIME = 65;
-}
-
+constexpr int32_t DEFAULT_FORM_ROTATION_ANIM_DURATION = 600;
 FormRendererDispatcherImpl::FormRendererDispatcherImpl(
     const std::shared_ptr<UIContent> uiContent,
     const std::shared_ptr<FormRenderer> formRenderer,
@@ -70,7 +65,6 @@ void FormRendererDispatcherImpl::DispatchPointerEvent(
 
         std::shared_ptr<FormSerializedResultData> serializedResultData = std::make_shared<FormSerializedResultData>();
         auto callback = [serializedResultData]() {
-            HILOG_INFO("process dowm event callback");
             std::unique_lock<std::mutex> lock(serializedResultData->mtx);
             serializedResultData->cv.notify_all();
         };
@@ -126,13 +120,9 @@ void FormRendererDispatcherImpl::DispatchSurfaceChangeEvent(float width, float h
         return;
     }
 
-#ifdef FORM_SIZE_CHANGE_ANIMATION
     // form existed in Sceneboard window always get undefined sizeChangeReason, use Visible to control anim instead
     reason = isVisible_ ? static_cast<uint32_t>(Rosen::WindowSizeChangeReason::ROTATION) :
         static_cast<uint32_t>(Rosen::WindowSizeChangeReason::UNDEFINED);
-#else
-    reason = static_cast<uint32_t>(Rosen::WindowSizeChangeReason::UNDEFINED);
-#endif
     handler->PostTask([content = uiContent_, width, height, reason, rsTransaction, borderWidth, this]() {
         auto uiContent = content.lock();
         if (!uiContent) {
@@ -145,7 +135,6 @@ void FormRendererDispatcherImpl::DispatchSurfaceChangeEvent(float width, float h
 
     auto formRenderer = formRenderer_.lock();
     if (!formRenderer) {
-        HILOG_WARN("formRenderer is nullptr");
         return;
     }
     formRenderer->OnSurfaceChange(width, height, borderWidth);
@@ -154,6 +143,7 @@ void FormRendererDispatcherImpl::DispatchSurfaceChangeEvent(float width, float h
 void FormRendererDispatcherImpl::HandleSurfaceChangeEvent(const std::shared_ptr<UIContent>& uiContent, float width,
     float height, uint32_t reason, const std::shared_ptr<Rosen::RSTransaction>& rsTransaction, float borderWidth)
 {
+    int32_t duration = DEFAULT_FORM_ROTATION_ANIM_DURATION;
     bool needSync = false;
     if (rsTransaction && rsTransaction->GetSyncId() > 0) {
         // extract high 32 bits of SyncId as pid
@@ -162,47 +152,29 @@ void FormRendererDispatcherImpl::HandleSurfaceChangeEvent(const std::shared_ptr<
             needSync = true;
         }
     }
-    std::shared_ptr<Rosen::RSUIContext> rsUIContext = nullptr;
-    if (isMultiInstanceEnabled_) {
-        rsUIContext = GetRSUIContext(uiContent);
-        if (rsUIContext == nullptr || rsUIContext->GetRSTransaction() == nullptr) {
-            HILOG_ERROR("rsUIContext is nullptr");
-            return;
-        }
-    }
-    if (isMultiInstanceEnabled_ && needSync) {
-        globalLock_.lock();
-        rsUIContext->GetRSTransaction()->FlushImplicitTransaction();
-        rsTransaction->Begin();
-    } else if (needSync) {
+
+    if (needSync) {
+        duration = rsTransaction->GetDuration() ? rsTransaction->GetDuration() : duration;
         globalLock_.lock();
         Rosen::RSTransaction::FlushImplicitTransaction();
         rsTransaction->Begin();
     }
     Rosen::RSAnimationTimingProtocol protocol;
-    protocol.SetDuration(DEFAULT_FORM_ROTATION_ANIM_DURATION);
-    auto curve = Rosen::RSAnimationTimingCurve::LINEAR;
-    if (isMultiInstanceEnabled_) {
-        Rosen::RSNode::OpenImplicitAnimation(rsUIContext, protocol, curve, []() {});
-    } else {
-        Rosen::RSNode::OpenImplicitAnimation(protocol, curve, []() {});
-    }
+    protocol.SetDuration(duration);
+    // animation curve: cubic [0.2, 0.0, 0.2, 1.0]
+    auto curve = Rosen::RSAnimationTimingCurve::CreateCubicCurve(0.2, 0.0, 0.2, 1.0);
+    Rosen::RSNode::OpenImplicitAnimation(protocol, curve, []() {});
+    
     float uiWidth = width - borderWidth * DOUBLE;
     float uiHeight = height - borderWidth * DOUBLE;
     uiContent->SetFormWidth(uiWidth);
     uiContent->SetFormHeight(uiHeight);
     uiContent->OnFormSurfaceChange(uiWidth, uiHeight, static_cast<OHOS::Rosen::WindowSizeChangeReason>(reason),
         rsTransaction);
-    if (isMultiInstanceEnabled_) {
-        Rosen::RSNode::CloseImplicitAnimation(rsUIContext);
-    } else {
-        Rosen::RSNode::CloseImplicitAnimation();
-    }
+    Rosen::RSNode::CloseImplicitAnimation();
     if (needSync) {
         rsTransaction->Commit();
         globalLock_.unlock();
-    } else if (isMultiInstanceEnabled_) {
-        rsUIContext->GetRSTransaction()->FlushImplicitTransaction();
     } else {
         Rosen::RSTransaction::FlushImplicitTransaction();
     }
@@ -243,13 +215,13 @@ void FormRendererDispatcherImpl::OnAccessibilityChildTreeRegister(
         }
         HILOG_INFO("OnAccessibilityChildTreeRegister: %{public}d %{public}" PRId64, treeId, accessibilityId);
         uiContent->RegisterAccessibilityChildTree(windowId, treeId, accessibilityId);
-        uiContent->SetAccessibilityGetParentRectHandler([formRenderer](AccessibilityParentRectInfo &parentRectInfo) {
+        uiContent->SetAccessibilityGetParentRectHandler([formRenderer](int32_t &top, int32_t &left) {
             auto formRendererPtr = formRenderer.lock();
             if (!formRendererPtr) {
                 HILOG_ERROR("formRenderer is nullptr");
                 return;
             }
-            formRendererPtr->GetRectRelativeToWindow(parentRectInfo);
+            formRendererPtr->GetRectRelativeToWindow(top, left);
         });
     });
 }
@@ -308,58 +280,6 @@ void FormRendererDispatcherImpl::OnAccessibilityTransferHoverEvent(float pointX,
         HILOG_INFO("OnAccessibilityTransferHoverEvent");
         uiContent->HandleAccessibilityHoverEvent(pointX, pointY, sourceType, eventType, timeMs);
     });
-}
-
-void FormRendererDispatcherImpl::OnNotifyDumpInfo(
-    const std::vector<std::string>& params, std::vector<std::string>& info)
-{
-    auto handler = eventHandler_.lock();
-    if (!handler) {
-        HILOG_ERROR("eventHandler is nullptr");
-        return;
-    }
-    struct DumpInfoCondition {
-        std::mutex mtx;
-        std::condition_variable cv;
-    };
-    std::shared_ptr<DumpInfoCondition> dumpCondition = std::make_shared<DumpInfoCondition>();
-    std::unique_lock<std::mutex> lock(dumpCondition->mtx);
-    handler->PostTask(
-        [content = uiContent_, params, &info, dumpCondition]() {
-            std::unique_lock<std::mutex> lock(dumpCondition->mtx);
-            auto uiContent = content.lock();
-            if (!uiContent) {
-                HILOG_ERROR("uiContent is nullptr");
-                dumpCondition->cv.notify_all();
-                return;
-            }
-            HILOG_INFO("OnNotifyDumpInfo");
-            uiContent->DumpInfo(params, info);
-            dumpCondition->cv.notify_all();
-        },
-        "OnNotifyDumpInfoTask");
-    if (dumpCondition->cv.wait_for(lock, std::chrono::milliseconds(DUMP_WAIT_TIME)) == std::cv_status::timeout) {
-        HILOG_ERROR("OnNotifyDumpInfo timeout");
-        info.push_back("dump timeout " + std::to_string(DUMP_WAIT_TIME) + "ms");
-        handler->RemoveTask("OnNotifyDumpInfoTask");
-    }
-}
-
-void FormRendererDispatcherImpl::SetMultiInstanceEnabled(bool isMultiInstanceEnabled)
-{
-    isMultiInstanceEnabled_ = isMultiInstanceEnabled;
-    HILOG_INFO("current isMultiInstanceEnabled: %{public}d", isMultiInstanceEnabled_);
-}
-
-std::shared_ptr<Rosen::RSUIContext> FormRendererDispatcherImpl::GetRSUIContext(
-    const std::shared_ptr<UIContent>& uiContent)
-{
-    auto rsSurfaceNode = uiContent->GetFormRootNode();
-    if (rsSurfaceNode == nullptr) {
-        HILOG_ERROR("GetRSUIContext: rsSurfaceNode is nullptr");
-        return nullptr;
-    }
-    return rsSurfaceNode->GetRSUIContext();
 }
 } // namespace Ace
 } // namespace OHOS

@@ -46,16 +46,6 @@ public:
     explicit VideoPattern(const RefPtr<VideoControllerV2>& videoController);
     ~VideoPattern() override;
 
-    bool IsEnableMatchParent() override
-    {
-        return true;
-    }
-
-    bool IsEnableFix() override
-    {
-        return true;
-    }
-
     RefPtr<EventHub> CreateEventHub() override
     {
         return MakeRefPtr<VideoEventHub>();
@@ -116,12 +106,6 @@ public:
     virtual bool IsFullScreen() const;
 
     void OnColorConfigurationUpdate() override;
-
-    void UpdateShowFirstFrame(bool showFirstFrame)
-    {
-        showFirstFrame_ = showFirstFrame;
-    }
-
     void UpdateProgressRate(double progressRate)
     {
         progressRate_ = progressRate;
@@ -172,7 +156,6 @@ public:
     // It is used to init mediaplayer on background.
     void UpdateMediaPlayerOnBg();
     void ResetMediaPlayer();
-    void ResetMediaPlayerOnBg();
 
     void SetIsStop(bool isStop)
     {
@@ -191,7 +174,7 @@ public:
 
     const std::string& GetSrc() const
     {
-        return videoSrcInfo_.src_;
+        return videoSrcInfo_.src;
     }
 
     void UpdateMediaParam(const RefPtr<MediaPlayer>& mediaPlayer, const RefPtr<RenderSurface>& renderSurface,
@@ -232,11 +215,9 @@ public:
 
     void OnError(const std::string& errorId);
 
-    void OnError(int32_t code, const std::string& message);
-
     void OnResolutionChange() const;
 
-    void OnStartRenderFrameCb();
+    void OnStartRenderFrameCb() const;
 
     void ResetLastBoundsRect()
     {
@@ -246,7 +227,6 @@ public:
     RefPtr<VideoPattern> GetTargetVideoPattern();
     void EnableAnalyzer(bool enable);
     void SetImageAnalyzerConfig(void* config);
-    void StartUpdateImageAnalyzer();
     void SetImageAIOptions(void* options);
     bool GetAnalyzerState();
     void UpdateAnalyzerState(bool isCreated)
@@ -270,26 +250,19 @@ public:
     {
         return isPrepared_;
     }
-    static void RegisterMediaPlayerEvent(const WeakPtr<VideoPattern>& weak, const RefPtr<MediaPlayer>& mediaPlayer,
-        const std::string& videoSrc, int32_t instanceId);
-
     void SetShortcutKeyEnabled(bool isEnableShortcutKey);
     bool GetShortcutKeyEnabled() const;
 
     void SetCurrentVolume(float currentVolume);
     float GetCurrentVolume() const;
-    static bool ParseCommand(const std::string& command);
-    int32_t OnInjectionEvent(const std::string& command) override;
 
 #ifdef RENDER_EXTRACT_SUPPORTED
     void OnTextureRefresh(void* surface);
 #endif
 
-    void SetVideoController(const RefPtr<VideoControllerV2>& videoController);
-    RefPtr<VideoControllerV2> GetVideoController();
-
 protected:
     void OnUpdateTime(uint32_t time, int pos) const;
+    void RegisterMediaPlayerEvent();
 
     RefPtr<MediaPlayer> mediaPlayer_ = MediaPlayer::Create();
     RefPtr<RenderSurface> renderSurface_ = RenderSurface::Create();
@@ -313,7 +286,6 @@ private:
     void InitKeyEvent();
     bool OnKeyEvent(const KeyEvent& event);
     bool HandleSliderKeyEvent(const KeyEventInfo& event);
-    void AddChild();
 
     // Set properties for media player.
     void PrepareMediaPlayer();
@@ -368,12 +340,13 @@ private:
     void ChangeFullScreenButtonTag(bool isFullScreen, RefPtr<FrameNode>& fullScreenBtn);
     void ResetStatus();
     void HiddenChange(bool hidden);
+    void PrintPlayerStatus(PlaybackStatus status);
 
     void UpdateFsState();
     void checkNeedAutoPlay();
 
     // Fire error manually, eg. src is not existed. It must run on ui.
-    void FireError(int32_t code, const std::string& message);
+    void FireError();
 
     HiddenChangeEvent CreateHiddenChangeEvent();
 
@@ -390,22 +363,22 @@ private:
 #endif
 
     void RegisterRenderContextCallBack();
-    void ChangePlayerStatus(const PlaybackStatus& status);
+    void ChangePlayerStatus(bool isPlaying, const PlaybackStatus& status);
 
     bool IsSupportImageAnalyzer();
     bool ShouldUpdateImageAnalyzer();
     void StartImageAnalyzer();
+    void StartUpdateImageAnalyzer();
     void CreateAnalyzerOverlay();
     void DestroyAnalyzerOverlay();
     void UpdateAnalyzerOverlay();
     void UpdateAnalyzerUIConfig(const RefPtr<NG::GeometryNode>& geometryNode);
     void UpdateOverlayVisibility(VisibleType type);
+    void ToJsonValue(std::unique_ptr<JsonValue>& json, const InspectorFilter& filter) const override;
 
     void OnKeySpaceEvent();
     void MoveByStep(int32_t step);
     void AdjustVolume(int32_t step);
-
-    void ToJsonValue(std::unique_ptr<JsonValue>& json, const InspectorFilter& filter) const override;
 
     RefPtr<VideoControllerV2> videoControllerV2_;
     RefPtr<FrameNode> controlBar_;
@@ -416,7 +389,6 @@ private:
 
     // Video src.
     VideoSourceInfo videoSrcInfo_;
-    bool showFirstFrame_ = false;
     bool isInitialState_ = true; // Initial state is true. Play or seek will set it to false.
     bool isPlaying_ = false;
     bool isPrepared_ = false;
@@ -442,7 +414,6 @@ private:
 
     // full screen node id
     std::optional<int32_t> fullScreenNodeId_;
-    int32_t hostId_ = 0;
 
     // Video playback speed.
     double progressRate_ = 1.0;

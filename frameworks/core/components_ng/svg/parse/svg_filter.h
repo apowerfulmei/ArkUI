@@ -16,6 +16,8 @@
 #ifndef FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_SVG_PARSE_SVG_FILTER_H
 #define FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_SVG_PARSE_SVG_FILTER_H
 
+#include "include/core/SkPaint.h"
+
 #include "frameworks/core/components_ng/svg/parse/svg_attributes_parser.h"
 #include "frameworks/core/components_ng/svg/parse/svg_quote.h"
 
@@ -29,8 +31,6 @@ public:
     ~SvgFilter() override = default;
     static RefPtr<SvgNode> Create();
     bool ParseAndSetSpecializedAttr(const std::string& name, const std::string& value) override;
-    void OnFilterEffect(RSCanvas& canvas, const SvgCoordinateSystemContext& svgCoordinateSystemContext,
-        float useOffsetX, float useOffsetY) override;
 
 protected:
     void OnInitStyle() override;
@@ -41,7 +41,11 @@ protected:
     void OnAsPaint();
 
 private:
+#ifndef USE_ROSEN_DRAWING
+    SkPaint filterPaint_;
+#else
     RSBrush filterBrush_;
+#endif
     SvgFilterAttribute filterAttr_;
 };
 

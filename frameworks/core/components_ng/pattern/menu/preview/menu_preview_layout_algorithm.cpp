@@ -15,17 +15,22 @@
 
 #include "core/components_ng/pattern/menu/preview/menu_preview_layout_algorithm.h"
 
+#include "base/utils/utils.h"
+#include "core/components/common/properties/shadow_config.h"
+#include "core/components/declaration/common/declaration_constants.h"
+#include "core/components_ng/pattern/menu/menu_layout_algorithm.h"
+#include "core/components_ng/pattern/menu/menu_paint_property.h"
+#include "core/components_ng/pattern/menu/menu_theme.h"
 #include "core/components_ng/pattern/menu/menu_pattern.h"
 #include "core/components_ng/pattern/menu/preview/menu_preview_pattern.h"
+#include "core/components_ng/property/measure_property.h"
+#include "core/components_ng/property/measure_utils.h"
 
 namespace OHOS::Ace::NG {
 void MenuPreviewLayoutAlgorithm::Measure(LayoutWrapper* layoutWrapper)
 {
-    CHECK_NULL_VOID(layoutWrapper);
     UpdateLayoutConstraintForPreview(layoutWrapper);
-    auto layoutProperty = layoutWrapper->GetLayoutProperty();
-    CHECK_NULL_VOID(layoutProperty);
-    auto layoutConstraint = layoutProperty->CreateChildConstraint();
+    auto layoutConstraint = layoutWrapper->GetLayoutProperty()->CreateChildConstraint();
     for (const auto& child : layoutWrapper->GetAllChildrenWithBuild()) {
         child->Measure(layoutConstraint);
     }
@@ -79,7 +84,6 @@ void MenuPreviewLayoutAlgorithm::LayoutHoverScaleImage(const RefPtr<MenuWrapperP
 
 void MenuPreviewLayoutAlgorithm::UpdateLayoutConstraintForPreview(LayoutWrapper* layoutWrapper)
 {
-    CHECK_NULL_VOID(layoutWrapper);
     auto preview = layoutWrapper->GetHostNode();
     CHECK_NULL_VOID(preview);
     auto previewPattern = preview->GetPattern<MenuPreviewPattern>();
@@ -88,20 +92,18 @@ void MenuPreviewLayoutAlgorithm::UpdateLayoutConstraintForPreview(LayoutWrapper*
     CHECK_NULL_VOID(menuWrapper);
     auto menuWrapperPattern = menuWrapper->GetPattern<MenuWrapperPattern>();
     CHECK_NULL_VOID(menuWrapperPattern);
+    auto menuParam = menuWrapperPattern->GetMenuParam();
+    CHECK_NULL_VOID(menuParam.isPreviewContainScale);
     auto menuNode = menuWrapperPattern->GetMenu();
     CHECK_NULL_VOID(menuNode);
     auto menuPattern = menuNode->GetPattern<MenuPattern>();
     CHECK_NULL_VOID(menuPattern);
-    auto menuParam = menuWrapperPattern->GetMenuParam();
-    if (menuParam.isPreviewContainScale) {
-        auto menuWindowRect = menuPattern->GetMenuWindowRect();
-        auto maxWidth = menuWindowRect.Width();
-        auto maxHeight = menuWindowRect.Height();
-        auto targetSize = menuPattern->GetTargetSize();
-        auto isOversize = GreatNotEqual(targetSize.Width(), maxWidth) || GreatNotEqual(targetSize.Height(), maxHeight);
-        if (!isOversize) {
-            return;
-        }
+    auto menuWindowRect = menuPattern->GetMenuWindowRect();
+    auto maxWidth = menuWindowRect.Width();
+    auto maxHeight = menuWindowRect.Height();
+    auto targetSize = menuPattern->GetTargetSize();
+    auto isOversize = GreatNotEqual(targetSize.Width(), maxWidth) || GreatNotEqual(targetSize.Height(), maxHeight);
+    if (isOversize) {
         auto widthDelta = targetSize.Width() - maxWidth;
         auto heightDelta = targetSize.Height() - maxHeight;
         if (GreatOrEqual(widthDelta, heightDelta)) {
@@ -109,50 +111,12 @@ void MenuPreviewLayoutAlgorithm::UpdateLayoutConstraintForPreview(LayoutWrapper*
         } else {
             maxWidth = targetSize.Width() * (maxHeight / targetSize.Height());
         }
-        auto layoutProperty = layoutWrapper->GetLayoutProperty();
-        CHECK_NULL_VOID(layoutProperty);
-        auto layoutConstraint = layoutProperty->CreateChildConstraint();
+        auto layoutConstraint = layoutWrapper->GetLayoutProperty()->CreateChildConstraint();
         layoutConstraint.maxSize.SetWidth(maxWidth);
         layoutConstraint.maxSize.SetHeight(maxHeight);
         layoutConstraint.selfIdealSize.SetWidth(maxWidth);
         layoutConstraint.selfIdealSize.SetHeight(maxHeight);
-        layoutProperty->UpdateLayoutConstraint(layoutConstraint);
-    } else {
-        CheckLayoutConstraint(layoutWrapper, menuParam, menuPattern);
-    }
-}
-
-void MenuPreviewLayoutAlgorithm::CheckLayoutConstraint(
-    LayoutWrapper* layoutWrapper, const MenuParam& menuParam, const RefPtr<MenuPattern>& menuPattern)
-{
-    CHECK_NULL_VOID(menuPattern);
-    CHECK_NULL_VOID(layoutWrapper);
-    auto layoutProperty = layoutWrapper->GetLayoutProperty();
-    CHECK_NULL_VOID(layoutProperty);
-    auto layoutConstraint = layoutProperty->CreateChildConstraint();
-
-    auto isUpdateContentConstraint = false;
-    // contentRect = windowSize - safeArea - margin
-    if (menuParam.availableLayoutAreaMode.has_value() &&
-        menuParam.availableLayoutAreaMode.value() == AvailableLayoutAreaMode::SAFE_AREA) {
-        auto layoutParam = menuPattern->GetMenuLayoutParam();
-        auto maxWidth = layoutParam.wrapperRect.Width() - layoutParam.leftSecurity - layoutParam.rightSecurity;
-        maxWidth = std::max(maxWidth, 0.0);
-        auto maxHeight = layoutParam.wrapperRect.Height() - layoutParam.topSecurity - layoutParam.bottomSecurity;
-        maxHeight = std::max(maxHeight, 0.0);
-        layoutConstraint.maxSize = { maxWidth, maxHeight };
-        layoutConstraint.percentReference = { maxWidth, maxHeight };
-        isUpdateContentConstraint = true;
-    }
-
-    if (menuParam.previewScaleMode.value_or(PreviewScaleMode::AUTO) == PreviewScaleMode::MAINTAIN) {
-        layoutConstraint.maxSize = { Infinity<float>(), Infinity<float>() };
-        isUpdateContentConstraint = true;
-    }
-
-    layoutProperty->UpdateLayoutConstraint(layoutConstraint);
-    if (isUpdateContentConstraint) {
-        layoutProperty->UpdateContentConstraint();
+        layoutWrapper->GetLayoutProperty()->UpdateLayoutConstraint(layoutConstraint);
     }
 }
 } // namespace OHOS::Ace::NG

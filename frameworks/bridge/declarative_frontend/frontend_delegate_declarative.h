@@ -66,9 +66,7 @@ public:
         const DestroyApplicationCallback& destroyApplicationCallback,
         const UpdateApplicationStateCallback& updateApplicationStateCallback, const TimerCallback& timerCallback,
         const MediaQueryCallback& mediaQueryCallback, const LayoutInspectorCallback& layoutInpsectorCallback,
-        const DrawInspectorCallback& drawInpsectorCallback,
-        const DrawChildrenInspectorCallback& drawChildrenInspectorCallback,
-        const RequestAnimationCallback& requestAnimationCallback,
+        const DrawInspectorCallback& drawInpsectorCallback, const RequestAnimationCallback& requestAnimationCallback,
         const JsCallback& jsCallback, const OnWindowDisplayModeChangedCallBack& onWindowDisplayModeChangedCallBack,
         const OnConfigurationUpdatedCallBack& onConfigurationUpdatedCallBack,
         const OnSaveAbilityStateCallBack& onSaveAbilityStateCallBack,
@@ -88,11 +86,6 @@ public:
         const std::string& url, const std::string& params, const std::string& profile, bool isNamedRouter = false);
     void RunPage(const std::shared_ptr<std::vector<uint8_t>>& content,
         const std::string& params, const std::string& profile);
-    void RunIntentPage();
-    void SetRouterIntentInfo(const std::string& intentInfoSerialized, bool isColdStart,
-        const std::function<void()>&& loadPageCallback);
-    std::string GetTopNavDestinationInfo(bool onlyFullScreen, bool needParam);
-
     void SetJsMessageDispatcher(const RefPtr<JsMessageDispatcher>& dispatcher) const;
     void TransferComponentResponseData(int32_t callbackId, int32_t code, std::vector<uint8_t>&& data);
     void TransferJsResponseData(int32_t callbackId, int32_t code, std::vector<uint8_t>&& data) const;
@@ -144,8 +137,6 @@ public:
     void OnSurfaceChanged();
     void OnLayoutCompleted(const std::string& componentId);
     void OnDrawCompleted(const std::string& componentId);
-    void OnDrawChildrenCompleted(const std::string& componentId);
-    bool IsDrawChildrenCallbackFuncExist(const std::string& componentId);
     // JSEventHandler delegate functions.
     void FireAsyncEvent(const std::string& eventId, const std::string& param, const std::string& jsonArgs);
     bool FireSyncEvent(const std::string& eventId, const std::string& param, const std::string& jsonArgs);
@@ -181,7 +172,6 @@ public:
     void GetRouterStateByIndex(int32_t& index, std::string& name, std::string& path, std::string& params) override;
     bool IsUnrestoreByIndex(int32_t index);
     void GetRouterStateByUrl(std::string& url, std::vector<StateInfo>& stateArray) override;
-    std::string GetInitParams() override;
     std::string GetParams() override;
     int32_t GetIndexByUrl(const std::string& url) override;
 
@@ -204,8 +194,7 @@ public:
     double MeasureText(MeasureContext context) override;
     Size MeasureTextSize(MeasureContext context) override;
 
-    void ShowToast(const NG::ToastInfo& toastInfo, std::function<void(int32_t)>&& callback = nullptr) override;
-    void CloseToast(const int32_t toastId, std::function<void(int32_t)>&& callback = nullptr) override;
+    void ShowToast(const NG::ToastInfo& toastInfo) override;
     void SetToastStopListenerCallback(std::function<void()>&& stopCallback) override;
     void ShowDialog(const std::string& title, const std::string& message, const std::vector<ButtonInfo>& buttons,
         bool autoCancel, std::function<void(int32_t, int32_t)>&& callback,
@@ -220,14 +209,12 @@ public:
         std::function<void(bool)>&& onStatusChanged) override;
     void ShowDialogInner(DialogProperties& dialogProperties, std::function<void(int32_t, int32_t)>&& callback,
         const std::set<std::string>& callbacks);
-    void RemoveCustomDialog(int32_t instanceId) override;
+    void RemoveCustomDialog() override;
     void OpenCustomDialog(const PromptDialogAttr &dialogAttr, std::function<void(int32_t)> &&callback) override;
     void CloseCustomDialog(const int32_t dialogId) override;
     void CloseCustomDialog(const WeakPtr<NG::UINode>& node, std::function<void(int32_t)> &&callback) override;
     void UpdateCustomDialog(const WeakPtr<NG::UINode>& node, const PromptDialogAttr &dialogAttr,
         std::function<void(int32_t)> &&callback) override;
-    std::optional<double> GetTopOrder() override;
-    std::optional<double> GetBottomOrder() override;
 
     RefPtr<NG::ChainedTransitionEffect> GetTransitionEffect(void* value) override;
 
@@ -309,18 +296,9 @@ public:
 
     std::pair<int32_t, std::shared_ptr<Media::PixelMap>> GetSyncSnapshotByUniqueId(int32_t uniqueId,
         const NG::SnapshotOptions& options) override;
-        
-    void GetSnapshotWithRange(const NG::NodeIdentity& startID, const NG::NodeIdentity& endID, const bool isStartRect,
-        std::function<void(std::shared_ptr<Media::PixelMap>, int32_t, std::function<void()>)>&& callback,
-        const NG::SnapshotOptions& options) override;
-
-    void CreateSnapshotFromComponent(const RefPtr<NG::UINode>& nodeWk,
-        std::function<void(std::shared_ptr<Media::PixelMap>, int32_t, std::function<void()>)>&& callback,
-        bool enableInspector, const NG::SnapshotParam& param) override;
 
     void AddFrameNodeToOverlay(
         const RefPtr<NG::FrameNode>& node, std::optional<int32_t> index = std::nullopt) override;
-    void AddFrameNodeWithOrder(const RefPtr<NG::FrameNode>& node, std::optional<double> levelOrder) override;
     void RemoveFrameNodeOnOverlay(const RefPtr<NG::FrameNode>& node) override;
     void ShowNodeOnOverlay(const RefPtr<NG::FrameNode>& node) override;
     void HideNodeOnOverlay(const RefPtr<NG::FrameNode>& node) override;
@@ -401,8 +379,6 @@ public:
         return manifestParser_;
     }
 
-    std::string GetPagePathByUrl(const std::string& url) const;
-
 protected:
     bool isCardDelegate_ = false;
 
@@ -448,8 +424,8 @@ private:
     uint64_t GetSystemRealTime();
 
     // Page lifecycle
-    void OnPageShow(bool isFromWindow = false);
-    void OnPageHide(bool isFromWindow = false);
+    void OnPageShow();
+    void OnPageHide();
     void OnPageDestroy(int32_t pageId);
 
     int32_t GetRunningPageId() const;
@@ -477,7 +453,6 @@ private:
     void ClearAlertCallback(PageInfo pageInfo);
     bool CheckIndexValid(int32_t index) const;
 
-    void ParsePartialPropertiesFromAttr(DialogProperties& dialogProperties, const PromptDialogAttr& dialogAttr);
     DialogProperties ParsePropertiesFromAttr(const PromptDialogAttr &dialogAttr);
 
     std::unique_ptr<JsonValue> GetNavigationJsonInfo();
@@ -511,7 +486,6 @@ private:
     MediaQueryCallback mediaQueryCallback_;
     LayoutInspectorCallback layoutInspectorCallback_;
     DrawInspectorCallback drawInspectorCallback_;
-    DrawChildrenInspectorCallback drawChildrenInspectorCallback_;
     RequestAnimationCallback requestAnimationCallback_;
     JsCallback jsCallback_;
     OnWindowDisplayModeChangedCallBack onWindowDisplayModeChanged_;

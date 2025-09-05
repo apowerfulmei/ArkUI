@@ -35,7 +35,6 @@ public:
     void JsPath2DBezierCurveTo(const JSCallbackInfo& args);
     void JsPath2DEllipse(const JSCallbackInfo& args);
     void JsPath2DRect(const JSCallbackInfo& args);
-    void JsPath2DRoundRect(const JSCallbackInfo& args);
     void JsPath2DClosePath(const JSCallbackInfo& args);
     RefPtr<CanvasPath2D> GetCanvasPath2d() const
     {
@@ -69,7 +68,6 @@ protected:
     panda::CopyableGlobal<panda::JSValueRef> pathCmdObj_;
     RefPtr<CanvasPath2D> path2d_;
     CanvasUnit unit_ = CanvasUnit::DEFAULT;
-    bool isJudgeSpecialValue_ = false;
 };
 
 } // namespace OHOS::Ace::Framework

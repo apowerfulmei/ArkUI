@@ -34,7 +34,7 @@ using ItemDropFunc = std::function<void(const ItemDragInfo&, int32_t, int32_t, b
 using ScrollIndexFunc = std::function<void(int32_t, int32_t)>;
 
 class GridEventHub : public ScrollableEventHub {
-    DECLARE_ACE_TYPE(GridEventHub, ScrollableEventHub);
+    DECLARE_ACE_TYPE(GridEventHub, ScrollableEventHub)
 
 public:
     GridEventHub() = default;
@@ -99,23 +99,6 @@ public:
         return onScrollIndexEvent_;
     }
 
-    void SetJSFrameNodeOnGridScrollIndex(ScrollIndexFunc&& onScroll)
-    {
-        onJSFrameNodeScrollIndexEvent_ = std::move(onScroll);
-    }
-
-    void ClearJSFrameNodeOnGridScrollIndex()
-    {
-        if (onJSFrameNodeScrollIndexEvent_) {
-            onJSFrameNodeScrollIndexEvent_ = nullptr;
-        }
-    }
-
-    const ScrollIndexFunc& GetJSFrameNodeOnGridScrollIndex() const
-    {
-        return onJSFrameNodeScrollIndexEvent_;
-    }
-
     std::pair<std::optional<float>, std::optional<float>> FireOnScrollBarUpdate(int32_t index, const Dimension& offset)
     {
         if (onScrollBarUpdate_) {
@@ -176,7 +159,6 @@ private:
     RefPtr<FrameNode> draggingItem_;
 
     ScrollIndexFunc onScrollIndexEvent_;
-    ScrollIndexFunc onJSFrameNodeScrollIndexEvent_;
 };
 
 } // namespace OHOS::Ace::NG

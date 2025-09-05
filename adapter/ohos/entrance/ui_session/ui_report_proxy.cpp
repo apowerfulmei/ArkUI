@@ -15,10 +15,10 @@
 
 #include "interfaces/inner_api/ui_session/ui_report_proxy.h"
 
-#include "pixel_map.h"
+#include "interfaces/inner_api/ui_session/ui_session_json_util.h"
+#include "interfaces/inner_api/ui_session/ui_session_manager.h"
 
 #include "adapter/ohos/entrance/ui_session/include/ui_service_hilog.h"
-#include "interfaces/inner_api/ui_session/ui_session_manager.h"
 
 namespace OHOS::Ace {
 void UiReportProxy::ReportClickEvent(const std::string& data)
@@ -121,7 +121,7 @@ void UiReportProxy::ReportInspectorTreeValue(const std::string& data, int32_t pa
 
 void UiReportProxy::OnComponentChange(const std::string& key, const std::string& value)
 {
-    if (UiSessionManager::GetInstance()->GetComponentChangeEventRegistered()) {
+    if (UiSessionManager::GetInstance().GetComponentChangeEventRegistered()) {
         auto result = InspectorJsonUtil::Create(true);
         result->Put(key.c_str(), value.c_str());
         ReportComponentChangeEvent(result->ToString());
@@ -165,156 +165,6 @@ void UiReportProxy::SendBaseInfo(const std::string& data)
     }
     if (Remote()->SendRequest(SEND_BASE_INFO, messageData, reply, option) != ERR_NONE) {
         LOGW("SendBaseInfo send request failed");
-    }
-}
-
-void UiReportProxy::SendCurrentLanguage(const std::string& data)
-{
-    MessageParcel messageData;
-    MessageParcel reply;
-    MessageOption option;
-    if (!messageData.WriteInterfaceToken(GetDescriptor())) {
-        LOGW("SendCurrentLanguage write interface token failed");
-        return;
-    }
-    if (!messageData.WriteString(data)) {
-        LOGW("SendCurrentLanguage write data  failed");
-        return;
-    }
-    if (Remote()->SendRequest(SEND_CURRENT_LANGUAGE, messageData, reply, option) != ERR_NONE) {
-        LOGW("SendCurrentLanguage send request failed");
-    }
-}
-
-void UiReportProxy::SendCurrentPageName(const std::string& data)
-{
-    MessageParcel messageData;
-    MessageParcel reply;
-    MessageOption option(MessageOption::TF_ASYNC);
-    if (!messageData.WriteInterfaceToken(GetDescriptor())) {
-        LOGW("SendCurrentPageName write interface token failed");
-        return;
-    }
-    if (!messageData.WriteString(data)) {
-        LOGW("SendCurrentPageName write data  failed");
-        return;
-    }
-    if (Remote()->SendRequest(SEND_CURRENT_PAGE_NAME, messageData, reply, option) != ERR_NONE) {
-        LOGW("SendCurrentPageName send request failed");
-    }
-}
-
-void UiReportProxy::SendWebText(int32_t nodeId, std::string res)
-{
-    MessageParcel messageData;
-    MessageParcel reply;
-    MessageOption option(MessageOption::TF_ASYNC);
-    if (!messageData.WriteInterfaceToken(GetDescriptor())) {
-        LOGW("SendWebText write interface token failed");
-        return;
-    }
-    if (!messageData.WriteString(res)) {
-        LOGW("SendWebText write data  failed");
-        return;
-    }
-    if (!messageData.WriteInt32(nodeId)) {
-        LOGW("SendWebText write data  failed");
-        return;
-    }
-    if (Remote()->SendRequest(SEND_TEXT, messageData, reply, option) != ERR_NONE) {
-        LOGW("SendWebText send request failed");
-    }
-}
-
-void UiReportProxyRecipient::OnRemoteDied(const wptr<IRemoteObject>& remote)
-{
-    LOGI("uiproxy death notice");
-    if (remote == nullptr) {
-        LOGW("weak remote is null");
-        return;
-    }
-    if (handler_) {
-        handler_();
-    }
-}
-
-void UiReportProxy::SendShowingImage(std::vector<std::pair<int32_t, std::shared_ptr<Media::PixelMap>>> maps)
-{
-    MessageParcel messageData;
-    MessageParcel reply;
-    MessageOption option(MessageOption::TF_ASYNC);
-    LOGI("before send images,collect map size:%{public}zu", maps.size());
-    if (!messageData.WriteInterfaceToken(GetDescriptor())) {
-        LOGW("SendShowingImage write interface token failed");
-        return;
-    }
-    std::vector<std::pair<int32_t, sptr<Ashmem>>> tempMaps;
-    for (auto& map : maps) {
-        std::vector<uint8_t> buf;
-        map.second->EncodeTlv(buf);
-        auto dataSize = buf.size();
-        sptr<Ashmem> ashmem = Ashmem::CreateAshmem((std::to_string(map.first)).c_str(), dataSize);
-        if (ashmem == nullptr) {
-            LOGW("Create shared memory failed");
-            continue;
-        }
-        // Set the read/write mode of the ashme.
-        if (!ashmem->MapReadAndWriteAshmem()) {
-            ClearAshmem(ashmem);
-            LOGW("Map shared memory fail");
-            continue;
-        }
-        // Write the size and content of each item to the ashmem.
-        int32_t offset = 0;
-        if (!ashmem->WriteToAshmem(reinterpret_cast<uint8_t*>(buf.data()), dataSize, offset)) {
-            LOGW("Write info to shared memory fail");
-            ClearAshmem(ashmem);
-            continue;
-        }
-
-        tempMaps.push_back({map.first, ashmem});
-    }
-    LOGI("before send images,collect tempMaps size:%{public}zu", tempMaps.size());
-    if (!messageData.WriteInt32(tempMaps.size())) {
-        LOGW("SendShowingImage write size failed");
-        return;
-    }
-    for (auto& map : tempMaps) {
-        if (!messageData.WriteInt32(map.first) || !messageData.WriteAshmem(map.second)) {
-            ClearAshmem(map.second);
-            LOGW("SendShowingImage write data failed");
-            return;
-        }
-        ClearAshmem(map.second);
-    }
-    if (Remote()->SendRequest(SEND_IMAGES, messageData, reply, option) != ERR_NONE) {
-        LOGW("SendShowingImage send request failed");
-    }
-}
-
-void UiReportProxy::ClearAshmem(sptr<Ashmem>& optMem)
-{
-    if (optMem != nullptr) {
-        optMem->UnmapAshmem();
-        optMem->CloseAshmem();
-    }
-}
-
-void UiReportProxy::SendExeAppAIFunctionResult(uint32_t result)
-{
-    MessageParcel messageData;
-    MessageParcel reply;
-    MessageOption option(MessageOption::TF_ASYNC);
-    if (!messageData.WriteInterfaceToken(GetDescriptor())) {
-        LOGW("SendExeAppAIFunctionResult write interface token failed");
-        return;
-    }
-    if (!messageData.WriteUint32(result)) {
-        LOGW("SendExeAppAIFunctionResult write result  failed");
-        return;
-    }
-    if (Remote()->SendRequest(SEND_EXE_APP_AI_FUNCTION_RESULT, messageData, reply, option) != ERR_NONE) {
-        LOGW("SendExeAppAIFunctionResult send request failed");
     }
 }
 } // namespace OHOS::Ace

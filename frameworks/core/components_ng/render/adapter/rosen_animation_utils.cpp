@@ -17,9 +17,6 @@
 
 #include "core/animation/native_curve_helper.h"
 #include "core/common/container.h"
-#include "core/components_ng/animation/callback_thread_wrapper.h"
-#include "core/pipeline_ng/pipeline_context.h"
-#include "render_service_client/core/ui/rs_ui_director.h"
 
 namespace OHOS::Ace {
 
@@ -47,7 +44,6 @@ Rosen::RSAnimationTimingProtocol OptionToTimingProtocol(const AnimationOption& o
                                   option.GetAnimationDirection() == AnimationDirection::ALTERNATE_REVERSE);
     timingProtocol.SetFillMode(static_cast<Rosen::FillMode>(option.GetFillMode()));
     timingProtocol.SetFinishCallbackType(ToAnimationFinishCallbackType(option.GetFinishCallbackType()));
-    timingProtocol.SetInterfaceName(option.GetAnimationInterfaceString());
     auto rateRange = option.GetFrameRateRange();
     if (rateRange) {
         timingProtocol.SetFrameRateRange({ rateRange->min_, rateRange->max_, rateRange->preferred_, 0,
@@ -55,16 +51,12 @@ Rosen::RSAnimationTimingProtocol OptionToTimingProtocol(const AnimationOption& o
     }
     return timingProtocol;
 }
-std::function<void()> GetWrappedCallback(
-    const std::function<void()>& callback, bool once, const RefPtr<PipelineBase>& pipeline)
+std::function<void()> GetWrappedCallback(const std::function<void()>& callback)
 {
-    CHECK_NULL_RETURN(callback, nullptr);
-    auto instanceId = pipeline ? pipeline->GetInstanceId() : Container::CurrentIdSafelyWithCheck();
-    ContainerScope scope(instanceId);
-    auto taskExecutor = Container::CurrentTaskExecutor();
-    CHECK_NULL_RETURN(taskExecutor, callback);
-    NG::CallbackThreadWrapper callbackWrapper { taskExecutor, callback, once };
-    auto wrappedCallback = [callbackWrapper, instanceId]() mutable {
+    if (!callback) {
+        return nullptr;
+    }
+    auto wrappedOnFinish = [onFinish = callback, instanceId = Container::CurrentIdSafelyWithCheck()]() {
         ContainerScope scope(instanceId);
         auto taskExecutor = Container::CurrentTaskExecutor();
         if (!taskExecutor) {
@@ -72,18 +64,13 @@ std::function<void()> GetWrappedCallback(
             return;
         }
         if (taskExecutor->WillRunOnCurrentThread(TaskExecutor::TaskType::UI)) {
-            callbackWrapper();
+            onFinish();
             return;
         }
-        taskExecutor->PostTask([callbackWrapper] () mutable { callbackWrapper(); }, TaskExecutor::TaskType::UI,
+        taskExecutor->PostTask([onFinish]() { onFinish(); }, TaskExecutor::TaskType::UI,
             "ArkUIAnimationGetWrappedCallback", PriorityType::HIGH);
     };
-    return wrappedCallback;
-}
-
-std::shared_ptr<Rosen::RSUIContext> GetRSUIContext(const RefPtr<PipelineBase>& context)
-{
-    return AnimationUtils::GetCurrentRSUIContext(context);
+    return wrappedOnFinish;
 }
 } // namespace
 
@@ -100,124 +87,83 @@ private:
     friend AnimationUtils;
 };
 
-void AnimationUtils::SetNavGroupNodeTransAnimationCallback()
-{
-    auto pipelineContext = NG::PipelineContext::GetCurrentContext();
-    CHECK_NULL_VOID(pipelineContext);
-    auto navigationManger = pipelineContext->GetNavigationManager();
-    CHECK_NULL_VOID(navigationManger);
-    navigationManger->SetNodeAddAnimation(true);
-}
-
-void AnimationUtils::OpenImplicitAnimation(const AnimationOption& option, const RefPtr<Curve>& curve,
-    const std::function<void()>& finishCallback, const RefPtr<PipelineBase>& context)
+void AnimationUtils::OpenImplicitAnimation(
+    const AnimationOption& option, const RefPtr<Curve>& curve, const std::function<void()>& finishCallback)
 {
     const auto& timingProtocol = OptionToTimingProtocol(option);
-    auto wrappedOnFinish = GetWrappedCallback(finishCallback, true, context);
-    auto rsUIContext = GetRSUIContext(context);
-    Rosen::RSNode::OpenImplicitAnimation(rsUIContext, timingProtocol,
-        NativeCurveHelper::ToNativeCurve(curve), wrappedOnFinish);
+    auto wrappedOnFinish = GetWrappedCallback(finishCallback);
+    Rosen::RSNode::OpenImplicitAnimation(timingProtocol, NativeCurveHelper::ToNativeCurve(curve), wrappedOnFinish);
 }
 
-bool AnimationUtils::CloseImplicitAnimation(const RefPtr<PipelineBase>& context)
+bool AnimationUtils::CloseImplicitAnimation()
 {
-    auto rsUIContext = GetRSUIContext(context);
-    auto animations = Rosen::RSNode::CloseImplicitAnimation(rsUIContext);
-    auto pipeline = context ? context : PipelineBase::GetCurrentContext();
-    SetNavGroupNodeTransAnimationCallback();
+    auto animations = Rosen::RSNode::CloseImplicitAnimation();
+    auto pipeline = PipelineBase::GetCurrentContext();
     if (pipeline && !pipeline->GetOnShow()) {
         pipeline->FlushMessages();
     }
     return !animations.empty();
 }
 
-bool AnimationUtils::CloseImplicitCancelAnimation(const RefPtr<PipelineBase>& context)
+bool AnimationUtils::IsImplicitAnimationOpen()
 {
-    auto rsUIContext = GetRSUIContext(context);
-    return Rosen::RSNode::CloseImplicitCancelAnimation(rsUIContext);
-}
-
-CancelAnimationStatus AnimationUtils::CloseImplicitCancelAnimationReturnStatus(const RefPtr<PipelineBase>& context)
-{
-    auto rsUIContext = GetRSUIContext(context);
-    auto status = Rosen::RSNode::CloseImplicitCancelAnimationReturnStatus(rsUIContext);
-    return static_cast<CancelAnimationStatus>(status);
-}
-
-bool AnimationUtils::IsImplicitAnimationOpen(const RefPtr<PipelineBase>& context)
-{
-    auto rsUIContext = GetRSUIContext(context);
-    CHECK_NULL_RETURN(rsUIContext, false);
-    return Rosen::RSNode::IsImplicitAnimationOpen(rsUIContext);
+    return Rosen::RSNode::IsImplicitAnimationOpen();
 }
 
 void AnimationUtils::Animate(const AnimationOption& option, const PropertyCallback& callback,
-    const FinishCallback& finishCallback, const RepeatCallback& repeatCallback, const RefPtr<PipelineBase>& context)
+    const FinishCallback& finishCallback, const RepeatCallback& repeatCallback)
 {
     const auto& timingProtocol = OptionToTimingProtocol(option);
-    auto wrappedOnFinish = GetWrappedCallback(finishCallback, true, context);
-    auto wrappedOnRepeat = GetWrappedCallback(repeatCallback, false, context);
-    auto rsUIContext = GetRSUIContext(context);
-    Rosen::RSNode::Animate(rsUIContext, timingProtocol, NativeCurveHelper::ToNativeCurve(option.GetCurve()), callback,
+    auto wrappedOnFinish = GetWrappedCallback(finishCallback);
+    auto wrappedOnRepeat = GetWrappedCallback(repeatCallback);
+    Rosen::RSNode::Animate(timingProtocol, NativeCurveHelper::ToNativeCurve(option.GetCurve()), callback,
         wrappedOnFinish, wrappedOnRepeat);
-    auto pipeline = context ? context : PipelineBase::GetCurrentContext();
-    SetNavGroupNodeTransAnimationCallback();
+    auto pipeline = PipelineBase::GetCurrentContext();
     if (pipeline && !pipeline->GetOnShow()) {
         pipeline->FlushMessages();
     }
 }
 
-void AnimationUtils::AnimateWithCurrentOptions(const PropertyCallback& callback, const FinishCallback& finishCallback,
-    bool timingSensitive, const RefPtr<PipelineBase>& context)
+void AnimationUtils::AnimateWithCurrentOptions(
+    const PropertyCallback& callback, const FinishCallback& finishCallback, bool timingSensitive)
 {
-    auto wrappedOnFinish = GetWrappedCallback(finishCallback, true, context);
-    auto rsUIContext = GetRSUIContext(context);
-    Rosen::RSNode::AnimateWithCurrentOptions(rsUIContext, callback, wrappedOnFinish, timingSensitive);
+    auto wrappedOnFinish = GetWrappedCallback(finishCallback);
+    Rosen::RSNode::AnimateWithCurrentOptions(callback, wrappedOnFinish, timingSensitive);
 }
 
-void AnimationUtils::AnimateWithCurrentCallback(const AnimationOption& option, const PropertyCallback& callback,
-    const RefPtr<PipelineBase>& context)
+void AnimationUtils::AnimateWithCurrentCallback(const AnimationOption& option, const PropertyCallback& callback)
 {
     const auto& timingProtocol = OptionToTimingProtocol(option);
-    auto rsUIContext = GetRSUIContext(context);
-    Rosen::RSNode::AnimateWithCurrentCallback(rsUIContext,
+    Rosen::RSNode::AnimateWithCurrentCallback(
         timingProtocol, NativeCurveHelper::ToNativeCurve(option.GetCurve()), callback);
 }
 
-void AnimationUtils::AddKeyFrame(float fraction, const RefPtr<Curve>& curve, const PropertyCallback& callback,
-    const RefPtr<PipelineBase>& context)
+void AnimationUtils::AddKeyFrame(float fraction, const RefPtr<Curve>& curve, const PropertyCallback& callback)
 {
-    auto rsUIContext = GetRSUIContext(context);
-    Rosen::RSNode::AddKeyFrame(rsUIContext, fraction, NativeCurveHelper::ToNativeCurve(curve), callback);
+    Rosen::RSNode::AddKeyFrame(fraction, NativeCurveHelper::ToNativeCurve(curve), callback);
 }
 
-void AnimationUtils::AddKeyFrame(float fraction, const PropertyCallback& callback,
-    const RefPtr<PipelineBase>& context)
+void AnimationUtils::AddKeyFrame(float fraction, const PropertyCallback& callback)
 {
-    auto rsUIContext = GetRSUIContext(context);
-    Rosen::RSNode::AddKeyFrame(rsUIContext, fraction, callback);
+    Rosen::RSNode::AddKeyFrame(fraction, callback);
 }
 
-void AnimationUtils::AddDurationKeyFrame(int duration, const RefPtr<Curve>& curve, const PropertyCallback& callback,
-    const RefPtr<PipelineBase>& context)
+void AnimationUtils::AddDurationKeyFrame(int duration, const RefPtr<Curve>& curve, const PropertyCallback& callback)
 {
-    auto rsUIContext = GetRSUIContext(context);
-    Rosen::RSNode::AddDurationKeyFrame(rsUIContext, duration, NativeCurveHelper::ToNativeCurve(curve), callback);
+    Rosen::RSNode::AddDurationKeyFrame(duration, NativeCurveHelper::ToNativeCurve(curve), callback);
 }
 
-std::shared_ptr<AnimationUtils::Animation> AnimationUtils::StartAnimation(
-    const AnimationOption& option, const PropertyCallback& callback,
-    const FinishCallback& finishCallback, const RepeatCallback& repeatCallback, const RefPtr<PipelineBase>& context)
+std::shared_ptr<AnimationUtils::Animation> AnimationUtils::StartAnimation(const AnimationOption& option,
+    const PropertyCallback& callback, const FinishCallback& finishCallback, const RepeatCallback& repeatCallback)
 {
     std::shared_ptr<AnimationUtils::Animation> animation = std::make_shared<AnimationUtils::Animation>();
     CHECK_NULL_RETURN(animation, nullptr);
     const auto& timingProtocol = OptionToTimingProtocol(option);
-    auto wrappedOnFinish = GetWrappedCallback(finishCallback, true, context);
-    auto wrappedOnRepeat = GetWrappedCallback(repeatCallback, false, context);
-    auto rsUIContext = GetRSUIContext(context);
-    animation->animations_ = Rosen::RSNode::Animate(rsUIContext, timingProtocol,
-        NativeCurveHelper::ToNativeCurve(option.GetCurve()), callback, wrappedOnFinish, wrappedOnRepeat);
-    auto pipeline = context ? context : PipelineBase::GetCurrentContext();
+    auto wrappedOnFinish = GetWrappedCallback(finishCallback);
+    auto wrappedOnRepeat = GetWrappedCallback(repeatCallback);
+    animation->animations_ = Rosen::RSNode::Animate(timingProtocol, NativeCurveHelper::ToNativeCurve(option.GetCurve()),
+        callback, wrappedOnFinish, wrappedOnRepeat);
+    auto pipeline = PipelineBase::GetCurrentContext();
     if (pipeline && !pipeline->GetOnShow()) {
         pipeline->FlushMessages();
     }
@@ -274,26 +220,9 @@ void AnimationUtils::ResumeAnimation(const std::shared_ptr<AnimationUtils::Anima
     }
 }
 
-void AnimationUtils::ReverseAnimation(const std::shared_ptr<AnimationUtils::Animation>& animation)
+void AnimationUtils::ExecuteWithoutAnimation(const PropertyCallback& callback)
 {
-    CHECK_NULL_VOID(animation);
-    if (animation->animations_.empty()) {
-        return;
-    }
-    auto pipeline = PipelineBase::GetCurrentContext();
-    if (pipeline) {
-        pipeline->RequestFrame();
-    }
-    for (auto& ani : animation->animations_) {
-        ani->Reverse();
-    }
-}
-
-void AnimationUtils::ExecuteWithoutAnimation(const PropertyCallback& callback,
-    const RefPtr<PipelineBase>& context)
-{
-    auto rsUIContext = GetRSUIContext(context);
-    Rosen::RSNode::ExecuteWithoutAnimation(callback, rsUIContext);
+    Rosen::RSNode::ExecuteWithoutAnimation(callback);
 }
 
 std::shared_ptr<AnimationUtils::InteractiveAnimation> AnimationUtils::CreateInteractiveAnimation(
@@ -302,7 +231,7 @@ std::shared_ptr<AnimationUtils::InteractiveAnimation> AnimationUtils::CreateInte
     std::shared_ptr<AnimationUtils::InteractiveAnimation> interactiveAnimation =
         std::make_shared<AnimationUtils::InteractiveAnimation>();
     CHECK_NULL_RETURN(interactiveAnimation, nullptr);
-    auto wrappedOnFinish = GetWrappedCallback(callback, true, nullptr);
+    auto wrappedOnFinish = GetWrappedCallback(callback);
     Rosen::RSAnimationTimingProtocol timingProtocol;
     Rosen::RSAnimationTimingCurve curve;
     interactiveAnimation->interactiveAnimation_ =
@@ -355,27 +284,5 @@ void AnimationUtils::AddInteractiveAnimation(
     CHECK_NULL_VOID(interactiveAnimation);
     CHECK_NULL_VOID(interactiveAnimation->interactiveAnimation_);
     interactiveAnimation->interactiveAnimation_->AddAnimation(callback);
-}
-
-std::shared_ptr<Rosen::RSUIContext> AnimationUtils::GetCurrentRSUIContext(RefPtr<PipelineBase> context)
-{
-    if (!context) {
-        context = PipelineBase::GetCurrentContextSafelyWithCheck();
-        CHECK_NULL_RETURN(context, nullptr);
-    }
-    auto window = context->GetWindow();
-    CHECK_NULL_RETURN(window, nullptr);
-    auto rsUIDirector = window->GetRSUIDirector();
-    CHECK_NULL_RETURN(rsUIDirector, nullptr);
-    return rsUIDirector->GetRSUIContext();
-}
-
-uint64_t AnimationUtils::GetRSUIContextToken(RefPtr<PipelineBase> context)
-{
-    auto rsUIContext = GetCurrentRSUIContext(context);
-    if (rsUIContext) {
-        return rsUIContext->GetToken();
-    }
-    return 0;
 }
 } // namespace OHOS::Ace

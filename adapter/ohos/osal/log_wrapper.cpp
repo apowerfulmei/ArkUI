@@ -19,6 +19,10 @@
 #include <dlfcn.h>
 #endif
 #include <mutex>
+#include <cstring>
+#include <unordered_map>
+
+#include "hilog/log.h"
 
 #ifdef ACE_INSTANCE_LOG
 #include "core/common/container_scope.h"
@@ -62,7 +66,7 @@ const std::unordered_map<AceLogTag, const char*> g_DOMAIN_CONTENTS_MAP = {
     { AceLogTag::ACE_TEXT_FIELD, "AceTextField" },
     { AceLogTag::ACE_SWIPER, "AceSwiper" },
     { AceLogTag::ACE_TABS, "AceTabs" },
-    { AceLogTag::ACE_SAFE_AREA, "AceSafeArea" },
+    { AceLogTag::ACE_BLANK, "AceBlank" },
     { AceLogTag::ACE_GRIDROW, "AceGridRow" },
     { AceLogTag::ACE_INPUTTRACKING, "AceInputTracking" },
     { AceLogTag::ACE_RICH_TEXT, "AceRichText" },
@@ -102,7 +106,6 @@ const std::unordered_map<AceLogTag, const char*> g_DOMAIN_CONTENTS_MAP = {
     { AceLogTag::ACE_NODE_CONTAINER, "AceNodeContainer" },
     { AceLogTag::ACE_NATIVE_NODE, "AceNativeNode" },
     { AceLogTag::ACE_ISOLATED_COMPONENT, "AceIsolatedComponent" },
-    { AceLogTag::ACE_DYNAMIC_COMPONENT, "AceDynamicComponent" },
     { AceLogTag::ACE_SECURITYUIEXTENSION, "AceSecurityUiExtensionComponent" },
     { AceLogTag::ACE_MARQUEE, "AceMarquee" },
     { AceLogTag::ACE_OBSERVER, "AceObserver" },
@@ -121,20 +124,15 @@ const std::unordered_map<AceLogTag, const char*> g_DOMAIN_CONTENTS_MAP = {
     { AceLogTag::ACE_ARK_COMPONENT, "AceArkComponent" },
     { AceLogTag::ACE_WINDOW, "AceWindow" },
     { AceLogTag::ACE_WINDOW_PIPELINE, "AceWindowPipeline" },
-    { AceLogTag::ACE_INPUTKEYFLOW, "InputKeyFlow" },
-    { AceLogTag::ACE_APPBAR, "AceAppBar" },
-    { AceLogTag::ACE_SELECT_OVERLAY, "AceSelectOverlay" },
-    { AceLogTag::ACE_CLIPBOARD, "AceClipBoard" },
-    { AceLogTag::ACE_SECURITY_COMPONENT, "AceSecurityComponent" },
+    { AceLogTag::ACE_INPUTKEYFLOW, "InputKeyFlow"},
+    { AceLogTag::ACE_APPBAR, "AceAppBar"},
+    { AceLogTag::ACE_SELECT_OVERLAY, "AceSelectOverlay"},
+    { AceLogTag::ACE_CLIPBOARD, "AceClipBoard"},
+    { AceLogTag::ACE_SECURITY_COMPONENT, "AceSecurityComponent"},
     { AceLogTag::ACE_LAYOUT_INSPECTOR, "AceLayoutInspector" },
     { AceLogTag::ACE_MEDIA_QUERY, "AceMediaQuery" },
     { AceLogTag::ACE_LAYOUT, "AceLayout" },
     { AceLogTag::ACE_STYLUS, "AceStylus" },
-    { AceLogTag::ACE_BADGE, "AceBadge" },
-    { AceLogTag::ACE_QRCODE, "AceQRCode" },
-    { AceLogTag::ACE_PROGRESS, "ACE_PROGRESS" },
-    { AceLogTag::ACE_DRAWABLE_DESCRIPTOR, "AceDrawableDescriptor" },
-    { AceLogTag::ACE_LAZY_GRID, "AceLazyGrid" },
 };
 // initial static member object
 LogLevel LogWrapper::level_ = LogLevel::DEBUG;

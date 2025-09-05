@@ -18,7 +18,6 @@
 #define protected public
 
 #include "base/geometry/ng/size_t.h"
-#include "core/common/resource/resource_parse_utils.h"
 #include "core/components/common/properties/color.h"
 #include "core/components_ng/base/view_stack_processor.h"
 #include "core/components_ng/pattern/divider/divider_layout_algorithm.h"
@@ -26,7 +25,6 @@
 #include "core/components_ng/pattern/divider/divider_model_ng.h"
 #include "core/components_ng/pattern/divider/divider_pattern.h"
 #include "core/components_ng/pattern/divider/divider_render_property.h"
-#include "test/mock/base/mock_system_properties.h"
 #include "test/mock/core/rosen/mock_canvas.h"
 #include "test/mock/core/common/mock_theme_manager.h"
 #include "test/mock/core/pipeline/mock_pipeline_context.h"
@@ -101,7 +99,7 @@ RefPtr<FrameNode> DividerTestNg::CreateDividerNode(TestProperty& testProperty)
  * @tc.desc: Test all the property of divider.
  * @tc.type: FUNC
  */
-HWTEST_F(DividerTestNg, DividerPatternTest001, TestSize.Level0)
+HWTEST_F(DividerTestNg, DividerPatternTest001, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. create frameNode
@@ -128,7 +126,7 @@ HWTEST_F(DividerTestNg, DividerPatternTest001, TestSize.Level0)
  * @tc.desc: Test all the layoutAlgorithm of divider
  * @tc.type: FUNC
  */
-HWTEST_F(DividerTestNg, DividerPatternTest002, TestSize.Level0)
+HWTEST_F(DividerTestNg, DividerPatternTest002, TestSize.Level1)
 {
     bool vertical[2] = { VERTICAL_TRUE, VERTICAL_FALSE };
     testProperty.strokeWidth = STROKE_WIDTH;
@@ -163,7 +161,7 @@ HWTEST_F(DividerTestNg, DividerPatternTest002, TestSize.Level0)
  * @tc.desc: Test all the pattern of divider
  * @tc.type: FUNC
  */
-HWTEST_F(DividerTestNg, DividerPatternTest003, TestSize.Level0)
+HWTEST_F(DividerTestNg, DividerPatternTest003, TestSize.Level1)
 {
     RefPtr<DividerLayoutAlgorithm> dividerLayoutAlgorithm = AceType::MakeRefPtr<DividerLayoutAlgorithm>();
     RefPtr<FrameNode> frameNode = CreateDividerNode(testProperty);
@@ -202,7 +200,7 @@ HWTEST_F(DividerTestNg, DividerPatternTest003, TestSize.Level0)
  * @tc.desc: Test the dynamic effect of the Divider
  * @tc.type: FUNC
  */
-HWTEST_F(DividerTestNg, DividerModifierTest001, TestSize.Level0)
+HWTEST_F(DividerTestNg, DividerModifierTest001, TestSize.Level1)
 {
     DividerModifier dividerModifier;
     Testing::MockCanvas rsCanvas;
@@ -217,7 +215,7 @@ HWTEST_F(DividerTestNg, DividerModifierTest001, TestSize.Level0)
  * @tc.desc: Test layoutAlgorithm of divider with testProperty.vertical = VERTICAL_TRUE
  * @tc.type: FUNC
  */
-HWTEST_F(DividerTestNg, DivideAlgorithmTest001, TestSize.Level0)
+HWTEST_F(DividerTestNg, DivideAlgorithmTest001, TestSize.Level1)
 {
     testProperty.strokeWidth = STROKE_WIDTH;
     testProperty.vertical = VERTICAL_TRUE;
@@ -247,7 +245,7 @@ HWTEST_F(DividerTestNg, DivideAlgorithmTest001, TestSize.Level0)
  * @tc.desc: Test layoutAlgorithm of divider with testProperty.vertical = VERTICAL_FALSE
  * @tc.type: FUNC
  */
-HWTEST_F(DividerTestNg, DivideAlgorithmTest002, TestSize.Level0)
+HWTEST_F(DividerTestNg, DivideAlgorithmTest002, TestSize.Level1)
 {
     testProperty.strokeWidth = STROKE_WIDTH;
     testProperty.vertical = VERTICAL_FALSE;
@@ -275,7 +273,7 @@ HWTEST_F(DividerTestNg, DivideAlgorithmTest002, TestSize.Level0)
  * @tc.desc: Test layoutAlgorithm of divider with testProperty.vertical = VERTICAL_FALSE and no selfIdealSize
  * @tc.type: FUNC
  */
-HWTEST_F(DividerTestNg, DivideAlgorithmTest003, TestSize.Level0)
+HWTEST_F(DividerTestNg, DivideAlgorithmTest003, TestSize.Level1)
 {
     testProperty.strokeWidth = STROKE_WIDTH;
     testProperty.vertical = VERTICAL_FALSE;
@@ -302,7 +300,7 @@ HWTEST_F(DividerTestNg, DivideAlgorithmTest003, TestSize.Level0)
  * @tc.desc: Test layoutAlgorithm of divider with testProperty.vertical = VERTICAL_TRUE and no selfIdealSize
  * @tc.type: FUNC
  */
-HWTEST_F(DividerTestNg, DivideAlgorithmTest004, TestSize.Level0)
+HWTEST_F(DividerTestNg, DivideAlgorithmTest004, TestSize.Level1)
 {
     testProperty.strokeWidth = STROKE_WIDTH;
     testProperty.vertical = VERTICAL_TRUE;
@@ -322,77 +320,5 @@ HWTEST_F(DividerTestNg, DivideAlgorithmTest004, TestSize.Level0)
     LayoutWrapperNode layoutWrapper = LayoutWrapperNode(frameNode, geometryNode, layoutProperty);
     dividerLayoutAlgorithm->MeasureContent(layoutConstraintF, &layoutWrapper);
     EXPECT_EQ(dividerLayoutAlgorithm->GetVertical(), testProperty.vertical);
-}
-
-/**
- * @tc.name: CreateWithDividerColorResourceObj
- * @tc.desc: Test CreateWithDividerColorResourceObj of Divider
- * @tc.type: FUNC
- */
-HWTEST_F(DividerTestNg, ResObjDividerColorTest1, TestSize.Level0)
-{
-    testProperty.strokeWidth = STROKE_WIDTH;
-    testProperty.vertical = VERTICAL_TRUE;
-    auto frameNode = CreateDividerNode(testProperty);
-    ASSERT_NE(frameNode, nullptr);
-    auto pattern = frameNode->GetPattern<DividerPattern>();
-    ASSERT_NE(pattern, nullptr);
-    DividerModelNG dividerModelNG;
-    std::string bundleName = "com.example.test";
-    std::string moduleName = "entry";
-    RefPtr<ResourceObject> resObj = AceType::MakeRefPtr<ResourceObject>(bundleName, moduleName, 0);
-    dividerModelNG.DividerColor(resObj);
-    std::string divider = pattern->GetResCacheMapByKey("divider.Color");
-    EXPECT_EQ(divider, "");
-}
-
-/**
- * @tc.name: OnColorConfigurationUpdate
- * @tc.desc: Test OnColorConfigurationUpdate of Divider
- * @tc.type: FUNC
- */
-HWTEST_F(DividerTestNg, OnColorConfigurationUpdateTest001, TestSize.Level0)
-{
-    testProperty.strokeWidth = STROKE_WIDTH;
-    testProperty.vertical = VERTICAL_TRUE;
-    LayoutConstraintF layoutConstraintF;
-    layoutConstraintF.maxSize = MAX_SIZE;
-    RefPtr<DividerLayoutAlgorithm> dividerLayoutAlgorithm = AceType::MakeRefPtr<DividerLayoutAlgorithm>();
-    auto themeManager = AceType::MakeRefPtr<MockThemeManager>();
-    MockPipelineContext::GetCurrent()->SetThemeManager(themeManager);
-
-    RefPtr<FrameNode> frameNode = CreateDividerNode(testProperty);
-    ASSERT_NE(frameNode, nullptr);
-    auto pattern = frameNode->GetPattern<DividerPattern>();
-    ASSERT_NE(pattern, nullptr);
-    g_isConfigChangePerform = true;
-    pattern->OnColorConfigurationUpdate();
-    g_isConfigChangePerform = false;
-    auto paintProperty = frameNode->GetPaintProperty<DividerRenderProperty>();
-    ASSERT_NE(paintProperty, nullptr);
-    auto color = paintProperty->GetDividerColorValue();
-    EXPECT_EQ(color.ColorToString(), "#FF000000");
-}
-
-/**
- * @tc.name: ResetDividerColorTests
- * @tc.desc: Test ResetDividerColor of Divider
- * @tc.type: FUNC
- */
-HWTEST_F(DividerTestNg, ResetDividerColorTest01, TestSize.Level0)
-{
-    testProperty.strokeWidth = STROKE_WIDTH;
-    testProperty.vertical = VERTICAL_TRUE;
-    auto frameNode = CreateDividerNode(testProperty);
-    ASSERT_NE(frameNode, nullptr);
-    auto paintProperty = frameNode->GetPaintProperty<DividerRenderProperty>();
-    ASSERT_NE(paintProperty, nullptr);
-    std::optional<Color> colorOpt = Color::RED;
-    DividerModelNG::SetDividerColor(frameNode.GetRawPtr(), colorOpt, true);
-    auto dividerColor = paintProperty->GetDividerColorValue();
-    EXPECT_EQ(dividerColor, Color::RED);
-    DividerModelNG::ResetDividerColor(frameNode.GetRawPtr());
-    dividerColor = paintProperty->GetDividerColorValue(Color::BLACK);
-    EXPECT_EQ(dividerColor, Color::BLACK);
 }
 } // namespace OHOS::Ace::NG

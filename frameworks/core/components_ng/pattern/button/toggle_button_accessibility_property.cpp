@@ -14,9 +14,10 @@
  */
 
 #include "core/components_ng/pattern/button/toggle_button_accessibility_property.h"
-#if defined(OHOS_STANDARD_SYSTEM) and !defined(ACE_UNITTEST)
-#include "accessibility_element_info.h"
-#endif
+
+#include "base/utils/utils.h"
+#include "core/components_ng/base/frame_node.h"
+#include "core/components_ng/pattern/button/toggle_button_paint_property.h"
 #include "core/components_ng/pattern/button/toggle_button_pattern.h"
 
 namespace OHOS::Ace::NG {
@@ -32,12 +33,5 @@ bool ToggleButtonAccessibilityProperty::IsChecked() const
     auto toggleButtonPaintProperty = frameNode->GetPaintProperty<ToggleButtonPaintProperty>();
     CHECK_NULL_RETURN(toggleButtonPaintProperty, false);
     return toggleButtonPaintProperty->GetIsOn().value_or(false);
-}
-
-void ToggleButtonAccessibilityProperty::GetExtraElementInfo(Accessibility::ExtraElementInfo& extraElementInfo)
-{
-#if defined(OHOS_STANDARD_SYSTEM) and !defined(ACE_UNITTEST)
-        extraElementInfo.SetExtraElementInfo("ToggleType", BUTTON);
-#endif
 }
 } // namespace OHOS::Ace::NG

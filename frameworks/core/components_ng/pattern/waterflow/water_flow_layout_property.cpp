@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -31,7 +31,6 @@ void WaterFlowLayoutProperty::ResetWaterflowLayoutInfoAndMeasure() const
     auto pattern = host->GetPattern<WaterFlowPattern>();
     CHECK_NULL_VOID(pattern);
     pattern->ResetLayoutInfo();
-    pattern->InvalidatedOffset();
     host->MarkDirtyNode(PROPERTY_UPDATE_MEASURE_SELF_AND_CHILD);
 }
 
@@ -46,8 +45,7 @@ void WaterFlowLayoutProperty::ToJsonValue(std::unique_ptr<JsonValue>& json, cons
     json->PutExtAttr("rowsTemplate", propRowsTemplate_.value_or("").c_str(), filter);
     json->PutExtAttr("columnsGap", propColumnsGap_.value_or(0.0_vp).ToString().c_str(), filter);
     json->PutExtAttr("rowsGap", propRowsGap_.value_or(0.0_vp).ToString().c_str(), filter);
-    json->PutExtAttr("layoutDirection", GetWaterflowDirectionStr().c_str(), filter);
-    json->PutExtAttr("cachedCount", propCachedCount_.value_or(1), filter);
+    json->PutExtAttr("layoutDirection ", GetWaterflowDirectionStr().c_str(), filter);
     auto jsonConstraintSize = JsonUtil::Create(true);
     if (itemLayoutConstraint_) {
         jsonConstraintSize->Put("minWidth", itemLayoutConstraint_->minSize.value_or(CalcSize())
@@ -62,12 +60,12 @@ void WaterFlowLayoutProperty::ToJsonValue(std::unique_ptr<JsonValue>& json, cons
                                                 .c_str());
         jsonConstraintSize->Put("maxWidth", itemLayoutConstraint_->maxSize.value_or(CalcSize())
                                                 .Width()
-                                                .value_or(CalcLength(LayoutInfinity<float>(), DimensionUnit::VP))
+                                                .value_or(CalcLength(Infinity<double>(), DimensionUnit::VP))
                                                 .ToString()
                                                 .c_str());
         jsonConstraintSize->Put("maxHeight", itemLayoutConstraint_->maxSize.value_or(CalcSize())
                                                 .Height()
-                                                .value_or(CalcLength(LayoutInfinity<float>(), DimensionUnit::VP))
+                                                .value_or(CalcLength(Infinity<double>(), DimensionUnit::VP))
                                                 .ToString()
                                                 .c_str());
         json->PutExtAttr("itemConstraintSize", jsonConstraintSize->ToString().c_str(), filter);
@@ -75,7 +73,6 @@ void WaterFlowLayoutProperty::ToJsonValue(std::unique_ptr<JsonValue>& json, cons
         json->PutExtAttr("itemConstraintSize", "0", filter);
     }
     json->PutExtAttr("enableScrollInteraction", propScrollEnabled_.value_or(true), filter);
-    json->PutExtAttr("syncLoad", propSyncLoad_.value_or(true), filter);
 }
 
 std::string WaterFlowLayoutProperty::GetWaterflowDirectionStr() const
@@ -94,7 +91,6 @@ RefPtr<LayoutProperty> WaterFlowLayoutProperty::Clone() const
     value->propColumnsGap_ = CloneColumnsGap();
     value->propWaterflowDirection_ = CloneWaterflowDirection();
     value->propScrollEnabled_ = CloneScrollEnabled();
-    value->propSyncLoad_ = CloneSyncLoad();
     if (itemLayoutConstraint_) {
         value->itemLayoutConstraint_ = std::make_unique<MeasureProperty>(*itemLayoutConstraint_);
     }

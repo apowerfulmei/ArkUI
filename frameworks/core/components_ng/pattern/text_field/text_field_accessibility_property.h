@@ -36,10 +36,7 @@ public:
 
     AceTextCategory GetTextInputType() const override;
 
-    bool IsEditable() const override
-    {
-        return true;
-    }
+    bool IsEditable() const override;
 
     bool IsMultiLine() const override;
 
@@ -60,10 +57,7 @@ public:
         errorText_ = errorText;
     }
 
-    std::string GetErrorText() const override
-    {
-        return errorText_;
-    }
+    std::string GetErrorText() const override;
 
     bool GetContentInvalid() const override;
 
@@ -73,8 +67,6 @@ protected:
     void SetSpecificSupportAction() override;
 
 private:
-    bool IsShowCount() const;
-    bool IsShowError() const;
     std::string errorText_;
 
     ACE_DISALLOW_COPY_AND_MOVE(TextFieldAccessibilityProperty);

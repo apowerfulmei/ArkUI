@@ -15,17 +15,15 @@
 
 #include "core/interfaces/native/node/node_relative_container_modifier.h"
 
-#include "core/common/resource/resource_parse_utils.h"
 #include "core/components_ng/pattern/relative_container/relative_container_model_ng.h"
 
 namespace OHOS::Ace::NG {
 namespace {
-constexpr int NUM_2 = 2;
-void SetGuideLine(ArkUINodeHandle node, ArkUIGuidelineStyle* values, ArkUI_Int32 size, void* rawPtr)
+
+void SetGuideLine(ArkUINodeHandle node, ArkUIGuidelineStyle* values, ArkUI_Int32 size)
 {
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
-    RelativeContainerModelNG::ResetResObj(frameNode, "relativeContainer.guideLine");
     std::vector<GuidelineInfo> guidelineInfos;
     for (int32_t i = 0; i < size; ++i) {
         GuidelineInfo info;
@@ -44,13 +42,6 @@ void SetGuideLine(ArkUINodeHandle node, ArkUIGuidelineStyle* values, ArkUI_Int32
         } else {
             CalcDimension start(0.0, DimensionUnit::VP);
             info.start = start;
-        }
-        if (SystemProperties::ConfigChangePerform() && rawPtr) {
-            auto objs = *(reinterpret_cast<const std::vector<RefPtr<ResourceObject>>*>(rawPtr));
-            RelativeContainerModelNG::SetPositionResObj(
-                objs[NUM_2 * i], info, "relativeContainer.guideLine.position.start");
-            RelativeContainerModelNG::SetPositionResObj(
-                objs[NUM_2 * i + 1], info, "relativeContainer.guideLine.position.end");
         }
         guidelineInfos.push_back(info);
     }
@@ -123,7 +114,6 @@ void ResetGuideline(ArkUINodeHandle node)
 {
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
-    RelativeContainerModelNG::ResetResObj(frameNode, "relativeContainer.guideLine");
     RelativeContainerModelNG::ResetGuideline(frameNode);
 }
 
@@ -139,31 +129,15 @@ namespace NodeModifier {
 
 const ArkUIRelativeContainerModifier* GetRelativeContainerModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
-    static const ArkUIRelativeContainerModifier modifier = {
-        .setGuideLine = SetGuideLine,
-        .setBarrier = SetBarrier,
-        .getGuideLine = GetGuideLine,
-        .getBarrier = GetBarrier,
-        .resetGuideline = ResetGuideline,
-        .resetBarrier = ResetBarrier,
-    };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
+    static const ArkUIRelativeContainerModifier modifier = { SetGuideLine, SetBarrier, GetGuideLine, GetBarrier,
+        ResetGuideline, ResetBarrier };
     return &modifier;
 }
 
 const CJUIRelativeContainerModifier* GetCJUIRelativeContainerModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
-    static const CJUIRelativeContainerModifier modifier = {
-        .setGuideLine = SetGuideLine,
-        .setBarrier = SetBarrier,
-        .getGuideLine = GetGuideLine,
-        .getBarrier = GetBarrier,
-        .resetGuideline = ResetGuideline,
-        .resetBarrier = ResetBarrier,
-    };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
+    static const CJUIRelativeContainerModifier modifier = { SetGuideLine, SetBarrier, GetGuideLine, GetBarrier,
+        ResetGuideline, ResetBarrier };
     return &modifier;
 }
 } // namespace NodeModifier

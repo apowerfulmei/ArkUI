@@ -22,30 +22,9 @@
 
 #include "base/geometry/ng/size_t.h"
 #include "core/components_ng/property/calc_length.h"
-#include "core/components_ng/property/layout_policy_property.h"
 #include "core/components_ng/property/measure_property.h"
 
 namespace OHOS::Ace::NG {
-enum class ReferenceEdge {
-    START,
-    END,
-};
-struct ViewPosReference {
-    float viewPosStart;
-    float viewPosEnd;
-    float referencePos;
-    ReferenceEdge referenceEdge;
-    Axis axis;
-
-    bool operator==(const ViewPosReference &other) const
-    {
-        return NearEqual(viewPosStart, other.viewPosStart) &&
-               NearEqual(viewPosEnd, other.viewPosEnd) &&
-               NearEqual(referencePos, other.referencePos) &&
-               referenceEdge == other.referenceEdge &&
-               axis == other.axis;
-    }
-};
 template<typename T>
 struct LayoutConstraintT {
     ScaleProperty scaleProperty = ScaleProperty::CreateScaleProperty();
@@ -54,7 +33,6 @@ struct LayoutConstraintT {
     SizeT<T> percentReference { 0, 0 };
     OptionalSize<T> parentIdealSize;
     OptionalSize<T> selfIdealSize;
-    std::optional<ViewPosReference> viewPosRef;
 
     static bool CompareWithInfinityCheck(const OptionalSize<float>& first, const OptionalSize<float>& second)
     {
@@ -96,8 +74,7 @@ struct LayoutConstraintT {
         return NearEqual(first, second);
     }
 
-    void ApplyAspectRatio(float ratio, const std::optional<CalcSize>& calcSize,
-        const std::optional<NG::LayoutPolicyProperty>& layoutPolicy = std::nullopt, bool greaterThanApiTen = false);
+    void ApplyAspectRatio(float ratio, const std::optional<CalcSize>& calcSize, bool greaterThanApiTen = false);
 
     void ApplyAspectRatioToParentIdealSize(bool useWidth, float ratio);
 
@@ -120,7 +97,7 @@ struct LayoutConstraintT {
         return (scaleProperty == layoutConstraint.scaleProperty) && (minSize == layoutConstraint.minSize) &&
                (maxSize == layoutConstraint.maxSize) && (percentReference == layoutConstraint.percentReference) &&
                (parentIdealSize == layoutConstraint.parentIdealSize) &&
-               (selfIdealSize == layoutConstraint.selfIdealSize) && (viewPosRef == layoutConstraint.viewPosRef);
+               (selfIdealSize == layoutConstraint.selfIdealSize);
     }
 
     bool operator!=(const LayoutConstraintT& layoutConstraint) const
@@ -135,8 +112,7 @@ struct LayoutConstraintT {
                CompareWithInfinityCheck(maxSize, layoutConstraint.maxSize) &&
                CompareWithInfinityCheck(parentIdealSize, layoutConstraint.parentIdealSize) &&
                CompareWithInfinityCheck(percentReference.Height(), layoutConstraint.percentReference.Height()) &&
-               CompareWithInfinityCheck(selfIdealSize, layoutConstraint.selfIdealSize) &&
-               (viewPosRef == layoutConstraint.viewPosRef);
+               CompareWithInfinityCheck(selfIdealSize, layoutConstraint.selfIdealSize);
     }
 
     bool EqualWithoutPercentHeight(const LayoutConstraintT& layoutConstraint) const
@@ -146,8 +122,7 @@ struct LayoutConstraintT {
                CompareWithInfinityCheck(maxSize, layoutConstraint.maxSize) &&
                CompareWithInfinityCheck(parentIdealSize, layoutConstraint.parentIdealSize) &&
                CompareWithInfinityCheck(percentReference.Width(), layoutConstraint.percentReference.Width()) &&
-               CompareWithInfinityCheck(selfIdealSize, layoutConstraint.selfIdealSize) &&
-               (viewPosRef == layoutConstraint.viewPosRef);
+               CompareWithInfinityCheck(selfIdealSize, layoutConstraint.selfIdealSize);
     }
 
     bool UpdateSelfMarginSizeWithCheck(const OptionalSize<T>& size)
@@ -188,27 +163,6 @@ struct LayoutConstraintT {
             return false;
         }
         return parentIdealSize.UpdateIllegalSizeWithCheck(size);
-    }
-
-    bool UpdateParentIdealSizeByLayoutPolicy(const SizeT<T>& size, bool isMax, NG::LayoutPolicyProperty layoutPolicy)
-    {
-        bool widthUpdated = false;
-        bool heightUpdated = false;
-        if (layoutPolicy.IsWidthMatch()) {
-            if (isMax) {
-                widthUpdated = parentIdealSize.UpdateWidthWhenSmaller(size);
-            } else {
-                widthUpdated = parentIdealSize.UpdateWidthWhenLarger(size);
-            }
-        }
-        if (layoutPolicy.IsHeightMatch()) {
-            if (isMax) {
-                heightUpdated = parentIdealSize.UpdateHeightWhenSmaller(size);
-            } else {
-                heightUpdated = parentIdealSize.UpdateHeightWhenLarger(size);
-            }
-        }
-        return widthUpdated || heightUpdated;
     }
 
     bool UpdateMaxSizeWithCheck(const SizeT<T>& size)

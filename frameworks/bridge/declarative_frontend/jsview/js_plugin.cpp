@@ -15,25 +15,40 @@
 
 #include "frameworks/bridge/declarative_frontend/jsview/js_plugin.h"
 
+#include "base/geometry/dimension.h"
 #include "base/log/ace_scoring_log.h"
+#include "base/log/log_wrapper.h"
 #include "bridge/declarative_frontend/jsview/models/plugin_model_impl.h"
+#include "core/components/common/properties/clip_path.h"
+#include "core/components_ng/base/view_stack_processor.h"
+#include "core/components_ng/pattern/plugin/plugin_model.h"
 #include "core/components_ng/pattern/plugin/plugin_model_ng.h"
+#include "core/components_ng/pattern/plugin/plugin_pattern.h"
+#include "frameworks/bridge/declarative_frontend/view_stack_processor.h"
+#include "frameworks/core/components/box/box_component.h"
+#include "frameworks/core/components/plugin/plugin_component.h"
 
 namespace OHOS::Ace {
+std::unique_ptr<PluginModel> PluginModel::instance_;
+std::mutex PluginModel::mutex_;
+
 PluginModel* PluginModel::GetInstance()
 {
+    if (!instance_) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (!instance_) {
 #ifdef NG_BUILD
-    static NG::PluginModelNG instance;
-    return &instance;
+            instance_.reset(new NG::PluginModelNG());
 #else
-    if (Container::IsCurrentUseNewPipeline()) {
-        static NG::PluginModelNG instance;
-        return &instance;
-    } else {
-        static Framework::PluginModelImpl instance;
-        return &instance;
-    }
+            if (Container::IsCurrentUseNewPipeline()) {
+                instance_.reset(new NG::PluginModelNG());
+            } else {
+                instance_.reset(new Framework::PluginModelImpl());
+            }
 #endif
+        }
+    }
+    return instance_.get();
 }
 } // namespace OHOS::Ace
 namespace OHOS::Ace::Framework {

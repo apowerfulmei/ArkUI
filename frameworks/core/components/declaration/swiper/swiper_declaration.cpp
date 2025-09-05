@@ -37,9 +37,6 @@ SwiperDeclaration::SwiperDeclaration()
 
 void SwiperDeclaration::InitializeStyle()
 {
-    if (!indicator_) {
-        return;
-    }
     RefPtr<SwiperIndicatorTheme> theme = GetTheme<SwiperIndicatorTheme>();
     if (theme) {
         indicator_->InitStyle(theme);
@@ -83,16 +80,10 @@ bool SwiperDeclaration::SetSpecializedAttr(const std::pair<std::string, std::str
             [](const std::string& val, SwiperDeclaration& swiper) { swiper.showIndicator_ = StringToBool(val); } },
         { DOM_INDICATOR_DISABLED,
             [](const std::string& val, SwiperDeclaration& swiper) {
-                if (!swiper.indicator_) {
-                    return;
-                }
                 swiper.indicator_->SetIndicatorDisabled(StringToBool(val));
             } },
         { DOM_INDICATOR_MASK,
             [](const std::string& val, SwiperDeclaration& swiper) {
-                if (!swiper.indicator_) {
-                    return;
-                }
                 swiper.indicator_->SetIndicatorMask(StringToBool(val));
             } },
         { DOM_INTERVAL, [](const std::string& val,
@@ -136,44 +127,26 @@ bool SwiperDeclaration::SetSpecializedStyle(const std::pair<std::string, std::st
             } },
         { DOM_INDICATOR_BOTTOM,
             [](const std::string& val, SwiperDeclaration& swiper) {
-                if (!swiper.indicator_) {
-                    return;
-                }
                 swiper.indicator_->SetBottom(swiper.ParseDimension(val));
             } },
         { DOM_INDICATOR_COLOR,
             [](const std::string& val, SwiperDeclaration& swiper) {
-                if (!swiper.indicator_) {
-                    return;
-                }
                 swiper.indicator_->SetColor(swiper.ParseColor(val));
             } },
         { DOM_INDICATOR_LEFT,
             [](const std::string& val, SwiperDeclaration& swiper) {
-                if (!swiper.indicator_) {
-                    return;
-                }
                 swiper.indicator_->SetLeft(swiper.ParseDimension(val));
             } },
         { DOM_INDICATOR_RIGHT,
             [](const std::string& val, SwiperDeclaration& swiper) {
-                if (!swiper.indicator_) {
-                    return;
-                }
                 swiper.indicator_->SetRight(swiper.ParseDimension(val));
             } },
         { DOM_INDICATOR_SELECTEDCOLOR,
             [](const std::string& val, SwiperDeclaration& swiper) {
-                if (!swiper.indicator_) {
-                    return;
-                }
                 swiper.indicator_->SetSelectedColor(swiper.ParseColor(val));
             } },
         { DOM_INDICATOR_SIZE,
             [](const std::string& val, SwiperDeclaration& swiper) {
-                if (!swiper.indicator_) {
-                    return;
-                }
                 Dimension indicatorSize = swiper.ParseDimension(val);
                 swiper.indicator_->SetSize(indicatorSize);
                 swiper.indicator_->SetSelectedSize(indicatorSize);
@@ -182,9 +155,6 @@ bool SwiperDeclaration::SetSpecializedStyle(const std::pair<std::string, std::st
             } },
         { DOM_INDICATOR_TOP,
             [](const std::string& val, SwiperDeclaration& swiper) {
-                if (!swiper.indicator_) {
-                    return;
-                }
                 swiper.indicator_->SetTop(swiper.ParseDimension(val));
             } },
         { DOM_NEXT_MARGIN,

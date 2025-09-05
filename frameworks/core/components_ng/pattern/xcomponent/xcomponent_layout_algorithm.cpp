@@ -13,33 +13,29 @@
  * limitations under the License.
  */
 
-#include "base/utils/utils.h"
-#include "core/components_ng/layout/drawing_layout_utils.h"
 #include "core/components_ng/pattern/xcomponent/xcomponent_layout_algorithm.h"
+#include "base/utils/utils.h"
 #include "core/components_ng/pattern/linear_layout/linear_layout_utils.h"
+#include "core/components_ng/pattern/xcomponent/xcomponent_layout_property.h"
 
 namespace OHOS::Ace::NG {
 std::optional<SizeF> XComponentLayoutAlgorithm::MeasureContent(
     const LayoutConstraintF& contentConstraint, LayoutWrapper* layoutWrapper)
 {
     auto layoutProperty = DynamicCast<XComponentLayoutProperty>(layoutWrapper->GetLayoutProperty());
-    CHECK_NULL_RETURN(layoutProperty, SizeF(0, 0));
     auto xcomponentType = layoutProperty->GetXComponentType().value_or(XComponentType::SURFACE);
     if (xcomponentType == XComponentType::COMPONENT) {
         return LayoutAlgorithm::MeasureContent(contentConstraint, layoutWrapper);
     }
-    SizeF layoutSize = contentConstraint.maxSize;
     if (contentConstraint.selfIdealSize.IsValid()) {
-        layoutSize = contentConstraint.selfIdealSize.ConvertToSizeT();
+        return contentConstraint.selfIdealSize.ConvertToSizeT();
     }
-    MeasureLayoutPolicySize(contentConstraint, layoutWrapper, layoutSize);
-    return layoutSize;
+    return contentConstraint.maxSize;
 }
 
 void XComponentLayoutAlgorithm::Measure(LayoutWrapper* layoutWrapper)
 {
     auto layoutProperty = DynamicCast<XComponentLayoutProperty>(layoutWrapper->GetLayoutProperty());
-    CHECK_NULL_VOID(layoutProperty);
     auto xcomponentType = layoutProperty->GetXComponentType().value_or(XComponentType::SURFACE);
     if (xcomponentType == XComponentType::COMPONENT) {
         LinearLayoutUtils::Measure(layoutWrapper, true);
@@ -51,7 +47,6 @@ void XComponentLayoutAlgorithm::Measure(LayoutWrapper* layoutWrapper)
 void XComponentLayoutAlgorithm::Layout(LayoutWrapper* layoutWrapper)
 {
     auto layoutProperty = DynamicCast<XComponentLayoutProperty>(layoutWrapper->GetLayoutProperty());
-    CHECK_NULL_VOID(layoutProperty);
     auto xcomponentType = layoutProperty->GetXComponentType().value_or(XComponentType::SURFACE);
     if (xcomponentType == XComponentType::COMPONENT) {
         LinearLayoutUtils::Layout(layoutWrapper, true, FlexAlign::CENTER, FlexAlign::FLEX_START);

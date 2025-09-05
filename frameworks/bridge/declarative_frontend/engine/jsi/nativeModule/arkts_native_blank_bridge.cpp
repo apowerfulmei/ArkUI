@@ -24,12 +24,9 @@ ArkUINativeModuleValue BlankBridge::SetColor(ArkUIRuntimeCallInfo* runtimeCallIn
     Local<JSValueRef> secondArg = runtimeCallInfo->GetCallArgRef(1);
     auto nativeNode = nodePtr(firstArg->ToNativePointer(vm)->Value());
     Color color;
-    RefPtr<ResourceObject> blankResObj;
-    auto nodeInfo = ArkTSUtils::MakeNativeNodeInfo(nativeNode);
-    if (ArkTSUtils::ParseJsColorAlpha(vm, secondArg, color, blankResObj, nodeInfo)) {
+    if (ArkTSUtils::ParseJsColorAlpha(vm, secondArg, color)) {
         uint32_t value = color.GetValue();
-        auto blankRawPtr = AceType::RawPtr(blankResObj);
-        GetArkUINodeModifiers()->getBlankModifier()->setColor(nativeNode, value, blankRawPtr);
+        GetArkUINodeModifiers()->getBlankModifier()->setColor(nativeNode, value);
     } else {
         GetArkUINodeModifiers()->getBlankModifier()->resetColor(nativeNode);
     }
@@ -52,21 +49,19 @@ ArkUINativeModuleValue BlankBridge::SetBlankHeight(ArkUIRuntimeCallInfo* runtime
     Local<JSValueRef> valueArg = runtimeCallInfo->GetCallArgRef(1);
     auto nativeNode = nodePtr(nodeArg->ToNativePointer(vm)->Value());
     CalcDimension height;
-    RefPtr<ResourceObject> heightResObj;
     std::string calcStr;
-    if (!ArkTSUtils::ParseJsDimensionVpNG(vm, valueArg, height, heightResObj)) {
+    if (!ArkTSUtils::ParseJsDimensionVpNG(vm, valueArg, height)) {
         GetArkUINodeModifiers()->getCommonModifier()->resetHeight(nativeNode);
     } else {
         if (LessNotEqual(height.Value(), 0.0)) {
             height.SetValue(0.0);
         }
-        auto heightRawResObj = AceType::RawPtr(heightResObj);
         if (height.Unit() == DimensionUnit::CALC) {
-            GetArkUINodeModifiers()->getCommonModifier()->setHeight(nativeNode, height.Value(),
-                static_cast<int32_t>(height.Unit()), height.CalcValue().c_str(), heightRawResObj);
+            GetArkUINodeModifiers()->getCommonModifier()->setHeight(
+                nativeNode, height.Value(), static_cast<int32_t>(height.Unit()), height.CalcValue().c_str());
         } else {
             GetArkUINodeModifiers()->getCommonModifier()->setHeight(
-                nativeNode, height.Value(), static_cast<int32_t>(height.Unit()), calcStr.c_str(), heightRawResObj);
+                nativeNode, height.Value(), static_cast<int32_t>(height.Unit()), calcStr.c_str());
         }
     }
     if (!ArkTSUtils::ParseJsDimensionVp(vm, valueArg, height)) {

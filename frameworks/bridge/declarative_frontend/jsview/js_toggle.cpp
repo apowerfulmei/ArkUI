@@ -17,16 +17,18 @@
 
 #include <cstddef>
 #include <string>
+#if !defined(PREVIEW) && defined(OHOS_PLATFORM)
 #include "interfaces/inner_api/ui_session/ui_session_manager.h"
+#endif
 
 #include "base/log/ace_scoring_log.h"
 #include "bridge/declarative_frontend/jsview/js_view_abstract.h"
 #include "bridge/declarative_frontend/jsview/js_button.h"
 #include "bridge/declarative_frontend/jsview/models/toggle_model_impl.h"
+#include "bridge/declarative_frontend/ark_theme/theme_apply/js_toggle_theme.h"
 #include "core/common/container.h"
 #include "core/components/common/properties/color.h"
 #include "core/components/toggle/toggle_theme.h"
-#include "core/components_ng/base/view_stack_model.h"
 #include "core/components_ng/base/view_stack_processor.h"
 #include "core/components_ng/pattern/button/toggle_button_model_ng.h"
 #include "core/components_ng/pattern/toggle/toggle_model_ng.h"
@@ -70,7 +72,6 @@ void JSToggle::JSBind(BindingTarget globalObj)
     JSClass<JSToggle>::StaticMethod("responseRegion", &JSToggle::JsResponseRegion);
     JSClass<JSToggle>::StaticMethod("size", &JSToggle::JsSize);
     JSClass<JSToggle>::StaticMethod("padding", &JSToggle::JsPadding);
-    JSClass<JSToggle>::StaticMethod("margin", &JSToggle::JsMargin);
     JSClass<JSToggle>::StaticMethod("pop", &JSToggle::Pop);
     JSClass<JSToggle>::StaticMethod("switchPointColor", &JSToggle::SwitchPointColor);
     JSClass<JSToggle>::StaticMethod("backgroundColor", &JSToggle::SetBackgroundColor);
@@ -131,9 +132,6 @@ void JSToggle::Create(const JSCallbackInfo& info)
         changeEventVal = isOnObj->GetProperty("changeEvent");
         auto isOnProperty = isOnObj->GetProperty("value");
         isOn = isOnProperty->IsBoolean() ? isOnProperty->ToBoolean() : false;
-    } else if (paramObject->HasProperty("$isOn")) {
-        changeEventVal = paramObject->GetProperty("$isOn");
-        isOn = tempIsOn->IsBoolean() ? tempIsOn->ToBoolean() : false;
     } else {
         isOn = tempIsOn->IsBoolean() ? tempIsOn->ToBoolean() : false;
     }
@@ -142,6 +140,7 @@ void JSToggle::Create(const JSCallbackInfo& info)
     if (!changeEventVal->IsUndefined() && changeEventVal->IsFunction()) {
         ParseToggleIsOnObject(info, changeEventVal);
     }
+    JSToggleTheme::ApplyTheme(NG::ToggleType(toggleType_));
 }
 
 void JSToggle::JsWidth(const JSCallbackInfo& info)
@@ -192,7 +191,9 @@ void JSToggle::JsHeight(const JSCallbackInfo& info)
 
 void JSToggle::JsHeight(const JSRef<JSVal>& jsValue)
 {
-    auto switchTheme = GetTheme<SwitchTheme>();
+    auto pipeline = PipelineBase::GetCurrentContext();
+    CHECK_NULL_VOID(pipeline);
+    auto switchTheme = pipeline->GetTheme<SwitchTheme>();
     CHECK_NULL_VOID(switchTheme);
     auto defaultHeight = switchTheme->GetHeight();
     auto verticalPadding = switchTheme->GetHotZoneVerticalPadding();
@@ -253,7 +254,9 @@ void JSToggle::OnChange(const JSCallbackInfo& args)
         PipelineContext::SetCallBackNode(node);
         auto newJSVal = JSRef<JSVal>::Make(ToJSValue(isOn));
         func->ExecuteJS(1, &newJSVal);
-        UiSessionManager::GetInstance()->ReportComponentChangeEvent("event", "Toggle.onChange");
+#if !defined(PREVIEW) && defined(OHOS_PLATFORM)
+        UiSessionManager::GetInstance().ReportComponentChangeEvent("event", "Toggle.onChange");
+#endif
     };
     ToggleModel::GetInstance()->OnChange(std::move(onChange));
     args.ReturnSelf();
@@ -266,11 +269,10 @@ void JSToggle::SelectedColor(const JSCallbackInfo& info)
     }
     Color color;
     std::optional<Color> selectedColor;
-    RefPtr<ResourceObject> resObj;
-    if (ParseJsColor(info[0], color, resObj)) {
+    if (ParseJsColor(info[0], color)) {
         selectedColor = color;
     }
-    CreateWithColorResourceObj(resObj, static_cast<int32_t>(ToggleColorType::SELECTED_COLOR));
+
     ToggleModel::GetInstance()->SetSelectedColor(selectedColor);
 }
 
@@ -280,14 +282,14 @@ void JSToggle::SwitchPointColor(const JSCallbackInfo& info)
         return;
     }
     Color color;
-    RefPtr<ResourceObject> resObj;
-    std::optional<Color> switchPointColor;
-    if (ParseJsColor(info[0], color, resObj)) {
-        switchPointColor = color;
-        ToggleModel::GetInstance()->SetSwitchPointColorSetByUser(true);
+    if (!ParseJsColor(info[0], color)) {
+        auto theme = GetTheme<SwitchTheme>();
+        if (theme) {
+            color = theme->GetPointColor();
+        }
     }
-    CreateWithColorResourceObj(resObj, static_cast<int32_t>(ToggleColorType::SWITCH_POINT_COLOR));
-    ToggleModel::GetInstance()->SetSwitchPointColor(switchPointColor);
+
+    ToggleModel::GetInstance()->SetSwitchPointColor(color);
 }
 
 void JSToggle::JsPadding(const JSCallbackInfo& info)
@@ -298,12 +300,6 @@ void JSToggle::JsPadding(const JSCallbackInfo& info)
     NG::PaddingPropertyF oldPadding = GetOldPadding(info);
     NG::PaddingProperty newPadding = GetNewPadding(info);
     ToggleModel::GetInstance()->SetPadding(oldPadding, newPadding);
-}
-
-void JSToggle::JsMargin(const JSCallbackInfo& info)
-{
-    ToggleModel::GetInstance()->SetIsUserSetMargin(true);
-    JSViewAbstract::JsMargin(info);
 }
 
 NG::PaddingPropertyF JSToggle::GetOldPadding(const JSCallbackInfo& info)
@@ -353,16 +349,34 @@ NG::PaddingPropertyF JSToggle::GetOldPadding(const JSCallbackInfo& info)
 
 NG::PaddingProperty JSToggle::GetNewPadding(const JSCallbackInfo& info)
 {
-    NG::PaddingProperty padding({ NG::CalcLength(0.0_vp), NG::CalcLength(0.0_vp), NG::CalcLength(0.0_vp),
-        NG::CalcLength(0.0_vp), std::nullopt, std::nullopt });
+    NG::PaddingProperty padding({
+        NG::CalcLength(0.0_vp), NG::CalcLength(0.0_vp), NG::CalcLength(0.0_vp), NG::CalcLength(0.0_vp)
+    });
     if (info[0]->IsObject()) {
+        std::optional<CalcDimension> left;
+        std::optional<CalcDimension> right;
+        std::optional<CalcDimension> top;
+        std::optional<CalcDimension> bottom;
         JSRef<JSObject> paddingObj = JSRef<JSObject>::Cast(info[0]);
-        CommonCalcDimension commonCalcDimension;
-        ParseCommonMarginOrPaddingCorner(paddingObj, commonCalcDimension);
-        if (commonCalcDimension.left.has_value() || commonCalcDimension.right.has_value() ||
-            commonCalcDimension.top.has_value() || commonCalcDimension.bottom.has_value()) {
-            padding = GetPadding(commonCalcDimension.top, commonCalcDimension.bottom, commonCalcDimension.left,
-                commonCalcDimension.right);
+
+        CalcDimension leftDimen;
+        if (ParseJsDimensionVp(paddingObj->GetProperty("left"), leftDimen)) {
+            left = leftDimen;
+        }
+        CalcDimension rightDimen;
+        if (ParseJsDimensionVp(paddingObj->GetProperty("right"), rightDimen)) {
+            right = rightDimen;
+        }
+        CalcDimension topDimen;
+        if (ParseJsDimensionVp(paddingObj->GetProperty("top"), topDimen)) {
+            top = topDimen;
+        }
+        CalcDimension bottomDimen;
+        if (ParseJsDimensionVp(paddingObj->GetProperty("bottom"), bottomDimen)) {
+            bottom = bottomDimen;
+        }
+        if (left.has_value() || right.has_value() || top.has_value() || bottom.has_value()) {
+            padding = GetPadding(top, bottom, left, right);
             return padding;
         }
     }
@@ -379,8 +393,9 @@ NG::PaddingProperty JSToggle::GetPadding(const std::optional<CalcDimension>& top
     const std::optional<CalcDimension>& bottom, const std::optional<CalcDimension>& left,
     const std::optional<CalcDimension>& right)
 {
-    NG::PaddingProperty padding({ NG::CalcLength(0.0_vp), NG::CalcLength(0.0_vp), NG::CalcLength(0.0_vp),
-        NG::CalcLength(0.0_vp), std::nullopt, std::nullopt });
+    NG::PaddingProperty padding({
+        NG::CalcLength(0.0_vp), NG::CalcLength(0.0_vp), NG::CalcLength(0.0_vp), NG::CalcLength(0.0_vp)
+    });
     if (left.has_value() && left.value().IsNonNegative()) {
         padding.left = NG::CalcLength(left.value());
     }
@@ -399,14 +414,12 @@ NG::PaddingProperty JSToggle::GetPadding(const std::optional<CalcDimension>& top
 void JSToggle::SetBackgroundColor(const JSCallbackInfo& info)
 {
     Color backgroundColor = Color::TRANSPARENT;
-    RefPtr<ResourceObject> resObj;
-    bool flag = ParseJsColor(info[0], backgroundColor, resObj);
+    bool flag = ParseJsColor(info[0], backgroundColor);
     if (!Container::IsCurrentUseNewPipeline()) {
         JSViewAbstract::JsBackgroundColor(info);
         return;
     }
     ToggleModel::GetInstance()->SetBackgroundColor(backgroundColor, flag);
-    CreateWithColorResourceObj(resObj, static_cast<int32_t>(ToggleColorType::BACKGROUND_COLOR));
 }
 
 void JSToggle::JsHoverEffect(const JSCallbackInfo& info)
@@ -418,9 +431,6 @@ void JSToggle::JsHoverEffect(const JSCallbackInfo& info)
 
 void JSToggle::Pop()
 {
-    if (ViewStackModel::GetInstance()->IsPrebuilding()) {
-        return ViewStackModel::GetInstance()->PushPrebuildCompCmd("[JSToggle][pop]", &JSToggle::Pop);
-    }
     ToggleModel::GetInstance()->Pop();
 }
 
@@ -430,90 +440,45 @@ void JSToggle::SwitchStyle(const JSCallbackInfo& info)
         return;
     }
     JSRef<JSObject> jsObj = JSRef<JSObject>::Cast(info[0]);
-    SetPointRadius(jsObj);
-    SetUnselectedColor(jsObj);
-    SetPointColor(jsObj);
-    SetTrackBorderRadius(jsObj);
-}
 
-void JSToggle::SetPointRadius(const JSRef<JSObject>& jsObj)
-{
     CalcDimension pointRadius;
-    RefPtr<ResourceObject> pointRadiusResObj;
     if (jsObj->HasProperty("pointRadius") &&
-        ParseJsDimensionVpNG(jsObj->GetProperty("pointRadius"), pointRadius, pointRadiusResObj, false) &&
-        !pointRadius.IsNegative()) {
+        ParseJsDimensionVpNG(jsObj->GetProperty("pointRadius"), pointRadius, false) && !pointRadius.IsNegative()) {
         ToggleModel::GetInstance()->SetPointRadius(pointRadius);
     } else {
         ToggleModel::GetInstance()->ResetPointRadius();
     }
-    CreateWithDimensionResourceObj(pointRadiusResObj, static_cast<int32_t>(ToggleDimensionType::POINT_RADIUS));
-}
 
-void JSToggle::SetUnselectedColor(const JSRef<JSObject>& jsObj)
-{
     Color unselectedColor;
-    RefPtr<ResourceObject> unselectedColorResObj;
     if (jsObj->HasProperty("unselectedColor") &&
-        ParseJsColor(jsObj->GetProperty("unselectedColor"), unselectedColor, unselectedColorResObj)) {
+        ParseJsColor(jsObj->GetProperty("unselectedColor"), unselectedColor)) {
         ToggleModel::GetInstance()->SetUnselectedColor(unselectedColor);
-        ToggleModel::GetInstance()->SetUnselectedColorSetByUser(true);
     } else {
         auto theme = GetTheme<SwitchTheme>();
         if (theme) {
             unselectedColor = theme->GetInactiveColor();
         }
         ToggleModel::GetInstance()->SetUnselectedColor(unselectedColor);
-        ToggleModel::GetInstance()->SetUnselectedColorSetByUser(false);
     }
-    CreateWithColorResourceObj(unselectedColorResObj, static_cast<int32_t>(ToggleColorType::UN_SELECTED_COLOR));
-}
 
-void JSToggle::SetPointColor(const JSRef<JSObject>& jsObj)
-{
     Color pointColor;
-    RefPtr<ResourceObject> pointColorResObj;
-    if (jsObj->HasProperty("pointColor") && ParseJsColor(jsObj->GetProperty("pointColor"),
-        pointColor, pointColorResObj)) {
+    if (jsObj->HasProperty("pointColor") && ParseJsColor(jsObj->GetProperty("pointColor"), pointColor)) {
         ToggleModel::GetInstance()->SetSwitchPointColor(pointColor);
-        ToggleModel::GetInstance()->SetSwitchPointColorSetByUser(true);
     } else {
         auto theme = GetTheme<SwitchTheme>();
         if (theme) {
             pointColor = theme->GetPointColor();
         }
         ToggleModel::GetInstance()->SetSwitchPointColor(pointColor);
-        ToggleModel::GetInstance()->SetSwitchPointColorSetByUser(false);
     }
-    CreateWithColorResourceObj(pointColorResObj, static_cast<int32_t>(ToggleColorType::SWITCH_POINT_COLOR));
-}
 
-void JSToggle::SetTrackBorderRadius(const JSRef<JSObject>& jsObj)
-{
     CalcDimension trackRadius;
-    RefPtr<ResourceObject> trackBorderRadiusResObj;
     if (jsObj->HasProperty("trackBorderRadius") &&
-        ParseJsDimensionVpNG(jsObj->GetProperty("trackBorderRadius"), trackRadius, trackBorderRadiusResObj, false) &&
+        ParseJsDimensionVpNG(jsObj->GetProperty("trackBorderRadius"), trackRadius, false) &&
         !trackRadius.IsNegative()) {
         ToggleModel::GetInstance()->SetTrackBorderRadius(trackRadius);
     } else {
         ToggleModel::GetInstance()->ResetTrackBorderRadius();
-    }
-    CreateWithDimensionResourceObj(trackBorderRadiusResObj,
-        static_cast<int32_t>(ToggleDimensionType::TRACK_BORDER_RADIUS));
-}
-
-void JSToggle::CreateWithDimensionResourceObj(RefPtr<ResourceObject>& resObj, const int32_t resType)
-{
-    if (SystemProperties::ConfigChangePerform()) {
-        ToggleModel::GetInstance()->CreateWithDimensionVpResourceObj(resObj, static_cast<ToggleDimensionType>(resType));
-    }
-}
-
-void JSToggle::CreateWithColorResourceObj(RefPtr<ResourceObject>& resObj, const int32_t resType)
-{
-    if (SystemProperties::ConfigChangePerform()) {
-        ToggleModel::GetInstance()->CreateWithColorResourceObj(resObj, static_cast<ToggleColorType>(resType));
     }
 }
 
@@ -534,9 +499,10 @@ void JSToggle::JsBorder(const JSCallbackInfo& info)
     if (!info[0]->IsObject()) {
         return;
     }
+    JSRef<JSObject> object = JSRef<JSObject>::Cast(info[0]);
+    CalcDimension borderRadius;
+    auto valueRadius = object->GetProperty("radius");
     if (static_cast<NG::ToggleType>(toggleType_) == NG::ToggleType::BUTTON) {
-        JSRef<JSObject> object = JSRef<JSObject>::Cast(info[0]);
-        auto valueRadius = object->GetProperty("radius");
         JSButton::JsRadius(valueRadius);
     }
 }

@@ -24,28 +24,65 @@
 namespace OHOS::Ace::NG {
 
 class RadioPaintProperty : public PaintProperty {
-    DECLARE_ACE_TYPE(RadioPaintProperty, PaintProperty);
+    DECLARE_ACE_TYPE(RadioPaintProperty, PaintProperty)
 
 public:
     RadioPaintProperty() = default;
     ~RadioPaintProperty() override = default;
 
-    RefPtr<PaintProperty> Clone() const override;
+    RefPtr<PaintProperty> Clone() const override
+    {
+        auto paintProperty = MakeRefPtr<RadioPaintProperty>();
+        paintProperty->UpdatePaintProperty(this);
+        paintProperty->propRadioCheck_ = CloneRadioCheck();
+        paintProperty->propRadioCheckedBackgroundColor_ = CloneRadioCheckedBackgroundColor();
+        paintProperty->propRadioUncheckedBorderColor_ = CloneRadioUncheckedBorderColor();
+        paintProperty->propRadioIndicatorColor_ = CloneRadioIndicatorColor();
+        paintProperty->propRadioIndicator_ = CloneRadioIndicator();
+        return paintProperty;
+    }
 
-    void Reset() override;
+    void Reset() override
+    {
+        PaintProperty::Reset();
+        ResetRadioCheck();
+        ResetRadioCheckedBackgroundColor();
+        ResetRadioUncheckedBorderColor();
+        ResetRadioIndicatorColor();
+        ResetRadioIndicator();
+    }
 
-    void ToJsonValue(std::unique_ptr<JsonValue>& json, const InspectorFilter& filter) const override;
-
-    void ToTreeJson(std::unique_ptr<JsonValue>& json, const InspectorConfig& config) const override;
+    void ToJsonValue(std::unique_ptr<JsonValue>& json, const InspectorFilter& filter) const override
+    {
+        PaintProperty::ToJsonValue(json, filter);
+        /* no fixed attr below, just return */
+        if (filter.IsFastFilter()) {
+            return;
+        }
+        auto pipeline = PipelineBase::GetCurrentContext();
+        CHECK_NULL_VOID(pipeline);
+        auto radioTheme = pipeline->GetTheme<RadioTheme>();
+        json->PutExtAttr("checked", GetRadioCheck().value_or(false) ? "true" : "false", filter);
+        auto jsonValue = JsonUtil::Create(true);
+        jsonValue->Put("checkedBackgroundColor",
+            GetRadioCheckedBackgroundColor().value_or(radioTheme->GetActiveColor()).ColorToString().c_str());
+        jsonValue->Put("uncheckedBorderColor",
+            GetRadioUncheckedBorderColor().value_or(radioTheme->GetInactiveColor()).ColorToString().c_str());
+        jsonValue->Put(
+            "indicatorColor", GetRadioIndicatorColor().value_or(radioTheme->GetPointColor()).ColorToString().c_str());
+        if (Container::GreatOrEqualAPITargetVersion(PlatformVersion::VERSION_TWELVE)) {
+            static const char* INDICATRO_TYPE[] = { "TICK", "DOT", "CUSTOM" };
+            json->PutExtAttr("indicatorType",
+                INDICATRO_TYPE[static_cast<int32_t>(GetRadioIndicator().value_or(0))], filter);
+        }
+        json->PutExtAttr("radioStyle", jsonValue->ToString().c_str(), filter);
+    }
 
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(RadioCheck, bool, PROPERTY_UPDATE_RENDER);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(RadioCheckedBackgroundColor, Color, PROPERTY_UPDATE_RENDER);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(RadioUncheckedBorderColor, Color, PROPERTY_UPDATE_RENDER);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(RadioIndicatorColor, Color, PROPERTY_UPDATE_RENDER);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(RadioIndicator, int32_t, PROPERTY_UPDATE_RENDER);
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(RadioCheckedBackgroundColorSetByUser, bool, PROPERTY_UPDATE_RENDER);
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(RadioUncheckedBorderColorSetByUser, bool, PROPERTY_UPDATE_RENDER);
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(RadioIndicatorColorSetByUser, bool, PROPERTY_UPDATE_RENDER);
 };
 } // namespace OHOS::Ace::NG
 

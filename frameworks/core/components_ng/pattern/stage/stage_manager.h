@@ -24,7 +24,6 @@
 #include "core/animation/page_transition_common.h"
 #include "core/components_ng/base/ui_node.h"
 #include "core/components_ng/pattern/stage/stage_pattern.h"
-#include "core/components_ng/pattern/stage/page_transition_effect.h"
 
 namespace OHOS::Ace::NG {
 class FrameNode;
@@ -39,10 +38,9 @@ public:
     ~StageManager() override = default;
 
     // PushUrl and ReplaceUrl both use PushPage function
-    virtual bool PushPage(const RefPtr<FrameNode>& node, bool needHideLast = true, bool needTransition = true,
-        const std::function<bool()>&& pushIntentPageCallback = nullptr);
+    virtual bool PushPage(const RefPtr<FrameNode>& node, bool needHideLast = true, bool needTransition = true);
     virtual bool InsertPage(const RefPtr<FrameNode>& node, bool bellowTopOrBottom);
-    virtual bool PopPage(const RefPtr<FrameNode>& inPageNode, bool needShowNext = true, bool needTransition = true);
+    virtual bool PopPage(bool needShowNext = true, bool needTransition = true);
     virtual bool PopPageToIndex(int32_t index, bool needShowNext = true, bool needTransition = true);
     virtual bool CleanPageStack();
     virtual bool MovePageToFront(const RefPtr<FrameNode>& node, bool needHideLast = true, bool needTransition = true);
@@ -50,7 +48,6 @@ public:
     virtual void StartTransition(const RefPtr<FrameNode>& srcPage, const RefPtr<FrameNode>& destPage, RouteType type);
 
     void PageChangeCloseKeyboard();
-    void UpdateColorModeForPage(const RefPtr<FrameNode>& page);
 
     static void FirePageHide(const RefPtr<UINode>& node, PageTransitionType transitionType = PageTransitionType::NONE);
     static void FirePageShow(const RefPtr<UINode>& node, PageTransitionType transitionType = PageTransitionType::NONE,
@@ -77,34 +74,6 @@ public:
         stageInTrasition_ = stageInTrasition;
     }
 
-    void SetForceSplitEnable(bool isForceSplit, const std::string& homePage, bool ignoreOrientation = false);
-
-    bool GetForceSplitEnable() const
-    {
-        return isForceSplit_;
-    }
-
-    std::string GetHomePageConfig() const
-    {
-        return homePageConfig_;
-    }
-
-    bool GetIgnoreOrientation() const
-    {
-        return ignoreOrientation_;
-    }
-
-    bool GetDetectPrimaryPageEnable() const
-    {
-        return isDetectPrimaryPage_;
-    }
-
-    void OnForceSplitConfigUpdate()
-    {
-        CHECK_NULL_VOID(stagePattern_);
-        stagePattern_->OnForceSplitConfigUpdate();
-    }
-
 #if defined(ENABLE_SPLIT_MODE)
     bool IsNewPageReplacing() const
     {
@@ -121,72 +90,23 @@ public:
     
     virtual bool CheckPageFocus();
 
-    void SetSrcPage(const RefPtr<FrameNode>& pageNode)
-    {
-        srcPageNode_ = pageNode;
-    }
-
-    void AddAnimation(const std::shared_ptr<AnimationUtils::Animation>& animation, bool isPush)
-    {
-        if (isPush) {
-            pushAnimations_.emplace_back(animation);
-            return;
-        }
-        popAnimations_.emplace_back(animation);
-    }
-
-    void AbortAnimation();
-
-    int32_t GetAnimationId() const
-    {
-        return animationId_;
-    }
-
-    void SetGetPagePathCallback(std::function<std::string(const std::string& url)>&& callback)
-    {
-        getPagePathCallback_ = std::move(callback);
-    }
-    std::vector<std::string> GetTopPagePaths() const;
-    virtual std::vector<RefPtr<FrameNode>> GetTopPagesWithTransition() const;
-    virtual bool IsSplitMode() const
-    {
-        return false;
-    }
-
 protected:
     // ace performance check
     void PerformanceCheck(const RefPtr<FrameNode>& pageNode, int64_t vsyncTimeout, std::string path);
+    void StopPageTransition();
     void FireAutoSave(const RefPtr<FrameNode>& outPageNode, const RefPtr<FrameNode>& inPageNode);
     void AddPageTransitionTrace(const RefPtr<FrameNode>& srcPage, const RefPtr<FrameNode>& destPage);
-    std::string GetSrcPageInfo(const RefPtr<FrameNode>& srcPage);
-    void UpdatePageNeedRemove(const RefPtr<UINode>& pageNode);
-    bool CheckPageInTransition(const RefPtr<UINode>& pageNode);
-    void StopPageTransition(bool needTransition);
-    std::string GetPagePath(const RefPtr<FrameNode>& pageNode);
-
-    std::list<std::shared_ptr<AnimationUtils::Animation>> pushAnimations_;
-    std::list<std::shared_ptr<AnimationUtils::Animation>> popAnimations_;
 
     RefPtr<FrameNode> stageNode_;
     RefPtr<StagePattern> stagePattern_;
     WeakPtr<FrameNode> destPageNode_;
     WeakPtr<FrameNode> srcPageNode_;
-    WeakPtr<FrameNode> animationSrcPage_;
-    int32_t animationId_ = -1;
     bool stageInTrasition_ = false;
 #if defined(ENABLE_SPLIT_MODE)
     bool isNewPageReplacing_ = false;
 #endif
-    std::string replaceSrcPageInfo_;
-    std::function<std::string(const std::string& url)> getPagePathCallback_;
 
     ACE_DISALLOW_COPY_AND_MOVE(StageManager);
-
-private:
-    bool isForceSplit_ = false;
-    std::string homePageConfig_;
-    bool isDetectPrimaryPage_ = false;
-    bool ignoreOrientation_ = false;
 };
 } // namespace OHOS::Ace::NG
 

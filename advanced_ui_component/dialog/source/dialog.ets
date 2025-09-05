@@ -22,9 +22,6 @@ import resourceManager from '@ohos.resourceManager';
 import { CustomColors, CustomTheme, Theme } from '@ohos.arkui.theme';
 import { LengthMetrics, LengthUnit } from '@ohos.arkui.node';
 import common from '@ohos.app.ability.common';
-import { accessibility } from '@kit.AccessibilityKit';
-import { KeyCode } from '@kit.InputKit';
-import { i18n } from '@kit.LocalizationKit';
 
 class CustomThemeImpl implements CustomTheme {
   public colors?: CustomColors;
@@ -38,6 +35,7 @@ const TITLE_MAX_LINES: number = 2;
 const HORIZON_BUTTON_MAX_COUNT: number = 2;
 const VERTICAL_BUTTON_MAX_COUNT: number = 4;
 const BUTTON_LAYOUT_WEIGHT: number = 1;
+const CHECKBOX_CONTAINER_HEIGHT: number = 48;
 const CONTENT_MAX_LINES: number = 2;
 const LOADING_PROGRESS_WIDTH: number = 40;
 const LOADING_PROGRESS_HEIGHT: number = 40;
@@ -49,6 +47,7 @@ const LOADING_MIN_HEIGHT: number = 48;
 const LIST_MIN_HEIGHT: number = 48;
 const CHECKBOX_CONTAINER_LENGTH: number = 20;
 const TEXT_MIN_HEIGHT: number = 48;
+const DEFAULT_IMAGE_SIZE: number = 64;
 const MIN_CONTENT_HEIGHT: number = 100;
 const MAX_CONTENT_HEIGHT: number = 30000;
 const KEYCODE_UP: number = 2012;
@@ -56,14 +55,18 @@ const KEYCODE_DOWN: number = 2013;
 const IGNORE_KEY_EVENT_TYPE: number = 1;
 const FIRST_ITEM_INDEX: number = 0;
 const VERSION_TWELVE: number = 50000012;
+const BUTTON_MIN_FONT_SIZE = 9;
 const MAX_FONT_SCALE: number = 2;
-const FADEOUT_GRADIENT_WIDTH: number = 32;
-const FADEOUT_ENABLE: string = 'true';
-
 // 'sys.float.alert_container_max_width'
 const MAX_DIALOG_WIDTH: number = getNumberByResourceId(125831042, 400);
+// 'sys.float.alert_right_padding_horizontal'
+const BUTTON_HORIZONTAL_MARGIN: number = getNumberByResourceId(125831054, 16);
 // 'sys.float.padding_level8'
 const BUTTON_HORIZONTAL_PADDING: number = getNumberByResourceId(125830927, 16);
+// 'sys.float.alert_button_horizontal_space'
+const BUTTON_HORIZONTAL_SPACE: number = getNumberByResourceId(125831051, 8);
+// 'sys.float.padding_level4'
+const CHECK_BOX_MARGIN_END: number = getNumberByResourceId(125830923, 8);
 // 'sys.float.Body_L'
 const BODY_L = getNumberByResourceId(125830970, 16);
 // 'sys.float.Body_M'
@@ -72,89 +75,22 @@ const BODY_M = getNumberByResourceId(125830971, 14);
 const BODY_S = getNumberByResourceId(125830972, 12);
 // 'sys.float.Title_S'
 const TITLE_S = getNumberByResourceId(125830966, 20);
+// 'sys.float.Subtitle_S'
+const SUBTITLE_S = getNumberByResourceId(125830969, 14);
 // 'sys.float.padding_level8'
 const PADDING_LEVEL_8 = getNumberByResourceId(125830927, 16);
-
-const BUTTON_HORIZONTAL_MARGIN = lazyInit<number>(() => {
-  return getLengthMetricsByResource($r('sys.float.alert_right_padding_horizontal'), 16);
-});
-const BUTTON_HORIZONTAL_SPACE = lazyInit<number>(() => {
-  return getLengthMetricsByResource($r('sys.float.alert_button_horizontal_space'), 8);
-});
-const BUTTON_MIN_FONT_SIZE = lazyInit<number>(() => {
-  return getLengthMetricsByResource($r('sys.float.dialog_button_font_min_size'), 9);
-});
-const BUTTON_MAX_FONT_SIZE = lazyInit<number>(() => {
-  return getLengthMetricsByResource($r('sys.float.dialog_button_font_max_size'), 16);
-});
-const DEFAULT_IMAGE_SIZE = lazyInit<number>(() => {
-  return getLengthMetricsByResource($r('sys.float.dialog_tip_image_size'), 64);
-});
-const DEFAULT_IMAGE_RADIUS = lazyInit<number>(() => {
-  return getLengthMetricsByResource($r('sys.float.dialog_tip_image_radius'), 12);
-});
-const TIP_TEXT_TOP_PADDING = lazyInit<number>(() => {
-  return getLengthMetricsByResource($r('sys.float.dialog_tip_text_top_padding'), 16);
-});
-const TIP_CHECKBOX_TOP_PADDING = lazyInit<number>(() => {
-  return getLengthMetricsByResource($r('sys.float.dialog_checkbox_top_padding'), 8);
-});
-const TIP_CHECKBOX_BOTTOM_PADDING = lazyInit<number>(() => {
-  return getLengthMetricsByResource($r('sys.float.dialog_checkbox_bottom_padding'), 8, true);
-});
-const TIP_CHECKBOX_END_MARGIN = lazyInit<number>(() => {
-  return getLengthMetricsByResource($r('sys.float.dialog_checkbox_end_margin'), 8);
-});
-const SUBTITLE_SIZE = lazyInit<number>(() => {
-  return getLengthMetricsByResource($r('sys.float.dialog_subtitle_font_size'), 14);
-});
-const CHECKBOX_CONTAINER_HEIGHT = lazyInit<number>(() => {
-  return getLengthMetricsByResource($r('sys.float.dialog_checkbox_min_height'), 48, true);
-});
-const CONTENT_END_MARGIN = lazyInit<number>(() => {
-  return getLengthMetricsByResource($r('sys.float.dialog_content_right_margin'), 16);
-});
-const SCROLL_END_MARGIN = lazyInit<number>(() => {
-  return getLengthMetricsByResource($r('sys.float.dialog_scroll_right_margin'), 16);
-});
-const DIALOG_DIVIDER_SHOW = lazyInit<number>(() => {
-  return getLengthMetricsByResource($r('sys.float.dialog_divider_show'), 1, true);
-});
-const ALERT_BUTTON_STYLE = lazyInit<number>(() => {
-  return getLengthMetricsByResource($r('sys.float.alert_button_style'), 2, true);
-});
-const ALERT_TITLE_ALIGNMENT = lazyInit<number>(() => {
-  return getLengthMetricsByResource($r('sys.float.alert_title_alignment'), 1);
-});
-const ERROR_BUTTON_STYLE = lazyInit<number>(() => {
-  return getLengthMetricsByResource($r('sys.float.dialog_error_button_style'), 2, true);
-});
-// 'sys.string.ohos_id_text_fadeout_enable_default'
-const IS_FADEOUT_ENABLE = lazyInit<boolean>(() => {
-  return getString(125831120) === FADEOUT_ENABLE;
-});
-// 'sys.string.dialog_title_font_weight'
-const TITLE_FONT_WEIGHT = lazyInit<FontWeight>(() => {
-  let fontWeight: FontWeight = FontWeight[getString(125834679) || 'Bold'];
-  return fontWeight;
-});
-// 'sys.string.dialog_content_font_weight'
-const CONTENT_FONT_WEIGHT = lazyInit<FontWeight>(() => {
-  let fontWeight: FontWeight = FontWeight[getString(125834682) || 'Medium'];
-  return fontWeight;
-});
-// 'sys.string.dialog_content_font_size'
-const CONTENT_FONT_SIZE = lazyInit<number>(() => {
-  return getLengthMetricsByResource($r('sys.float.dialog_content_font_size'), BODY_L);
-});
-const SCROLL_BAR_OFFSET = 20;
-const SELECT_DIALOG_SCROLL_BAR_OFFSET = 4;
+// 'sys.float.dialog_divider_show'
+const DIALOG_DIVIDER_SHOW = getNumberByResourceId(125831202, 1, true);
+// 'sys.float.alert_button_style'
+const ALERT_BUTTON_STYLE = getNumberByResourceId(125831085, 2, true);
+// 'sys.float.alert_title_alignment'
+const ALERT_TITLE_ALIGNMENT = getEnumNumberByResourceId(125831126, 1);
 
 @CustomDialog
 export struct TipsDialog {
   controller: CustomDialogController;
   imageRes: ResourceStr | PixelMap | null = null;
-  @State imageSize?: SizeOptions = { width: DEFAULT_IMAGE_SIZE(), height: DEFAULT_IMAGE_SIZE() };
+  @State imageSize?: SizeOptions = { width: DEFAULT_IMAGE_SIZE, height: DEFAULT_IMAGE_SIZE };
   title?: ResourceStr | null = null;
   content?: ResourceStr | null = null;
   checkAction?: (isChecked: boolean) => void;
@@ -164,7 +100,7 @@ export struct TipsDialog {
   primaryButton?: ButtonOptions | null = null;
   secondaryButton?: ButtonOptions | null = null;
   buttons?: ButtonOptions[] | undefined = undefined;
-  @State textAlignment: TextAlign = TextAlign.Center;
+  @State textAlignment: TextAlign = TextAlign.Start;
   marginOffset: number = 0;
   // the controller of content area scroll
   contentScroller: Scroller = new Scroller();
@@ -173,6 +109,11 @@ export struct TipsDialog {
   themeColorMode?: ThemeColorMode = ThemeColorMode.SYSTEM;
   @State fontSizeScale: number = 1;
   @State minContentHeight: number = 160;
+  updateTextAlign: (maxWidth: number) => void = (maxWidth: number) => {
+    if (this.content) {
+      this.textAlignment = getTextAlign(maxWidth, this.content, `${BODY_L * this.fontSizeScale}vp`);
+    }
+  }
   imageIndex: number = 0;
   textIndex: number = 1;
   checkBoxIndex: number = 2;
@@ -198,18 +139,17 @@ export struct TipsDialog {
       title: this.title,
       content: this.content,
       checkTips: this.checkTips,
-      minContentHeight: this.minContentHeight
+      minContentHeight: this.minContentHeight,
+      updateTextAlign: this.updateTextAlign
     }) {
       ForEach([this.imageIndex, this.textIndex, this.checkBoxIndex], (index: number) => {
         if (index === this.imageIndex) {
           this.imagePart();
         } else if (index === this.textIndex) {
           Column() {
-            WithTheme({ theme: this.theme, colorMode: this.themeColorMode }) {
-              this.textPart();
-            }
+            this.textPart();
           }
-          .padding({ top: TIP_TEXT_TOP_PADDING() })
+          .padding({ top: $r('sys.float.padding_level8') })
         } else {
           WithTheme({ theme: this.theme, colorMode: this.themeColorMode }) {
             this.checkBoxPart();
@@ -233,9 +173,10 @@ export struct TipsDialog {
               this.onCheckedChange(checked);
             }
           })
-          .margin({ start: LengthMetrics.vp(0), end: LengthMetrics.vp(TIP_CHECKBOX_END_MARGIN()) })
+          .accessibilityLevel('yes')
+          .margin({ start: LengthMetrics.vp(0), end: LengthMetrics.vp(CHECK_BOX_MARGIN_END) })
         Text(this.checkTips)
-          .fontSize(`${CONTENT_FONT_SIZE()}fp`)
+          .fontSize(`${BODY_L}fp`)
           .fontWeight(FontWeight.Regular)
           .fontColor(this.fontColorWithTheme)
           .maxLines(CONTENT_MAX_LINES)
@@ -245,33 +186,14 @@ export struct TipsDialog {
       }
     }
     .accessibilityGroup(true)
-    .accessibilityText(getCheckTipsAccessibilityText(this.checkTips, this.isChecked))
-    .accessibilityDescription(this.isChecked ? $r('sys.string.advanced_dialog_accessibility_cancel_checked_desc') :
-    $r('sys.string.slider_accessibility_unselectedDesc'))
     .onClick(() => {
       this.isChecked = !this.isChecked;
       if (this.checkAction) {
         this.checkAction(this.isChecked);
       }
-      try {
-        let eventInfo: accessibility.EventInfo = ({
-          type: 'announceForAccessibility',
-          bundleName: (getContext() as common.UIAbilityContext)?.abilityInfo?.bundleName,
-          triggerAction: 'common',
-          textAnnouncedForAccessibility: this.isChecked ? getContext().resourceManager.getStringSync(125833934) :
-          getContext().resourceManager.getStringSync(125833935)
-        });
-        accessibility.sendAccessibilityEvent(eventInfo).then(() => {
-          console.info(`Accessibility send event`)
-        });
-      } catch (exception) {
-        let code: number = (exception as BusinessError).code;
-        let message: string = (exception as BusinessError).message;
-        hilog.error(0x3900, 'Ace', `Faild to send event, cause, code: ${code}, message: ${message}`);
-      }
     })
-    .padding({ top: TIP_CHECKBOX_TOP_PADDING(), bottom: TIP_CHECKBOX_BOTTOM_PADDING() })
-    .constraintSize({ minHeight: CHECKBOX_CONTAINER_HEIGHT() })
+    .padding({ top: 8, bottom: 8 })
+    .constraintSize({ minHeight: CHECKBOX_CONTAINER_HEIGHT })
     .width('100%')
   }
 
@@ -280,10 +202,10 @@ export struct TipsDialog {
     Column() {
       Image(this.imageRes)
         .objectFit(ImageFit.Contain)
-        .borderRadius(DEFAULT_IMAGE_RADIUS())
+        .borderRadius($r('sys.float.corner_radius_level6'))
         .constraintSize({
-          maxWidth: this.imageSize?.width ?? DEFAULT_IMAGE_SIZE(),
-          maxHeight: this.imageSize?.height ?? DEFAULT_IMAGE_SIZE()
+          maxWidth: this.imageSize?.width ?? DEFAULT_IMAGE_SIZE,
+          maxHeight: this.imageSize?.height ?? DEFAULT_IMAGE_SIZE
         })
     }
     .width('100%')
@@ -297,11 +219,11 @@ export struct TipsDialog {
           Row() {
             Text(this.title)
               .fontSize(`${TITLE_S}fp`)
-              .maxFontScale(Math.min(this.appMaxFontScale, MAX_FONT_SCALE))
-              .fontWeight(TITLE_FONT_WEIGHT())
+              .fontWeight(FontWeight.Bold)
               .fontColor(this.fontColorWithTheme)
               .textAlign(TextAlign.Center)
               .maxLines(CONTENT_MAX_LINES)
+              .maxFontScale(Math.min(this.appMaxFontScale, MAX_FONT_SCALE))
               .textOverflow({ overflow: TextOverflow.Ellipsis })
               .width('100%')
           }
@@ -316,7 +238,7 @@ export struct TipsDialog {
                 strokeWidth: LengthMetrics.px(0)
               })
               .fontSize(this.getContentFontSize())
-              .fontWeight(CONTENT_FONT_WEIGHT())
+              .fontWeight(FontWeight.Medium)
               .fontColor(this.fontColorWithTheme)
               .textAlign(this.textAlignment)
               .width('100%')
@@ -328,12 +250,10 @@ export struct TipsDialog {
           }
         }
       }
-      .margin({ end: LengthMetrics.vp(SCROLL_BAR_OFFSET) })
-      .width(`calc(100% - ${SCROLL_BAR_OFFSET}vp)`)
+      .margin({ end: LengthMetrics.resource($r('sys.float.padding_level8')) })
     }
-    .fadingEdge(IS_FADEOUT_ENABLE(), { fadingEdgeLength: LengthMetrics.vp(FADEOUT_GRADIENT_WIDTH) })
     .nestedScroll({ scrollForward: NestedScrollMode.PARALLEL, scrollBackward: NestedScrollMode.PARALLEL })
-    .margin({ end: LengthMetrics.vp(0 - SCROLL_BAR_OFFSET) })
+    .margin({ end: LengthMetrics.vp(this.marginOffset) })
   }
 
   aboutToAppear() {
@@ -346,7 +266,7 @@ export struct TipsDialog {
   }
 
   getContentFontSize(): Length {
-    return CONTENT_FONT_SIZE() + 'fp';
+    return BODY_L + 'fp';
   }
 
   private initButtons(): void {
@@ -363,7 +283,7 @@ export struct TipsDialog {
   }
 
   private initMargin(): void {
-    this.marginOffset = 0 - SCROLL_END_MARGIN();
+    this.marginOffset = 0 - PADDING_LEVEL_8;
   }
 }
 
@@ -376,6 +296,8 @@ struct TipsDialogContentLayout {
   title?: ResourceStr | null = null;
   content?: ResourceStr | null = null;
   checkTips?: ResourceStr | null = null;
+  updateTextAlign: (maxWidth: number) => void = (maxWidth: number) => {
+  };
   @Link minContentHeight: number;
   @BuilderParam dialogBuilder: () => void = this.doNothingBuilder;
   imageIndex: number = 0;
@@ -406,7 +328,7 @@ struct TipsDialogContentLayout {
       let checkboxChild: Measurable = children[this.checkBoxIndex];
       let checkboxConstraint: ConstraintSizeOptions = {
         maxWidth: constraint.maxWidth,
-        minHeight: CHECKBOX_CONTAINER_HEIGHT(),
+        minHeight: CHECKBOX_CONTAINER_HEIGHT,
         maxHeight: constraint.maxHeight
       }
       let checkBoxMeasureResult: MeasureResult = checkboxChild.measure(checkboxConstraint);
@@ -429,6 +351,7 @@ struct TipsDialogContentLayout {
 
     if (this.title !== null || this.content !== null) {
       let textChild: Measurable = children[this.textIndex];
+      this.updateTextAlign(sizeResult.width);
       let contentMaxHeight: number = Number(constraint.maxHeight) - imageMeasureResult.height - checkBoxHeight;
       let contentConstraint: ConstraintSizeOptions =
         {
@@ -513,7 +436,6 @@ export struct SelectDialog {
                       .fontWeight(FontWeight.Medium)
                       .fontColor(this.fontColorWithTheme)
                       .layoutWeight(1)
-                      .direction(i18n.isRTL(i18n.System.getSystemLanguage()) ? Direction.Rtl : Direction.Ltr)
                     Radio({ value: 'item.title', group: 'radioGroup' })
                       .size({ width: CHECKBOX_CONTAINER_LENGTH, height: CHECKBOX_CONTAINER_LENGTH })
                       .checked(this.selectedIndex === index)
@@ -540,23 +462,20 @@ export struct SelectDialog {
                 .borderRadius($r('sys.float.corner_radius_level8'))
                 .buttonStyle(ButtonStyleMode.TEXTUAL)
                 .paddingStyle()
+                .focusBox({
+                  margin: { value: -2, unit: LengthUnit.VP }
+                })
+                .onClick(() => {
+                  this.selectedIndex = index;
+                  item.action && item.action();
+                  this.controller?.close();
+                })
 
                 if (index < this.radioContent.length - 1) {
                   Divider().color(this.dividerColorWithTheme).paddingStyle();
                 }
-              }
-              .borderRadius($r('sys.float.corner_radius_level8'))
-              .focusBox({
-                margin: { value: -2, unit: LengthUnit.VP }
-              })
-              .accessibilityText(getAccessibilityText(item.title, this.selectedIndex === index))
-              .onClick(() => {
-                this.selectedIndex = index;
-                item.action && item.action();
-                closeDialog(this.controller, 'onClick');
-              })
+              }.paddingStyle()
             }
-            .paddingStyle()
             .onSizeChange((oldValue: SizeOptions, newValue: SizeOptions) => {
               this.itemHeight = Number(newValue.height)
             })
@@ -591,7 +510,6 @@ export struct SelectDialog {
         this.isFocus = false;
       }
     })
-    .margin({ end: LengthMetrics.vp(SELECT_DIALOG_SCROLL_BAR_OFFSET) })
   }
 
   build() {
@@ -689,7 +607,7 @@ struct ConfirmDialogContentLayout {
     let checkboxChild: Measurable = children[this.checkboxIndex];
     let checkboxConstraint: ConstraintSizeOptions = {
       maxWidth: constraint.maxWidth,
-      minHeight: CHECKBOX_CONTAINER_HEIGHT(),
+      minHeight: CHECKBOX_CONTAINER_HEIGHT,
       maxHeight: constraint.maxHeight
     }
     let checkBoxMeasureResult: MeasureResult = checkboxChild.measure(checkboxConstraint);
@@ -719,8 +637,8 @@ export struct ConfirmDialog {
   content?: ResourceStr = ''
   checkTips?: ResourceStr = ''
   @State isChecked?: boolean = false
-  primaryButton?: ButtonOptions | null = null;
-  secondaryButton?: ButtonOptions | null = null;
+  primaryButton?: ButtonOptions = { value: "" }
+  secondaryButton?: ButtonOptions = { value: "" }
   @State fontColorWithTheme: ResourceColor = $r('sys.color.font_primary');
   theme?: Theme | CustomTheme = new CustomThemeImpl({});
   themeColorMode?: ThemeColorMode = ThemeColorMode.SYSTEM;
@@ -735,7 +653,7 @@ export struct ConfirmDialog {
   checkboxIndex: number = 1;
   updateTextAlign: (maxWidth: number) => void = (maxWidth: number) => {
     if (this.content) {
-      this.textAlign = getTextAlign(maxWidth, this.content, `${CONTENT_FONT_SIZE() * this.fontSizeScale}vp`);
+      this.textAlign = getTextAlign(maxWidth, this.content, `${BODY_L * this.fontSizeScale}vp`);
     }
   }
 
@@ -750,8 +668,8 @@ export struct ConfirmDialog {
             .focusBox({
               strokeWidth: LengthMetrics.px(0)
             })
-            .fontSize(`${CONTENT_FONT_SIZE()}fp`)
-            .fontWeight(CONTENT_FONT_WEIGHT())
+            .fontSize(`${BODY_L}fp`)
+            .fontWeight(FontWeight.Medium)
             .fontColor(this.fontColorWithTheme)
             .textAlign(this.textAlign)
             .onKeyEvent((event: KeyEvent) => {
@@ -761,20 +679,17 @@ export struct ConfirmDialog {
             })
             .width('100%')
         }
-        .margin({ end: LengthMetrics.vp(SCROLL_BAR_OFFSET) })
-        .width(`calc(100% - ${SCROLL_BAR_OFFSET}vp)`)
+        .margin({ end: LengthMetrics.resource($r('sys.float.padding_level8')) })
       }
-      .fadingEdge(IS_FADEOUT_ENABLE(), { fadingEdgeLength: LengthMetrics.vp(FADEOUT_GRADIENT_WIDTH) })
       .nestedScroll({ scrollForward: NestedScrollMode.PARALLEL, scrollBackward: NestedScrollMode.PARALLEL })
-      .margin({ end: LengthMetrics.vp(0 - SCROLL_BAR_OFFSET) })
+      .margin({ end: LengthMetrics.vp(this.marginOffset) })
     }
   }
 
   @Builder
   checkBoxBuilder(): void {
     Row() {
-      Checkbox({ name: '', group: 'checkboxGroup' })
-        .select(this.isChecked)
+      Checkbox({ name: '', group: 'checkboxGroup' }).select(this.isChecked)
         .onChange((checked: boolean) => {
           this.isChecked = checked;
           if (this.onCheckedChange) {
@@ -782,11 +697,12 @@ export struct ConfirmDialog {
           }
         })
         .hitTestBehavior(HitTestMode.Block)
-        .margin({ start: LengthMetrics.vp(0), end: LengthMetrics.vp(TIP_CHECKBOX_END_MARGIN()) })
+        .accessibilityLevel('yes')
+        .margin({ start: LengthMetrics.vp(0), end: LengthMetrics.vp(CHECK_BOX_MARGIN_END) })
 
       Text(this.checkTips)
-        .fontSize(`${SUBTITLE_SIZE()}fp`)
-        .fontWeight(CONTENT_FONT_WEIGHT())
+        .fontSize(`${BODY_M}fp`)
+        .fontWeight(FontWeight.Medium)
         .fontColor(this.fontColorWithTheme)
         .maxLines(CONTENT_MAX_LINES)
         .focusable(false)
@@ -794,30 +710,11 @@ export struct ConfirmDialog {
         .textOverflow({ overflow: TextOverflow.Ellipsis })
     }
     .accessibilityGroup(true)
-    .accessibilityText(getCheckTipsAccessibilityText(this.checkTips, this.isChecked))
-    .accessibilityDescription(this.isChecked ? $r('sys.string.advanced_dialog_accessibility_cancel_checked_desc') :
-    $r('sys.string.slider_accessibility_unselectedDesc'))
     .onClick(() => {
       this.isChecked = !this.isChecked;
-      try {
-        let eventInfo: accessibility.EventInfo = ({
-          type: 'announceForAccessibility',
-          bundleName: (getContext() as common.UIAbilityContext)?.abilityInfo?.bundleName,
-          triggerAction: 'common',
-          textAnnouncedForAccessibility: this.isChecked ? getContext().resourceManager.getStringSync(125833934) :
-          getContext().resourceManager.getStringSync(125833935)
-        });
-        accessibility.sendAccessibilityEvent(eventInfo).then(() => {
-          console.info(`Accessibility send event`)
-        });
-      } catch (exception) {
-        let code: number = (exception as BusinessError).code;
-        let message: string = (exception as BusinessError).message;
-        hilog.error(0x3900, 'Ace', `Faild to send event, cause, code: ${code}, message: ${message}`);
-      }
     })
     .width('100%')
-    .padding({ top: TIP_CHECKBOX_TOP_PADDING(), bottom: TIP_CHECKBOX_BOTTOM_PADDING() })
+    .padding({ top: 8, bottom: 8 })
   }
 
   @Builder
@@ -825,9 +722,7 @@ export struct ConfirmDialog {
     ConfirmDialogContentLayout({ minContentHeight: this.minContentHeight, updateTextAlign: this.updateTextAlign }) {
       ForEach([this.textIndex, this.checkboxIndex], (index: number) => {
         if (index === this.textIndex) {
-          WithTheme({ theme: this.theme, colorMode: this.themeColorMode }) {
-            this.textBuilder();
-          }
+          this.textBuilder();
         } else if (index === this.checkboxIndex) {
           WithTheme({ theme: this.theme, colorMode: this.themeColorMode }) {
             this.checkBoxBuilder();
@@ -860,7 +755,7 @@ export struct ConfirmDialog {
   }
 
   private initMargin(): void {
-    this.marginOffset = 0 - SCROLL_END_MARGIN();
+    this.marginOffset = 0 - PADDING_LEVEL_8;
   }
 
   private initButtons(): void {
@@ -886,7 +781,7 @@ export struct AlertDialog {
   primaryButton?: ButtonOptions | null = null;
   secondaryButton?: ButtonOptions | null = null;
   buttons?: ButtonOptions[] | undefined = undefined;
-  @State textAlign: TextAlign = TextAlign.Center;
+  @State textAlign: TextAlign = TextAlign.Start;
   // the controller of content area
   contentScroller: Scroller = new Scroller();
   @State fontColorWithTheme: ResourceColor = $r('sys.color.font_primary');
@@ -921,29 +816,35 @@ export struct AlertDialog {
           .focusBox({
             strokeWidth: LengthMetrics.px(0)
           })
-          .fontSize(`${CONTENT_FONT_SIZE()}fp`)
+          .fontSize(`${BODY_L}fp`)
           .fontWeight(this.getFontWeight())
           .fontColor(this.fontColorWithTheme)
-          .margin({ end: LengthMetrics.vp(SCROLL_BAR_OFFSET) })
-          .width(`calc(100% - ${SCROLL_BAR_OFFSET}vp)`)
+          .margin({ end: LengthMetrics.resource($r('sys.float.padding_level8')) })
+          .width(`calc(100% - ${PADDING_LEVEL_8}vp)`)
           .textAlign(this.textAlign)
+          .onSizeChange((oldValue: SizeOptions, newValue: SizeOptions) => {
+            this.updateTextAlign(Number(newValue.width));
+          })
           .onKeyEvent((event: KeyEvent) => {
             if (event) {
               resolveKeyEvent(event, this.contentScroller);
             }
           })
       }
-      .fadingEdge(IS_FADEOUT_ENABLE(), { fadingEdgeLength: LengthMetrics.vp(FADEOUT_GRADIENT_WIDTH) })
       .nestedScroll({ scrollForward: NestedScrollMode.PARALLEL, scrollBackward: NestedScrollMode.PARALLEL })
       .width('100%')
     }
-    .margin({ end: LengthMetrics.vp(0 - SCROLL_BAR_OFFSET) })
+    .margin({ end: LengthMetrics.vp(this.getMargin()) })
   }
 
   aboutToAppear(): void {
     this.fontColorWithTheme = this.theme?.colors?.fontPrimary ?
     this.theme.colors.fontPrimary : $r('sys.color.font_primary');
     this.initButtons();
+  }
+
+  private updateTextAlign(maxWidth: number): void {
+    this.textAlign = getTextAlign(maxWidth, this.content, `${BODY_L * this.fontSizeScale}vp`);
   }
 
   private initButtons(): void {
@@ -959,11 +860,15 @@ export struct AlertDialog {
     }
   }
 
+  private getMargin(): number {
+    return 0 - PADDING_LEVEL_8;
+  }
+
   private getFontWeight(): number {
     if (this.primaryTitle || this.secondaryTitle) {
       return FontWeight.Regular;
     }
-    return CONTENT_FONT_WEIGHT();
+    return FontWeight.Medium;
   }
 }
 
@@ -1101,8 +1006,10 @@ struct CustomDialogContentComponent {
   @State customStyle: boolean | undefined = undefined;
   @State buttonMaxFontSize: Length = `${BODY_L}fp`;
   @State buttonMinFontSize: Length = 9;
-  @State primaryTitleFontSize: Length = `${TITLE_S}fp`;
-  @State secondaryTitleFontSize: Length = `${SUBTITLE_SIZE()}fp`;
+  @State primaryTitleMaxFontSize: Length = `${TITLE_S}fp`;
+  @State primaryTitleMinFontSize: Length = `${BODY_L}fp`;
+  @State secondaryTitleMaxFontSize: Length = `${SUBTITLE_S}fp`;
+  @State secondaryTitleMinFontSize: Length = `${BODY_S}fp`;
   @State primaryTitleFontColorWithTheme: ResourceColor = $r('sys.color.font_primary');
   @State secondaryTitleFontColorWithTheme: ResourceColor = $r('sys.color.font_secondary');
   @State titleTextAlign: TextAlign = TextAlign.Center;
@@ -1113,73 +1020,47 @@ struct CustomDialogContentComponent {
   titleIndex: number = 0;
   contentIndex: number = 1;
   buttonIndex: number = 2;
-  isHasDefaultFocus: boolean = false;
-  isAllFocusFalse: boolean = false;
-  scroller: Scroller = new Scroller();
 
   build() {
     WithTheme({ theme: this.theme, colorMode: this.themeColorMode }) {
-      RelativeContainer() {
-        Scroll(this.scroller) {
-          Column() {
-            CustomDialogLayout({
-              buttonHeight: this.buttonHeight,
-              titleHeight: this.titleHeight,
-              titleMinHeight: this.titleMinHeight
-            }) {
-              ForEach([this.titleIndex, this.contentIndex, this.buttonIndex], (index: number) => {
-                if (index === this.titleIndex) {
-                  WithTheme({ theme: this.theme, colorMode: this.themeColorMode }) {
-                    this.titleBuilder();
-                  }
-                } else if (index === this.contentIndex) {
-                  Column() {
-                    WithTheme({ theme: this.theme, colorMode: this.themeColorMode }) {
-                      this.contentBuilder();
-                    }
-                  }.padding(this.getContentPadding())
-                } else {
-                  this.buildButton();
+      Scroll() {
+        Column() {
+          CustomDialogLayout({
+            buttonHeight: this.buttonHeight,
+            titleHeight: this.titleHeight,
+            titleMinHeight: this.titleMinHeight
+          }) {
+            ForEach([this.titleIndex, this.contentIndex, this.buttonIndex], (index: number) => {
+              if (index === this.titleIndex) {
+                WithTheme({ theme: this.theme, colorMode: this.themeColorMode }) {
+                  this.titleBuilder();
                 }
-              });
-            }
-          }
-          .constraintSize({ maxHeight: this.contentMaxHeight })
-          .backgroundBlurStyle(this.customStyle ?
-          BlurStyle.Thick : BlurStyle.NONE, undefined, { disableSystemAdaptation: true })
-          .borderRadius(this.customStyle ? $r('sys.float.ohos_id_corner_radius_dialog') : 0)
-          .margin(this.customStyle ? {
-            start: LengthMetrics.resource($r('sys.float.ohos_id_dialog_margin_start')),
-            end: LengthMetrics.resource($r('sys.float.ohos_id_dialog_margin_end')),
-            bottom: LengthMetrics.resource($r('sys.float.ohos_id_dialog_margin_bottom')),
-          } : { left: 0, right: 0, bottom: 0 })
-          .backgroundColor(this.customStyle ? $r('sys.color.ohos_id_color_dialog_bg') : Color.Transparent)
-        }
-        .scrollBar(BarState.Off)
-        .id('CustomDialogContentComponent')
-        .edgeEffect(EdgeEffect.None, { alwaysEnabled: false })
-        .backgroundColor(this.themeColorMode === ThemeColorMode.SYSTEM || undefined ?
-        Color.Transparent : $r('sys.color.comp_background_primary'))
-
-        ScrollBar({scroller: this.scroller})
-          .alignRules({
-            top: { anchor: 'CustomDialogContentComponent', align: VerticalAlign.Top },
-            bottom: { anchor: 'CustomDialogContentComponent', align: VerticalAlign.Bottom },
-            end: { anchor: 'CustomDialogContentComponent', align: HorizontalAlign.End }
-          })
-          .margin({ top: $r('sys.float.alert_container_shape'), bottom: $r('sys.float.alert_container_shape')})
-          .enableNestedScroll(true)
-          .hitTestBehavior(HitTestMode.Transparent)
-          .onGestureRecognizerJudgeBegin((event: BaseGestureEvent, current: GestureRecognizer,
-            others: Array<GestureRecognizer>) => {
-            if (current) {
-              if (current.getType() == GestureControl.GestureType.LONG_PRESS_GESTURE) {
-                return GestureJudgeResult.REJECT;
+              } else if (index === this.contentIndex) {
+                Column() {
+                  WithTheme({ theme: this.theme, colorMode: this.themeColorMode }) {
+                    this.contentBuilder();
+                  }
+                }.padding(this.getContentPadding())
+              } else {
+                WithTheme({ theme: this.theme, colorMode: this.themeColorMode }) {
+                  this.ButtonBuilder();
+                }
               }
-            }
-            return GestureJudgeResult.CONTINUE;
-          })
-      }.height('auto')
+            });
+          }
+        }
+        .constraintSize({ maxHeight: this.contentMaxHeight })
+        .backgroundBlurStyle(this.customStyle ? BlurStyle.Thick : BlurStyle.NONE)
+        .borderRadius(this.customStyle ? $r('sys.float.ohos_id_corner_radius_dialog') : 0)
+        .margin(this.customStyle ? {
+          start: LengthMetrics.resource($r('sys.float.ohos_id_dialog_margin_start')),
+          end: LengthMetrics.resource($r('sys.float.ohos_id_dialog_margin_end')),
+          bottom: LengthMetrics.resource($r('sys.float.ohos_id_dialog_margin_bottom')),
+        } : { left: 0, right: 0, bottom: 0 })
+        .backgroundColor(this.customStyle ? $r('sys.color.ohos_id_color_dialog_bg') : Color.Transparent)
+      }
+      .backgroundColor(this.themeColorMode === ThemeColorMode.SYSTEM || undefined ?
+      Color.Transparent : $r('sys.color.comp_background_primary'))
     }
   }
 
@@ -1190,7 +1071,7 @@ struct CustomDialogContentComponent {
     let maxHeight: number = Number(constraint.maxHeight);
     this.fontSizeScale = this.updateFontScale();
     this.updateFontSize();
-    this.isButtonVertical = this.isVerticalAlignButton(maxWidth - BUTTON_HORIZONTAL_MARGIN() * 2);
+    this.isButtonVertical = this.isVerticalAlignButton(maxWidth - BUTTON_HORIZONTAL_MARGIN * 2);
     this.titleMinHeight = this.getTitleAreaMinHeight();
     let height: number = 0;
     children.forEach((child) => {
@@ -1210,12 +1091,11 @@ struct CustomDialogContentComponent {
   aboutToAppear(): void {
     try {
       let uiContext: UIContext = this.getUIContext();
-      this.isFollowingSystemFontScale = uiContext?.isFollowingSystemFontScale();
-      this.appMaxFontScale = uiContext?.getMaxFontScale();
+      this.isFollowingSystemFontScale = uiContext?.isFollowingSystemFontScale() ?? false;
+      this.appMaxFontScale = uiContext?.getMaxFontScale() ?? 3.2;
     } catch (err) {
       let code: number = (err as BusinessError)?.code;
-      let message: string = (err as BusinessError)?.message;
-      hilog.error(0x3900, 'Ace', `Faild to dialog getUIContext, code: ${code}, message: ${message}`);
+      hilog.error(0x3900, 'Ace', `Faild to dialog getUIContext, code: ${code}`);
     }
     this.fontSizeScale = this.updateFontScale();
     if (this.controller && this.customStyle === undefined) {
@@ -1232,16 +1112,15 @@ struct CustomDialogContentComponent {
     this.secondaryTitleFontColorWithTheme = this.theme?.colors?.fontSecondary ?
     this.theme.colors.fontSecondary : $r('sys.color.font_secondary');
     this.initTitleTextAlign();
-    this.setDefaultFocusState(this.buttons);
   }
 
   private updateFontSize(): void {
     if (this.fontSizeScale > MAX_FONT_SCALE) {
-      this.buttonMaxFontSize = BUTTON_MAX_FONT_SIZE() * MAX_FONT_SCALE + 'vp';
-      this.buttonMinFontSize = BUTTON_MIN_FONT_SIZE() * MAX_FONT_SCALE + 'vp';
+      this.buttonMaxFontSize = BODY_L * MAX_FONT_SCALE + 'vp';
+      this.buttonMinFontSize = BUTTON_MIN_FONT_SIZE * MAX_FONT_SCALE + 'vp';
     } else {
-      this.buttonMaxFontSize = BUTTON_MAX_FONT_SIZE() + 'fp';
-      this.buttonMinFontSize = BUTTON_MIN_FONT_SIZE() + 'fp';
+      this.buttonMaxFontSize = BODY_L + 'fp';
+      this.buttonMinFontSize = BUTTON_MIN_FONT_SIZE + 'fp';
     }
   }
 
@@ -1310,13 +1189,14 @@ struct CustomDialogContentComponent {
     Column() {
       Row() {
         Text(this.primaryTitle)
-          .fontWeight(TITLE_FONT_WEIGHT())
+          .fontWeight(FontWeight.Bold)
           .fontColor(this.primaryTitleFontColorWithTheme)
           .textAlign(this.titleTextAlign)
-          .fontSize(this.primaryTitleFontSize)
+          .maxFontSize(this.primaryTitleMaxFontSize)
+          .minFontSize(this.primaryTitleMinFontSize)
           .maxFontScale(Math.min(this.appMaxFontScale, MAX_FONT_SCALE))
           .maxLines(TITLE_MAX_LINES)
-          .heightAdaptivePolicy(TextHeightAdaptivePolicy.MAX_LINES_FIRST)
+          .heightAdaptivePolicy(TextHeightAdaptivePolicy.MIN_FONT_SIZE_FIRST)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .width('100%')
       }
@@ -1332,10 +1212,11 @@ struct CustomDialogContentComponent {
           .fontWeight(FontWeight.Regular)
           .fontColor(this.secondaryTitleFontColorWithTheme)
           .textAlign(this.titleTextAlign)
-          .fontSize(this.secondaryTitleFontSize)
+          .maxFontSize(this.secondaryTitleMaxFontSize)
+          .minFontSize(this.secondaryTitleMinFontSize)
           .maxFontScale(Math.min(this.appMaxFontScale, MAX_FONT_SCALE))
           .maxLines(TITLE_MAX_LINES)
-          .heightAdaptivePolicy(TextHeightAdaptivePolicy.MAX_LINES_FIRST)
+          .heightAdaptivePolicy(TextHeightAdaptivePolicy.MIN_FONT_SIZE_FIRST)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .width('100%')
       }
@@ -1374,7 +1255,7 @@ struct CustomDialogContentComponent {
    * @returns TextAlign
    */
   private initTitleTextAlign(): void {
-    let textAlign: number = ALERT_TITLE_ALIGNMENT();
+    let textAlign: number = ALERT_TITLE_ALIGNMENT;
     if (textAlign === TextAlign.Start) {
       this.titleTextAlign = TextAlign.Start;
     } else if (textAlign === TextAlign.Center) {
@@ -1403,29 +1284,6 @@ struct CustomDialogContentComponent {
     }
   }
 
-  /**
-   * set state of button focus
-   */
-  private setDefaultFocusState(buttonList?: ButtonOptions[]): void {
-    if (!buttonList) {
-      return;
-    }
-    let falseNum: number = 0;
-    buttonList.forEach((button: ButtonOptions) => {
-      // 遍历查询按钮中存在是否存在默认按钮
-      if (button.defaultFocus) {
-        this.isHasDefaultFocus = true;
-      }
-      if (button.defaultFocus === false) {
-        falseNum++;
-      }
-    });
-    // 所有按钮defaultFocus都设置为false
-    if (falseNum === buttonList.length) {
-      this.isAllFocusFalse = true;
-    }
-  }
-
   @Builder
   ButtonBuilder(): void {
     Column() {
@@ -1439,33 +1297,6 @@ struct CustomDialogContentComponent {
     }
     .width('100%')
     .padding(this.getOperationAreaPadding());
-  }
-
-  private isSetCustomButtonTheme(): boolean {
-    // is set fadeout style: now only on TV
-    if (IS_FADEOUT_ENABLE()) {
-      // has set button background color prop
-      if (this.theme?.colors?.compBackgroundTertiary || this.theme?.colors?.backgroundEmphasize) {
-        return true;
-      }
-      // has set button font color prop
-      if (this.theme?.colors?.fontEmphasize || this.theme?.colors?.fontOnPrimary || this.theme?.colors?.warning) {
-        return true;
-      }
-      return false;
-    }
-    return true;
-  }
-
-  @Builder
-  buildButton() {
-    if (this.isSetCustomButtonTheme()) {
-      WithTheme({ theme: this.theme, colorMode: this.themeColorMode }) {
-        this.ButtonBuilder();
-      }
-    } else {
-      this.ButtonBuilder();
-    }
   }
 
   /**
@@ -1495,49 +1326,29 @@ struct CustomDialogContentComponent {
   buildSingleButton(buttonOptions: ButtonOptions): void {
     if (this.isNewPropertiesHighPriority(buttonOptions)) {
       Button(buttonOptions.value)
-        .setButtonProperties(buttonOptions, this.isHasDefaultFocus, this.isAllFocusFalse, this.controller)
+        .setButtonProperties(buttonOptions, this.buttons, this.controller)
         .role(buttonOptions.role ?? ButtonRole.NORMAL)
         .key(`advanced_dialog_button_${this.keyIndex++}`)
-        .labelStyle({
-          maxLines: 1,
-          overflow: IS_FADEOUT_ENABLE() ? TextOverflow.MARQUEE : TextOverflow.Ellipsis,
-          maxFontSize: this.buttonMaxFontSize,
-          minFontSize: this.buttonMinFontSize
-        })
+        .labelStyle({ maxLines: 1, maxFontSize: this.buttonMaxFontSize, minFontSize: this.buttonMinFontSize })
     } else if (buttonOptions.background !== undefined && buttonOptions.fontColor !== undefined) {
       Button(buttonOptions.value)
-        .setButtonProperties(buttonOptions, this.isHasDefaultFocus, this.isAllFocusFalse, this.controller)
+        .setButtonProperties(buttonOptions, this.buttons, this.controller)
         .backgroundColor(buttonOptions.background)
         .fontColor(buttonOptions.fontColor)
         .key(`advanced_dialog_button_${this.keyIndex++}`)
-        .labelStyle({
-          maxLines: 1,
-          overflow: IS_FADEOUT_ENABLE() ? TextOverflow.MARQUEE : TextOverflow.Ellipsis,
-          maxFontSize: this.buttonMaxFontSize,
-          minFontSize: this.buttonMinFontSize
-        })
+        .labelStyle({ maxLines: 1, maxFontSize: this.buttonMaxFontSize, minFontSize: this.buttonMinFontSize })
     } else if (buttonOptions.background !== undefined) {
       Button(buttonOptions.value)
-        .setButtonProperties(buttonOptions, this.isHasDefaultFocus, this.isAllFocusFalse, this.controller)
+        .setButtonProperties(buttonOptions, this.buttons, this.controller)
         .backgroundColor(buttonOptions.background)
         .key(`advanced_dialog_button_${this.keyIndex++}`)
-        .labelStyle({
-          maxLines: 1,
-          overflow: IS_FADEOUT_ENABLE() ? TextOverflow.MARQUEE : TextOverflow.Ellipsis,
-          maxFontSize: this.buttonMaxFontSize,
-          minFontSize: this.buttonMinFontSize
-        })
+        .labelStyle({ maxLines: 1, maxFontSize: this.buttonMaxFontSize, minFontSize: this.buttonMinFontSize })
     } else {
       Button(buttonOptions.value)
-        .setButtonProperties(buttonOptions, this.isHasDefaultFocus, this.isAllFocusFalse, this.controller)
+        .setButtonProperties(buttonOptions, this.buttons, this.controller)
         .fontColor(buttonOptions.fontColor)
         .key(`advanced_dialog_button_${this.keyIndex++}`)
-        .labelStyle({
-          maxLines: 1,
-          overflow: IS_FADEOUT_ENABLE() ? TextOverflow.MARQUEE : TextOverflow.Ellipsis,
-          maxFontSize: this.buttonMaxFontSize,
-          minFontSize: this.buttonMinFontSize
-        })
+        .labelStyle({ maxLines: 1, maxFontSize: this.buttonMaxFontSize, minFontSize: this.buttonMinFontSize })
     }
   }
 
@@ -1547,16 +1358,15 @@ struct CustomDialogContentComponent {
       Row() {
         this.buildSingleButton(this.buttons[0]);
         if (this.buttons.length === HORIZON_BUTTON_MAX_COUNT) {
-          Row() {
-            Divider()
-              .width($r('sys.float.alert_divider_width'))
-              .height($r('sys.float.alert_divider_height'))
-              .color(this.getDividerColor())
-              .vertical(true)
-          }
-          .width(BUTTON_HORIZONTAL_SPACE() * 2)
-          .justifyContent(FlexAlign.Center)
-
+          Divider()
+            .width($r('sys.float.alert_divider_width'))
+            .height($r('sys.float.alert_divider_height'))
+            .color(this.getDividerColor())
+            .vertical(true)
+            .margin({
+              left: $r('sys.float.alert_button_horizontal_space'),
+              right: $r('sys.float.alert_button_horizontal_space'),
+            });
           this.buildSingleButton(this.buttons[HORIZON_BUTTON_MAX_COUNT - 1]);
         }
       }
@@ -1581,7 +1391,7 @@ struct CustomDialogContentComponent {
    * @returns divider color
    */
   private getDividerColor(): ResourceColor {
-    if (!this.buttons || this.buttons.length === 0 || !DIALOG_DIVIDER_SHOW()) {
+    if (!this.buttons || this.buttons.length === 0 || !DIALOG_DIVIDER_SHOW) {
       return Color.Transparent;
     }
 
@@ -1605,7 +1415,7 @@ struct CustomDialogContentComponent {
       return true;
     }
     if (buttonOptions.buttonStyle !== undefined &&
-      buttonOptions.buttonStyle !== ALERT_BUTTON_STYLE()) {
+      buttonOptions.buttonStyle !== ALERT_BUTTON_STYLE) {
       return true;
     }
     if (buttonOptions.background === undefined && buttonOptions.fontColor === undefined) {
@@ -1639,8 +1449,8 @@ struct CustomDialogContentComponent {
         return true;
       }
       let isVertical: boolean = false;
-      let maxButtonTextSize = vp2px(width / HORIZON_BUTTON_MAX_COUNT - BUTTON_HORIZONTAL_MARGIN() -
-      BUTTON_HORIZONTAL_SPACE() - 2 * BUTTON_HORIZONTAL_PADDING);
+      let maxButtonTextSize = vp2px(width / HORIZON_BUTTON_MAX_COUNT - BUTTON_HORIZONTAL_MARGIN -
+        BUTTON_HORIZONTAL_SPACE - 2 * BUTTON_HORIZONTAL_PADDING);
       this.buttons.forEach((button) => {
         try {
           let contentSize: SizeOptions = measure.measureTextSize({
@@ -1664,69 +1474,41 @@ struct CustomDialogContentComponent {
 }
 
 @Extend(Button)
-function setButtonProperties(buttonOptions: ButtonOptions, isHasDefaultFocus: boolean, isAllFocusFalse: boolean,
+function setButtonProperties(buttonOptions: ButtonOptions, buttonList?: ButtonOptions[],
   controller?: CustomDialogController) {
-  .onKeyEvent((event: KeyEvent) => {
-    if (!event) {
-      return;
-    }
-    if ((event.keyCode === KeyCode.KEYCODE_SPACE || event.keyCode === KeyCode.KEYCODE_ENTER) &&
-      event.type === KeyType.Down) {
-      if (buttonOptions.action) {
-        buttonOptions.action();
-      }
-      closeDialog(controller, 'onKeyEvent');
-      event.stopPropagation();
-    }
-  })
   .onClick(() => {
     if (buttonOptions.action) {
       buttonOptions.action();
     }
-    closeDialog(controller, 'onClick');
-  })
-  .defaultFocus(isDefaultFocus(buttonOptions, isHasDefaultFocus, isAllFocusFalse))
-  .buttonStyle(buttonOptions.buttonStyle ??
-    (buttonOptions.role === ButtonRole.ERROR ? ERROR_BUTTON_STYLE() : ALERT_BUTTON_STYLE()))
-  .layoutWeight(BUTTON_LAYOUT_WEIGHT)
-  .type(ButtonType.ROUNDED_RECTANGLE)
-}
-
-function closeDialog(controller: CustomDialogController | undefined, funcName: string) {
-  if (controller) {
-    hilog?.info(0x3900,'Ace',`AdvancedDialog button ${funcName} controller true`);
     controller?.close();
-  } else {
-    hilog?.info(0x3900,'Ace',`AdvancedDialog button ${funcName} controller false`);
-  }
+  })
+  .defaultFocus(buttonOptions.defaultFocus ? true : isHasDefaultFocus(buttonList) ? false : true)
+  .buttonStyle(buttonOptions.buttonStyle ?? ALERT_BUTTON_STYLE)
+  .layoutWeight(BUTTON_LAYOUT_WEIGHT)
+  .type(ButtonType.Normal)
+  .borderRadius($r('sys.float.corner_radius_level10'))
 }
 
 /**
- * is button set default focus
+ * is button list has default focus
  *
- * @param singleButton button options
- * @param isHasDefaultFocus is button list has default focus button
- * @param isAllFocusFalse is all button in button list default focus false
+ * @param buttonList button list
  * @returns boolean
  */
-function isDefaultFocus(singleButton: ButtonOptions, isHasDefaultFocus: boolean, isAllFocusFalse: boolean): boolean {
+function isHasDefaultFocus(buttonList?: ButtonOptions[]): boolean {
   try {
-    // 当前按钮为默认按钮
-    if (singleButton.defaultFocus) {
-      return true;
-    }
-    let isDefaultFocus: boolean = false;
-    if (isHasDefaultFocus || isAllFocusFalse) {
-      isDefaultFocus = false; // 存在默认按钮或者所有按钮的defaultFocus都为false
-    } else {
-      isDefaultFocus = true; // 默认第一个按钮获焦
-    }
-    return isDefaultFocus;
+    let isHasDefaultFocus: boolean = false;
+    buttonList?.forEach((button) => {
+      if (button.defaultFocus) {
+        isHasDefaultFocus = true;
+      }
+    })
+    return isHasDefaultFocus;
   } catch (error) {
     let code: number = (error as BusinessError).code;
     let message: string = (error as BusinessError).message;
     hilog.error(0x3900, 'Ace', `get defaultFocus exist error, code: ${code}, message: ${message}`);
-    return true;
+    return false;
   }
 }
 
@@ -1754,94 +1536,25 @@ function getNumberByResourceId(resourceId: number, defaultValue: number, allowZe
 }
 
 /**
- * lazy init
+ * get enum number
  *
- * @param initializer  lazy initializer
- * @returns lazy init result
- */
-function lazyInit<T>(initializer: () => T): () => T {
-  let value: T | null = null;
-  return () => {
-    if (value === null) {
-      value = initializer();
-    }
-    return value;
-  };
-}
-
-/**
- * get LengthMetrics size
- *
- * @param resource resource
+ * @param resourceId resource id
  * @param defaultValue default value
- * @param isAllowZero allow value zero
- * @returns LengthMetrics size
+ * @returns number
  */
-function getLengthMetricsByResource(resource: Resource, defaultValue: number, isAllowZero?: boolean): number {
-  if (!resource) {
-    hilog.error(0x3900, 'Ace', 'CustomContentDialog getLengthMetricsByResource error');
-    return defaultValue;
-  }
+function getEnumNumberByResourceId(resourceId: number, defaultValue: number): number {
   try {
-    let sourceValue: number = LengthMetrics.resource(resource).value;
-    if (sourceValue === 0) {
-      return isAllowZero ? sourceValue : defaultValue;
-    }
-    return sourceValue;
-  } catch (error) {
-    let code: number = (error as BusinessError).code;
-    let message: string = (error as BusinessError).message;
-    hilog.error(0x3900, 'Ace',
-      `CustomContentDialog getLengthMetricsByResource error, code: ${code}, message: ${message}`);
-    return defaultValue;
-  }
-}
-
-/**
- * get string value
- *
- * @param resourceId Resource id
- * @returns resource value
- */
-function getString(resourceId: number): string {
-  let res = '';
-  if (resourceId <= 0) {
-    hilog.error(0x3900, 'Ace', 'CustomContentDialog getString error');
-    return res;
-  }
-  try {
-    res = getContext().resourceManager.getStringSync(resourceId);
-  } catch (error) {
-    let code: number = (error as BusinessError).code;
-    let message: string = (error as BusinessError).message;
-    hilog.error(0x3900, 'Ace',
-      `CustomContentDialog getString error, code: ${code}, message: ${message}`);
-  }
-  return res;
-}
-
-/**
- * 获取SelectDialog无障碍文本
- *
- * @param resource 资源
- * @param selected select state
- * @returns string
- */
-function getAccessibilityText(resource: ResourceStr, selected: boolean): string {
-  try {
-    let selectText: string = getContext().resourceManager.getStringSync(125833934);
-    let resourceString: string = '';
-    if (typeof resource === 'string') {
-      resourceString = resource;
+    let sourceValue: number = getContext().resourceManager.getNumber(resourceId);
+    if (sourceValue > 0) {
+      return sourceValue;
     } else {
-      resourceString = getContext().resourceManager.getStringSync(resource);
+      return defaultValue;
     }
-    return selected ? `${selectText},${resourceString}` : resourceString;
   } catch (error) {
     let code: number = (error as BusinessError).code;
     let message: string = (error as BusinessError).message;
-    hilog.error(0x3900, 'Ace', `getAccessibilityText error, code: ${code}, message: ${message}`);
-    return '';
+    hilog.error(0x3900, 'Ace', `getEnumNumberByResourceId error, code: ${code}, message: ${message}`);
+    return defaultValue;
   }
 }
 
@@ -1907,37 +1620,6 @@ function resolveKeyEvent(event: KeyEvent, controller: Scroller) {
   }
 }
 
-/**
- * 获取checkTips无障碍文本
- *
- * @param resource 资源
- * @param selected select state
- * @returns string
- */
-function getCheckTipsAccessibilityText(resource: ResourceStr | null | undefined, selected?: boolean): string {
-  try {
-    // 'sys.string.slider_accessibility_selected'
-    let selectText: string = getContext().resourceManager.getStringSync(125833934);
-    // 'sys.string.slider_accessibility_unselected'
-    let unselectText: string = getContext().resourceManager.getStringSync(125833935);
-    // 'sys.string.advanced_dialog_accessibility_checkbox'
-    let checkBoxText: string = getContext().resourceManager.getStringSync(125834354);
-    let resourceString: string = '';
-    if (typeof resource === 'string') {
-      resourceString = resource
-    } else {
-      resourceString = getContext().resourceManager.getStringSync(resource);
-    }
-    return selected ? `${selectText},${resourceString},${checkBoxText}` :
-      `${unselectText},${resourceString},${checkBoxText}`;
-  } catch (error) {
-    let code: number = (error as BusinessError).code;
-    let message: string = (error as BusinessError).message;
-    hilog.error(0x3900, 'Ace', `getCheckTipsAccessibilityText error, code: ${code}, message: ${message}`);
-    return '';
-  }
-}
-
 @CustomDialog
 export struct LoadingDialog {
   controller: CustomDialogController;
@@ -1969,7 +1651,7 @@ export struct LoadingDialog {
     Column() {
       Row() {
         Text(this.content)
-          .fontSize(`${CONTENT_FONT_SIZE()}fp`)
+          .fontSize(`${BODY_L}fp`)
           .fontWeight(FontWeight.Regular)
           .fontColor(this.fontColorWithTheme)
           .layoutWeight(LOADING_TEXT_LAYOUT_WEIGHT)
@@ -2020,20 +1702,14 @@ export struct PopoverDialog {
       this.targetBuilder();
     }
     .onClick(() => {
-      try {
-        let screenSize: display.Display = display.getDefaultDisplaySync();
-        let screenWidth: number = px2vp(screenSize.width);
-        if (screenWidth - BUTTON_HORIZONTAL_MARGIN() - BUTTON_HORIZONTAL_MARGIN() > MAX_DIALOG_WIDTH) {
-          this.popover.width = this.popover?.width ?? MAX_DIALOG_WIDTH;
-        } else {
-          this.popover.width = this.dialogWidth;
-        }
-        this.visible = !this.visible;
-      } catch (error) {
-        let code: number = (error as BusinessError).code;
-        let message: string = (error as BusinessError).message;
-        hilog.error(0x3900, 'Ace', `dialog popup error, code: ${code}, message: ${message}`);
+      let screenSize: display.Display = display.getDefaultDisplaySync();
+      let screenWidth: number = px2vp(screenSize.width);
+      if (screenWidth - BUTTON_HORIZONTAL_MARGIN - BUTTON_HORIZONTAL_MARGIN > MAX_DIALOG_WIDTH) {
+        this.popover.width = this.popover?.width ?? MAX_DIALOG_WIDTH;
+      } else {
+        this.popover.width = this.dialogWidth;
       }
+      this.visible = !this.visible;
     })
     .bindPopup(this.visible, {
       builder: this.popover?.builder,

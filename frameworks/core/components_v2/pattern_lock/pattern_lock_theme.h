@@ -52,7 +52,7 @@ public:
 
         RefPtr<PatternLockTheme> Build(const RefPtr<ThemeConstants>& themeConstants) const
         {
-            RefPtr<PatternLockTheme> theme = AceType::MakeRefPtr<PatternLockTheme>();
+            RefPtr<PatternLockTheme> theme = AceType::Claim(new PatternLockTheme());
             if (!themeConstants) {
                 return theme;
             }
@@ -77,6 +77,7 @@ public:
                 theme->activeCircleRadius_ = DEFAULT_ACTIVE_CIRCLE_RADIUS_API9;
                 theme->backgroundCircleRadius_ = DEFAULT_BACKGROUND_CIRCLE_RADIUS_API9;
             } else {
+                theme->sideLength_ = DEFAULT_SIDE_LENGTH;
                 theme->circleRadius_ = DEFAULT_CIRCLE_RADIUS;
                 theme->pathStrokeWidth_ = DEFAULT_PATH_STROKE_WIDTH;
                 theme->activeCircleRadius_ = DEFAULT_ACTIVE_CIRCLE_RADIUS;
@@ -102,7 +103,6 @@ public:
                 theme->hoverColor_ = pattern->GetAttr<Color>("hover_color", Color::BLACK);
                 theme->focusColor_ = pattern->GetAttr<Color>("focus_color", Color::BLACK);
                 theme->passPointTxt_ = pattern->GetAttr<std::string>("pass_point", "");
-                theme->sideLength_ = pattern->GetAttr<Dimension>("patternlock_side_length", DEFAULT_SIDE_LENGTH);
             }
         }
     };

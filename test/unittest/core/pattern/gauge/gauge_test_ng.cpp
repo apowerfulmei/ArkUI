@@ -115,7 +115,6 @@ public:
 void GaugeTestNg::SetUpTestSuite()
 {
     TestNG::SetUpTestSuite();
-    MockPipelineContext::GetCurrent()->SetUseFlushUITasks(true);
     auto themeManager = AceType::MakeRefPtr<MockThemeManager>();
     MockPipelineContext::GetCurrent()->SetThemeManager(themeManager);
     auto themeConstants = CreateThemeConstants(THEME_PATTERN_PROGRESS);
@@ -160,7 +159,7 @@ void GaugeTestNg::Create(float values, float min, float max, const std::function
         callback(model);
     }
     GetInstance();
-    FlushUITasks(frameNode_);
+    FlushLayoutTask(frameNode_);
 }
 
 /**
@@ -168,7 +167,7 @@ void GaugeTestNg::Create(float values, float min, float max, const std::function
  * @tc.desc: Test Gauge Create
  * @tc.type: FUNC
  */
-HWTEST_F(GaugeTestNg, GaugePaintPropertyTest001, TestSize.Level0)
+HWTEST_F(GaugeTestNg, GaugePaintPropertyTest001, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. create gauge.
@@ -194,7 +193,7 @@ HWTEST_F(GaugeTestNg, GaugePaintPropertyTest001, TestSize.Level0)
  * @tc.desc: Test Gauge SetValue SetStartAngle SetEndAngle SetStrokeWidth SetColors
  * @tc.type: FUNC
  */
-HWTEST_F(GaugeTestNg, GaugePaintPropertyTest002, TestSize.Level0)
+HWTEST_F(GaugeTestNg, GaugePaintPropertyTest002, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. create gauge and set the properties.
@@ -228,7 +227,7 @@ HWTEST_F(GaugeTestNg, GaugePaintPropertyTest002, TestSize.Level0)
  * @tc.desc: Test gauge pattern OnDirtyLayoutWrapperSwap function..
  * @tc.type: FUNC
  */
-HWTEST_F(GaugeTestNg, GaugePaintPropertyTest003, TestSize.Level0)
+HWTEST_F(GaugeTestNg, GaugePaintPropertyTest003, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. create gauge.
@@ -447,7 +446,7 @@ HWTEST_F(GaugeTestNg, GaugeMeasureTest002, TestSize.Level1)
  * @tc.desc: Test Gauge OnModifyDone
  * @tc.type: FUNC
  */
-HWTEST_F(GaugeTestNg, GaugeLayoutPropertyTest001, TestSize.Level0)
+HWTEST_F(GaugeTestNg, GaugeLayoutPropertyTest001, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. create gauge.
@@ -473,7 +472,7 @@ HWTEST_F(GaugeTestNg, GaugeLayoutPropertyTest001, TestSize.Level0)
  * @tc.desc: Test Gauge PaintMethod ShouldHighLight
  * @tc.type: FUNC
  */
-HWTEST_F(GaugeTestNg, GaugePaintMethodTest001, TestSize.Level0)
+HWTEST_F(GaugeTestNg, GaugePaintMethodTest001, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. create gaugePaintMethod.
@@ -518,7 +517,7 @@ HWTEST_F(GaugeTestNg, GaugePaintMethodTest001, TestSize.Level0)
  * @tc.desc: Test Gauge PaintMethod DrawGauge
  * @tc.type: FUNC
  */
-HWTEST_F(GaugeTestNg, GaugePaintMethodTest003, TestSize.Level0)
+HWTEST_F(GaugeTestNg, GaugePaintMethodTest003, TestSize.Level1)
 {
     Create(METHOD_VALUE, METHOD_MIN, METHOD_MAX, [](GaugeModelNG model) {
         std::vector<Color> colors = { Color::RED, Color::GREEN };
@@ -544,7 +543,7 @@ HWTEST_F(GaugeTestNg, GaugePaintMethodTest003, TestSize.Level0)
  * @tc.desc: Test Gauge PaintMethod DrawIndicator
  * @tc.type: FUNC
  */
-HWTEST_F(GaugeTestNg, GaugePaintMethodTest004, TestSize.Level0)
+HWTEST_F(GaugeTestNg, GaugePaintMethodTest004, TestSize.Level1)
 {
     Create(METHOD_VALUE, METHOD_MIN, METHOD_MAX, [](GaugeModelNG model) {
         std::vector<Color> colors = { Color::RED, Color::GREEN };
@@ -575,7 +574,7 @@ HWTEST_F(GaugeTestNg, GaugePaintMethodTest004, TestSize.Level0)
  * @tc.desc: Test Gauge PaintMethod UpdateContentModifier
  * @tc.type: FUNC
  */
-HWTEST_F(GaugeTestNg, GaugePaintMethodTest005, TestSize.Level0)
+HWTEST_F(GaugeTestNg, GaugePaintMethodTest005, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. create gauge without set shadowOptions.
@@ -615,7 +614,7 @@ HWTEST_F(GaugeTestNg, GaugePaintMethodTest005, TestSize.Level0)
  * @tc.desc: Test Gauge PaintMethod Paint
  * @tc.type: FUNC
  */
-HWTEST_F(GaugeTestNg, GaugePaintMethodTest006, TestSize.Level0)
+HWTEST_F(GaugeTestNg, GaugePaintMethodTest006, TestSize.Level1)
 {
     /**
      * case 1: Paint can DrawGauge and DrawIndicator
@@ -655,7 +654,7 @@ HWTEST_F(GaugeTestNg, GaugePaintMethodTest006, TestSize.Level0)
  * @tc.desc: Test Gauge PaintMethod Paint
  * @tc.type: FUNC
  */
-HWTEST_F(GaugeTestNg, GaugePaintMethodTest007, TestSize.Level0)
+HWTEST_F(GaugeTestNg, GaugePaintMethodTest007, TestSize.Level1)
 {
     /**
      * case 2: Paint return because colors.size() != weights.size()
@@ -675,8 +674,6 @@ HWTEST_F(GaugeTestNg, GaugePaintMethodTest007, TestSize.Level0)
     RefPtr<GeometryNode> geometryNode = AceType::MakeRefPtr<GeometryNode>();
     auto paintWrapper = AceType::MakeRefPtr<PaintWrapper>(renderContext, geometryNode, paintProperty_);
     Testing::MockCanvas rsCanvas;
-    EXPECT_CALL(rsCanvas, Save()).Times(0);
-    EXPECT_CALL(rsCanvas, Restore()).Times(0);
     gaugeModifier.PaintCircularAndIndicator(rsCanvas);
 }
 
@@ -685,7 +682,7 @@ HWTEST_F(GaugeTestNg, GaugePaintMethodTest007, TestSize.Level0)
  * @tc.desc: Test Gauge PaintMethod Paint
  * @tc.type: FUNC
  */
-HWTEST_F(GaugeTestNg, GaugePaintMethodTest008, TestSize.Level0)
+HWTEST_F(GaugeTestNg, GaugePaintMethodTest008, TestSize.Level1)
 {
     /**
      * case 3: Paint return because colors.size() = 0 and weights.size = 0
@@ -705,8 +702,6 @@ HWTEST_F(GaugeTestNg, GaugePaintMethodTest008, TestSize.Level0)
     RefPtr<GeometryNode> geometryNode = AceType::MakeRefPtr<GeometryNode>();
     auto paintWrapper = AceType::MakeRefPtr<PaintWrapper>(renderContext, geometryNode, paintProperty_);
     Testing::MockCanvas rsCanvas;
-    EXPECT_CALL(rsCanvas, Save()).Times(0);
-    EXPECT_CALL(rsCanvas, Restore()).Times(0);
     gaugeModifier.PaintCircularAndIndicator(rsCanvas);
 }
 
@@ -715,7 +710,7 @@ HWTEST_F(GaugeTestNg, GaugePaintMethodTest008, TestSize.Level0)
  * @tc.desc: Test Gauge PaintMethod Paint
  * @tc.type: FUNC
  */
-HWTEST_F(GaugeTestNg, GaugePaintMethodTest009, TestSize.Level0)
+HWTEST_F(GaugeTestNg, GaugePaintMethodTest009, TestSize.Level1)
 {
     /**
      * case 4: Paint return because colors.size() = 0
@@ -735,8 +730,6 @@ HWTEST_F(GaugeTestNg, GaugePaintMethodTest009, TestSize.Level0)
     RefPtr<GeometryNode> geometryNode = AceType::MakeRefPtr<GeometryNode>();
     auto paintWrapper = AceType::MakeRefPtr<PaintWrapper>(renderContext, geometryNode, paintProperty_);
     Testing::MockCanvas rsCanvas;
-    EXPECT_CALL(rsCanvas, Save()).Times(0);
-    EXPECT_CALL(rsCanvas, Restore()).Times(0);
     gaugeModifier.PaintCircularAndIndicator(rsCanvas);
 }
 
@@ -745,7 +738,7 @@ HWTEST_F(GaugeTestNg, GaugePaintMethodTest009, TestSize.Level0)
  * @tc.desc: Test Gauge PaintMethod Paint
  * @tc.type: FUNC
  */
-HWTEST_F(GaugeTestNg, GaugePaintMethodTest010, TestSize.Level0)
+HWTEST_F(GaugeTestNg, GaugePaintMethodTest010, TestSize.Level1)
 {
     /**
      * case 5: Paint return because total weight is 0.0
@@ -765,8 +758,6 @@ HWTEST_F(GaugeTestNg, GaugePaintMethodTest010, TestSize.Level0)
     RefPtr<GeometryNode> geometryNode = AceType::MakeRefPtr<GeometryNode>();
     auto paintWrapper = AceType::MakeRefPtr<PaintWrapper>(renderContext, geometryNode, paintProperty_);
     Testing::MockCanvas rsCanvas;
-    EXPECT_CALL(rsCanvas, Save()).Times(0);
-    EXPECT_CALL(rsCanvas, Restore()).Times(0);
     gaugeModifier.PaintCircularAndIndicator(rsCanvas);
 }
 
@@ -775,7 +766,7 @@ HWTEST_F(GaugeTestNg, GaugePaintMethodTest010, TestSize.Level0)
  * @tc.desc: Test Gauge PaintMethod Paint
  * @tc.type: FUNC
  */
-HWTEST_F(GaugeTestNg, GaugePaintMethodTest011, TestSize.Level0)
+HWTEST_F(GaugeTestNg, GaugePaintMethodTest011, TestSize.Level1)
 {
     /**
      * case 6: Paint can DrawGauge and DrawIndicator
@@ -815,7 +806,7 @@ HWTEST_F(GaugeTestNg, GaugePaintMethodTest011, TestSize.Level0)
  * @tc.desc: Test Gauge PaintMethod Paint
  * @tc.type: FUNC
  */
-HWTEST_F(GaugeTestNg, GaugePaintMethodTest012, TestSize.Level0)
+HWTEST_F(GaugeTestNg, GaugePaintMethodTest012, TestSize.Level1)
 {
     /**
      * case 7: Paint can DrawGauge and DrawIndicator
@@ -855,7 +846,7 @@ HWTEST_F(GaugeTestNg, GaugePaintMethodTest012, TestSize.Level0)
  * @tc.desc: Test Gauge PaintMethod Paint
  * @tc.type: FUNC
  */
-HWTEST_F(GaugeTestNg, GaugePaintMethodTest013, TestSize.Level0)
+HWTEST_F(GaugeTestNg, GaugePaintMethodTest013, TestSize.Level1)
 {
     /**
      * case 8: Paint can DrawGauge and DrawIndicator
@@ -892,7 +883,7 @@ HWTEST_F(GaugeTestNg, GaugePaintMethodTest013, TestSize.Level0)
  * @tc.desc: Test Gauge PaintMethod Paint
  * @tc.type: FUNC
  */
-HWTEST_F(GaugeTestNg, GaugePaintMethodTest014, TestSize.Level0)
+HWTEST_F(GaugeTestNg, GaugePaintMethodTest014, TestSize.Level1)
 {
     /**
      * case 9: Paint can DrawGauge and DrawIndicator
@@ -929,7 +920,7 @@ HWTEST_F(GaugeTestNg, GaugePaintMethodTest014, TestSize.Level0)
  * @tc.desc: Test Gauge PaintMethod Paint
  * @tc.type: FUNC
  */
-HWTEST_F(GaugeTestNg, GaugePaintMethodTest015, TestSize.Level0)
+HWTEST_F(GaugeTestNg, GaugePaintMethodTest015, TestSize.Level1)
 {
     /**
      * case 10: Paint can DrawGauge and DrawIndicator
@@ -969,7 +960,7 @@ HWTEST_F(GaugeTestNg, GaugePaintMethodTest015, TestSize.Level0)
  * @tc.desc: Test Gauge PaintMethod Paint
  * @tc.type: FUNC
  */
-HWTEST_F(GaugeTestNg, GaugePaintMethodTest016, TestSize.Level0)
+HWTEST_F(GaugeTestNg, GaugePaintMethodTest016, TestSize.Level1)
 {
     /**
      * case: colors.size != VALUES.size.
@@ -1009,7 +1000,7 @@ HWTEST_F(GaugeTestNg, GaugePaintMethodTest016, TestSize.Level0)
  * @tc.desc: Test Gauge PaintMethod Paint
  * @tc.type: FUNC
  */
-HWTEST_F(GaugeTestNg, GaugePaintMethodTest017, TestSize.Level0)
+HWTEST_F(GaugeTestNg, GaugePaintMethodTest017, TestSize.Level1)
 {
     /**
      * case: endAngle - startAngle > DEFAULT_END_DEGREE.
@@ -1065,7 +1056,7 @@ HWTEST_F(GaugeTestNg, GaugePaintMethodTest017, TestSize.Level0)
  * @tc.desc: Test Gauge PaintMethod Paint
  * @tc.type: FUNC
  */
-HWTEST_F(GaugeTestNg, GaugePaintMethodTest018, TestSize.Level0)
+HWTEST_F(GaugeTestNg, GaugePaintMethodTest018, TestSize.Level1)
 {
     /**
      * case: colors.size == VALUES.size.
@@ -1113,7 +1104,7 @@ HWTEST_F(GaugeTestNg, GaugePaintMethodTest018, TestSize.Level0)
  * @tc.desc: Test Gauge PaintMethod Paint
  * @tc.type: FUNC
  */
-HWTEST_F(GaugeTestNg, GaugePaintMethodTest019, TestSize.Level0)
+HWTEST_F(GaugeTestNg, GaugePaintMethodTest019, TestSize.Level1)
 {
     /**
      * case: GaugeType == GaugeType::TYPE_CIRCULAR_SINGLE_SEGMENT_GRADIENT.
@@ -1228,7 +1219,7 @@ HWTEST_F(GaugeTestNg, NewPaint001, TestSize.Level1)
  * @tc.desc: Test the DrawHighLight
  * @tc.type: FUNC
  */
-HWTEST_F(GaugeTestNg, DrawHighLight001, TestSize.Level0)
+HWTEST_F(GaugeTestNg, DrawHighLight001, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. Create GaugePaintMethod.
@@ -1273,7 +1264,7 @@ HWTEST_F(GaugeTestNg, DrawHighLight001, TestSize.Level0)
  * @tc.desc: Test the NewDrawIndicator
  * @tc.type: FUNC
  */
-HWTEST_F(GaugeTestNg, NewDrawIndicator001, TestSize.Level0)
+HWTEST_F(GaugeTestNg, NewDrawIndicator001, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. Create GaugePaintMethod.
@@ -1336,7 +1327,7 @@ HWTEST_F(GaugeTestNg, NewDrawIndicator001, TestSize.Level0)
  * @tc.desc: Test the Measure
  * @tc.type: FUNC
  */
-HWTEST_F(GaugeTestNg, Measure001, TestSize.Level0)
+HWTEST_F(GaugeTestNg, Measure001, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. Create GaugePaintMethod.
@@ -1379,7 +1370,7 @@ HWTEST_F(GaugeTestNg, Measure001, TestSize.Level0)
     MockPipelineContext::pipeline_->SetMinPlatformVersion(static_cast<int32_t>(PlatformVersion::VERSION_ELEVEN));
     ViewAbstract::SetWidth(AceType::RawPtr(frameNode_), CalcLength(Infinity<float>() / SIZE_INFINITY + 1.0f));
     ViewAbstract::SetHeight(AceType::RawPtr(frameNode_), CalcLength(Infinity<float>() / SIZE_INFINITY + 1.0f));
-    FlushUITasks(frameNode_);
+    FlushLayoutTask(frameNode_);
     EXPECT_TRUE(IsEqual(frameNode_->GetGeometryNode()->GetFrameSize(),
         SizeF(Infinity<float>() / SIZE_INFINITY + 1.0f, Infinity<float>() / SIZE_INFINITY + 1.0f)));
 
@@ -1388,7 +1379,7 @@ HWTEST_F(GaugeTestNg, Measure001, TestSize.Level0)
      */
     ViewAbstract::SetWidth(AceType::RawPtr(frameNode_), CalcLength(WIDTH_1));
     ViewAbstract::SetHeight(AceType::RawPtr(frameNode_), CalcLength(HEIGHT_1));
-    FlushUITasks(frameNode_);
+    FlushLayoutTask(frameNode_);
     EXPECT_TRUE(IsEqual(frameNode_->GetGeometryNode()->GetFrameSize(), SizeF(WIDTH_1, HEIGHT_1)));
 }
 
@@ -1397,7 +1388,7 @@ HWTEST_F(GaugeTestNg, Measure001, TestSize.Level0)
  * @tc.desc: Test the SetLimitFontSize
  * @tc.type: FUNC
  */
-HWTEST_F(GaugeTestNg, SetLimitFontSize001, TestSize.Level0)
+HWTEST_F(GaugeTestNg, SetLimitFontSize001, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. Create GaugePaintMethod.
@@ -1451,7 +1442,7 @@ HWTEST_F(GaugeTestNg, SetLimitFontSize001, TestSize.Level0)
  * @tc.desc: Test the Layout
  * @tc.type: FUNC
  */
-HWTEST_F(GaugeTestNg, Layout001, TestSize.Level0)
+HWTEST_F(GaugeTestNg, Layout001, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. Create GaugePaintMethod.
@@ -1508,7 +1499,7 @@ HWTEST_F(GaugeTestNg, Layout001, TestSize.Level0)
  * @tc.desc: Test the Layout CheckDescriptionIsImageNode
  * @tc.type: FUNC
  */
-HWTEST_F(GaugeTestNg, Layout002, TestSize.Level0)
+HWTEST_F(GaugeTestNg, Layout002, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. Set version restrictions and Create GaugePaintMethod.
@@ -1552,7 +1543,7 @@ HWTEST_F(GaugeTestNg, Layout002, TestSize.Level0)
  * @tc.desc: Test the OnModifyDone
  * @tc.type: FUNC
  */
-HWTEST_F(GaugeTestNg, OnModifyDone, TestSize.Level0)
+HWTEST_F(GaugeTestNg, OnModifyDone, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. create GaugePattern.
@@ -1600,7 +1591,7 @@ HWTEST_F(GaugeTestNg, OnModifyDone, TestSize.Level0)
  * @tc.desc: Test the InitLimitValueText
  * @tc.type: FUNC
  */
-HWTEST_F(GaugeTestNg, InitLimitValueText, TestSize.Level0)
+HWTEST_F(GaugeTestNg, InitLimitValueText, TestSize.Level1)
 {
     /**
      * @tc.steps: step1.create GaugePattern.
@@ -1631,7 +1622,7 @@ HWTEST_F(GaugeTestNg, InitLimitValueText, TestSize.Level0)
  * @tc.desc: Test the GetMaxValueColor
  * @tc.type: FUNC
  */
-HWTEST_F(GaugeTestNg, GetMaxValueColor, TestSize.Level0)
+HWTEST_F(GaugeTestNg, GetMaxValueColor, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. Create GaugePattern.
@@ -1677,7 +1668,7 @@ HWTEST_F(GaugeTestNg, GetMaxValueColor, TestSize.Level0)
  * @tc.desc: Test the OnImageLoadSuccess
  * @tc.type: FUNC
  */
-HWTEST_F(GaugeTestNg, OnImageLoadSuccess001, TestSize.Level0)
+HWTEST_F(GaugeTestNg, OnImageLoadSuccess001, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. Create GaugePattern.
@@ -1739,7 +1730,7 @@ HWTEST_F(GaugeTestNg, OnImageLoadSuccess002, TestSize.Level2)
  * @tc.desc: Test the OnImageDataReady
  * @tc.type: FUNC
  */
-HWTEST_F(GaugeTestNg, OnImageDataReady001, TestSize.Level0)
+HWTEST_F(GaugeTestNg, OnImageDataReady001, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. Create GaugePattern.
@@ -1766,7 +1757,7 @@ HWTEST_F(GaugeTestNg, OnImageDataReady001, TestSize.Level0)
  * @tc.desc: Test GaugeModelNG  SetIsShowIndicator SetDescription SetIsShowLimitValue SetIsShowDescription
  * @tc.type: FUNC
  */
-HWTEST_F(GaugeTestNg, GaugeModelNGTest001, TestSize.Level0)
+HWTEST_F(GaugeTestNg, GaugeModelNGTest001, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. create gauge and set the properties ,and then get frameNode.
@@ -1796,7 +1787,7 @@ HWTEST_F(GaugeTestNg, GaugeModelNGTest001, TestSize.Level0)
  * @tc.desc: Test GaugeModelNG ResetGradientColors ResetShadowOptions ResetIndicatorIconPath ResetIndicatorSpace
  * @tc.type: FUNC
  */
-HWTEST_F(GaugeTestNg, GaugeModelNGTest002, TestSize.Level0)
+HWTEST_F(GaugeTestNg, GaugeModelNGTest002, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. create gauge and set the properties ,and then get frameNode.
@@ -1862,7 +1853,7 @@ HWTEST_F(GaugeTestNg, GaugeModelNGTest002, TestSize.Level0)
  * @tc.desc: Test GaugeModelNG ResetGradientColors ResetShadowOptions ResetIndicatorIconPath ResetIndicatorSpace
  * @tc.type: FUNC
  */
-HWTEST_F(GaugeTestNg, GaugeModelNGTest003, TestSize.Level0)
+HWTEST_F(GaugeTestNg, GaugeModelNGTest003, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. create gauge and set the properties ,and then get frameNode.
@@ -1927,7 +1918,7 @@ HWTEST_F(GaugeTestNg, GaugeModelNGTest003, TestSize.Level0)
  * @tc.desc: Test GaugeModelNG  SetIsShowIndicator SetDescription SetIsShowLimitValue SetIsShowDescription
  * @tc.type: FUNC
  */
-HWTEST_F(GaugeTestNg, GaugeModelNGTest004, TestSize.Level0)
+HWTEST_F(GaugeTestNg, GaugeModelNGTest004, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. create gauge and set the properties ,and then get frameNode.
@@ -1963,7 +1954,7 @@ HWTEST_F(GaugeTestNg, GaugeModelNGTest004, TestSize.Level0)
  * @tc.desc: SetBuilderFunc and get value
  * @tc.type: FUNC
  */
-HWTEST_F(GaugeTestNg, GaugePatternTest001, TestSize.Level0)
+HWTEST_F(GaugeTestNg, GaugePatternTest001, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. Init Gauge node.
@@ -2016,40 +2007,8 @@ HWTEST_F(GaugeTestNg, GaugePrivacySensitiveTest001, TestSize.Level1)
      * @tc.steps: step2. change privacy sensitive and check status.
      */
     pattern_->OnSensitiveStyleChange(false);
-    EXPECT_EQ(textPattern->IsSensitiveEnable(), false);
+    EXPECT_EQ(textPattern->IsSensitiveEnalbe(), false);
     pattern_->OnSensitiveStyleChange(true);
-    EXPECT_EQ(textPattern->IsSensitiveEnable(), true);
-}
-
-/**
- * @tc.name: GaugePrivacySensitiveTest002
- * @tc.desc: Test OnSensitiveStyleChange maxValue
- * @tc.type: FUNC
- */
-HWTEST_F(GaugeTestNg, GaugePrivacySensitiveTest002, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. Create GaugePattern.
-     */
-    Create(VALUE, MIN, MAX);
-    frameNode_ = ViewStackProcessor::GetInstance()->GetMainFrameNode();
-    auto valueTextId = ElementRegister::GetInstance()->MakeUniqueId();
-    auto textNode = FrameNode::GetOrCreateFrameNode(
-        V2::TEXT_ETS_TAG, valueTextId, []() { return AceType::MakeRefPtr<TextPattern>(); });
-    ASSERT_NE(textNode, nullptr);
-    pattern_->maxValueTextId_ = valueTextId;
-    auto textPattern = textNode->GetPattern<TextPattern>();
-    ASSERT_NE(textPattern, nullptr);
-
-    /**
-     * @tc.steps: step2. change privacy sensitive false and check status.
-     */
-    pattern_->OnSensitiveStyleChange(false);
-    EXPECT_EQ(textPattern->IsSensitiveEnable(), false);
-    /**
-     * @tc.steps: step3. change privacy sensitive true and check status.
-     */
-    pattern_->OnSensitiveStyleChange(true);
-    EXPECT_EQ(textPattern->IsSensitiveEnable(), true);
+    EXPECT_EQ(textPattern->IsSensitiveEnalbe(), true);
 }
 } // namespace OHOS::Ace::NG

@@ -28,17 +28,19 @@
 #include "base/utils/noncopyable.h"
 #include "core/components_ng/base/geometry_node.h"
 #include "core/components_ng/layout/layout_algorithm.h"
+#include "core/components_ng/layout/layout_property.h"
 #include "core/components_ng/layout/layout_wrapper_builder.h"
 #include "core/components_ng/property/constraint_flags.h"
+#include "core/components_ng/property/geometry_property.h"
 #include "core/components_ng/property/layout_constraint.h"
-#include "ui/properties/safe_area_insets.h"
+#include "core/components_ng/property/magic_layout_property.h"
+#include "core/components_ng/property/measure_property.h"
+#include "core/components_ng/property/position_property.h"
+#include "core/components_ng/property/property.h"
+#include "core/components_v2/inspector/inspector_constants.h"
 
 namespace OHOS::Ace::NG {
 class FrameNode;
-class UINode;
-class LayoutProperty;
-struct SafeAreaInsets;
-struct SafeAreaExpandOpts;
 
 class RecursiveLock {
 public:
@@ -124,14 +126,8 @@ struct ActiveChildSets {
     std::set<int32_t> cachedItems;
 };
 
-enum class IgnoreStrategy {
-    NORMAL = 0,
-    FROM_MARGIN,
-    STRIDE_OVER,
-    AXIS_INSENSITIVE
-};
 class ACE_FORCE_EXPORT LayoutWrapper : public virtual AceType {
-    DECLARE_ACE_TYPE(LayoutWrapper, AceType);
+    DECLARE_ACE_TYPE(LayoutWrapper, AceType)
 public:
     LayoutWrapper(WeakPtr<FrameNode> hostNode) : hostNode_(std::move(hostNode)) {}
     ~LayoutWrapper() override = default;
@@ -149,9 +145,6 @@ public:
 
     virtual RefPtr<LayoutWrapper> GetOrCreateChildByIndex(
         uint32_t index, bool addToRenderTree = true, bool isCache = false) = 0;
-    /**
-     * @param isCache if false, child is added to render tree and AttachToMainTree is called.
-     */
     virtual RefPtr<LayoutWrapper> GetChildByIndex(uint32_t index, bool isCache = false) = 0;
     virtual ChildrenListWithGuard GetAllChildrenWithBuild(bool addToRenderTree = true) = 0;
     virtual void RemoveChildInRenderTree(uint32_t index) = 0;
@@ -192,7 +185,7 @@ public:
         return false;
     }
 
-    virtual OffsetF GetParentGlobalOffsetWithSafeArea(bool checkBoundary = false, bool checkPosition = false) const;
+    OffsetF GetParentGlobalOffsetWithSafeArea(bool checkBoundary = false, bool checkPosition = false) const;
 
     virtual bool SkipMeasureContent() const;
 
@@ -205,11 +198,6 @@ public:
     }
 
     virtual bool CheckNeedForceMeasureAndLayout() = 0;
-
-    virtual bool ReachResponseDeadline() const
-    {
-        return false;
-    }
 
     void SetIsOverlayNode(bool isOverlayNode)
     {
@@ -224,9 +212,9 @@ public:
 
     virtual void BuildLazyItem() {}
 
-    bool ConstraintChanged() const
+    bool IsConstraintNoChanged() const
     {
-        return !isConstraintNotChanged_;
+        return isConstraintNotChanged_;
     }
     const ConstraintFlags& GetConstraintChanges() const
     {
@@ -248,12 +236,9 @@ public:
     void AdjustNotExpandNode();
     void AdjustFixedSizeNode(RectF& frame);
     void ExpandHelper(const std::unique_ptr<SafeAreaExpandOpts>& opts, RectF& frame);
-    ExpandEdges GetAccumulatedSafeAreaExpand(bool includingSelf = false,
-        IgnoreLayoutSafeAreaOpts options = { .type = NG::LAYOUT_SAFE_AREA_TYPE_SYSTEM,
-            .edges = NG::LAYOUT_SAFE_AREA_EDGE_ALL },
-        IgnoreStrategy strategy = IgnoreStrategy::NORMAL);
+    ExpandEdges GetAccumulatedSafeAreaExpand(bool includingSelf = false);
     void ResetSafeAreaPadding();
-
+    
     bool SkipSyncGeometryNode() const
     {
         return needSkipSyncGeometryNode_;
@@ -268,61 +253,6 @@ public:
     RectF GetFrameRectWithSafeArea(bool checkPosition = false) const;
     void AddChildToExpandListIfNeeded(const WeakPtr<FrameNode>& node);
     void ApplyConstraintWithoutMeasure(const std::optional<LayoutConstraintF>& constraint);
-    RectF GetBackGroundAccumulatedSafeAreaExpand();
-
-    bool GetIgnoreLayoutProcess()
-    {
-        return ignoreLayoutProcess_;
-    }
-
-    // Paired with GetHasPreMeasured. Once a node being collected as a measure-delayed child, set true.
-    void SetHasPreMeasured()
-    {
-        hasPreMeasured_ = true;
-    }
-
-    // Paired with SetHasPreMeasured. To avoid re-entering PreMeasure in the delayed measure process.
-    bool GetHasPreMeasured()
-    {
-        return std::exchange(hasPreMeasured_, false);
-    }
-
-    bool CheckHasPreMeasured() const
-    {
-        return hasPreMeasured_;
-    }
-
-    void SetEscapeDelayForIgnore(bool noDelay)
-    {
-        escapeDelayForIgnore_ = noDelay;
-    }
-
-    bool GetEscapeDelayForIgnore() const
-    {
-        return escapeDelayForIgnore_;
-    }
-
-    bool PredictMeasureResult(LayoutWrapper* childWrapper, const std::optional<LayoutConstraintF>& parentConstraint);
-
-    // Paired with GetDelaySelfLayoutForIgnore. Once a node being collected as a layout-delayed child, set true.
-    void SetDelaySelfLayoutForIgnore()
-    {
-        delaySelfLayoutForIgnore_ = true;
-    }
-
-    // Paired with SetDelaySelfLayoutForIgnore. Access to skip THE JUST first layout after SetDelaySelfLayoutForIgnore,
-    // and valid layout should be called during PostponedTaskForIgnore.
-    bool GetDelaySelfLayoutForIgnore()
-    {
-        return std::exchange(delaySelfLayoutForIgnore_, false);
-    }
-
-    bool IsIgnoreOptsValid();
-
-    bool IsScrollableAxisInsensitive()
-    {
-        return isScrollableAxis_;
-    }
 
 protected:
     void CreateRootConstraint();
@@ -333,29 +263,11 @@ protected:
     OffsetF ExpandIntoKeyboard();
     bool CheckValidSafeArea();
     float GetPageCurrentOffset();
-
-    void SetIgnoreLayoutProcess(bool switchTo)
-    {
-        ignoreLayoutProcess_ = switchTo;
-    }
-
-    void ResetIgnoreLayoutProcess()
-    {
-        ignoreLayoutProcess_ = false;
-    }
-
-    enum class StartPoint {
-        NORMAL = 0,
-        INCLUDING_SELF,
-        FROM_MARGIN
-    };
     bool AccumulateExpandCacheHit(ExpandEdges& totalExpand, const PaddingPropertyF& innerSpace);
-    ExpandEdges GetAccumulatedSafeAreaExpandForAllEdges(
-        StartPoint startPoint = StartPoint::NORMAL, LayoutSafeAreaType ignoreType = NG::LAYOUT_SAFE_AREA_TYPE_SYSTEM);
-    void GetAccumulatedSafeAreaExpandHelper(RectF& adjustingRect, ExpandEdges& totalExpand, bool fromSelf = false,
-        LayoutSafeAreaType ignoreType = NG::LAYOUT_SAFE_AREA_TYPE_SYSTEM);
+    void GetAccumulatedSafeAreaExpandHelper(RectF& adjustingRect, ExpandEdges& totalExpand, bool fromSelf = false);
     void ParseSafeAreaPaddingSides(const PaddingPropertyF& parentSafeAreaPadding,
         const PaddingPropertyF& parentInnerSpace, const RectF& adjustingRect, ExpandEdges& rollingExpand);
+
     WeakPtr<FrameNode> hostNode_;
 
     ConstraintFlags constraintChanges_;
@@ -367,11 +279,7 @@ protected:
     bool needSkipSyncGeometryNode_ = false;
     std::optional<bool> skipMeasureContent_;
     std::optional<bool> needForceMeasureAndLayout_;
-    bool ignoreLayoutProcess_ = false;
-    bool hasPreMeasured_ = false;
-    bool delaySelfLayoutForIgnore_ = false;
-    bool escapeDelayForIgnore_ = false;
-    bool isScrollableAxis_ = false;
+
 private:
     void AdjustChildren(const OffsetF& offset, bool parentScrollable);
     void AdjustChild(RefPtr<UINode> node, const OffsetF& offset, bool parentScrollable);

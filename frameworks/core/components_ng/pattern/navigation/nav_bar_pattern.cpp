@@ -18,35 +18,41 @@
 #include <algorithm>
 
 #include "base/i18n/localization.h"
-#include "base/subwindow/subwindow_manager.h"
-#include "base/utils/system_properties.h"
+#include "core/common/container.h"
+#include "core/components_ng/base/view_abstract.h"
+#include "core/components_ng/pattern/bubble/bubble_pattern.h"
+#include "core/components_ng/pattern/button/button_layout_property.h"
+#include "core/components_ng/pattern/button/button_pattern.h"
+#include "core/components_ng/pattern/grid/grid_pattern.h"
 #include "core/components_ng/pattern/image/image_layout_property.h"
 #include "core/components_ng/pattern/image/image_pattern.h"
 #include "core/components_ng/pattern/menu/menu_view.h"
 #include "core/components_ng/pattern/menu/wrapper/menu_wrapper_pattern.h"
+#include "core/components_ng/pattern/navigation/bar_item_event_hub.h"
+#include "core/components_ng/pattern/navigation/bar_item_pattern.h"
 #include "core/components_ng/pattern/navigation/navigation_pattern.h"
 #include "core/components_ng/pattern/navigation/navigation_title_util.h"
 #include "core/components_ng/pattern/navigation/navigation_toolbar_util.h"
 #include "core/components_ng/pattern/navigation/title_bar_pattern.h"
 #include "core/components_ng/pattern/navigation/tool_bar_node.h"
+#include "core/components_ng/pattern/text/text_pattern.h"
 
 namespace OHOS::Ace::NG {
 namespace {
 // titlebar ZINDEX
 constexpr static int32_t DEFAULT_TITLEBAR_ZINDEX = 2;
+constexpr float DEFAULT_NAV_BAR_MASK_OPACITY = 0.6f;
 void BuildMoreItemNodeAction(const RefPtr<FrameNode>& buttonNode, const RefPtr<BarItemNode>& barItemNode,
-    const RefPtr<FrameNode>& barMenuNode, const RefPtr<NavBarNode>& navBarNode, const MenuParam& menuParam)
+    const RefPtr<FrameNode>& barMenuNode, const RefPtr<NavBarNode>& navBarNode)
 {
     auto eventHub = barItemNode->GetEventHub<BarItemEventHub>();
     CHECK_NULL_VOID(eventHub);
 
     auto context = PipelineContext::GetCurrentContext();
-    auto clickCallback = [weakContext = WeakPtr<PipelineContext>(context),
-                            id = barItemNode->GetId(),
-                            param = menuParam,
-                            weakMenu = WeakPtr<FrameNode>(barMenuNode),
-                            weakBarItemNode = WeakPtr<BarItemNode>(barItemNode),
-                            weakNavBarNode = WeakPtr<NavBarNode>(navBarNode)]() {
+    auto clickCallback = [weakContext = WeakPtr<PipelineContext>(context), id = barItemNode->GetId(),
+                             weakMenu = WeakPtr<FrameNode>(barMenuNode),
+                             weakBarItemNode = WeakPtr<BarItemNode>(barItemNode),
+                             weakNavBarNode = WeakPtr<NavBarNode>(navBarNode)]() {
         auto context = weakContext.Upgrade();
         CHECK_NULL_VOID(context);
 
@@ -88,16 +94,6 @@ void BuildMoreItemNodeAction(const RefPtr<FrameNode>& buttonNode, const RefPtr<B
         } else {
             offset = navBarPattern->GetShowMenuOffset(barItemNode, menuNode);
         }
-
-        if (param.isShowInSubWindow) {
-            auto wrapperPattern = menu->GetPattern<MenuWrapperPattern>();
-            if (wrapperPattern && wrapperPattern->GetMenuStatus() == MenuStatus::ON_HIDE_ANIMATION) {
-                //if on hide animation, avoid displaying the menu again 
-                return;
-            }
-            SubwindowManager::GetInstance()->ShowMenuNG(menu, param, barItemNode, offset);
-            return;
-        }
         overlayManager->ShowMenu(id, offset, menu);
     };
     eventHub->SetItemAction(clickCallback);
@@ -114,7 +110,7 @@ void BuildMoreItemNodeAction(const RefPtr<FrameNode>& buttonNode, const RefPtr<B
 }
 
 RefPtr<FrameNode> CreateMenuItems(const int32_t menuNodeId, const std::vector<NG::BarItem>& menuItems,
-    const RefPtr<NavBarNode>& navBarNode, bool isCreateLandscapeMenu)
+    RefPtr<NavBarNode> navBarNode, bool isCreateLandscapeMenu)
 {
     auto menuNode = FrameNode::GetOrCreateFrameNode(
         V2::NAVIGATION_MENU_ETS_TAG, menuNodeId, []() { return AceType::MakeRefPtr<LinearLayoutPattern>(false); });
@@ -124,11 +120,7 @@ RefPtr<FrameNode> CreateMenuItems(const int32_t menuNodeId, const std::vector<NG
     auto rowProperty = menuNode->GetLayoutProperty<LinearLayoutProperty>();
     CHECK_NULL_RETURN(rowProperty, nullptr);
     rowProperty->UpdateMainAxisAlign(FlexAlign::SPACE_BETWEEN);
-    CHECK_NULL_RETURN(navBarNode, nullptr);
-    auto frameNode = navBarNode->GetParent();
-    CHECK_NULL_RETURN(frameNode, nullptr);
-    auto theme = NavigationGetTheme(frameNode->GetThemeScopeId());
-    CHECK_NULL_RETURN(theme, nullptr);
+    auto theme = NavigationGetTheme();
     auto navBarPattern = AceType::DynamicCast<NavBarPattern>(navBarNode->GetPattern());
     auto navBarMaxNum = navBarPattern->GetMaxMenuNum();
     auto mostMenuItemCount =
@@ -136,8 +128,9 @@ RefPtr<FrameNode> CreateMenuItems(const int32_t menuNodeId, const std::vector<NG
     mostMenuItemCount = SystemProperties::GetDeviceOrientation() == DeviceOrientation::LANDSCAPE ? MAX_MENU_NUM_LARGE
                                                                                                   : mostMenuItemCount;
     navBarPattern->SetMaxMenuNum(mostMenuItemCount);
-    bool needMoreButton = menuItems.size() > mostMenuItemCount;
+    bool needMoreButton = menuItems.size() > mostMenuItemCount ? true : false;
 
+    auto frameNode = navBarNode->GetParent();
     auto navigationGroupNode = AceType::DynamicCast<NavigationGroupNode>(frameNode);
     CHECK_NULL_RETURN(navigationGroupNode, nullptr);
     auto hub = navigationGroupNode->GetEventHub<EventHub>();
@@ -160,7 +153,7 @@ RefPtr<FrameNode> CreateMenuItems(const int32_t menuNodeId, const std::vector<NG
             int32_t barItemNodeId = ElementRegister::GetInstance()->MakeUniqueId();
             auto barItemNode = BarItemNode::GetOrCreateBarItemNode(
                 V2::BAR_ITEM_ETS_TAG, barItemNodeId, []() { return AceType::MakeRefPtr<BarItemPattern>(); });
-            NavigationTitleUtil::UpdateBarItemNodeWithItem(barItemNode, menuItem, isButtonEnabled, theme);
+            NavigationTitleUtil::UpdateBarItemNodeWithItem(barItemNode, menuItem, isButtonEnabled);
             auto barItemLayoutProperty = barItemNode->GetLayoutProperty();
             CHECK_NULL_RETURN(barItemLayoutProperty, nullptr);
             barItemLayoutProperty->UpdateMeasureType(MeasureType::MATCH_PARENT);
@@ -193,13 +186,10 @@ RefPtr<FrameNode> CreateMenuItems(const int32_t menuNodeId, const std::vector<NG
         auto barItemLayoutProperty = barItemNode->GetLayoutProperty();
         CHECK_NULL_RETURN(barItemLayoutProperty, nullptr);
         barItemLayoutProperty->UpdateMeasureType(MeasureType::MATCH_PARENT);
-        NavigationTitleUtil::BuildMoreIemNode(barItemNode, isButtonEnabled, theme);
+        NavigationTitleUtil::BuildMoreIemNode(barItemNode, isButtonEnabled);
         auto menuItemNode = NavigationTitleUtil::CreateMenuItemButton(theme);
         MenuParam menuParam;
         menuParam.isShowInSubWindow = false;
-        if (SystemProperties::GetDeviceType() == DeviceType::TWO_IN_ONE) {
-            menuParam.isShowInSubWindow = true;
-        }
         auto targetId = barItemNode->GetId();
         auto targetTag = barItemNode->GetTag();
         if (AceApplicationInfo::GetInstance().GreatOrEqualTargetAPIVersion(PlatformVersion::VERSION_TWELVE)) {
@@ -207,21 +197,14 @@ RefPtr<FrameNode> CreateMenuItems(const int32_t menuNodeId, const std::vector<NG
             targetId = menuItemNode->GetId();
             targetTag = menuItemNode->GetTag();
         }
-        NavigationMenuOptions menuOptions = navBarPattern->GetMenuOptions();
-        if (menuOptions.mbOptions.bgOptions.blurStyleOption.has_value()) {
-            menuParam.backgroundBlurStyleOption = menuOptions.mbOptions.bgOptions.blurStyleOption.value();
-        }
-        if (menuOptions.mbOptions.bgOptions.effectOption.has_value()) {
-            menuParam.backgroundEffectOption = menuOptions.mbOptions.bgOptions.effectOption.value();
-        }
         auto barMenuNode = MenuView::Create(
             std::move(params), targetId, targetTag, MenuType::NAVIGATION_MENU, menuParam);
-        BuildMoreItemNodeAction(menuItemNode, barItemNode, barMenuNode, navBarNode, menuParam);
+        BuildMoreItemNodeAction(menuItemNode, barItemNode, barMenuNode, navBarNode);
         auto iconNode = AceType::DynamicCast<FrameNode>(barItemNode->GetChildren().front());
         NavigationTitleUtil::InitTitleBarButtonEvent(menuItemNode, iconNode, true);
 
         // read navigation "more" button
-        std::string message  = theme->GetMoreMessage();
+        std::string message  = Localization::GetInstance()->GetEntryLetters("navigation.more");
         NavigationTitleUtil::SetAccessibility(menuItemNode, message);
 
         // set navigation titleBar "more" button inspectorId
@@ -233,11 +216,8 @@ RefPtr<FrameNode> CreateMenuItems(const int32_t menuNodeId, const std::vector<NG
         menuNode->AddChild(menuItemNode);
         isCreateLandscapeMenu ? navBarNode->SetLandscapeMenuNode(barMenuNode) : navBarNode->SetMenuNode(barMenuNode);
     }
-    auto titleBarNode = AceType::DynamicCast<TitleBarNode>(navBarNode->GetTitleBarNode());
-    CHECK_NULL_RETURN(titleBarNode, nullptr);
-    auto titlePattern = titleBarNode->GetPattern<TitleBarPattern>();
-    CHECK_NULL_RETURN(titlePattern, nullptr);
-    titlePattern->InitMenuDragAndLongPressEvent(menuNode, menuItems);
+
+    NavigationTitleUtil::InitDragAndLongPressEvent(menuNode, menuItems);
     return menuNode;
 }
 
@@ -293,7 +273,6 @@ void BuildTitleBar(const RefPtr<NavBarNode>& navBarNode, const RefPtr<TitleBarNo
     auto mainTitleNode = AceType::DynamicCast<FrameNode>(titleBarNode->GetTitle());
     if (mainTitleNode && !navBarNode->GetPrevTitleIsCustomValue(false)) {
         auto textLayoutProperty = mainTitleNode->GetLayoutProperty<TextLayoutProperty>();
-        CHECK_NULL_VOID(textLayoutProperty);
         auto theme = NavigationGetTheme();
         CHECK_NULL_VOID(theme);
         if (titleBarLayoutProperty->GetTitleModeValue(NavigationTitleMode::FREE) == NavigationTitleMode::MINI) {
@@ -350,7 +329,7 @@ void NavBarPattern::MountTitleBar(
     currHideTitleBar_ = hideTitleBar;
 }
 
-OffsetF NavBarPattern::GetShowMenuOffset(const RefPtr<BarItemNode>& barItemNode, const RefPtr<FrameNode>& menuNode)
+OffsetF NavBarPattern::GetShowMenuOffset(const RefPtr<BarItemNode> barItemNode, RefPtr<FrameNode> menuNode)
 {
     auto imageNode = barItemNode->GetChildAtIndex(0);
     CHECK_NULL_RETURN(imageNode, OffsetF(0.0f, 0.0f));
@@ -367,6 +346,8 @@ OffsetF NavBarPattern::GetShowMenuOffset(const RefPtr<BarItemNode>& barItemNode,
     bool isRightToLeft = AceApplicationInfo::GetInstance().IsRightToLeft();
     if (isRightToLeft) {
         imgOffset.SetX(imgOffset.GetX() + imageSize.Width());
+    } else {
+        imgOffset.SetX(imgOffset.GetX());
     }
     imgOffset.SetY(imgOffset.GetY() + imageSize.Height());
     return imgOffset;
@@ -376,8 +357,7 @@ void NavBarPattern::OnAttachToFrameNode()
 {
     auto host = GetHost();
     CHECK_NULL_VOID(host);
-    NavDestinationPatternBase::InitOnTouchEvent(host);
-    auto pipelineContext = host->GetContextWithCheck();
+    auto pipelineContext = PipelineContext::GetCurrentContext();
     CHECK_NULL_VOID(pipelineContext);
     pipelineContext->AddWindowSizeChangeCallback(host->GetId());
 
@@ -396,9 +376,6 @@ void NavBarPattern::OnAttachToFrameNode()
 void NavBarPattern::OnCoordScrollStart()
 {
     if (isHideTitlebar_ || titleMode_ != NavigationTitleMode::FREE) {
-        auto eventHub = GetEventHub<NavBarEventHub>();
-        CHECK_NULL_VOID(eventHub);
-        eventHub->FireOnCoordScrollStartAction();
         return;
     }
     auto hostNode = AceType::DynamicCast<NavBarNode>(GetHost());
@@ -410,12 +387,9 @@ void NavBarPattern::OnCoordScrollStart()
     titlePattern->OnCoordScrollStart();
 }
 
-float NavBarPattern::OnCoordScrollUpdate(float offset, float currentOffset)
+float NavBarPattern::OnCoordScrollUpdate(float offset)
 {
     if (isHideTitlebar_ || titleMode_ != NavigationTitleMode::FREE) {
-        auto eventHub = GetEventHub<NavBarEventHub>();
-        CHECK_NULL_RETURN(eventHub, 0.0f);
-        eventHub->FireOnCoordScrollUpdateAction(offset, currentOffset);
         return 0.0f;
     }
     auto hostNode = AceType::DynamicCast<NavBarNode>(GetHost());
@@ -432,9 +406,6 @@ void NavBarPattern::OnCoordScrollEnd()
     TAG_LOGI(AceLogTag::ACE_NAVIGATION, "OnCoordScroll end");
     if (titleMode_ != NavigationTitleMode::FREE) {
         TAG_LOGI(AceLogTag::ACE_NAVIGATION, "titleMode_ is not free");
-        auto eventHub = GetEventHub<NavBarEventHub>();
-        CHECK_NULL_VOID(eventHub);
-        eventHub->FireOnCoordScrollEndAction();
         return;
     }
     auto hostNode = AceType::DynamicCast<NavBarNode>(GetHost());
@@ -471,15 +442,6 @@ void NavBarPattern::OnModifyDone()
     auto parent = hostNode->GetParent();
     CHECK_NULL_VOID(parent);
     titleBarNode->SetInnerParentId(parent->GetInspectorId().value_or(""));
-    auto layoutPolicy = navBarLayoutProperty->GetLayoutPolicyProperty();
-    if (layoutPolicy.has_value()) {
-        auto content = AceType::DynamicCast<FrameNode>(hostNode->GetContentNode());
-        CHECK_NULL_VOID(content);
-        content->GetLayoutProperty()->UpdateLayoutPolicyProperty(
-            layoutPolicy.value().widthLayoutPolicy_.value_or(LayoutCalPolicy::NO_MATCH), true);
-        content->GetLayoutProperty()->UpdateLayoutPolicyProperty(
-            layoutPolicy.value().heightLayoutPolicy_.value_or(LayoutCalPolicy::NO_MATCH), false);
-    }
 }
 
 void NavBarPattern::OnWindowSizeChanged(int32_t width, int32_t height, WindowSizeChangeReason type)
@@ -511,10 +473,43 @@ void NavBarPattern::OnWindowSizeChanged(int32_t width, int32_t height, WindowSiz
 void NavBarPattern::OnDetachFromFrameNode(FrameNode* frameNode)
 {
     CHECK_NULL_VOID(frameNode);
-    auto pipeline = frameNode->GetContextWithCheck();
+    auto pipeline = PipelineContext::GetCurrentContext();
     CHECK_NULL_VOID(pipeline);
     pipeline->RemoveWindowSizeChangeCallback(frameNode->GetId());
-    NavDestinationPatternBase::RemoveOnTouchEvent(frameNode);
+}
+
+void NavBarPattern::WindowFocus(bool isFocus)
+{
+    isWindowFocus_ = isFocus;
+    SetNavBarMask(isFocus);
+}
+
+void NavBarPattern::OnColorConfigurationUpdate()
+{
+    SetNavBarMask(isWindowFocus_);
+}
+
+void NavBarPattern::SetNavBarMask(bool isWindowFocus)
+{
+    auto theme = NavigationGetTheme();
+    CHECK_NULL_VOID(theme);
+    auto navBarNode = GetHost();
+    CHECK_NULL_VOID(navBarNode);
+    auto parent = navBarNode->GetParent();
+    CHECK_NULL_VOID(parent);
+    auto navigationGroupNode = AceType::DynamicCast<NavigationGroupNode>(parent);
+    CHECK_NULL_VOID(navigationGroupNode);
+    auto pattern = navigationGroupNode->GetPattern();
+    CHECK_NULL_VOID(pattern);
+    auto navigationPattern = AceType::DynamicCast<NavigationPattern>(pattern);
+    if (navigationPattern && navigationPattern->GetNavigationMode() == NavigationMode::SPLIT) {
+        auto renderContext = navBarNode->GetRenderContext();
+        CHECK_NULL_VOID(renderContext);
+        Color maskColor = theme->GetNavBarUnfocusColor().BlendOpacity(DEFAULT_NAV_BAR_MASK_OPACITY);
+        auto maskProperty = AceType::MakeRefPtr<ProgressMaskProperty>();
+        maskProperty->SetColor(isWindowFocus ? Color::TRANSPARENT : maskColor);
+        renderContext->UpdateProgressMask(maskProperty);
+    }
 }
 
 bool NavBarPattern::CanCoordScrollUp(float offset) const
@@ -525,7 +520,7 @@ bool NavBarPattern::CanCoordScrollUp(float offset) const
     CHECK_NULL_RETURN(titleNode, false);
     auto titlePattern = titleNode->GetPattern<TitleBarPattern>();
     CHECK_NULL_RETURN(titlePattern, false);
-    return (Negative(offset) && !titlePattern->IsCurrentMinTitle()) || IsNeedHandleScroll();
+    return Negative(offset) && !titlePattern->IsCurrentMinTitle();
 }
 
 float NavBarPattern::GetTitleBarHeightLessThanMaxBarHeight() const
@@ -537,20 +532,5 @@ float NavBarPattern::GetTitleBarHeightLessThanMaxBarHeight() const
     auto titlePattern = titleBarNode->GetPattern<TitleBarPattern>();
     CHECK_NULL_RETURN(titlePattern, 0.f);
     return titlePattern->GetTitleBarHeightLessThanMaxBarHeight();
-}
-
-bool NavBarPattern::OnDirtyLayoutWrapperSwap(const RefPtr<LayoutWrapper>& dirty, const DirtySwapConfig& config)
-{
-    auto hostNode = AceType::DynamicCast<NavBarNode>(GetHost());
-    CHECK_NULL_RETURN(hostNode, false);
-    hostNode->AdjustRenderContextIfNeeded();
-    return false;
-}
-
-void NavBarPattern::BeforeCreateLayoutWrapper()
-{
-    auto eventHub = GetEventHub<NavBarEventHub>();
-    CHECK_NULL_VOID(eventHub);
-    eventHub->FireBeforeCreateLayoutWrapperCallBack();
 }
 } // namespace OHOS::Ace::NG

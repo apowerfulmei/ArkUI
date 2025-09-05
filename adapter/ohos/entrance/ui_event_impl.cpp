@@ -16,58 +16,21 @@
 #include "adapter/ohos/entrance/ui_event_impl.h"
 
 #include <dlfcn.h>
+#include <mutex>
+#include <string>
+#include <unordered_map>
 
-#include "ui_event_observer.h"
+#include "interfaces/inner_api/ace/ui_event_observer.h"
+
+#include "base/log/log.h"
+#include "base/thread/background_task_executor.h"
 #include "core/common/container.h"
-#include "core/common/container_scope.h"
 #include "core/common/recorder/event_controller.h"
 #include "core/common/recorder/event_recorder.h"
-#include "core/common/recorder/inspector_tree_collector.h"
 #include "core/common/recorder/node_data_cache.h"
-#include "core/components_ng/base/simplified_inspector.h"
-#include "core/components_ng/pattern/pattern.h"
-#include "frameworks/bridge/common/utils/engine_helper.h"
+#include "core/components_ng/base/inspector.h"
 
 namespace OHOS::Ace {
-namespace {
-std::string GetWebLanguageByNodeId(int32_t nodeId)
-{
-    auto& weakNodeCache = Recorder::EventRecorder::Get().GetWeakNodeMap();
-    auto iter = weakNodeCache.find(nodeId);
-    if (iter == weakNodeCache.end()) {
-        return "";
-    }
-    auto node = iter->second.Upgrade();
-    CHECK_NULL_RETURN(node, "");
-    auto pattern = node->GetPattern();
-    CHECK_NULL_RETURN(pattern, "");
-    return pattern->GetCurrentLanguage();
-}
-
-std::string GetCurrentPageParam()
-{
-    ContainerScope scope(Container::CurrentIdSafely());
-    auto container = Container::CurrentSafely();
-    CHECK_NULL_RETURN(container, "");
-    auto frontend = container->GetFrontend();
-    CHECK_NULL_RETURN(frontend, "");
-    auto result = frontend->GetTopNavDestinationInfo(false, true);
-    if (!result.empty() && result != "{}") {
-        return result;
-    }
-
-    auto delegate = EngineHelper::GetCurrentDelegate();
-    CHECK_NULL_RETURN(delegate, "");
-    auto paramJson = JsonUtil::Create();
-    result = delegate->GetParams();
-    if (result.empty() || result == "{}") {
-        result = delegate->GetInitParams();
-    }
-    paramJson->Put("params", result.c_str());
-    return paramJson->ToString();
-}
-} // namespace
-
 extern "C" ACE_FORCE_EXPORT void OHOS_ACE_RegisterUIEventObserver(
     const std::string& config, const std::shared_ptr<UIEventObserver>& observer)
 {
@@ -88,56 +51,17 @@ extern "C" ACE_FORCE_EXPORT void OHOS_ACE_GetNodeProperty(
     Recorder::NodeDataCache::Get().GetNodeData(pageUrl, nodeProperties);
 }
 
-extern "C" ACE_FORCE_EXPORT void OHOS_ACE_GetSimplifiedInspectorTree(const TreeParams& params, std::string& tree)
+extern "C" ACE_FORCE_EXPORT void OHOS_ACE_GetSimplifiedInspectorTree(std::string& tree)
 {
-    if (params.infoType == InspectorInfoType::PAGE_PARAM) {
-        tree = GetCurrentPageParam();
-        return;
-    }
-    auto containerId = Recorder::EventRecorder::Get().GetContainerId(params.inspectorType == InspectorPageType::FOCUS);
-    auto container = Container::GetContainer(containerId);
-    if (!container) {
-        return;
-    }
-    if (params.isWindowIdOnly || params.infoType == InspectorInfoType::WINDOW_ID) {
-        tree = std::to_string(container->GetWindowId());
-        return;
-    }
-    if (params.infoType == InspectorInfoType::WEB_LANG && params.webId > 0) {
-        tree = GetWebLanguageByNodeId(params.webId);
-        return;
-    }
-    if (container->IsUseNewPipeline()) {
-        auto inspector = std::make_shared<NG::SimplifiedInspector>(containerId, params);
-        tree = inspector->GetInspector();
-    }
-}
-
-extern "C" ACE_FORCE_EXPORT void OHOS_ACE_GetSimplifiedInspectorTreeAsync(
-    const TreeParams& params, OnInspectorTreeResult&& callback)
-{
-    auto containerId = Recorder::EventRecorder::Get().GetContainerId(params.inspectorType == InspectorPageType::FOCUS);
+    TAG_LOGD(AceLogTag::ACE_UIEVENT, "GetSimplifiedInspectorTree.");
+    auto containerId = Recorder::EventRecorder::Get().GetContainerId();
     auto container = Container::GetContainer(containerId);
     if (!container) {
         return;
     }
     if (container->IsUseNewPipeline()) {
-        auto inspector = std::make_shared<NG::SimplifiedInspector>(containerId, params);
-        if (params.enableBackground) {
-            auto collector = std::make_shared<Recorder::InspectorTreeCollector>(std::move(callback), true);
-            inspector->GetInspectorBackgroundAsync(collector);
-        } else {
-            auto collector = std::make_shared<Recorder::InspectorTreeCollector>(std::move(callback), false);
-            inspector->GetInspectorAsync(collector);
-        }
+        tree = NG::Inspector::GetSimplifiedInspector(containerId);
     }
-}
-
-extern "C" ACE_FORCE_EXPORT void OHOS_ACE_ExecuteCommandAsync(const UICommandParams& params, UICommandResult&& callback)
-{
-    auto inspector = std::make_shared<NG::SimplifiedInspector>(0, params);
-    auto collector = std::make_shared<Recorder::InspectorTreeCollector>(std::move(callback), false);
-    inspector->ExecuteUICommand(collector);
 }
 
 namespace Recorder {

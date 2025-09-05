@@ -238,7 +238,7 @@ RefPtr<Frontend> Frontend::Create()
 
 JsFrontend::~JsFrontend() noexcept
 {
-    LOGI("Frontend destroyed");
+    LOG_DESTROY();
 }
 
 void JsFrontend::Destroy()
@@ -733,21 +733,6 @@ void JsFrontend::OnDrawCompleted(const std::string& componentId)
     if (delegate_) {
         delegate_->OnDrawCompleted(componentId);
     }
-}
-
-void JsFrontend::OnDrawChildrenCompleted(const std::string& componentId)
-{
-    if (delegate_) {
-        delegate_->OnDrawChildrenCompleted(componentId);
-    }
-}
-
-bool JsFrontend::IsDrawChildrenCallbackFuncExist(const std::string& componentId)
-{
-    if (delegate_) {
-        return delegate_->IsDrawChildrenCallbackFuncExist(componentId);
-    }
-    return false;
 }
 
 void JsFrontend::DumpFrontend() const

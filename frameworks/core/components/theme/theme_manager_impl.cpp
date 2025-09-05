@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2021-2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,7 +16,6 @@
 #include "core/components/theme/theme_manager_impl.h"
 
 #include "core/common/agingadapation/aging_adapation_dialog_theme.h"
-#include "core/common/resource/resource_manager.h"
 #include "core/components/badge/badge_theme.h"
 #include "core/components/button/button_theme.h"
 #include "core/components/calendar/calendar_theme.h"
@@ -35,8 +34,6 @@
 #include "core/components/indexer/indexer_theme.h"
 #include "core/components/list/list_item_theme.h"
 #include "core/components/list/list_theme.h"
-#include "core/components/list/arc_list_item_theme.h"
-#include "core/components/list/arc_list_theme.h"
 #include "core/components/marquee/marquee_theme.h"
 #include "core/components/navigation_bar/navigation_bar_theme.h"
 #include "core/components/picker/picker_theme.h"
@@ -55,12 +52,10 @@
 #include "core/components/tab_bar/tab_theme.h"
 #include "core/components/text_field/textfield_theme.h"
 #include "core/components/text_overlay/text_overlay_theme.h"
-#include "core/components/text_overlay/text_overlay_theme_wrapper.h"
 #include "core/components/theme/advanced_pattern_theme.h"
 #include "core/components/theme/app_theme.h"
 #include "core/components/theme/blur_style_theme.h"
 #include "core/components/theme/card_theme.h"
-#include "core/components/theme/icon_theme.h"
 #include "core/components/theme/shadow_theme.h"
 #include "core/components/toast/toast_theme.h"
 #include "core/components/toggle/toggle_theme.h"
@@ -70,35 +65,12 @@
 #include "core/components_ng/pattern/container_modal/container_modal_theme.h"
 #include "core/components_ng/pattern/form/form_theme.h"
 #include "core/components_ng/pattern/gauge/gauge_theme.h"
-#include "core/components_ng/pattern/refresh/refresh_theme_ng.h"
 #include "core/components_ng/pattern/security_component/security_component_theme.h"
 #include "core/components_ng/pattern/side_bar/side_bar_theme.h"
 #include "core/components_v2/pattern_lock/pattern_lock_theme.h"
 #include "core/components_ng/pattern/grid/grid_item_theme.h"
-#include "core/components_ng/pattern/linear_indicator/linear_indicator_theme.h"
 #include "core/components_ng/pattern/menu/menu_theme.h"
 #include "core/components_ng/pattern/rich_editor/rich_editor_theme.h"
-#include "core/components_ng/pattern/scrollable/scrollable_theme.h"
-#include "core/components_ng/pattern/select/select_theme_wrapper.h"
-#include "core/components_ng/pattern/swiper/swiper_theme.h"
-#include "core/components_ng/pattern/toggle/switch_theme_wrapper.h"
-#include "core/components_ng/pattern/toggle/toggle_theme_wrapper.h"
-#include "core/components_ng/token_theme/token_theme_storage.h"
-#include "core/components_ng/pattern/checkbox/checkbox_theme_wrapper.h"
-#include "core/components_ng/pattern/counter/counter_theme_wrapper.h"
-#include "frameworks/core/components/text_clock/text_clock_theme.h"
-#include "core/components_ng/pattern/text_clock/text_clock_theme_wrapper.h"
-#include "core/components_ng/pattern/progress/progress_theme_wrapper.h"
-#include "core/components_ng/pattern/divider/divider_theme_wrapper.h"
-#include "core/components_ng/pattern/rich_editor/rich_editor_theme_wrapper.h"
-#include "core/components_ng/pattern/search/search_theme_wrapper.h"
-#include "core/components_ng/pattern/slider/slider_theme_wrapper.h"
-#include "core/components_ng/pattern/text/text_theme_wrapper.h"
-#include "core/components_ng/pattern/text_field/text_field_theme_wrapper.h"
-#include "core/components_ng/pattern/picker/picker_theme_wrapper.h"
-#include "core/components_ng/pattern/navigation/navigation_bar_theme_wrapper.h"
-#include "core/common/agingadapation/aging_adapation_dialog_theme_wrapper.h"
-#include "core/components_ng/pattern/side_bar/side_bar_theme_wrapper.h"
 
 namespace OHOS::Ace {
 namespace {
@@ -128,11 +100,8 @@ const std::unordered_map<ThemeType, RefPtr<Theme>(*)(const RefPtr<ThemeConstants
     { RefreshTheme::TypeId(), &ThemeBuildFunc<RefreshTheme::Builder> },
     { ListTheme::TypeId(), &ThemeBuildFunc<ListTheme::Builder> },
     { ListItemTheme::TypeId(), &ThemeBuildFunc<ListItemTheme::Builder> },
-    { ArcListTheme::TypeId(), &ThemeBuildFunc<ArcListTheme::Builder> },
-    { ArcListItemTheme::TypeId(), &ThemeBuildFunc<ArcListItemTheme::Builder> },
     { ToastTheme::TypeId(), &ThemeBuildFunc<ToastTheme::Builder> },
     { TextTheme::TypeId(), &ThemeBuildFunc<TextTheme::Builder> },
-    { TextClockTheme::TypeId(), &ThemeBuildFunc<TextClockTheme::Builder> },
     { RatingTheme::TypeId(), &ThemeBuildFunc<RatingTheme::Builder> },
     { TextFieldTheme::TypeId(), &ThemeBuildFunc<TextFieldTheme::Builder> },
     { FocusAnimationTheme::TypeId(), &ThemeBuildFunc<FocusAnimationTheme::Builder> },
@@ -171,46 +140,10 @@ const std::unordered_map<ThemeType, RefPtr<Theme>(*)(const RefPtr<ThemeConstants
     { NG::GaugeTheme::TypeId(), &ThemeBuildFunc<NG::GaugeTheme::Builder> },
     { NG::SheetTheme::TypeId(), &ThemeBuildFunc<NG::SheetTheme::Builder> },
     { BlurStyleTheme::TypeId(), &ThemeBuildFunc<BlurStyleTheme::Builder> },
+    { AgingAdapationDialogTheme::TypeId(), &ThemeBuildFunc<AgingAdapationDialogTheme::Builder> },
     { ShadowTheme::TypeId(), &ThemeBuildFunc<ShadowTheme::Builder> },
     { NG::ContainerModalTheme::TypeId(), &ThemeBuildFunc<NG::ContainerModalTheme::Builder> },
-    { AgingAdapationDialogTheme::TypeId(), &ThemeBuildFunc<AgingAdapationDialogTheme::Builder> },
-    { NG::ScrollableTheme::TypeId(), &ThemeBuildFunc<NG::ScrollableTheme::Builder> },
-    { NG::SwiperTheme::TypeId(), &ThemeBuildFunc<NG::SwiperTheme::Builder> },
-    { NG::LinearIndicatorTheme::TypeId(), &ThemeBuildFunc<NG::LinearIndicatorTheme::Builder> },
-    { NG::RefreshThemeNG::TypeId(), &ThemeBuildFunc<NG::RefreshThemeNG::Builder> },
 };
-
-template<class T>
-RefPtr<TokenThemeWrapper> ThemeWrapperBuildFunc(const RefPtr<ThemeConstants>& themeConstants)
-{
-    return T().BuildWrapper(themeConstants);
-}
-
-const std::unordered_map<ThemeType, RefPtr<TokenThemeWrapper>(*)(const RefPtr<ThemeConstants>&)>
-    TOKEN_THEME_WRAPPER_BUILDERS = {
-        { CheckboxTheme::TypeId(), &ThemeWrapperBuildFunc<NG::CheckboxThemeWrapper::WrapperBuilder> },
-        { SwitchTheme::TypeId(), &ThemeWrapperBuildFunc<NG::SwitchThemeWrapper::WrapperBuilder> },
-        { ToggleTheme::TypeId(), &ThemeWrapperBuildFunc<NG::ToggleThemeWrapper::WrapperBuilder> },
-        { CounterTheme::TypeId(), &ThemeWrapperBuildFunc<NG::CounterThemeWrapper::WrapperBuilder> },
-        { TextClockTheme::TypeId(), &ThemeWrapperBuildFunc<NG::TextClockThemeWrapper::WrapperBuilder> },
-        { DividerTheme::TypeId(), &ThemeWrapperBuildFunc<NG::DividerThemeWrapper::WrapperBuilder> },
-        { NG::RichEditorTheme::TypeId(), &ThemeWrapperBuildFunc<NG::RichEditorThemeWrapper::WrapperBuilder> },
-        { SearchTheme::TypeId(), &ThemeWrapperBuildFunc<NG::SearchThemeWrapper::WrapperBuilder> },
-        { SliderTheme::TypeId(), &ThemeWrapperBuildFunc<NG::SliderThemeWrapper::WrapperBuilder> },
-        { TextTheme::TypeId(), &ThemeWrapperBuildFunc<NG::TextThemeWrapper::WrapperBuilder> },
-        { TextFieldTheme::TypeId(), &ThemeWrapperBuildFunc<NG::TextFieldThemeWrapper::WrapperBuilder> },
-        { PickerTheme::TypeId(), &ThemeWrapperBuildFunc<NG::PickerThemeWrapper::WrapperBuilder> },
-        { ProgressTheme::TypeId(), &ThemeWrapperBuildFunc<NG::ProgressThemeWrapper::WrapperBuilder> },
-        { SelectTheme::TypeId(), &ThemeWrapperBuildFunc<NG::SelectThemeWrapper::WrapperBuilder> },
-        { NavigationBarTheme::TypeId(), &ThemeWrapperBuildFunc<NG::NavigationBarThemeWrapper::WrapperBuilder> },
-        { AgingAdapationDialogTheme::TypeId(),
-            &ThemeWrapperBuildFunc<NG::AgingAdapationDialogThemeWrapper::WrapperBuilder> },
-        { NG::SideBarTheme::TypeId(), &ThemeWrapperBuildFunc<NG::SideBarThemeWrapper::WrapperBuilder> },
-        { TextOverlayTheme::TypeId(), &ThemeWrapperBuildFunc<NG::TextOverlayThemeWrapper::WrapperBuilder> }
-    };
-
-std::unordered_map<ThemeType, Ace::Kit::BuildFunc> THEME_BUILDERS_KIT;
-std::unordered_map<ThemeType, Ace::Kit::BuildThemeWrapperFunc> TOKEN_THEME_WRAPPER_BUILDERS_KIT;
 } // namespace
 
 ThemeManagerImpl::ThemeManagerImpl()
@@ -224,177 +157,19 @@ ThemeManagerImpl::ThemeManagerImpl(RefPtr<ResourceAdapter>& resourceAdapter)
     themeConstants_ = AceType::MakeRefPtr<ThemeConstants>(resourceAdapter);
 }
 
-void ThemeManagerImpl::RegisterThemeKit(ThemeType type, Ace::Kit::BuildFunc func)
-{
-    auto findIter = themes_.find(type);
-    if (findIter != themes_.end()) {
-        return;
-    }
-    THEME_BUILDERS_KIT.insert({ type, func });
-}
-
 RefPtr<Theme> ThemeManagerImpl::GetTheme(ThemeType type)
 {
     auto findIter = themes_.find(type);
     if (findIter != themes_.end()) {
         return findIter->second;
     }
-
-    auto theme = GetThemeKit(type);
-    CHECK_NULL_RETURN(theme, GetThemeOrigin(type));
-    return theme;
-}
-
-RefPtr<Theme> ThemeManagerImpl::GetThemeOrigin(ThemeType type)
-{
     auto builderIter = THEME_BUILDERS.find(type);
     if (builderIter == THEME_BUILDERS.end()) {
         return nullptr;
     }
-  
     auto theme = builderIter->second(themeConstants_);
     themes_.emplace(type, theme);
     return theme;
-}
-
-RefPtr<Theme> ThemeManagerImpl::GetThemeKit(ThemeType type)
-{
-    auto builderIterKit = THEME_BUILDERS_KIT.find(type);
-    if (builderIterKit == THEME_BUILDERS_KIT.end()) {
-        return nullptr;
-    }
-
-    if (auto pipeline = NG::PipelineContext::GetCurrentContext(); pipeline) {
-        ColorMode localMode = pipeline->GetLocalColorMode();
-        ColorMode systemMode = pipeline->GetColorMode();
-        bool needRestore = false;
-        if (localMode != ColorMode::COLOR_MODE_UNDEFINED && localMode != systemMode) {
-            // Ordinary themes should work in system color mode. Only theme wrappers support local color mode.
-            ResourceManager::GetInstance().UpdateColorMode(
-                pipeline->GetBundleName(), pipeline->GetModuleName(), pipeline->GetInstanceId(), systemMode);
-            pipeline->SetLocalColorMode(ColorMode::COLOR_MODE_UNDEFINED);
-            needRestore = true;
-        }
-        auto theme = builderIterKit->second();
-        if (needRestore) {
-            pipeline->SetLocalColorMode(localMode);
-            ResourceManager::GetInstance().UpdateColorMode(
-                pipeline->GetBundleName(), pipeline->GetModuleName(), pipeline->GetInstanceId(), localMode);
-        }
-        themes_.emplace(type, theme);
-        return theme;
-    }
-    
-    auto theme = builderIterKit->second();
-    themes_.emplace(type, theme);
-    return theme;
-}
-
-
-void ThemeManagerImpl::RegisterCustomThemeKit(ThemeType type, Ace::Kit::BuildThemeWrapperFunc func)
-{
-    auto findIter = TOKEN_THEME_WRAPPER_BUILDERS_KIT.find(type);
-    if (findIter != TOKEN_THEME_WRAPPER_BUILDERS_KIT.end()) {
-        return;
-    }
-    TOKEN_THEME_WRAPPER_BUILDERS_KIT.insert({ type, func });
-}
-
-RefPtr<Theme> ThemeManagerImpl::GetTheme(ThemeType type, TokenThemeScopeId themeScopeId)
-{
-    auto theme = GetThemeKit(type, themeScopeId);
-    CHECK_NULL_RETURN(theme, GetThemeOrigin(type, themeScopeId));
-    return theme;
-}
-
-RefPtr<Theme> ThemeManagerImpl::GetThemeOrigin(ThemeType type, int32_t themeScopeId)
-{
-    auto tokenTheme = NG::TokenThemeStorage::GetInstance()->GetTheme(themeScopeId);
-    if (!tokenTheme) {
-        return GetTheme(type);
-    }
-
-    auto pipeline = NG::PipelineContext::GetCurrentContextSafely();
-    CHECK_NULL_RETURN(pipeline, GetTheme(type));
-    ColorMode currentMode = GetCurrentColorMode();
-    ColorMode themeMode = tokenTheme->GetColorMode();
-    auto& themeWrappers = GetThemeWrappers(themeMode == ColorMode::COLOR_MODE_UNDEFINED ? currentMode : themeMode);
-    auto findIter = themeWrappers.find(type);
-    if (findIter != themeWrappers.end()) {
-        auto wrapper = findIter->second;
-        wrapper->ApplyTokenTheme(*tokenTheme);
-        return AceType::DynamicCast<Theme>(wrapper);
-    }
-
-    auto builderIter = TOKEN_THEME_WRAPPER_BUILDERS.find(type);
-    if (builderIter == TOKEN_THEME_WRAPPER_BUILDERS.end()) {
-        return GetTheme(type);
-    }
-
-    bool needRestore = false;
-    if (themeMode != ColorMode::COLOR_MODE_UNDEFINED && themeMode != currentMode) {
-        // Local color mode of the current theme does not match actual color scheme.
-        // Current color mode is system. Need to switch to local color mode temporarily.
-        ResourceManager::GetInstance().UpdateColorMode(
-            pipeline->GetBundleName(), pipeline->GetModuleName(), pipeline->GetInstanceId(), themeMode);
-        pipeline->SetLocalColorMode(themeMode);
-        needRestore = true;
-    }
-    auto wrapper = builderIter->second(themeConstants_);
-    if (needRestore) {
-        // Switching resource manager back into system color mode
-        pipeline->SetLocalColorMode(ColorMode::COLOR_MODE_UNDEFINED);
-        ResourceManager::GetInstance().UpdateColorMode(
-            pipeline->GetBundleName(), pipeline->GetModuleName(), pipeline->GetInstanceId(), currentMode);
-    }
-    wrapper->ApplyTokenTheme(*tokenTheme);
-    themeWrappers.emplace(type, wrapper);
-    return AceType::DynamicCast<Theme>(wrapper);
-}
-
-RefPtr<Theme> ThemeManagerImpl::GetThemeKit(ThemeType type, int32_t themeScopeId)
-{
-    auto tokenTheme = NG::TokenThemeStorage::GetInstance()->GetTheme(themeScopeId);
-    if (!tokenTheme) {
-        return GetTheme(type);
-    }
-
-    auto pipeline = NG::PipelineContext::GetCurrentContextSafely();
-    CHECK_NULL_RETURN(pipeline, GetTheme(type));
-    ColorMode currentMode = GetCurrentColorMode();
-    ColorMode themeMode = tokenTheme->GetColorMode();
-    auto& themeWrappers = GetThemeWrappers(themeMode == ColorMode::COLOR_MODE_UNDEFINED ? currentMode : themeMode);
-    auto findIter = themeWrappers.find(type);
-    if (findIter != themeWrappers.end()) {
-        auto wrapper = findIter->second;
-        wrapper->ApplyTokenTheme(*tokenTheme);
-        return AceType::DynamicCast<Theme>(wrapper);
-    }
-
-    auto builderIter = TOKEN_THEME_WRAPPER_BUILDERS_KIT.find(type);
-    if (builderIter == TOKEN_THEME_WRAPPER_BUILDERS_KIT.end()) {
-        return nullptr;
-    }
-
-    bool needRestore = false;
-    if (themeMode != ColorMode::COLOR_MODE_UNDEFINED && themeMode != currentMode) {
-        // Local color mode of the current theme does not match actual color scheme.
-        // Current color mode is system. Need to switch to local color mode temporarily.
-        ResourceManager::GetInstance().UpdateColorMode(
-            pipeline->GetBundleName(), pipeline->GetModuleName(), pipeline->GetInstanceId(), themeMode);
-        pipeline->SetLocalColorMode(themeMode);
-        needRestore = true;
-    }
-    auto wrapper = builderIter->second();
-    if (needRestore) {
-        // Switching resource manager back into system color mode
-        pipeline->SetLocalColorMode(ColorMode::COLOR_MODE_UNDEFINED);
-        ResourceManager::GetInstance().UpdateColorMode(
-            pipeline->GetBundleName(), pipeline->GetModuleName(), pipeline->GetInstanceId(), currentMode);
-    }
-    wrapper->ApplyTokenTheme(*tokenTheme);
-    themeWrappers.emplace(type, wrapper);
-    return AceType::DynamicCast<Theme>(wrapper);
 }
 
 Color ThemeManagerImpl::GetBackgroundColor() const
@@ -424,22 +199,6 @@ Color ThemeManagerImpl::GetBackgroundColor() const
 void ThemeManagerImpl::LoadResourceThemes()
 {
     themes_.clear();
-    themeWrappersLight_.clear();
-    themeWrappersDark_.clear();
     themeConstants_->LoadTheme(currentThemeId_);
-}
-
-ThemeManagerImpl::ThemeWrappers& ThemeManagerImpl::GetThemeWrappers(ColorMode mode)
-{
-    return mode == ColorMode::DARK ? themeWrappersDark_ : themeWrappersLight_;
-}
-
-ColorMode ThemeManagerImpl::GetCurrentColorMode() const
-{
-    auto pipelineContext = NG::PipelineContext::GetCurrentContext();
-    ColorMode systemMode = Container::CurrentColorMode();
-    CHECK_NULL_RETURN(pipelineContext, systemMode);
-    ColorMode localMode = pipelineContext->GetLocalColorMode();
-    return localMode == ColorMode::COLOR_MODE_UNDEFINED ? systemMode : localMode;
 }
 } // namespace OHOS::Ace

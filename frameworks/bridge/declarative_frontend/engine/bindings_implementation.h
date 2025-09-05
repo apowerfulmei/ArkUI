@@ -39,11 +39,7 @@ enum MethodOptions : uint8_t {
 
 class IFunctionBinding {
 public:
-    thread_local static std::vector<std::unique_ptr<IFunctionBinding>> functions;
-    IFunctionBinding(const char* name, MethodOptions options) : name_(name), options_(options)
-    {
-        functions.emplace_back(this);
-    }
+    IFunctionBinding(const char* name, MethodOptions options) : name_(name), options_(options) {}
     virtual ~IFunctionBinding() {}
 
     const char* Name() const

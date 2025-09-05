@@ -13,15 +13,13 @@
  * limitations under the License.
  */
 #include "core/common/recorder/event_config.h"
-#include <cstdint>
-#include <vector>
 
 #include "core/common/recorder/event_recorder.h"
 
 namespace OHOS::Ace::Recorder {
 EventConfig::EventConfig()
 {
-    switches_.resize(static_cast<int32_t>(EventCategory::CATEGORY_END), false);
+    switches_ = std::make_shared<Switch>();
     config_ = std::make_shared<Config>();
 }
 
@@ -32,7 +30,6 @@ void EventConfig::Init(const std::string& config)
         return;
     }
     ParseSwitch(jsonObj);
-    ParseJsCode(jsonObj);
     auto cfgJsonArray = jsonObj->GetValue("config");
     if (!cfgJsonArray || !cfgJsonArray->IsArray()) {
         return;
@@ -60,41 +57,23 @@ void EventConfig::Init(const std::string& config)
     }
 }
 
-void FillSwitch(std::vector<bool>& switches, const std::unique_ptr<JsonValue>& jsonObj, bool defaultValue = false)
-{
-    switches[static_cast<int32_t>(EventCategory::CATEGORY_PAGE)] = jsonObj->GetBool("page", defaultValue);
-    switches[static_cast<int32_t>(EventCategory::CATEGORY_COMPONENT)] = jsonObj->GetBool("component", defaultValue);
-    switches[static_cast<int32_t>(EventCategory::CATEGORY_EXPOSURE)] = jsonObj->GetBool("exposure", defaultValue);
-    switches[static_cast<int32_t>(EventCategory::CATEGORY_PAGE_PARAM)] = jsonObj->GetBool("pageParam", defaultValue);
-    switches[static_cast<int32_t>(EventCategory::CATEGORY_SCROLL)] = jsonObj->GetBool("scroll", defaultValue);
-    switches[static_cast<int32_t>(EventCategory::CATEGORY_ANIMATION)] = jsonObj->GetBool("animation", defaultValue);
-    switches[static_cast<int32_t>(EventCategory::CATEGORY_RECT)] = jsonObj->GetBool("rect", defaultValue);
-    switches[static_cast<int32_t>(EventCategory::CATEGORY_WEB)] = jsonObj->GetBool("web", defaultValue);
-    switches[static_cast<int32_t>(EventCategory::CATEGORY_TEXT_INPUT)] = jsonObj->GetBool("textInput", defaultValue);
-    switches[static_cast<int32_t>(EventCategory::CATEGORY_POINT)] = jsonObj->GetBool("point", defaultValue);
-    switches[static_cast<int32_t>(EventCategory::CATEGORY_PARENT_TEXT)] = jsonObj->GetBool("parentText", defaultValue);
-}
-
 void EventConfig::ParseSwitch(const std::unique_ptr<JsonValue>& jsonObj)
 {
     enable_ = jsonObj->GetBool("enable", false);
     auto switchVal = jsonObj->GetValue("switch");
     if (switchVal && switchVal->IsObject()) {
-        FillSwitch(switches_, switchVal);
+        switches_->emplace(EventCategory::CATEGORY_PAGE, switchVal->GetBool("page", false));
+        switches_->emplace(EventCategory::CATEGORY_COMPONENT, switchVal->GetBool("component", false));
+        switches_->emplace(EventCategory::CATEGORY_EXPOSURE, switchVal->GetBool("exposure", false));
+        switches_->emplace(EventCategory::CATEGORY_PAGE_PARAM, switchVal->GetBool("pageParam", false));
     }
     auto globalSwitchVal = jsonObj->GetValue("globalSwitch");
     if (globalSwitchVal && globalSwitchVal->IsObject()) {
-        std::vector<bool> globalSwitch(static_cast<int32_t>(EventCategory::CATEGORY_END), true);
-        FillSwitch(globalSwitch, globalSwitchVal, true);
-        EventRecorder::Get().UpdateGlobalEventSwitch(globalSwitch);
+        EventRecorder::Get().pageEnable_ = globalSwitchVal->GetBool("page", true);
+        EventRecorder::Get().componentEnable_ = globalSwitchVal->GetBool("component", true);
+        EventRecorder::Get().exposureEnable_ = globalSwitchVal->GetBool("exposure", true);
+        EventRecorder::Get().pageParamEnable_ = globalSwitchVal->GetBool("pageParam", true);
     }
-}
-
-void EventConfig::ParseJsCode(const std::unique_ptr<JsonValue>& jsonObj)
-{
-    webCategory_ = jsonObj->GetString("webCategory");
-    webIdentifier_ = jsonObj->GetString("webIdentifier");
-    webJsCode_ = jsonObj->GetString("webActionJs");
 }
 
 void EventConfig::ParseShareNode(const std::unique_ptr<JsonValue>& shareNodeArray, PageCfg& pageCfg)
@@ -135,12 +114,13 @@ bool EventConfig::IsEnable() const
     return enable_;
 }
 
-bool EventConfig::IsCategoryEnable(int32_t index) const
+bool EventConfig::IsCategoryEnable(EventCategory category) const
 {
-    if (index < 0 || index >= static_cast<int32_t>(switches_.size())) {
+    auto iter = switches_->find(category);
+    if (iter == switches_->end()) {
         return false;
     }
-    return switches_[index];
+    return iter->second;
 }
 
 const std::shared_ptr<Config>& EventConfig::GetConfig() const

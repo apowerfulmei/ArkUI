@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -734,62 +734,6 @@ HWTEST_F(GeometryTransitionTestNg, GeometryTransitionTest013, TestSize.Level1)
      * @tc.expected: pipeline not null
      */
     gt_->SyncGeometryPropertiesAfterLayout(weakNode1.Upgrade());
-    EXPECT_TRUE(PipelineContext::GetCurrentContext() != nullptr);
-}
-
-/**
- * @tc.name: GeometryTransitionTest014
- * @tc.desc: Test GetWindowBoundaryNode()
- * @tc.type: FUNC
- */
-HWTEST_F(GeometryTransitionTestNg, GeometryTransitionTest014, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. create GeometryTransition with node.
-     */
-    Create(weakNode1, true, true);
-    /**
-     * @tc.steps: step2. test GetWindowBoundaryNode().
-     * @tc.expected: pipeline not null
-     */
-    auto node = weakNode1.Upgrade();
-    node->SetParent(node2);
-
-    /**
-     * @tc.steps: step3. Set window boundary to true and verify GetWindowBoundaryNode() returns the correct node.
-     * @tc.expected: GetWindowBoundaryNode() should return the current node when window boundary is true.
-     */
-    node->SetWindowBoundary(true);
-    EXPECT_TRUE(gt_->GetWindowBoundaryNode(node) == node);
-
-    /**
-     * @tc.steps: step4. Set window boundary to false and verify GetWindowBoundaryNode() returns the parent node.
-     * @tc.expected: GetWindowBoundaryNode() should return the parent node when window boundary is false.
-     */
-    node->SetWindowBoundary(false);
-    EXPECT_TRUE(gt_->GetWindowBoundaryNode(node) == node2);
-}
- 
-/**
- * @tc.name: GeometryTransitionTest015
- * @tc.desc: Test HandleOcclusionScene()
- * @tc.type: FUNC
- */
-HWTEST_F(GeometryTransitionTestNg, GeometryTransitionTest015, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. create GeometryTransition with node.
-     */
-    Create(weakNode1, true, true);
-    /**
-     * @tc.steps: step2. test HandleOcclusionScene().
-     * @tc.expected: pipeline not null
-     */
-    gt_->HandleOcclusionScene(weakNode1.Upgrade(), false);
-    EXPECT_TRUE(PipelineContext::GetCurrentContext() != nullptr);
-    std::string id = weakNode1.Upgrade()->GetInspectorId().value_or("");
-    weakNode1.Upgrade()->UpdateInspectorId(id.append("_occlusion"));
-    gt_->HandleOcclusionScene(weakNode1.Upgrade(), false);
     EXPECT_TRUE(PipelineContext::GetCurrentContext() != nullptr);
 }
 } // namespace OHOS::Ace::NG

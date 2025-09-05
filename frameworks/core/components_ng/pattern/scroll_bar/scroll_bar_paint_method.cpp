@@ -14,7 +14,12 @@
  */
 
 #include "core/components_ng/pattern/scroll_bar/scroll_bar_paint_method.h"
-#include "core/components_ng/pattern/scroll_bar/scroll_bar_paint_property.h"
+
+#include "base/geometry/rect.h"
+#include "base/utils/utils.h"
+#include "core/components_ng/pattern/scroll/inner/scroll_bar_overlay_modifier.h"
+#include "core/components_ng/render/drawing.h"
+#include "core/pipeline/base/constants.h"
 
 namespace OHOS::Ace::NG {
 
@@ -25,11 +30,6 @@ void ScrollBarPaintMethod::UpdateOverlayModifier(PaintWrapper* paintWrapper)
     CHECK_NULL_VOID(scrollBarOverlayModifier);
     auto scrollBar = scrollBar_.Upgrade();
     CHECK_NULL_VOID(scrollBar);
-    auto paintProperty = DynamicCast<ScrollBarPaintProperty>(paintWrapper->GetPaintProperty());
-    CHECK_NULL_VOID(paintProperty);
-    auto barColor = paintProperty->GetBarColor();
-    scrollBar->SetForegroundColor(barColor);
-
     if (scrollBar->GetPositionModeUpdate()) {
         scrollBarOverlayModifier->SetPositionMode(scrollBar->GetPositionMode());
     }

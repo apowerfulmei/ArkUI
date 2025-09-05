@@ -26,18 +26,4 @@ RefPtr<PixelMap> PixelMap::DecodeTlv(std::vector<uint8_t>& buff)
 {
     return AceType::MakeRefPtr<MockPixelMap>();
 }
-
-RefPtr<PixelMap> PixelMap::CreatePixelMapFromDataAbility(void* /*rawPtr*/)
-{
-    return AceType::MakeRefPtr<MockPixelMap>();
-}
-
-void* PixelMap::GetReleaseContext(const RefPtr<PixelMap>& pixelMap)
-{
-    return nullptr;
-}
-
-void PixelMap::ReleaseProc(const void* /* pixels */, void* context)
-{
-}
 } // namespace OHOS::Ace

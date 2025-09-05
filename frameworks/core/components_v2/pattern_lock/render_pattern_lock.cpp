@@ -15,6 +15,11 @@
 
 #include "core/components_v2/pattern_lock/render_pattern_lock.h"
 
+#include "base/log/event_report.h"
+#include "core/common/font_manager.h"
+#include "core/components/common/properties/alignment.h"
+#include "core/event/ace_event_helper.h"
+
 namespace OHOS::Ace::V2 {
 RenderPatternLock::RenderPatternLock()
 {

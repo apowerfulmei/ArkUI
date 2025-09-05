@@ -14,16 +14,23 @@
  */
 #include "core/interfaces/native/node/radio_modifier.h"
 
+#include <string>
+
 #include "core/components/checkable/checkable_theme.h"
+#include "core/components/common/layout/constants.h"
+#include "core/components/theme/theme_manager.h"
+#include "core/components_ng/base/frame_node.h"
 #include "core/components_ng/base/view_abstract.h"
 #include "core/components_ng/pattern/radio/radio_model_ng.h"
+#include "core/pipeline/base/element_register.h"
 #include "core/pipeline_ng/pipeline_context.h"
+
 
 namespace OHOS::Ace::NG {
 namespace {
 constexpr bool DEFAULT_CHECKED = false;
 const int32_t ERROR_INT_CODE = -1;
-thread_local std::string g_radioStrValue;
+std::string g_radioStrValue;
 
 void SetRadioChecked(ArkUINodeHandle node, ArkUI_Bool isCheck)
 {
@@ -39,16 +46,6 @@ void ResetRadioChecked(ArkUINodeHandle node)
     RadioModelNG::SetChecked(frameNode, DEFAULT_CHECKED);
 }
 
-void SetRadioColorSetByUser(ArkUINodeHandle node, ArkUI_Bool isCheckedBackgroundColorSetByUser,
-    ArkUI_Bool isUncheckedBorderColorSetByUser, ArkUI_Bool isIndicatorColorSetByUser)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    RadioModelNG::SetCheckedBackgroundColorSetByUser(frameNode, isCheckedBackgroundColorSetByUser);
-    RadioModelNG::SetUncheckedBorderColorSetByUser(frameNode, isUncheckedBorderColorSetByUser);
-    RadioModelNG::SetIndicatorColorSetByUser(frameNode, isIndicatorColorSetByUser);
-}
-
 void SetRadioStyle(ArkUINodeHandle node, ArkUI_Uint32 checkedBackgroundColor, ArkUI_Uint32 uncheckedBorderColor,
     ArkUI_Uint32 indicatorColor)
 {
@@ -58,42 +55,6 @@ void SetRadioStyle(ArkUINodeHandle node, ArkUI_Uint32 checkedBackgroundColor, Ar
     RadioModelNG::SetCheckedBackgroundColor(frameNode, Color(checkedBackgroundColor));
     RadioModelNG::SetUncheckedBorderColor(frameNode, Color(uncheckedBorderColor));
     RadioModelNG::SetIndicatorColor(frameNode, Color(indicatorColor));
-}
-
-void SetRadioStylePtr(ArkUINodeHandle node, ArkUI_Uint32 checkedBackgroundColor, ArkUI_Uint32 uncheckedBorderColor,
-    ArkUI_Uint32 indicatorColor, const ArkUIRadioColorStruct& resObjStru)
-{
-    CHECK_NULL_VOID(node);
-    SetRadioStyle(node, checkedBackgroundColor, uncheckedBorderColor, indicatorColor);
-    if (SystemProperties::ConfigChangePerform()) {
-        auto* frameNode = reinterpret_cast<FrameNode*>(node);
-        CHECK_NULL_VOID(frameNode);
-        if (resObjStru.checkedBackgroundColor) {
-            auto* backgroundColor = reinterpret_cast<ResourceObject*>(resObjStru.checkedBackgroundColor);
-            auto backgroundColorResObj = AceType::Claim(backgroundColor);
-            RadioModelNG::CreateWithColorResourceObj(frameNode, backgroundColorResObj,
-                RadioColorType::CHECKED_BACKGROUND_COLOR);
-        } else {
-            RadioModelNG::CreateWithColorResourceObj(frameNode, nullptr, RadioColorType::CHECKED_BACKGROUND_COLOR);
-        }
-
-        if (resObjStru.uncheckedBorderColor) {
-            auto* unBorderColor = reinterpret_cast<ResourceObject*>(resObjStru.uncheckedBorderColor);
-            auto unBorderrResObj = AceType::Claim(unBorderColor);
-            RadioModelNG::CreateWithColorResourceObj(frameNode, unBorderrResObj,
-                RadioColorType::UNCHECKED_BORDER_COLOR);
-        } else {
-            RadioModelNG::CreateWithColorResourceObj(frameNode, nullptr, RadioColorType::UNCHECKED_BORDER_COLOR);
-        }
-
-        if (resObjStru.indicatorColor) {
-            auto* indicatorColor = reinterpret_cast<ResourceObject*>(resObjStru.indicatorColor);
-            auto indicatorResObj = AceType::Claim(indicatorColor);
-            RadioModelNG::CreateWithColorResourceObj(frameNode, indicatorResObj, RadioColorType::INDICATOR_COLOR);
-        } else {
-            RadioModelNG::CreateWithColorResourceObj(frameNode, nullptr, RadioColorType::INDICATOR_COLOR);
-        }
-    }
 }
 
 void ResetRadioStyle(ArkUINodeHandle node)
@@ -111,14 +72,6 @@ void ResetRadioStyle(ArkUINodeHandle node)
     RadioModelNG::SetCheckedBackgroundColor(frameNode, theme->GetActiveColor());
     RadioModelNG::SetUncheckedBorderColor(frameNode, theme->GetInactiveColor());
     RadioModelNG::SetIndicatorColor(frameNode, theme->GetPointColor());
-    RadioModelNG::SetCheckedBackgroundColorSetByUser(frameNode, false);
-    RadioModelNG::SetUncheckedBorderColorSetByUser(frameNode, false);
-    RadioModelNG::SetIndicatorColorSetByUser(frameNode, false);
-    if (SystemProperties::ConfigChangePerform()) {
-        RadioModelNG::CreateWithColorResourceObj(frameNode, nullptr, RadioColorType::CHECKED_BACKGROUND_COLOR);
-        RadioModelNG::CreateWithColorResourceObj(frameNode, nullptr, RadioColorType::UNCHECKED_BORDER_COLOR);
-        RadioModelNG::CreateWithColorResourceObj(frameNode, nullptr, RadioColorType::INDICATOR_COLOR);
-    }
 }
 
 void SetRadioWidth(ArkUINodeHandle node, ArkUI_Float32 value, ArkUI_Int32 unit, ArkUI_CharPtr calcValue)
@@ -348,120 +301,27 @@ ArkUI_CharPtr GetRadioGroup(ArkUINodeHandle node)
     g_radioStrValue = RadioModelNG::GetRadioGroup(frameNode);
     return g_radioStrValue.c_str();
 }
-
-void SetRadioOptions(ArkUINodeHandle node, ArkUI_CharPtr value, ArkUI_CharPtr group, ArkUI_Uint32 indicatorType)
-{
-    if (value == nullptr || group == nullptr) {
-        return;
-    }
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    if (static_cast<RadioIndicatorType>(indicatorType) != RadioIndicatorType::TICK &&
-        static_cast<RadioIndicatorType>(indicatorType) != RadioIndicatorType::DOT &&
-        static_cast<RadioIndicatorType>(indicatorType) != RadioIndicatorType::CUSTOM) {
-            indicatorType = static_cast<ArkUI_Uint32>(RadioIndicatorType::TICK);
-    }
-    RadioModelNG::SetRadioOptions(frameNode, std::string(value), std::string(group), indicatorType);
-}
-
-void SetRadioOnChange(ArkUINodeHandle node, void* callback)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    if (callback) {
-        auto onChange = reinterpret_cast<std::function<void(bool)>*>(callback);
-        RadioModelNG::SetOnChange(frameNode, std::move(*onChange));
-    } else {
-        RadioModelNG::SetOnChange(frameNode, nullptr);
-    }
-}
-
-void ResetRadioOnChange(ArkUINodeHandle node)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    RadioModelNG::SetOnChange(frameNode, nullptr);
-}
-
-void SetIsUserSetMargin(ArkUINodeHandle node)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    RadioModelNG::SetIsUserSetMargin(frameNode, true);
-}
 } // namespace
 
 namespace NodeModifier {
 const ArkUIRadioModifier* GetRadioModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
-    static const ArkUIRadioModifier modifier = {
-        .setRadioChecked = SetRadioChecked,
-        .resetRadioChecked = ResetRadioChecked,
-        .setRadioStyle = SetRadioStyle,
-        .resetRadioStyle = ResetRadioStyle,
-        .setRadioWidth = SetRadioWidth,
-        .resetRadioWidth = ResetRadioWidth,
-        .setRadioHeight = SetRadioHeight,
-        .resetRadioHeight = ResetRadioHeight,
-        .setRadioSize = SetRadioSize,
-        .resetRadioSize = ResetRadioSize,
-        .setRadioHoverEffect = SetRadioHoverEffect,
-        .resetRadioHoverEffect = ResetRadioHoverEffect,
-        .setRadioPadding = SetRadioPadding,
-        .resetRadioPadding = ResetRadioPadding,
-        .setRadioResponseRegion = SetRadioResponseRegion,
-        .resetRadioResponseRegion = ResetRadioResponseRegion,
-        .getRadioChecked = GetRadioChecked,
-        .getRadioStyle = GetRadioStyle,
-        .setRadioValue = SetRadioValue,
-        .resetRadioValue = ResetRadioValue,
-        .getRadioValue = GetSetRadioValue,
-        .setRadioGroup = SetRadioGroup,
-        .resetRadioGroup = ResetRadioGroup,
-        .getRadioGroup = GetRadioGroup,
-        .setRadioOptions = SetRadioOptions,
-        .setRadioOnChange = SetRadioOnChange,
-        .resetRadioOnChange = ResetRadioOnChange,
-        .setRadioStylePtr = SetRadioStylePtr,
-        .setIsUserSetMargin = SetIsUserSetMargin,
-        .setRadioColorSetByUser = SetRadioColorSetByUser,
-    };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
+    static const ArkUIRadioModifier modifier = { SetRadioChecked, ResetRadioChecked, SetRadioStyle, ResetRadioStyle,
+        SetRadioWidth, ResetRadioWidth, SetRadioHeight, ResetRadioHeight, SetRadioSize, ResetRadioSize,
+        SetRadioHoverEffect, ResetRadioHoverEffect, SetRadioPadding, ResetRadioPadding, SetRadioResponseRegion,
+        ResetRadioResponseRegion, GetRadioChecked, GetRadioStyle, SetRadioValue, ResetRadioValue, GetSetRadioValue,
+        SetRadioGroup, ResetRadioGroup, GetRadioGroup };
 
     return &modifier;
 }
 
 const CJUIRadioModifier* GetCJUIRadioModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
-    static const CJUIRadioModifier modifier = {
-        .setRadioChecked = SetRadioChecked,
-        .resetRadioChecked = ResetRadioChecked,
-        .setRadioStyle = SetRadioStyle,
-        .resetRadioStyle = ResetRadioStyle,
-        .setRadioWidth = SetRadioWidth,
-        .resetRadioWidth = ResetRadioWidth,
-        .setRadioHeight = SetRadioHeight,
-        .resetRadioHeight = ResetRadioHeight,
-        .setRadioSize = SetRadioSize,
-        .resetRadioSize = ResetRadioSize,
-        .setRadioHoverEffect = SetRadioHoverEffect,
-        .resetRadioHoverEffect = ResetRadioHoverEffect,
-        .setRadioPadding = SetRadioPadding,
-        .resetRadioPadding = ResetRadioPadding,
-        .setRadioResponseRegion = SetRadioResponseRegion,
-        .resetRadioResponseRegion = ResetRadioResponseRegion,
-        .getRadioChecked = GetRadioChecked,
-        .getRadioStyle = GetRadioStyle,
-        .setRadioValue = SetRadioValue,
-        .resetRadioValue = ResetRadioValue,
-        .getRadioValue = GetSetRadioValue,
-        .setRadioGroup = SetRadioGroup,
-        .resetRadioGroup = ResetRadioGroup,
-        .getRadioGroup = GetRadioGroup,
-    };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
+    static const CJUIRadioModifier modifier = { SetRadioChecked, ResetRadioChecked, SetRadioStyle, ResetRadioStyle,
+        SetRadioWidth, ResetRadioWidth, SetRadioHeight, ResetRadioHeight, SetRadioSize, ResetRadioSize,
+        SetRadioHoverEffect, ResetRadioHoverEffect, SetRadioPadding, ResetRadioPadding, SetRadioResponseRegion,
+        ResetRadioResponseRegion, GetRadioChecked, GetRadioStyle, SetRadioValue, ResetRadioValue, GetSetRadioValue,
+        SetRadioGroup, ResetRadioGroup, GetRadioGroup };
 
     return &modifier;
 }
@@ -476,7 +336,7 @@ void SetOnRadioChange(ArkUINodeHandle node, void* extraParam)
         event.extraParam = reinterpret_cast<intptr_t>(extraParam);
         event.componentAsyncEvent.subKind = ON_RADIO_CHANGE;
         event.componentAsyncEvent.data[0].i32 = static_cast<int>(value);
-        SendArkUISyncEvent(&event);
+        SendArkUIAsyncEvent(&event);
     };
     RadioModelNG::SetOnChange(frameNode, std::move(onChange));
 }

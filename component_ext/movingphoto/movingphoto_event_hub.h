@@ -19,14 +19,17 @@
 #include <functional>
 
 #include "base/memory/ace_type.h"
+#include "core/common/recorder/event_recorder.h"
+#include "core/components_ng/base/frame_node.h"
 #include "core/components_ng/event/event_hub.h"
+#include "core/components_ng/event/gesture_event_hub.h"
 
 namespace OHOS::Ace::NG {
 
 using MovingPhotoEventFunc = std::function<void()>;
 
 class MovingPhotoEventHub : public EventHub {
-    DECLARE_ACE_TYPE(MovingPhotoEventHub, EventHub);
+    DECLARE_ACE_TYPE(MovingPhotoEventHub, EventHub)
 
 public:
     MovingPhotoEventHub() = default;
@@ -135,24 +138,6 @@ public:
         }
     }
 
-    void SetOnPrepared(MovingPhotoEventFunc&& onPrepared)
-    {
-        onPrepared_ = std ::move(onPrepared);
-    }
-
-    MovingPhotoEventFunc GetOnPrepared()
-    {
-        return onPrepared_;
-    }
-
-    void FirePreparedEvent()
-    {
-        if (onPrepared_) {
-            auto onPrepared = onPrepared_;
-            onPrepared();
-        }
-    }
-
 private:
     MovingPhotoEventFunc onComplete_;
     MovingPhotoEventFunc onStart_;
@@ -160,7 +145,6 @@ private:
     MovingPhotoEventFunc onPause_;
     MovingPhotoEventFunc onFinish_;
     MovingPhotoEventFunc onError_;
-    MovingPhotoEventFunc onPrepared_;
 };
 
 } // namespace OHOS::Ace::NG

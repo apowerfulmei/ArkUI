@@ -15,6 +15,9 @@
 
 #include "core/components_ng/pattern/qrcode/qrcode_paint_method.h"
 
+#include <cstdint>
+
+#include "base/utils/utils.h"
 #include "core/components_ng/pattern/qrcode/qrcode_paint_property.h"
 
 namespace OHOS::Ace::NG {
@@ -50,9 +53,7 @@ void QRCodePaintMethod::UpdateContentModifier(PaintWrapper* paintWrapper)
     }
     auto paintOffset = paintWrapper->GetContentOffset();
     qrCodeModifier_->SetQRCodeOpacity(opacity);
-    auto contentSize = paintWrapper->GetContentSize();
-    auto qrCodeSize = std::min(contentSize.Width(), contentSize.Height());
-    qrCodeModifier_->SetQRCodeSize(qrCodeSize);
+    qrCodeModifier_->SetQRCodeSize(qrCodeSize_);
     qrCodeModifier_->SetQRCodeValue(value);
     qrCodeModifier_->SetPaintOffset(paintOffset);
     qrCodeModifier_->SetQRCodeColor(color);

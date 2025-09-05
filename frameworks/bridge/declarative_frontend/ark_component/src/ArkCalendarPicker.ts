@@ -161,7 +161,9 @@ class CalendarPickerBorderRadiusModifier extends ModifierWithKey<Length | Border
   }
 
   checkObjectDiff(): boolean {
-    if (!isResource(this.stageValue) && !isResource(this.value)) {
+    if (isResource(this.stageValue) && isResource(this.value)) {
+      return !isResourceEqual(this.stageValue, this.value);
+    } else if (!isResource(this.stageValue) && !isResource(this.value)) {
       if ((Object.keys(this.value).indexOf('topStart') >= 0) ||
           (Object.keys(this.value).indexOf('topEnd') >= 0) ||
           (Object.keys(this.value).indexOf('bottomStart') >= 0) ||
@@ -216,7 +218,9 @@ class CalendarPickerBorderColorModifier extends ModifierWithKey<ResourceColor | 
   }
 
   checkObjectDiff(): boolean {
-    if (!isResource(this.stageValue) && !isResource(this.value)) {
+    if (isResource(this.stageValue) && isResource(this.value)) {
+      return !isResourceEqual(this.stageValue, this.value);
+    } else if (!isResource(this.stageValue) && !isResource(this.value)) {
       if ((Object.keys(this.value).indexOf('start') >= 0) ||
           (Object.keys(this.value).indexOf('end') >= 0)) {
         return !((this.stageValue as LocalizedEdgeColors).start === (this.value as LocalizedEdgeColors).start &&
@@ -230,37 +234,6 @@ class CalendarPickerBorderColorModifier extends ModifierWithKey<ResourceColor | 
         (this.stageValue as EdgeColors).bottom === (this.value as EdgeColors).bottom);
     } else {
       return true;
-    }
-  }
-}
-
-class CalendarPickerMarkTodayModifier extends ModifierWithKey<boolean> {
-  constructor(value: boolean) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('calendarPickerMarkToday');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().calendarPicker.resetCalendarPickerMarkToday(node);
-    } else {
-      getUINativeModule().calendarPicker.setCalendarPickerMarkToday(node, this.value);
-    }
-  }
-  checkObjectDiff(): boolean {
-    return !isBaseOrResourceEqual(this.stageValue, this.value);
-  }
-}
-
-class CalendarPickerOnChangeModifier extends ModifierWithKey<Callback<Date>>{
-  constructor(value: Callback<Date>) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('calendarPickerOnChange');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().calendarPicker.resetCalendarPickerOnChange(node);
-    } else {
-      getUINativeModule().calendarPicker.setCalendarPickerOnChange(node, this.value);
     }
   }
 }
@@ -280,9 +253,8 @@ class ArkCalendarPickerComponent extends ArkComponent implements CalendarPickerA
     modifierWithKey(this._modifiersWithKeys, TextStyleModifier.identity, TextStyleModifier, value);
     return this;
   }
-  onChange(callback: Callback<Date>): this {
-    modifierWithKey(this._modifiersWithKeys, CalendarPickerOnChangeModifier.identity, CalendarPickerOnChangeModifier, callback);
-    return this;
+  onChange(callback: (value: Date) => void): this {
+    throw new Error('Method not implemented.');
   }
   padding(value: Padding | Length): this {
     let arkValue = new ArkPadding();
@@ -380,10 +352,6 @@ class ArkCalendarPickerComponent extends ArkComponent implements CalendarPickerA
   }
   borderColor(value: ResourceColor | EdgeColors): this {
     modifierWithKey(this._modifiersWithKeys, CalendarPickerBorderColorModifier.identity, CalendarPickerBorderColorModifier, value);
-    return this;
-  }
-  markToday(value: boolean): this {
-    modifierWithKey(this._modifiersWithKeys, CalendarPickerMarkTodayModifier.identity, CalendarPickerMarkTodayModifier, value);
     return this;
   }
 }

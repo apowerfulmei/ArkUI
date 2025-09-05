@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2022-2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -33,8 +33,6 @@ public:
     LoadingProgressPattern() = default;
     ~LoadingProgressPattern() override = default;
 
-    bool OnThemeScopeUpdate(int32_t themeScopeId) override;
-
     RefPtr<NodePaintMethod> CreateNodePaintMethod() override
     {
         if (!loadingProgressModifier_) {
@@ -44,9 +42,8 @@ public:
             CHECK_NULL_RETURN(paintProperty, nullptr);
             auto loadingOwner =
                 paintProperty->GetLoadingProgressOwner().value_or(LoadingProgressOwner::SELF);
-            loadingProgressModifier_ = AceType::MakeRefPtr<LoadingProgressModifier>(loadingOwner, WeakClaim(this));
+            loadingProgressModifier_ = AceType::MakeRefPtr<LoadingProgressModifier>(loadingOwner);
             loadingProgressModifier_->SetUseContentModifier(UseContentModifier());
-            InitThemeValues();
         }
         return MakeRefPtr<LoadingProgressPaintMethod>(loadingProgressModifier_);
     }
@@ -93,65 +90,20 @@ public:
     {
         return contentModifierNode_ != nullptr;
     }
-    void UpdateColor(const Color& color, bool isFristLoad = false);
-
-    void SetForegroundColorParseFailed(bool isParseFailed)
-    {
-        CHECK_NULL_VOID(loadingProgressModifier_);
-        loadingProgressModifier_->SetForegroundColorParseFailed(isParseFailed);
-    }
-
-    void SetColorLock(bool colorLock)
-    {
-        colorLock_ = colorLock;
-    }
-
-    bool IsEnableMatchParent() override
-    {
-        return true;
-    }
-
-    bool IsEnableFix() override
-    {
-        return true;
-    }
 
 private:
     void RegisterVisibleAreaChange();
     bool OnDirtyLayoutWrapperSwap(const RefPtr<LayoutWrapper>& dirty, bool skipMeasure, bool skipLayout) override;
     void OnAttachToFrameNode() override;
     void OnDetachFromFrameNode(FrameNode* frameNode) override;
-    void OnAttachToMainTree() override;
-    void OnDetachFromMainTree() override;
-
-    void OnAttachToFrameNodeMultiThread() {}
-    void OnDetachFromFrameNodeMultiThread(FrameNode* frameNode) {}
-    void OnAttachToMainTreeMultiThread();
-    void OnDetachFromMainTreeMultiThread();
     void OnModifyDone() override;
     void OnWindowHide() override;
     void OnWindowShow() override;
     void DumpInfo() override;
-    void DumpInfo(std::unique_ptr<JsonValue>& json) override;
-    void DumpSimplifyInfo(std::shared_ptr<JsonValue>& json) override {}
     void StartAnimation();
     void StopAnimation();
     void FireBuilder();
     RefPtr<FrameNode> BuildContentModifierNode();
-    void InitThemeValues();
-    void InitFocusEvent();
-    void HandleFocusEvent();
-    void HandleBlurEvent();
-    void SetFocusStyle();
-    void ClearFocusStyle();
-    void AddIsFocusActiveUpdateEvent();
-    void RemoveIsFocusActiveUpdateEvent();
-    void OnColorConfigurationUpdate() override;
-
-    Color defaultColor_;
-    Color focusedColor_;
-    bool isFocusColorSet_ = false;
-    std::function<void(bool)> isFocusActiveUpdateEvent_;
 
     std::optional<LoadingProgressMakeCallback> makeFunc_;
     RefPtr<FrameNode> contentModifierNode_;
@@ -161,7 +113,6 @@ private:
     bool isVisibleArea_ = false;
     bool isVisible_ = true;
     bool isShow_ = true;
-    bool colorLock_ = false;
     RefPtr<LoadingProgressModifier> loadingProgressModifier_;
     ACE_DISALLOW_COPY_AND_MOVE(LoadingProgressPattern);
 };

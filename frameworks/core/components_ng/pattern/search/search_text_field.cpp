@@ -15,9 +15,7 @@
 
 #include "core/components_ng/pattern/search/search_text_field.h"
 
-#include "core/components/search/search_theme.h"
 #include "core/components_ng/pattern/search/search_event_hub.h"
-#include "interfaces/inner_api/ui_session/ui_session_manager.h"
 
 namespace OHOS::Ace::NG {
 
@@ -36,10 +34,7 @@ RefPtr<FocusHub> SearchTextFieldPattern::GetFocusHub() const
 
 void SearchTextFieldPattern::PerformAction(TextInputAction action, bool forceCloseKeyboard)
 {
-    if (!HasFocus()) {
-        TAG_LOGW(AceLogTag::ACE_TEXT_FIELD, "Not Trigger OnSubmit because field blur");
-        return;
-    }
+    TAG_LOGI(AceLogTag::ACE_TEXT_FIELD, "Search PerformAction %{public}d", static_cast<int32_t>(action));
     auto host = GetHost();
     CHECK_NULL_VOID(host);
     auto parentFrameNode = AceType::DynamicCast<FrameNode>(host->GetParent());
@@ -47,15 +42,13 @@ void SearchTextFieldPattern::PerformAction(TextInputAction action, bool forceClo
     CHECK_NULL_VOID(eventHub);
     // Enter key type callback
     TextFieldCommonEvent event;
-    eventHub->FireOnSubmit(GetTextUtf16Value(), event);
-    UiSessionManager::GetInstance()->ReportComponentChangeEvent("event", "Search.onSubmit");
-    TAG_LOGI(
-        AceLogTag::ACE_TEXT_FIELD, "nodeId:[%{public}d] Search reportComponentChangeEvent onSubmit", host->GetId());
+    eventHub->FireOnSubmit(GetTextValue(), event);
     // If the developer wants to keep editing, editing will not stop
-    if (event.IsKeepEditable()) {
+    if (event.IsKeepEditable() || action == TextInputAction::NEW_LINE) {
         return;
     }
-    HandleCloseKeyboard(forceCloseKeyboard);
+    CloseKeyboard(forceCloseKeyboard);
+    FocusHub::LostFocusToViewRoot();
 }
 
 TextInputAction SearchTextFieldPattern::GetDefaultTextInputAction() const
@@ -67,10 +60,7 @@ void SearchTextFieldPattern::InitDragEvent()
 {
     auto host = GetHost();
     CHECK_NULL_VOID(host);
-    auto parentFrameNode = AceType::DynamicCast<FrameNode>(host->GetParent());
-    CHECK_NULL_VOID(parentFrameNode);
-    auto draggable = parentFrameNode->IsDraggable() || !parentFrameNode->IsCustomerSet();
-    host->SetDraggable(draggable);
+    host->SetDraggable(true);
     TextFieldPattern::InitDragEvent();
 }
 
@@ -89,7 +79,6 @@ void SearchTextFieldPattern::ApplyNormalTheme()
 
 bool SearchTextFieldPattern::IsTextEditableForStylus() const
 {
-    CHECK_NULL_RETURN(!HasCustomKeyboard(), false);
     auto host = GetHost();
     CHECK_NULL_RETURN(host, false);
     auto parentFrameNode = AceType::DynamicCast<FrameNode>(host->GetParent());
@@ -111,13 +100,12 @@ bool SearchTextFieldPattern::IsTextEditableForStylus() const
 
 void SearchTextFieldPattern::ProcessSelection()
 {
-    auto textWidth = static_cast<int32_t>(contentController_->GetTextUtf16Value().length());
+    auto textWidth = static_cast<int32_t>(contentController_->GetWideText().length());
     if (SelectOverlayIsOn()) {
         needToRefreshSelectOverlay_ = textWidth > 0;
         UpdateSelection(std::clamp(selectController_->GetStartIndex(), 0, textWidth),
             std::clamp(selectController_->GetEndIndex(), 0, textWidth));
         SetIsSingleHandle(!IsSelected());
-        selectOverlay_->UpdateHandleColor();
         if (isTextChangedAtCreation_ && textWidth == 0) {
             CloseSelectOverlay();
             StartTwinkling();
@@ -161,53 +149,12 @@ int32_t SearchTextFieldPattern::GetRequestKeyboardId()
     return searchHost->GetId();
 }
 
-float SearchTextFieldPattern::FontSizeConvertToPx(const Dimension &fontSize)
+float SearchTextFieldPattern::FontSizeConvertToPx(const Dimension& fontSize)
 {
-    auto host = GetHost();
-    CHECK_NULL_RETURN(host, fontSize.ConvertToPx());
-    auto pipeline = host->GetContext();
-    CHECK_NULL_RETURN(pipeline, fontSize.ConvertToPx());
-    auto textFieldLayoutProperty = GetLayoutProperty<TextFieldLayoutProperty>();
-    CHECK_NULL_RETURN(textFieldLayoutProperty, fontSize.ConvertToPx());
-
     if (fontSize.Unit() == DimensionUnit::FP) {
-        auto maxFontScale = MAX_FONT_SCALE;
-        if (textFieldLayoutProperty->HasMaxFontScale()) {
-            maxFontScale = std::min(textFieldLayoutProperty->GetMaxFontScale().value(), maxFontScale);
-        } else {
-            maxFontScale = std::min(pipeline->GetMaxAppFontScale(), maxFontScale);
-        }
-        return fontSize.ConvertToPxDistribute(0, maxFontScale);
+        return fontSize.ConvertToPxDistribute(0, MAX_FONT_SCALE);
     } else {
         return fontSize.ConvertToPx();
     }
 }
-
-std::string SearchTextFieldPattern::GetPlaceholderFont() const
-{
-    auto layoutProperty = GetLayoutProperty<TextFieldLayoutProperty>();
-    CHECK_NULL_RETURN(layoutProperty, "");
-    auto host = GetHost();
-    CHECK_NULL_RETURN(host, "");
-    auto pipeline = host->GetContext();
-    CHECK_NULL_RETURN(pipeline, "");
-    auto searchTheme = pipeline->GetTheme<SearchTheme>();
-    CHECK_NULL_RETURN(searchTheme, "");
-    auto jsonString = TextFieldPattern::GetPlaceholderFont();
-    auto jsonValue = JsonUtil::ParseJsonString(jsonString);
-    jsonValue->Replace(
-        "size", layoutProperty->GetPlaceholderFontSizeValue(searchTheme->GetFontSize()).ToString().c_str());
-    return jsonValue->ToString();
-}
-
-IMEClient SearchTextFieldPattern::GetIMEClientInfo()
-{
-    IMEClient clientInfo;
-    auto host = GetHost();
-    CHECK_NULL_RETURN(host, clientInfo);
-    auto parentFrameNode = AceType::DynamicCast<FrameNode>(host->GetParent());
-    CHECK_NULL_RETURN(parentFrameNode, clientInfo);
-    clientInfo.nodeId = parentFrameNode->GetId();
-    return clientInfo;
-}
-}  // namespace OHOS::Ace::NG
+} // namespace OHOS::Ace::NG

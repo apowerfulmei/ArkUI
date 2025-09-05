@@ -82,10 +82,6 @@ class ArkGaugeComponent extends ArkComponent implements GaugeAttribute {
     }
     return this.gaugeNode.getFrameNode();
   }
-  privacySensitive(value: boolean): this {
-    modifierWithKey(this._modifiersWithKeys, GaugePrivacySensitiveModifier.identity, GaugePrivacySensitiveModifier, value);
-    return this;
-  }
 }
 
 class GaugeIndicatorModifier extends ModifierWithKey<GaugeIndicatorOptions> {
@@ -140,7 +136,11 @@ class GaugeVauleModifier extends ModifierWithKey<number> {
   }
 
   checkObjectDiff(): boolean {
-    return !isBaseOrResourceEqual(this.stageValue, this.value);
+    if (isResource(this.stageValue) && isResource(this.value)) {
+      return !isResourceEqual(this.stageValue, this.value);
+    } else {
+      return true;
+    }
   }
 }
 
@@ -155,7 +155,11 @@ class GaugeStartAngleModifier extends ModifierWithKey<number> {
   }
 
   checkObjectDiff(): boolean {
-    return !isBaseOrResourceEqual(this.stageValue, this.value);
+    if (isResource(this.stageValue) && isResource(this.value)) {
+      return !isResourceEqual(this.stageValue, this.value);
+    } else {
+      return true;
+    }
   }
 }
 
@@ -170,7 +174,11 @@ class GaugeEndAngleModifier extends ModifierWithKey<number> {
   }
 
   checkObjectDiff(): boolean {
-    return !isBaseOrResourceEqual(this.stageValue, this.value);
+    if (isResource(this.stageValue) && isResource(this.value)) {
+      return !isResourceEqual(this.stageValue, this.value);
+    } else {
+      return true;
+    }
   }
 }
 
@@ -185,7 +193,11 @@ class GaugeStrokeWidthModifier extends ModifierWithKey<Length> {
   }
 
   checkObjectDiff(): boolean {
-    return !isBaseOrResourceEqual(this.stageValue, this.value);
+    if (isResource(this.stageValue) && isResource(this.value)) {
+      return !isResourceEqual(this.stageValue, this.value);
+    } else {
+      return true;
+    }
   }
 }
 
@@ -200,20 +212,10 @@ class GaugeTrackShadowModifier extends ModifierWithKey<GaugeShadowOptions> {
   }
 
   checkObjectDiff(): boolean {
-    return !isBaseOrResourceEqual(this.stageValue, this.value);
-  }
-}
-
-class GaugePrivacySensitiveModifier extends ModifierWithKey<boolean> {
-  constructor(value: boolean) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('gaugePrivacySensitive');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().gauge.resetGaugePrivacySensitive(node);
+    if (isResource(this.stageValue) && isResource(this.value)) {
+      return !isResourceEqual(this.stageValue, this.value);
     } else {
-      getUINativeModule().gauge.setGaugePrivacySensitive(node, this.value);
+      return true;
     }
   }
 }

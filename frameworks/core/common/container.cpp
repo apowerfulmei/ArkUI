@@ -15,29 +15,16 @@
 
 #include "core/common/container.h"
 
-#include <dirent.h>
-#include "iremote_object.h"
-
-#include "base/utils/utils.h"
-#include "base/subwindow/subwindow_manager.h"
 #include "core/common/ace_engine.h"
 #ifdef PLUGIN_COMPONENT_SUPPORTED
 #include "core/common/plugin_manager.h"
 #endif
-
-#include "core/components_ng/pattern/window_scene/helper/window_scene_helper.h"
-#include "core/pipeline/pipeline_base.h"
 
 namespace OHOS::Ace {
 
 int32_t Container::CurrentId()
 {
     return ContainerScope::CurrentId();
-}
-
-NG::SafeAreaInsets Container::GetKeyboardSafeArea()
-{
-    return {};
 }
 
 int32_t Container::SafelyId()
@@ -132,27 +119,16 @@ RefPtr<Container> Container::GetDefault()
     return defaultContainer;
 }
 
-RefPtr<Container> Container::GetFocused()
+RefPtr<Container> Container::GetFoucsed()
 {
-    RefPtr<Container> focusContainer;
-    AceEngine::Get().NotifyContainers([&focusContainer](const RefPtr<Container>& container) {
+    RefPtr<Container> foucsContainer;
+    AceEngine::Get().NotifyContainers([&foucsContainer](const RefPtr<Container>& container) {
         auto pipeline = container->GetPipelineContext();
         if (pipeline && pipeline->IsWindowFocused()) {
-            focusContainer = container;
+            foucsContainer = container;
         }
     });
-    return focusContainer;
-}
-
-RefPtr<Container> Container::GetByWindowId(uint32_t windowId)
-{
-    RefPtr<Container> windowContainer;
-    AceEngine::Get().NotifyContainers([&windowContainer, windowId](const RefPtr<Container>& container) {
-        if (windowId == container->GetWindowId()) {
-            windowContainer = container;
-        }
-    });
-    return windowContainer;
+    return foucsContainer;
 }
 
 RefPtr<TaskExecutor> Container::CurrentTaskExecutor()
@@ -179,20 +155,6 @@ RefPtr<TaskExecutor> Container::CurrentTaskExecutorSafelyWithCheck()
 void Container::UpdateCurrent(int32_t id)
 {
     ContainerScope::UpdateCurrent(id);
-}
-
-ColorMode Container::CurrentColorMode()
-{
-    auto curContainer = CurrentSafely();
-    CHECK_NULL_RETURN(curContainer, ColorMode::LIGHT);
-    return curContainer->GetColorMode();
-}
-
-std::string Container::CurrentBundleName()
-{
-    auto curContainer = CurrentSafely();
-    CHECK_NULL_RETURN(curContainer, "");
-    return curContainer->GetBundleName();
 }
 
 bool Container::UpdateState(const Frontend::State& state)
@@ -240,7 +202,7 @@ void Container::SetFontWeightScale(int32_t instanceId, float fontWeightScale)
 
 RefPtr<DisplayInfo> Container::GetDisplayInfo()
 {
-    return displayManager_->GetDisplayInfo(currentDisplayId_);
+    return displayManager_->GetDisplayInfo();
 }
 
 void Container::InitIsFoldable()
@@ -263,103 +225,6 @@ std::vector<Rect> Container::GetCurrentFoldCreaseRegion()
     return displayManager_->GetCurrentFoldCreaseRegion();
 }
 
-void Container::DestroyToastSubwindow(int32_t instanceId)
-{
-    auto subwindow = SubwindowManager::GetInstance()->GetToastSubwindow(instanceId);
-    if (subwindow && subwindow->IsToastSubWindow()) {
-        subwindow->DestroyWindow();
-    }
-    auto systemToastWindow = SubwindowManager::GetInstance()->GetSystemToastWindow(instanceId);
-    if (systemToastWindow && systemToastWindow->IsToastSubWindow()) {
-        systemToastWindow->DestroyWindow();
-    }
-}
-
-void Container::DestroySelectOverlaySubwindow(int32_t instanceId)
-{
-    auto subwindow = SubwindowManager::GetInstance()->GetSelectOverlaySubwindow(instanceId);
-    if (subwindow && subwindow->GetIsSelectOverlaySubWindow()) {
-        subwindow->DestroyWindow();
-        TAG_LOGI(AceLogTag::ACE_SUB_WINDOW, "Destroy selectOverlay subwindow, instanceId is %{public}d", instanceId);
-    }
-}
-
-bool Container::IsFontFileExistInPath(const std::string& path)
-{
-    DIR* dir;
-    struct dirent* ent;
-    bool isFlagFileExist = false;
-    bool isFontDirExist = false;
-    if ((dir = opendir(path.c_str())) == nullptr) {
-        if (errno == ENOENT) {
-            LOGE("ERROR ENOENT");
-        } else if (errno == EACCES) {
-            LOGE("ERROR EACCES");
-        } else {
-            LOGE("ERROR Other");
-        }
-        return false;
-    }
-    while ((ent = readdir(dir)) != nullptr) {
-        if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0) {
-            continue;
-        }
-        if (strcmp(ent->d_name, "flag") == 0) {
-            isFlagFileExist = true;
-        } else if (strcmp(ent->d_name, "fonts") == 0) {
-            isFontDirExist = true;
-        }
-    }
-    closedir(dir);
-    if (isFlagFileExist && isFontDirExist) {
-        LOGI("font path exist");
-        return true;
-    }
-    return false;
-}
-
-std::vector<std::string> Container::GetFontFamilyName(const std::string& path)
-{
-    std::vector<std::string> fontFamilyName;
-    std::string manifest = "manifest.json";
-    std::string manifestContent = ReadFileToString(path, manifest);
-    auto json = JsonUtil::ParseJsonString(manifestContent);
-    if (!json || !json->IsValid()) {
-        TAG_LOGI(AceLogTag::ACE_FONT, "Json is null or Json is not Valid, manifestContentLength:%{public}zu",
-            manifestContent.length());
-        return fontFamilyName;
-    }
-    std::string ttfFileSrc = json->GetString("ttfFileSrc");
-    if (!ttfFileSrc.empty()) {
-        size_t lastSlashPos = ttfFileSrc.find_last_of("/\\");
-        std::string ttfFileName =
-            (lastSlashPos != std::string::npos) ? ttfFileSrc.substr(lastSlashPos + 1) : ttfFileSrc;
-        fontFamilyName.push_back(ttfFileName);
-    }
-    auto ttfFileSrcExtArray = json->GetValue("ttfFileSrcExt");
-    if (ttfFileSrcExtArray && ttfFileSrcExtArray->IsArray()) {
-        for (int32_t index = 0; index < ttfFileSrcExtArray->GetArraySize(); ++index) {
-            auto ttfFileSrcExtArrayItem = ttfFileSrcExtArray->GetArrayItem(index);
-            if (ttfFileSrcExtArrayItem && ttfFileSrcExtArrayItem->IsString()) {
-                std::string ttfFileSrcExt = ttfFileSrcExtArrayItem->GetString();
-                size_t lastSlashPos = ttfFileSrcExt.find_last_of("/\\");
-                std::string ttfFileExtName =
-                    (lastSlashPos != std::string::npos) ? ttfFileSrcExt.substr(lastSlashPos + 1) : ttfFileSrcExt;
-                fontFamilyName.emplace_back(ttfFileExtName);
-            }
-        }
-    }
-    return fontFamilyName;
-}
-
-bool Container::endsWith(std::string str, std::string suffix)
-{
-    if (str.length() < suffix.length()) {
-        return false;
-    }
-    return str.substr(str.length() - suffix.length()) == suffix;
-}
-
 template<>
 int32_t Container::GenerateId<PLUGIN_SUBCONTAINER>()
 {
@@ -370,59 +235,4 @@ int32_t Container::GenerateId<PLUGIN_SUBCONTAINER>()
 #endif
 }
 
-bool Container::IsNodeInKeyGuardWindow(const RefPtr<NG::FrameNode>& node)
-{
-#ifdef WINDOW_SCENE_SUPPORTED
-    return NG::WindowSceneHelper::IsNodeInKeyGuardWindow(node);
-#else
-    return false;
-#endif
-}
-bool Container::CheckRunOnThreadByThreadId(int32_t currentId, bool defaultRes)
-{
-    auto container = GetContainer(currentId);
-    CHECK_NULL_RETURN(container, defaultRes);
-    auto executor = container->GetTaskExecutor();
-    CHECK_NULL_RETURN(executor, defaultRes);
-    return executor->WillRunOnCurrentThread(TaskExecutor::TaskType::UI);
-}
-
-Window* Container::GetWindow() const
-{
-    auto context = GetPipelineContext();
-    return context ? context->GetWindow() : nullptr;
-}
-
-bool Container::LessThanAPIVersion(PlatformVersion version)
-{
-    return static_cast<int32_t>(version) < 15
-               ? PipelineBase::GetCurrentContext() &&
-                     PipelineBase::GetCurrentContext()->GetMinPlatformVersion() < static_cast<int32_t>(version)
-               : LessThanAPITargetVersion(version);
-}
-
-bool Container::GreatOrEqualAPIVersion(PlatformVersion version)
-{
-    return static_cast<int32_t>(version) < 15
-               ? PipelineBase::GetCurrentContext() &&
-                     PipelineBase::GetCurrentContext()->GetMinPlatformVersion() >= static_cast<int32_t>(version)
-               : GreatOrEqualAPITargetVersion(version);
-}
-
-bool Container::LessThanAPIVersionWithCheck(PlatformVersion version)
-{
-    return PipelineBase::GetCurrentContextSafelyWithCheck() &&
-           PipelineBase::GetCurrentContextSafelyWithCheck()->GetMinPlatformVersion() < static_cast<int32_t>(version);
-}
-
-bool Container::GreatOrEqualAPIVersionWithCheck(PlatformVersion version)
-{
-    return PipelineBase::GetCurrentContextSafelyWithCheck() &&
-           PipelineBase::GetCurrentContextSafelyWithCheck()->GetMinPlatformVersion() >= static_cast<int32_t>(version);
-}
-
-sptr<IRemoteObject> Container::GetToken()
-{
-    return nullptr;
-}
 } // namespace OHOS::Ace

@@ -29,7 +29,6 @@
  *
  * @library libace_ndk.z.so
  * @syscap SystemCapability.ArkUI.ArkUI.Full
- * @kit ArkUI
  * @since 15
  */
 
@@ -48,7 +47,7 @@ extern "C" {
  *
  * @since 15
  */
-typedef enum {
+ typedef enum {
     /** Key events are used to move focus. */
     ARKUI_KEY_PROCESSING_MODE_FOCUS_NAVIGATION = 0,
     /** Key events bubble up to ancestors. */
@@ -111,4 +110,3 @@ void OH_ArkUI_FocusSetKeyProcessingMode(ArkUI_ContextHandle uiContext, ArkUI_Key
 #endif
 
 #endif // ARKUI_NATIVE_INTERFACE_FOCUS_H
-/** @} */

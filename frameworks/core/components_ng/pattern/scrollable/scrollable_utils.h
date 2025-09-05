@@ -20,23 +20,7 @@
 #include "core/components_ng/layout/layout_property.h"
 
 namespace OHOS::Ace::NG {
-class LayoutWrapper;
-
-struct MoveOffsetParam {
-    bool isVertical = false;
-    float contentStartOffset = 0;
-    float contentEndOffset = 0;
-    bool noNeedMargin = false;
-};
-
 struct ScrollableUtils {
-    /**
-     * @brief Disable lazyForEach prebuild cache item.
-     *
-     * @param node The host node.
-     */
-    static void DisableLazyForEachBuildCache(const RefPtr<UINode>& node);
-
     /**
      * @brief Checks if contentHeight needs to expand based on safeArea property.
      *
@@ -69,7 +53,9 @@ struct ScrollableUtils {
     static float GetMoveOffset(
         const RefPtr<FrameNode>& parentFrameNode,
         const RefPtr<FrameNode>& curFrameNode,
-        const MoveOffsetParam& param);
+        bool isVertical,
+        float contentStartOffset,
+        float contentEndOffset);
 };
 } // namespace OHOS::Ace::NG
 

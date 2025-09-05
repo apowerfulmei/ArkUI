@@ -37,6 +37,16 @@ bool UIExtensionManager::IsWrapExtensionAbilityId(int64_t elementId)
 {
     return false;
 }
+
+void UIExtensionManager::TransferAccessibilityRectInfo()
+{
+}
+
+void UIExtensionManager::RegisterBusinessDataConsumeCallback(
+    UIContentBusinessCode code, UIExtBusinessDataConsumeCallback callback)
+{
+}
+
 std::pair<int64_t, int64_t> UIExtensionManager::UnWrapExtensionAbilityId(
     int64_t extensionOffset,
     int64_t elementId)
@@ -49,24 +59,9 @@ std::pair<int64_t, int64_t> UIExtensionManager::UnWrapExtensionAbilityId(
     return std::pair<int64_t, int64_t>(index, abilityId);
 }
 
-void UIExtensionManager::TransferAccessibilityRectInfo()
-{
-}
-
-void UIExtensionManager::RegisterBusinessDataConsumeCallback(
-    UIContentBusinessCode code, const UIExtBusinessDataConsumeCallback& callback)
-{
-}
-
 const RefPtr<FrameNode> UIExtensionManager::GetFocusUiExtensionNode()
 {
     return nullptr;
-}
-
-bool UIExtensionManager::SendBusinessToHostSyncReply(
-    UIContentBusinessCode code, const AAFwk::Want& data, AAFwk::Want& reply)
-{
-    return true;
 }
 
 RefPtr<AccessibilityManagerNG> PipelineContext::GetAccessibilityManagerNG()

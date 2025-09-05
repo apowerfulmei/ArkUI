@@ -44,23 +44,18 @@ public:
 
         RefPtr<TextFieldTheme> Build(const RefPtr<ThemeConstants>& themeConstants) const
         {
-            RefPtr<TextFieldTheme> theme = AceType::MakeRefPtr<TextFieldTheme>();
+            RefPtr<TextFieldTheme> theme = AceType::Claim(new TextFieldTheme());
             if (!themeConstants) {
                 return theme;
             }
-            ParsePattern(themeConstants, theme);
+            theme->height_ = themeConstants->GetDimension(THEME_TEXTFIELD_HEIGHT);
+            ParsePattern(themeConstants->GetThemeStyle(), theme);
             return theme;
         }
 
-    protected:
-        void ParsePattern(const RefPtr<ThemeConstants>& themeConstants, const RefPtr<TextFieldTheme>& theme) const
+    private:
+        void ParsePattern(const RefPtr<ThemeStyle>& themeStyle, const RefPtr<TextFieldTheme>& theme) const
         {
-            theme->height_ = Dimension(40.0, DimensionUnit::VP);
-            theme->showSymbolId_ = themeConstants->GetSymbolByName("sys.symbol.eye");
-            theme->hideSymbolId_ = themeConstants->GetSymbolByName("sys.symbol.eye_slash");
-            theme->cancelSymbolId_ = themeConstants->GetSymbolByName("sys.symbol.xmark");
-            theme->autoFillSymbolId_ = themeConstants->GetSymbolByName("sys.symbol.security_shield");
-            auto themeStyle = themeConstants->GetThemeStyle();
             if (!themeStyle || !theme) {
                 return;
             }
@@ -72,9 +67,8 @@ public:
             ParsePatternSubFirstPart(pattern, theme);
             ParsePatternSubSecondPart(pattern, theme);
             ParsePatternSubThirdPart(pattern, theme);
-            ParsePatternSubFourthPart(pattern, theme);
         }
-    private:
+
         void ParsePatternSubFirstPart(const RefPtr<ThemeStyle>& pattern, const RefPtr<TextFieldTheme>& theme) const
         {
             theme->padding_ = Edge(pattern->GetAttr<Dimension>("textfield_padding_horizontal", 0.0_vp),
@@ -95,8 +89,6 @@ public:
             theme->needFade_ = static_cast<bool>(pattern->GetAttr<double>("textfield_need_fade", 0.0));
             theme->iconSize_ = pattern->GetAttr<Dimension>("textfield_icon_size", 0.0_vp);
             theme->iconHotZoneSize_ = pattern->GetAttr<Dimension>("textfield_icon_hot_zone_size", 0.0_vp);
-            theme->symbolSize_ = pattern->GetAttr<Dimension>("textfield_icon_size", 0.0_vp);
-            theme->symbolColor_ = pattern->GetAttr<Color>("textfield_symbol_color", Color());
             theme->showEllipsis_ = static_cast<bool>(pattern->GetAttr<double>("textfield_show_ellipsis", 0.0));
             theme->errorSpacing_ = pattern->GetAttr<Dimension>("textfield_error_spacing", 0.0_vp);
             theme->errorIsInner_ = static_cast<bool>(pattern->GetAttr<double>("textfield_error_is_inner", 0.0));
@@ -151,8 +143,6 @@ public:
             theme->underlineFontSize_ = pattern->GetAttr<Dimension>(UNDERLINE_FONT_SIZE, 0.0_fp);
             theme->errorTextStyle_.SetTextColor(pattern->GetAttr<Color>(ERROR_UNDERLINE_TEXT_COLOR, Color()));
             theme->errorTextStyle_.SetFontSize(pattern->GetAttr<Dimension>(ERROR_UNDERLINE_TEXT_SIZE, 0.0_fp));
-            theme->errorTextAlign_ =
-                static_cast<TextAlign>(pattern->GetAttr<double>("textfield_error_text_align", 0.0));
 
             theme->countTextStyle_.SetTextColor(pattern->GetAttr<Color>("count_text_color", Color()));
             theme->countTextStyle_.SetFontSize(pattern->GetAttr<Dimension>("count_text_font_size", 0.0_fp));
@@ -215,44 +205,15 @@ public:
 
             theme->cancelButton_ = pattern->GetAttr<std::string>("textfield_accessibility_clear", "");
             theme->cancelImageText_ = pattern->GetAttr<std::string>("textfield_accessibility_property_clear", "");
-            theme->showPassword_ = pattern->GetAttr<std::string>("textfield_show_password", "");
-            theme->hidePassword_ = pattern->GetAttr<std::string>("textfield_hide_password", "");
+            theme->showPassword_ = pattern->GetAttr<std::string>("textfield_show_password_button", "");
+            theme->hidePassword_ = pattern->GetAttr<std::string>("textfield_hide_password_button", "");
             theme->aiWriteBundleName_ = pattern->GetAttr<std::string>("textfield_writting_bundle_name", "");
             theme->aiWriteAbilityName_ = pattern->GetAttr<std::string>("textfield_writting_ability_name", "");
             theme->aiWriteIsSupport_ = pattern->GetAttr<std::string>("textfield_writting_is_support", "");
             theme->hasShowedPassword_ = pattern->GetAttr<std::string>("textfield_has_showed_password", "");
             theme->hasHiddenPassword_ = pattern->GetAttr<std::string>("textfield_has_hidden_password", "");
-
-            theme->inlinePaddingLeft_ = pattern->GetAttr<Dimension>("inline_padding_left", 2.0_vp);
-            theme->inlinePaddingRight_ = pattern->GetAttr<Dimension>("inline_padding_right", 12.0_vp);
             auto supportTranslate = pattern->GetAttr<std::string>("menu_translate_is_support", "0");
             theme->translateIsSupport_ = StringUtils::StringToInt(supportTranslate);
-            auto supportSearch = pattern->GetAttr<std::string>("textfield_menu_search_is_support", "0");
-            theme->supportSearch_ = StringUtils::StringToInt(supportSearch);
-        }
-
-        void ParsePatternSubFourthPart(const RefPtr<ThemeStyle>& pattern, const RefPtr<TextFieldTheme>& theme) const
-        {
-            std::string isTextFadeout = pattern->GetAttr<std::string>("text_fadeout_enable", "");
-            theme->textFadeoutEnabled_ = isTextFadeout == "true";
-            theme->textInputBorderColor_ = pattern->GetAttr<Color>("text_input_border_color", Color());
-            theme->textInputBorderWidth_ = pattern->GetAttr<Dimension>("text_input_border_width", 0.0_vp);
-            theme->errorTextInputBorderWidth_ = pattern->GetAttr<Dimension>("error_text_input_border_width", 1.0_vp);
-            theme->showPasswordIcon_ = static_cast<bool>(pattern->GetAttr<double>("show_icon_text_input", 1.0));
-            theme->hoverAndPressBgColorEnabled_ =
-                static_cast<uint32_t>(pattern->GetAttr<int>("textfield_hover_press_bg_color_enabled", 0));
-            theme->needFocusBox_ = static_cast<bool>(pattern->GetAttr<double>("text_input_need_focus_box", 0.0));
-            theme->focusPadding_ = pattern->GetAttr<Dimension>("text_input_focus_padding", 0.0_vp);
-            theme->independentControlKeyboard_ =
-                static_cast<bool>(pattern->GetAttr<double>("independent_control_keyboard", 0.0));
-            theme->directionKeysMoveFocusOut_ =
-                static_cast<bool>(pattern->GetAttr<double>("direction_keys_move_focus_out", 0.0));
-            theme->cancelIconSize_ = pattern->GetAttr<Dimension>("textfield_icon_size", 0.0_vp);
-            if (Container::GreatOrEqualAPITargetVersion(PlatformVersion::VERSION_EIGHTEEN)) {
-                theme->cancelIconSize_ = pattern->GetAttr<Dimension>("textfield_cancel_icon_size", 16.0_vp);
-            }
-            theme->autoFillIconPrimaryColor_ = pattern->GetAttr<Color>("auto_fill_icon_primary_color", Color());
-            theme->autoFillIconEmphasizeColor_ = pattern->GetAttr<Color>("auto_fill_icon_emphasize_color", Color());
         }
     };
 
@@ -408,59 +369,9 @@ public:
         return iconSize_;
     }
 
-    const Dimension& GetCancelIconSize() const
-    {
-        return cancelIconSize_;
-    }
-
-    const Dimension& GetPasswordIconSize() const
-    {
-        return passwordIconSize_;
-    }
-
-    const Dimension& GetCancelIconPadding() const
-    {
-        return cancelIconPadding_;
-    }
-
-    const Dimension& GetPasswordIconPadding() const
-    {
-        return passwordIconPadding_;
-    }
-
     const Dimension& GetIconHotZoneSize() const
     {
         return iconHotZoneSize_;
-    }
-
-    const Dimension& GetSymbolSize() const
-    {
-        return symbolSize_;
-    }
-
-    const Color& GetSymbolColor() const
-    {
-        return symbolColor_;
-    }
-
-    uint32_t GetShowSymbolId() const
-    {
-        return showSymbolId_;
-    }
-
-    uint32_t GetAutoFillSymbolId() const
-    {
-        return autoFillSymbolId_;
-    }
-
-    uint32_t GetHideSymbolId() const
-    {
-        return hideSymbolId_;
-    }
-
-    uint32_t GetCancelSymbolId() const
-    {
-        return cancelSymbolId_;
     }
 
     bool ShowEllipsis() const
@@ -476,16 +387,6 @@ public:
     bool GetErrorIsInner() const
     {
         return errorIsInner_;
-    }
-
-    bool GetIndependentControlKeyboard() const
-    {
-        return independentControlKeyboard_;
-    }
-
-    bool GetDirectionKeysMoveFocusOut() const
-    {
-        return directionKeysMoveFocusOut_;
     }
 
     const Dimension& GetErrorBorderWidth() const
@@ -526,12 +427,6 @@ public:
     TextStyle GetTextStyle() const
     {
         return textStyle_;
-    }
-
-    TextDecoration GetTextDecoration() const
-    {
-        return textStyle_.GetTextDecoration().size() > 0 ?
-            textStyle_.GetTextDecoration()[0] : TextDecoration::NONE;
     }
 
     const TextStyle& GetErrorTextStyle() const
@@ -699,11 +594,6 @@ public:
         return cancelImageText_;
     }
 
-    const Dimension& getInlinePaddingLeft() const
-    {
-        return inlinePaddingLeft_;
-    }
-
     const Dimension& getInlinePaddingRight() const
     {
         return inlinePaddingRight_;
@@ -728,19 +618,10 @@ public:
     {
         return aiWriteBundleName_;
     }
+
     const std::string& GetAIWriteAbilityName() const
     {
         return aiWriteAbilityName_;
-    }
-
-    const std::string& GetHasShowedPassword() const
-    {
-        return hasShowedPassword_;
-    }
- 
-    const std::string& GetHasHiddenPassword() const
-    {
-        return hasHiddenPassword_;
     }
 
     bool GetTranslateIsSupport() const
@@ -748,142 +629,23 @@ public:
         return translateIsSupport_;
     }
 
-    bool GetIsSupportSearch() const
-    {
-        return supportSearch_;
-    }
-
     const std::string& GetAIWriteIsSupport() const
     {
         return aiWriteIsSupport_;
     }
 
-    TextAlign GetErrorTextAlign() const
+    const std::string& GetHasShowedPassword() const
     {
-        return errorTextAlign_;
+        return hasShowedPassword_;
     }
 
-    const Dimension& GetCounterTextTopMargin() const
+    const std::string& GetHasHiddenPassword() const
     {
-        return counterTextTopMargin_;
-    }
-
-    const Dimension& GetCounterTextBottomMargin() const
-    {
-        return counterTextBottomMargin_;
-    }
-
-    const Dimension& GetStandardCounterTextMargin() const
-    {
-        return standardCounterTextMargin_;
-    }
-
-    const Dimension& GetErrorTextTopMargin() const
-    {
-        return errorTextTopMargin_;
-    }
-
-    const Dimension& GetErrorTextBottomMargin() const
-    {
-        return errorTextBottomMargin_;
-    }
-
-    const Dimension& GetCounterTextMarginOffset() const
-    {
-        return counterTextMarginOffset_;
-    }
-
-    const Dimension& GetErrorTextUnderlineMargin() const
-    {
-        return errorTextUnderlineMargin_;
-    }
-
-    const Dimension& GetErrorTextCapsuleMargin() const
-    {
-        return errorTextCapsuleMargin_;
-    }
-
-    float GetErrorTextMaxFontScale() const
-    {
-        return errorTextMaxFontScale_;
-    }
-
-    uint32_t GetCounterTextMaxline() const
-    {
-        return counterTextMaxline_;
-    }
-
-    uint32_t GetErrorTextMaxLine() const
-    {
-        return errorTextMaxLine_;
-    }
-
-    bool TextFadeoutEnabled() const
-    {
-        return textFadeoutEnabled_;
-    }
-
-    const Dimension& GetTextInputWidth() const
-    {
-        return textInputBorderWidth_;
-    }
-
-    const Color& GetTextInputColor() const
-    {
-        return textInputBorderColor_;
-    }
-
-    bool IsShowPasswordIcon() const
-    {
-        return showPasswordIcon_;
-    }
-
-    bool GetHoverAndPressBgColorEnabled() const
-    {
-        return hoverAndPressBgColorEnabled_;
-    }
-
-    const Dimension& GetErrorTextInputBorderWidth() const
-    {
-        return errorTextInputBorderWidth_;
-    }
-
-    bool NeedFocusBox() const
-    {
-        return needFocusBox_;
-    }
-
-    const Dimension& GetFocusPadding() const
-    {
-        return focusPadding_;
-    }
-
-    const Color& GetAutoFillIconPrimaryColor() const
-    {
-        return autoFillIconPrimaryColor_;
-    }
-
-    const Color& GetAutoFillIconEmphasizeColor() const
-    {
-        return autoFillIconEmphasizeColor_;
-    }
-
-    const Dimension& GetAutoFillIconSize() const
-    {
-        return autoFillIconSize_;
+        return hasHiddenPassword_;
     }
 
 protected:
     TextFieldTheme() = default;
-    TextStyle textStyle_;
-    Color textColor_;
-    Color placeholderColor_;
-    Color bgColor_;
-    Color focusBgColor_;
-    Color inlineBgColor_;
-    Color cursorColor_;
-    Color symbolColor_;
-    Color textColorDisable_;
 
 private:
     Edge padding_;
@@ -895,12 +657,17 @@ private:
     FontWeight fontWeight_ = FontWeight::NORMAL;
     Radius borderRadius_;
 
+    Color bgColor_;
     Radius borderRadiusSize_;
+    Color placeholderColor_;
+    Color focusBgColor_;
     Color focusPlaceholderColor_;
     Color focusTextColor_;
+    Color textColor_;
     Color disableTextColor_;
     Color underlineActivedColor_;
     Color underlineTypingColor_;
+    Color textColorDisable_;
     Color selectedColor_;
     Color hoverColor_;
     Color pressColor_;
@@ -918,6 +685,7 @@ private:
     Color passwordErrorInputColor_;
     Color passwordErrorBorderColor_;
     Color passwordErrorLableColor_;
+    TextStyle textStyle_;
     TextStyle errorTextStyle_;
     TextStyle countTextStyle_;
     TextStyle overCountStyle_;
@@ -926,6 +694,7 @@ private:
     TextStyle overCountTextStyle_;
     Color inlineTextColor_;
     Radius inlineRadiusSize_;
+    Color inlineBgColor_;
     Color inlineBorderColor_;
     Color defaultCounterColor_;
     Color overCounterColor_;
@@ -941,6 +710,7 @@ private:
     Dimension overHideLength_;
 
     // UX::cursor state cursor-color=#000000, cursor blur-radius=0.9, cursor-width=2, cursor-height=24, cursor-radius=1
+    Color cursorColor_;
     Dimension cursorRadius_;
     Dimension cursorWidth_;
     bool needFade_ = false;
@@ -949,20 +719,9 @@ private:
     Dimension iconSize_;
     Dimension iconHotZoneSize_;
     Dimension inlineBorderWidth_ = 2.0_vp;
-    Dimension cancelIconSize_;
-    Dimension passwordIconSize_ = 20.0_vp;
-    Dimension cancelIconPadding_ = 14.0_vp;
-    Dimension passwordIconPadding_ = 10.0_vp;
 
     // UX::insert cursor offset up by 24vp
     Dimension insertCursorOffset_ = 24.0_vp;
-
-    // Replace image(icon) with symbol
-    Dimension symbolSize_;
-    uint32_t showSymbolId_ = 0;
-    uint32_t hideSymbolId_ = 0;
-    uint32_t cancelSymbolId_ = 0;
-    uint32_t autoFillSymbolId_ = 0;
 
     Dimension avoidKeyboardOffset_ = 24.0_vp;
 
@@ -971,7 +730,6 @@ private:
     bool showPasswordDirectly_ = false;
     bool textfieldShowHandle_ = false;
     bool translateIsSupport_ = false;
-    bool supportSearch_ = false;
     Dimension passwordTypeHeight_ = 40.0_vp;
 
     // cancelButton
@@ -980,49 +738,19 @@ private:
     Color previewUnderlineColor_;
     Color previewBoardColor_;
 
-    bool textFadeoutEnabled_ = false;
-    Dimension textInputBorderWidth_ = 0.0_vp;
-    Dimension errorTextInputBorderWidth_ = 1.0_vp;
-    Color textInputBorderColor_;
-    bool showPasswordIcon_ = true;
-    bool hoverAndPressBgColorEnabled_ = false;
-    bool independentControlKeyboard_ = false;
-    bool directionKeysMoveFocusOut_ = false;
-
     std::string cancelButton_;
 
-    Dimension inlinePaddingLeft_ = 0.0_vp;
-    Dimension inlinePaddingRight_ = 0.0_vp;
+    Dimension inlinePaddingRight_ = 12.0_vp;
     Dimension placeholderLineSpacing_ = 0.0_vp;
-
-    TextAlign errorTextAlign_ = TextAlign::START;
-
-    Dimension counterTextTopMargin_ = 8.0_vp;
-    Dimension counterTextBottomMargin_ = 8.0_vp;
-    Dimension standardCounterTextMargin_ = 22.0_vp;
-    Dimension errorTextTopMargin_ = 8.0_vp;
-    Dimension errorTextBottomMargin_ = 8.0_vp;
-    Dimension counterTextMarginOffset_ = 8._vp;
-    Dimension errorTextUnderlineMargin_ = 8.0_vp;
-    Dimension errorTextCapsuleMargin_ = 8.0_vp;
-    
-    float errorTextMaxFontScale_ = 2.0f;
-    uint32_t counterTextMaxline_ = 1;
-    uint32_t errorTextMaxLine_ = 1;
 
     std::string hasShowedPassword_;
     std::string hasHiddenPassword_;
-    std::string showPassword_;
-    std::string hidePassword_;
     std::string aiWriteBundleName_;
     std::string aiWriteAbilityName_;
     std::string aiWriteIsSupport_;
+    std::string showPassword_;
+    std::string hidePassword_;
     std::string cancelImageText_;
-    bool needFocusBox_ = false;
-    Dimension focusPadding_;
-    Color autoFillIconPrimaryColor_;
-    Color autoFillIconEmphasizeColor_;
-    Dimension autoFillIconSize_ = 24.0_vp;
 };
 
 } // namespace OHOS::Ace

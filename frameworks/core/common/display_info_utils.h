@@ -26,13 +26,11 @@ class ACE_FORCE_EXPORT DisplayInfoUtils : public AceType {
 public:
     DisplayInfoUtils() = default;
     ~DisplayInfoUtils() override = default;
-    RefPtr<DisplayInfo> GetDisplayInfo(int32_t displayId = 0);
+    RefPtr<DisplayInfo> GetDisplayInfo();
     void InitIsFoldable();
     bool GetIsFoldable();
     FoldStatus GetCurrentFoldStatus();
     std::vector<Rect> GetCurrentFoldCreaseRegion();
-    Rect GetDisplayAvailableRect(int32_t displayId) const;
-    Rect GetFoldExpandAvailableRect() const;
 
 private:
     RefPtr<DisplayInfo> displayInfo_ = AceType::MakeRefPtr<DisplayInfo>();

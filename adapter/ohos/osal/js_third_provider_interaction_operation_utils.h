@@ -32,7 +32,6 @@ void TransformAccessbilityElementInfo(
     accessibilityElementInfo.SetHint(nativeInfo.GetHintText());
     accessibilityElementInfo.SetAccessibilityText(nativeInfo.GetAccessibilityText());
     accessibilityElementInfo.SetDescriptionInfo(nativeInfo.GetAccessibilityDescription());
-    accessibilityElementInfo.SetOriginalText(nativeInfo.GetContents());
 
     auto nodeList = nativeInfo.GetChildNodeIds();
     for (const auto& node : nodeList) {
@@ -43,7 +42,7 @@ void TransformAccessbilityElementInfo(
     for (const auto& actionItem : actionList) {
         auto action = OHOS::Accessibility::AccessibleAction(
             static_cast<OHOS::Accessibility::ActionType>(actionItem.actionType),
-            actionItem.description ? actionItem.description : "");
+            actionItem.description);
         accessibilityElementInfo.AddAction(action);
     }
 

@@ -35,17 +35,6 @@ struct CJSideBarButtonStyle {
     CJSideBarIconStyle icons;
 };
 
-struct CJDividerStyle {
-    double strokeWidth;
-    int32_t strokeWidthUnit;
-    bool hasColor;
-    uint32_t color;
-    double startMargin;
-    int32_t startMarginUnit;
-    double endMargin;
-    int32_t endMarginUnit;
-};
-
 CJ_EXPORT void FfiOHOSAceFrameworkSideBarCreate(int32_t type);
 CJ_EXPORT void FfiOHOSAceFrameworkSideBarShowSideBar(bool isShow);
 CJ_EXPORT void FfiOHOSAceFrameworkSideBarControlButton(CJSideBarButtonStyle style);
@@ -57,9 +46,6 @@ CJ_EXPORT void FfiOHOSAceFrameworkSideBarMaxSideBarWidth(double width, int32_t u
 CJ_EXPORT void FfiOHOSAceFrameworkSideBarAutoHide(bool autoHide);
 CJ_EXPORT void FfiOHOSAceFrameworkSideBarSideBarPosition(int32_t position);
 CJ_EXPORT void FfiOHOSAceFrameworkSideBarPop();
-CJ_EXPORT void FfiOHOSAceFrameworkSideBarDividerNull();
-CJ_EXPORT void FfiOHOSAceFrameworkSideBarDivider(CJDividerStyle info);
-CJ_EXPORT void FfiOHOSAceFrameworkSideBarMinContentWidth(double width, int32_t unit);
 };
 
 #endif // OHOS_ACE_FRAMEWORK_CJ_SIDE_BAR_CONTAINER_FFI_H

@@ -28,13 +28,6 @@ struct PaddingSize {
     double left;
 };
 
-struct BorderRadius {
-    double leftTop;
-    double rightTop;
-    double leftBottom;
-    double rightBottom;
-};
-
 enum SecCompType {
     UNKNOWN_SC_TYPE = 0,
     LOCATION_COMPONENT,
@@ -75,11 +68,6 @@ enum CrossAxisState {
     STATE_NO_CROSS,
 };
 
-enum class TipPosition : int32_t {
-    ABOVE_BOTTOM = 0,
-    BELOW_TOP
-};
-
 class SecCompBase {
 public:
     SecCompBase() = default;
@@ -93,7 +81,6 @@ public:
     double fontSize_;
     double iconSize_;
     PaddingSize padding_;
-    BorderRadius borderRadius_;
     double textIconSpace_;
 
     // color
@@ -122,20 +109,10 @@ public:
     int32_t icon_;
     SecCompBackground bg_;
 
-    bool hasNonCompatibleChange_ = false;
-    double blurRadius_ = 0.0;
-    double foregroundBlurRadius_ = 0.0;
-    bool isOverlayTextSet_ = false;
-    bool isOverlayNodeCovered_ = false;
     int32_t windowId_;
     uint64_t displayId_ = 0;
     int32_t nodeId_;
     CrossAxisState crossAxisState_ = CrossAxisState::STATE_INVALID;
-    bool isIconExceeded_ = false;
-    bool isBorderCovered_ = false;
-    bool isWearableDevice_ = false;
-    bool isCustomizable_ = false;
-    TipPosition tipPosition_ = TipPosition::ABOVE_BOTTOM;
 };
 }  // namespace SecurityComponent
 }  // namespace Security

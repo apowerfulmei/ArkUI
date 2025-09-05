@@ -18,7 +18,6 @@
 #include "core/components/common/properties/color.h"
 #include "core/components/text_field/textfield_theme.h"
 #include "core/components_ng/pattern/select_overlay/magnifier.h"
-#include "core/components_ng/pattern/select_overlay/magnifier_pattern.h"
 #include "core/components_ng/pattern/text/text_base.h"
 #include "core/components_ng/render/drawing_prop_convertor.h"
 #include "core/pipeline_ng/pipeline_context.h"
@@ -35,8 +34,12 @@ void MagnifierController::UpdateShowMagnifier(bool isShowMagnifier)
 }
 
 bool MagnifierController::UpdateMagnifierOffsetX(OffsetF& magnifierPaintOffset, VectorF& magnifierOffset,
-    const OffsetF& basePaintOffset)
+    const OffsetF& basePaintOffset, const RefPtr<FrameNode>& host)
 {
+    if (localOffset_.GetX() < 0 || localOffset_.GetX() > GetViewPort(host).Width()) {
+        UpdateShowMagnifier();
+        return false;
+    }
     float left = basePaintOffset.GetX() + localOffset_.GetX() - magnifierNodeWidth_.ConvertToPx() / 2;
     auto rootUINode = GetRootNode();
     CHECK_NULL_RETURN(rootUINode, false);
@@ -51,9 +54,9 @@ bool MagnifierController::UpdateMagnifierOffsetX(OffsetF& magnifierPaintOffset, 
 }
 
 bool MagnifierController::UpdateMagnifierOffsetY(OffsetF& magnifierPaintOffset, VectorF& magnifierOffset,
-    const OffsetF& basePaintOffset)
+    const OffsetF& basePaintOffset, const RefPtr<FrameNode>& host)
 {
-    auto pipeline = PipelineContext::GetCurrentContextSafelyWithCheck();
+    auto pipeline = PipelineContext::GetCurrentContextSafely();
     CHECK_NULL_RETURN(pipeline, false);
     float menuHeight = magnifierNodeHeight_.ConvertToPx();
     auto safeAreaManager = pipeline->GetSafeAreaManager();
@@ -63,6 +66,10 @@ bool MagnifierController::UpdateMagnifierOffsetY(OffsetF& magnifierPaintOffset, 
     float offsetY_ = 0.f;
 
     if (hasKeyboard && basePaintOffset.GetY() + localOffset_.GetY() >= keyboardInsert.start) {
+        UpdateShowMagnifier();
+        return false;
+    }
+    if (localOffset_.GetY() < 0 || localOffset_.GetY() > GetViewPort(host).Height()) {
         UpdateShowMagnifier();
         return false;
     }
@@ -76,11 +83,9 @@ bool MagnifierController::UpdateMagnifierOffsetY(OffsetF& magnifierPaintOffset, 
     auto rootGeometryNode = rootUINode->GetGeometryNode();
     CHECK_NULL_RETURN(rootGeometryNode, false);
     auto rootFrameSize = rootGeometryNode->GetFrameSize();
+    magnifierY = std::clamp(magnifierY, 0.f, static_cast<float>(rootFrameSize.Height() - menuHeight));
     offsetY_ = std::clamp(magnifierY, 0.f, static_cast<float>(MAGNIFIER_OFFSETY.ConvertToPx()));
-    auto magnifierPaintOffsetY = magnifierY - offsetY_;
-    magnifierPaintOffsetY =
-        std::clamp(magnifierPaintOffsetY, 0.f, static_cast<float>(rootFrameSize.Height() - menuHeight));
-    magnifierPaintOffset.SetY(magnifierPaintOffsetY);
+    magnifierPaintOffset.SetY(magnifierY - offsetY_);
     magnifierOffset.y = offsetY_;
     return true;
 }
@@ -101,19 +106,9 @@ bool MagnifierController::UpdateMagnifierOffset()
     ViewAbstract::SetBackgroundColor(AceType::RawPtr(magnifierFrameNode_), colorMagnifier);
     OffsetF magnifierPaintOffset;
     VectorF magnifierOffset(0.f, 0.f);
-    if (!IsLocalOffsetInHostRange(host)) {
-        UpdateShowMagnifier(false);
-        return false;
-    }
-    CHECK_NULL_RETURN(UpdateMagnifierOffsetX(magnifierPaintOffset, magnifierOffset, paintOffset), false);
-    CHECK_NULL_RETURN(UpdateMagnifierOffsetY(magnifierPaintOffset, magnifierOffset, paintOffset), false);
+    CHECK_NULL_RETURN(UpdateMagnifierOffsetX(magnifierPaintOffset, magnifierOffset, paintOffset, host), false);
+    CHECK_NULL_RETURN(UpdateMagnifierOffsetY(magnifierPaintOffset, magnifierOffset, paintOffset, host), false);
     auto geometryNode = magnifierFrameNode_->GetGeometryNode();
-    if (magnifierPaintOffset == geometryNode->GetFrameOffset() && NearEqual(params_.offsetX_, magnifierOffset.x) &&
-        NearEqual(params_.offsetY_, magnifierOffset.y)) {
-        // change x one pixel so magnifier can refresh
-        magnifierPaintOffset.SetX(magnifierPaintOffset.GetX() - 1.0f);
-        magnifierOffset.x += 1.0f;
-    }
     geometryNode->SetFrameOffset(magnifierPaintOffset);
     childContext->UpdatePosition(
         OffsetT<Dimension>(Dimension(magnifierPaintOffset.GetX()), Dimension(magnifierPaintOffset.GetY())));
@@ -121,20 +116,10 @@ bool MagnifierController::UpdateMagnifierOffset()
     params_.offsetX_ = magnifierOffset.x;
     params_.offsetY_ = magnifierOffset.y;
     params_.factor_ = MAGNIFIER_FACTOR;
-    params_.changed_ = !params_.changed_;
     ViewAbstract::SetMagnifier(AceType::RawPtr(magnifierFrameNode_), params_);
     magnifierFrameNode_->ForceSyncGeometryNode();
     magnifierFrameNode_->MarkDirtyNode(PROPERTY_UPDATE_RENDER);
     return true;
-}
-
-bool MagnifierController::IsLocalOffsetInHostRange(const RefPtr<FrameNode>& host)
-{
-    CHECK_NULL_RETURN(host, false);
-    auto localOffset = localOffsetWithoutTrans_.value_or(localOffset_);
-    auto viewPort = GetViewPort(host);
-    viewPort.SetOffset({ 0, 0 });
-    return viewPort.IsInRegion(PointF{ localOffset.GetX(), localOffset.GetY() });
 }
 
 void MagnifierController::OpenMagnifier()
@@ -161,7 +146,7 @@ void MagnifierController::OpenMagnifier()
 
 RefPtr<FrameNode> MagnifierController::GetRootNode()
 {
-    auto pipeline = PipelineContext::GetCurrentContextSafelyWithCheck();
+    auto pipeline = PipelineContext::GetCurrentContextSafely();
     CHECK_NULL_RETURN(pipeline, nullptr);
     auto rootNode = pipeline->GetRootElement();
     CHECK_NULL_RETURN(rootNode, nullptr);
@@ -170,7 +155,7 @@ RefPtr<FrameNode> MagnifierController::GetRootNode()
     auto host = pattern->GetHost();
     CHECK_NULL_RETURN(host, rootNode);
     auto container = Container::Current();
-    if (container && container->IsSceneBoardWindow()) {
+    if (container && container->IsScenceBoardWindow()) {
         auto root = FindWindowScene(host);
         rootNode = DynamicCast<FrameNode>(root);
     }
@@ -218,11 +203,10 @@ void MagnifierController::ChangeMagnifierVisibility(const bool& visible)
     AnimationOption option;
     option.SetCurve(Curves::FRICTION);
     option.SetDuration(ANIMATION_DURATION_150);
-    auto contextPtr = magnifierFrameNode_ ? magnifierFrameNode_->GetContextRefPtr() : nullptr;
     if (removeFrameNode_) {
-        AnimationUtils::Animate(option, callBack, endCallBack, nullptr, contextPtr);
+        AnimationUtils::Animate(option, callBack, endCallBack);
     } else {
-        AnimationUtils::Animate(option, callBack, nullptr, nullptr, contextPtr);
+        AnimationUtils::Animate(option, callBack);
     }
 }
 
@@ -241,7 +225,6 @@ void MagnifierController::RemoveMagnifierFrameNode()
         parentNode->RebuildRenderContextTree();
     }
     removeFrameNode_ = false;
-    hostViewPort_.reset();
 }
 
 void MagnifierController::CloseMagnifier()
@@ -265,7 +248,7 @@ void MagnifierController::InitMagnifierParams()
     params_.shadowSize_ = MAGNIFIER_SHADOWSIZE.ConvertToPx();
     params_.shadowStrength_ = MAGNIFIER_SHADOWSTRENGTH;
 
-    auto pipeline = PipelineContext::GetCurrentContextSafelyWithCheck();
+    auto pipeline = PipelineBase::GetCurrentContextSafely();
     CHECK_NULL_VOID(pipeline);
     auto textFieldTheme = pipeline->GetTheme<TextFieldTheme>();
     CHECK_NULL_VOID(textFieldTheme);
@@ -274,7 +257,7 @@ void MagnifierController::InitMagnifierParams()
 
     Color outlineColor1 = textFieldTheme->GetGlassOutlinePrimaryColor();
     Color outlineColor2 = textFieldTheme->GetGlassOutlineSecondaryColor();
-    if (Container::CurrentColorMode() == ColorMode::DARK) {
+    if (SystemProperties::GetColorMode() == ColorMode::DARK) {
         outlineColor1 = outlineColor1.ChangeAlpha(0xCC); // 0xCC: 80%
         outlineColor2 = outlineColor2.ChangeAlpha(0xCC); // 0xCC: 80%
     } else {
@@ -310,12 +293,9 @@ void MagnifierController::CreateMagnifierChildNode()
     CHECK_NULL_VOID(textBasePattern);
 
     auto nodeId = ElementRegister::GetInstance()->MakeUniqueId();
-    ACE_SCOPED_TRACE("Create[%s][self:%d]", V2::MAGNIFIER_TAG, nodeId);
-    auto childNode = FrameNode::GetOrCreateFrameNode(V2::MAGNIFIER_TAG, nodeId,
-        [weak = WeakClaim(Referenced::RawPtr(textBasePattern))]() {
-            auto textBase = weak.Upgrade();
-            return AceType::MakeRefPtr<MagnifierPattern>(textBase);
-        });
+    ACE_SCOPED_TRACE("Create[%s][self:%d]", V2::TEXTINPUT_ETS_TAG, nodeId);
+    auto childNode = FrameNode::GetOrCreateFrameNode(
+        V2::TEXTINPUT_ETS_TAG, nodeId, []() { return AceType::MakeRefPtr<Pattern>(); });
     CHECK_NULL_VOID(childNode);
     InitMagnifierParams();
     ViewAbstract::SetWidth(AceType::RawPtr(childNode), CalcLength(magnifierNodeWidth_));

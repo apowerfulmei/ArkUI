@@ -14,12 +14,13 @@
  */
 
 #include "frameworks/bridge/declarative_frontend/jsview/js_page_transition.h"
+#if !defined(PREVIEW) && defined(OHOS_PLATFORM)
 #include "interfaces/inner_api/ui_session/ui_session_manager.h"
+#endif
 
 #include "base/log/ace_scoring_log.h"
 #include "bridge/declarative_frontend/engine/functions/js_page_transition_function.h"
 #include "bridge/declarative_frontend/jsview/models/page_transition_model_impl.h"
-#include "core/components_ng/base/view_stack_model.h"
 #include "core/components_ng/pattern/stage/page_transition_model_ng.h"
 
 namespace OHOS::Ace {
@@ -166,7 +167,9 @@ void JSPageTransition::JsHandlerOnEnter(const JSCallbackInfo& info)
         JAVASCRIPT_EXECUTION_SCOPE_WITH_CHECK(execCtx);
         ACE_SCORING_EVENT("PageTransition.onEnter");
         func->Execute(type, progress);
-        UiSessionManager::GetInstance()->ReportComponentChangeEvent("event", "PageTransition.onEnter");
+#if !defined(PREVIEW) && defined(OHOS_PLATFORM)
+        UiSessionManager::GetInstance().ReportComponentChangeEvent("event", "PageTransition.onEnter");
+#endif
     };
 
     PageTransitionModel::GetInstance()->SetOnEnter(std::move(onEnterHandler));
@@ -186,7 +189,9 @@ void JSPageTransition::JsHandlerOnExit(const JSCallbackInfo& info)
         JAVASCRIPT_EXECUTION_SCOPE_WITH_CHECK(execCtx);
         ACE_SCORING_EVENT("PageTransition.onExit");
         func->Execute(type, progress);
-        UiSessionManager::GetInstance()->ReportComponentChangeEvent("event", "PageTransition.onExit");
+#if !defined(PREVIEW) && defined(OHOS_PLATFORM)
+        UiSessionManager::GetInstance().ReportComponentChangeEvent("event", "PageTransition.onExit");
+#endif
     };
 
     PageTransitionModel::GetInstance()->SetOnExit(std::move(onExitHandler));
@@ -199,9 +204,6 @@ void JSPageTransition::Create(const JSCallbackInfo& info)
 
 void JSPageTransition::Pop()
 {
-    if (ViewStackModel::GetInstance()->IsPrebuilding()) {
-        return ViewStackModel::GetInstance()->PushPrebuildCompCmd("[JSPageTransition][pop]", &JSPageTransition::Pop);
-    }
     PageTransitionModel::GetInstance()->Pop();
 }
 

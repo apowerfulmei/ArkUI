@@ -38,7 +38,8 @@ public:
     bool CheckAndAdjustHandle(RectF& paintRect);
     bool CheckAndAdjustHandleWithContent(const RectF& contentRect, RectF& paintRect);
     void OnResetTextSelection() override;
-    RectF GetHandleLocalPaintRect(DragHandleIndex dragHandleIndex) override;
+    RectF GetFirstHandleLocalPaintRect() override;
+    RectF GetSecondHandleLocalPaintRect() override;
     void OnAncestorNodeChanged(FrameNodeChangeInfoFlag flag) override;
 
     // override SelectOverlayHolder
@@ -51,7 +52,6 @@ public:
 
     // override SelectOverlayCallback
     void OnMenuItemAction(OptionMenuActionId id, OptionMenuType type) override;
-    void OnMenuItemAction(OptionMenuActionId id, OptionMenuType type, const std::string& labelInfo) override;
     void OnHandleMove(const RectF& rect, bool isFirst) override;
     void OnHandleMoveDone(const RectF& rect, bool isFirst) override;
     void OnCloseOverlay(OptionMenuType menuType, CloseReason reason, RefPtr<OverlayInfo> info = nullptr) override;
@@ -79,13 +79,8 @@ public:
         const RefPtr<ScrollablePattern> scrollableParent, const Offset& globalOffset, bool isStopAutoScroll);
     const RefPtr<ScrollablePattern> FindScrollableParent();
     std::optional<Color> GetHandleColor() override;
-    std::optional<SelectOverlayInfo> GetSelectOverlayInfo();
-    bool ChangeSecondHandleHeight(const GestureEvent& event, bool isOverlayMode) override;
-    void GetVisibleDragViewHandles(RectF& first, RectF& second);
-    void IsAIMenuOptionChanged(SelectMenuInfo& menuInfo) override;
 
 protected:
-    OffsetF GetHandleReferenceOffset(const RectF& handleRect);
     virtual void UpdateSelectorOnHandleMove(const OffsetF& handleOffset, bool isFirstHandle);
     void UpdateTransformFlag() override
     {
@@ -97,14 +92,11 @@ protected:
     }
     void UpdateClipHandleViewPort(RectF& rect) override;
     bool AllowTranslate() override;
-    bool AllowSearch() override;
-    bool AllowShare() override;
     bool selectTextUseTopHandle = false;
     RectF GetSelectAreaFromRects(SelectRectsType pos) override;
 
 private:
     OffsetF GetHotPaintOffset();
-    bool GetRenderClipValue() const;
     OffsetF handleGlobalOffset_;
     bool isDraggingFirstHandle_ = true;
     OffsetF hostPaintOffset_;

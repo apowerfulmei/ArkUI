@@ -13,47 +13,39 @@
  * limitations under the License.
  */
 #include "core/components_ng/pattern/app_bar/atomic_service_pattern.h"
-#include <string>
 
+#include "base/utils/utils.h"
+#include "core/common/container.h"
 #include "core/components_ng/pattern/button/button_pattern.h"
 #include "core/components_ng/pattern/divider/divider_render_property.h"
 #include "core/components_ng/pattern/image/image_layout_property.h"
 #include "core/components_ng/pattern/image/image_render_property.h"
-#include "core/components_ng/base/inspector.h"
-#include "core/components_ng/pattern/app_bar/app_bar_view.h"
+#include "core/components_ng/pattern/text/text_layout_property.h"
+#include "core/components_ng/property/calc_length.h"
+#include "core/components_ng/property/measure_property.h"
+#include "core/pipeline_ng/pipeline_context.h"
+
 namespace OHOS::Ace::NG {
 constexpr int32_t ATOMIC_SERVICE_MIN_SIZE = 2;
 constexpr int32_t FIRST_OVERLAY_INDEX = 1;
 
-std::atomic<int32_t> g_nextListenerId = 1;
-
-std::function<void(RefPtr<FrameNode> host, std::optional<bool> settedColorMode)>
-    AtomicServicePattern::beforeCreateLayoutBuilder_ = nullptr;
-
-void AtomicServicePattern::RegisterBeforeCreateLayoutBuilder(
-    std::function<void(RefPtr<FrameNode> host, std::optional<bool> settedColorMode)> beforeCreateLayoutBuilder)
-{
-    beforeCreateLayoutBuilder_ = beforeCreateLayoutBuilder;
-}
-
 void AtomicServicePattern::BeforeCreateLayoutWrapper()
-{
-    // before create layout builder for cj frontend
-    if (beforeCreateLayoutBuilder_) {
-        beforeCreateLayoutBuilder_(GetHost(), settedColorMode);
-        return;
-    }
-    MenuBarSafeAreaCallBack();
-    ContentSafeAreaCallBack();
-    ColorConfigurationCallBack();
-}
-
-void AtomicServicePattern::MenuBarSafeAreaCallBack()
 {
     auto pipeline = PipelineContext::GetCurrentContext();
     CHECK_NULL_VOID(pipeline);
     auto theme = pipeline->GetTheme<AppBarTheme>();
     CHECK_NULL_VOID(theme);
+    auto menuBar = GetMenuBar();
+    auto safeArea = pipeline->GetSafeArea();
+    auto safeAreaLeft = safeArea.left_.Length();
+    auto safeAreaRight = safeArea.right_.Length();
+    if (safeAreaLeft_ != safeAreaLeft || safeAreaRight_ != safeAreaRight) {
+        safeAreaLeft_ = safeAreaLeft;
+        safeAreaRight_ = safeAreaRight;
+        bool isRtl = AceApplicationInfo::GetInstance().IsRightToLeft();
+        UpdateMenuBarLayout(theme, menuBar, isRtl);
+    }
+
     auto host = GetHost();
     CHECK_NULL_VOID(host);
     auto manager = pipeline->GetSafeAreaManager();
@@ -61,14 +53,22 @@ void AtomicServicePattern::MenuBarSafeAreaCallBack()
     manager->SetIsAtomicService(true);
     manager->AddGeoRestoreNode(host);
     auto systemSafeArea = manager->GetSystemSafeArea();
-    auto menuSafeTopValue = systemSafeArea.top_.Length();
-    auto menuSafeTopVp = Dimension(menuSafeTopValue, DimensionUnit::PX).ConvertToVp();
-    auto customAppBar = GetJSAppBarContainer();
-    CHECK_NULL_VOID(customAppBar);
-    customAppBar->FireCustomCallback(ARKUI_APP_BAR_MENU_SAFE_AREA, std::to_string(menuSafeTopVp));
+    float topMargin = theme->GetMenuBarTopMargin().ConvertToPx();
+    topMargin += systemSafeArea.top_.Length();
+    UpdateOverlayLayout();
+    auto menuBarRow = GetMenuBarRow();
+    CHECK_NULL_VOID(menuBarRow);
+    auto renderContext = menuBarRow->GetRenderContext();
+    renderContext->UpdatePosition(OffsetT<Dimension>(0.0_vp, Dimension(topMargin, DimensionUnit::PX)));
+    if (settedColorMode.has_value()) {
+        UpdateMenuBarColor(theme, menuBar, settedColorMode.value());
+    } else {
+        UpdateMenuBarColor(theme, menuBar, SystemProperties::GetColorMode() != ColorMode::DARK);
+    }
+    UpdateLayoutMargin();
 }
 
-void AtomicServicePattern::ContentSafeAreaCallBack()
+void AtomicServicePattern::UpdateLayoutMargin()
 {
     auto pipeline = PipelineContext::GetCurrentContext();
     CHECK_NULL_VOID(pipeline);
@@ -78,103 +78,6 @@ void AtomicServicePattern::ContentSafeAreaCallBack()
     if (manager->KeyboardSafeAreaEnabled()) {
         safeArea.bottom_ = safeArea.bottom_.Combine(manager->GetKeyboardInset());
     }
-    auto left = Dimension(safeArea.left_.Length(), DimensionUnit::PX).ConvertToVp();
-    auto right = Dimension(safeArea.right_.Length(), DimensionUnit::PX).ConvertToVp();
-    auto top = Dimension(safeArea.top_.Length(), DimensionUnit::PX).ConvertToVp();
-    auto bottom = Dimension(safeArea.bottom_.Length(), DimensionUnit::PX).ConvertToVp();
-    auto customAppBar = GetJSAppBarContainer();
-    CHECK_NULL_VOID(customAppBar);
-    std::vector<float> values = { top, left, right, bottom };
-    std::string result;
-    for (size_t i = 0; i < values.size(); ++i) {
-        result += std::to_string(values[i]);
-        if (i < values.size() - 1) {
-            result += "|";
-        }
-    }
-    customAppBar->FireCustomCallback(ARKUI_APP_BAR_CONTENT_SAFE_AREA, result);
-}
-
-void AtomicServicePattern::ColorConfigurationCallBack()
-{
-    auto customAppBar = GetJSAppBarContainer();
-    CHECK_NULL_VOID(customAppBar);
-    auto context = GetContext();
-    CHECK_NULL_VOID(context);
-    customAppBar->FireCustomCallback(ARKUI_APP_BAR_COLOR_CONFIGURATION,
-        settedColorMode.has_value() ? !settedColorMode.value() : context->GetColorMode() == ColorMode::DARK);
-}
-
-void AtomicServicePattern::AppInfoCallBack()
-{
-    auto atom = GetHost();
-    CHECK_NULL_VOID(atom);
-    auto pipeline = atom->GetContextRefPtr();
-    CHECK_NULL_VOID(pipeline);
-    auto themeManager = pipeline->GetThemeManager();
-    CHECK_NULL_VOID(themeManager);
-    auto themeConstants = themeManager->GetThemeConstants();
-    CHECK_NULL_VOID(themeConstants);
-    auto windowManager = pipeline->GetWindowManager();
-    CHECK_NULL_VOID(windowManager);
-    auto customAppBar = GetJSAppBarContainer();
-    CHECK_NULL_VOID(customAppBar);
-    auto id = windowManager->GetAppIconId();
-    auto pixelMap = themeConstants->GetPixelMap(id);
-    if (pixelMap) {
-        const RefPtr<PixelMap> icon = PixelMap::CreatePixelMap(&pixelMap);
-        customAppBar->FireAppIconCallback(icon);
-    } else {
-        TAG_LOGW(AceLogTag::ACE_APPBAR, "App bar Cannot get pixelmap, try media path.");
-    }
-    auto result = AceApplicationInfo::GetInstance().GetProcessName() + "|" +
-                  themeConstants->GetString(windowManager->GetAppLabelId());
-    customAppBar->FireCustomCallback(ARKUI_APP_BAR_BAR_INFO, result);
-}
-
-void AtomicServicePattern::AppScreenCallBack()
-{
-    auto customAppBar = GetJSAppBarContainer();
-    CHECK_NULL_VOID(customAppBar);
-    auto container = Container::Current();
-    CHECK_NULL_VOID(container);
-    customAppBar->FireCustomCallback(ARKUI_APP_BAR_SCREEN, container->UIExtensionIsHalfScreen());
-}
-
-void AtomicServicePattern::SetOnBackPressedConsumed()
-{
-    if (onBackPressedConsumed_.has_value()) {
-        onBackPressedConsumed_ = true;
-    }
-}
-
-bool AtomicServicePattern::OnBackPressedCallback()
-{
-    auto customAppBar = GetJSAppBarContainer();
-    CHECK_NULL_RETURN(customAppBar, false);
-    onBackPressedConsumed_ = false;
-    customAppBar->FireCustomCallback(ARKUI_APP_BAR_ON_BACK_PRESSED, true);
-    bool consumed = onBackPressedConsumed_.value();
-    onBackPressedConsumed_.reset();
-    return consumed;
-}
-
-void AtomicServicePattern::AppBgColorCallBack()
-{
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    auto pipeline = host->GetContextRefPtr();
-    CHECK_NULL_VOID(pipeline);
-    auto customAppBar = GetJSAppBarContainer();
-    CHECK_NULL_VOID(customAppBar);
-    customAppBar->FireCustomCallback(ARKUI_APP_BG_COLOR, pipeline->GetAppBgColor().ColorToString());
-}
-
-void AtomicServicePattern::UpdateLayoutMargin()
-{
-    auto pipeline = PipelineContext::GetCurrentContext();
-    CHECK_NULL_VOID(pipeline);
-    auto safeArea = pipeline->GetSafeArea();
     auto atom = GetHost();
     CHECK_NULL_VOID(atom);
     MarginProperty margin;
@@ -183,7 +86,7 @@ void AtomicServicePattern::UpdateLayoutMargin()
     margin.top = CalcLength(safeArea.top_.Length());
     margin.bottom = CalcLength(safeArea.bottom_.Length());
     // update stage margin
-    auto stage = GetContent();
+    auto stage = AceType::DynamicCast<FrameNode>(atom->GetChildAtIndex(0));
     CHECK_NULL_VOID(stage);
     auto layoutProperty = stage->GetLayoutProperty();
     CHECK_NULL_VOID(layoutProperty);
@@ -215,71 +118,84 @@ void AtomicServicePattern::OnAttachToFrameNode()
     auto host = GetHost();
     CHECK_NULL_VOID(host);
     host->GetLayoutProperty()->UpdateMeasureType(MeasureType::MATCH_PARENT);
-    AppBgColorCallBack();
-}
-
-void AtomicServicePattern::OnColorConfigurationUpdate()
-{
-    AppBgColorCallBack();
-    ColorConfigurationCallBack();
+    auto pipeline = PipelineContext::GetCurrentContext();
+    CHECK_NULL_VOID(pipeline);
+    host->GetRenderContext()->UpdateBackgroundColor(pipeline->GetAppBgColor());
 }
 
 void AtomicServicePattern::OnLanguageConfigurationUpdate()
 {
-    AppInfoCallBack();
+    UpdateLayout();
 }
 
-RefPtr<CustomAppBarNode> AtomicServicePattern::GetJSAppBarContainer()
+void AtomicServicePattern::OnColorConfigurationUpdate()
 {
-    auto customAppBarNode = NG::ViewStackProcessor::GetInstance()->GetCustomAppBarNode();
-    return AceType::DynamicCast<CustomAppBarNode>(customAppBarNode);
-}
-
-RefPtr<FrameNode> AtomicServicePattern::GetStageNodeWrapper()
-{
-    return NG::Inspector::GetFrameNodeByKey("AtomicServiceStageId");
-}
-
-RefPtr<FrameNode> AtomicServicePattern::GetContent()
-{
-    auto stageNodeWrapper = GetStageNodeWrapper();
-    CHECK_NULL_RETURN(stageNodeWrapper, nullptr);
-    return AceType::DynamicCast<FrameNode>(stageNodeWrapper->GetChildAtIndex(0));
+    auto host = GetHost();
+    CHECK_NULL_VOID(host);
+    auto pipeline = PipelineContext::GetCurrentContext();
+    CHECK_NULL_VOID(pipeline);
+    host->GetRenderContext()->UpdateBackgroundColor(pipeline->GetAppBgColor());
+    if (settedColorMode.has_value()) {
+        UpdateColor(settedColorMode);
+    } else {
+        UpdateColor(SystemProperties::GetColorMode() != ColorMode::DARK);
+    }
 }
 
 RefPtr<FrameNode> AtomicServicePattern::GetMenuBarRow()
 {
-    return NG::Inspector::GetFrameNodeByKey("AtomicServiceMenubarRowId");
+    auto atom = GetHost();
+    CHECK_NULL_RETURN(atom, nullptr);
+    auto menuBarRow = AceType::DynamicCast<FrameNode>(atom->GetChildren().back());
+    return menuBarRow;
 }
 
 RefPtr<FrameNode> AtomicServicePattern::GetMenuBar()
 {
-    return NG::Inspector::GetFrameNodeByKey("AtomicServiceMenubarId");
+    auto menuBarRow = GetMenuBarRow();
+    CHECK_NULL_RETURN(menuBarRow, nullptr);
+    auto menuBar = AceType::DynamicCast<FrameNode>(menuBarRow->GetChildAtIndex(0));
+    return menuBar;
 }
 
 RefPtr<FrameNode> AtomicServicePattern::GetMenuButton()
 {
-    return NG::Inspector::GetFrameNodeByKey("AtomicServiceMenuId");
+    auto menuBar = GetMenuBar();
+    CHECK_NULL_RETURN(menuBar, nullptr);
+    auto menuButton = AceType::DynamicCast<FrameNode>(menuBar->GetChildAtIndex(0));
+    return menuButton;
 }
 
 RefPtr<FrameNode> AtomicServicePattern::GetDivider()
 {
-    return NG::Inspector::GetFrameNodeByKey("AtomicServiceDividerId");
+    auto menuBar = GetMenuBar();
+    CHECK_NULL_RETURN(menuBar, nullptr);
+    auto divider = AceType::DynamicCast<FrameNode>(menuBar->GetChildAtIndex(1));
+    return divider;
 }
 
 RefPtr<FrameNode> AtomicServicePattern::GetCloseButton()
 {
-    return NG::Inspector::GetFrameNodeByKey("AtomicServiceCloseId");
+    auto menuBar = GetMenuBar();
+    CHECK_NULL_RETURN(menuBar, nullptr);
+    auto closeButton = AceType::DynamicCast<FrameNode>(menuBar->GetChildAtIndex(2));
+    return closeButton;
 }
 
 RefPtr<FrameNode> AtomicServicePattern::GetMenuIcon()
 {
-    return NG::Inspector::GetFrameNodeByKey("AtomicServiceMenuIconId");
+    auto menuButton = GetMenuButton();
+    CHECK_NULL_RETURN(menuButton, nullptr);
+    auto menuIcon = AceType::DynamicCast<FrameNode>(menuButton->GetChildAtIndex(0));
+    return menuIcon;
 }
 
 RefPtr<FrameNode> AtomicServicePattern::GetCloseIcon()
 {
-    return NG::Inspector::GetFrameNodeByKey("AtomicServiceCloseIconId");
+    auto closeButton = GetCloseButton();
+    CHECK_NULL_RETURN(closeButton, nullptr);
+    auto closeIcon = AceType::DynamicCast<FrameNode>(closeButton->GetChildAtIndex(0));
+    return closeIcon;
 }
 
 void AtomicServicePattern::UpdateColor(std::optional<bool> isLight)
@@ -288,7 +204,7 @@ void AtomicServicePattern::UpdateColor(std::optional<bool> isLight)
     CHECK_NULL_VOID(pipeline);
     auto theme = pipeline->GetTheme<AppBarTheme>();
     if (!(isLight.has_value())) {
-        isLight = pipeline->GetColorMode() != ColorMode::DARK;
+        isLight = SystemProperties::GetColorMode() != ColorMode::DARK;
     }
     auto menuButton = GetMenuButton();
     UpdateButtonColor(theme, menuButton, isLight.value());
@@ -457,72 +373,9 @@ void AtomicServicePattern::UpdateIconLayout(RefPtr<AppBarTheme>& theme, RefPtr<F
         margin.left = CalcLength(theme->GetIconInsideMargin());
         margin.right = CalcLength(theme->GetIconOutsideMargin());
     }
-    auto layoutProperty = icon->GetLayoutProperty<ImageLayoutProperty>();
-    CHECK_NULL_VOID(layoutProperty);
-    layoutProperty->UpdateMargin(margin);
+    icon->GetLayoutProperty<ImageLayoutProperty>()->UpdateMargin(margin);
 
     icon->MarkModifyDone();
     icon->MarkDirtyNode();
-}
-
-bool AtomicServicePattern::OnDirtyLayoutWrapperSwap(const RefPtr<LayoutWrapper>& dirty, const DirtySwapConfig& config)
-{
-    auto atom = GetHost();
-    CHECK_NULL_RETURN(atom, false);
-    auto pipeline = atom->GetContextRefPtr();
-    CHECK_NULL_RETURN(pipeline, false);
-    pipeline->AddAfterLayoutTask([weak = WeakClaim(this)]() {
-        auto pattern = weak.Upgrade();
-        CHECK_NULL_VOID(pattern);
-        pattern->CallRectChange();
-    });
-    return false;
-}
-
-int32_t AtomicServicePattern::AddRectChangeListener(std::function<void(const RectF& rect)>&& listener)
-{
-    auto id = g_nextListenerId.fetch_add(1);
-    rectChangeListeners_.emplace(id, listener);
-    return id;
-}
-
-void AtomicServicePattern::RemoveRectChangeListener(int32_t id)
-{
-    auto it = rectChangeListeners_.find(id);
-    if (it != rectChangeListeners_.end()) {
-        rectChangeListeners_.erase(it);
-    }
-}
-
-void AtomicServicePattern::NotifyRectChange(const RectF& rect)
-{
-    for (auto& pair : rectChangeListeners_) {
-        if (pair.second) {
-            pair.second(rect);
-        }
-    }
-}
-
-void AtomicServicePattern::CallRectChange()
-{
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    auto pipeline = host->GetContextRefPtr();
-    CHECK_NULL_VOID(pipeline);
-    auto container = Container::GetContainer(pipeline->GetInstanceId());
-    CHECK_NULL_VOID(container);
-    auto appbar = container->GetAppBar();
-    CHECK_NULL_VOID(appbar);
-    auto rect = appbar->GetAppBarRect();
-    if (!rect.has_value()) {
-        TAG_LOGW(AceLogTag::ACE_APPBAR, "Get rect of app bar failed, app bar is hidden");
-        return;
-    }
-    if (appBarRect_.has_value() && appBarRect_.value() == rect.value()) {
-        TAG_LOGD(AceLogTag::ACE_APPBAR, "App bar rect is not changed, no need to notify");
-        return;
-    }
-    NotifyRectChange(rect.value());
-    appBarRect_ = rect;
 }
 } // namespace OHOS::Ace::NG

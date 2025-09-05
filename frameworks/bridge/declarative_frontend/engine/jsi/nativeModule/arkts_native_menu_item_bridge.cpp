@@ -22,9 +22,6 @@ using namespace OHOS::Ace::Framework;
 namespace OHOS::Ace::NG {
 const std::string FORMAT_FONT = "%s|%s|%s";
 const std::string DEFAULT_ERR_CODE = "-1";
-constexpr int NUM_0 = 0;
-constexpr int NUM_1 = 1;
-constexpr int NUM_2 = 2;
 ArkUINativeModuleValue MenuItemBridge::SetMenuItemSelected(ArkUIRuntimeCallInfo* runtimeCallInfo)
 {
     EcmaVM* vm = runtimeCallInfo->GetVM();
@@ -59,13 +56,10 @@ ArkUINativeModuleValue MenuItemBridge::SetLabelFontColor(ArkUIRuntimeCallInfo* r
     Local<JSValueRef> colorArg = runtimeCallInfo->GetCallArgRef(1);
     auto nativeNode = nodePtr(nodeArg->ToNativePointer(vm)->Value());
     Color color;
-    RefPtr<ResourceObject> colorResObj;
-    auto nodeInfo = ArkTSUtils::MakeNativeNodeInfo(nativeNode);
-    if (!ArkTSUtils::ParseJsColorAlpha(vm, colorArg, color, colorResObj, nodeInfo)) {
+    if (!ArkTSUtils::ParseJsColorAlpha(vm, colorArg, color)) {
         GetArkUINodeModifiers()->getMenuItemModifier()->resetLabelFontColor(nativeNode);
     } else {
-        auto colorRawPtr = AceType::RawPtr(colorResObj);
-        GetArkUINodeModifiers()->getMenuItemModifier()->setLabelFontColor(nativeNode, color.GetValue(), colorRawPtr);
+        GetArkUINodeModifiers()->getMenuItemModifier()->setLabelFontColor(nativeNode, color.GetValue());
     }
     return panda::JSValueRef::Undefined(vm);
 }
@@ -88,13 +82,10 @@ ArkUINativeModuleValue MenuItemBridge::SetContentFontColor(ArkUIRuntimeCallInfo*
     Local<JSValueRef> colorArg = runtimeCallInfo->GetCallArgRef(1);
     auto nativeNode = nodePtr(nodeArg->ToNativePointer(vm)->Value());
     Color color;
-    RefPtr<ResourceObject> colorResObj;
-    auto nodeInfo = ArkTSUtils::MakeNativeNodeInfo(nativeNode);
-    if (!ArkTSUtils::ParseJsColorAlpha(vm, colorArg, color, colorResObj, nodeInfo)) {
+    if (!ArkTSUtils::ParseJsColorAlpha(vm, colorArg, color)) {
         GetArkUINodeModifiers()->getMenuItemModifier()->resetContentFontColor(nativeNode);
     } else {
-        auto colorRawPtr = AceType::RawPtr(colorResObj);
-        GetArkUINodeModifiers()->getMenuItemModifier()->setContentFontColor(nativeNode, color.GetValue(), colorRawPtr);
+        GetArkUINodeModifiers()->getMenuItemModifier()->setContentFontColor(nativeNode, color.GetValue());
     }
     return panda::JSValueRef::Undefined(vm);
 }
@@ -125,8 +116,7 @@ ArkUINativeModuleValue MenuItemBridge::SetLabelFont(ArkUIRuntimeCallInfo* runtim
     }
 
     CalcDimension fontSize;
-    RefPtr<ResourceObject> fontSizeResObj;
-    if (!ArkTSUtils::ParseJsDimensionFp(vm, sizeArg, fontSize, fontSizeResObj, false)) {
+    if (!ArkTSUtils::ParseJsDimensionFp(vm, sizeArg, fontSize, false)) {
         fontSize = Dimension(0.0);
     }
 
@@ -145,18 +135,14 @@ ArkUINativeModuleValue MenuItemBridge::SetLabelFont(ArkUIRuntimeCallInfo* runtim
     }
 
     std::string family;
-    RefPtr<ResourceObject> fontFamiliesResObj;
-    if (!ArkTSUtils::ParseJsFontFamiliesToString(vm, familyArg, family, fontFamiliesResObj) || family.empty()) {
+    if (!ArkTSUtils::ParseJsFontFamiliesToString(vm, familyArg, family) || family.empty()) {
         family = DEFAULT_ERR_CODE;
     }
 
     std::string fontSizeStr = fontSize.ToString();
     std::string fontInfo =
         StringUtils::FormatString(FORMAT_FONT.c_str(), fontSizeStr.c_str(), weight.c_str(), family.c_str());
-    auto fontFamiliesRawPtr = AceType::RawPtr(fontFamiliesResObj);
-    auto fontSizeRawPtr = AceType::RawPtr(fontSizeResObj);
-    GetArkUINodeModifiers()->getMenuItemModifier()->setLabelFont(
-        nativeNode, fontInfo.c_str(), style, fontFamiliesRawPtr, fontSizeRawPtr);
+    GetArkUINodeModifiers()->getMenuItemModifier()->setLabelFont(nativeNode, fontInfo.c_str(), style);
     return panda::JSValueRef::Undefined(vm);
 }
 
@@ -186,8 +172,7 @@ ArkUINativeModuleValue MenuItemBridge::SetContentFont(ArkUIRuntimeCallInfo* runt
     }
 
     CalcDimension fontSize;
-    RefPtr<ResourceObject> fontSizeResObj;
-    if (!ArkTSUtils::ParseJsDimensionFp(vm, sizeArg, fontSize, fontSizeResObj, false)) {
+    if (!ArkTSUtils::ParseJsDimensionFp(vm, sizeArg, fontSize, false)) {
         fontSize = Dimension(0.0);
     }
 
@@ -206,18 +191,14 @@ ArkUINativeModuleValue MenuItemBridge::SetContentFont(ArkUIRuntimeCallInfo* runt
     }
 
     std::string family;
-    RefPtr<ResourceObject> fontFamiliesResObj;
-    if (!ArkTSUtils::ParseJsFontFamiliesToString(vm, familyArg, family, fontFamiliesResObj) || family.empty()) {
+    if (!ArkTSUtils::ParseJsFontFamiliesToString(vm, familyArg, family) || family.empty()) {
         family = DEFAULT_ERR_CODE;
     }
 
     std::string fontSizeStr = fontSize.ToString();
     std::string fontInfo =
         StringUtils::FormatString(FORMAT_FONT.c_str(), fontSizeStr.c_str(), weight.c_str(), family.c_str());
-    auto fontFamiliesRawPtr = AceType::RawPtr(fontFamiliesResObj);
-    auto fontSizeRawPtr = AceType::RawPtr(fontSizeResObj);
-    GetArkUINodeModifiers()->getMenuItemModifier()->setContentFont(
-        nativeNode, fontInfo.c_str(), style, fontSizeRawPtr, fontFamiliesRawPtr);
+    GetArkUINodeModifiers()->getMenuItemModifier()->setContentFont(nativeNode, fontInfo.c_str(), style);
     return panda::JSValueRef::Undefined(vm);
 }
 
@@ -241,22 +222,20 @@ ArkUINativeModuleValue MenuItemBridge::SetSelectIcon(ArkUIRuntimeCallInfo* runti
     std::function<void(WeakPtr<NG::FrameNode>)> symbolApply;
     bool isShow = false;
     std::string icon;
-    RefPtr<ResourceObject> selectIconResObj;
     if (inputArg->IsBoolean()) {
         isShow = inputArg->ToBoolean(vm)->Value();
     } else if (inputArg->IsString(vm)) {
         icon = inputArg->ToString(vm)->ToString(vm);
         isShow = true;
-    } else if (ArkTSUtils::ParseJsMedia(vm, inputArg, icon, selectIconResObj)) {
+    } else if (ArkTSUtils::ParseJsMedia(vm, inputArg, icon)) {
         isShow = true;
     } else if (inputArg->IsObject(vm)) {
         isShow = true;
         Framework::JsiCallbackInfo info = Framework::JsiCallbackInfo(runtimeCallInfo);
         Framework::JSViewAbstract::SetSymbolOptionApply(runtimeCallInfo, symbolApply, info[1]);
     }
-    auto selectIconRawPtr = AceType::RawPtr(selectIconResObj);
     GetArkUINodeModifiers()->getMenuItemModifier()->setSelectIcon(nativeNode, isShow);
-    GetArkUINodeModifiers()->getMenuItemModifier()->setSelectIconSrc(nativeNode, icon.c_str(), selectIconRawPtr);
+    GetArkUINodeModifiers()->getMenuItemModifier()->setSelectIconSrc(nativeNode, icon.c_str());
     GetArkUINodeModifiers()->getMenuItemModifier()->setSelectIconSymbol(
         nativeNode, reinterpret_cast<void*>(&symbolApply));
     return panda::JSValueRef::Undefined(vm);
@@ -273,44 +252,4 @@ ArkUINativeModuleValue MenuItemBridge::ResetSelectIcon(ArkUIRuntimeCallInfo* run
     GetArkUINodeModifiers()->getMenuItemModifier()->resetSelectIconSymbol(nativeNode);
     return panda::JSValueRef::Undefined(vm);
 }
-
-ArkUINativeModuleValue MenuItemBridge::SetOnChange(ArkUIRuntimeCallInfo* runtimeCallInfo)
-{
-    EcmaVM* vm = runtimeCallInfo->GetVM();
-    CHECK_NULL_RETURN(vm, panda::NativePointerRef::New(vm, nullptr));
-    uint32_t argsNumber = runtimeCallInfo->GetArgsNumber();
-    if (argsNumber != NUM_2) {
-        return panda::JSValueRef::Undefined(vm);
-    }
-    Local<JSValueRef> nativeNodeArg = runtimeCallInfo->GetCallArgRef(NUM_0);
-    Local<JSValueRef> callbackArg = runtimeCallInfo->GetCallArgRef(NUM_1);
-    auto nativeNode = nodePtr(nativeNodeArg->ToNativePointer(vm)->Value());
-    auto frameNode = reinterpret_cast<FrameNode*>(nativeNode);
-    CHECK_NULL_RETURN(frameNode, panda::NativePointerRef::New(vm, nullptr));
-    if (callbackArg->IsUndefined() || callbackArg->IsNull() || !callbackArg->IsFunction(vm)) {
-        GetArkUINodeModifiers()->getMenuItemModifier()->resetOnChange(nativeNode);
-        return panda::JSValueRef::Undefined(vm);
-    }
-    panda::Local<panda::FunctionRef> func = callbackArg->ToObject(vm);
-    std::function<void(bool)> callback = [vm, frameNode, func = panda::CopyableGlobal(vm, func)](bool flag) {
-        panda::LocalScope pandaScope(vm);
-        panda::TryCatch trycatch(vm);
-        PipelineContext::SetCallBackNode(AceType::WeakClaim(frameNode));
-        panda::Local<panda::JSValueRef> params[1] = { panda::BooleanRef::New(vm, flag) };
-        func->Call(vm, func.ToLocal(), params, 1);
-    };
-    GetArkUINodeModifiers()->getMenuItemModifier()->setOnChange(nativeNode, reinterpret_cast<void*>(&callback));
-    return panda::JSValueRef::Undefined(vm);
-}
-
-ArkUINativeModuleValue MenuItemBridge::ResetOnChange(ArkUIRuntimeCallInfo* runtimeCallInfo)
-{
-    EcmaVM* vm = runtimeCallInfo->GetVM();
-    CHECK_NULL_RETURN(vm, panda::NativePointerRef::New(vm, nullptr));
-    Local<JSValueRef> nativeNodeArg = runtimeCallInfo->GetCallArgRef(NUM_0);
-    auto nativeNode = nodePtr(nativeNodeArg->ToNativePointer(vm)->Value());
-    GetArkUINodeModifiers()->getMenuItemModifier()->resetOnChange(nativeNode);
-    return panda::JSValueRef::Undefined(vm);
-}
-
 } // namespace OHOS::Ace::NG

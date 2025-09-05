@@ -17,6 +17,7 @@
 
 #include "bridge/declarative_frontend/view_stack_processor.h"
 #include "core/components/plugin/plugin_component.h"
+#include "core/event/ace_event_handler.h"
 
 namespace OHOS::Ace::Framework {
 void PluginModelImpl::Create(const RequestPluginInfo& pluginInfo)

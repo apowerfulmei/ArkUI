@@ -28,7 +28,7 @@ namespace OHOS::Ace::NG {
 using ChangeEvent = std::function<void(const bool)>;
 
 class CheckBoxEventHub : public EventHub {
-    DECLARE_ACE_TYPE(CheckBoxEventHub, EventHub);
+    DECLARE_ACE_TYPE(CheckBoxEventHub, EventHub)
 
 public:
     CheckBoxEventHub() = default;
@@ -53,10 +53,7 @@ public:
             auto host = GetFrameNode();
             if (host) {
                 auto id = host->GetInspectorIdValue("");
-                builder.SetId(id)
-                    .SetType(host->GetHostTag())
-                    .SetDescription(host->GetAutoEventParamValue(""))
-                    .SetHost(host);
+                builder.SetId(id).SetType(host->GetHostTag()).SetDescription(host->GetAutoEventParamValue(""));
                 if (!id.empty()) {
                     Recorder::NodeDataCache::Get().PutMultiple(host, id, name_, select);
                 }

@@ -22,7 +22,6 @@
 #include "base/thread/task_executor.h"
 #include "base/image/pixel_map.h"
 #include "base/utils/device_config.h"
-#include "base/utils/string_utils.h"
 #include "core/components/theme/resource_adapter.h"
 #include "adapter/ohos/osal/resource_theme_style.h"
 
@@ -33,7 +32,6 @@ class ResourceAdapterImplV2 : public ResourceAdapter {
 public:
     ResourceAdapterImplV2() = default;
     explicit ResourceAdapterImplV2(std::shared_ptr<Global::Resource::ResourceManager> resourceManager);
-    ResourceAdapterImplV2(std::shared_ptr<Global::Resource::ResourceManager> resourceManager, int32_t instanceId);
     ResourceAdapterImplV2(
         std::shared_ptr<Global::Resource::ResourceManager> resourceManager, const ResourceInfo& resourceInfo);
     ~ResourceAdapterImplV2() override = default;
@@ -88,12 +86,8 @@ public:
     void SetAppHasDarkRes(bool hasDarkRes);
     RefPtr<ResourceAdapter> GetOverrideResourceAdapter(
         const ResourceConfiguration& config, const ConfigurationChange& configurationChange) override;
-    bool ExistDarkResById(const std::string& resourceId) override;
-    bool ExistDarkResByName(const std::string& resourceName, const std::string& resourceType) override;
-    uint32_t GetResId(const std::string &resTypeName) const override;
 
 private:
-    std::unordered_map<std::string, uint32_t> patternNameMap_;
     std::string GetActualResourceName(const std::string& resName) const;
     bool NeedUpdateResConfig(const std::shared_ptr<Global::Resource::ResConfig>& oldResConfig,
         const std::shared_ptr<Global::Resource::ResConfig>& newResConfig);

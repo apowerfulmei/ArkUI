@@ -15,13 +15,19 @@
 
 #include "core/components_ng/gestures/recognizers/swipe_recognizer.h"
 
-#include "core/common/reporter/reporter.h"
-#include "core/components_ng/base/observer_handler.h"
-#include "core/components_ng/event/event_constants.h"
-#include "core/components_ng/manager/event/json_child_report.h"
-#include "core/components_ng/manager/event/json_report.h"
+#include <optional>
+
+#include "base/geometry/offset.h"
+#include "base/geometry/point.h"
+#include "base/log/log.h"
+#include "base/utils/type_definition.h"
+#include "base/utils/utils.h"
+#include "core/components_ng/gestures/base_gesture_event.h"
+#include "core/components_ng/gestures/gesture_referee.h"
+#include "core/components_ng/gestures/recognizers/gesture_recognizer.h"
+#include "core/components_ng/gestures/recognizers/multi_fingers_recognizer.h"
+#include "core/event/touch_event.h"
 #include "core/pipeline_ng/pipeline_context.h"
-#include "core/pipeline/base/constants.h"
 
 namespace OHOS::Ace::NG {
 namespace {
@@ -51,7 +57,7 @@ double ComputeAngle(double x, double y)
         }
         return verticalAngle;
     }
-    return atan2(y, x) * STRAIGHT_ANGLE / ACE_PI;
+    return atan2(y, x) * STRAIGHT_ANGLE / M_PI;
 }
 } // namespace
 
@@ -69,25 +75,17 @@ void SwipeRecognizer::OnAccepted()
     firstInputTime_.reset();
 
     auto node = GetAttachedNode().Upgrade();
-    TAG_LOGI(AceLogTag::ACE_INPUTKEYFLOW, "SWIPE RACC, T: %{public}s",
+    TAG_LOGI(AceLogTag::ACE_INPUTKEYFLOW, "Swipe accepted, tag = %{public}s",
         node ? node->GetTag().c_str() : "null");
-    auto lastRefereeState = refereeState_;
     lastRefereeState_ = refereeState_;
     refereeState_ = RefereeState::SUCCEED;
-    TouchEvent touchPoint = {};
-    if (!touchPoints_.empty()) {
-        touchPoint = touchPoints_.begin()->second;
-    }
-    SendCallbackMsg(onAction_, GestureCallbackType::ACTION);
+    SendCallbackMsg(onAction_);
     int64_t overTime = GetSysTimestamp();
     if (SystemProperties::GetTraceInputEventEnabled()) {
         ACE_SCOPED_TRACE("UserEvent InputTime:%lld OverTime:%lld InputType:SwipeGesture",
             static_cast<long long>(inputTime), static_cast<long long>(overTime));
     }
     firstInputTime_.reset();
-    if (lastRefereeState != RefereeState::SUCCEED_BLOCKED) {
-        ResetStateVoluntarily();
-    }
 }
 
 void SwipeRecognizer::OnRejected()
@@ -105,6 +103,8 @@ void SwipeRecognizer::HandleTouchDownEvent(const TouchEvent& event)
         firstInputTime_ = event.time;
     }
 
+    TAG_LOGI(AceLogTag::ACE_INPUTKEYFLOW, "Id:%{public}d, swipe %{public}d down, state: %{public}d", event.touchEventId,
+        event.id, refereeState_);
     if (fingers_ > MAX_SWIPE_FINGERS) {
         extraInfo_ += "fingers exceeds the maximum dingers of the swipe gesture.";
         Adjudicate(Claim(this), GestureDisposal::REJECT);
@@ -116,6 +116,11 @@ void SwipeRecognizer::HandleTouchDownEvent(const TouchEvent& event)
         TAG_LOGI(AceLogTag::ACE_GESTURE, "Swipe recognizer direction is none, node tag = %{public}s, id = %{public}s",
             node ? node->GetTag().c_str() : "null", node ? std::to_string(node->GetId()).c_str() : "invalid");
         extraInfo_ += "swipe direction is NONE.";
+        Adjudicate(Claim(this), GestureDisposal::REJECT);
+        return;
+    }
+
+    if (!IsInAttachedNode(event)) {
         Adjudicate(Claim(this), GestureDisposal::REJECT);
         return;
     }
@@ -141,6 +146,8 @@ void SwipeRecognizer::HandleTouchDownEvent(const AxisEvent& event)
     if (!firstInputTime_.has_value()) {
         firstInputTime_ = event.time;
     }
+    TAG_LOGI(AceLogTag::ACE_INPUTKEYFLOW, "Id:%{public}d, swipe axis start, state: %{public}d", event.touchEventId,
+        refereeState_);
     if (direction_.type == SwipeDirection::NONE) {
         extraInfo_ += "swipe direction is NONE in axis case.";
         Adjudicate(Claim(this), GestureDisposal::REJECT);
@@ -160,6 +167,8 @@ void SwipeRecognizer::HandleTouchDownEvent(const AxisEvent& event)
 
 void SwipeRecognizer::HandleTouchUpEvent(const TouchEvent& event)
 {
+    TAG_LOGI(AceLogTag::ACE_INPUTKEYFLOW, "Id:%{public}d, swipe %{public}d up, state: %{public}d", event.touchEventId,
+        event.id, refereeState_);
     if (fingersId_.find(event.id) != fingersId_.end()) {
         fingersId_.erase(event.id);
     }
@@ -167,47 +176,48 @@ void SwipeRecognizer::HandleTouchUpEvent(const TouchEvent& event)
     touchPoints_[event.id] = event;
     time_ = event.time;
     lastTouchEvent_ = event;
-    if (IsRefereeFinished()) {
-        return;
-    }
-    if (refereeState_ == RefereeState::READY) {
+    if ((refereeState_ != RefereeState::DETECTING) && (refereeState_ != RefereeState::FAIL) &&
+        (refereeState_ != RefereeState::PENDING)) {
         Adjudicate(AceType::Claim(this), GestureDisposal::REJECT);
         return;
     }
 
-    auto offset = event.GetOffset() - downEvents_[event.id].GetOffset();
-    // nanoseconds duration to seconds.
-    std::chrono::duration<double> duration = event.time - touchDownTime_;
-    auto seconds = duration.count();
-    resultSpeed_ = LessOrEqual(seconds, 0.0) ? 0.0 : offset.GetDistance() / seconds;
-    if (resultSpeed_ < speed_) {
-        if (currentFingers_ - 1 + static_cast<int32_t>(matchedTouch_.size()) < fingers_) {
-            TAG_LOGI(AceLogTag::ACE_GESTURE, "The result speed %{public}f is less than duration %{public}f",
-                resultSpeed_, speed_);
-            Adjudicate(AceType::Claim(this), GestureDisposal::REJECT);
+    if ((refereeState_ == RefereeState::DETECTING) || (refereeState_ == RefereeState::PENDING)) {
+        auto offset = event.GetOffset() - downEvents_[event.id].GetOffset();
+        // nanoseconds duration to seconds.
+        std::chrono::duration<double> duration = event.time - touchDownTime_;
+        auto seconds = duration.count();
+        resultSpeed_ = LessOrEqual(seconds, 0.0) ? 0.0 : offset.GetDistance() / seconds;
+        if (resultSpeed_ < speed_) {
+            if (currentFingers_ - 1 + static_cast<int32_t>(matchedTouch_.size()) < fingers_) {
+                TAG_LOGI(AceLogTag::ACE_GESTURE, "The result speed %{public}f is less than duration %{public}f",
+                    resultSpeed_, speed_);
+                Adjudicate(AceType::Claim(this), GestureDisposal::REJECT);
+            }
+        } else {
+            matchedTouch_.insert(event.id);
+            if (static_cast<int32_t>(matchedTouch_.size()) != fingers_) {
+                Adjudicate(AceType::Claim(this), GestureDisposal::PENDING);
+                return;
+            }
+            auto onGestureJudgeBeginResult = TriggerGestureJudgeCallback();
+            if (onGestureJudgeBeginResult == GestureJudgeResult::REJECT) {
+                Adjudicate(AceType::Claim(this), GestureDisposal::REJECT);
+                return;
+            }
+            if (CheckLimitFinger()) {
+                Adjudicate(AceType::Claim(this), GestureDisposal::REJECT);
+                return;
+            }
+            Adjudicate(AceType::Claim(this), GestureDisposal::ACCEPT);
         }
-    } else {
-        matchedTouch_.insert(event.id);
-        if (static_cast<int32_t>(matchedTouch_.size()) != fingers_) {
-            Adjudicate(AceType::Claim(this), GestureDisposal::PENDING);
-            return;
-        }
-        if (CheckLimitFinger()) {
-            extraInfo_ += " isLFC: " + std::to_string(isLimitFingerCount_);
-            Adjudicate(AceType::Claim(this), GestureDisposal::REJECT);
-            return;
-        }
-        auto onGestureJudgeBeginResult = TriggerGestureJudgeCallback();
-        if (onGestureJudgeBeginResult == GestureJudgeResult::REJECT) {
-            Adjudicate(AceType::Claim(this), GestureDisposal::REJECT);
-            return;
-        }
-        Adjudicate(AceType::Claim(this), GestureDisposal::ACCEPT);
     }
 }
 
 void SwipeRecognizer::HandleTouchUpEvent(const AxisEvent& event)
 {
+    TAG_LOGI(AceLogTag::ACE_INPUTKEYFLOW,
+        "Id:%{public}d, swipe axis end, state: %{public}d", event.touchEventId, refereeState_);
     globalPoint_ = Point(event.x, event.y);
     touchPoints_[event.id] = TouchEvent();
     UpdateTouchPointWithAxisEvent(event);
@@ -225,11 +235,6 @@ void SwipeRecognizer::HandleTouchUpEvent(const AxisEvent& event)
         }
         if (event.sourceTool == SourceTool::MOUSE) {
             resultSpeed_ = 0.0;
-            auto onGestureJudgeBeginResult = TriggerGestureJudgeCallback();
-            if (onGestureJudgeBeginResult == GestureJudgeResult::REJECT) {
-                Adjudicate(AceType::Claim(this), GestureDisposal::REJECT);
-                return;
-            }
             Adjudicate(AceType::Claim(this), GestureDisposal::ACCEPT);
             return;
         }
@@ -265,9 +270,9 @@ void SwipeRecognizer::HandleTouchMoveEvent(const TouchEvent& event)
     lastTouchEvent_ = event;
     PointF curLocalPoint(event.x, event.y);
     PointF lastLocalPoint(touchPoints_[event.id].x, touchPoints_[event.id].y);
-    TransformForRecognizer(curLocalPoint, GetAttachedNode(), false,
+    NGGestureRecognizer::Transform(curLocalPoint, GetAttachedNode(), false,
         isPostEventResult_, event.postEventNodeId);
-    TransformForRecognizer(lastLocalPoint, GetAttachedNode(), false,
+    NGGestureRecognizer::Transform(lastLocalPoint, GetAttachedNode(), false,
         isPostEventResult_, event.postEventNodeId);
     Offset moveDistance(curLocalPoint.GetX() - lastLocalPoint.GetX(), curLocalPoint.GetY() - lastLocalPoint.GetY());
     touchPoints_[event.id] = event;
@@ -296,12 +301,12 @@ void SwipeRecognizer::HandleTouchMoveEvent(const AxisEvent& event)
     time_ = event.time;
     lastAxisEvent_ = event;
     UpdateTouchPointWithAxisEvent(event);
-    auto pipeline = PipelineContext::GetCurrentContextSafelyWithCheck();
+    auto pipeline = PipelineContext::GetCurrentContext();
     bool isShiftKeyPressed = false;
     bool hasDifferentDirectionGesture = false;
     if (pipeline) {
         isShiftKeyPressed =
-            event.HasKey(KeyCode::KEY_SHIFT_LEFT) || event.HasKey(KeyCode::KEY_SHIFT_RIGHT);
+            pipeline->IsKeyInPressed(KeyCode::KEY_SHIFT_LEFT) || pipeline->IsKeyInPressed(KeyCode::KEY_SHIFT_RIGHT);
         hasDifferentDirectionGesture = pipeline->HasDifferentDirectionGesture();
     }
     auto currentOffset = event.ConvertToOffset(isShiftKeyPressed, hasDifferentDirectionGesture);
@@ -327,27 +332,27 @@ void SwipeRecognizer::HandleTouchMoveEvent(const AxisEvent& event)
 
 void SwipeRecognizer::HandleTouchCancelEvent(const TouchEvent& event)
 {
-    extraInfo_ += "cancel received.";
+    TAG_LOGI(AceLogTag::ACE_INPUTKEYFLOW, "Id:%{public}d, swipe %{public}d cancel", event.touchEventId, event.id);
     if ((refereeState_ != RefereeState::SUCCEED) && (refereeState_ != RefereeState::FAIL)) {
         Adjudicate(AceType::Claim(this), GestureDisposal::REJECT);
         return;
     }
 
     if (refereeState_ == RefereeState::SUCCEED) {
-        SendCallbackMsg(onActionCancel_, GestureCallbackType::CANCEL);
+        SendCancelMsg();
     }
 }
 
 void SwipeRecognizer::HandleTouchCancelEvent(const AxisEvent& event)
 {
-    extraInfo_ += "cancel received.";
+    TAG_LOGI(AceLogTag::ACE_INPUTKEYFLOW, "Id:%{public}d, swipe axis cancel", event.touchEventId);
     if ((refereeState_ != RefereeState::SUCCEED) && (refereeState_ != RefereeState::FAIL)) {
         Adjudicate(AceType::Claim(this), GestureDisposal::REJECT);
         return;
     }
 
     if (refereeState_ == RefereeState::SUCCEED) {
-        SendCallbackMsg(onActionCancel_, GestureCallbackType::CANCEL);
+        SendCancelMsg();
     }
 }
 
@@ -390,16 +395,10 @@ void SwipeRecognizer::OnResetStatus()
     matchedTouch_.clear();
 }
 
-void SwipeRecognizer::SendCallbackMsg(const std::unique_ptr<GestureEventFunc>& callback, GestureCallbackType type)
+void SwipeRecognizer::SendCallbackMsg(const std::unique_ptr<GestureEventFunc>& callback)
 {
-    std::string callbackName = GetCallbackName(callback);
-    ACE_SCOPED_TRACE("SwipeRecognizer %s", callbackName.c_str());
-    if (gestureInfo_ && gestureInfo_->GetDisposeTag()) {
-        return;
-    }
     if (callback && *callback) {
         GestureEvent info;
-        info.SetGestureTypeName(GestureTypeName::SWIPE_GESTURE);
         info.SetTimeStamp(time_);
         UpdateFingerListInfo();
         info.SetFingerList(fingerList_);
@@ -415,21 +414,14 @@ void SwipeRecognizer::SendCallbackMsg(const std::unique_ptr<GestureEventFunc>& c
         if (lastTouchEvent_.tiltY.has_value()) {
             info.SetTiltY(lastTouchEvent_.tiltY.value());
         }
-        if (lastTouchEvent_.rollAngle.has_value()) {
-            info.SetRollAngle(lastTouchEvent_.rollAngle.value());
-        }
         if (inputEventType_ == InputEventType::AXIS) {
             info.SetVerticalAxis(lastAxisEvent_.verticalAxis);
             info.SetHorizontalAxis(lastAxisEvent_.horizontalAxis);
             info.SetSourceTool(lastAxisEvent_.sourceTool);
             info.SetPressedKeyCodes(lastAxisEvent_.pressedCodes);
-            info.CopyConvertInfoFrom(lastAxisEvent_.convertInfo);
-            info.SetTargetDisplayId(lastAxisEvent_.targetDisplayId);
         } else {
             info.SetSourceTool(lastTouchEvent_.sourceTool);
             info.SetPressedKeyCodes(lastTouchEvent_.pressedKeyCodes_);
-            info.CopyConvertInfoFrom(lastTouchEvent_.convertInfo);
-            info.SetTargetDisplayId(lastTouchEvent_.targetDisplayId);
         }
         info.SetPointerEvent(lastPointEvent_);
         if (prevAngle_) {
@@ -438,29 +430,8 @@ void SwipeRecognizer::SendCallbackMsg(const std::unique_ptr<GestureEventFunc>& c
         info.SetInputEventType(inputEventType_);
         // callback may be overwritten in its invoke so we copy it first
         auto callbackFunction = *callback;
-        HandleGestureAccept(info, type, GestureListenerType::SWIPE);
         callbackFunction(info);
-        HandleReports(info, type);
     }
-}
-
-void SwipeRecognizer::HandleReports(const GestureEvent& info, GestureCallbackType type)
-{
-    if (type != GestureCallbackType::ACTION) {
-        return;
-    }
-    auto frameNode = GetAttachedNode().Upgrade();
-    CHECK_NULL_VOID(frameNode);
-    SwipeJsonReport swipeReport;
-    swipeReport.SetCallbackType(type);
-    swipeReport.SetGestureType(GetRecognizerType());
-    swipeReport.SetId(frameNode->GetId());
-    swipeReport.SetSwipeDirection(static_cast<int32_t>(direction_.type));
-    swipeReport.SetTouchEvents(downEvents_);
-    swipeReport.SetSpeed(speed_);
-    swipeReport.SetActualSpeed(resultSpeed_);
-    swipeReport.SetFingerList(info.GetFingerList());
-    Reporter::GetInstance().HandleUISessionReporting(swipeReport);
 }
 
 GestureJudgeResult SwipeRecognizer::TriggerGestureJudgeCallback()
@@ -473,15 +444,6 @@ GestureJudgeResult SwipeRecognizer::TriggerGestureJudgeCallback()
         return GestureJudgeResult::CONTINUE;
     }
     auto info = std::make_shared<SwipeGestureEvent>();
-    UpdateGestureEventInfo(info);
-    if (gestureRecognizerJudgeFunc) {
-        return gestureRecognizerJudgeFunc(info, Claim(this), responseLinkRecognizer_);
-    }
-    return callback(gestureInfo_, info);
-}
-
-void SwipeRecognizer::UpdateGestureEventInfo(std::shared_ptr<SwipeGestureEvent>& info)
-{
     info->SetTimeStamp(time_);
     info->SetDeviceId(deviceId_);
     UpdateFingerListInfo();
@@ -503,24 +465,14 @@ void SwipeRecognizer::UpdateGestureEventInfo(std::shared_ptr<SwipeGestureEvent>&
     if (lastTouchEvent_.tiltY.has_value()) {
         info->SetTiltY(lastTouchEvent_.tiltY.value());
     }
-    if (lastTouchEvent_.rollAngle.has_value()) {
-        info->SetRollAngle(lastTouchEvent_.rollAngle.value());
-    }
-    info->SetSourceTool(
-        inputEventType_ == InputEventType::AXIS ? lastAxisEvent_.sourceTool : lastTouchEvent_.sourceTool);
+    info->SetSourceTool(lastTouchEvent_.sourceTool);
     if (prevAngle_) {
         info->SetAngle(prevAngle_.value());
     }
-    info->SetRawInputEventType(inputEventType_);
-    info->SetRawInputEvent(lastPointEvent_);
-    info->SetRawInputDeviceId(deviceId_);
-    if (inputEventType_ == InputEventType::AXIS) {
-        info->SetPressedKeyCodes(lastAxisEvent_.pressedCodes);
-        info->SetTargetDisplayId(lastAxisEvent_.targetDisplayId);
-    } else {
-        info->SetPressedKeyCodes(lastTouchEvent_.pressedKeyCodes_);
-        info->SetTargetDisplayId(lastTouchEvent_.targetDisplayId);
+    if (gestureRecognizerJudgeFunc) {
+        return gestureRecognizerJudgeFunc(info, Claim(this), responseLinkRecognizer_);
     }
+    return callback(gestureInfo_, info);
 }
 
 bool SwipeRecognizer::ReconcileFrom(const RefPtr<NGGestureRecognizer>& recognizer)
@@ -536,7 +488,6 @@ bool SwipeRecognizer::ReconcileFrom(const RefPtr<NGGestureRecognizer>& recognize
         ResetStatus();
         return false;
     }
-    isLimitFingerCount_ = curr->isLimitFingerCount_;
 
     onAction_ = std::move(curr->onAction_);
     ReconcileGestureInfoFrom(recognizer);

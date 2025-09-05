@@ -111,17 +111,15 @@ HWTEST_F(TabsSubTabBarStyleTestNg, TabsSubTabBarStyleModelTest003, TestSize.Leve
     model.SetAnimationDuration(AceType::RawPtr(frameNode_), -1);
     model.SetIsVertical(AceType::RawPtr(frameNode_), false);
     model.SetBarOverlap(AceType::RawPtr(frameNode_), false);
-    FlushUITasks();
+    FlushLayoutTask(frameNode_);
 
     auto dividerRenderContext = dividerNode_->GetRenderContext();
-    BlurStyleOption option;
     EXPECT_EQ(dividerRenderContext->GetOpacityValue(), 0.0);
     EXPECT_EQ(layoutProperty_->GetDividerValue(), divider);
     EXPECT_EQ(tabBarPattern_->animationDuration_, -1);
     EXPECT_EQ(tabBarLayoutProperty_->GetAxisValue(), Axis::HORIZONTAL);
     EXPECT_EQ(swiperLayoutProperty_->GetDirectionValue(), Axis::HORIZONTAL);
-    auto renderContext = tabBarNode_->GetRenderContext();
-    EXPECT_EQ(renderContext->GetBackBlurStyle().value_or(option).blurStyle, BlurStyle::NO_MATERIAL);
+    EXPECT_EQ(tabBarPaintProperty_->GetTabBarBlurStyle().value_or(BlurStyle::NO_MATERIAL), BlurStyle::NO_MATERIAL);
 
     /**
      * @tc.steps3: set valid properties
@@ -134,7 +132,7 @@ HWTEST_F(TabsSubTabBarStyleTestNg, TabsSubTabBarStyleModelTest003, TestSize.Leve
     model.SetTabBarHeight(AceType::RawPtr(frameNode_), Dimension(60.f));
     model.SetTabBarWidth(AceType::RawPtr(frameNode_), Dimension(60.f));
     model.SetBarOverlap(AceType::RawPtr(frameNode_), true);
-    FlushUITasks();
+    FlushLayoutTask(frameNode_);
 
     EXPECT_EQ(dividerRenderContext->GetOpacityValue(), 1.0);
     EXPECT_EQ(layoutProperty_->GetDividerValue(), divider);
@@ -144,7 +142,7 @@ HWTEST_F(TabsSubTabBarStyleTestNg, TabsSubTabBarStyleModelTest003, TestSize.Leve
     EXPECT_EQ(swiperLayoutProperty_->GetDirectionValue(), Axis::VERTICAL);
     EXPECT_EQ(tabBarLayoutProperty_->GetTabBarWidthValue(Dimension(56.f)), Dimension(60.f));
     EXPECT_EQ(tabBarLayoutProperty_->GetTabBarHeightValue(Dimension(56.f)), Dimension(60.f));
-    EXPECT_EQ(renderContext->GetBackBlurStyle().value_or(option).blurStyle, BlurStyle::COMPONENT_THICK);
+    EXPECT_EQ(tabBarPaintProperty_->GetTabBarBlurStyle().value_or(BlurStyle::NO_MATERIAL), BlurStyle::COMPONENT_THICK);
 
     /**
      * @tc.steps: step4. check the frameNode.
@@ -193,7 +191,7 @@ HWTEST_F(TabsSubTabBarStyleTestNg, TabsSubTabBarStyleModelTest004, TestSize.Leve
     indicator.borderRadius = 2.0_vp;
     indicator.marginTop = 3.0_vp;
     tabContentPattern->SetIndicatorStyle(indicator);
-    FlushUITasks();
+    FlushLayoutTask(frameNode_);
     EXPECT_EQ(tabContentPattern->GetIndicatorStyle().color, Color::BLACK);
     EXPECT_EQ(tabContentPattern->GetIndicatorStyle().height, 10.0_vp);
     EXPECT_EQ(tabContentPattern->GetIndicatorStyle().width, 20.0_vp);
@@ -235,7 +233,7 @@ HWTEST_F(TabsSubTabBarStyleTestNg, TabsSubTabBarStyleModelTest005, TestSize.Leve
     indicator.borderRadius = 2.0_vp;
     indicator.marginTop = 3.0_vp;
     tabContentPattern->SetIndicatorStyle(indicator);
-    FlushUITasks();
+    FlushLayoutTask(frameNode_);
     EXPECT_EQ(tabContentPattern->GetIndicatorStyle().color, Color::BLACK);
     EXPECT_EQ(tabContentPattern->GetIndicatorStyle().height, 10.0_vp);
     EXPECT_EQ(tabContentPattern->GetIndicatorStyle().width, 20.0_vp);
@@ -1222,8 +1220,7 @@ HWTEST_F(TabsSubTabBarStyleTestNg, TabsSubTabBarStyleModelTest029, TestSize.Leve
     filter.AddFilterAttr(attr);
     json = JsonUtil::Create(true);
     tabContentFrameNode->ToJsonValue(json, filter);
-    EXPECT_EQ(json->ToString(), "{\"id\":\"\",\"isLayoutDirtyMarked\":false,\"isRenderDirtyMarked\":false,"
-    "\"isMeasureBoundary\":false,\"hasPendingRequest\":false,\"isFirstBuilding\":false}");
+    EXPECT_EQ(json->ToString(), "{\"id\":\"\"}");
 
     /**
      * @tc.steps: step3. check the frameNode.
@@ -1395,7 +1392,7 @@ HWTEST_F(TabsSubTabBarStyleTestNg, TabsSubTabBarStyleModelTest032, TestSize.Leve
      * @tc.expected: check the SymbolColorListValue of frame node correctly.
      */
     auto symbolProperty = symbolNode->GetLayoutProperty<TextLayoutProperty>();
-    auto pipeline = frameNode_->GetContext();
+    auto pipeline = PipelineContext::GetCurrentContext();
     auto tabTheme = pipeline->GetTheme<TabTheme>();
     auto defaultColorOn = tabTheme->GetBottomTabSymbolOn();
     EXPECT_EQ(symbolProperty->GetSymbolColorListValue({})[0], defaultColorOn);
@@ -1455,7 +1452,7 @@ HWTEST_F(TabsSubTabBarStyleTestNg, TabsSubTabBarStyleModelTest033, TestSize.Leve
      * @tc.expected: check the SymbolColorListValue of frame node correctly.
      */
     auto symbolProperty = symbolNode->GetLayoutProperty<TextLayoutProperty>();
-    auto pipeline = frameNode_->GetContext();
+    auto pipeline = PipelineContext::GetCurrentContext();
     auto tabTheme = pipeline->GetTheme<TabTheme>();
     auto defaultColorOn = tabTheme->GetBottomTabSymbolOn();
     EXPECT_EQ(symbolProperty->GetSymbolColorListValue({})[0], defaultColorOn);

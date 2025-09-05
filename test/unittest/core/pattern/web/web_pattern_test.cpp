@@ -24,13 +24,11 @@
 #include "core/components_v2/inspector/inspector_constants.h"
 #include "core/event/touch_event.h"
 #include "core/pipeline_ng/pipeline_context.h"
-#include "test/mock/core/pipeline/mock_pipeline_context.h"
 
 using namespace testing;
 using namespace testing::ext;
 using namespace OHOS::NWeb;
 using namespace OHOS::Ace;
-using namespace OHOS::Rosen;
 
 namespace OHOS::Ace::NG {
 namespace {
@@ -78,60 +76,44 @@ void WebPatternTest::SetUpTestCase()
     g_webPattern->SetWebController(controller);
 #endif
 }
-void WebPatternTest::TearDownTestCase()
-{
-#ifdef OHOS_STANDARD_SYSTEM
-    g_webPattern = nullptr;
-#endif
-}
-
+void WebPatternTest::TearDownTestCase() {}
 void WebPatternTest::SetUp() {}
 void WebPatternTest::TearDown() {}
 
 #ifdef OHOS_STANDARD_SYSTEM
 class NWebTouchHandleStateMock : public NWebTouchHandleState {
 public:
-    int32_t GetTouchHandleId() override
+    int32_t GetTouchHandleId() const override
     {
         return 0;
     }
 
-    int32_t GetX() override
+    int32_t GetX() const override
     {
         return 0;
     }
 
-    int32_t GetY() override
+    int32_t GetY() const override
     {
         return g_Y;
     }
 
-    int32_t GetViewPortX() override
-    {
-        return 0;
-    }
-
-    int32_t GetViewPortY() override
-    {
-        return 0;
-    }
-
-    TouchHandleType GetTouchHandleType() override
+    TouchHandleType GetTouchHandleType() const override
     {
         return TouchHandleType::INSERT_HANDLE;
     }
 
-    bool IsEnable() override
+    bool IsEnable() const override
     {
         return g_isEnable;
     }
 
-    float GetAlpha() override
+    float GetAlpha() const override
     {
         return g_alpha;
     }
 
-    float GetEdgeHeight() override
+    float GetEdgeHeight() const override
     {
         return g_height;
     }
@@ -162,25 +144,6 @@ public:
     int32_t GetEditStateFlags() override
     {
         return g_editStateFlags;
-    }
-
-    int32_t GetSelectX() override
-    {
-        return 0;
-    }
-    int32_t GetSelectY() override
-    {
-        return 0;
-    }
-
-    int32_t GetSelectWidth() override
-    {
-        return 0;
-    }
-
-    int32_t GetSelectXHeight() override
-    {
-        return 0;
     }
 
     std::shared_ptr<NWebTouchHandleState> GetTouchHandleState(NWebTouchHandleState::TouchHandleType type) override
@@ -230,10 +193,37 @@ HWTEST_F(WebPatternTest, OnModifyDoneTest001, TestSize.Level1)
     EXPECT_FALSE(result);
     keyboard = 1;
     result = g_webPattern->ProcessVirtualKeyBoard(width, height, keyboard);
-    EXPECT_FALSE(result);
+    EXPECT_TRUE(result);
     g_webPattern->isVirtualKeyBoardShow_ = WebPattern::VkState::VK_HIDE;
     result = g_webPattern->ProcessVirtualKeyBoard(width, height, keyboard);
-    EXPECT_FALSE(result);
+    EXPECT_TRUE(result);
+    g_webPattern->UpdateWebLayoutSize(width, height, false);
+    TouchEventInfo info("test");
+    info.changedTouches_.clear();
+    g_webPattern->touchEvent_->callback_(info);
+    TouchLocationInfo touch(1);
+    info.changedTouches_.emplace_back(touch);
+    g_webPattern->touchEvent_->callback_(info);
+    info.SetSourceDevice(SourceType::NONE);
+    g_webPattern->touchEvent_->callback_(info);
+    info.SetSourceDevice(SourceType::TOUCH);
+    g_webPattern->touchEvent_->callback_(info);
+    touch.SetTouchType(TouchType::DOWN);
+    info.changedTouches_.clear();
+    info.changedTouches_.emplace_back(touch);
+    g_webPattern->touchEvent_->callback_(info);
+    touch.SetTouchType(TouchType::MOVE);
+    info.changedTouches_.clear();
+    info.changedTouches_.emplace_back(touch);
+    g_webPattern->touchEvent_->callback_(info);
+    touch.SetTouchType(TouchType::UP);
+    info.changedTouches_.clear();
+    info.changedTouches_.emplace_back(touch);
+    g_webPattern->touchEvent_->callback_(info);
+    touch.SetTouchType(TouchType::CANCEL);
+    info.changedTouches_.clear();
+    info.changedTouches_.emplace_back(touch);
+    g_webPattern->touchEvent_->callback_(info);
 #endif
 }
 
@@ -255,7 +245,7 @@ HWTEST_F(WebPatternTest, HandleTouchDownTest002, TestSize.Level1)
     auto drawSize = Size(CONTRNT_WIDTH_SIZE, CONTRNT_HEIGHT_SIZE);
     g_webPattern->drawSizeCache_ = drawSize;
     bool result = g_webPattern->ProcessVirtualKeyBoard(width, height, keyboard);
-    EXPECT_FALSE(result);
+    EXPECT_TRUE(result);
     TouchLocationInfo info("webtest", fingerId);
     TouchEventInfo event("webtest");
     g_webPattern->HandleTouchUp(event, true);
@@ -291,7 +281,7 @@ HWTEST_F(WebPatternTest, OnOverviewUpdateTest008, TestSize.Level1)
     int y = 0;
     EXPECT_NE(g_webPattern->delegate_, nullptr);
     g_webPattern->OnPinchSmoothModeEnabledUpdate(true);
-    g_webPattern->OnWebDebuggingAccessEnabledAndPortUpdate(std::make_tuple(true, 0));
+    g_webPattern->OnWebDebuggingAccessEnabledUpdate(true);
     g_webPattern->OnTextZoomRatioUpdate(value);
     g_webPattern->OnDatabaseAccessEnabledUpdate(true);
     g_webPattern->OnFileFromUrlAccessEnabledUpdate(true);
@@ -311,7 +301,7 @@ HWTEST_F(WebPatternTest, OnOverviewUpdateTest008, TestSize.Level1)
     RefPtr<WebPattern> webPattern = AceType::MakeRefPtr<WebPattern>("test", controller);
     EXPECT_NE(webPattern, nullptr);
     webPattern->OnPinchSmoothModeEnabledUpdate(true);
-    webPattern->OnWebDebuggingAccessEnabledAndPortUpdate(std::make_tuple(true, 0));
+    webPattern->OnWebDebuggingAccessEnabledUpdate(true);
     webPattern->OnTextZoomRatioUpdate(value);
     webPattern->OnDatabaseAccessEnabledUpdate(true);
     webPattern->OnFileFromUrlAccessEnabledUpdate(true);
@@ -322,6 +312,10 @@ HWTEST_F(WebPatternTest, OnOverviewUpdateTest008, TestSize.Level1)
     webPattern->isW3cDragEvent_ = false;
     result = webPattern->GenerateDragDropInfo(dragDropInfo);
     EXPECT_FALSE(result);
+    g_webPattern->RegistVirtualKeyBoardListener();
+    g_webPattern->needUpdateWeb_ = false;
+    g_webPattern->RegistVirtualKeyBoardListener();
+    g_webPattern->OnQuickMenuDismissed();
 #endif
 }
 
@@ -337,9 +331,9 @@ HWTEST_F(WebPatternTest, HandleDoubleClickEventTest009, TestSize.Level1)
     info.SetButton(MouseButton::LEFT_BUTTON);
     info.SetAction(MouseAction::NONE);
     std::queue<MouseClickInfo> empty;
-    swap(empty, g_webPattern->mouseClickQueue_);
+    swap(empty, g_webPattern->doubleClickQueue_);
     g_webPattern->HandleDoubleClickEvent(info);
-    EXPECT_FALSE(g_webPattern->HandleDoubleClickEvent(info));
+    g_webPattern->HandleDoubleClickEvent(info);
 #endif
 }
 
@@ -362,8 +356,7 @@ HWTEST_F(WebPatternTest, HandleDragUpdateTest010, TestSize.Level1)
     g_webPattern->HandleDragCancel();
     g_webPattern->HandleDragEnd(x, y);
     g_webPattern->needUpdateWeb_ = false;
-    auto pipelineContext = PipelineContext::GetCurrentContext();
-    g_webPattern->RegistVirtualKeyBoardListener(pipelineContext);
+    g_webPattern->RegistVirtualKeyBoardListener();
 
     RefPtr<WebController> controller = AceType::MakeRefPtr<WebController>();
     RefPtr<WebPattern> webPattern = AceType::MakeRefPtr<WebPattern>("test", controller);
@@ -392,7 +385,6 @@ HWTEST_F(WebPatternTest, OnWindowShowTest011, TestSize.Level1)
     g_webPattern->isWindowShow_ = false;
     g_webPattern->OnWindowHide();
     g_webPattern->OnWindowShow();
-    EXPECT_TRUE(g_webPattern->isWindowShow_);
 
     g_webPattern->isActive_ = true;
     g_webPattern->OnActive();
@@ -400,156 +392,9 @@ HWTEST_F(WebPatternTest, OnWindowShowTest011, TestSize.Level1)
     g_webPattern->isActive_ = false;
     g_webPattern->OnInActive();
     g_webPattern->OnActive();
-    EXPECT_TRUE(g_webPattern->isActive_);
 
     g_webPattern->OnVisibleChange(false);
     g_webPattern->OnVisibleChange(true);
 #endif
-}
-
-/**
- * @tc.name: MenuAvoidKeyboard
- * @tc.desc: Test MenuAvoidKeyboard.
- * @tc.type: FUNC
- */
-HWTEST_F(WebPatternTest, MenuAvoidKeyboard, TestSize.Level1)
-{
-    MockPipelineContext::SetUp();
-    bool result = g_webPattern->MenuAvoidKeyboard(true, 0.0);
-    EXPECT_TRUE(result);
-    result = g_webPattern->MenuAvoidKeyboard(false, 0.0);
-    EXPECT_TRUE(result);
-    MockPipelineContext::TearDown();
-}
-
-/**
- * @tc.name: SetLinkPreviewSelectionMenu001
- * @tc.desc: Test SetPreviewSelectionMenu for link.
- * @tc.type: FUNC
- */
-HWTEST_F(WebPatternTest, SetLinkPreviewSelectionMenu001, TestSize.Level1)
-{
-#ifdef OHOS_STANDARD_SYSTEM
-    std::function<void()> menuBuilder = nullptr;
-    std::function<void()> previewBuilder = nullptr;
-    NG::MenuParam menuParam;
-    std::shared_ptr<WebPreviewSelectionMenuParam> param = std::make_shared<WebPreviewSelectionMenuParam>(
-        WebElementType::LINK, ResponseType::LONG_PRESS, menuBuilder, previewBuilder, menuParam);
-    g_webPattern->SetPreviewSelectionMenu(param);
-#endif
-}
-
-/**
- * @tc.name: ProcessVirtualKeyBoardShowAvoidMenu
- * @tc.desc: Test ProcessVirtualKeyBoardShowAvoidMenu.
- * @tc.type: FUNC
- */
-HWTEST_F(WebPatternTest, ProcessVirtualKeyBoardShowAvoidMenu, TestSize.Level1)
-{
-    bool result;
-    result = g_webPattern->ProcessVirtualKeyBoardShowAvoidMenu(0, 1280, 0.0, false);
-    EXPECT_TRUE(result);
-    result = g_webPattern->ProcessVirtualKeyBoardShowAvoidMenu(0, 1280, 0.0, true);
-    EXPECT_FALSE(result);
-}
-
-/**
- * @tc.name: ProcessVirtualKeyBoardHideAvoidMenu
- * @tc.desc: Test ProcessVirtualKeyBoardHideAvoidMenu.
- * @tc.type: FUNC
- */
-HWTEST_F(WebPatternTest, ProcessVirtualKeyBoardHideAvoidMenu, TestSize.Level1)
-{
-    bool result;
-    g_webPattern->isVirtualKeyBoardShow_ = WebPattern::VkState::VK_SHOW;
-    result = g_webPattern->ProcessVirtualKeyBoardHideAvoidMenu(0, 1280, false);
-    EXPECT_TRUE(result);
-
-    g_webPattern->isVirtualKeyBoardShow_ = WebPattern::VkState::VK_SHOW;
-    result = g_webPattern->ProcessVirtualKeyBoardHideAvoidMenu(0, 1280, true);
-    EXPECT_FALSE(result);
-}
-
-/**
- * @tc.name: UpdateScrollBarWithBorderRadius
- * @tc.desc: Test UpdateScrollBarWithBorderRadius.
- * @tc.type: FUNC
- */
-HWTEST_F(WebPatternTest, UpdateScrollBarWithBorderRadius, TestSize.Level1)
-{
-    std::string src = "web_test";
-    RefPtr<WebController> controller = AceType::MakeRefPtr<WebController>();
-    ASSERT_NE(controller, nullptr);
-    auto* stack = ViewStackProcessor::GetInstance();
-    ASSERT_NE(stack, nullptr);
-    auto nodeId = stack->ClaimNodeId();
-    auto frameNode = FrameNode::GetOrCreateFrameNode(
-        V2::WEB_ETS_TAG, nodeId, [src, controller]() { return AceType::MakeRefPtr<WebPattern>(src, controller); });
-    ASSERT_NE(frameNode, nullptr);
-    stack->Push(frameNode);
-
-    RefPtr<WebPattern> webPattern = frameNode->GetPattern<WebPattern>();
-    ASSERT_NE(webPattern, nullptr);
-    auto host = webPattern->GetHost();
-    ASSERT_NE(host, nullptr);
-    auto renderContext = host->GetRenderContext();
-    ASSERT_NE(renderContext, nullptr);
-    BorderRadiusProperty borderRadius;
-
-    webPattern->UpdateScrollBarWithBorderRadius();
-    bool borderRadiusStructHasValue = renderContext->GetBorderRadius().has_value();
-    EXPECT_FALSE(borderRadiusStructHasValue);
-    webPattern->UpdateScrollBarWithBorderRadius();
-    bool hasBorderRadiusValue = borderRadius.radiusTopLeft.has_value();
-    EXPECT_FALSE(hasBorderRadiusValue);
-    
-    borderRadius.radiusTopLeft = Dimension(10.0f);
-    borderRadius.radiusTopRight = Dimension(20.0f);
-    borderRadius.radiusBottomLeft = Dimension(30.0f);
-    borderRadius.radiusBottomRight = Dimension(40.0f);
-    renderContext->UpdateBorderRadius(borderRadius);
-    webPattern->OnModifyDone();
-    ASSERT_NE(webPattern->delegate_, nullptr);
-    auto clipState = renderContext->GetClipEdge().value_or(false);
-    webPattern->UpdateScrollBarWithBorderRadius();
-    renderContext->UpdateClipEdge(true);
-    clipState = renderContext->GetClipEdge().value_or(false);
-    webPattern->UpdateScrollBarWithBorderRadius();
-
-    borderRadiusStructHasValue = renderContext->GetBorderRadius().has_value();
-    webPattern->UpdateScrollBarWithBorderRadius();
-    EXPECT_TRUE(borderRadiusStructHasValue);
-    hasBorderRadiusValue = !borderRadius.radiusTopLeft.has_value();
-    webPattern->UpdateScrollBarWithBorderRadius();
-    EXPECT_FALSE(hasBorderRadiusValue);
-}
-
-/**
- * @tc.name: IsShowHandle
- * @tc.desc: Test IsShowHandle.
- * @tc.type: FUNC
- */
-HWTEST_F(WebPatternTest, IsShowHandle, TestSize.Level1)
-{
-    std::string src = "web_test";
-    RefPtr<WebController> controller = AceType::MakeRefPtr<WebController>();
-    ASSERT_NE(controller, nullptr);
-    auto* stack = ViewStackProcessor::GetInstance();
-    ASSERT_NE(stack, nullptr);
-    auto nodeId = stack->ClaimNodeId();
-    auto frameNode = FrameNode::GetOrCreateFrameNode(
-        V2::WEB_ETS_TAG, nodeId, [src, controller]() { return AceType::MakeRefPtr<WebPattern>(src, controller); });
-    ASSERT_NE(frameNode, nullptr);
-    stack->Push(frameNode);
-
-    RefPtr<WebPattern> webPattern = frameNode->GetPattern<WebPattern>();
-    ASSERT_NE(webPattern, nullptr);
-    auto result = webPattern->IsShowHandle();
-    EXPECT_FALSE(result);
-    webPattern->webSelectOverlay_ = AceType::MakeRefPtr<WebSelectOverlay>(webPattern);
-    ASSERT_NE(webPattern->webSelectOverlay_, nullptr);
-    webPattern->webSelectOverlay_->isShowHandle_ = true;
-    result = webPattern->IsShowHandle();
-    EXPECT_TRUE(result);
 }
 } // namespace OHOS::Ace::NG

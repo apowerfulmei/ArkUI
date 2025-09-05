@@ -14,14 +14,21 @@
  */
 #include "core/interfaces/native/node/node_list_modifier.h"
 
+#include <cstdint>
+
 #include "interfaces/native/node/list_option.h"
 #include "interfaces/native/node/node_model.h"
 
+#include "base/error/error_code.h"
+#include "base/geometry/dimension.h"
+#include "base/utils/utils.h"
 #include "core/components/list/list_theme.h"
+#include "core/components_ng/base/frame_node.h"
 #include "core/components_ng/pattern/list/list_model_ng.h"
 #include "core/components_ng/pattern/scrollable/scrollable_model_ng.h"
+#include "core/interfaces/arkoala/arkoala_api.h"
 #include "core/interfaces/native/node/node_adapter_impl.h"
-#include "core/components/common/layout/constants.h"
+#include "core/pipeline/base/element_register.h"
 
 namespace OHOS::Ace::NG {
 namespace {
@@ -196,20 +203,6 @@ ArkUI_Int32 GetCachedIsShown(ArkUINodeHandle node)
     return static_cast<ArkUI_Int32>(ListModelNG::GetShowCached(frameNode));
 }
 
-void SetCacheRange(ArkUINodeHandle node, ArkUI_Int32 min, ArkUI_Int32 max)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    ListModelNG::SetCacheRange(frameNode, min, max);
-}
-
-void ResetCacheRange(ArkUINodeHandle node)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    ListModelNG::ResetCacheRange(frameNode);
-}
-
 ArkUI_Bool GetEnableScrollInteraction(ArkUINodeHandle node)
 {
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
@@ -273,17 +266,7 @@ void ResetListSpace(ArkUINodeHandle node)
     ListModelNG::SetListSpace(frameNode, Dimension(0, DimensionUnit::VP));
 }
 
-ArkUI_Int32 GetListEdgeEffect(ArkUINodeHandle node, ArkUI_Int32 (*values)[3])
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_RETURN(frameNode, ERROR_INT_CODE);
-    (*values)[0] = static_cast<ArkUI_Int32>(ListModelNG::GetEdgeEffect(frameNode));
-    (*values)[1] = static_cast<ArkUI_Int32>(ListModelNG::GetEdgeEffectAlways(frameNode));
-    (*values)[2] = static_cast<ArkUI_Int32>(ListModelNG::GetEffectEdge(frameNode)); /* 2: param index */
-    return 3; /* 3: param count */
-}
-
-ArkUI_Int32 GetListEdgeEffectCJ(ArkUINodeHandle node, ArkUI_Int32 (*values)[2])
+ArkUI_Int32 GetListEdgeEffect(ArkUINodeHandle node, ArkUI_Int32 (*values)[2])
 {
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_RETURN(frameNode, ERROR_INT_CODE);
@@ -292,18 +275,18 @@ ArkUI_Int32 GetListEdgeEffectCJ(ArkUINodeHandle node, ArkUI_Int32 (*values)[2])
     return INDEX_2;
 }
 
-void SetListEdgeEffect(ArkUINodeHandle node, ArkUI_Int32 edgeEffect, ArkUI_Bool alwaysEnabled, ArkUI_Int32 edge)
+void SetListEdgeEffect(ArkUINodeHandle node, ArkUI_Int32 edgeEffect, ArkUI_Bool alwaysEnabled)
 {
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
-    ListModelNG::SetEdgeEffect(frameNode, edgeEffect, alwaysEnabled, static_cast<EffectEdge>(edge));
+    ListModelNG::SetEdgeEffect(frameNode, edgeEffect, alwaysEnabled);
 }
 
 void ResetListEdgeEffect(ArkUINodeHandle node)
 {
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
-    ListModelNG::SetEdgeEffect(frameNode, DEFAULT_EDGE_EFFECT, false, EffectEdge::ALL);
+    ListModelNG::SetEdgeEffect(frameNode, DEFAULT_EDGE_EFFECT, false);
 }
 
 ArkUI_Int32 GetListDirection(ArkUINodeHandle node)
@@ -345,9 +328,6 @@ void ResetListFriction(ArkUINodeHandle node)
 {
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
-    if (SystemProperties::ConfigChangePerform()) {
-        ListModelNG::CreateWithResourceObjFriction(frameNode, nullptr);
-    }
     double friction = -1.0;
     ListModelNG::SetListFriction(frameNode, friction);
 }
@@ -433,15 +413,6 @@ ArkUI_Uint32 GetListScrollBarColor(ArkUINodeHandle node)
     return ListModelNG::GetScrollBarColor(frameNode);
 }
 
-void CreateWithResourceObjScrollBarColor(ArkUINodeHandle node, void* resObj)
-{
-    CHECK_NULL_VOID(SystemProperties::ConfigChangePerform());
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    auto* resourceObj = reinterpret_cast<ResourceObject*>(resObj);
-    ListModelNG::CreateWithResourceObjScrollBarColor(frameNode, AceType::Claim(resourceObj));
-}
-
 void SetListScrollBarColor(ArkUINodeHandle node, ArkUI_CharPtr value)
 {
     CHECK_NULL_VOID(value);
@@ -455,8 +426,6 @@ void ResetListScrollBarColor(ArkUINodeHandle node)
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
     ListModelNG::SetListScrollBarColor(frameNode, "#FF000000");
-
-    CreateWithResourceObjScrollBarColor(node, nullptr);
 }
 
 ArkUI_Int32 GetAlignListItem(ArkUINodeHandle node)
@@ -484,14 +453,14 @@ void SetScrollSnapAlign(ArkUINodeHandle node, ArkUI_Int32 scrollSnapAlign)
 {
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
-    ListModelNG::SetScrollSnapAlign(frameNode, static_cast<ScrollSnapAlign>(scrollSnapAlign));
+    ListModelNG::SetScrollSnapAlign(frameNode, static_cast<V2::ScrollSnapAlign>(scrollSnapAlign));
 }
 
 void ResetScrollSnapAlign(ArkUINodeHandle node)
 {
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
-    ListModelNG::SetScrollSnapAlign(frameNode, ScrollSnapAlign::NONE);
+    ListModelNG::SetScrollSnapAlign(frameNode, V2::ScrollSnapAlign::NONE);
 }
 
 ArkUI_Int32 GetScrollSnapAlign(ArkUINodeHandle node)
@@ -571,13 +540,6 @@ void ListResetDivider(ArkUINodeHandle node)
     CHECK_NULL_VOID(frameNode);
     const V2::ItemDivider divider;
 
-    if (SystemProperties::ConfigChangePerform()) {
-        ListModelNG::ParseResObjDividerStrokeWidth(frameNode, nullptr);
-        ListModelNG::ParseResObjDividerColor(frameNode, nullptr);
-        ListModelNG::ParseResObjDividerStartMargin(frameNode, nullptr);
-        ListModelNG::ParseResObjDividerEndMargin(frameNode, nullptr);
-        ListModel::GetInstance()->SetDividerColorByUser(false);
-    }
     ListModelNG::SetDivider(frameNode, divider);
 }
 
@@ -679,7 +641,6 @@ void ResetInitialIndex(ArkUINodeHandle node)
 
 void SetListChildrenMainSize(ArkUINodeHandle node, ArkUIListChildrenMainSize option, ArkUI_Int32 unit)
 {
-    CHECK_NULL_VOID(option);
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
     for (uint32_t i = 0; i < option->mainSize.size(); i++) {
@@ -721,14 +682,14 @@ void SetListFlingSpeedLimit(ArkUINodeHandle node, ArkUI_Float32 maxSpeed)
 {
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
-    ScrollableModelNG::SetMaxFlingSpeed(frameNode, maxSpeed);
+    ListModelNG::SetFlingSpeedLimit(frameNode, maxSpeed);
 }
 
 void ResetListFlingSpeedLimit(ArkUINodeHandle node)
 {
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
-    ScrollableModelNG::SetMaxFlingSpeed(frameNode, -1.0);
+    ListModelNG::SetFlingSpeedLimit(frameNode, -1.0);
 }
 
 ArkUI_Int32 GetInitialIndex(ArkUINodeHandle node)
@@ -797,48 +758,6 @@ ArkUI_Bool GetListMaintainVisibleContentPosition(ArkUINodeHandle node)
     return ListModelNG::GetListMaintainVisibleContentPosition(frameNode);
 }
 
-void SetListStackFromEnd(ArkUINodeHandle node, ArkUI_Bool enabled)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    ListModelNG::SetListStackFromEnd(frameNode, enabled);
-}
-
-void ResetListStackFromEnd(ArkUINodeHandle node)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    ListModelNG::SetListStackFromEnd(frameNode, false);
-}
-
-ArkUI_Bool GetListStackFromEnd(ArkUINodeHandle node)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_RETURN(frameNode, false);
-    return ListModelNG::GetListStackFromEnd(frameNode);
-}
-
-void SetListSyncLoad(ArkUINodeHandle node, ArkUI_Bool enabled)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    ListModelNG::SetListSyncLoad(frameNode, enabled);
-}
-
-void ResetListSyncLoad(ArkUINodeHandle node)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    ListModelNG::SetListSyncLoad(frameNode, true);
-}
-
-ArkUI_Bool GetListSyncLoad(ArkUINodeHandle node)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_RETURN(frameNode, true);
-    return ListModelNG::GetListSyncLoad(frameNode);
-}
-
 void SetListFadingEdge(
     ArkUINodeHandle node, ArkUI_Bool fadingEdge, ArkUI_Float32 fadingEdgeLengthValue, ArkUI_Int32 fadingEdgeLengthUnit)
 {
@@ -854,33 +773,6 @@ void ResetListFadingEdge(ArkUINodeHandle node)
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
     NG::ScrollableModelNG::SetFadingEdge(frameNode, false, DEFAULT_FADING_EDGE_LENGTH);
-}
-
-ArkUI_Int32 GetListFocusWrapMode(ArkUINodeHandle node)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_RETURN(frameNode, 0);
-    auto mode = ListModelNG::GetFocusWrapMode(frameNode);
-    if (mode == FocusWrapMode::WRAP_WITH_ARROW) {
-        return 1; // 1 means wrap with arrow
-    } else {
-        return 0; // 0 means default
-    }
-}
-
-void SetListFocusWrapMode(ArkUINodeHandle node, int32_t focusWrapMode)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    FocusWrapMode mode = static_cast<FocusWrapMode>(focusWrapMode);
-    ListModelNG::SetFocusWrapMode(frameNode, mode);
-}
-
-void ResetListFocusWrapMode(ArkUINodeHandle node)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    ListModelNG::SetFocusWrapMode(frameNode, FocusWrapMode::DEFAULT);
 }
 
 void SetShowCached(ArkUINodeHandle node, ArkUI_Bool show)
@@ -908,226 +800,51 @@ ArkUI_Bool GetShowCached(ArkUINodeHandle node)
 namespace NodeModifier {
 const ArkUIListModifier* GetListModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
-    static const ArkUIListModifier modifier = {
-        .setListLanes = SetListLanes,
-        .resetListLanes = ResetListLanes,
-        .resetlistLaneMinAndMaxLength = ResetlistLaneMinAndMaxLength,
-        .getListLanes = GetListLanes,
-        .getlistLaneMinLength = GetlistLaneMinLength,
-        .getListLaneMaxLength = GetListLaneMaxLength,
-        .getListLaneGutter = GetListLaneGutter,
-        .setEditMode = SetEditMode,
-        .resetEditMode = ResetEditMode,
-        .setMultiSelectable = SetMultiSelectable,
-        .resetMultiSelectable = ResetMultiSelectable,
-        .setChainAnimation = SetChainAnimation,
-        .resetChainAnimation = ResetChainAnimation,
-        .setCachedCount = SetCachedCount,
-        .resetCachedCount = ResetCachedCount,
-        .setCachedIsShown = SetCachedIsShown,
-        .resetCachedIsShown = ResetCachedIsShown,
-        .setCacheRange = SetCacheRange,
-        .resetCacheRange = ResetCacheRange,
-        .getListFocusWrapMode = GetListFocusWrapMode,
-        .setListFocusWrapMode = SetListFocusWrapMode,
-        .resetListFocusWrapMode = ResetListFocusWrapMode,
-        .getCachedIsShown = GetCachedIsShown,
-        .getEnableScrollInteraction = GetEnableScrollInteraction,
-        .setEnableScrollInteraction = SetEnableScrollInteraction,
-        .resetEnableScrollInteraction = ResetEnableScrollInteraction,
-        .getSticky = GetSticky,
-        .setSticky = SetSticky,
-        .resetSticky = ResetSticky,
-        .getListEdgeEffect = GetListEdgeEffect,
-        .setListEdgeEffect = SetListEdgeEffect,
-        .resetListEdgeEffect = ResetListEdgeEffect,
-        .getListDirection = GetListDirection,
-        .setListDirection = SetListDirection,
-        .resetListDirection = ResetListDirection,
-        .getListFriction = GetListFriction,
-        .setListFriction = SetListFriction,
-        .resetListFriction = ResetListFriction,
-        .getListNestedScroll = GetListNestedScroll,
-        .setListNestedScroll = SetListNestedScroll,
-        .resetListNestedScroll = ResetListNestedScroll,
-        .getListScrollBar = GetListScrollBar,
-        .setListScrollBar = SetListScrollBar,
-        .resetListScrollBar = ResetListScrollBar,
-        .getListScrollBarWidth = GetListScrollBarWidth,
-        .setListScrollBarWidth = SetListScrollBarWidth,
-        .resetListScrollBarWidth = ResetListScrollBarWidth,
-        .getListScrollBarColor = GetListScrollBarColor,
-        .setListScrollBarColor = SetListScrollBarColor,
-        .resetListScrollBarColor = ResetListScrollBarColor,
-        .getAlignListItem = GetAlignListItem,
-        .setAlignListItem = SetAlignListItem,
-        .resetAlignListItem = ResetAlignListItem,
-        .setScrollSnapAlign = SetScrollSnapAlign,
-        .resetScrollSnapAlign = ResetScrollSnapAlign,
-        .getScrollSnapAlign = GetScrollSnapAlign,
-        .setContentStartOffset = SetContentStartOffset,
-        .resetContentStartOffset = ResetContentStartOffset,
-        .getContentStartOffset = GetContentStartOffset,
-        .setContentEndOffset = SetContentEndOffset,
-        .resetContentEndOffset = ResetContentEndOffset,
-        .getContentEndOffset = GetContentEndOffset,
-        .listSetDivider = ListSetDivider,
-        .listResetDivider = ListResetDivider,
-        .setChainAnimationOptions = SetChainAnimationOptions,
-        .resetChainAnimationOptions = ResetChainAnimationOptions,
-        .getListSpace = GetListSpace,
-        .setListSpace = SetListSpace,
-        .resetListSpace = ResetListSpace,
-        .setNodeAdapter = SetNodeAdapter,
-        .resetNodeAdapter = ResetNodeAdapter,
-        .getNodeAdapter = GetNodeAdapter,
-        .getCachedCount = GetCachedCount,
-        .setScrollToIndex = SetScrollToIndex,
-        .setScrollBy = SetScrollBy,
-        .setInitialIndex = SetInitialIndex,
-        .resetInitialIndex = ResetInitialIndex,
-        .setListChildrenMainSize = SetListChildrenMainSize,
-        .resetListChildrenMainSize = ResetListChildrenMainSize,
-        .setListCloseAllSwipeActions = SetListCloseAllSwipeActions,
-        .getInitialIndex = GetInitialIndex,
-        .getlistDivider = GetlistDivider,
-        .setInitialScroller = SetInitialScroller,
-        .resetInitialScroller = ResetInitialScroller,
-        .setScrollToItemInGroup = SetScrollToItemInGroup,
-        .setListMaintainVisibleContentPosition = SetListMaintainVisibleContentPosition,
-        .resetListMaintainVisibleContentPosition = ResetListMaintainVisibleContentPosition,
-        .getListMaintainVisibleContentPosition = GetListMaintainVisibleContentPosition,
-        .setListStackFromEnd = SetListStackFromEnd,
-        .resetListStackFromEnd = ResetListStackFromEnd,
-        .getListStackFromEnd = GetListStackFromEnd,
-        .setListSyncLoad = SetListSyncLoad,
-        .resetListSyncLoad = ResetListSyncLoad,
-        .getListSyncLoad = GetListSyncLoad,
-        .setListFadingEdge = SetListFadingEdge,
-        .resetListFadingEdge = ResetListFadingEdge,
-        .setShowCached = SetShowCached,
-        .resetShowCached = ResetShowCached,
-        .getShowCached = GetShowCached,
-        .setOnListScrollIndexCallBack = SetOnListScrollIndexCallBack,
-        .setOnScrollVisibleContentChange = SetOnScrollVisibleContentChange,
-        .setOnItemMove = SetOnItemMove,
-        .setOnItemDragStart = SetOnItemDragStart,
-        .setOnItemDragEnter = SetOnItemDragEnter,
-        .setOnItemDragMove = SetOnItemDragMove,
-        .setOnItemDragLeave = SetOnItemDragLeave,
-        .setOnItemDrop = SetOnItemDrop,
-        .setOnListScrollFrameBeginCallBack = SetOnListScrollFrameBeginCallBack,
-        .setOnListWillScrollCallBack = SetOnListWillScrollCallBack,
-        .setOnListDidScrollCallBack = SetOnListDidScrollCallBack,
-        .setOnListReachStartCallBack = SetOnListReachStartCallBack,
-        .setOnListReachEndCallBack = SetOnListReachEndCallBack,
-        .setOnListScrollStartCallBack = SetOnListScrollStartCallBack,
-        .setOnListScrollStopCallBack = SetOnListScrollStopCallBack,
-        .resetOnListScrollIndex = ResetOnListScrollIndex,
-        .resetOnScrollVisibleContentChange = ResetOnScrollVisibleContentChange,
-        .resetOnItemMove = ResetOnItemMove,
-        .resetOnItemDragStart = ResetOnItemDragStart,
-        .resetOnItemDragEnter = ResetOnItemDragEnter,
-        .resetOnItemDragMove = ResetOnItemDragMove,
-        .resetOnItemDragLeave = ResetOnItemDragLeave,
-        .resetOnItemDrop = ResetOnItemDrop,
-        .resetOnListScrollStart = ResetOnListScrollStart,
-        .resetOnListScrollStop = ResetOnListScrollStop,
-        .resetOnListScrollFrameBegin = ResetOnListScrollFrameBegin,
-        .resetOnListWillScroll = ResetOnListWillScroll,
-        .resetOnListDidScroll = ResetOnListDidScroll,
-        .resetOnListReachStart = ResetOnListReachStart,
-        .resetOnListReachEnd = ResetOnListReachEnd,
-        .createWithResourceObjFriction = CreateWithResourceObjFriction,
-        .parseResObjDividerStrokeWidth = ParseResObjDividerStrokeWidth,
-        .parseResObjDividerColor = ParseResObjDividerColor,
-        .parseResObjDividerStartMargin = ParseResObjDividerStartMargin,
-        .parseResObjDividerEndMargin = ParseResObjDividerEndMargin,
-        .createWithResourceObjLaneConstrain = CreateWithResourceObjLaneConstrain,
-        .createWithResourceObjScrollBarColor = CreateWithResourceObjScrollBarColor,
-    };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
+    static const ArkUIListModifier modifier = { SetListLanes, ResetListLanes, ResetlistLaneMinAndMaxLength,
+        GetListLanes, GetlistLaneMinLength, GetListLaneMaxLength, GetListLaneGutter, SetEditMode, ResetEditMode,
+        SetMultiSelectable, ResetMultiSelectable, SetChainAnimation, ResetChainAnimation, SetCachedCount,
+        ResetCachedCount, SetCachedIsShown, ResetCachedIsShown, GetCachedIsShown, GetEnableScrollInteraction,
+        SetEnableScrollInteraction, ResetEnableScrollInteraction, GetSticky, SetSticky, ResetSticky, GetListEdgeEffect,
+        SetListEdgeEffect, ResetListEdgeEffect, GetListDirection, SetListDirection, ResetListDirection, GetListFriction,
+        SetListFriction, ResetListFriction, GetListNestedScroll, SetListNestedScroll, ResetListNestedScroll,
+        GetListScrollBar, SetListScrollBar, ResetListScrollBar, GetListScrollBarWidth, SetListScrollBarWidth,
+        ResetListScrollBarWidth, GetListScrollBarColor, SetListScrollBarColor, ResetListScrollBarColor,
+        GetAlignListItem, SetAlignListItem, ResetAlignListItem, SetScrollSnapAlign, ResetScrollSnapAlign,
+        GetScrollSnapAlign, SetContentStartOffset, ResetContentStartOffset, GetContentStartOffset, SetContentEndOffset,
+        ResetContentEndOffset, GetContentEndOffset, ListSetDivider, ListResetDivider, SetChainAnimationOptions,
+        ResetChainAnimationOptions, GetListSpace, SetListSpace, ResetListSpace, SetNodeAdapter, ResetNodeAdapter,
+        GetNodeAdapter, GetCachedCount, SetScrollToIndex, SetScrollBy, SetInitialIndex, ResetInitialIndex,
+        SetListChildrenMainSize, ResetListChildrenMainSize, SetListCloseAllSwipeActions, SetListFlingSpeedLimit,
+        ResetListFlingSpeedLimit, GetInitialIndex, GetlistDivider, SetInitialScroller, ResetInitialScroller,
+        SetScrollToItemInGroup, SetListMaintainVisibleContentPosition, ResetListMaintainVisibleContentPosition,
+        GetListMaintainVisibleContentPosition, SetListFadingEdge, ResetListFadingEdge, SetShowCached, ResetShowCached,
+        GetShowCached, SetOnListScrollIndexCallBack, SetOnScrollVisibleContentChange, SetOnItemMove, SetOnItemDragStart,
+        SetOnItemDragEnter, SetOnItemDragMove, SetOnItemDragLeave, SetOnItemDrop, SetOnListScrollFrameBeginCallBack,
+        SetOnListWillScrollCallBack, SetOnListDidScrollCallBack, SetOnListReachStartCallBack, SetOnListReachEndCallBack,
+        SetOnListScrollStartCallBack, SetOnListScrollStopCallBack, ResetOnListScrollIndex,
+        ResetOnScrollVisibleContentChange, ResetOnItemMove, ResetOnItemDragStart, ResetOnItemDragEnter,
+        ResetOnItemDragMove, ResetOnItemDragLeave, ResetOnItemDrop, ResetOnListScrollStart, ResetOnListScrollStop,
+        ResetOnListScrollFrameBegin, ResetOnListWillScroll, ResetOnListDidScroll, ResetOnListReachStart,
+        ResetOnListReachEnd };
     return &modifier;
 }
 
 const CJUIListModifier* GetCJUIListModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
-    static const CJUIListModifier modifier = {
-        .setListLanes = SetListLanes,
-        .resetListLanes = ResetListLanes,
-        .setEditMode = SetEditMode,
-        .resetEditMode = ResetEditMode,
-        .setMultiSelectable = SetMultiSelectable,
-        .resetMultiSelectable = ResetMultiSelectable,
-        .setChainAnimation = SetChainAnimation,
-        .resetChainAnimation = ResetChainAnimation,
-        .setCachedCount = SetCachedCount,
-        .resetCachedCount = ResetCachedCount,
-        .getEnableScrollInteraction = GetEnableScrollInteraction,
-        .setEnableScrollInteraction = SetEnableScrollInteraction,
-        .resetEnableScrollInteraction = ResetEnableScrollInteraction,
-        .getSticky = GetSticky,
-        .setSticky = SetSticky,
-        .resetSticky = ResetSticky,
-        .getListEdgeEffect = GetListEdgeEffectCJ,
-        .setListEdgeEffect = SetListEdgeEffect,
-        .resetListEdgeEffect = ResetListEdgeEffect,
-        .getListDirection = GetListDirection,
-        .setListDirection = SetListDirection,
-        .resetListDirection = ResetListDirection,
-        .getListFriction = GetListFriction,
-        .setListFriction = SetListFriction,
-        .resetListFriction = ResetListFriction,
-        .getListFocusWrapMode = GetListFocusWrapMode,
-        .setListFocusWrapMode = SetListFocusWrapMode,
-        .resetListFocusWrapMode = ResetListFocusWrapMode,
-        .getListNestedScroll = GetListNestedScroll,
-        .setListNestedScroll = SetListNestedScroll,
-        .resetListNestedScroll = ResetListNestedScroll,
-        .getListScrollBar = GetListScrollBar,
-        .setListScrollBar = SetListScrollBar,
-        .resetListScrollBar = ResetListScrollBar,
-        .getListScrollBarWidth = GetListScrollBarWidth,
-        .setListScrollBarWidth = SetListScrollBarWidth,
-        .resetListScrollBarWidth = ResetListScrollBarWidth,
-        .getListScrollBarColor = GetListScrollBarColor,
-        .setListScrollBarColor = SetListScrollBarColor,
-        .resetListScrollBarColor = ResetListScrollBarColor,
-        .getAlignListItem = GetAlignListItem,
-        .setAlignListItem = SetAlignListItem,
-        .resetAlignListItem = ResetAlignListItem,
-        .setScrollSnapAlign = SetScrollSnapAlign,
-        .resetScrollSnapAlign = ResetScrollSnapAlign,
-        .setContentStartOffset = SetContentStartOffset,
-        .resetContentStartOffset = ResetContentStartOffset,
-        .setContentEndOffset = SetContentEndOffset,
-        .resetContentEndOffset = ResetContentEndOffset,
-        .listSetDivider = ListSetDivider,
-        .listResetDivider = ListResetDivider,
-        .setChainAnimationOptions = SetChainAnimationOptions,
-        .resetChainAnimationOptions = ResetChainAnimationOptions,
-        .getListSpace = GetListSpace,
-        .setListSpace = SetListSpace,
-        .resetListSpace = ResetListSpace,
-        .setNodeAdapter = SetNodeAdapter,
-        .resetNodeAdapter = ResetNodeAdapter,
-        .getNodeAdapter = GetNodeAdapter,
-        .getCachedCount = GetCachedCount,
-        .setScrollToIndex = SetScrollToIndex,
-        .setScrollBy = SetScrollBy,
-        .setInitialIndex = SetInitialIndex,
-        .resetInitialIndex = ResetInitialIndex,
-        .setListChildrenMainSize = SetListChildrenMainSize,
-        .resetListChildrenMainSize = ResetListChildrenMainSize,
-        .setListCloseAllSwipeActions = SetListCloseAllSwipeActions,
-        .setListFlingSpeedLimit = SetListFlingSpeedLimit,
-        .resetListFlingSpeedLimit = ResetListFlingSpeedLimit,
-        .getInitialIndex = GetInitialIndex,
-        .getlistDivider = GetlistDivider,
-    };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
+    static const CJUIListModifier modifier = { SetListLanes, ResetListLanes, SetEditMode, ResetEditMode,
+        SetMultiSelectable, ResetMultiSelectable, SetChainAnimation, ResetChainAnimation, SetCachedCount,
+        ResetCachedCount, GetEnableScrollInteraction, SetEnableScrollInteraction, ResetEnableScrollInteraction,
+        GetSticky, SetSticky, ResetSticky, GetListEdgeEffect, SetListEdgeEffect, ResetListEdgeEffect, GetListDirection,
+        SetListDirection, ResetListDirection, GetListFriction, SetListFriction, ResetListFriction,
+        GetListNestedScroll, SetListNestedScroll, ResetListNestedScroll, GetListScrollBar, SetListScrollBar,
+        ResetListScrollBar, GetListScrollBarWidth, SetListScrollBarWidth, ResetListScrollBarWidth,
+        GetListScrollBarColor, SetListScrollBarColor, ResetListScrollBarColor, GetAlignListItem, SetAlignListItem,
+        ResetAlignListItem, SetScrollSnapAlign, ResetScrollSnapAlign, SetContentStartOffset, ResetContentStartOffset,
+        SetContentEndOffset, ResetContentEndOffset, ListSetDivider, ListResetDivider, SetChainAnimationOptions,
+        ResetChainAnimationOptions, GetListSpace, SetListSpace, ResetListSpace, SetNodeAdapter, ResetNodeAdapter,
+        GetNodeAdapter, GetCachedCount, SetScrollToIndex, SetScrollBy, SetInitialIndex, ResetInitialIndex,
+        SetListChildrenMainSize, ResetListChildrenMainSize, SetListCloseAllSwipeActions,
+        SetListFlingSpeedLimit, ResetListFlingSpeedLimit, GetInitialIndex, GetlistDivider };
     return &modifier;
 }
 
@@ -1142,7 +859,7 @@ void SetOnListScroll(ArkUINodeHandle node, void* extraParam)
         event.componentAsyncEvent.subKind = ON_LIST_SCROLL;
         event.componentAsyncEvent.data[0].f32 = static_cast<float>(scrollOffset.Value());
         event.componentAsyncEvent.data[1].i32 = static_cast<int>(scrollState);
-        SendArkUISyncEvent(&event);
+        SendArkUIAsyncEvent(&event);
     };
     ListModelNG::SetOnScroll(frameNode, std::move(onScroll));
 }
@@ -1161,7 +878,7 @@ void SetOnListScrollFrameBegin(ArkUINodeHandle node, void* extraParam)
         event.componentAsyncEvent.subKind = ON_LIST_SCROLL_FRAME_BEGIN;
         event.componentAsyncEvent.data[0].f32 = static_cast<float>(offset.Value());
         event.componentAsyncEvent.data[1].i32 = static_cast<int>(state);
-        SendArkUISyncEvent(&event);
+        SendArkUIAsyncEvent(&event);
         scrollRes.offset = Dimension(event.componentAsyncEvent.data[0].f32, DimensionUnit::VP);
         return scrollRes;
     };
@@ -1178,7 +895,7 @@ void SetOnListScrollStart(ArkUINodeHandle node, void* extraParam)
         event.kind = COMPONENT_ASYNC_EVENT;
         event.extraParam = reinterpret_cast<intptr_t>(extraParam);
         event.componentAsyncEvent.subKind = ON_LIST_SCROLL_START;
-        SendArkUISyncEvent(&event);
+        SendArkUIAsyncEvent(&event);
     };
     ListModelNG::SetOnScrollStart(frameNode, std::move(onScrollStart));
 }
@@ -1193,7 +910,7 @@ void SetOnListScrollStop(ArkUINodeHandle node, void* extraParam)
         event.kind = COMPONENT_ASYNC_EVENT;
         event.extraParam = reinterpret_cast<intptr_t>(extraParam);
         event.componentAsyncEvent.subKind = ON_LIST_SCROLL_STOP;
-        SendArkUISyncEvent(&event);
+        SendArkUIAsyncEvent(&event);
     };
     ListModelNG::SetOnScrollStop(frameNode, std::move(onScrollStop));
 }
@@ -1215,7 +932,7 @@ void SetOnListWillScroll(ArkUINodeHandle node, void* extraParam)
             usePx ? static_cast<float>(offset.ConvertToPx()) : static_cast<float>(offset.Value());
         event.componentAsyncEvent.data[1].i32 = static_cast<int>(state);
         event.componentAsyncEvent.data[2].i32 = static_cast<int>(source);
-        SendArkUISyncEvent(&event);
+        SendArkUIAsyncEvent(&event);
         scrollRes.offset =
             Dimension(event.componentAsyncEvent.data[0].f32, usePx ? DimensionUnit::PX : DimensionUnit::VP);
         return scrollRes;
@@ -1237,7 +954,7 @@ void SetOnListDidScroll(ArkUINodeHandle node, void* extraParam)
         event.componentAsyncEvent.data[0].f32 =
             usePx ? static_cast<float>(offset.ConvertToPx()) : static_cast<float>(offset.Value());
         event.componentAsyncEvent.data[1].i32 = static_cast<int32_t>(state);
-        SendArkUISyncEvent(&event);
+        SendArkUIAsyncEvent(&event);
     };
     ScrollableModelNG::SetOnDidScroll(frameNode, std::move(onDidScroll));
 }
@@ -1255,7 +972,7 @@ void SetOnListScrollIndex(ArkUINodeHandle node, void* extraParam)
         event.componentAsyncEvent.data[0].i32 = first;
         event.componentAsyncEvent.data[1].i32 = last;
         event.componentAsyncEvent.data[2].i32 = center;
-        SendArkUISyncEvent(&event);
+        SendArkUIAsyncEvent(&event);
     };
     ListModelNG::SetOnScrollIndex(frameNode, std::move(onScrollIndex));
 }
@@ -1269,7 +986,7 @@ void SetOnListReachStart(ArkUINodeHandle node, void* extraParam)
         event.kind = COMPONENT_ASYNC_EVENT;
         event.extraParam = reinterpret_cast<intptr_t>(extraParam);
         event.componentAsyncEvent.subKind = ON_LIST_REACH_START;
-        SendArkUISyncEvent(&event);
+        SendArkUIAsyncEvent(&event);
     };
     ListModelNG::SetOnReachStart(frameNode, std::move(onReachStart));
 }
@@ -1283,7 +1000,7 @@ void SetOnListReachEnd(ArkUINodeHandle node, void* extraParam)
         event.kind = COMPONENT_ASYNC_EVENT;
         event.extraParam = reinterpret_cast<intptr_t>(extraParam);
         event.componentAsyncEvent.subKind = ON_LIST_REACH_END;
-        SendArkUISyncEvent(&event);
+        SendArkUIAsyncEvent(&event);
     };
     ListModelNG::SetOnReachEnd(frameNode, std::move(onReachEnd));
 }
@@ -1303,7 +1020,7 @@ void SetOnListScrollVisibleContentChange(ArkUINodeHandle node, void* extraParam)
         event.componentAsyncEvent.data[3].i32 = end.index;
         event.componentAsyncEvent.data[4].i32 = end.area;
         event.componentAsyncEvent.data[5].i32 = end.indexInGroup;
-        SendArkUISyncEvent(&event);
+        SendArkUIAsyncEvent(&event);
     };
     ListModelNG::SetOnScrollVisibleContentChange(frameNode, std::move(onScrollVisibleContentChange));
 }
@@ -1598,57 +1315,6 @@ void ResetOnListReachEnd(ArkUINodeHandle node)
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
     ListModelNG::SetOnReachEnd(frameNode, nullptr);
-}
-
-void CreateWithResourceObjFriction(ArkUINodeHandle node, void* resObj)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    auto* resourceObj = reinterpret_cast<ResourceObject*>(resObj);
-    ListModelNG::CreateWithResourceObjFriction(frameNode, AceType::Claim(resourceObj));
-}
-
-void ParseResObjDividerStrokeWidth(ArkUINodeHandle node, void* resObj)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    auto* resourceObj = reinterpret_cast<ResourceObject*>(resObj);
-    ListModelNG::ParseResObjDividerStrokeWidth(frameNode, AceType::Claim(resourceObj));
-}
-
-void ParseResObjDividerColor(ArkUINodeHandle node, void* resObj)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    auto* resourceObj = reinterpret_cast<ResourceObject*>(resObj);
-    ListModelNG::ParseResObjDividerColor(frameNode, AceType::Claim(resourceObj));
-    ListModelNG::SetDividerColorByUser(frameNode, false);
-}
-
-void ParseResObjDividerStartMargin(ArkUINodeHandle node, void* resObj)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    auto* resourceObj = reinterpret_cast<ResourceObject*>(resObj);
-    ListModelNG::ParseResObjDividerStartMargin(frameNode, AceType::Claim(resourceObj));
-}
-
-void ParseResObjDividerEndMargin(ArkUINodeHandle node, void* resObj)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    auto* resourceObj = reinterpret_cast<ResourceObject*>(resObj);
-    ListModelNG::ParseResObjDividerEndMargin(frameNode, AceType::Claim(resourceObj));
-}
-
-void CreateWithResourceObjLaneConstrain(ArkUINodeHandle node, void* resObjMinLengthValue, void* resObjMaxLengthValue)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    auto* resourcObjMinLengthValue = reinterpret_cast<ResourceObject*>(resObjMinLengthValue);
-    auto* resourceObjMaxLengthValue = reinterpret_cast<ResourceObject*>(resObjMaxLengthValue);
-    ListModelNG::CreateWithResourceObjLaneConstrain(
-        frameNode, AceType::Claim(resourcObjMinLengthValue), AceType::Claim(resourceObjMaxLengthValue));
 }
 } // namespace NodeModifier
 } // namespace OHOS::Ace::NG

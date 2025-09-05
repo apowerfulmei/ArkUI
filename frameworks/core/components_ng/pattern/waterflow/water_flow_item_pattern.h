@@ -34,6 +34,11 @@ public:
         return MakeRefPtr<WaterFlowItemLayoutProperty>();
     }
 
+    bool IsNeedInitClickEventRecorder() const override
+    {
+        return true;
+    }
+
     FocusPattern GetFocusPattern() const override
     {
         return { FocusType::SCOPE, true };
@@ -42,21 +47,6 @@ public:
     OPINC_TYPE_E OpIncType() override
     {
         return OPINC_NODE;
-    }
-
-    bool IsEnableChildrenMatchParent() override
-    {
-        return true;
-    }
-
-    bool IsEnableFix() override
-    {
-        return true;
-    }
-
-    bool IsEnableMatchParent() override
-    {
-        return true;
     }
 };
 } // namespace OHOS::Ace::NG

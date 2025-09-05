@@ -75,9 +75,6 @@ public:
     void ButtonOnHover(RefPtr<FrameNode> buttonNode, bool isHovered);
     void SetButtonVisible(bool visible);
     void DumpAdvanceInfo() override;
-    void DumpAdvanceInfo(std::unique_ptr<JsonValue>& json) override;
-    void SetLayoutDisplayCount(int32_t displayCount);
-
 private:
     std::tuple<bool, bool, bool> CheckHoverStatus();
     void OnModifyDone() override;
@@ -91,18 +88,14 @@ private:
     void InitOnKeyEvent();
     bool OnKeyEvent(const KeyEvent& event);
     void OnClick() const;
-    void InitAccessibilityText();
-    int32_t TotalCount() const;
-    RefPtr<SwiperPattern> GetSwiperPattern() const;
 
+    int32_t TotalCount() const;
     RefPtr<ClickEvent> buttonClickListener_;
-    RefPtr<ClickEvent> arrowClickListener_;
     RefPtr<TouchEventImpl> buttonTouchListener_;
     RefPtr<InputEvent> buttonOnHoverListener_;
     std::shared_ptr<ChangeEvent> swiperChangeEvent_;
 
     int32_t index_ = 0;
-    int32_t displayCount_ = 1;
     bool isFirstCreate_ = true;
     Color hoverBeginColor_ = Color::TRANSPARENT;
     Color backgroundColor_ = Color::TRANSPARENT;

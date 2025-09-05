@@ -16,6 +16,9 @@
 #include "bridge/cj_frontend/interfaces/cj_ffi/cj_list_item_group_ffi.h"
 
 #include "cj_lambda.h"
+#include "bridge/cj_frontend/interfaces/cj_ffi/utils.h"
+#include "core/common/container.h"
+#include "core/components_ng/pattern/list/list_item_group_model.h"
 #include "core/components_ng/pattern/list/list_item_group_model_ng.h"
 
 using namespace OHOS::Ace;
@@ -29,18 +32,6 @@ void FfiOHOSAceFrameworkListItemGroupCreate(
 
     V2::ListItemGroupStyle style {};
     ListItemGroupModel::GetInstance()->Create(style);
-    ListItemGroupModel::GetInstance()->SetSpace(spaceDime);
-    ListItemGroupModel::GetInstance()->SetHeader(CJLambda::Create(headerBuilder));
-    ListItemGroupModel::GetInstance()->SetFooter(CJLambda::Create(footerBuilder));
-}
-
-void FfiOHOSAceFrameworkListItemGroupCreate2(
-    void (*headerBuilder)(), void (*footerBuilder)(), double space, int32_t spaceUnit, int32_t style)
-{
-    Dimension spaceDime(space, static_cast<DimensionUnit>(spaceUnit));
-
-    V2::ListItemGroupStyle itemStyle = static_cast<V2::ListItemGroupStyle>(style);
-    ListItemGroupModel::GetInstance()->Create(itemStyle);
     ListItemGroupModel::GetInstance()->SetSpace(spaceDime);
     ListItemGroupModel::GetInstance()->SetHeader(CJLambda::Create(headerBuilder));
     ListItemGroupModel::GetInstance()->SetFooter(CJLambda::Create(footerBuilder));

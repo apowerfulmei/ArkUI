@@ -15,10 +15,10 @@
 
 #include "frameworks/bridge/js_frontend/frontend_delegate_impl.h"
 
+#include "base/i18n/localization.h"
 #include "base/log/event_report.h"
 #include "base/resource/ace_res_config.h"
 #include "core/components/toast/toast_component.h"
-#include "core/pipeline_ng/pipeline_context.h"
 
 namespace OHOS::Ace::Framework {
 namespace {
@@ -41,23 +41,6 @@ const char RESOURCES_FOLDER[] = "resources/";
 const char STYLES_FOLDER[] = "styles/";
 const char I18N_FILE_SUFFIX[] = "/properties/i18n.json";
 
-struct DialogStrings {
-    std::string cancel;
-    std::string confirm;
-};
-
-DialogStrings GetDialogStrings()
-{
-    DialogStrings strs = {"Cancel", "OK"};
-    auto context = NG::PipelineContext::GetCurrentContextSafelyWithCheck();
-    CHECK_NULL_RETURN(context, strs);
-    auto dialogTheme = context->GetTheme<DialogTheme>();
-    CHECK_NULL_RETURN(dialogTheme, strs);
-
-    strs.cancel = dialogTheme->GetCancelText();
-    strs.confirm = dialogTheme->GetConfirmText();
-    return strs;
-}
 } // namespace
 
 int32_t FrontendDelegateImpl::GenerateNextPageId()
@@ -103,7 +86,7 @@ FrontendDelegateImpl::FrontendDelegateImpl(const FrontendDelegateImplBuilder& bu
 FrontendDelegateImpl::~FrontendDelegateImpl()
 {
     CHECK_RUN_ON(JS);
-    LOGI("DelegateImpl destroyed");
+    LOG_DESTROY();
 }
 
 void FrontendDelegateImpl::ParseManifest()
@@ -961,7 +944,7 @@ Size FrontendDelegateImpl::MeasureTextSize(MeasureContext context)
     return MeasureUtil::MeasureTextSize(context);
 }
 
-void FrontendDelegateImpl::ShowToast(const NG::ToastInfo& toastInfo, std::function<void(int32_t)>&& callback)
+void FrontendDelegateImpl::ShowToast(const NG::ToastInfo& toastInfo)
 {
     NG::ToastInfo updatedToastInfo = toastInfo;
     updatedToastInfo.duration = std::clamp(toastInfo.duration, TOAST_TIME_DEFAULT, TOAST_TIME_MAX);
@@ -1053,12 +1036,6 @@ void FrontendDelegateImpl::ShowDialog(const std::string& title, const std::strin
         TaskExecutor::TaskType::UI, "ArkUIShowDialog");
 }
 
-void FrontendDelegateImpl::ShowDialog(const PromptDialogAttr& dialogAttr, const std::vector<ButtonInfo>& buttons,
-    std::function<void(int32_t, int32_t)>&& callback, const std::set<std::string>& callbacks)
-{
-    ShowDialog(dialogAttr.title, dialogAttr.message, buttons, dialogAttr.autoCancel, std::move(callback), callbacks);
-}
-
 void FrontendDelegateImpl::ShowActionMenu(const std::string& title,
     const std::vector<ButtonInfo>& button, std::function<void(int32_t, int32_t)>&& callback)
 {
@@ -1092,7 +1069,6 @@ void FrontendDelegateImpl::ShowActionMenu(const std::string& title,
         });
     callbackMarkers.emplace(COMMON_CANCEL, cancelEventMarker);
 
-    auto strs = GetDialogStrings();
     DialogProperties dialogProperties = {
         .title = title,
         .autoCancel = true,
@@ -1101,7 +1077,7 @@ void FrontendDelegateImpl::ShowActionMenu(const std::string& title,
         .callbacks = std::move(callbackMarkers),
     };
     ButtonInfo buttonInfo = {
-        .text = strs.cancel,
+        .text = Localization::GetInstance()->GetEntryLetters("common.cancel"),
         .textColor = "#000000"
     };
     dialogProperties.buttons.emplace_back(buttonInfo);
@@ -1114,12 +1090,6 @@ void FrontendDelegateImpl::ShowActionMenu(const std::string& title,
             }
         },
         TaskExecutor::TaskType::UI, "ArkUIShowActionMenu");
-}
-
-void FrontendDelegateImpl::ShowActionMenu(const PromptDialogAttr& dialogAttr, const std::vector<ButtonInfo>& buttons,
-    std::function<void(int32_t, int32_t)>&& callback)
-{
-    ShowActionMenu(dialogAttr.title, buttons, std::move(callback));
 }
 
 void FrontendDelegateImpl::EnableAlertBeforeBackPage(
@@ -1156,14 +1126,13 @@ void FrontendDelegateImpl::EnableAlertBeforeBackPage(
         return;
     }
 
-    auto strs = GetDialogStrings();
     auto& currentPage = pageRouteStack_.back();
     ClearAlertCallback(currentPage);
     currentPage.dialogProperties = {
         .content = message,
         .autoCancel = false,
-        .buttons = { { .text = strs.cancel, .textColor = "" },
-            { .text = strs.confirm, .textColor = "" } },
+        .buttons = { { .text = Localization::GetInstance()->GetEntryLetters("common.cancel"), .textColor = "" },
+            { .text = Localization::GetInstance()->GetEntryLetters("common.ok"), .textColor = "" } },
         .callbacks = std::move(callbackMarkers),
     };
 }
@@ -1329,13 +1298,6 @@ void FrontendDelegateImpl::OnLayoutCompleted(const std::string& componentId) {}
 
 void FrontendDelegateImpl::OnDrawCompleted(const std::string& componentId) {}
 
-void FrontendDelegateImpl::OnDrawChildrenCompleted(const std::string& componentId) {}
-
-bool FrontendDelegateImpl::IsDrawChildrenCallbackFuncExist(const std::string& componentId)
-{
-    return false;
-}
-
 void FrontendDelegateImpl::OnMediaQueryUpdate(bool isSynchronous)
 {
     if (mediaQueryInfo_->GetIsInit()) {
@@ -1469,10 +1431,7 @@ void FrontendDelegateImpl::OnPushPageSuccess(const RefPtr<JsAcePage>& page, cons
 {
     std::lock_guard<std::mutex> lock(mutex_);
     AddPageLocked(page);
-    PageInfo pageInfo;
-    pageInfo.pageId = page->GetPageId();
-    pageInfo.url = url;
-    pageRouteStack_.emplace_back(pageInfo);
+    pageRouteStack_.emplace_back(PageInfo { page->GetPageId(), url });
     if (pageRouteStack_.size() >= MAX_ROUTER_STACK) {
         isRouteStackFull_ = true;
         EventReport::SendPageRouterException(PageRouterExcepType::PAGE_STACK_OVERFLOW_ERR, page->GetUrl());
@@ -1690,10 +1649,7 @@ void FrontendDelegateImpl::OnReplacePageSuccess(const RefPtr<JsAcePage>& page, c
         ClearAlertCallback(pageRouteStack_.back());
         pageRouteStack_.pop_back();
     }
-    PageInfo pageInfo;
-    pageInfo.pageId = page->GetPageId();
-    pageInfo.url = url;
-    pageRouteStack_.emplace_back(pageInfo);
+    pageRouteStack_.emplace_back(PageInfo { page->GetPageId(), url });
     auto pipelineContext = pipelineContextHolder_.Get();
     if (pipelineContext) {
         pipelineContext->onRouterChange(url);

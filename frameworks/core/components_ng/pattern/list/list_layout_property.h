@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022-2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -27,15 +27,6 @@
 
 namespace OHOS::Ace::NG {
 class InspectorFilter;
-
-struct CacheRange {
-    int32_t min;
-    int32_t max;
-    bool operator==(const CacheRange& other) const
-    {
-        return min == other.min && max == other.max;
-    }
-};
 
 class ACE_EXPORT ListLayoutProperty : public LayoutProperty {
     DECLARE_ACE_TYPE(ListLayoutProperty, LayoutProperty);
@@ -66,9 +57,6 @@ public:
         value->propScrollSnapAlign_ = CloneScrollSnapAlign();
         value->propEditMode_ = CloneEditMode();
         value->propScrollEnabled_ = CloneScrollEnabled();
-        value->propStackFromEnd_ = CloneStackFromEnd();
-        value->propSyncLoad_ = CloneSyncLoad();
-        value->propCacheRange_ = CloneCacheRange();
         return value;
     }
 
@@ -92,9 +80,6 @@ public:
         ResetScrollSnapAlign();
         ResetEditMode();
         ResetScrollEnabled();
-        ResetStackFromEnd();
-        ResetSyncLoad();
-        ResetCacheRange();
     }
 
     void SetDefaultCachedCount(const int32_t cachedCount)
@@ -104,18 +89,6 @@ public:
 
     int32_t GetCachedCountWithDefault() const
     {
-        if (propCacheRange_.has_value()) {
-            auto& range = propCacheRange_.value();
-            return std::max(range.min, range.max);
-        }
-        return GetCachedCountValue(defCachedCount_);
-    }
-
-    int32_t GetMinCacheCount() const
-    {
-        if (propCacheRange_.has_value()) {
-            return propCacheRange_.value().min;
-        }
         return GetCachedCountValue(defCachedCount_);
     }
 
@@ -137,20 +110,14 @@ public:
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(CachedCount, int32_t, PROPERTY_UPDATE_MEASURE);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(ShowCachedItems, bool, PROPERTY_UPDATE_MEASURE);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(StickyStyle, V2::StickyStyle, PROPERTY_UPDATE_MEASURE);
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(ScrollSnapAlign, ScrollSnapAlign, PROPERTY_UPDATE_MEASURE);
+    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(ScrollSnapAlign, V2::ScrollSnapAlign, PROPERTY_UPDATE_MEASURE);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(ChainAnimation, bool, PROPERTY_UPDATE_MEASURE);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(ContentStartOffset, float, PROPERTY_UPDATE_MEASURE);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(ContentEndOffset, float, PROPERTY_UPDATE_MEASURE);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(EditMode, bool, PROPERTY_UPDATE_MEASURE);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(ScrollEnabled, bool, PROPERTY_UPDATE_MEASURE);
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(StackFromEnd, bool, PROPERTY_UPDATE_MEASURE);
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(SyncLoad, bool, PROPERTY_UPDATE_NORMAL);
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(DividerColorSetByUser, bool, PROPERTY_UPDATE_NORMAL);
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(CacheRange, CacheRange, PROPERTY_UPDATE_MEASURE_SELF);
 
-    int32_t defCachedCount_ = 1;
-protected:
-    void UpdateLayoutProperty(const ListLayoutProperty* layoutProperty);
+    int defCachedCount_ = 1;
 };
 } // namespace OHOS::Ace::NG
 

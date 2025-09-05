@@ -20,10 +20,8 @@
 
 #include "core/components/swiper/swiper_indicator_theme.h"
 #include "core/components_ng/base/modifier.h"
-#include "core/components_ng/pattern/swiper_indicator/dot_indicator/dot_indicator_paint_property.h"
 #include "core/components_ng/render/animation_utils.h"
 #include "core/components_ng/render/drawing_prop_convertor.h"
-#include "core/components_ng/render/paint_wrapper.h"
 
 namespace OHOS::Ace::NG {
 constexpr int32_t ITEM_SIZE = 4;
@@ -57,7 +55,6 @@ public:
           itemHalfSizes_(AceType::MakeRefPtr<AnimatablePropertyVectorFloat>(LinearVector<float>(ITEM_SIZE))),
           backgroundWidthDilateRatio_(AceType::MakeRefPtr<AnimatablePropertyFloat>(1)),
           backgroundHeightDilateRatio_(AceType::MakeRefPtr<AnimatablePropertyFloat>(1)),
-          isFocused_(AceType::MakeRefPtr<PropertyBool>(false)),
           unselectedColor_(AceType::MakeRefPtr<PropertyColor>(Color::TRANSPARENT)),
           selectedColor_(AceType::MakeRefPtr<AnimatablePropertyColor>(LinearColor::TRANSPARENT)),
           touchBottomPointColor_(AceType::MakeRefPtr<AnimatablePropertyColor>(LinearColor::TRANSPARENT))
@@ -72,7 +69,6 @@ public:
         AttachProperty(indicatorPadding_);
         AttachProperty(indicatorMargin_);
         AttachProperty(itemHalfSizes_);
-        AttachProperty(isFocused_);
         AttachProperty(unselectedColor_);
         AttachProperty(selectedColor_);
         AttachProperty(backgroundWidthDilateRatio_);
@@ -118,12 +114,11 @@ public:
     void PaintUnselectedIndicator(RSCanvas& canvas, const OffsetF& center,
         const LinearVector<float>& itemHalfSizes,
         bool currentIndexFlag, const LinearColor& indicatorColor);
-    void PaintSelectedIndicator(RSCanvas& canvas, const OffsetF& leftCenter, const OffsetF& rightCenter,
-        const LinearVector<float>& itemHalfSizes, bool isOverlong = false);
+    void PaintSelectedIndicator(RSCanvas& canvas, const OffsetF& leftCenter,
+        const OffsetF& rightCenter, const LinearVector<float>& itemHalfSizes);
     void PaintMask(DrawingContext& context);
-    void PaintBackground(DrawingContext& context, ContentProperty& contentProperty);
+    void PaintBackground(DrawingContext& context, const ContentProperty& contentProperty);
     virtual LinearVector<float> GetItemHalfSizes(size_t index, ContentProperty& contentProperty);
-    void SetFocusedAndSelectedColor(ContentProperty& contentProperty);
     // Update property
     void UpdateShrinkPaintProperty(const OffsetF& margin, const LinearVector<float>& normalItemHalfSizes,
         const LinearVector<float>& vectorBlackPointCenterX, const std::pair<float, float>& longPointCenterX);
@@ -169,7 +164,6 @@ public:
     {
         if (unselectedColor_) {
             unselectedColor_->Set(unselectedColor);
-            originalUnselectColor_ = unselectedColor_->Get();
         }
     }
 
@@ -177,7 +171,6 @@ public:
     {
         if (selectedColor_ && isSelectedColorAnimEnd_) {
             selectedColor_->Set(LinearColor(selectedColor));
-            originalSelectColor_ = selectedColor_->Get().ToColor();
         }
         if (touchBottomPointColor_ && isSelectedColorAnimEnd_) {
             touchBottomPointColor_->Set(LinearColor(selectedColor));
@@ -189,21 +182,9 @@ public:
         currentIndex_ = index;
     }
 
-    void SetCurrentIndexActual(int32_t currentIndexActual)
-    {
-        currentIndexActual_ = currentIndexActual;
-    }
-
     void SetNormalToHoverIndex(const std::optional<int32_t>& normalToHoverIndex)
     {
         normalToHoverIndex_ = normalToHoverIndex;
-    }
-
-    void SetIsFocused(bool isFocused)
-    {
-        if (isFocused_) {
-            isFocused_->Set(isFocused);
-        }
     }
 
     void SetHoverToNormalIndex(const std::optional<int32_t>& hoverToNormalIndex)
@@ -316,36 +297,11 @@ public:
         motionVelocity_ = motionVelocity;
     }
 
-    void SetUserSetSwiperCurve(RefPtr<Curve> userSetSwiperCurve)
+    void SetIsOverlong(bool isOverlong)
     {
-        userSetSwiperCurve_ = userSetSwiperCurve;
+        isOverlong_ = isOverlong;
     }
 
-    void SetIndicatorDotItemSpace(const Dimension& indicatorDotItemSpace)
-    {
-        indicatorDotItemSpace_ = indicatorDotItemSpace;
-    }
-
-    const Dimension& GetIndicatorDotItemSpace() const
-    {
-        return indicatorDotItemSpace_;
-    }
-
-    std::pair<float, float> GetTargetCenter() const
-    {
-        return bottomCenterX_;
-    }
-
-    bool GetIsBottomAnimationFinished() const
-    {
-        return isBottomAnimationFinished_;
-    }
-
-    RectF GetBoundsRect() const
-    {
-        return boundsRectF_;
-    }
-    void FinishAnimationToTargetImmediately(std::pair<float, float> centerX);
 protected:
     static RefPtr<OHOS::Ace::SwiperIndicatorTheme> GetSwiperIndicatorTheme()
     {
@@ -368,11 +324,6 @@ protected:
     int32_t GetLoopOpacityDuration() const;
     float CalculateMinimumAmplitudeRatio(
         const std::vector<std::pair<float, float>>& longPointCenterX, GestureState gestureState) const;
-    RefPtr<InterpolatingSpring> GetTailCurve();
-    AnimationOption CreateTailOption(
-        const std::vector<std::pair<float, float>>& longPointCenterX, GestureState gestureState, bool isNormal);
-    std::tuple<float, float, float, float> CalcAndAdjustIndicatorPaintRect(
-        const ContentProperty& contentProperty, float& rectWidth, float& rectHeight);
 
     RefPtr<AnimatablePropertyColor> backgroundColor_;
     RefPtr<AnimatablePropertyVectorFloat> vectorBlackPointCenterX_;
@@ -386,10 +337,8 @@ protected:
     RefPtr<AnimatablePropertyVectorFloat> itemHalfSizes_;
     RefPtr<AnimatablePropertyFloat> backgroundWidthDilateRatio_;
     RefPtr<AnimatablePropertyFloat> backgroundHeightDilateRatio_;
-    RefPtr<PropertyBool> isFocused_;
 
     RefPtr<Curve> headCurve_;
-    RefPtr<Curve> userSetSwiperCurve_;
     float motionVelocity_ = 0;
 
     float centerY_ = 0;
@@ -400,8 +349,6 @@ protected:
     RefPtr<AnimatablePropertyColor> touchBottomPointColor_;
     bool isTouchBottomLoop_ = false;
     bool ifNeedFinishCallback_ = false;
-    bool isBottomAnimationFinished_ = true;
-    std::pair<float, float> bottomCenterX_;
     TouchBottomAnimationStage animationState_ = TouchBottomAnimationStage::STAGE_NONE;
     std::optional<int32_t> normalToHoverIndex_ = std::nullopt;
     std::optional<int32_t> hoverToNormalIndex_ = std::nullopt;
@@ -414,20 +361,14 @@ protected:
     bool indicatorMask_ = false;
     bool isCustomSize_ = false;
     int32_t currentIndex_ = 0;
-    int32_t currentIndexActual_ = 0;
     int32_t animationDuration_ = 0;
     OffsetF offset_;
     float itemWidth_ = 0.0f;
     float itemHeight_ = 0.0f;
     float selectedItemWidth_ = 0.0f;
     float selectedItemHeight_ = 0.0f;
-    Color originalUnselectColor_;
-    Color originalSelectColor_;
-    Dimension paddingSide_;
-    Dimension indicatorDotItemSpace_ = 8.0_vp;
-    float scaleIndicator_ = 1.33f;
-    RectF boundsRectF_;
     TouchBottomType touchBottomType_ = TouchBottomType::NONE;
+    bool isOverlong_ = false;
     ACE_DISALLOW_COPY_AND_MOVE(DotIndicatorModifier);
 };
 } // namespace OHOS::Ace::NG

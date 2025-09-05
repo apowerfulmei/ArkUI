@@ -53,18 +53,18 @@ struct TouchPointInfo {
 
 struct OverlayInfo : public virtual AceType {
     DECLARE_ACE_TYPE(OverlayInfo, AceType);
-
+ 
 public:
     bool isSingleHandle = false;
     bool isShowMenu = false;
     bool isHiddenHandle = false;
-
+ 
     bool CanBackPressed()
     {
         return isSingleHandle && !isShowMenu && isHiddenHandle;
     }
 };
-
+ 
 class ACE_EXPORT SelectOverlayCallback : public virtual AceType {
     DECLARE_ACE_TYPE(SelectOverlayCallback, AceType);
 
@@ -73,7 +73,6 @@ public:
     ~SelectOverlayCallback() override = default;
     virtual void OnAfterSelectOverlayShow(bool isCreate) {}
     virtual void OnMenuItemAction(OptionMenuActionId id, OptionMenuType type) {}
-    virtual void OnMenuItemAction(OptionMenuActionId id, OptionMenuType type, const std::string& labelInfo) {}
 
     virtual void OnOverlayTouchDown(const TouchEventInfo& event) {}
     virtual void OnOverlayTouchUp(const TouchEventInfo& event) {}

@@ -57,28 +57,9 @@ public:
         return MakeRefPtr<IndicatorEventHub>();
     }
 
-    void InitIndicatorController()
-    {
-        CHECK_NULL_VOID(indicatorController_);
-        indicatorController_->SetIndicatorPattern(AceType::Claim(this));
-        indicatorController_->ResetJSIndicatorController();
-    }
-
     const RefPtr<IndicatorController>& GetIndicatorController() const
     {
         return indicatorController_;
-    }
-
-    void ResetSwiperNode() const
-    {
-        CHECK_NULL_VOID(indicatorController_);
-        indicatorController_->ResetSwiperNode();
-    }
-
-    void ResetJSIndicatorController()
-    {
-        CHECK_NULL_VOID(indicatorController_);
-        indicatorController_->ResetJSIndicatorController();
     }
 
     void UpdateChangeEvent(ChangeEvent&& event)
@@ -116,7 +97,7 @@ public:
         auto controller = GetIndicatorController();
         CHECK_NULL_RETURN(controller, nullptr);
         auto weakUINode = controller->GetSwiperNode();
-        return weakUINode.Upgrade();
+        return WeakUINode2RefFrameNode(weakUINode);
     }
 
     RefPtr<LayoutAlgorithm> CreateLayoutAlgorithm() override
@@ -165,11 +146,8 @@ public:
 
     RefPtr<DotIndicatorPaintMethod> CreateDotIndicatorPaintMethodInSingleMode()
     {
-        ResetOverlongModifier();
-
         if (!GetDotIndicatorModifier()) {
             SetDotIndicatorModifier(AceType::MakeRefPtr<DotIndicatorModifier>());
-            singleGestureState_ = GestureState::GESTURE_STATE_INIT;
         }
         GetDotIndicatorModifier()->SetAnimationDuration(INDICATOR_DEFAULT_DURATION);
         float motionVelocity = 0.0f;
@@ -200,7 +178,6 @@ public:
         }
         paintMethod->SetMouseClickIndex(GetOptinalMouseClickIndex());
         paintMethod->SetIsTouchBottom(GetTouchBottomType());
-        paintMethod->SetTouchBottomRate(touchBottomRate_);
         paintMethod->SetTouchBottomTypeLoop(singleIndicatorTouchBottomTypeLoop_);
         singleIndicatorTouchBottomTypeLoop_ = TouchBottomTypeLoop::TOUCH_BOTTOM_TYPE_LOOP_NONE;
         paintMethod->SetFirstIndex(lastIndex_);
@@ -222,7 +199,6 @@ public:
     void ChangeIndex(int32_t index, bool useAnimation) override;
     int32_t GetCurrentIndex() const override;
     int32_t GetCurrentShownIndex() const override;
-    int32_t DisplayIndicatorTotalCount() const override;
     int32_t RealTotalCount() const override;
     Axis GetDirection() const override;
     bool IsHorizontalAndRightToLeft() const override;
@@ -232,21 +208,9 @@ public:
     void SwipeTo(std::optional<int32_t> mouseClickIndex) override;
     void OnModifyDone() override;
     int32_t GetTouchCurrentIndex() const override;
-    std::pair<int32_t, int32_t> CalMouseClickIndexStartAndEnd(int32_t itemCount, int32_t currentIndex) override;
-    bool CheckIsTouchBottom(const TouchLocationInfo& info);
-    void HandleDragEnd(double dragVelocity) override;
-    void InitTouchEvent(const RefPtr<GestureEventHub>& gestureHub) override; 
     void HandleLongDragUpdate(const TouchLocationInfo& info) override;
-    RectF CalcBoundsRect() const override;
     void InitOnKeyEvent(const RefPtr<FocusHub>& focusHub);
     bool OnKeyEvent(const KeyEvent& event);
-    std::shared_ptr<SwiperParameters> GetIndicatorParameters() const
-    {
-        return swiperParameters_;
-    }
-    std::shared_ptr<SwiperDigitalParameters> GetSwiperDigitalParameters();
-    void OnColorModeChange(uint32_t colorMode) override;
-
     int32_t currentIndexInSingleMode_ = 0;
     int32_t hasSetInitialIndex_ = false;
 
@@ -260,11 +224,12 @@ protected:
     bool IsLoopFromProperty() const;
 
 private:
+    void InitIndicatorController();
     std::shared_ptr<SwiperParameters> GetSwiperParameters();
+    std::shared_ptr<SwiperDigitalParameters> GetSwiperDigitalParameters();
     void SaveDotIndicatorProperty();
     void SaveDigitIndicatorProperty();
     void UpdatePaintProperty();
-    void UpdateDefaultColor();
     RefPtr<IndicatorController> indicatorController_;
     mutable std::shared_ptr<SwiperParameters> swiperParameters_;
     mutable std::shared_ptr<SwiperDigitalParameters> swiperDigitalParameters_;
@@ -273,7 +238,6 @@ private:
     bool isCustomSize_ = false;
     TouchBottomTypeLoop singleIndicatorTouchBottomTypeLoop_ = TouchBottomTypeLoop::TOUCH_BOTTOM_TYPE_LOOP_NONE;
     int32_t lastIndex_ = 0;
-    float touchBottomRate_ = 1.0f;
 };
 } // namespace OHOS::Ace::NG
 

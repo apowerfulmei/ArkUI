@@ -16,7 +16,6 @@
 #ifndef FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_PATTERNS_TABS_TAB_BAR_ITEM_PATTERN_H
 #define FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_PATTERNS_TABS_TAB_BAR_ITEM_PATTERN_H
 
-#include "core/components/focus_animation/focus_animation_theme.h"
 #include "core/components_ng/pattern/linear_layout/linear_layout_pattern.h"
 #include "core/components_ng/pattern/tabs/tab_bar_item_accessibility_property.h"
 
@@ -24,7 +23,7 @@ namespace OHOS::Ace::NG {
 const auto TWO = 2;
 
 class TabBarItemPattern : public LinearLayoutPattern {
-    DECLARE_ACE_TYPE(TabBarItemPattern, LinearLayoutPattern);
+    DECLARE_ACE_TYPE(TabBarItemPattern, Pattern);
 
 public:
     TabBarItemPattern() : LinearLayoutPattern(true) {}
@@ -92,10 +91,7 @@ public:
         CHECK_NULL_VOID(pipeline);
         auto tabTheme = pipeline->GetTheme<TabTheme>();
         CHECK_NULL_VOID(tabTheme);
-        auto padding = tabTheme->GetFocusPadding();
-        BorderRadiusProperty borderRadius;
-        borderRadius.SetRadius(tabTheme->GetFocusIndicatorRadius());
-        auto radius = renderContext->GetBorderRadius().value_or(borderRadius);
+        auto radius = tabTheme->GetFocusIndicatorRadius();
         if (tabBarFocusHub->GetFocusBox().HasCustomStyle()) {
             auto tabBarFocusBoxStyle = tabBarFocusHub->GetFocusBox().GetStyle().value();
             focusHub->GetFocusBox().SetStyle(tabBarFocusBoxStyle);
@@ -106,34 +102,21 @@ public:
         } else {
             FocusBoxStyle tabBarFocusBoxStyle;
             focusHub->GetFocusBox().SetStyle(tabBarFocusBoxStyle);
-            auto outLineWidth = tabTheme->GetActiveIndicatorWidth().ConvertToPx() - padding.ConvertToPx() * TWO;
+            auto outLineWidth = tabTheme->GetActiveIndicatorWidth().ConvertToPx();
             columnPaintRect.SetOffset(OffsetF(outLineWidth / TWO, outLineWidth / TWO));
             columnPaintRect.SetSize(SizeF((columnPaintRect.GetSize().Width() - outLineWidth),
                 (columnPaintRect.GetSize().Height() - outLineWidth)));
         }
 
         paintRect.SetRect(columnPaintRect);
-        SetFocusRectRadius(paintRect, radius, padding, *tabTheme);
-    }
-
-    void SetFocusRectRadius(RoundRect& paintRect, BorderRadiusProperty& radius, Dimension& padding, TabTheme& tabTheme)
-    {
-        auto focusBorderWidth = tabTheme.GetActiveIndicatorWidth();
-        if (focusBorderWidth > 0.0_vp && padding > focusBorderWidth) {
-            padding -= focusBorderWidth;
-        }
-        paintRect.SetCornerRadius(RoundRect::CornerPos::TOP_LEFT_POS,
-            static_cast<float>(radius.radiusTopLeft->ConvertToPx() + padding.ConvertToPx()),
-            static_cast<float>(radius.radiusTopLeft->ConvertToPx() + padding.ConvertToPx()));
-        paintRect.SetCornerRadius(RoundRect::CornerPos::TOP_RIGHT_POS,
-            static_cast<float>(radius.radiusTopRight->ConvertToPx() + padding.ConvertToPx()),
-            static_cast<float>(radius.radiusTopRight->ConvertToPx() + padding.ConvertToPx()));
-        paintRect.SetCornerRadius(RoundRect::CornerPos::BOTTOM_LEFT_POS,
-            static_cast<float>(radius.radiusBottomLeft->ConvertToPx() + padding.ConvertToPx()),
-            static_cast<float>(radius.radiusBottomLeft->ConvertToPx() + padding.ConvertToPx()));
-        paintRect.SetCornerRadius(RoundRect::CornerPos::BOTTOM_RIGHT_POS,
-            static_cast<float>(radius.radiusBottomRight->ConvertToPx() + padding.ConvertToPx()),
-            static_cast<float>(radius.radiusBottomRight->ConvertToPx() + padding.ConvertToPx()));
+        paintRect.SetCornerRadius(RoundRect::CornerPos::TOP_LEFT_POS, static_cast<RSScalar>(radius.ConvertToPx()),
+            static_cast<RSScalar>(radius.ConvertToPx()));
+        paintRect.SetCornerRadius(RoundRect::CornerPos::TOP_RIGHT_POS, static_cast<RSScalar>(radius.ConvertToPx()),
+            static_cast<RSScalar>(radius.ConvertToPx()));
+        paintRect.SetCornerRadius(RoundRect::CornerPos::BOTTOM_LEFT_POS, static_cast<RSScalar>(radius.ConvertToPx()),
+            static_cast<RSScalar>(radius.ConvertToPx()));
+        paintRect.SetCornerRadius(RoundRect::CornerPos::BOTTOM_RIGHT_POS, static_cast<RSScalar>(radius.ConvertToPx()),
+            static_cast<RSScalar>(radius.ConvertToPx()));
     }
 
 private:

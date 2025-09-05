@@ -17,6 +17,9 @@
 
 #include "hitrace_meter.h"
 
+#include "base/log/log.h"
+#include "base/utils/macros.h"
+#include "base/utils/system_properties.h"
 #include "base/utils/utils.h"
 
 namespace OHOS::Ace {
@@ -39,12 +42,12 @@ void AceTraceEnd()
 
 void AceTraceBeginCommercial(const char* name)
 {
-    StartTraceEx(HITRACE_LEVEL_COMMERCIAL, ACE_TRACE_COMMERCIAL, name);
+    StartTrace(ACE_TRACE_COMMERCIAL, name);
 }
 
 void AceTraceEndCommercial()
 {
-    FinishTraceEx(HITRACE_LEVEL_COMMERCIAL, ACE_TRACE_COMMERCIAL);
+    FinishTrace(ACE_TRACE_COMMERCIAL);
 }
 
 void AceAsyncTraceBegin(int32_t taskId, const char* name, bool isAnimationTrace)

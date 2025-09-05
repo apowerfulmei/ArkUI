@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -13,9 +13,8 @@
  * limitations under the License.
  */
 #include "core/components_ng/image_provider/image_utils.h"
-
-#include "base/image/image_task_pool.h"
-#include "base/log/log.h"
+#include "core/common/container.h"
+#include "core/common/container_scope.h"
 
 namespace OHOS::Ace::NG {
 void ImageUtils::PostTask(
@@ -23,7 +22,7 @@ void ImageUtils::PostTask(
 {
     auto taskExecutor = Container::CurrentTaskExecutorSafelyWithCheck();
     if (!taskExecutor) {
-        TAG_LOGE(AceLogTag::ACE_IMAGE, "taskExecutor is null : %{public}s", taskTypeName);
+        LOGE("taskExecutor is null when try post task to %{public}s", taskTypeName);
         return;
     }
     taskExecutor->PostTask(
@@ -33,31 +32,6 @@ void ImageUtils::PostTask(
             task();
         },
         taskType, std::string(taskTypeName), priorityType);
-}
-
-void ImageUtils::PostDelayedTask(std::function<void()>&& task, TaskExecutor::TaskType taskType, uint32_t delayTime,
-    const char* taskTypeName, PriorityType priorityType)
-{
-    auto taskExecutor = Container::CurrentTaskExecutorSafelyWithCheck();
-    if (!taskExecutor) {
-        TAG_LOGE(AceLogTag::ACE_IMAGE, "taskExecutor is null : %{public}s", taskTypeName);
-        return;
-    }
-    taskExecutor->PostDelayedTask(
-        [task, id = Container::CurrentId()] {
-            ContainerScope scope(id);
-            CHECK_NULL_VOID(task);
-            task();
-        },
-        taskType, delayTime, std::string(taskTypeName), priorityType);
-}
-
-void ImageUtils::PostDelayedTaskToUI(std::function<void()>&& task, uint32_t delayTime, const std::string& name,
-    const int32_t containerId, PriorityType priorityType)
-{
-    ContainerScope scope(containerId);
-    CHECK_NULL_VOID(task);
-    ImageUtils::PostDelayedTask(std::move(task), TaskExecutor::TaskType::UI, delayTime, name.c_str(), priorityType);
 }
 
 void ImageUtils::PostToUI(
@@ -72,16 +46,9 @@ void ImageUtils::PostToUI(
 void ImageUtils::PostToBg(
     std::function<void()>&& task, const std::string& name, const int32_t containerId, PriorityType priorityType)
 {
+    ContainerScope scope(containerId);
+
     CHECK_NULL_VOID(task);
-#if defined(PREVIEW) || defined(CROSS_PLATFORM)
     ImageUtils::PostTask(std::move(task), TaskExecutor::TaskType::BACKGROUND, name.c_str(), priorityType);
-#else
-    ImageTaskPool::GetInstance()->PostTask(
-        [task, containerId] {
-            ContainerScope scope(containerId);
-            task();
-        },
-        name);
-#endif
 }
 } // namespace OHOS::Ace::NG

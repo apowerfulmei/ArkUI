@@ -17,12 +17,13 @@
 #define FOUNDATION_ACE_FRAMEWORKS_BASE_PAGE_URL_CHECKER_H
 
 #include "base/memory/ace_type.h"
+#include "frameworks/bridge/declarative_frontend/ng/page_router_manager.h"
 
 namespace OHOS::Ace {
 extern const char BUNDLE_TAG[];
 
 class ACE_EXPORT PageUrlChecker : public AceType {
-    DECLARE_ACE_TYPE(PageUrlChecker, AceType);
+    DECLARE_ACE_TYPE(PageUrlChecker, AceType)
 
 public:
     virtual void LoadPageUrl(const std::string& url, const std::function<void()>& callback,

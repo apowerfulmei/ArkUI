@@ -19,13 +19,10 @@
 #include <memory>
 
 #include "testing_color.h"
-#include "testing_color_space.h"
 #include "testing_image.h"
 #include "testing_matrix.h"
 #include "testing_point.h"
 #include "testing_sampling_options.h"
-#include "testing_picture.h"
-#include "testing_rect.h"
 
 namespace OHOS::Ace::Testing {
 enum class TileMode {
@@ -49,15 +46,14 @@ public:
     }
 
     static std::shared_ptr<TestingShaderEffect> CreateLinearGradient(const TestingPoint& /* startPt */,
-        const TestingPoint& /* endPt */, const std::vector<uint32_t>& /* colors */,
-        const std::vector<float>& /* pos */, TileMode /* mode */, const TestingMatrix* matrix = nullptr)
+        const TestingPoint& /* endPt */, const std::vector<uint32_t>& /* colors */, const std::vector<float>& /* pos */,
+        TileMode /* mode */)
     {
         return std::make_shared<TestingShaderEffect>();
     }
 
     static std::shared_ptr<TestingShaderEffect> CreateRadialGradient(const TestingPoint& centerPt, scalar radius,
-        const std::vector<ColorQuad>& colors, const std::vector<scalar>& pos, TileMode mode,
-        const TestingMatrix* matrix = nullptr)
+        const std::vector<ColorQuad>& colors, const std::vector<scalar>& pos, TileMode mode)
     {
         return std::make_shared<TestingShaderEffect>();
     }
@@ -76,43 +72,6 @@ public:
 
     static std::shared_ptr<TestingShaderEffect> CreateImageShader(const TestingImage& image, TileMode tileX,
         TileMode tileY, const TestingSamplingOptions& sampling, const TestingMatrix& matrix)
-    {
-        return std::make_shared<TestingShaderEffect>();
-    }
-
-    static std::shared_ptr<TestingShaderEffect> CreatePictureShader(const TestingPicture& picture, TileMode tileX,
-        TileMode tileY, const FilterMode& mode, const TestingMatrix& matrix, const TestingRect& rect)
-    {
-        return std::make_shared<TestingShaderEffect>();
-    }
-
-    static std::shared_ptr<TestingShaderEffect> CreateSweepGradient(const TestingPoint& /* centerPt */,
-        const std::vector<TestingColor4f>& /* colors */, std::shared_ptr<TestingColorSpace> /* colorSpace */,
-        const std::vector<float>& /* pos */, TileMode /* mode */, float /* startAngle */, float /* endAngle */,
-        const TestingMatrix* /* matrix */)
-    {
-        return std::make_shared<TestingShaderEffect>();
-    }
-
-    static std::shared_ptr<TestingShaderEffect> CreateLinearGradient(const TestingPoint& /* startPt */,
-        const TestingPoint& /* endPt */, const std::vector<TestingColor4f>& /* colors */,
-        std::shared_ptr<TestingColorSpace> /* colorSpace */, const std::vector<float>& /* pos */, TileMode /* mode */,
-        const TestingMatrix* matrix = nullptr)
-    {
-        return std::make_shared<TestingShaderEffect>();
-    }
-
-    static std::shared_ptr<TestingShaderEffect> CreateRadialGradient(const TestingPoint& centerPt, scalar radius,
-        const std::vector<TestingColor4f>& /* colors */, std::shared_ptr<TestingColorSpace> /* colorSpace */,
-        const std::vector<scalar>& pos, TileMode mode, const TestingMatrix* matrix = nullptr)
-    {
-        return std::make_shared<TestingShaderEffect>();
-    }
-
-    static std::shared_ptr<TestingShaderEffect> CreateTwoPointConical(const TestingPoint& startPt, scalar startRadius,
-        const TestingPoint& endPt, scalar endRadius, const std::vector<TestingColor4f>& /* colors */,
-        std::shared_ptr<TestingColorSpace> /* colorSpace */, const std::vector<scalar>& pos, TileMode mode,
-        const TestingMatrix* matrix)
     {
         return std::make_shared<TestingShaderEffect>();
     }

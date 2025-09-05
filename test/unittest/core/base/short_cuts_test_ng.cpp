@@ -822,12 +822,12 @@ HWTEST_F(ShortCutsTestNg, ShortCutsTest023, TestSize.Level1)
 
     /**
      * @tc.steps: step2. call SetKeyboardShortcut with ctrl + A.
-     * @tc.expected: add success
+     * @tc.expected: add fail
      */
     std::vector<ModifierKey> keys;
     keys.push_back(ModifierKey::CTRL);
     ViewAbstract::SetKeyboardShortcut(VALUE_A, std::move(keys), callback);
-    EXPECT_EQ(eventManager->keyboardShortcutNode_.size(), 1);
+    EXPECT_EQ(eventManager->keyboardShortcutNode_.size(), 0);
 
     /**
      * @tc.steps: step3. call SetKeyboardShortcut with ctrl + shift + A.
@@ -957,12 +957,12 @@ HWTEST_F(ShortCutsTestNg, ShortCutsTest027, TestSize.Level1)
 
     /**
      * @tc.steps: step2. call SetKeyboardShortcut with ctrl + C.
-     * @tc.expected: add success
+     * @tc.expected: add fail
      */
     std::vector<ModifierKey> keys;
     keys.push_back(ModifierKey::CTRL);
     ViewAbstract::SetKeyboardShortcut(VALUE_C, std::move(keys), callback);
-    EXPECT_EQ(eventManager->keyboardShortcutNode_.size(), 1);
+    EXPECT_EQ(eventManager->keyboardShortcutNode_.size(), 0);
 
     /**
      * @tc.steps: step3. call SetKeyboardShortcut with ctrl + shift + C.
@@ -1092,12 +1092,12 @@ HWTEST_F(ShortCutsTestNg, ShortCutsTest031, TestSize.Level1)
 
     /**
      * @tc.steps: step2. call SetKeyboardShortcut with ctrl + V.
-     * @tc.expected: add success
+     * @tc.expected: add fail
      */
     std::vector<ModifierKey> keys;
     keys.push_back(ModifierKey::CTRL);
     ViewAbstract::SetKeyboardShortcut(VALUE_V, std::move(keys), callback);
-    EXPECT_EQ(eventManager->keyboardShortcutNode_.size(), 1);
+    EXPECT_EQ(eventManager->keyboardShortcutNode_.size(), 0);
 
     /**
      * @tc.steps: step3. call SetKeyboardShortcut with ctrl + shift + V.
@@ -1227,12 +1227,12 @@ HWTEST_F(ShortCutsTestNg, ShortCutsTest035, TestSize.Level1)
 
     /**
      * @tc.steps: step2. call SetKeyboardShortcut with ctrl + Z.
-     * @tc.expected: add success
+     * @tc.expected: add fail
      */
     std::vector<ModifierKey> keys;
     keys.push_back(ModifierKey::CTRL);
     ViewAbstract::SetKeyboardShortcut(VALUE_Z, std::move(keys), callback);
-    EXPECT_EQ(eventManager->keyboardShortcutNode_.size(), 1);
+    EXPECT_EQ(eventManager->keyboardShortcutNode_.size(), 0);
 
     /**
      * @tc.steps: step3. call SetKeyboardShortcut with ctrl + shift + Z.
@@ -1240,7 +1240,7 @@ HWTEST_F(ShortCutsTestNg, ShortCutsTest035, TestSize.Level1)
      */
     keys.push_back(ModifierKey::SHIFT);
     ViewAbstract::SetKeyboardShortcut(VALUE_Z, std::move(keys), callback);
-    EXPECT_EQ(eventManager->keyboardShortcutNode_.size(), 1);
+    EXPECT_EQ(eventManager->keyboardShortcutNode_.size(), 0);
     keys.clear();
 }
 
@@ -1362,12 +1362,12 @@ HWTEST_F(ShortCutsTestNg, ShortCutsTest039, TestSize.Level1)
 
     /**
      * @tc.steps: step2. call SetKeyboardShortcut with ctrl + Y.
-     * @tc.expected: add success
+     * @tc.expected: add fail
      */
     std::vector<ModifierKey> keys;
     keys.push_back(ModifierKey::CTRL);
     ViewAbstract::SetKeyboardShortcut(VALUE_Y, std::move(keys), callback);
-    EXPECT_EQ(eventManager->keyboardShortcutNode_.size(), 1);
+    EXPECT_EQ(eventManager->keyboardShortcutNode_.size(), 0);
 
     /**
      * @tc.steps: step3. call SetKeyboardShortcut with ctrl + shift + Y.
@@ -1419,26 +1419,5 @@ HWTEST_F(ShortCutsTestNg, ShortCutsTest040, TestSize.Level1)
     ViewAbstract::SetKeyboardShortcut(VALUE_Y, std::move(keys), callback);
     EXPECT_EQ(eventManager->keyboardShortcutNode_.size(), 1);
     keys.clear();
-}
-
-/**
- * @tc.name: ShortCutsTest041
- * @tc.desc: Test the KeyEvent.
- * @tc.type: FUNC
- */
-HWTEST_F(ShortCutsTestNg, ShortCutsTest041, TestSize.Level1)
-{
-    KeyEvent event;
-    const RefPtr<FrameNode> targetNode = FrameNode::CreateFrameNode("main", 1, AceType::MakeRefPtr<Pattern>(), true);
-    ViewStackProcessor::GetInstance()->Push(targetNode);
-    auto keyEventManager = PipelineContext::GetCurrentContext()->GetEventManager();
-    event.code = KeyCode::KEY_TAB;
-    event.action = KeyAction::DOWN;
-    event.isPreIme = false;
-    event.pressedCodes = {KeyCode::KEY_TAB};
-    auto ret = keyEventManager->TriggerKeyEventDispatch(event);
-    EXPECT_TRUE(ret);
-    ret = keyEventManager->TriggerKeyEventDispatch(event);
-    EXPECT_FALSE(ret);
 }
 } // namespace OHOS::Ace::NG

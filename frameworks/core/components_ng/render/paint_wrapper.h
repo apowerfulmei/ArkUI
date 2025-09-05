@@ -29,25 +29,19 @@
 #include "core/components_ng/render/render_context.h"
 #include "core/pipeline_ng/ui_task_scheduler.h"
 
-namespace OHOS::Ace::Kit {
-class NodePaintMethod;
-}
-
 namespace OHOS::Ace::NG {
 class NodePaintMethod;
 
 // PaintWrapper are used to flush dirty render task.
 class PaintWrapper : public virtual AceType {
-    DECLARE_ACE_TYPE(PaintWrapper, AceType);
+    DECLARE_ACE_TYPE(PaintWrapper, AceType)
 
 public:
     PaintWrapper(WeakPtr<RenderContext> renderContext, RefPtr<GeometryNode> geometryNode,
-        RefPtr<PaintProperty> paintProperty, RefPtr<ExtensionHandler> handler = nullptr);
+        RefPtr<PaintProperty> layoutProperty, RefPtr<ExtensionHandler> handler = nullptr);
     ~PaintWrapper() override;
 
     void SetNodePaintMethod(const RefPtr<NodePaintMethod>& nodePaintImpl);
-
-    void SetKitNodePaintMethod(const RefPtr<Kit::NodePaintMethod>& nodePaintMethod);
 
     void SetTaskThread(TaskThread taskThread)
     {
@@ -122,7 +116,6 @@ private:
     RefPtr<NodePaintMethod> nodePaintImpl_;
     RefPtr<ExtensionHandler> extensionHandler_;
     TaskThread taskThread_ = MAIN_TASK;
-    RefPtr<Kit::NodePaintMethod> nodePaintMethod_;
 };
 } // namespace OHOS::Ace::NG
 

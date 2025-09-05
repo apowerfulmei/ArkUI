@@ -15,6 +15,9 @@
 
 #include "core/components_ng/gestures/pinch_gesture.h"
 
+#include "base/geometry/dimension.h"
+#include "base/utils/utils.h"
+#include "core/components_ng/base/ui_node.h"
 #include "core/components_ng/gestures/recognizers/pinch_recognizer.h"
 #include "core/pipeline_ng/pipeline_context.h"
 
@@ -46,9 +49,6 @@ RefPtr<NGGestureRecognizer> PinchGesture::CreateRecognizer()
     pinchRecognizer->SetPriority(priority_);
     pinchRecognizer->SetPriorityMask(gestureMask_);
     pinchRecognizer->SetGestureInfo(gestureInfo_);
-    if (gestureInfo_) {
-        gestureInfo_->SetDisposeTag(false);
-    }
     pinchRecognizer->SetUserData(userData_);
 
     return pinchRecognizer;

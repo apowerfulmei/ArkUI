@@ -35,16 +35,6 @@ struct TextFieldInfo {
     bool enableAutoFill = true;
 };
 
-struct LaterAvoidInfo {
-    bool laterAvoid = false;
-    Rect keyboardArea;
-    double positionY = 0.0;
-    double avoidHeight = 0.0;
-    int32_t orientation = -1;
-};
-
-using FillContentMap = std::unordered_map<std::string, std::variant<std::string, bool, int32_t>>;
-
 class ACE_EXPORT TextFieldManagerNG : public ManagerInterface {
     DECLARE_ACE_TYPE(TextFieldManagerNG, ManagerInterface);
 
@@ -53,6 +43,7 @@ public:
     ~TextFieldManagerNG() override;
 
     void SetClickPosition(const Offset& position) override;
+    
     const Offset& GetClickPosition() override
     {
         return position_;
@@ -81,7 +72,18 @@ public:
         return onFocusTextField_;
     }
 
-    void SetOnFocusTextField(const WeakPtr<Pattern>& onFocusTextField);
+    void SetOnFocusTextField(const WeakPtr<Pattern>& onFocusTextField)
+    {
+        const auto& pattern = onFocusTextField.Upgrade();
+        if (pattern && pattern->GetHost()) {
+            onFocusTextFieldId = pattern->GetHost()->GetId();
+        }
+        if (onFocusTextField_ != onFocusTextField) {
+            SetImeAttached(false);
+            GetOnFocusTextFieldInfo(onFocusTextField);
+        }
+        onFocusTextField_ = onFocusTextField;
+    }
 
     void GetOnFocusTextFieldInfo(const WeakPtr<Pattern>& onFocusTextField);
 
@@ -110,7 +112,13 @@ public:
 
     void UpdateScrollableParentViewPort(const RefPtr<FrameNode>& node);
 
-    bool GetImeShow() const override;
+    bool GetImeShow() const override
+    {
+        if (!imeShow_ && imeAttachCalled_) {
+            TAG_LOGI(ACE_KEYBOARD, "imeNotShown but attach called, still consider that as shown");
+        }
+        return imeShow_ || imeAttachCalled_;
+    }
 
     void SetImeShow(bool imeShow)
     {
@@ -145,12 +153,16 @@ public:
 
     void UpdatePrevHasTextFieldPattern()
     {
-        prevHasTextFieldPattern_ = onFocusTextField_.Upgrade();
+        if (onFocusTextField_.Upgrade()) {
+            prevHasTextFieldPattern_ = true;
+        } else {
+            prevHasTextFieldPattern_ = false;
+        }
     }
 
     void AvoidKeyBoardInNavigation();
 
-    void SetNavContentAvoidKeyboardOffset(const RefPtr<FrameNode>& navNode, float avoidKeyboardOffset);
+    void SetNavContentAvoidKeyboardOffset(RefPtr<FrameNode> navNode, float avoidKeyboardOffset);
 
     void SetNeedToRequestKeyboard(bool val) override
     {
@@ -163,11 +175,11 @@ public:
     }
 
     bool GetIfFocusTextFieldIsInline() {
-        return focusFieldIsInline_;
+        return focusFieldIsInline;
     }
 
     void SetIfFocusTextFieldIsInline(bool isinline) {
-        focusFieldIsInline_ = isinline;
+        focusFieldIsInline = isinline;
     }
 
     void GetInlineTextFieldAvoidPositionYAndHeight(double& positionY, double& height) {
@@ -189,42 +201,46 @@ public:
     }
 
     int32_t GetOnFocusTextFieldId() {
-        return onFocusTextFieldId_;
+        return onFocusTextFieldId;
     }
 
     bool GetLaterAvoid() const
     {
-        return laterAvoidInfo_.laterAvoid;
+        return laterAvoid_;
     }
 
     void SetLaterAvoid(bool laterAvoid)
     {
-        laterAvoidInfo_.laterAvoid = laterAvoid;
+        laterAvoid_ = laterAvoid;
     }
 
-    void SetLaterAvoidArgs(LaterAvoidInfo laterAvoidInfo)
+    void SetLaterAvoidArgs(Rect keyboardArea, double positionY, double height, int32_t orientation)
     {
-        laterAvoidInfo_ = laterAvoidInfo;
+        laterAvoid_ = true;
+        laterAvoidKeyboardArea_ = keyboardArea;
+        laterAvoidPositionY_ = positionY;
+        laterAvoidHeight_ = height;
+        laterOrientation_ = orientation;
     }
 
     Rect GetLaterAvoidKeyboardRect()
     {
-        return laterAvoidInfo_.keyboardArea;
+        return laterAvoidKeyboardArea_;
     }
 
     double GetLaterAvoidPositionY()
     {
-        return laterAvoidInfo_.positionY;
+        return laterAvoidPositionY_;
     }
 
     double GetLaterAvoidHeight()
     {
-        return laterAvoidInfo_.avoidHeight;
+        return laterAvoidHeight_;
     }
 
     int32_t GetLaterOrientation()
     {
-        return laterAvoidInfo_.orientation;
+        return laterOrientation_;
     }
 
     void SetLastRequestKeyboardId(int32_t lastRequestKeyboardId) {
@@ -251,16 +267,6 @@ public:
     void UpdateTextFieldInfo(const TextFieldInfo& textFieldInfo);
     bool HasAutoFillPasswordNodeInContainer(const int32_t& autoFillContainerNodeId, const int32_t& nodeId);
 
-    int32_t GetFocusFieldOrientation() const
-    {
-        return focusFieldOrientation_;
-    }
-
-    void SetFocusFieldOrientation(int32_t focusFieldOrientation)
-    {
-        focusFieldOrientation_ = focusFieldOrientation;
-    }
-
     void SetIsImeAttached(bool isImeAttached)
     {
         isImeAttached_ = isImeAttached;
@@ -271,50 +277,12 @@ public:
         return isImeAttached_;
     }
 
-    void AddAvoidKeyboardCallback(int32_t id, bool isCustomKeyboard, const std::function<void()>&& callback);
-
-    void RemoveAvoidKeyboardCallback(int32_t id)
-    {
-        avoidCustomKeyboardCallbacks_.erase(id);
-        avoidSystemKeyboardCallbacks_.erase(id);
-    }
-
-    void OnAfterAvoidKeyboard(bool isCustomKeyboard);
-
-    int32_t GetContextTriggerAvoidTaskOrientation() const
-    {
-        return contextTriggerAvoidTaskOrientation_;
-    }
-
-    void SetContextTriggerAvoidTaskOrientation(int32_t contextTriggerAvoidTaskOrientation)
-    {
-        contextTriggerAvoidTaskOrientation_ = contextTriggerAvoidTaskOrientation;
-    }
-
-    bool ParseFillContentJsonValue(const std::unique_ptr<JsonValue>& jsonObject);
-    FillContentMap GetFillContentMap(int32_t id);
-    void RemoveFillContentMap(int32_t id);
-
-    int32_t GetAttachInputId() const
-    {
-        return attachInputId_;
-    }
-
-    void SetAttachInputId(int32_t attachInputId)
-    {
-        attachInputId_ = attachInputId;
-    }
-
 private:
     bool ScrollToSafeAreaHelper(const SafeAreaInsets::Inset& bottomInset, bool isShowKeyboard);
     RefPtr<FrameNode> FindNavNode(const RefPtr<FrameNode>& textField);
     bool IsAutoFillPasswordType(const TextFieldInfo& textFieldInfo);
-    void GenerateFillContentMap(const std::string& fillContent, FillContentMap& map);
 
-    RefPtr<FrameNode> FindCorrectScrollNode(const SafeAreaInsets::Inset& bottomInset,
-        bool isShowKeyboard);
-
-    bool focusFieldIsInline_ = false;
+    bool focusFieldIsInline = false;
     double inlinePositionY_ = 0.0f;
     double inlineHeight_ = 0.0f;
     bool hasMove_ = false;
@@ -322,28 +290,26 @@ private:
     bool usingCustomKeyboardAvoid_ = false;
     bool uiExtensionImeShow_ = false;
     bool prevHasTextFieldPattern_ = true;
-    int32_t contextTriggerAvoidTaskOrientation_ = -1;
-    int32_t focusFieldOrientation_ = -1;
     Offset position_;
     float clickPositionOffset_ = 0.0f;
     std::optional<Offset> optionalPosition_;
     float height_ = 0.0f;
     WeakPtr<Pattern> onFocusTextField_;
     WeakPtr<FrameNode> weakNavNode_;
-    int32_t onFocusTextFieldId_ = -1;
+    int32_t onFocusTextFieldId = -1;
     int32_t lastAvoidFieldId_ = -1;
     int32_t lastRequestKeyboardId_ = -1;
     bool imeAttachCalled_ = false;
     bool needToRequestKeyboard_ = true;
     std::unordered_map<int32_t, std::unordered_map<int32_t, TextFieldInfo>> textFieldInfoMap_;
-    LaterAvoidInfo laterAvoidInfo_;
-    bool isScrollableChild_ = false;
+    bool laterAvoid_ = false;
+    Rect laterAvoidKeyboardArea_;
+    double laterAvoidPositionY_ = 0.0;
+    double laterAvoidHeight_ = 0.0;
+    int32_t laterOrientation_ = -1;
     bool isImeAttached_ = false;
-    std::unordered_map<int32_t, std::function<void()>> avoidSystemKeyboardCallbacks_;
-    std::unordered_map<int32_t, std::function<void()>> avoidCustomKeyboardCallbacks_;
+    bool isScrollableChild_ = false;
     float lastKeyboardOffset_ = 0.0f;
-    std::unordered_map<int32_t, FillContentMap> textFieldFillContentMaps_;
-    int32_t attachInputId_ = -1;
 };
 
 } // namespace OHOS::Ace::NG

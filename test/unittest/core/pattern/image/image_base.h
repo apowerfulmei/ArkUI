@@ -25,7 +25,6 @@
 #define private public
 #define protected public
 
-#include "test/mock/base/mock_system_properties.h"
 #include "test/mock/base/mock_task_executor.h"
 #include "test/mock/core/common/mock_container.h"
 #include "test/mock/core/common/mock_theme_manager.h"
@@ -54,6 +53,7 @@
 #include "core/components_ng/pattern/image/image_model_ng.h"
 #include "core/components_ng/pattern/image/image_paint_method.h"
 #include "core/components_ng/pattern/image/image_pattern.h"
+#include "core/components_ng/pattern/image/image_modifier.h"
 #include "core/components_v2/inspector/inspector_constants.h"
 #include "core/event/mouse_event.h"
 #include "core/image/image_source_info.h"
@@ -115,11 +115,6 @@ constexpr Dimension IMAGE_HEIGHT = 120.0_vp;
 constexpr Dimension IMAGE_TOP = 0.0_vp;
 constexpr Dimension IMAGE_LEFT = 0.0_vp;
 const std::vector<float> COLOR_FILTER_NULL;
-const std::string tagName = "TestNode";
-const std::string URL_LENGTH_EQUAL_35 = "https://example.com/api/v1/resource";
-const std::string URL_LENGTH_LESS_THAN_30 = "https://example.com";
-const std::string RESULT_FOR_URL_LENGTH_EQUAL_35 = "https://example*****ap*/v*/r*so*rc*";
-const std::string RESULT_FOR_URL_LENGTH_LESS_THAN_30 = "ht*ps*//*xa*pl*.c*m";
 
 class ImageBases : public testing::Test {
 public:
@@ -150,25 +145,6 @@ auto GetCompoment()
     EXPECT_NE(renderProperty, nullptr);
     return std::make_tuple(frameNode, layoutProperty, pattern, renderProperty);
 }
-
-class TestNode : public UINode {
-    DECLARE_ACE_TYPE(TestNode, UINode);
-
-public:
-    static RefPtr<TestNode> CreateTestNode(int32_t nodeId)
-    {
-        auto node = MakeRefPtr<TestNode>(nodeId);
-        return node;
-    }
-
-    bool IsAtomicNode() const override
-    {
-        return true;
-    }
-
-    explicit TestNode(int32_t nodeId) : UINode(tagName, nodeId) {}
-    ~TestNode() override = default;
-};
 
 std::vector<RefPtr<UINode>> PopUINodes();
 void PushUINodes(std::vector<RefPtr<UINode>> &vec);

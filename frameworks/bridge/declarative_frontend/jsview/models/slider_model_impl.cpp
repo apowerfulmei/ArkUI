@@ -101,7 +101,7 @@ void SliderModelImpl::SetMaxLabel(float value)
     CHECK_NULL_VOID(slider);
     slider->SetMaxValue(value);
 }
-void SliderModelImpl::SetShowSteps(bool value, const std::optional<SliderModel::SliderShowStepOptions>& options)
+void SliderModelImpl::SetShowSteps(bool value)
 {
     auto component = ViewStackProcessor::GetInstance()->GetMainComponent();
     auto slider = AceType::DynamicCast<SliderComponent>(component);
@@ -133,13 +133,10 @@ void SliderModelImpl::SetBlockImage(
 {}
 void SliderModelImpl::SetBlockShape(const RefPtr<BasicShape>& value) {}
 void SliderModelImpl::SetStepSize(const Dimension& value) {}
-void SliderModelImpl::SetPrefix(const RefPtr<NG::UINode>& content, const NG::SliderPrefixOptions& options) {}
-void SliderModelImpl::SetSuffix(const RefPtr<NG::UINode>& content, const NG::SliderSuffixOptions& options) {}
 void SliderModelImpl::SetOnChange(std::function<void(float, int32_t)>&& eventOnChange)
 {
     auto component = ViewStackProcessor::GetInstance()->GetMainComponent();
     auto slider = AceType::DynamicCast<SliderComponent>(component);
-    CHECK_NULL_VOID(slider);
     slider->SetOnChange(std::move(eventOnChange));
 }
 

@@ -64,41 +64,6 @@ void MockCustomDialogController::JSBind(BindingTarget globalObj)
     JSClass<JSMockBaseNode>::Bind(globalObj);
 }
 
-void JSMockNativeCustomSpan::JSBind(BindingTarget globalObj)
-{
-    JSClass<JSMockNativeCustomSpan>::Declare("NativeCustomSpan");
-    JSClass<JSMockNativeCustomSpan>::CustomMethod("invalidate", &JSMockNativeCustomSpan::Invalidate);
-    JSClass<JSMockNativeCustomSpan>::Bind(globalObj);
-}
-
-void JSMockViewBuildNodeBase::JSBind(BindingTarget globalObj)
-{
-    JSClass<JSMockViewBuildNodeBase>::Declare("ViewBuildNodeBase");
-
-    JSClass<JSMockViewBuildNodeBase>::StaticMethod(
-        "setArkThemeScopeManager", &JSMockViewBuildNodeBase::SetArkThemeScopeManager);
-    JSClass<JSMockViewBuildNodeBase>::CustomMethod("id__", &JSMockViewBuildNodeBase::Id);
-    JSClass<JSMockViewBuildNodeBase>::CustomMethod("debugInfo__", &JSMockViewBuildNodeBase::DebugInfo);
-    JSClass<JSMockViewBuildNodeBase>::CustomMethod("debugInfoElmtId", &JSMockViewBuildNodeBase::DebugInfoElmtId);
-    JSClass<JSMockViewBuildNodeBase>::CustomMethod("getChildById", &JSMockViewBuildNodeBase::GetChildById);
-    JSClass<JSMockViewBuildNodeBase>::CustomMethod("addChild", &JSMockViewBuildNodeBase::AddChild);
-    JSClass<JSMockViewBuildNodeBase>::CustomMethod(
-        "purgeDeletedElmtIds", &JSMockViewBuildNodeBase::PurgeDeletedElmtIds);
-    JSClass<JSMockViewBuildNodeBase>::CustomMethod(
-        "updateStateVarsOfChildByElmtId", &JSMockViewBuildNodeBase::UpdateStateVarsOfChildByElmtId);
-    JSClass<JSMockViewBuildNodeBase>::CustomMethod("createOrGetNode", &JSMockViewBuildNodeBase::CreateOrGetNode);
-    JSClass<JSMockViewBuildNodeBase>::CustomMethod(
-        "ifElseBranchUpdateFunction", &JSMockViewBuildNodeBase::IfElseBranchUpdateFunction);
-    JSClass<JSMockViewBuildNodeBase>::CustomMethod(
-        "onWillApplyThemeInternally", &JSMockViewBuildNodeBase::OnWillApplyThemeInternally);
-    JSClass<JSMockViewBuildNodeBase>::CustomMethod("onWillApplyTheme", &JSMockViewBuildNodeBase::OnWillApplyTheme);
-    JSClass<JSMockViewBuildNodeBase>::CustomMethod(
-        "onGlobalThemeChanged", &JSMockViewBuildNodeBase::OnGlobalThemeChanged);
-
-    JSClass<JSMockViewBuildNodeBase>::Bind(
-        globalObj, JSMockViewBuildNodeBase::ConstructorCallback, JSMockViewBuildNodeBase::DestructorCallback);
-}
-
 void JSMock::JSBind(BindingTarget globalObj)
 {
     JSMockBaseNode::JSBind(globalObj);
@@ -106,8 +71,6 @@ void JSMock::JSBind(BindingTarget globalObj)
     JSMockViewPU::JSBind(globalObj, "PUV2ViewBase");
     JSMockScopeUtil::JSBind(globalObj);
     MockCustomDialogController::JSBind(globalObj);
-    JSMockNativeCustomSpan::JSBind(globalObj);
-    JSMockViewBuildNodeBase::JSBind(globalObj);
 }
 
 bool JSMock::InitModule(

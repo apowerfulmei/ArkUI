@@ -18,29 +18,74 @@
 
 #include <utility>
 
-#include "adapter/ohos/entrance/picker/picker_haptic_interface.h"
 #include "base/i18n/localization.h"
 #include "core/components/common/properties/color.h"
 #include "core/components/picker/picker_base_component.h"
 #include "core/components/picker/picker_date_component.h"
 #include "core/components_ng/base/frame_node.h"
 #include "core/components_ng/pattern/linear_layout/linear_layout_pattern.h"
-#include "core/components_ng/pattern/picker_utils/picker_column_pattern.h"
-#include "core/components_ng/pattern/picker_utils/picker_column_pattern_utils.h"
-#include "core/components_ng/pattern/picker_utils/toss_animation_controller.h"
 #include "core/components_ng/pattern/text/text_layout_property.h"
 #include "core/components_ng/pattern/time_picker/timepicker_column_accessibility_property.h"
 #include "core/components_ng/pattern/time_picker/timepicker_column_layout_algorithm.h"
+#include "core/components_ng/pattern/time_picker/timepicker_haptic_interface.h"
 #include "core/components_ng/pattern/time_picker/timepicker_layout_property.h"
+#include "core/components_ng/pattern/time_picker/toss_animation_controller.h"
 
 namespace OHOS::Ace::NG {
 
-class TimePickerColumnPattern : public PickerColumnPattern {
-    DECLARE_ACE_TYPE(TimePickerColumnPattern, PickerColumnPattern);
+using ColumnChangeCallback = std::function<void(const RefPtr<FrameNode>&, bool, uint32_t, bool)>;
+using ColumnFinishCallback = std::function<void(bool)>;
+using EventCallback = std::function<void(bool)>;
+
+struct TimeTextProperties {
+    Dimension upFontSize;
+    Dimension fontSize;
+    Dimension downFontSize;
+    FontWeight upFontWeight;
+    FontWeight fontWeight;
+    FontWeight downFontWeight;
+    Color upColor;
+    Color currentColor;
+    Color downColor;
+};
+
+struct TimePickerOptionProperty {
+    float height = 0.0f;
+    float fontheight = 0.0f;
+    float prevDistance = 0.0f; // between the prev item and itself when scroll up
+    float nextDistance = 0.0f; // between the next item and itself when scroll down
+};
+
+class TimePickerEventParam : public virtual AceType {
+    DECLARE_ACE_TYPE(TimePickerEventParam, AceType)
 
 public:
-    TimePickerColumnPattern() : PickerColumnPattern() {}
-    virtual ~TimePickerColumnPattern() = default;
+    WeakPtr<FrameNode> instance_;
+    int32_t itemIndex_ = 0;
+    int32_t itemTotalCounts_ = 0;
+};
+
+enum class TimePickerScrollDirection {
+    UP = 0,
+    DOWN,
+};
+enum class TimePickerOptionIndex {
+    COLUMN_INDEX_0 = 0,
+    COLUMN_INDEX_1,
+    COLUMN_INDEX_2,
+    COLUMN_INDEX_3,
+    COLUMN_INDEX_4,
+    COLUMN_INDEX_5,
+    COLUMN_INDEX_6,
+};
+
+class TimePickerColumnPattern : public LinearLayoutPattern {
+    DECLARE_ACE_TYPE(TimePickerColumnPattern, LinearLayoutPattern);
+
+public:
+    TimePickerColumnPattern() : LinearLayoutPattern(true) {};
+
+    ~TimePickerColumnPattern() override = default;
 
     RefPtr<LayoutAlgorithm> CreateLayoutAlgorithm() override
     {
@@ -62,12 +107,41 @@ public:
         return MakeRefPtr<TimePickerColumnAccessibilityProperty>();
     }
 
-    void FlushCurrentOptions(bool isDown = false, bool isUpateTextContentOnly = false,
-        bool isUpdateAnimationProperties = false, bool isTossPlaying = false) override;
-    void UpdateColumnChildPosition(double offsetY) override;
-    bool CanMove(bool isDown) const override;
+    void FlushCurrentOptions(bool isDown = false, bool isUpateTextContentOnly = false);
+
+    bool NotLoopOptions() const;
+
+    void UpdateColumnChildPosition(double offsetY);
+
+    bool CanMove(bool isDown) const;
+
+    bool InnerHandleScroll(bool isDown, bool isUpatePropertiesOnly = false);
+
     void ScrollTimeColumn();
+
     void UpdateCurrentOffset(float offset);
+
+    uint32_t GetCurrentIndex() const
+    {
+        return currentIndex_;
+    }
+
+    void SetCurrentIndex(uint32_t value)
+    {
+        // minute : [0, 59];
+        // AM_PM hour : [0, 11]; 24 hour : [0, 23]
+        currentIndex_ = value;
+    }
+
+    float GetCurrentOffset() const
+    {
+        return deltaSize_;
+    }
+
+    void SetCurrentOffset(float deltaSize)
+    {
+        deltaSize_ = deltaSize;
+    }
 
     const std::map<WeakPtr<FrameNode>, uint32_t>& GetOptions() const
     {
@@ -79,12 +153,49 @@ public:
         optionsTotalCount_ = value;
     }
 
-    uint32_t GetOptionCount() const override;
+    uint32_t GetShowCount() const
+    {
+        return showCount_;
+    }
 
     void SetShowCount(const uint32_t showCount)
     {
         showCount_ = showCount;
         GetHost()->MarkModifyDone();
+    }
+
+    void HandleChangeCallback(bool isAdd, bool needNotify)
+    {
+        if (changeCallback_) {
+            changeCallback_(GetHost(), isAdd, GetCurrentIndex(), needNotify);
+        }
+    }
+
+    const ColumnChangeCallback& GetChangeCallback() const
+    {
+        return changeCallback_;
+    }
+
+    void SetChangeCallback(ColumnChangeCallback&& value)
+    {
+        changeCallback_ = value;
+    }
+
+    void HandleEventCallback(bool refresh)
+    {
+        if (EventCallback_) {
+            EventCallback_(refresh);
+        }
+    }
+
+    const EventCallback& GetEventCallback() const
+    {
+        return EventCallback_;
+    }
+
+    void SetEventCallback(EventCallback&& value)
+    {
+        EventCallback_ = value;
     }
 
     FocusPattern GetFocusPattern() const override
@@ -102,62 +213,103 @@ public:
         return hour24_;
     }
 
+    bool GetWheelModeEnabled() const
+    {
+        return wheelModeEnabled_;
+    }
+
+    void SetWheelModeEnabled(bool value)
+    {
+        wheelModeEnabled_ = value;
+    }
+
+    const RefPtr<TimePickerTossAnimationController>& GetToss() const
+    {
+        return tossAnimationController_;
+    }
+
+    void SetLocalDownDistance(float value)
+    {
+        localDownDistance_ = value;
+    }
+
+    float GetLocalDownDistance() const
+    {
+        return localDownDistance_;
+    }
+
+    void UpdateToss(double offsetY);
+
+    void UpdateFinishToss(double offsetY);
+
+    void TossStoped();
+
     void UpdateScrollDelta(double delta);
 
-    void InitHapticController(const RefPtr<FrameNode>& host) override;
-    bool IsStartEndTimeDefined();
-    bool IsTossNeedToStop() override;
-
-    uint32_t GetEnterIndex() const
+    void SetYLast(double value)
     {
-        return currentEnterIndex_;
+        yLast_ = value;
+    }
+    double GetOffset()
+    {
+        return offsetCurSet_;
+    }
+    void PlayRestAnimation();
+
+    void TossAnimationStoped();
+
+    std::vector<TimePickerOptionProperty> GetMidShiftDistance()
+    {
+        return optionProperties_;
     }
 
-    void SetEnterIndex(uint32_t value)
+    void SetMainVelocity(double mainVelocity)
     {
-        if (value != currentEnterIndex_) {
-            currentEnterIndex_ = value;
-        }
+        mainVelocity_ = mainVelocity;
     }
 
-    void HandleEnterSelectedAreaEventCallback(bool refresh)
+    double GetMainVelocity() const
     {
-        if (enterSelectedAreaEventCallback_) {
-            enterSelectedAreaEventCallback_(refresh);
-        }
+        return mainVelocity_;
     }
 
-    const EventCallback& GetEnterSelectedAreaEventCallback() const
+    void SetTossStatus(bool status)
     {
-        return enterSelectedAreaEventCallback_;
+        isTossStatus_ = status;
     }
 
-    void SetEnterSelectedAreaEventCallback(EventCallback&& value)
+    bool GetTossStatus()
     {
-        enterSelectedAreaEventCallback_ = value;
+        return isTossStatus_;
     }
 
-    const Color& GetButtonHoverColor() const override
+    void SetYOffset(double value)
     {
-        return hoverColor_;
+        yOffset_ = value;
     }
 
-    const Color& GetButtonBgColor() const override
+    bool GetTouchBreakStatus()
     {
-        return buttonBgColor_;
+        return touchBreak_;
     }
 
-    const Color& GetButtonPressColor() const override
+    bool GetClickBreakStatus()
     {
-        return pressColor_;
+        return clickBreak_;
     }
 
-    std::string GetCurrentOption() const override;
+    void SetclickBreak(bool value)
+    {
+        clickBreak_ = value;
+    }
 
-    bool GetCanLoopFromLayoutProperty() const override;
+    void InitHapticController(const RefPtr<FrameNode>& host);
 
 private:
     void OnModifyDone() override;
+    void OnAttachToFrameNode() override;
+    void OnDetachFromFrameNode(FrameNode* frameNode) override;
+    bool OnDirtyLayoutWrapperSwap(const RefPtr<LayoutWrapper>& dirty, const DirtySwapConfig& config) override;
     void SetDividerHeight(uint32_t showOptionCount);
     void ChangeTextStyle(uint32_t index, uint32_t showOptionCount, const RefPtr<TextLayoutProperty>& textLayoutProperty,
         const RefPtr<TimePickerLayoutProperty>& timePickerLayoutProperty);
@@ -168,38 +320,111 @@ private:
     void InitOnKeyEvent(const RefPtr<FocusHub>& focusHub);
     bool OnKeyEvent(const KeyEvent& event);
     bool HandleDirectionKey(KeyCode code);
-    void UpdateSelectedTextColor(const RefPtr<PickerTheme>& pickerTheme) override;
-    void GetAnimationColor(uint32_t index, uint32_t showCount, Color& color, bool selectedMark = false);
-    void UpdateAnimationColor(const RefPtr<PickerTheme>& pickerTheme);
-#ifdef SUPPORT_DIGITAL_CROWN
-    void HandleCrownMoveEvent(const CrownEvent& event);
-#endif
-    void TextPropertiesLinearAnimation(const RefPtr<TextLayoutProperty>& textLayoutProperty, uint32_t index,
-        uint32_t showCount, bool isDown, double scale) override;
-    void InitTextFontFamily() override;
-    void HandleEnterSelectedArea(double scrollDelta, float shiftDistance, PickerScrollDirection dir) override;
+    RefPtr<TouchEventImpl> CreateItemTouchEventListener();
+    void InitPanEvent(const RefPtr<GestureEventHub>& gestureHub);
+    void HandleDragStart(const GestureEvent& event);
+    void HandleDragMove(const GestureEvent& event);
+    void HandleDragEnd();
+    void CreateAnimation();
+    void CreateAnimation(double from, double to);
+    void ScrollOption(double delta, bool isJump = false);
 
+    std::vector<TimePickerOptionProperty> optionProperties_;
+    RefPtr<ClickEvent> CreateItemClickEventListener(RefPtr<TimePickerEventParam> param);
+    void OnAroundButtonClick(RefPtr<TimePickerEventParam> param);
+    std::vector<int32_t> algorithmOffset_;
+    void ResetAlgorithmOffset();
+    void CalcAlgorithmOffset(TimePickerScrollDirection dir, double distancePercent);
+    void SetOptionShiftDistance();
+    float GetShiftDistanceForLandscape(uint32_t index, TimePickerScrollDirection dir);
+    float GetShiftDistance(uint32_t index, TimePickerScrollDirection dir);
+    void ShiftOptionProp(RefPtr<FrameNode> curNode, RefPtr<FrameNode> shiftNode);
+
+    void OnTouchDown();
+    void OnTouchUp();
+    void ParseTouchListener();
+    void ParseMouseEvent();
+    void InitMouseAndPressEvent();
+    void HandleMouseEvent(bool isHover);
+    void SetButtonBackgroundColor(const Color& pressColor);
+    void PlayPressAnimation(const Color& pressColor);
+    void PlayHoverAnimation(const Color& color);
+    void UpdateDisappearTextProperties(const RefPtr<PickerTheme>& pickerTheme,
+        const RefPtr<TextLayoutProperty>& textLayoutProperty,
+        const RefPtr<TimePickerLayoutProperty>& timePickerLayoutProperty);
+    void UpdateCandidateTextProperties(const RefPtr<PickerTheme>& pickerTheme,
+        const RefPtr<TextLayoutProperty>& textLayoutProperty,
+        const RefPtr<TimePickerLayoutProperty>& timePickerLayoutProperty);
+    void UpdateSelectedTextProperties(const RefPtr<PickerTheme>& pickerTheme,
+        const RefPtr<TextLayoutProperty>& textLayoutProperty,
+        const RefPtr<TimePickerLayoutProperty>& timePickerLayoutProperty);
+    void AddAnimationTextProperties(uint32_t currentIndex, const RefPtr<TextLayoutProperty>& textLayoutProperty);
+    void UpdateTextPropertiesLinear(bool isDown, double scale);
+    void TextPropertiesLinearAnimation(const RefPtr<TextLayoutProperty>& textLayoutProperty, uint32_t index,
+        uint32_t showCount, bool isDown, double scale);
+    void FlushAnimationTextProperties(bool isDown);
+    Dimension LinearFontSize(const Dimension& startFontSize, const Dimension& endFontSize, double percent);
+    void SetAccessibilityAction();
+    DimensionRect CalculateHotZone(int32_t index, int32_t midSize, float middleChildHeight, float otherChildHeight);
+    void AddHotZoneRectToText();
+    void InitTextFontFamily();
+    void RegisterWindowStateChangedCallback();
+    void UnregisterWindowStateChangedCallback();
+    void OnWindowHide() override;
+    void OnWindowShow() override;
+    double mainVelocity_ = 0.0;
+    float localDownDistance_ = 0.0f;
     Color pressColor_;
     Color hoverColor_;
-    Color buttonBgColor_ = Color::TRANSPARENT;
+    FontWeight SelectedWeight_ = FontWeight::MEDIUM;
+    FontWeight DisappearWeight_ = FontWeight::REGULAR;
+    RefPtr<TouchEventImpl> touchListener_;
+    RefPtr<InputEvent> mouseEvent_;
     bool hour24_ = SystemProperties::Is24HourClock();
     // column options number
     std::map<WeakPtr<FrameNode>, uint32_t> optionsTotalCount_;
-    EventCallback enterSelectedAreaEventCallback_;
-    uint32_t currentEnterIndex_ = 0;
+    ColumnChangeCallback changeCallback_;
+    EventCallback EventCallback_;
+    uint32_t currentIndex_ = 0;
+    double yLast_ = 0.0;
+    double yOffset_ = 0.0;
+    double jumpInterval_ = 0.0;
+    uint32_t showCount_ = 0;
     bool isVertical_ = true;
     float gradientHeight_ = 0.0f;
     float dividerHeight_ = 0.0f;
     float dividerSpacingWidth_ = 0.0f;
-    double enterDelta_ = 0.0;
+    double distancePercent_ = 0.0;
+    double offsetCurSet_ = 0.0;
+    bool isTossStatus_ = false;
+    bool clickBreak_ = false;
+    bool touchBreak_ = false;
+    bool animationBreak_ = false;
+    float deltaSize_ = 0.0f;
+    RefPtr<PanEvent> panEvent_;
+    bool pressed_ = false;
+    bool hoverd_ = false;
+    bool wheelModeEnabled_ = true;
+    double scrollDelta_ = 0.0;
+    bool animationCreated_ = false;
+    OffsetF offset_;
+    SizeF size_;
+    RefPtr<TimePickerTossAnimationController> tossAnimationController_ =
+        AceType::MakeRefPtr<TimePickerTossAnimationController>();
+    RefPtr<NodeAnimatablePropertyFloat> scrollProperty_;
+    RefPtr<NodeAnimatablePropertyFloat> aroundClickProperty_;
+    std::shared_ptr<AnimationUtils::Animation> animation_;
+    std::vector<TimeTextProperties> animationProperties_;
     float dividerSpacing_ = 0.0f;
+
     bool hasAppCustomFont_ = false;
     bool hasUserDefinedDisappearFontFamily_ = false;
     bool hasUserDefinedNormalFontFamily_ = false;
     bool hasUserDefinedSelectedFontFamily_ = false;
-    bool isTossReadyToStop_ = false;
+    bool isShow_ = true;
+    bool isEnableHaptic_ = true;
+    std::shared_ptr<ITimepickerAudioHaptic> hapticController_ = nullptr;
     ACE_DISALLOW_COPY_AND_MOVE(TimePickerColumnPattern);
-    friend class PickerColumnPatternCircleUtils<TimePickerColumnPattern>;
 };
 } // namespace OHOS::Ace::NG
 

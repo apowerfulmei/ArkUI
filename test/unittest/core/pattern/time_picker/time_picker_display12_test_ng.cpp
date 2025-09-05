@@ -53,7 +53,7 @@
 #include "core/components_ng/pattern/time_picker/timepicker_dialog_view.h"
 #include "core/components_ng/pattern/time_picker/timepicker_model_ng.h"
 #include "core/components_ng/pattern/time_picker/timepicker_row_pattern.h"
-#include "core/components_ng/pattern/picker_utils/toss_animation_controller.h"
+#include "core/components_ng/pattern/time_picker/toss_animation_controller.h"
 #include "core/components_v2/inspector/inspector_constants.h"
 #include "core/event/key_event.h"
 #include "core/event/touch_event.h"
@@ -76,20 +76,6 @@ const std::string PM = "PM ";
 const std::string COLON = ":";
 const std::string ZERO = "0";
 const PickerTime TIME_PICKED_PREFIXZERO = PickerTime(3, 3, 3);
-RefPtr<Theme> GetTheme(ThemeType type)
-{
-    if (type == IconTheme::TypeId()) {
-        return AceType::MakeRefPtr<IconTheme>();
-    } else if (type == DialogTheme::TypeId()) {
-        return AceType::MakeRefPtr<DialogTheme>();
-    } else if (type == PickerTheme::TypeId()) {
-        return MockThemeDefault::GetPickerTheme();
-    } else if (type == ButtonTheme::TypeId()) {
-        return AceType::MakeRefPtr<ButtonTheme>();
-    } else {
-        return nullptr;
-    }
-}
 } // namespace
 class TimePickerDisplay12TestNg : public testing::Test {
 public:
@@ -137,11 +123,18 @@ void TimePickerDisplay12TestNg::TearDownTestSuite()
 void TimePickerDisplay12TestNg::SetUp()
 {
     auto themeManager = AceType::MakeRefPtr<MockThemeManager>();
-    EXPECT_CALL(*themeManager, GetTheme(_)).WillRepeatedly([](ThemeType type) -> RefPtr<Theme> {
-        return GetTheme(type);
-    });
-    EXPECT_CALL(*themeManager, GetTheme(_, _))
-        .WillRepeatedly([](ThemeType type, int32_t themeScopeId) -> RefPtr<Theme> { return GetTheme(type); });
+    EXPECT_CALL(*themeManager, GetTheme(_))
+        .WillRepeatedly([](ThemeType type) -> RefPtr<Theme> {
+            if (type == IconTheme::TypeId()) {
+                return AceType::MakeRefPtr<IconTheme>();
+            } else if (type == DialogTheme::TypeId()) {
+                return AceType::MakeRefPtr<DialogTheme>();
+            } else if (type == PickerTheme::TypeId()) {
+                return MockThemeDefault::GetPickerTheme();
+            } else {
+                return nullptr;
+            }
+        });
     MockPipelineContext::GetCurrent()->SetThemeManager(themeManager);
 }
 
@@ -1962,52 +1955,5 @@ HWTEST_F(TimePickerDisplay12TestNg, TimePickerTextDisplayHour12TestNg031, TestSi
     EXPECT_EQ(accessibilityProperty->GetText(),
         PM + std::to_string(CURRENT_INDEX_VALUE3 + 1) + COLON + std::to_string(CURRENT_INDEX_VALUE1));
     MockContainer::Current()->SetApiTargetVersion(rollbackApiVersion);
-}
-
-/**
- * @tc.name: TimePickerTextDisplayHour12TestNg032
- * @tc.desc: Test OnKeyEvent.
- * @tc.type: FUNC
- */
-HWTEST_F(TimePickerDisplay12TestNg, TimePickerTextDisplayHour12TestNg032, TestSize.Level1)
-{
-    auto theme = MockPipelineContext::GetCurrent()->GetTheme<PickerTheme>();
-    TimePickerModelNG::GetInstance()->CreateTimePicker(theme);
-    TimePickerModelNG::GetInstance()->SetHour24(false);
-    auto frameNode = ViewStackProcessor::GetInstance()->GetMainFrameNode();
-    ASSERT_NE(frameNode, nullptr);
-    auto pickerProperty = frameNode->GetLayoutProperty<TimePickerLayoutProperty>();
-    ASSERT_NE(pickerProperty, nullptr);
-    pickerProperty->UpdateLoop(false);
-    frameNode->MarkModifyDone();
-    auto timePickerRowPattern = frameNode->GetPattern<TimePickerRowPattern>();
-    ASSERT_NE(timePickerRowPattern, nullptr);
-
-    auto eventHub = frameNode->GetEventHub<EventHub>();
-    auto focusHub = eventHub->GetOrCreateFocusHub();
-    timePickerRowPattern->InitOnKeyEvent(focusHub);
-
-    KeyEvent keyEvent;
-    keyEvent.action = KeyAction::UNKNOWN;
-    keyEvent.code = KeyCode::KEY_DPAD_UP;
-    EXPECT_FALSE(focusHub->ProcessOnKeyEventInternal(keyEvent));
-
-    keyEvent.action = KeyAction::DOWN;
-    auto stackChild = AceType::DynamicCast<FrameNode>(frameNode->GetChildAtIndex(timePickerRowPattern->focusKeyID_));
-    ASSERT_NE(stackChild, nullptr);
-    auto blendChild = AceType::DynamicCast<FrameNode>(stackChild->GetLastChild());
-    ASSERT_NE(blendChild, nullptr);
-    auto pickerChild = AceType::DynamicCast<FrameNode>(blendChild->GetLastChild());
-    ASSERT_NE(pickerChild, nullptr);
-    auto pattern = pickerChild->GetPattern<TimePickerColumnPattern>();
-    ASSERT_NE(pattern, nullptr);
-    timePickerRowPattern->options_[pickerChild].clear();
-    EXPECT_TRUE(focusHub->ProcessOnKeyEventInternal(keyEvent));
-
-    timePickerRowPattern->options_[pickerChild][0] = "AM";
-    timePickerRowPattern->options_[pickerChild][1] = "PM";
-    EXPECT_EQ(pattern->GetCurrentIndex(), 0);
-    EXPECT_TRUE(focusHub->ProcessOnKeyEventInternal(keyEvent));
-    EXPECT_EQ(pattern->GetCurrentIndex(), 0);
 }
 } // namespace OHOS::Ace::NG

@@ -21,9 +21,6 @@
 namespace OHOS::Ace::Framework {
 void JSContainerBase::Pop()
 {
-    if (ViewStackModel::GetInstance()->IsPrebuilding()) {
-        return ViewStackModel::GetInstance()->PushPrebuildCompCmd("[JSContainerBase][pop]", &JSContainerBase::Pop);
-    }
     ViewStackModel::GetInstance()->PopContainer();
 }
 

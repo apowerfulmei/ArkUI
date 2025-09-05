@@ -20,7 +20,6 @@
 #include <string>
 #include <unordered_set>
 
-#include "accessibility_property_function.h"
 #include "base/memory/ace_type.h"
 #include "interfaces/native/native_type.h"
 #include "core/accessibility/accessibility_utils.h"
@@ -60,16 +59,11 @@ using ActionLongClickImpl = ActionNoParam;
 using ActionsImpl = std::function<void((uint32_t actionType))>;
 using GetRelatedElementInfoImpl = std::function<void(Accessibility::ExtraElementInfo& extraElementInfo)>;
 using OnAccessibilityFocusCallbackImpl = std::function<void((bool isFocus))>;
-
 using GetWindowScenePositionImpl = std::function<void((WindowSceneInfo& windowSceneInfo))>;
-
-using OnAccessibilityHoverConsumeCheckImpl = std::function<bool(const NG::PointF& point)>;
-
 class FrameNode;
 using AccessibilityHoverTestPath = std::vector<RefPtr<FrameNode>>;
 
-class ACE_FORCE_EXPORT AccessibilityProperty : public virtual AceType,
-    public AccessibilityPropertyInnerFunction, public AccessibilityPropertyInterfaceFunction {
+class ACE_FORCE_EXPORT AccessibilityProperty : public virtual AceType {
     DECLARE_ACE_TYPE(AccessibilityProperty, AceType);
 
 public:
@@ -242,7 +236,11 @@ public:
 
     std::unordered_set<AceAction> GetSupportAction() const;
 
-    void ResetSupportAction();
+    void ResetSupportAction()
+    {
+        supportActions_ = 0;
+        SetSpecificSupportAction();
+    };
 
     void SetActionSetText(const ActionSetTextImpl& actionSetTextImpl)
     {
@@ -387,125 +385,224 @@ public:
         actionCopyImpl_ = actionCopyImpl;
     }
 
-    bool ActActionCopy();
+    bool ActActionCopy()
+    {
+        if (ActionsDefined(static_cast<uint32_t>(ARKUI_ACCESSIBILITY_ACTION_COPY))) {
+            actionsImpl_(static_cast<uint32_t>(ARKUI_ACCESSIBILITY_ACTION_COPY));
+            return true;
+        }
+        if (actionCopyImpl_) {
+            actionCopyImpl_();
+            return true;
+        }
+        return false;
+    }
 
-    void SetActionCut(const ActionCutImpl& actionCutImpl);
+    void SetActionCut(const ActionCutImpl& actionCutImpl)
+    {
+        actionCutImpl_ = actionCutImpl;
+    }
 
-    bool ActActionCut();
+    bool ActActionCut()
+    {
+        if (ActionsDefined(static_cast<uint32_t>(ARKUI_ACCESSIBILITY_ACTION_CUT))) {
+            actionsImpl_(static_cast<uint32_t>(ARKUI_ACCESSIBILITY_ACTION_CUT));
+            return true;
+        }
+        if (actionCutImpl_) {
+            actionCutImpl_();
+            return true;
+        }
+        return false;
+    }
 
-    void SetActionPaste(const ActionPasteImpl& actionPasteImpl);
+    void SetActionPaste(const ActionPasteImpl& actionPasteImpl)
+    {
+        actionPasteImpl_ = actionPasteImpl;
+    }
 
-    bool ActActionPaste();
+    bool ActActionPaste()
+    {
+        if (ActionsDefined(static_cast<uint32_t>(ARKUI_ACCESSIBILITY_ACTION_PASTE))) {
+            actionsImpl_(static_cast<uint32_t>(ARKUI_ACCESSIBILITY_ACTION_PASTE));
+            return true;
+        }
+        if (actionPasteImpl_) {
+            actionPasteImpl_();
+            return true;
+        }
+        return false;
+    }
 
-    void SetActionLongClick(const ActionLongClickImpl& actionLongClickImpl);
+    void SetActionLongClick(const ActionLongClickImpl& actionLongClickImpl)
+    {
+        actionLongClickImpl_ = actionLongClickImpl;
+    }
 
-    bool ActActionLongClick();
+    bool ActActionLongClick()
+    {
+        if (ActionsDefined(static_cast<uint32_t>(ARKUI_ACCESSIBILITY_ACTION_LONG_CLICK))) {
+            actionsImpl_(static_cast<uint32_t>(ARKUI_ACCESSIBILITY_ACTION_LONG_CLICK));
+            return true;
+        }
+        if (actionLongClickImpl_) {
+            actionLongClickImpl_();
+            return true;
+        }
+        return false;
+    }
 
-    void SetActionClick(const ActionClickImpl& actionClickImpl);
+    void SetActionClick(const ActionClickImpl& actionClickImpl)
+    {
+        actionClickImpl_ = actionClickImpl;
+    }
 
-    bool ActActionClick();
+    bool ActActionClick()
+    {
+        if (ActionsDefined(static_cast<uint32_t>(ARKUI_ACCESSIBILITY_ACTION_CLICK))) {
+            actionsImpl_(static_cast<uint32_t>(ARKUI_ACCESSIBILITY_ACTION_CLICK));
+            return true;
+        }
+        if (actionClickImpl_) {
+            actionClickImpl_();
+            return true;
+        }
+        return false;
+    }
 
-    void SetActionSelect(const ActionSelectImpl& actionSelectImpl);
+    void SetActionSelect(const ActionSelectImpl& actionSelectImpl)
+    {
+        actionSelectImpl_ = actionSelectImpl;
+    }
 
-    bool ActActionSelect();
+    bool ActActionSelect()
+    {
+        if (actionSelectImpl_) {
+            actionSelectImpl_();
+            return true;
+        }
+        return false;
+    }
 
-    void SetActionClearSelection(const ActionClearSelectionImpl& actionClearSelectionImpl);
+    void SetActionClearSelection(const ActionClearSelectionImpl& actionClearSelectionImpl)
+    {
+        actionClearSelectionImpl_ = actionClearSelectionImpl;
+    }
 
-    bool ActActionClearSelection();
+    bool ActActionClearSelection()
+    {
+        if (actionClearSelectionImpl_) {
+            actionClearSelectionImpl_();
+            return true;
+        }
+        return false;
+    }
 
-    void SetOnAccessibilityFocusCallback(const OnAccessibilityFocusCallbackImpl& onAccessibilityFocusCallbackImpl);
+    void SetOnAccessibilityFocusCallback(const OnAccessibilityFocusCallbackImpl& onAccessibilityFocusCallbackImpl)
+    {
+        onAccessibilityFocusCallbackImpl_ = onAccessibilityFocusCallbackImpl;
+    }
 
-    void ResetUserOnAccessibilityFocusCallback();
-
-    void SetUserOnAccessibilityFocusCallback(
-        const OnAccessibilityFocusCallbackImpl& onUserAccessibilityFocusCallbackImpl);
-
-    void OnAccessibilityFocusCallback(bool isFocus);
+    void OnAccessibilityFocusCallback(bool isFocus)
+    {
+        if (onAccessibilityFocusCallbackImpl_) {
+            onAccessibilityFocusCallbackImpl_(isFocus);
+        }
+    }
 
     void SetGetWindowScenePosition(const GetWindowScenePositionImpl& getWindowScenePositionImpl);
 
     void GetWindowScenePosition(WindowSceneInfo& windowSceneInfo);
 
-    bool GetAccessibilityFocusState() const;
+    bool GetAccessibilityFocusState() const
+    {
+        return isAccessibilityFocused_;
+    }
 
-    void SetAccessibilityFocusState(bool state);
+    void SetAccessibilityFocusState(bool state)
+    {
+        isAccessibilityFocused_ = state;
+    }
 
     void SetAccessibilityGroup(bool accessibilityGroup);
 
+    void SetChildTreeId(int32_t childTreeId)
+    {
+        childTreeId_ = childTreeId;
+    }
+
     void SetAccessibilityTextPreferred(bool accessibilityTextPreferred);
 
-    void SetChildTreeId(int32_t childTreeId);
-
-    void SetChildWindowId(int32_t childWindowId);
+    void SetChildWindowId(int32_t childWindowId)
+    {
+        childWindowId_ = childWindowId;
+    }
 
     void SetAccessibilityText(const std::string& text);
 
-    void SetAccessibilityNextFocusInspectorKey(const std::string& accessibilityNextFocusInspectorKey);
-
     void SetAccessibilityTextWithEvent(const std::string& text);
 
-    void SetAccessibilityTextHint(const std::string& text);
+    void SetAccessibilityTextHint(const std::string& text)
+    {
+        textTypeHint_ = text;
+    }
 
     void SetAccessibilityDescription(const std::string& accessibilityDescription);
 
     void SetAccessibilityDescriptionWithEvent(const std::string& accessibilityDescription);
 
-    void OnAccessibilityDetachFromMainTree();
+    bool IsAccessibilityGroup() const
+    {
+        return accessibilityGroup_;
+    }
 
-    bool IsMatchAccessibilityResponseRegion(bool isAccessibilityVirtualNode);
-
-    bool IsAccessibilityCompInResponseRegion(const RectF& rect, const RectF& origRect);
-
-    static NG::RectF UpdateHoverTestRect(const RefPtr<FrameNode>& node);
-
-    NG::RectT<int32_t> GetAccessibilityResponseRegionRect(bool isAccessibilityVirtualNode);
-
-    bool IsAccessibilityGroup() const;
+    int32_t GetChildTreeId() const
+    {
+        return childTreeId_;
+    }
 
     bool IsAccessibilityTextPreferred() const;
 
+    int32_t GetChildWindowId() const
+    {
+        return childWindowId_;
+    }
+
     void NotifyComponentChangeEvent(AccessibilityEventType eventType);
 
-    void UpdateAccessibilityNextFocusIdMap(const std::string& nextFocusInspectorKey);
+    void SaveAccessibilityVirtualNode(const RefPtr<UINode>& node)
+    {
+        accessibilityVirtualNode_ = node;
+    }
 
-    int32_t GetChildTreeId() const;
+    RefPtr<UINode> GetAccessibilityVirtualNode()
+    {
+        return accessibilityVirtualNode_;
+    }
 
-    int32_t GetChildWindowId() const;
+    NG::UINode* GetAccessibilityVirtualNodePtr()
+    {
+        return Referenced::RawPtr(accessibilityVirtualNode_);
+    }
 
-    void SaveAccessibilityVirtualNode(const RefPtr<UINode>& node);
-
-    const RefPtr<UINode>& GetAccessibilityVirtualNode() const;
-
-    bool HasAccessibilityVirtualNode() const;
+    bool HasAccessibilityVirtualNode() const
+    {
+        return accessibilityVirtualNode_ != nullptr;
+    }
 
     virtual std::string GetAccessibilityText() const
     {
         return accessibilityText_.value_or("");
     }
 
-    virtual std::string GetAccessibilityNextFocusInspectorKey() const
+    std::string GetAccessibilityDescription() const
     {
-        return accessibilityNextFocusInspectorKey_.value_or("");
+        return accessibilityDescription_.value_or("");
     }
 
-    std::string GetAccessibilityDescription() const;
-
-    std::string GetTextType() const;
-
-    // true means self and descendants will consume hover, do not search brothers
-    // false means self and descendants no need to be hovered, should search brothers
-    void SetAccessibilityHoverConsume(const OnAccessibilityHoverConsumeCheckImpl& accessibilityHoverConsumeCheckImpl)
+    std::string GetTextType() const
     {
-        accessibilityHoverConsumeCheckImpl_ = accessibilityHoverConsumeCheckImpl;
-    }
-
-    bool IsAccessibilityHoverConsume(const NG::PointF& point) const
-    {
-        if (!accessibilityHoverConsumeCheckImpl_) {
-            return true;
-        }
-
-        return accessibilityHoverConsumeCheckImpl_(point);
+        return textTypeHint_.value_or("");
     }
 
     class Level {
@@ -559,7 +656,7 @@ public:
     */
     static bool IsAccessibilityFocusableTag(const std::string &tag);
 
-    static bool IsTagInSubTreeComponent(const std::string& tag);
+    static bool IsTagInCrossProcessComponent(const std::string& tag);
 
     static bool IsTagInModalDialog(const RefPtr<FrameNode>& node);
 
@@ -567,9 +664,18 @@ public:
 
     virtual void GetExtraElementInfo(Accessibility::ExtraElementInfo& extraElementInfo) {}
 
-    void SetRelatedElementInfoCallback(const GetRelatedElementInfoImpl& getRelatedElementInfoImpl);
+    void SetRelatedElementInfoCallback(const GetRelatedElementInfoImpl& getRelatedElementInfoImpl)
+    {
+        getRelatedElementInfoImpl_ = getRelatedElementInfoImpl;
+    }
 
-    void GetAllExtraElementInfo(Accessibility::ExtraElementInfo& extraElementInfo);
+    void GetAllExtraElementInfo(Accessibility::ExtraElementInfo& extraElementInfo)
+    {
+        if (getRelatedElementInfoImpl_) {
+            getRelatedElementInfoImpl_(extraElementInfo);
+        }
+        GetExtraElementInfo(extraElementInfo);
+    }
 
     void SetAccessibilityActions(uint32_t actions);
     void ResetAccessibilityActions();
@@ -580,14 +686,6 @@ public:
     void ResetAccessibilityRole();
     bool HasAccessibilityRole();
     std::string GetAccessibilityRole() const;
-    void SetAccessibilityCustomRole(const std::string& role);
-    void ResetAccessibilityCustomRole();
-    bool HasAccessibilityCustomRole();
-    std::string GetAccessibilityCustomRole() const;
-
-    void SetAccessibilitySamePage(const std::string& pageMode);
-    bool HasAccessibilitySamePage();
-    std::string GetAccessibilitySamePage();
 
     void SetActions(const ActionsImpl& actionsImpl);
     bool ActionsDefined(uint32_t action);
@@ -618,18 +716,6 @@ public:
     bool HasUserCurrentValue();
     int32_t GetUserCurrentValue();
 
-    void SetUserRangeMinValue(const int32_t rangeMinValue);
-    bool HasUserRangeMinValue() const;
-    int32_t GetUserRangeMinValue() const;
-
-    void SetUserRangeMaxValue(const int32_t rangeMaxValue);
-    bool HasUserRangeMaxValue() const;
-    int32_t GetUserRangeMaxValue() const;
-
-    void SetUserRangeCurrentValue(const int32_t rangeCurrentValue);
-    bool HasUserRangeCurrentValue() const;
-    int32_t GetUserRangeCurrentValue() const;
-
     void SetUserTextValue(const std::string& textValue);
     bool HasUserTextValue();
     std::string GetUserTextValue();
@@ -641,17 +727,6 @@ public:
 
     virtual bool IsAccessibilityHoverPriority() const;
     void SetAccessibilityHoverPriority(bool hoverPriority);
-
-    void SetUserScrollTriggerable(const bool& triggerable);
-    bool HasUserScrollTriggerable();
-    bool IsUserScrollTriggerable();
-    void ResetUserScrollTriggerable();
-    void SetFocusDrawLevel(int32_t drawLevel);
-    int32_t GetFocusDrawLevel();
-
-
-    void SetAccessibilityZIndex(const int32_t& accessibilityZIndex);
-    int32_t GetAccessibilityZIndex() const;
 
 private:
     // node should be not-null
@@ -689,25 +764,6 @@ private:
 
     bool HasAction() const;
 
-    static bool CheckHoverConsumeByAccessibility(const RefPtr<FrameNode>& node);
-
-    static bool CheckHoverConsumeByComponent(const RefPtr<FrameNode>& node, const NG::PointF& point);
-
-    // the interface supports multithreading
-    void SetAccessibilityGroupMultiThread();
-
-    // the interface supports multithreading
-    void SetAccessibilityTextWithEventMultiThread();
-
-    // the interface supports multithreading
-    void SetAccessibilityDescriptionWithEventMultiThread();
-
-    // the interface supports multithreading
-    void SetAccessibilityLevelMultiThread(const std::string& backupLevel);
-
-    // the interface supports multithreading
-    void NotifyComponentChangeEventMultiThread(AccessibilityEventType eventType);
-
 protected:
     virtual void SetSpecificSupportAction() {}
     std::optional<std::string> propText_;
@@ -733,14 +789,11 @@ protected:
     ActionsImpl actionsImpl_;
     GetRelatedElementInfoImpl getRelatedElementInfoImpl_;
     OnAccessibilityFocusCallbackImpl onAccessibilityFocusCallbackImpl_;
-    OnAccessibilityFocusCallbackImpl onUserAccessibilityFocusCallbackImpl_;
     GetWindowScenePositionImpl getWindowScenePositionImpl_;
-    OnAccessibilityHoverConsumeCheckImpl accessibilityHoverConsumeCheckImpl_;
-
     bool isAccessibilityFocused_ = false;
     bool accessibilityGroup_ = false;
-    bool accessibilityTextPreferred_ = false;
     bool accessibilityHoverPriority_ = false;
+    bool accessibilityTextPreferred_ = false;
     int32_t childTreeId_ = -1;
     int32_t childWindowId_ = 0;
     RefPtr<UINode> accessibilityVirtualNode_;
@@ -748,31 +801,19 @@ protected:
     std::optional<std::string> accessibilityDescription_;
     std::optional<std::string> accessibilityLevel_;
     std::optional<std::string> textTypeHint_;
-    std::optional<std::string> accessibilityNextFocusInspectorKey_;
     std::optional<uint32_t> accessibilityActions_;
     std::optional<std::string> accessibilityRole_;
-    std::optional<std::string> accessibilityCustomRole_;
-    std::optional<std::string> accessibilityUseSamePage_;
     ACE_DISALLOW_COPY_AND_MOVE(AccessibilityProperty);
 
     std::optional<bool> isDisabled_;
     std::optional<bool> isSelected_;
     std::optional<int32_t> checkedType_;
     std::optional<bool> isUserCheckable_;
-    std::optional<bool> isUserScrollTriggerable_ = true;
 
     std::optional<int32_t> minValue_;
     std::optional<int32_t> maxValue_;
     std::optional<int32_t> currentValue_;
-    std::optional<int32_t> rangeMinValue_;
-    std::optional<int32_t> rangeMaxValue_;
-    std::optional<int32_t> rangeCurrentValue_;
     std::optional<std::string> textValue_;
-    FocusDrawLevel focusDrawLevel_ = FocusDrawLevel::SELF;
-    
-    // used to modify the hierarchical relation ship between sibling nodes the same level in barrierfree tree
-    // only affects the barrierfree tree presentation, does not affect the zindex in barrierfree hover
-    int32_t accessibilityZIndex_ = -1;
 };
 } // namespace OHOS::Ace::NG
 

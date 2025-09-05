@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022-2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -15,16 +15,15 @@
 
 #ifndef FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_PATTERNS_LIST_LIST_MODEL_NG_H
 #define FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_PATTERNS_LIST_LIST_MODEL_NG_H
-#include "base/utils/macros.h"
 #include "core/components_ng/base/frame_node.h"
 #include "core/components_ng/pattern/list/list_model.h"
 #include "core/components_v2/list/list_properties.h"
 
 namespace OHOS::Ace::NG {
 
-class ACE_FORCE_EXPORT ListModelNG : public ListModel {
+class ACE_EXPORT ListModelNG : public ListModel {
 public:
-    void Create(bool isCreateArc = false) override;
+    void Create() override;
     void SetSpace(const Dimension& space) override;
     void SetInitialIndex(int32_t initialIndex) override;
     RefPtr<ScrollControllerBase> CreateScrollController() override;
@@ -33,10 +32,9 @@ public:
     void SetScrollBar(DisplayMode scrollBar) override;
     void SetScrollBarColor(const std::string& value) override;
     void SetScrollBarWidth(const std::string& value) override;
-    void SetEdgeEffect(EdgeEffect edgeEffect, bool alwaysEnabled, EffectEdge edge = EffectEdge::ALL) override;
+    void SetEdgeEffect(EdgeEffect edgeEffect, bool alwaysEnabled) override;
     void SetEditMode(bool editMode) override;
     void SetDivider(const V2::ItemDivider& divider) override;
-    void SetDividerColorByUser(bool isByUser) override;
     void SetChainAnimation(bool enableChainAnimation) override;
     void SetChainAnimationOptions(const ChainAnimationOptions& options) override;
     void SetLanes(int32_t lanes) override;
@@ -52,14 +50,11 @@ public:
     void SetSticky(V2::StickyStyle stickyStyle) override;
     void SetContentStartOffset(float startOffset) override;
     void SetContentEndOffset(float endOffset) override;
-    void SetScrollSnapAlign(ScrollSnapAlign scrollSnapAlign) override;
+    void SetScrollSnapAlign(V2::ScrollSnapAlign scrollSnapAlign) override;
     void SetNestedScroll(const NestedScrollOptions& nestedOpt) override;
     void SetScrollEnabled(bool scrollEnabled) override;
     void SetFriction(double friction) override;
-    void SetFocusWrapMode(FocusWrapMode focusWrapMode) override;
     void SetMaintainVisibleContentPosition(bool enabled) override;
-    void SetStackFromEnd(bool enabled) override;
-    void SetSyncLoad(bool enabled) override;
     void SetOnScroll(OnScrollEvent&& onScroll) override;
     void SetOnScrollBegin(OnScrollBeginEvent&& onScrollBegin) override;
     void SetOnScrollFrameBegin(OnScrollFrameBeginEvent&& onScrollFrameBegin) override;
@@ -77,16 +72,8 @@ public:
     void SetOnItemDragMove(OnItemDragMoveFunc&& onItemDragMove) override;
     void SetOnItemDrop(OnItemDropFunc&& onItemDrop) override;
     RefPtr<ListChildrenMainSize> GetOrCreateListChildrenMainSize() override;
-    void ParseResObjDividerStrokeWidth(const RefPtr<ResourceObject>& resObj) override;
-    void ParseResObjDividerColor(const RefPtr<ResourceObject>& resObj) override;
-    void ParseResObjDividerStartMargin(const RefPtr<ResourceObject>& resObj) override;
-    void ParseResObjDividerEndMargin(const RefPtr<ResourceObject>& resObj) override;
-    void CreateWithResourceObjFriction(const RefPtr<ResourceObject>& resObj) override;
-    void CreateWithResourceObjLaneGutter(const RefPtr<ResourceObject>& resObj) override;
-    void CreateWithResourceObjLaneConstrain(const RefPtr<ResourceObject>& resObjMinLengthValue,
-        const RefPtr<ResourceObject>& resObjMaxLengthValue) override;
-    void CreateWithResourceObjScrollBarColor(const RefPtr<ResourceObject>& resObj) override;
 
+    static RefPtr<FrameNode> CreateFrameNode(int32_t nodeId);
     static RefPtr<ScrollControllerBase> GetOrCreateController(FrameNode* frameNode);
     static void ScrollToEdge(FrameNode* frameNode, ScrollEdgeType scrollEdgeType, bool smooth);
     static void SetInitialIndex(FrameNode* frameNode, int32_t initialIndex);
@@ -97,13 +84,11 @@ public:
     static void SetShowCached(FrameNode* frameNode, bool show);
     static int32_t GetCachedCount(FrameNode* frameNode);
     static bool GetShowCached(FrameNode* frameNode);
-    static void SetCacheRange(FrameNode* frameNode, int32_t min, int32_t max);
-    static void ResetCacheRange(FrameNode* frameNode);
     static int32_t GetScrollEnabled(FrameNode* frameNode);
     static void SetScrollEnabled(FrameNode* frameNode, bool enableScrollInteraction);
     static int32_t GetSticky(FrameNode* frameNode);
     static void SetSticky(FrameNode* frameNode, int32_t stickyStyle);
-    static void SetEdgeEffect(FrameNode* frameNode, int32_t edgeEffect, bool alwaysEnabled, EffectEdge edge);
+    static void SetEdgeEffect(FrameNode* frameNode, int32_t edgeEffect, bool alwaysEnabled);
     static int32_t GetListDirection(FrameNode* frameNode);
     static void SetListDirection(FrameNode* frameNode, int32_t axis);
     static float GetListFriction(FrameNode* frameNode);
@@ -117,14 +102,13 @@ public:
     static void SetListScrollBarWidth(FrameNode* frameNode, const std::string& value);
     static uint32_t GetScrollBarColor(FrameNode* frameNode);
     static void SetListScrollBarColor(FrameNode* frameNode, const std::string& value);
+    static void SetFlingSpeedLimit(FrameNode* frameNode, double maxSpeed);
     static void SetLanes(FrameNode* frameNode, int32_t lanes);
     static int32_t GetLanes(FrameNode* frameNode);
     static void SetLaneConstrain(FrameNode* frameNode, const Dimension& laneMinLength, const Dimension& laneMaxLength);
     static void SetLaneMinLength(FrameNode* frameNode, const Dimension& laneMinLength);
     static float GetLaneMinLength(FrameNode* frameNode);
     static void SetLaneMaxLength(FrameNode* frameNode, const Dimension& laneMaxLength);
-    static FocusWrapMode GetFocusWrapMode(FrameNode* frameNode);
-    static void SetFocusWrapMode(FrameNode* frameNode, FocusWrapMode focusWrapMode);
     static float GetLaneMaxLength(FrameNode* frameNode);
     static void SetLaneGutter(FrameNode* frameNode, const Dimension& laneGutter);
     static float GetLaneGutter(FrameNode* frameNode);
@@ -133,8 +117,7 @@ public:
     static float GetListSpace(FrameNode* frameNode);
     static void SetListSpace(FrameNode* frameNode, const Dimension& space);
     static int32_t GetEdgeEffectAlways(FrameNode* frameNode);
-    static EffectEdge GetEffectEdge(FrameNode* frameNode);
-    static void SetScrollSnapAlign(FrameNode* frameNode, ScrollSnapAlign scrollSnapAlign);
+    static void SetScrollSnapAlign(FrameNode* frameNode, V2::ScrollSnapAlign scrollSnapAlign);
     static int32_t GetScrollSnapAlign(FrameNode* frameNode);
     static void SetContentStartOffset(FrameNode* frameNode, float startOffset);
     static float GetContentStartOffset(FrameNode* frameNode);
@@ -143,29 +126,14 @@ public:
     static void SetDivider(FrameNode* frameNode, const V2::ItemDivider& divider);
     static void SetChainAnimationOptions(FrameNode* frameNode, const ChainAnimationOptions& options);
     static int32_t GetEdgeEffect(FrameNode* frameNode);
-    static void SetListStackFromEnd(FrameNode* frameNode, bool enabled);
-    static bool GetListStackFromEnd(FrameNode* frameNode);
-    static void SetListSyncLoad(FrameNode* frameNode, bool enabled);
-    static bool GetListSyncLoad(FrameNode* frameNode);
     static void SetOnScroll(FrameNode* frameNode, OnScrollEvent&& onScroll);
     static void SetOnScrollFrameBegin(FrameNode* frameNode, OnScrollFrameBeginEvent&& onScrollFrameBegin);
     static void SetOnScrollStart(FrameNode* frameNode, OnScrollStartEvent&& onScrollStart);
     static void SetOnScrollStop(FrameNode* frameNode, OnScrollStopEvent&& onScrollStop);
     static void SetOnScrollIndex(FrameNode* frameNode, OnScrollIndexEvent&& onScrollIndex);
     static NestedScrollOptions GetListNestedScroll(FrameNode* frameNode);
-    static void SetDividerColorByUser(FrameNode* frameNode, bool isByUser);
     DisplayMode GetDisplayMode() const override;
-    void SetHeader(const RefPtr<FrameNode>& headerNode) override;
-    void ResetListChildrenMainSize() override;
-#ifdef SUPPORT_DIGITAL_CROWN
-    void SetDigitalCrownSensitivity(CrownSensitivity sensitivity) override;
-    static void SetDigitalCrownSensitivity(FrameNode* frameNode, CrownSensitivity sensitivity);
-    static CrownSensitivity GetDigitalCrownSensitivity(FrameNode* frameNode);
-#endif
-    static RefPtr<FrameNode> CreateFrameNode(int32_t nodeId, bool isCreateArc = false);
     static void SetScrollToIndex(FrameNode* frameNode, int32_t index, int32_t animation, int32_t alignment,
-        std::optional<float> extraOffset = std::nullopt);
-    static void SetScrollToIndexMultiThread(FrameNode* frameNode, int32_t index, int32_t animation, int32_t alignment,
         std::optional<float> extraOffset = std::nullopt);
     static void SetScrollBy(FrameNode* frameNode, double x, double y);
     static void SetOnReachStart(FrameNode* frameNode, OnReachEvent&& onReachStart);
@@ -186,18 +154,6 @@ public:
     static void SetOnItemDrop(FrameNode* frameNode, OnItemDropFunc&& onItemDrop);
     static void ScrollToItemInGroup(
         FrameNode* frameNode, int32_t index, int32_t indexInGroup, bool smooth, ScrollAlign align);
-    static void ScrollToItemInGroupMultiThread(
-        FrameNode* frameNode, int32_t index, int32_t indexInGroup, bool smooth, ScrollAlign align);
-    static void SetHeader(FrameNode* frameNode, FrameNode* headerNode);
-    static void CreateWithResourceObjFriction(FrameNode* frameNode, const RefPtr<ResourceObject>& resObj);
-    static void ParseResObjDividerStrokeWidth(FrameNode* frameNode, const RefPtr<ResourceObject>& resObj);
-    static void ParseResObjDividerColor(FrameNode* frameNode, const RefPtr<ResourceObject>& resObj);
-    static void ParseResObjDividerStartMargin(FrameNode* frameNode, const RefPtr<ResourceObject>& resObj);
-    static void ParseResObjDividerEndMargin(FrameNode* frameNode, const RefPtr<ResourceObject>& resObj);
-    static void CreateWithResourceObjLaneConstrain(FrameNode* frameNode,
-        const RefPtr<ResourceObject>& resObjMinLengthValue, const RefPtr<ResourceObject>& resObjMaxLengthValue);
-    static void CreateWithResourceObjScrollBarColor(FrameNode* frameNode, const RefPtr<ResourceObject>& resObj);
-
 private:
     void AddDragFrameNodeToManager() const;
     static void AddDragFrameNodeToManager(FrameNode* frameNode);

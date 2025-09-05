@@ -19,31 +19,11 @@ class ArkToggleComponent extends ArkComponent implements ToggleAttribute {
   toggleNode: BuilderNode<[ToggleConfiguration]> | null = null;
   modifier: ContentModifier<ToggleConfiguration>;
   needRebuild: boolean = false;
-  toggleType: ToggleType = ToggleType.Switch;
   constructor(nativePtr: KNode, classType?: ModifierType) {
     super(nativePtr, classType);
   }
-  allowChildCount(): number {
-    if (this.toggleType === ToggleType.Button) {
-      return 1;
-    }
-    return 0;
-  }
-  initialize(value: Object[]): this {
-    if (!value.length) {
-      return this;
-    }
-    if (!isUndefined(value[0]) && !isNull(value[0]) && isObject(value[0])) {
-      this.toggleType = (value[0] as ToggleOptions).type;
-      modifierWithKey(this._modifiersWithKeys, ToggleOptionsModifier.identity, ToggleOptionsModifier, value[0]);
-    } else {
-      modifierWithKey(this._modifiersWithKeys, ToggleOptionsModifier.identity, ToggleOptionsModifier, undefined);
-    }
-    return this;
-  }
   onChange(callback: (isOn: boolean) => void): this {
-    modifierWithKey(this._modifiersWithKeys, ToggleOnChangeModifier.identity, ToggleOnChangeModifier, callback);
-    return this;
+    throw new Error('Method not implemented.');
   }
   selectedColor(value: ResourceColor): this {
     modifierWithKey(this._modifiersWithKeys, ToggleSelectedColorModifier.identity, ToggleSelectedColorModifier, value);
@@ -77,36 +57,6 @@ class ArkToggleComponent extends ArkComponent implements ToggleAttribute {
     modifierWithKey(this._modifiersWithKeys, ToggleSwitchStyleModifier.identity, ToggleSwitchStyleModifier, value);
     return this;
   }
-  margin(value: Margin | Length): this {
-    let arkValue = new ArkPadding();
-    if (value !== null && value !== undefined) {
-      if (isLengthType(value) || isResource(value)) {
-        arkValue.top = <Length>value;
-        arkValue.right = <Length>value;
-        arkValue.bottom = <Length>value;
-        arkValue.left = <Length>value;
-      } else {
-        arkValue.top = value.top;
-        arkValue.bottom = value.bottom;
-        if (Object.keys(value).indexOf('right') >= 0) {
-          arkValue.right = value.right;
-        }
-        if (Object.keys(value).indexOf('end') >= 0) {
-          arkValue.right = value.end;
-        }
-        if (Object.keys(value).indexOf('left') >= 0) {
-          arkValue.left = value.left;
-        }
-        if (Object.keys(value).indexOf('start') >= 0) {
-          arkValue.left = value.start;
-        }
-      }
-      modifierWithKey(this._modifiersWithKeys, ToggleMarginModifier.identity, ToggleMarginModifier, arkValue);
-    } else {
-      modifierWithKey(this._modifiersWithKeys, ToggleMarginModifier.identity, ToggleMarginModifier, undefined);
-    }
-    return this;
-  }
   contentModifier(value: ContentModifier<ToggleConfiguration>): this {
     modifierWithKey(this._modifiersWithKeys, ToggleContentModifier.identity, ToggleContentModifier, value);
     return this;
@@ -137,21 +87,6 @@ class ArkToggleComponent extends ArkComponent implements ToggleAttribute {
     return this.toggleNode.getFrameNode();
   }
 }
-
-class ToggleOnChangeModifier extends ModifierWithKey<(isOn:boolean) => void> {
-  constructor(value: (isOn:boolean) => void) {
-    super(value);
-  }
-  static identity = Symbol('toggleOnChange');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().toggle.resetOnChange(node);
-    } else {
-      getUINativeModule().toggle.setOnChange(node, this.value);
-    }
-  }
-}
-
 class ToggleSelectedColorModifier extends ModifierWithKey<ResourceColor> {
   constructor(value: ResourceColor) {
     super(value);
@@ -282,7 +217,9 @@ class TogglePaddingModifier extends ModifierWithKey<Padding | Length> {
     }
   }
   checkObjectDiff(): boolean {
-    if (!isResource(this.stageValue) && !isResource(this.value)) {
+    if (isResource(this.stageValue) && isResource(this.value)) {
+      return !isResourceEqual(this.stageValue, this.value);
+    } else if (!isResource(this.stageValue) && !isResource(this.value)) {
       if (typeof this.stageValue === 'object' && typeof this.value === 'object') {
         return !((this.stageValue as Padding).left === (this.value as Padding).left &&
         (this.stageValue as Padding).right === (this.value as Padding).right &&
@@ -345,31 +282,14 @@ class ToggleSwitchStyleModifier extends ModifierWithKey<SwitchStyle> {
         this.stageValue.unselectedColor === this.value.unselectedColor &&
         this.stageValue.pointColor === this.value.pointColor &&
         this.stageValue.trackBorderRadius === this.value.trackBorderRadius);
+    } else if (isResource(this.stageValue) && isResource(this.value)) {
+      return !(isResourceEqual(this.stageValue.pointRadius, this.value.pointRadius) && 
+      isResourceEqual(this.stageValue.unselectedColor, this.value.unselectedColor) && 
+      isResourceEqual(this.stageValue.pointColor, this.value.pointColor) &&
+      isResourceEqual(this.stageValue.trackBorderRadius, this.value.trackBorderRadius));
     } else {
       return true;
     }
-  }
-}
-
-class ToggleMarginModifier extends ModifierWithKey<ArkPadding> {
-  constructor(value: ArkPadding) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('toggleMargin');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().toggle.resetMargin(node);
-    } else {
-      getUINativeModule().toggle.setMargin(node, this.value.top,
-        this.value.right, this.value.bottom, this.value.left);
-    }
-  }
-
-  checkObjectDiff(): boolean {
-    return !isBaseOrResourceEqual(this.stageValue.top, this.value.top) ||
-      !isBaseOrResourceEqual(this.stageValue.right, this.value.right) ||
-      !isBaseOrResourceEqual(this.stageValue.bottom, this.value.bottom) ||
-      !isBaseOrResourceEqual(this.stageValue.left, this.value.left);
   }
 }
 
@@ -382,23 +302,6 @@ class ToggleContentModifier extends ModifierWithKey<ContentModifier<ToggleConfig
     let toggleComponent = component as ArkToggleComponent;
     toggleComponent.setNodePtr(node);
     toggleComponent.setContentModifier(this.value);
-  }
-}
-class ToggleOptionsModifier extends ModifierWithKey<object> {
-  constructor(value: object) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('toggleOptions');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().toggle.setToggleOptions(node, undefined);
-    } else {
-      getUINativeModule().toggle.setToggleOptions(node, this.value?.isOn);
-    }
-  }
-
-  checkObjectDiff(): boolean {
-    return !isBaseOrResourceEqual(this.stageValue.isOn, this.value.isOn);
   }
 }
 // @ts-ignore

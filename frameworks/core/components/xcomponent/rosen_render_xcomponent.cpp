@@ -15,13 +15,18 @@
 
 #include "core/components/xcomponent/rosen_render_xcomponent.h"
 
+#include "include/core/SkCanvas.h"
+#include "include/core/SkColor.h"
 #ifdef ENABLE_ROSEN_BACKEND
-#include "core/pipeline/base/rs_node_adapter.h"
 #include "render_service_client/core/ui/rs_surface_node.h"
-#include "render_service_client/core/ui/rs_ui_director.h"
 #endif
 
+#include "base/log/ace_trace.h"
 #include "base/log/dump_log.h"
+#include "base/log/log.h"
+#include "base/utils/system_properties.h"
+#include "core/components/display/render_display.h"
+#include "core/pipeline/base/rosen_render_context.h"
 
 namespace OHOS::Ace {
 void RosenRenderXComponent::Update(const RefPtr<Component>& component)
@@ -81,10 +86,7 @@ std::shared_ptr<RSNode> RosenRenderXComponent::CreateRSNode() const
     std::string renderNodeName = "RosenRenderXComponent";
     std::string surfaceNodeName =  renderNodeName + id_;
     struct Rosen::RSSurfaceNodeConfig surfaceNodeConfig = {.SurfaceNodeName = surfaceNodeName};
-    if (!SystemProperties::GetMultiInstanceEnabled()) {
-        return OHOS::Rosen::RSSurfaceNode::Create(surfaceNodeConfig, false);
-    }
-    return RsNodeAdapter::CreateSurfaceNode(surfaceNodeConfig);
+    return OHOS::Rosen::RSSurfaceNode::Create(surfaceNodeConfig, false);
 }
 
 #ifdef OHOS_STANDARD_SYSTEM

@@ -28,8 +28,7 @@ public:
     SvgImageObject(const ImageSourceInfo& src, const SizeF& imageSize) : ImageObject(src, imageSize, nullptr) {}
     ~SvgImageObject() override = default;
 
-    static RefPtr<SvgImageObject> Create(
-        const ImageSourceInfo& src, ImageErrorInfo& errorInfo, const RefPtr<ImageData>& data);
+    static RefPtr<SvgImageObject> Create(const ImageSourceInfo& src, const RefPtr<ImageData>& data);
     RefPtr<SvgDomBase> GetSVGDom() const override;
     std::string GetDumpInfo() override;
     RefPtr<ImageObject> Clone() override
@@ -37,10 +36,9 @@ public:
         return Claim(this);
     }
 
-    void MakeCanvasImage(
-        const WeakPtr<ImageLoadingContext>& ctxWp, const SizeF& resizeTarget, bool forceResize, bool syncLoad) override;
-
 private:
+    void MakeCanvasImage(const RefPtr<ImageLoadingContext>& ctx, const SizeF& resizeTarget, bool forceResize,
+        bool syncLoad, bool loadInVipChannel = false) override;
     // return true if process is successful
     bool MakeSvgDom(const RefPtr<ImageData>& data, const ImageSourceInfo& src);
     RefPtr<SvgDomBase> svgDomBase_;

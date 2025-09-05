@@ -22,7 +22,6 @@
 #include "core/components/common/layout/constants.h"
 #include "core/components/scroll_bar/scroll_proxy.h"
 #include "core/components_ng/pattern/scroll/scroll_event_hub.h"
-#include "core/common/resource/resource_object.h"
 
 namespace OHOS::Ace {
 
@@ -55,7 +54,7 @@ public:
     virtual void SetDisplayMode(int displayMode) = 0;
     virtual void SetScrollBarWidth(const Dimension& dimension) = 0;
     virtual void SetScrollBarColor(const Color& color) = 0;
-    virtual void SetEdgeEffect(EdgeEffect edgeEffect, bool alwaysEnabled, EffectEdge effectEdge = EffectEdge::ALL) = 0;
+    virtual void SetEdgeEffect(EdgeEffect edgeEffect, bool alwaysEnabled) = 0;
     virtual void SetHasWidth(bool hasWidth) = 0;
     virtual void SetHasHeight(bool hasHeight) = 0;
     virtual void SetNestedScroll(const NestedScrollOptions& nestedOpt) = 0;
@@ -65,20 +64,6 @@ public:
         const std::vector<Dimension>& snapPaginations, const std::pair<bool, bool>& enableSnapToSide) = 0;
     virtual void SetEnablePaging(bool enablePaging) = 0;
     virtual void SetInitialOffset(const NG::OffsetT<CalcDimension>& offset) = 0;
-    virtual void CreateWithResourceObjFriction(const RefPtr<ResourceObject>& resObj) {};
-    virtual void CreateWithResourceObjIntervalSize(const RefPtr<ResourceObject>& resObj) {};
-    virtual void CreateWithResourceObjSnapPaginations(
-        const std::vector<Dimension>& snapPaginations, std::vector<RefPtr<ResourceObject>>& resObjs) {};
-    virtual void CreateWithResourceObjScrollBarColor(const RefPtr<ResourceObject>& resObj) {};
-    virtual void SetMaxZoomScale(float scale) {};
-    virtual void SetMinZoomScale(float scale) {};
-    virtual void SetZoomScale(float scale) {};
-    virtual void ResetZoomScale() {};
-    virtual void SetZoomScaleChangeEvent(std::function<void(float)>&& event) {};
-    virtual void SetEnableBouncesZoom(bool enable) {};
-    virtual void SetOnDidZoom(std::function<void(float)>&& event) {};
-    virtual void SetOnZoomStart(std::function<void(void)>&& event) {};
-    virtual void SetOnZoomStop(std::function<void(void)>&& event) {};
 
 private:
     static std::unique_ptr<ScrollModel> instance_;

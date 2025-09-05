@@ -21,17 +21,16 @@
 namespace OHOS::Ace::Framework {
 
 class JsClipboardFunction : public JsFunction {
-    DECLARE_ACE_TYPE(JsClipboardFunction, JsFunction);
+    DECLARE_ACE_TYPE(JsClipboardFunction, JsFunction)
 
 public:
     explicit JsClipboardFunction(const JSRef<JSFunc>& jsFunction) : JsFunction(JSRef<JSObject>(), jsFunction) {}
     ~JsClipboardFunction() override = default;
-    void Execute()
+    void Execute() override
     {
         ExecuteJS();
     }
     void Execute(const std::string& direction);
-    void Execute(const std::u16string& direction);
 };
 
 } // namespace OHOS::Ace::Framework

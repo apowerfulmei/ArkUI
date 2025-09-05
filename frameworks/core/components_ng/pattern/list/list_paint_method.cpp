@@ -17,8 +17,6 @@
 
 #include "core/components_ng/pattern/scroll/inner/scroll_bar_overlay_modifier.h"
 #include "core/components_ng/render/divider_painter.h"
-#include "core/components_ng/pattern/arc_scroll/inner/arc_scroll_bar_overlay_modifier.h"
-#include "core/components_ng/pattern/arc_scroll/inner/arc_scroll_bar.h"
 
 namespace OHOS::Ace::NG {
 void ListPaintMethod::PaintEdgeEffect(PaintWrapper* paintWrapper, RSCanvas& canvas)
@@ -54,15 +52,14 @@ void ListPaintMethod::UpdateContentModifier(PaintWrapper* paintWrapper)
     }
     UpdateFadingGradient(renderContext);
 
-    if (!TryContentClip(paintWrapper)) {
+    if (TryContentClip(paintWrapper)) {
+        listContentModifier_->SetClip(false);
+    } else {
         const bool hasPadding = padding && padding->HasValue();
         bool clip = hasPadding && (!renderContext || renderContext->GetClipEdge().value_or(true));
-        if (clip) {
-            RectF rect(paddingOffset, frameSize);
-            renderContext->SetContentClip(rect);
-        } else {
-            renderContext->ResetContentClip();
-        }
+        listContentModifier_->SetClipOffset(paddingOffset);
+        listContentModifier_->SetClipSize(frameSize);
+        listContentModifier_->SetClip(clip);
     }
 
     float contentSize = vertical_ ? frameSize.Width() : frameSize.Height();
@@ -90,52 +87,29 @@ void ListPaintMethod::UpdateContentModifier(PaintWrapper* paintWrapper)
         .isVertical = vertical_
     };
     float checkMargin = dividerInfo.crossSize / dividerInfo.lanes - dividerInfo.startMargin - dividerInfo.endMargin;
-    if (NearZero(checkMargin)) {
-        return;
-    }
+    if (NearZero(checkMargin)) return;
     if (LessNotEqual(checkMargin, 0.0f)) {
         dividerInfo.startMargin = 0.0f;
         dividerInfo.endMargin = 0.0f;
     }
-    bool clip = !renderContext || renderContext->GetClipEdge().value_or(true);
-    UpdateDividerList(dividerInfo, clip);
+    UpdateDividerList(dividerInfo);
 }
 
-void ListPaintMethod::UpdateBoundsRect(const RectF& frameRect, bool clip)
-{
-    RectF boundsRect;
-    if (!clip && !itemPosition_.empty()) {
-        auto mainSize = itemPosition_.rbegin()->second.endPos - itemPosition_.begin()->second.startPos;
-        boundsRect.SetLeft(std::min(0.0f, vertical_ ? itemPosition_.begin()->second.startPos : 0.0f));
-        boundsRect.SetTop(std::min(0.0f, vertical_ ? 0.0f : itemPosition_.begin()->second.startPos));
-        boundsRect.SetWidth(std::max(frameRect.Width(), vertical_ ? mainSize : frameRect.Width()));
-        boundsRect.SetHeight(std::max(frameRect.Height(), vertical_ ? frameRect.Height() : mainSize));
-    } else {
-        boundsRect.SetLeft(0.0f);
-        boundsRect.SetTop(0.0f);
-        boundsRect.SetWidth(frameRect.Width());
-        boundsRect.SetHeight(frameRect.Height());
-    }
-    listContentModifier_->SetBoundsRect(boundsRect);
-}
-
-void ListPaintMethod::UpdateDividerList(const DividerInfo& dividerInfo, bool clip)
+void ListPaintMethod::UpdateDividerList(const DividerInfo& dividerInfo)
 {
     listContentModifier_->SetDividerPainter(
         dividerInfo.constrainStrokeWidth, dividerInfo.isVertical, dividerInfo.color);
     int32_t lanes = dividerInfo.lanes;
-    int32_t laneIdx = initLaneIdx_;
+    int32_t laneIdx = 0;
     bool lastIsItemGroup = false;
-    bool isFirstItem = (itemPosition_.begin()->first == 0) || !clip;
+    bool isFirstItem = (itemPosition_.begin()->first == 0);
     std::map<int32_t, int32_t> lastLineIndex;
     ListDividerMap dividerMap;
     bool nextIsPressed = false;
     for (const auto& child : itemPosition_) {
         auto nextId = child.first - lanes;
-        auto nextItem = itemPosition_.find(nextId);
-        nextIsPressed = nextId < 0 || lastIsItemGroup || child.second.isGroup || nextItem == itemPosition_.end()
-                            ? false
-                            : nextItem->second.isPressed;
+        nextIsPressed = nextId < 0 || lastIsItemGroup || child.second.isGroup ?
+            false : itemPosition_[nextId].isPressed;
         if (!isFirstItem && !(child.second.isPressed || nextIsPressed)) {
             dividerMap[child.second.id] = HandleDividerList(child.first, lastIsItemGroup, laneIdx, dividerInfo);
         }
@@ -147,16 +121,16 @@ void ListPaintMethod::UpdateDividerList(const DividerInfo& dividerInfo, bool cli
         laneIdx = (lanes <= 1 || (laneIdx + 1) >= lanes || child.second.isGroup) ? 0 : laneIdx + 1;
         isFirstItem = isFirstItem ? laneIdx > 0 : false;
     }
-    if (clip && !lastLineIndex.empty() && lastLineIndex.rbegin()->first < dividerInfo.totalItemCount - 1) {
-        int32_t lastLineLaneIdx = 0;
+    if (!lastLineIndex.empty() && lastLineIndex.rbegin()->first < dividerInfo.totalItemCount - 1) {
+        int32_t laneIdx = 0;
         for (auto index : lastLineIndex) {
             if (index.first + lanes >= dividerInfo.totalItemCount) {
                 break;
             }
             if (!itemPosition_.at(index.first).isPressed) {
-                dividerMap[-index.second] = HandleLastLineIndex(index.first, lastLineLaneIdx, dividerInfo);
+                dividerMap[-index.second] = HandleLastLineIndex(index.first, laneIdx, dividerInfo);
             }
-            lastLineLaneIdx++;
+            laneIdx++;
         }
     }
     listContentModifier_->SetDividerMap(std::move(dividerMap));
@@ -185,7 +159,7 @@ ListDivider ListPaintMethod::HandleDividerList(
     }
     divider.length = dividerLen;
     divider.offset = dividerInfo.isVertical ?
-        OffsetF(mainPos, crossPos + adjustOffset_) : OffsetF(crossPos, mainPos + adjustOffset_);
+        OffsetF(mainPos, crossPos) : OffsetF(crossPos, mainPos);
     return divider;
 }
 
@@ -211,7 +185,7 @@ ListDivider ListPaintMethod::HandleLastLineIndex(int32_t index, int32_t laneIdx,
     }
     divider.length = dividerLen;
     divider.offset = dividerInfo.isVertical ?
-        OffsetF(mainPos, crossPos + adjustOffset_) : OffsetF(crossPos, mainPos + adjustOffset_);
+        OffsetF(mainPos, crossPos) : OffsetF(crossPos, mainPos);
     return divider;
 }
 
@@ -225,24 +199,11 @@ void ListPaintMethod::UpdateOverlayModifier(PaintWrapper* paintWrapper)
     if (scrollBar->GetPositionModeUpdate()) {
         scrollBarOverlayModifier->SetPositionMode(scrollBar->GetPositionMode());
     }
-
-    auto shapeMode = scrollBar->GetShapeMode();
-    if (shapeMode == ShapeMode::ROUND) {
-        auto arcScrollBarOverlayModifier = AceType::DynamicCast<ArcScrollBarOverlayModifier>(scrollBarOverlayModifier);
-        CHECK_NULL_VOID(arcScrollBarOverlayModifier);
-        auto arcScrollBar = AceType::DynamicCast<ArcScrollBar>(scrollBar);
-        CHECK_NULL_VOID(arcScrollBar);
-        scrollBarOverlayModifier->SetBarColor(arcScrollBar->GetArcForegroundColor());
-        arcScrollBarOverlayModifier->SetBackgroundBarColor(arcScrollBar->GetArcBackgroundColor());
-        arcScrollBarOverlayModifier->StartArcBarAnimation(arcScrollBar->GetHoverAnimationType(),
-            arcScrollBar->GetOpacityAnimationType(), arcScrollBar->GetNeedAdaptAnimation(),
-            arcScrollBar->GetArcActiveRect(), arcScrollBar->GetArcBarRect());
-    } else {
-        scrollBarOverlayModifier->SetBarColor(scrollBar->GetForegroundColor());
-        scrollBarOverlayModifier->StartBarAnimation(scrollBar->GetHoverAnimationType(),
-            scrollBar->GetOpacityAnimationType(), scrollBar->GetNeedAdaptAnimation(), scrollBar->GetActiveRect());
-    }
+    OffsetF fgOffset(scrollBar->GetActiveRect().Left(), scrollBar->GetActiveRect().Top());
+    scrollBarOverlayModifier->StartBarAnimation(scrollBar->GetHoverAnimationType(),
+        scrollBar->GetOpacityAnimationType(), scrollBar->GetNeedAdaptAnimation(), scrollBar->GetActiveRect());
     scrollBar->SetHoverAnimationType(HoverAnimationType::NONE);
+    scrollBarOverlayModifier->SetBarColor(scrollBar->GetForegroundColor());
     scrollBar->SetOpacityAnimationType(OpacityAnimationType::NONE);
 }
 } // namespace OHOS::Ace::NG

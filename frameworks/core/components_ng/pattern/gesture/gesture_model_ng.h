@@ -20,13 +20,12 @@
 #include "frameworks/base/utils/macros.h"
 
 namespace OHOS::Ace::NG {
-GestureEventFunc GetTapGestureEventFunc(const RefPtr<NG::Gesture>& gesture);
 class ACE_EXPORT GestureModelNG : public OHOS::Ace::GestureModel {
 public:
     void Create(int32_t priorityNum, int32_t gestureMaskNum) override;
     void Finish() override;
     void Pop() override;
-    void SetOnGestureEvent(const GestureEventFunc& gestureEventFunc) override;
+    void SetOnGestureEvent(const GestureEventNoParameter& gestureEventNoParameter) override;
     void SetOnActionFunc(const GestureEventFunc& gestureEventFunc, const Ace::GestureEventAction& action) override;
     void SetTag(const std::string& tag) override;
     void SetAllowedTypes(const std::set<SourceTool>& allowedTypes) override;
@@ -47,8 +46,6 @@ class ACE_EXPORT PanGestureModelNG : public OHOS::Ace::PanGestureModel {
 public:
     void Create(int32_t fingersNum, const PanDirection& panDirection, double distanceNum,
         bool isLimitFingerCount = false) override;
-    void Create(int32_t fingersNum, const PanDirection& panDirection, const PanDistanceMapDimension& distanceMap,
-        bool isLimitFingerCount) override;
     void SetPanGestureOption(const RefPtr<PanGestureOption>& panGestureOption) override;
 };
 

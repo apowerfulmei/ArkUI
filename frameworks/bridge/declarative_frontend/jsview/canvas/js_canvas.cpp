@@ -26,20 +26,25 @@
 #include "core/components_ng/pattern/canvas/canvas_model_ng.h"
 
 namespace OHOS::Ace {
+std::unique_ptr<CanvasModel> CanvasModel::instance_ = nullptr;
+std::mutex CanvasModel::mutex_;
 CanvasModel* CanvasModel::GetInstance()
 {
+    if (!instance_) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (!instance_) {
 #ifdef NG_BUILD
-    static NG::CanvasModelNG instance;
-    return &instance;
+            instance_.reset(new NG::CanvasModelNG());
 #else
-    if (Container::IsCurrentUseNewPipeline()) {
-        static NG::CanvasModelNG instance;
-        return &instance;
-    } else {
-        static Framework::CanvasModelImpl instance;
-        return &instance;
-    }
+            if (Container::IsCurrentUseNewPipeline()) {
+                instance_.reset(new NG::CanvasModelNG());
+            } else {
+                instance_.reset(new Framework::CanvasModelImpl());
+            }
 #endif
+        }
+    }
+    return instance_.get();
 }
 } // namespace OHOS::Ace
 namespace OHOS::Ace::Framework {

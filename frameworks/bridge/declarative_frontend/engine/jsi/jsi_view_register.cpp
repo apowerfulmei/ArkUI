@@ -35,15 +35,13 @@
 #include "bridge/declarative_frontend/jsview/canvas/js_canvas_image_data.h"
 #include "bridge/js_frontend/engine/jsi/ark_js_runtime.h"
 #include "core/common/card_scope.h"
+#include "core/common/container.h"
 #include "core/components/container_modal/container_modal_constants.h"
 #include "core/components_ng/base/inspector.h"
+#include "core/components_ng/base/inspector_filter.h"
 #include "core/components_ng/pattern/stage/page_pattern.h"
 #include "core/components_v2/inspector/inspector.h"
-#include "frameworks/bridge/declarative_frontend/engine/jsi/jsi_container_app_bar_register.h"
-#include "frameworks/bridge/declarative_frontend/engine/jsi/jsi_container_modal_view_register.h"
-#include "frameworks/bridge/declarative_frontend/engine/jsi/jsi_object_template.h"
-#include "frameworks/bridge/declarative_frontend/engine/jsi/nativeModule/arkts_utils.h"
-#include "frameworks/bridge/declarative_frontend/engine/functions/js_gesture_recognizer.h"
+
 namespace OHOS::Ace::Framework {
 namespace {
 static constexpr uint32_t PARAM_SIZE_ONE   = 1;
@@ -105,7 +103,6 @@ void RegisterCardUpdateCallback(int64_t cardId, const panda::Local<panda::Object
         ContainerScope scope(id);
         const EcmaVM* vm = storage->GetEcmaVM();
         CHECK_NULL_VOID(vm);
-        TAG_LOGI(AceLogTag::ACE_FORM, "setOrCreate, dataList length: %{public}zu", data.length());
         std::unique_ptr<JsonValue> jsonRoot = JsonUtil::ParseJsonString(data);
         CHECK_NULL_VOID(jsonRoot);
         auto child = jsonRoot->GetChild();
@@ -125,7 +122,6 @@ void RegisterCardUpdateCallback(int64_t cardId, const panda::Local<panda::Object
     };
 
     auto container = Container::Current();
-    CHECK_NULL_VOID(container);
     if (container->IsFRSCardContainer() || container->IsDynamicRender()) {
         auto frontEnd = AceType::DynamicCast<FormFrontendDeclarative>(container->GetCardFrontend(cardId).Upgrade());
         CHECK_NULL_VOID(frontEnd);
@@ -198,7 +194,7 @@ void UpdatePageLifeCycleFunctions(RefPtr<NG::FrameNode> pageNode, JSView* view)
 
 void UpdateCardRootComponent(const EcmaVM* vm, const panda::Local<panda::ObjectRef>& obj)
 {
-    auto* view = JsiObjectTemplate::GetNativeView(obj, vm);
+    auto* view = static_cast<JSView*>(obj->GetNativePointerField(vm, 0));
     if (!view && !static_cast<JSViewPartialUpdate*>(view) && !static_cast<JSViewFullUpdate*>(view)) {
         return;
     }
@@ -270,6 +266,24 @@ panda::Local<panda::JSValueRef> JsLoadDocument(panda::JsiRuntimeCallInfo* runtim
     shared_ptr<ArkJSRuntime> arkRuntime = std::static_pointer_cast<ArkJSRuntime>(runtime);
     arkRuntime->AddRootView(rootView);
 #endif
+
+    return panda::JSValueRef::Undefined(vm);
+}
+
+panda::Local<panda::JSValueRef> JsLoadCustomTitleBar(panda::JsiRuntimeCallInfo* runtimeCallInfo)
+{
+    EcmaVM* vm = runtimeCallInfo->GetVM();
+    uint32_t argc = runtimeCallInfo->GetArgsNumber();
+    if (argc != 1) {
+        return panda::JSValueRef::Undefined(vm);
+    }
+    Local<JSValueRef> firstArg = runtimeCallInfo->GetCallArgRef(0);
+    if (!firstArg->IsObject(vm)) {
+        return panda::JSValueRef::Undefined(vm);
+    }
+
+    panda::Local<panda::ObjectRef> obj = firstArg->ToObject(vm);
+    AddCustomTitleBarComponent(obj);
 
     return panda::JSValueRef::Undefined(vm);
 }
@@ -361,7 +375,7 @@ panda::Local<panda::JSValueRef> JSPostCardAction(panda::JsiRuntimeCallInfo* runt
     }
 
     panda::Local<panda::ObjectRef> obj = firstArg->ToObject(vm);
-    auto* view = JsiObjectTemplate::GetNativeView(obj, vm);
+    auto* view = static_cast<JSView*>(obj->GetNativePointerField(vm, 0));
     if (!view && !static_cast<JSViewPartialUpdate*>(view) && !static_cast<JSViewFullUpdate*>(view)) {
         return panda::JSValueRef::Undefined(vm);
     }
@@ -619,9 +633,6 @@ panda::Local<panda::JSValueRef> JsGetInspectorNodeById(panda::JsiRuntimeCallInfo
     }
     int32_t intValue = firstArg->Int32Value(vm);
     auto nodeInfo = accessibilityManager->DumpComposedElementToJson(intValue);
-    if (nodeInfo == nullptr) {
-        return panda::JSValueRef::Undefined(vm);
-    }
     return panda::JSON::Parse(vm, panda::StringRef::NewFromUtf8(vm, nodeInfo->ToString().c_str()));
 }
 
@@ -660,7 +671,7 @@ panda::Local<panda::JSValueRef> JsGetFilteredInspectorTree(panda::JsiRuntimeCall
 
     auto container = Container::Current();
     if (!container) {
-        LOGE("container is null");
+        JSException::Throw(ERROR_CODE_PARAM_INVALID, "%s", "container is nullptr");
         return panda::StringRef::NewFromUtf8(vm, "");
     }
     auto argc = runtimeCallInfo->GetArgsNumber();
@@ -671,7 +682,6 @@ panda::Local<panda::JSValueRef> JsGetFilteredInspectorTree(panda::JsiRuntimeCall
 
     NG::InspectorFilter filter;
     Local<JSValueRef> firstArg = runtimeCallInfo->GetCallArgRef(0);
-    bool isLayoutInspector = false;
     if (argc == PARAM_SIZE_ONE) {
         if (!firstArg->IsArray(vm)) {
             JSException::Throw(ERROR_CODE_PARAM_INVALID, "%s", "invalid param type");
@@ -686,20 +696,20 @@ panda::Local<panda::JSValueRef> JsGetFilteredInspectorTree(panda::JsiRuntimeCall
                 return panda::StringRef::NewFromUtf8(vm, "");
             }
             auto itemVal = panda::Local<panda::StringRef>(subItemVal);
-            if (itemVal->ToString(vm) == "isLayoutInspector") {
-                isLayoutInspector = true;
-                continue;
-            }
             filter.AddFilterAttr(itemVal->ToString(vm));
         }
     }
-    bool needThrow = false;
-    auto nodeInfos = NG::Inspector::GetInspector(isLayoutInspector, filter, needThrow);
-    if (needThrow) {
-        JSException::Throw(ERROR_CODE_PARAM_INVALID, "%s", "get inspector failed");
-        return panda::StringRef::NewFromUtf8(vm, "");
+    if (container->IsUseNewPipeline()) {
+        bool needThrow = false;
+        auto nodeInfos = NG::Inspector::GetInspector(false, filter, needThrow);
+        if (needThrow) {
+            JSException::Throw(ERROR_CODE_PARAM_INVALID, "%s", "get inspector failed");
+            return panda::StringRef::NewFromUtf8(vm, "");
+        }
+        return panda::StringRef::NewFromUtf8(vm, nodeInfos.c_str());
     }
-    return panda::StringRef::NewFromUtf8(vm, nodeInfos.c_str());
+    JSException::Throw(ERROR_CODE_PARAM_INVALID, "%s", "get inspector tree failed");
+    return panda::StringRef::NewFromUtf8(vm, "");
 }
 
 panda::Local<panda::JSValueRef> JsGetFilteredInspectorTreeById(panda::JsiRuntimeCallInfo* runtimeCallInfo)
@@ -709,7 +719,7 @@ panda::Local<panda::JSValueRef> JsGetFilteredInspectorTreeById(panda::JsiRuntime
 
     auto container = Container::Current();
     if (!container) {
-        LOGE("container is null");
+        JSException::Throw(ERROR_CODE_PARAM_INVALID, "%s", "container is nullptr");
         return panda::StringRef::NewFromUtf8(vm, "");
     }
 
@@ -761,13 +771,17 @@ panda::Local<panda::JSValueRef> JsGetFilteredInspectorTreeById(panda::JsiRuntime
             filter.AddFilterAttr(itemVal->ToString(vm));
         }
     }
-    bool needThrow = false;
-    auto nodeInfos = NG::Inspector::GetInspector(false, filter, needThrow);
-    if (needThrow) {
-        JSException::Throw(ERROR_CODE_PARAM_INVALID, "%s", "get inspector failed");
-        return panda::StringRef::NewFromUtf8(vm, "");
+    if (container->IsUseNewPipeline()) {
+        bool needThrow = false;
+        auto nodeInfos = NG::Inspector::GetInspector(false, filter, needThrow);
+        if (needThrow) {
+            JSException::Throw(ERROR_CODE_PARAM_INVALID, "%s", "get inspector failed");
+            return panda::StringRef::NewFromUtf8(vm, "");
+        }
+        return panda::StringRef::NewFromUtf8(vm, nodeInfos.c_str());
     }
-    return panda::StringRef::NewFromUtf8(vm, nodeInfos.c_str());
+    JSException::Throw(ERROR_CODE_PARAM_INVALID, "%s", "get inspector tree failed");
+    return panda::StringRef::NewFromUtf8(vm, "");
 }
 
 panda::Local<panda::JSValueRef> JsGetInspectorByKey(panda::JsiRuntimeCallInfo* runtimeCallInfo)
@@ -844,24 +858,16 @@ static TouchEvent GetTouchPointFromJS(const JsiObject& value)
     TouchEvent touchPoint;
 
     auto type = value->GetProperty("type");
-    if (type->IsNumber()) {
-        touchPoint.type = static_cast<TouchType>(type->ToNumber<int32_t>());
-    }
+    touchPoint.type = static_cast<TouchType>(type->ToNumber<int32_t>());
 
     auto id = value->GetProperty("id");
-    if (id->IsNumber()) {
-        touchPoint.id = id->ToNumber<int32_t>();
-    }
+    touchPoint.id = id->ToNumber<int32_t>();
 
     auto x = value->GetProperty("x");
-    if (x->IsNumber()) {
-        touchPoint.x = x->ToNumber<float>();
-    }
+    touchPoint.x = x->ToNumber<float>();
 
     auto y = value->GetProperty("y");
-    if (y->IsNumber()) {
-        touchPoint.y = y->ToNumber<float>();
-    }
+    touchPoint.y = y->ToNumber<float>();
 
     touchPoint.time = std::chrono::high_resolution_clock::now();
 
@@ -900,39 +906,25 @@ panda::Local<panda::JSValueRef> JsSendTouchEvent(panda::JsiRuntimeCallInfo* runt
 static KeyEvent GetKeyEventFromJS(const JsiObject& value)
 {
     auto type = value->GetProperty("type");
-    auto action = KeyAction::UNKNOWN;
-    if (type->IsNumber()) {
-        action = static_cast<KeyAction>(type->ToNumber<int32_t>());
-    }
+    auto action = static_cast<KeyAction>(type->ToNumber<int32_t>());
 
     auto jsKeyCode = value->GetProperty("keyCode");
-    auto code = KeyCode::KEY_UNKNOWN;
-    if (jsKeyCode->IsNumber()) {
-        code = static_cast<KeyCode>(jsKeyCode->ToNumber<int32_t>());
-    }
+    auto code = static_cast<KeyCode>(jsKeyCode->ToNumber<int32_t>());
 
     KeyEvent keyEvent(code, action);
 
     auto jsKeySource = value->GetProperty("keySource");
-    if (jsKeySource->IsNumber()) {
-        keyEvent.sourceType = static_cast<SourceType>(jsKeySource->ToNumber<int32_t>());
-    }
+    keyEvent.sourceType = static_cast<SourceType>(jsKeySource->ToNumber<int32_t>());
 
     auto jsDeviceId = value->GetProperty("deviceId");
-    if (jsDeviceId->IsNumber()) {
-        keyEvent.deviceId = jsDeviceId->ToNumber<int32_t>();
-    }
+    keyEvent.deviceId = jsDeviceId->ToNumber<int32_t>();
 
     auto jsMetaKey = value->GetProperty("metaKey");
-    if (jsMetaKey->IsNumber()) {
-        keyEvent.metaKey = jsMetaKey->ToNumber<int32_t>();
-    }
+    keyEvent.metaKey = jsMetaKey->ToNumber<int32_t>();
 
     auto jsTimestamp = value->GetProperty("timestamp");
-    if (jsTimestamp->IsNumber()) {
-        auto timeStamp = jsTimestamp->ToNumber<int64_t>();
-        keyEvent.SetTimeStamp(timeStamp);
-    }
+    auto timeStamp = jsTimestamp->ToNumber<int64_t>();
+    keyEvent.SetTimeStamp(timeStamp);
 
     auto jsUnicode = value->GetProperty("unicode");
     keyEvent.unicode = jsUnicode->ToNumber<uint32_t>();
@@ -974,26 +966,18 @@ static MouseEvent GetMouseEventFromJS(const JsiObject& value)
     MouseEvent mouseEvent;
 
     auto action = value->GetProperty("action");
-    if (action->IsNumber()) {
-        mouseEvent.action = static_cast<MouseAction>(action->ToNumber<int32_t>());
-    }
+    mouseEvent.action = static_cast<MouseAction>(action->ToNumber<int32_t>());
 
     auto button = value->GetProperty("button");
-    if (button->IsNumber()) {
-        mouseEvent.button = static_cast<MouseButton>(button->ToNumber<int32_t>());
-    }
+    mouseEvent.button = static_cast<MouseButton>(button->ToNumber<int32_t>());
 
     auto x = value->GetProperty("x");
-    if (x->IsNumber()) {
-        mouseEvent.x = x->ToNumber<float>();
-        mouseEvent.deltaX = mouseEvent.x;
-    }
+    mouseEvent.x = x->ToNumber<float>();
+    mouseEvent.deltaX = mouseEvent.x;
 
     auto y = value->GetProperty("y");
-    if (y->IsNumber()) {
-        mouseEvent.y = y->ToNumber<float>();
-        mouseEvent.deltaY = mouseEvent.y;
-    }
+    mouseEvent.y = y->ToNumber<float>();
+    mouseEvent.deltaY = mouseEvent.y;
 
     mouseEvent.time = std::chrono::high_resolution_clock::now();
     mouseEvent.sourceType = SourceType::MOUSE;
@@ -1068,242 +1052,6 @@ panda::Local<panda::JSValueRef> Px2Vp(panda::JsiRuntimeCallInfo* runtimeCallInfo
     double vpValue = pxValue / density;
 
     return panda::NumberRef::New(vm, vpValue);
-}
-
-// use for ArkTs1.2
-panda::Local<panda::JSValueRef> ConvertEventPointer(panda::JsiRuntimeCallInfo* runtimeCallInfo)
-{
-    ContainerScope scope(Container::CurrentIdSafely());
-    Local<panda::JSValueRef> thisObj = runtimeCallInfo->GetCallArgRef(0);
-    auto vm = runtimeCallInfo->GetVM();
-    auto eventInfo = static_cast<void*>(panda::Local<panda::ObjectRef>(thisObj)->GetNativePointerField(vm, 0));
-    if (!eventInfo) {
-        return JSValueRef::Undefined(vm);
-    }
-    return panda::NumberRef::New(vm, reinterpret_cast<int64_t>(eventInfo));
-}
-
-panda::Local<panda::JSValueRef> WrapTouchEventPointer(panda::JsiRuntimeCallInfo* runtimeCallInfo)
-{
-    ContainerScope scope(Container::CurrentIdSafely());
-    auto vm = runtimeCallInfo->GetVM();
-    panda::Local<panda::JSValueRef> thisObj = runtimeCallInfo->GetCallArgRef(0);
-    panda::Local<panda::ObjectRef> dynamicEvent = panda::Local<panda::ObjectRef>(thisObj);
-    dynamicEvent->Set(vm, panda::StringRef::NewFromUtf8(vm, "stopPropagation"),
-        panda::FunctionRef::New(vm, Framework::JsStopPropagation));
-    dynamicEvent->Set(vm, panda::StringRef::NewFromUtf8(vm, "getModifierKeyState"),
-        panda::FunctionRef::New(vm, NG::ArkTSUtils::JsGetModifierKeyState));
-    dynamicEvent->Set(vm, panda::StringRef::NewFromUtf8(vm, "getHistoricalPoints"),
-        panda::FunctionRef::New(vm, Framework::JsGetHistoricalPoints));
-    dynamicEvent->Set(vm, panda::StringRef::NewFromUtf8(vm, "preventDefault"),
-        panda::FunctionRef::New(vm, Framework::JsTouchPreventDefault));
-    panda::Local<panda::JSValueRef> pointerObj = runtimeCallInfo->GetCallArgRef(1);
-    if (!pointerObj.IsNull() && !pointerObj->IsUndefined()) {
-        auto nativePointer = static_cast<int64_t>(pointerObj->ToNumber(vm)->Value());
-        dynamicEvent->SetNativePointerFieldCount(vm, 1);
-        dynamicEvent->SetNativePointerField(vm, 0, reinterpret_cast<void*>(nativePointer));
-    }
-    return panda::JSValueRef::Undefined(vm);
-}
-
-panda::Local<panda::JSValueRef> WrapMouseEventPointer(panda::JsiRuntimeCallInfo* runtimeCallInfo)
-{
-    ContainerScope scope(Container::CurrentIdSafely());
-    auto vm = runtimeCallInfo->GetVM();
-    panda::Local<panda::JSValueRef> thisObj = runtimeCallInfo->GetCallArgRef(0);
-    panda::Local<panda::ObjectRef> dynamicEvent = panda::Local<panda::ObjectRef>(thisObj);
-    dynamicEvent->Set(vm, panda::StringRef::NewFromUtf8(vm, "stopPropagation"),
-        panda::FunctionRef::New(vm, Framework::JsStopPropagation));
-    dynamicEvent->Set(vm, panda::StringRef::NewFromUtf8(vm, "getModifierKeyState"),
-        panda::FunctionRef::New(vm, NG::ArkTSUtils::JsGetModifierKeyState));
-    panda::Local<panda::JSValueRef> pointerObj = runtimeCallInfo->GetCallArgRef(1);
-    if (!pointerObj.IsNull() && !pointerObj->IsUndefined()) {
-        auto nativePointer = static_cast<int64_t>(pointerObj->ToNumber(vm)->Value());
-        dynamicEvent->SetNativePointerFieldCount(vm, 1);
-        dynamicEvent->SetNativePointerField(vm, 0, reinterpret_cast<void*>(nativePointer));
-    }
-    return panda::JSValueRef::Undefined(vm);
-}
-
-panda::Local<panda::JSValueRef> WrapAxisEventPointer(panda::JsiRuntimeCallInfo* runtimeCallInfo)
-{
-    ContainerScope scope(Container::CurrentIdSafely());
-    auto vm = runtimeCallInfo->GetVM();
-    panda::Local<panda::JSValueRef> thisObj = runtimeCallInfo->GetCallArgRef(0);
-    panda::Local<panda::ObjectRef> dynamicEvent = panda::Local<panda::ObjectRef>(thisObj);
-    dynamicEvent->Set(
-        vm, panda::StringRef::NewFromUtf8(vm, "propagation"), panda::FunctionRef::New(vm, Framework::JsPropagation));
-    dynamicEvent->Set(vm, panda::StringRef::NewFromUtf8(vm, "getHorizontalAxisValue"),
-        panda::FunctionRef::New(vm, NG::ArkTSUtils::JsGetHorizontalAxisValue));
-    dynamicEvent->Set(vm, panda::StringRef::NewFromUtf8(vm, "getVerticalAxisValue"),
-        panda::FunctionRef::New(vm, NG::ArkTSUtils::JsGetVerticalAxisValue));
-    dynamicEvent->Set(vm, panda::StringRef::NewFromUtf8(vm, "getModifierKeyState"),
-        panda::FunctionRef::New(vm, NG::ArkTSUtils::JsGetModifierKeyState));
-    panda::Local<panda::JSValueRef> pointerObj = runtimeCallInfo->GetCallArgRef(1);
-    if (!pointerObj.IsNull() && !pointerObj->IsUndefined()) {
-        auto nativePointer = static_cast<int64_t>(pointerObj->ToNumber(vm)->Value());
-        dynamicEvent->SetNativePointerFieldCount(vm, 1);
-        dynamicEvent->SetNativePointerField(vm, 0, reinterpret_cast<void*>(nativePointer));
-    }
-    return panda::JSValueRef::Undefined(vm);
-}
-
-panda::Local<panda::JSValueRef> WrapClickEventPointer(panda::JsiRuntimeCallInfo* runtimeCallInfo)
-{
-    ContainerScope scope(Container::CurrentIdSafely());
-    auto vm = runtimeCallInfo->GetVM();
-    panda::Local<panda::JSValueRef> thisObj = runtimeCallInfo->GetCallArgRef(0);
-    panda::Local<panda::ObjectRef> dynamicEvent = panda::Local<panda::ObjectRef>(thisObj);
-    dynamicEvent->Set(vm, panda::StringRef::NewFromUtf8(vm, "getModifierKeyState"),
-        panda::FunctionRef::New(vm, NG::ArkTSUtils::JsGetModifierKeyState));
-    dynamicEvent->Set(vm, panda::StringRef::NewFromUtf8(vm, "preventDefault"),
-        panda::FunctionRef::New(vm, Framework::JsTouchPreventDefault));
-    panda::Local<panda::JSValueRef> pointerObj = runtimeCallInfo->GetCallArgRef(1);
-    if (!pointerObj.IsNull() && !pointerObj->IsUndefined()) {
-        auto nativePointer = static_cast<int64_t>(pointerObj->ToNumber(vm)->Value());
-        dynamicEvent->SetNativePointerFieldCount(vm, 1);
-        dynamicEvent->SetNativePointerField(vm, 0, reinterpret_cast<void*>(nativePointer));
-    }
-    return panda::JSValueRef::Undefined(vm);
-}
-
-panda::Local<panda::JSValueRef> WrapHoverEventPointer(panda::JsiRuntimeCallInfo* runtimeCallInfo)
-{
-    ContainerScope scope(Container::CurrentIdSafely());
-    auto vm = runtimeCallInfo->GetVM();
-    panda::Local<panda::JSValueRef> thisObj = runtimeCallInfo->GetCallArgRef(0);
-    panda::Local<panda::ObjectRef> dynamicEvent = panda::Local<panda::ObjectRef>(thisObj);
-    dynamicEvent->Set(vm, panda::StringRef::NewFromUtf8(vm, "stopPropagation"),
-        panda::FunctionRef::New(vm, Framework::JsStopPropagation));
-    dynamicEvent->Set(vm, panda::StringRef::NewFromUtf8(vm, "getModifierKeyState"),
-        panda::FunctionRef::New(vm, NG::ArkTSUtils::JsGetModifierKeyState));
-    panda::Local<panda::JSValueRef> pointerObj = runtimeCallInfo->GetCallArgRef(1);
-    if (!pointerObj.IsNull() && !pointerObj->IsUndefined()) {
-        auto nativePointer = static_cast<int64_t>(pointerObj->ToNumber(vm)->Value());
-        dynamicEvent->SetNativePointerFieldCount(vm, 1);
-        dynamicEvent->SetNativePointerField(vm, 0, reinterpret_cast<void*>(nativePointer));
-    }
-    return panda::JSValueRef::Undefined(vm);
-}
-
-panda::Local<panda::JSValueRef> WrapDragEventPointer(panda::JsiRuntimeCallInfo* runtimeCallInfo)
-{
-    ContainerScope scope(Container::CurrentIdSafely());
-    EcmaVM* vm = runtimeCallInfo->GetVM();
-    Local<panda::JSValueRef> pointerObj = runtimeCallInfo->GetCallArgRef(0);
-    if (!pointerObj->IsNull() && !pointerObj->IsUndefined()) {
-        auto nativePointer = static_cast<int64_t>(pointerObj->ToNumber(vm)->Value());
-        auto dragEvent = JsDragEvent::CreateDragEvent(reinterpret_cast<void*>(nativePointer));
-        return dragEvent.Get().GetLocalHandle();
-    }
-    return panda::NumberRef::Undefined(vm);
-}
-
-panda::Local<panda::JSValueRef> ConvertKeyEventPointer(panda::JsiRuntimeCallInfo* runtimeCallInfo)
-{
-    ContainerScope scope(Container::CurrentIdSafely());
-    Local<panda::JSValueRef> thisObj = runtimeCallInfo->GetCallArgRef(0);
-    auto vm = runtimeCallInfo->GetVM();
-    auto eventInfo = static_cast<void*>(panda::Local<panda::ObjectRef>(thisObj)->GetNativePointerField(vm, 0));
-    if (!eventInfo) {
-        LOGE("ConvertKeyEventPointer is null");
-        return JSValueRef::Undefined(vm);
-    }
-    return panda::NumberRef::New(vm, reinterpret_cast<int64_t>(eventInfo));
-}
-
-panda::Local<panda::JSValueRef> WrapKeyEventPointer(panda::JsiRuntimeCallInfo* runtimeCallInfo)
-{
-    ContainerScope scope(Container::CurrentIdSafely());
-    auto vm = runtimeCallInfo->GetVM();
-    panda::Local<panda::JSValueRef> thisObj = runtimeCallInfo->GetCallArgRef(0);
-    panda::Local<panda::ObjectRef> dynamicEvent = panda::Local<panda::ObjectRef>(thisObj);
-    dynamicEvent->Set(vm, panda::StringRef::NewFromUtf8(vm, "stopPropagation"),
-        panda::FunctionRef::New(vm, Framework::JsStopPropagation));
-    dynamicEvent->Set(vm, panda::StringRef::NewFromUtf8(vm, "getModifierKeyState"),
-        panda::FunctionRef::New(vm, NG::ArkTSUtils::JsGetModifierKeyState));
-    panda::Local<panda::JSValueRef> pointerObj = runtimeCallInfo->GetCallArgRef(1);
-    if (!pointerObj.IsNull() && !pointerObj->IsUndefined()) {
-        auto nativePointer = static_cast<int64_t>(pointerObj->ToNumber(vm)->Value());
-        dynamicEvent->SetNativePointerFieldCount(vm, 1);
-        dynamicEvent->SetNativePointerField(vm, 0, reinterpret_cast<void*>(nativePointer));
-    }
-    return panda::JSValueRef::Undefined(vm);
-}
-
-panda::Local<panda::JSValueRef> WrapEventTargetInfoPointer(panda::JsiRuntimeCallInfo* runtimeCallInfo)
-{
-    ContainerScope scope(Container::CurrentIdSafely());
-    auto vm = runtimeCallInfo->GetVM();
-    JSRef<JSObject> eventTargetObj = JSClass<JSEventTargetInfo>::NewInstance();
-    auto eventTarget = Referenced::Claim(eventTargetObj->Unwrap<JSEventTargetInfo>());
-    if (!eventTarget) {
-        LOGE("WrapEventTargetInfoPointer targetInfo is null");
-        return panda::JSValueRef::Undefined(vm);
-    }
-    panda::Local<panda::JSValueRef> nativeIdObj = runtimeCallInfo->GetCallArgRef(0);
-    if (!nativeIdObj.IsNull() && !nativeIdObj->IsUndefined()) {
-        auto nativeId = nativeIdObj->ToString(vm)->ToString(vm);
-        eventTarget->SetInspectorId(nativeId);
-    }
-    return eventTargetObj.Get().GetLocalHandle();
-}
-
-panda::Local<panda::JSValueRef> WrapScrollableTargetInfoPointer(panda::JsiRuntimeCallInfo* runtimeCallInfo)
-{
-    ContainerScope scope(Container::CurrentIdSafely());
-    auto vm = runtimeCallInfo->GetVM();
-    JSRef<JSObject> eventTargetObj = JSClass<JSScrollableTargetInfo>::NewInstance();
-    auto eventTarget = Referenced::Claim(eventTargetObj->Unwrap<JSScrollableTargetInfo>());
-    if (!eventTarget) {
-        LOGE("WrapScrollableTargetInfoPointer targetInfo is null");
-        return panda::JSValueRef::Undefined(vm);
-    }
-    panda::Local<panda::JSValueRef> nativeIdObj = runtimeCallInfo->GetCallArgRef(0);
-    if (!nativeIdObj.IsNull() && !nativeIdObj->IsUndefined()) {
-        auto nativeId = nativeIdObj->ToString(vm)->ToString(vm);
-        eventTarget->SetInspectorId(nativeId);
-    }
-    panda::Local<panda::JSValueRef> pointerObj = runtimeCallInfo->GetCallArgRef(1);
-    if (!pointerObj.IsNull() && !pointerObj->IsUndefined()) {
-        auto nativePointer = static_cast<int64_t>(pointerObj->ToNumber(vm)->Value());
-        auto pattern = reinterpret_cast<NG::Pattern*>(nativePointer);
-        if (!pattern) {
-            auto patternRef = AceType::WeakClaim(pattern);
-            eventTarget->SetPattern(patternRef);
-        }
-    }
-    return eventTargetObj.Get().GetLocalHandle();
-}
-
-panda::Local<panda::JSValueRef> GetScrollableTargetInfoPointer(panda::JsiRuntimeCallInfo* runtimeCallInfo)
-{
-    ContainerScope scope(Container::CurrentIdSafely());
-    EcmaVM* vm = runtimeCallInfo->GetVM();
-    Local<panda::JSValueRef> obj = runtimeCallInfo->GetCallArgRef(0);
-    if (obj->IsNull() || obj->IsUndefined()) {
-        return panda::NumberRef::Undefined(vm);
-    }
-    JSRef<JSObject> object = JSRef<JSObject>::Make(obj);
-    auto jsScrollableTargetInfo = Referenced::Claim(object->Unwrap<JSScrollableTargetInfo>());
-    auto ptr = jsScrollableTargetInfo->GetPatternPointer();
-    CHECK_NULL_RETURN(ptr, panda::NumberRef::Undefined(vm));
-    return panda::NumberRef::New(vm, ptr);
-}
-
-panda::Local<panda::JSValueRef> GetDragEventPointer(panda::JsiRuntimeCallInfo* runtimeCallInfo)
-{
-    ContainerScope scope(Container::CurrentIdSafely());
-    EcmaVM* vm = runtimeCallInfo->GetVM();
-    Local<panda::JSValueRef> obj = runtimeCallInfo->GetCallArgRef(0);
-    if (obj->IsNull() || obj->IsUndefined()) {
-        return panda::NumberRef::Undefined(vm);
-    }
-    JSRef<JSObject> object = JSRef<JSObject>::Make(obj);
-    auto jsDragEvent = Referenced::Claim(object->Unwrap<JsDragEvent>());
-    auto ptr = jsDragEvent->GetDragEventPointer();
-    CHECK_NULL_RETURN(ptr, panda::NumberRef::Undefined(vm));
-    return panda::NumberRef::New(vm, ptr);
 }
 
 panda::Local<panda::JSValueRef> Fp2Px(panda::JsiRuntimeCallInfo* runtimeCallInfo)
@@ -1392,14 +1140,6 @@ panda::Local<panda::JSValueRef> Lpx2Px(panda::JsiRuntimeCallInfo* runtimeCallInf
     if (pipelineContext && pipelineContext->IsContainerModalVisible()) {
         width -= 2 * (CONTAINER_BORDER_WIDTH + CONTENT_PADDING).ConvertToPx();
     }
-
-    if (pipelineContext) {
-        double effectiveWidth = pipelineContext->CalcPageWidth(width);
-        if (effectiveWidth > 0) {
-            width = effectiveWidth;
-        }
-    }
-
     if (!windowConfig.autoDesignWidth) {
         windowConfig.UpdateDesignWidthScale(width);
     }
@@ -1434,14 +1174,6 @@ panda::Local<panda::JSValueRef> Px2Lpx(panda::JsiRuntimeCallInfo* runtimeCallInf
     if (pipelineContext && pipelineContext->IsContainerModalVisible()) {
         width -= 2 * (CONTAINER_BORDER_WIDTH + CONTENT_PADDING).ConvertToPx();
     }
-
-    if (pipelineContext) {
-        double effectiveWidth = pipelineContext->CalcPageWidth(width);
-        if (effectiveWidth > 0) {
-            width = effectiveWidth;
-        }
-    }
-
     if (!windowConfig.autoDesignWidth) {
         windowConfig.UpdateDesignWidthScale(width);
     }
@@ -1540,7 +1272,7 @@ panda::Local<panda::JSValueRef> RestoreDefault(panda::JsiRuntimeCallInfo* runtim
         return panda::JSValueRef::Undefined(vm);
     }
     pipelineContext->GetTaskExecutor()->PostSyncTask(
-        [pipelineContext]() { pipelineContext->RestoreDefault(0, MouseStyleChangeReason::USER_SET_MOUSESTYLE); },
+        [pipelineContext]() { pipelineContext->RestoreDefault(); },
         TaskExecutor::TaskType::UI, "ArkUIJsRestoreDefault");
     return panda::JSValueRef::Undefined(vm);
 }
@@ -1629,33 +1361,6 @@ void JsRegisterFormViews(
         panda::FunctionRef::New(const_cast<panda::EcmaVM*>(vm), Lpx2Px));
     globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "px2lpx"),
         panda::FunctionRef::New(const_cast<panda::EcmaVM*>(vm), Px2Lpx));
-    // use for ArkTs1.2
-    globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "convertEventPointer"),
-        panda::FunctionRef::New(const_cast<panda::EcmaVM*>(vm), ConvertEventPointer));
-    globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "wrapTouchEventPointer"),
-        panda::FunctionRef::New(const_cast<panda::EcmaVM*>(vm), WrapTouchEventPointer));
-    globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "wrapMouseEventPointer"),
-        panda::FunctionRef::New(const_cast<panda::EcmaVM*>(vm), WrapMouseEventPointer));
-    globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "wrapAxisEventPointer"),
-        panda::FunctionRef::New(const_cast<panda::EcmaVM*>(vm), WrapAxisEventPointer));
-    globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "wrapClickEventPointer"),
-        panda::FunctionRef::New(const_cast<panda::EcmaVM*>(vm), WrapClickEventPointer));
-    globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "wrapHoverEventPointer"),
-        panda::FunctionRef::New(const_cast<panda::EcmaVM*>(vm), WrapHoverEventPointer));
-    globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "convertKeyEventPointer"),
-        panda::FunctionRef::New(const_cast<panda::EcmaVM*>(vm), ConvertKeyEventPointer));
-    globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "wrapKeyEventPointer"),
-        panda::FunctionRef::New(const_cast<panda::EcmaVM*>(vm), WrapKeyEventPointer));
-    globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "wrapEventTargetInfoPointer"),
-        panda::FunctionRef::New(const_cast<panda::EcmaVM*>(vm), WrapEventTargetInfoPointer));
-    globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "wrapScrollableTargetInfoPointer"),
-        panda::FunctionRef::New(const_cast<panda::EcmaVM*>(vm), WrapScrollableTargetInfoPointer));
-    globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "wrapDragEventPointer"),
-        panda::FunctionRef::New(const_cast<panda::EcmaVM*>(vm), WrapDragEventPointer));
-    globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "getScrollableTargetInfoPointer"),
-        panda::FunctionRef::New(const_cast<panda::EcmaVM*>(vm), GetScrollableTargetInfoPointer));
-    globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "getDragEventPointer"),
-        panda::FunctionRef::New(const_cast<panda::EcmaVM*>(vm), GetDragEventPointer));
     globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "setAppBgColor"),
         panda::FunctionRef::New(const_cast<panda::EcmaVM*>(vm), SetAppBackgroundColor));
     globalObj->Set(vm,
@@ -1732,11 +1437,6 @@ void JsRegisterFormViews(
     sliderStyle.Constant("InSet", 1);
     sliderStyle.Constant("NONE", 2);
 
-    JSObjectTemplate datePickerMode;
-    datePickerMode.Constant("DATE", static_cast<int>(DatePickerMode::DATE));
-    datePickerMode.Constant("YEAR_AND_MONTH", static_cast<int>(DatePickerMode::YEAR_AND_MONTH));
-    datePickerMode.Constant("MONTH_AND_DAY", static_cast<int>(DatePickerMode::MONTH_AND_DAY));
-
     JSObjectTemplate sliderChangeMode;
     sliderChangeMode.Constant("Begin", 0);
     sliderChangeMode.Constant("Moving", 1);
@@ -1754,10 +1454,6 @@ void JsRegisterFormViews(
     buttonType.Constant("Arc", (int)ButtonType::ARC);
     buttonType.Constant("ROUNDED_RECTANGLE", (int)ButtonType::ROUNDED_RECTANGLE);
 
-    JSObjectTemplate toolbaritemPlacement;
-    toolbaritemPlacement.Constant("TOP_BAR_LEADING", (int)ToolBarItemPlacement::TOP_BAR_LEADING);
-    toolbaritemPlacement.Constant("TOP_BAR_TRAILING", (int)ToolBarItemPlacement::TOP_BAR_TRAILING);
-
     JSObjectTemplate iconPosition;
     iconPosition.Constant("Start", 0);
     iconPosition.Constant("End", 1);
@@ -1774,13 +1470,11 @@ void JsRegisterFormViews(
     globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "Align"), *alignment);
     globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "Overflow"), *overflow);
     globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "ButtonType"), *buttonType);
-    globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "ToolBarItemPlacement"), *toolbaritemPlacement);
     globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "LoadingProgressStyle"), *loadingProgressStyle);
     globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "ProgressStyle"), *progressStyle);
     globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "ToggleType"), *toggleType);
     globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "RefreshStatus"), *refreshStatus);
     globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "SliderStyle"), *sliderStyle);
-    globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "DatePickerMode"), *datePickerMode);
     globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "SliderChangeMode"), *sliderChangeMode);
     globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "IconPosition"), *iconPosition);
     globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "PickerStyle"), *pickerStyle);
@@ -1788,7 +1482,7 @@ void JsRegisterFormViews(
 }
 #endif
 
-void JsRegisterViews(BindingTarget globalObj, void* nativeEngine, bool isCustomEnvSupported)
+void JsRegisterViews(BindingTarget globalObj, void* nativeEngine)
 {
     auto runtime = std::static_pointer_cast<ArkJSRuntime>(JsiDeclarativeEngineInstance::GetCurrentRuntime());
     if (!runtime) {
@@ -1849,35 +1543,8 @@ void JsRegisterViews(BindingTarget globalObj, void* nativeEngine, bool isCustomE
         panda::FunctionRef::New(const_cast<panda::EcmaVM*>(vm), Lpx2Px));
     globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "px2lpx"),
         panda::FunctionRef::New(const_cast<panda::EcmaVM*>(vm), Px2Lpx));
-    // use for ArkTs1.2
-    globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "convertEventPointer"),
-        panda::FunctionRef::New(const_cast<panda::EcmaVM*>(vm), ConvertEventPointer));
-    globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "wrapTouchEventPointer"),
-        panda::FunctionRef::New(const_cast<panda::EcmaVM*>(vm), WrapTouchEventPointer));
-    globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "wrapMouseEventPointer"),
-        panda::FunctionRef::New(const_cast<panda::EcmaVM*>(vm), WrapMouseEventPointer));
-    globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "wrapAxisEventPointer"),
-        panda::FunctionRef::New(const_cast<panda::EcmaVM*>(vm), WrapAxisEventPointer));
-    globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "wrapClickEventPointer"),
-        panda::FunctionRef::New(const_cast<panda::EcmaVM*>(vm), WrapClickEventPointer));
-    globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "wrapHoverEventPointer"),
-        panda::FunctionRef::New(const_cast<panda::EcmaVM*>(vm), WrapHoverEventPointer));
-    globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "convertKeyEventPointer"),
-        panda::FunctionRef::New(const_cast<panda::EcmaVM*>(vm), ConvertKeyEventPointer));
-    globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "wrapKeyEventPointer"),
-        panda::FunctionRef::New(const_cast<panda::EcmaVM*>(vm), WrapKeyEventPointer));
-    globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "wrapEventTargetInfoPointer"),
-        panda::FunctionRef::New(const_cast<panda::EcmaVM*>(vm), WrapEventTargetInfoPointer));
-    globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "wrapScrollableTargetInfoPointer"),
-        panda::FunctionRef::New(const_cast<panda::EcmaVM*>(vm), WrapScrollableTargetInfoPointer));
-    globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "wrapDragEventPointer"),
-        panda::FunctionRef::New(const_cast<panda::EcmaVM*>(vm), WrapDragEventPointer));
-    globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "getScrollableTargetInfoPointer"),
-        panda::FunctionRef::New(const_cast<panda::EcmaVM*>(vm), GetScrollableTargetInfoPointer));
     globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "setAppBgColor"),
         panda::FunctionRef::New(const_cast<panda::EcmaVM*>(vm), SetAppBackgroundColor));
-    globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "getDragEventPointer"),
-        panda::FunctionRef::New(const_cast<panda::EcmaVM*>(vm), GetDragEventPointer));
     globalObj->Set(vm,
         panda::StringRef::NewFromUtf8(vm, "_arkUIUncaughtPromiseError"),
         panda::FunctionRef::New(const_cast<panda::EcmaVM*>(vm), JSHandleUncaughtException));
@@ -1894,12 +1561,6 @@ void JsRegisterViews(BindingTarget globalObj, void* nativeEngine, bool isCustomE
         panda::FunctionRef::New(const_cast<panda::EcmaVM*>(vm), NG::ArkUINativeModule::GetArkUINativeModule));
     globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "loadCustomTitleBar"),
         panda::FunctionRef::New(const_cast<panda::EcmaVM*>(vm), JsLoadCustomTitleBar));
-    globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "loadCustomTitleButton"),
-        panda::FunctionRef::New(const_cast<panda::EcmaVM*>(vm), JsLoadCustomButton));
-    globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "loadCustomAppbar"),
-        panda::FunctionRef::New(const_cast<panda::EcmaVM*>(vm), JsLoadCustomAppBar));
-    globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "loadCustomWindowMask"),
-        panda::FunctionRef::New(const_cast<panda::EcmaVM*>(vm), JsLoadCustomWindowMask));
 
     BindingTarget cursorControlObj = panda::ObjectRef::New(const_cast<panda::EcmaVM*>(vm));
     cursorControlObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "setCursor"),
@@ -1907,7 +1568,7 @@ void JsRegisterViews(BindingTarget globalObj, void* nativeEngine, bool isCustomE
     cursorControlObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "restoreDefault"),
         panda::FunctionRef::New(const_cast<panda::EcmaVM*>(vm), RestoreDefault));
     globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "cursorControl"), cursorControlObj);
-    JsBindViews(globalObj, nativeEngine, isCustomEnvSupported);
+    JsBindViews(globalObj, nativeEngine);
 
     JSObjectTemplate toggleType;
     toggleType.Constant("Checkbox", 0);
@@ -1977,11 +1638,6 @@ void JsRegisterViews(BindingTarget globalObj, void* nativeEngine, bool isCustomE
     sliderStyle.Constant("InSet", 1);
     sliderStyle.Constant("NONE", 2);
 
-    JSObjectTemplate datePickerMode;
-    datePickerMode.Constant("DATE", static_cast<int>(DatePickerMode::DATE));
-    datePickerMode.Constant("YEAR_AND_MONTH", static_cast<int>(DatePickerMode::YEAR_AND_MONTH));
-    datePickerMode.Constant("MONTH_AND_DAY", static_cast<int>(DatePickerMode::MONTH_AND_DAY));
-
     JSObjectTemplate sliderChangeMode;
     sliderChangeMode.Constant("Begin", 0);
     sliderChangeMode.Constant("Moving", 1);
@@ -1999,10 +1655,6 @@ void JsRegisterViews(BindingTarget globalObj, void* nativeEngine, bool isCustomE
     buttonType.Constant("Circle", (int)ButtonType::CIRCLE);
     buttonType.Constant("Arc", (int)ButtonType::ARC);
     buttonType.Constant("ROUNDED_RECTANGLE", (int)ButtonType::ROUNDED_RECTANGLE);
-
-    JSObjectTemplate toolbaritemPlacement;
-    toolbaritemPlacement.Constant("TOP_BAR_LEADING", (int)ToolBarItemPlacement::TOP_BAR_LEADING);
-    toolbaritemPlacement.Constant("TOP_BAR_TRAILING", (int)ToolBarItemPlacement::TOP_BAR_TRAILING);
 
     JSObjectTemplate iconPosition;
     iconPosition.Constant("Start", 0);
@@ -2025,13 +1677,11 @@ void JsRegisterViews(BindingTarget globalObj, void* nativeEngine, bool isCustomE
     globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "Align"), *alignment);
     globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "Overflow"), *overflow);
     globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "ButtonType"), *buttonType);
-    globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "ToolBarItemPlacement"), *toolbaritemPlacement);
     globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "LoadingProgressStyle"), *loadingProgressStyle);
     globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "ProgressStyle"), *progressStyle);
     globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "ToggleType"), *toggleType);
     globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "RefreshStatus"), *refreshStatus);
     globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "SliderStyle"), *sliderStyle);
-    globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "DatePickerMode"), *datePickerMode);
     globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "SliderChangeMode"), *sliderChangeMode);
     globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "IconPosition"), *iconPosition);
     globalObj->Set(vm, panda::StringRef::NewFromUtf8(vm, "PickerStyle"), *pickerStyle);

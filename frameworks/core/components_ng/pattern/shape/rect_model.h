@@ -32,13 +32,15 @@ public:
     virtual void SetRadiusWidth(const Dimension& value);
     virtual void SetRadiusHeight(const Dimension& value);
     virtual void SetRadiusValue(const Dimension& radiusX, const Dimension& radiusY, int32_t index);
-    virtual void SetRadiusValue(const Dimension& radiusX, const Dimension& radiusY,
-        const RefPtr<ResourceObject>& radiusXResObj, const RefPtr<ResourceObject>& radiusYResObj, int32_t index) {};
     virtual void SetShapeRectRadius(
         const RefPtr<ShapeRect>& shapeRect, const Dimension& radiusX, const Dimension& radiusY, int32_t index);
 
 protected:
     enum RADIUS { TOP_LEFT_RADIUS = 0, TOP_RIGHT_RADIUS = 1, BOTTOM_RIGHT_RADIUS = 2, BOTTOM_LEFT_RADIUS = 3 };
+
+private:
+    static std::unique_ptr<RectModel> instance_;
+    static std::mutex mutex_;
 };
 } // namespace OHOS::Ace
 #endif // FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_PATTERN_RECT_RECT_MODEL_H

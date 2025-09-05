@@ -19,7 +19,6 @@
 #include <regex>
 
 #include "base/utils/utils.h"
-#include "core/common/container.h"
 #include "core/common/resource/resource_manager.h"
 
 namespace OHOS::Ace {
@@ -118,19 +117,19 @@ Color Color::FromString(std::string colorStr, uint32_t maskAlpha, Color defaultC
     // Regex match for rgb(90,254,180).
     if (std::regex_match(colorStr, matches, COLOR_WITH_RGB)) {
         if (matches.size() == RGB_SUB_MATCH_SIZE) {
-            auto red = static_cast<uint8_t>(StringUtils::StringToInt(matches[1]));   // red value.
-            auto green = static_cast<uint8_t>(StringUtils::StringToInt(matches[2])); // green value.
-            auto blue = static_cast<uint8_t>(StringUtils::StringToInt(matches[3]));  // blue value.
+            auto red = static_cast<uint8_t>(std::stoi(matches[1]));   // red value.
+            auto green = static_cast<uint8_t>(std::stoi(matches[2])); // green value.
+            auto blue = static_cast<uint8_t>(std::stoi(matches[3]));  // blue value.
             return FromRGB(red, green, blue);
         }
     }
     // Regex match for rgba(90,254,180,0.5).
     if (std::regex_match(colorStr, matches, COLOR_WITH_RGBA)) {
         if (matches.size() == RGBA_SUB_MATCH_SIZE) {
-            auto red = static_cast<uint8_t>(StringUtils::StringToInt(matches[1]));
-            auto green = static_cast<uint8_t>(StringUtils::StringToInt(matches[2]));
-            auto blue = static_cast<uint8_t>(StringUtils::StringToInt(matches[3]));
-            auto opacity = StringUtils::StringToDouble(matches[4]);
+            auto red = static_cast<uint8_t>(std::stoi(matches[1]));
+            auto green = static_cast<uint8_t>(std::stoi(matches[2]));
+            auto blue = static_cast<uint8_t>(std::stoi(matches[3]));
+            auto opacity = static_cast<double>(std::stod(matches[4]));
             return FromRGBO(red, green, blue, opacity);
         }
     }
@@ -235,13 +234,6 @@ std::string Color::ToString() const
     return ColorToString();
 }
 
-std::string Color::ToSvgFillColorKey() const
-{
-    std::ostringstream oss;
-    oss << ColorToString() << "_cs" << static_cast<int32_t>(colorSpace_);
-    return oss.str();
-}
-
 Color Color::FromARGB(uint8_t alpha, uint8_t red, uint8_t green, uint8_t blue)
 {
     ColorParam colorValue {
@@ -276,9 +268,7 @@ Color Color::BlendColor(const Color& overlayColor) const
     auto newRed = static_cast<uint8_t>(GetRed() * (1.0f - alphaRate) + overlayColor.GetRed() * alphaRate);
     auto newGreen = static_cast<uint8_t>(GetGreen() * (1.0f - alphaRate) + overlayColor.GetGreen() * alphaRate);
     auto newBlue = static_cast<uint8_t>(GetBlue() * (1.0f - alphaRate) + overlayColor.GetBlue() * alphaRate);
-    auto newColor = Color::FromRGB(newRed, newGreen, newBlue);
-    newColor.SetColorSpace(GetColorSpace());
-    return newColor;
+    return Color::FromRGB(newRed, newGreen, newBlue);
 }
 
 float Color::CalculateBlend(float alphaLeft, float alphaRight, float valueLeft, float valueRight) const
@@ -492,28 +482,12 @@ bool Color::MatchColorWithMagicMini(std::string& colorStr, uint32_t maskAlpha, C
         newColorStr += c;
     }
     unsigned long int value = HandleIncorrectColor(newColorStr);
-    
     if (newColorStr.length() < COLOR_STRING_SIZE_STANDARD) {
         // no alpha specified, set alpha to 0xff
         value |= maskAlpha;
     }
     color = Color(value);
     return true;
-}
-
-bool Color::MatchColorHexString(const std::string& colorStr)
-{
-    if (colorStr.empty()) {
-        return false;
-    }
-    std::smatch matches;
-    if (std::regex_match(colorStr, matches, COLOR_WITH_MAGIC) ||
-        std::regex_match(colorStr, matches, COLOR_WITH_RGBA) ||
-        std::regex_match(colorStr, matches, COLOR_WITH_RGB) ||
-        std::regex_match(colorStr, matches, COLOR_WITH_MAGIC_MINI)) {
-        return true;
-    }
-    return false;
 }
 
 bool Color::MatchColorWithRGB(const std::string& colorStr, Color& color)
@@ -524,9 +498,9 @@ bool Color::MatchColorWithRGB(const std::string& colorStr, Color& color)
     std::smatch matches;
     if (std::regex_match(colorStr, matches, COLOR_WITH_RGB)) {
         if (matches.size() == RGB_SUB_MATCH_SIZE) {
-            auto redInt = StringUtils::StringToInt(matches[1]);
-            auto greenInt = StringUtils::StringToInt(matches[2]);
-            auto blueInt = StringUtils::StringToInt(matches[3]);
+            auto redInt = std::stoi(matches[1]);
+            auto greenInt = std::stoi(matches[2]);
+            auto blueInt = std::stoi(matches[3]);
             if (!IsRGBValid(redInt) || !IsRGBValid(greenInt) || !IsRGBValid(blueInt)) {
                 return false;
             }
@@ -549,10 +523,10 @@ bool Color::MatchColorWithRGBA(const std::string& colorStr, Color& color)
     std::smatch matches;
     if (std::regex_match(colorStr, matches, COLOR_WITH_RGBA)) {
         if (matches.size() == RGBA_SUB_MATCH_SIZE) {
-            auto redInt = StringUtils::StringToInt(matches[1]);
-            auto greenInt = StringUtils::StringToInt(matches[2]);
-            auto blueInt = StringUtils::StringToInt(matches[3]);
-            auto opacityDouble = StringUtils::StringToDouble(matches[4]);
+            auto redInt = std::stoi(matches[1]);
+            auto greenInt = std::stoi(matches[2]);
+            auto blueInt = std::stoi(matches[3]);
+            auto opacityDouble = std::stod(matches[4]);
             if (!IsRGBValid(redInt) || !IsRGBValid(greenInt) || !IsRGBValid(blueInt) ||
                 !IsOpacityValid(opacityDouble)) {
                 return false;
@@ -636,7 +610,7 @@ void Color::UpdateColorByResourceId()
 {
 #ifndef ACE_UNITTEST
     CHECK_NULL_VOID(resourceId_ != 0);
-    auto resourceAdapter = ResourceManager::GetInstance().GetResourceAdapter(Container::CurrentIdSafely());
+    auto resourceAdapter = ResourceManager::GetInstance().GetResourceAdapter();
     CHECK_NULL_VOID(resourceAdapter);
     auto newColor = resourceAdapter->GetColor(resourceId_);
     SetValue(newColor.GetValue());

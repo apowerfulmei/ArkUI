@@ -350,7 +350,7 @@ ACE_FORCE_EXPORT FONT_FEATURES_LIST ParseFontFeatureSettings(const std::string& 
     return fontFeatures;
 }
 
-ACE_FORCE_EXPORT std::string UnParseFontFeatureSetting(const FONT_FEATURES_LIST& fontFeatureSettings)
+std::string UnParseFontFeatureSetting(const FONT_FEATURES_LIST& fontFeatureSettings)
 {
     std::stringstream strTemp;
     for (const auto& kv:fontFeatureSettings) {

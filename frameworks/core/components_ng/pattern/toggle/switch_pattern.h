@@ -29,7 +29,6 @@
 #include "core/components_ng/pattern/toggle/switch_paint_method.h"
 #include "core/components_ng/pattern/toggle/switch_paint_property.h"
 #include "core/components_ng/pattern/toggle/toggle_model_ng.h"
-#include "core/components/theme/app_theme.h"
 
 namespace OHOS::Ace::NG {
 
@@ -71,6 +70,7 @@ public:
         paintMethod_->SetUseContentModifier(UseContentModifier());
         paintMethod_->SetDirection(direction_);
         paintMethod_->SetIsSelect(isOn_.value_or(false));
+        paintMethod_->SetEnabled(enabled_);
         paintMethod_->SetDragOffsetX(dragOffsetX_);
         paintMethod_->SetTouchHoverAnimationType(touchHoverType_);
         paintMethod_->SetIsDragEvent(isDragEvent_);
@@ -90,12 +90,11 @@ public:
 
         auto pipelineContext = PipelineBase::GetCurrentContext();
         CHECK_NULL_RETURN(pipelineContext, FocusPattern());
-        auto switchTheme = pipelineContext->GetTheme<SwitchTheme>(GetThemeScopeId());
+        auto switchTheme = pipelineContext->GetTheme<SwitchTheme>();
         CHECK_NULL_RETURN(switchTheme, FocusPattern());
-
         auto focusPaintcolor = switchTheme->GetActiveColor();
         focusPaintParams.SetPaintColor(focusPaintcolor);
-        focusPaintParams.SetFocusPadding(switchTheme->GetSwitchFocuPadding());
+        focusPaintParams.SetFocusPadding(Dimension(2.0_vp));
 
         return { FocusType::NODE, true, FocusStyleType::CUSTOM_REGION, focusPaintParams };
     }
@@ -143,19 +142,8 @@ public:
     }
 
     void SetSwitchIsOn(bool value);
-    bool OnThemeScopeUpdate(int32_t themeScopeId) override;
-    void DumpInfo() override;
-    void SetIsUserSetMargin(bool isUserSetMargin)
-    {
-        isUserSetMargin_ = isUserSetMargin;
-    }
 
-    bool IsEnableMatchParent() override
-    {
-        return true;
-    }
 private:
-    void OnAttachToFrameNode() override;
     void OnModifyDone() override;
     void SetAccessibilityAction();
     void UpdateSelectStatus(bool isSelected);
@@ -169,23 +157,14 @@ private:
     void OnTouchDown();
     void OnTouchUp();
     void HandleMouseEvent(bool isHover);
-    void HandleFocusEvent();
-    void HandleBlurEvent();
-    void UpdateColorWhenIsOn(bool isOn);
     float GetSwitchWidth() const;
     float GetSwitchContentOffsetX() const;
 
     // Init pan recognizer to move items when drag update, play translate animation when drag end.
-    void HandleEnabled();
     void InitPanEvent(const RefPtr<GestureEventHub>& gestureHub);
     void InitClickEvent();
     void InitTouchEvent();
     void InitMouseEvent();
-    void InitFocusEvent();
-
-    void AddIsFocusActiveUpdateEvent();
-    void RemoveIsFocusActiveUpdateEvent();
-    void OnIsFocusActiveUpdate(bool isFocusAcitve);
 
     // Init key event
     void InitOnKeyEvent(const RefPtr<FocusHub>& focusHub);
@@ -202,15 +181,13 @@ private:
     void UpdateSwitchPaintProperty();
     void UpdateSwitchLayoutProperty();
     void FireBuilder();
-    bool OnKeyEvent(const KeyEvent& keyEventInfo);
-    void InitDefaultMargin();
-    void ResetDefaultMargin();
+
     RefPtr<FrameNode> BuildContentModifierNode();
     std::optional<SwitchMakeCallback> makeFunc_;
     RefPtr<FrameNode> contentModifierNode_;
 
     RefPtr<PanEvent> panEvent_;
-    RefPtr<SwitchTheme> switchTheme_;
+
     RefPtr<ClickEvent> clickListener_;
     std::optional<bool> isOn_;
     float currentOffset_ = 0.0f;
@@ -220,10 +197,9 @@ private:
     RefPtr<InputEvent> mouseEvent_;
     bool isTouch_ = false;
     bool isHover_ = false;
-    bool isFocus_ = false;
     bool isUserSetResponseRegion_ = false;
     bool showHoverEffect_ = true;
-    bool isUserSetMargin_ = false;
+    bool enabled_ = true;
 
     float width_ = 0.0f;
     float height_ = 0.0f;
@@ -238,9 +214,6 @@ private:
     bool isDragEvent_ = false;
     RefPtr<SwitchPaintMethod> paintMethod_;
     ACE_DISALLOW_COPY_AND_MOVE(SwitchPattern);
-    std::function<void(bool)> isFocusActiveUpdateEvent_;
-    Dimension hotZoneHorizontalSize_;
-    Dimension hotZoneVerticalSize_;
 };
 } // namespace OHOS::Ace::NG
 

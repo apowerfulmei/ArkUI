@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -15,6 +15,8 @@
 
 #include "bridge/declarative_frontend/jsview/models/shape_model_impl.h"
 
+#include "base/memory/referenced.h"
+#include "bridge/declarative_frontend/jsview/models/shape_abstract_model_impl.h"
 #include "bridge/declarative_frontend/view_stack_processor.h"
 #include "core/components/shape/shape_container_component.h"
 
@@ -29,12 +31,12 @@ void ShapeModelImpl::Create()
     ViewStackProcessor::GetInstance()->Push(component);
 }
 
-void ShapeModelImpl::SetBitmapMesh(const std::vector<float>& mesh, int32_t column, int32_t row)
+void ShapeModelImpl::SetBitmapMesh(std::vector<double>& mesh, int32_t column, int32_t row)
 {
     auto* stack = ViewStackProcessor::GetInstance();
     auto component = AceType::DynamicCast<OHOS::Ace::ShapeContainerComponent>(stack->GetMainComponent());
     if (component) {
-        component->SetBitmapMesh(std::vector<double>(mesh.begin(), mesh.end()), column, row);
+        component->SetBitmapMesh(mesh, column, row);
     }
 }
 
@@ -88,7 +90,7 @@ void ShapeModelImpl::SetHeight()
     }
 }
 
-void ShapeModelImpl::InitBox(const RefPtr<PixelMap>& pixMap)
+void ShapeModelImpl::InitBox(RefPtr<PixelMap>& pixMap)
 {
     auto box = ViewStackProcessor::GetInstance()->GetBoxComponent();
     box->SetOverflow(Overflow::FORCE_CLIP);
@@ -120,11 +122,6 @@ void ShapeModelImpl::SetFill(const Color& color)
     }
     AnimationOption option = stack->GetImplicitAnimationOption();
     component->SetFill(color, option);
-}
-
-void ShapeModelImpl::SetForegroundColor(const Color& color)
-{
-    SetFill(color);
 }
 
 void ShapeModelImpl::SetStrokeDashOffset(const Ace::Dimension& dashOffset)

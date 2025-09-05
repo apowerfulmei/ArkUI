@@ -16,6 +16,8 @@
 #include "core/components_ng/pattern/window_scene/helper/window_scene_helper.h"
 
 #include "input_manager.h"
+#include "key_event.h"
+#include "pointer_event.h"
 
 #include "adapter/ohos/entrance/ace_view_ohos.h"
 #include "base/memory/referenced.h"
@@ -27,14 +29,11 @@
 #include "core/components_ng/pattern/search/search_pattern.h"
 #include "core/pipeline_ng/pipeline_context.h"
 #include "session/host/include/session.h"
-#include "transaction/rs_transaction.h"
-#include "transaction/rs_transaction_handler.h"
-#include "transaction/rs_transaction_proxy.h"
-#include "transaction/rs_sync_transaction_controller.h"
-#include "transaction/rs_sync_transaction_handler.h"
-#include "ui/rs_node.h"
-#include "ui/rs_ui_context.h"
-#include "ui/rs_ui_director.h"
+
+#include "key_event.h"
+#include "pointer_event.h"
+#include "adapter/ohos/entrance/ace_view_ohos.h"
+#include "core/pipeline_ng/pipeline_context.h"
 
 #ifndef ACE_UNITTEST
 #ifdef ENABLE_STANDARD_INPUT
@@ -48,8 +47,8 @@ RefPtr<UINode> WindowSceneHelper::FindWindowScene(const RefPtr<FrameNode>& targe
     CHECK_NULL_RETURN(targetNode, nullptr);
 
     auto container = Container::Current();
-    if (!container || !container->IsSceneBoardWindow() || !container->IsSceneBoardEnabled()) {
-        TAG_LOGD(AceLogTag::ACE_KEYBOARD, "Container nullptr Or not SceneBoardWindow.");
+    if (!container || !container->IsScenceBoardWindow() || !container->IsSceneBoardEnabled()) {
+        TAG_LOGD(AceLogTag::ACE_KEYBOARD, "Container null Or not ScenceBoardWindow.");
         return nullptr;
     }
 
@@ -80,7 +79,7 @@ sptr<Rosen::Session> GetCurSession(const RefPtr<FrameNode>& focusedFrameNode)
 
     auto windowScenePattern = windowSceneFrameNode->GetPattern<SystemWindowScene>();
     if (windowScenePattern == nullptr) {
-        TAG_LOGD(AceLogTag::ACE_KEYBOARD, "windowScenePattern is nullptr.");
+        TAG_LOGD(AceLogTag::ACE_KEYBOARD, "windowScenePattern is null.");
         return nullptr;
     }
 
@@ -100,11 +99,11 @@ bool WindowSceneHelper::IsWindowScene(const RefPtr<FrameNode>& focusedFrameNode)
 
 int32_t WindowSceneHelper::GetFocusSystemWindowId(const RefPtr<FrameNode>& focusedFrameNode)
 {
-    int32_t focusSystemWindowId = 0;
+    int32_t  focusSystemWindowId = 0;
     bool isWindowScene = IsWindowScene(focusedFrameNode);
     sptr<Rosen::Session> window2patternSession = GetCurSession(focusedFrameNode);
     if (window2patternSession == nullptr) {
-        TAG_LOGD(AceLogTag::ACE_KEYBOARD, "The session between window and pattern is nullptr.");
+        TAG_LOGD(AceLogTag::ACE_KEYBOARD, "The session between window and pattern is null.");
         return focusSystemWindowId;
     }
     if (isWindowScene) {
@@ -137,13 +136,6 @@ bool WindowSceneHelper::IsFocusWindowSceneCloseKeyboard(const RefPtr<FrameNode>&
     sptr<Rosen::Session> window2patternSession = GetCurSession(focusedFrameNode);
     if (window2patternSession == nullptr) {
         TAG_LOGW(AceLogTag::ACE_KEYBOARD, "The session between window and pattern is nullptr.");
-        if (focusedFrameNode && focusedFrameNode->GetTag() == V2::WINDOW_SCENE_ETS_TAG) {
-            auto windowScenePattern = focusedFrameNode->GetPattern<SystemWindowScene>();
-            CHECK_NULL_RETURN(windowScenePattern, false);
-            auto window2patternSession = windowScenePattern->GetSession();
-            CHECK_NULL_RETURN(window2patternSession, false);
-            return window2patternSession->GetSCBKeepKeyboardFlag();
-        }
         return false;
     }
 
@@ -164,7 +156,7 @@ void WindowSceneHelper::IsWindowSceneCloseKeyboard(const RefPtr<FrameNode>& fram
     if (!saveKeyboard && !isNeedKeyBoard) {
         auto inputMethod = MiscServices::InputMethodController::GetInstance();
         if (inputMethod) {
-            inputMethod->RequestHideInput(true);
+            inputMethod->RequestHideInput();
             inputMethod->Close();
             TAG_LOGI(AceLogTag::ACE_KEYBOARD, "scbSoftKeyboard Closes Successfully.");
         }
@@ -186,7 +178,7 @@ void WindowSceneHelper::IsCloseKeyboard(const RefPtr<FrameNode>& frameNode)
     if (!saveKeyboard && !isNeedKeyBoard) {
         auto inputMethod = MiscServices::InputMethodController::GetInstance();
         if (inputMethod) {
-            inputMethod->RequestHideInput(true);
+            inputMethod->RequestHideInput();
             inputMethod->Close();
             TAG_LOGI(AceLogTag::ACE_KEYBOARD, "SoftKeyboard Closes Successfully.");
         }
@@ -205,16 +197,14 @@ void CaculatePoint(const RefPtr<FrameNode>& node, const std::shared_ptr<OHOS::MM
     auto rect = renderContext->GetPaintRectWithoutTransform();
     MMI::PointerEvent::PointerItem item;
     if (pointerEvent->GetPointerItem(pointerId, item)) {
-        auto windowX = item.GetWindowX();
-        auto windowY = item.GetWindowY();
         PointF tmp(item.GetWindowX() + rect.GetX(), item.GetWindowY() + rect.GetY());
         renderContext->GetPointTransform(tmp);
         item.SetWindowX(static_cast<int32_t>(std::round(tmp.GetX())));
         item.SetWindowY(static_cast<int32_t>(std::round(tmp.GetY())));
-        if (pointerEvent->GetSourceType() == OHOS::MMI::PointerEvent::SOURCE_TYPE_TOUCHSCREEN) {
+        if (pointerEvent->GetSourceType() == OHOS::MMI::PointerEvent::SOURCE_TYPE_TOUCHSCREEN &&
+            item.GetToolType() == OHOS::MMI::PointerEvent::TOOL_TYPE_PEN) {
             // CaculatePoint for double XY Position.
-            PointF tmpPos((NearZero(item.GetWindowXPos()) ? windowX : item.GetWindowXPos()) + rect.GetX(),
-                (NearZero(item.GetWindowYPos()) ? windowY : item.GetWindowYPos()) + rect.GetY());
+            PointF tmpPos(item.GetWindowXPos() + rect.GetX(), item.GetWindowYPos() + rect.GetY());
             renderContext->GetPointTransform(tmpPos);
             item.SetWindowXPos(tmpPos.GetX());
             item.SetWindowYPos(tmpPos.GetY());
@@ -256,39 +246,6 @@ void WindowSceneHelper::InjectPointerEvent(
         return;
     }
     OHOS::Ace::Platform::AceViewOhos::DispatchTouchEvent(aceView, pointerEvent, node, nullptr, true);
-}
-
-void WindowSceneHelper::InjectPointerEventForActionCancel(const std::shared_ptr<OHOS::MMI::PointerEvent>& pointerEvent)
-{
-    if (!pointerEvent) {
-        TAG_LOGE(AceLogTag::ACE_INPUTTRACKING, "InjectPointerEventForActionCancel pointerEvent is null return.");
-        return;
-    }
-
-    if (pointerEvent->GetPointerAction() != MMI::PointerEvent::POINTER_ACTION_CANCEL) {
-        MMI::InputManager::GetInstance()->MarkProcessed(
-            pointerEvent->GetId(), pointerEvent->GetActionTime(), pointerEvent->IsMarkEnabled());
-        TAG_LOGE(AceLogTag::ACE_INPUTTRACKING, "InjectPointerEventForActionCancel only handle cancel event.");
-        return;
-    }
-
-    auto container = Container::Current();
-    if (!container) {
-        MMI::InputManager::GetInstance()->MarkProcessed(
-            pointerEvent->GetId(), pointerEvent->GetActionTime(), pointerEvent->IsMarkEnabled());
-        TAG_LOGE(AceLogTag::ACE_INPUTTRACKING,
-            "InjectPointerEventForActionCancel eventId:%{public}d container is null return.", pointerEvent->GetId());
-        return;
-    }
-    auto aceView = AceType::DynamicCast<OHOS::Ace::Platform::AceViewOhos>(container->GetAceView());
-    if (!aceView) {
-        MMI::InputManager::GetInstance()->MarkProcessed(
-            pointerEvent->GetId(), pointerEvent->GetActionTime(), pointerEvent->IsMarkEnabled());
-        TAG_LOGE(AceLogTag::ACE_INPUTTRACKING,
-            "InjectPointerEventForActionCancel eventId:%{public}d aceView is null return.", pointerEvent->GetId());
-        return;
-    }
-    OHOS::Ace::Platform::AceViewOhos::DispatchTouchEvent(aceView, pointerEvent, nullptr, nullptr, true);
 }
 
 bool WindowSceneHelper::InjectKeyEvent(const std::shared_ptr<OHOS::MMI::KeyEvent>& keyEvent, bool isPreIme)
@@ -349,87 +306,5 @@ bool WindowSceneHelper::IsPanelScene(uint32_t type)
 bool WindowSceneHelper::IsScreenScene(uint32_t type)
 {
     return type == static_cast<uint32_t>(WindowPatternType::SCREEN_SCENE);
-}
-
-bool WindowSceneHelper::IsNodeInKeyGuardWindow(const RefPtr<FrameNode>& node)
-{
-    auto window2patternSession = GetCurSession(node);
-    if (window2patternSession == nullptr) {
-        TAG_LOGD(AceLogTag::ACE_SUB_WINDOW, "The session between window and pattern is nullptr.");
-        return false;
-    }
-    
-    auto sessionWindowType = window2patternSession->GetWindowType();
-    TAG_LOGD(AceLogTag::ACE_SUB_WINDOW, "The windowtype of window scene session is %{public}d", sessionWindowType);
-    return sessionWindowType == Rosen::WindowType::WINDOW_TYPE_KEYGUARD;
-}
-
-std::shared_ptr<Rosen::RSUIContext> WindowSceneHelper::GetRSUIContext(const RefPtr<FrameNode>& frameNode)
-{
-    CHECK_NULL_RETURN(frameNode, nullptr);
-    auto pipeline = frameNode->GetContext();
-    CHECK_NULL_RETURN(pipeline, nullptr);
-    auto window = pipeline->GetWindow();
-    CHECK_NULL_RETURN(window, nullptr);
-    auto rsUIDirector = window->GetRSUIDirector();
-    CHECK_NULL_RETURN(rsUIDirector, nullptr);
-    auto rsUIContext = rsUIDirector->GetRSUIContext();
-    TAG_LOGD(AceLogTag::ACE_WINDOW, "%{public}s", RSUIContextToStr(rsUIContext).c_str());
-    return rsUIContext;
-}
-
-std::shared_ptr<Rosen::RSTransaction> WindowSceneHelper::GetRSTransaction(const sptr<Rosen::Session>& session)
-{
-    auto rsUIContext = session->GetRSUIContext(__func__);
-    if (rsUIContext) {
-        if (auto rsSyncTransHandler = rsUIContext->GetSyncTransactionHandler()) {
-            return rsSyncTransHandler->GetRSTransaction();
-        }
-    }
-    TAG_LOGD(AceLogTag::ACE_WINDOW, "Use RSSyncTransactionController");
-    return Rosen::RSSyncTransactionController::GetInstance()->GetRSTransaction();
-}
-
-
-std::shared_ptr<Rosen::RSTransactionHandler> WindowSceneHelper::GetRSTransactionHandler(
-    const RefPtr<FrameNode>& frameNode)
-{
-    auto rsUIContext = GetRSUIContext(frameNode);
-    CHECK_NULL_RETURN(rsUIContext, nullptr);
-    return rsUIContext->GetRSTransaction();
-}
-
-void WindowSceneHelper::FlushImplicitTransaction(const RefPtr<FrameNode>& frameNode)
-{
-    if (auto transactionHandler = GetRSTransactionHandler(frameNode)) {
-        transactionHandler->FlushImplicitTransaction();
-    } else {
-        TAG_LOGD(AceLogTag::ACE_WINDOW, "RSTransactionHandler is null, use RSTransactionProxy");
-        Rosen::RSTransactionProxy::GetInstance()->FlushImplicitTransaction();
-    }
-}
-
-std::string WindowSceneHelper::RSNodeToStr(const std::shared_ptr<Rosen::RSNode>& rsNode)
-{
-    if (!rsNode) {
-        return "RSNode is null";
-    }
-    std::ostringstream oss;
-    oss << "RSNode [id: " << rsNode->GetId() << "], "
-        << RSUIContextToStr(rsNode->GetRSUIContext());
-    return oss.str();
-}
-
-std::string WindowSceneHelper::RSUIContextToStr(const std::shared_ptr<Rosen::RSUIContext>& rsUIContext)
-{
-    if (!rsUIContext) {
-        return "RSUIContext is null";
-    }
-    std::ostringstream oss;
-    oss << "RSUIContext [token: " << rsUIContext->GetToken()
-        << ", tid: "
-        << static_cast<int32_t>(rsUIContext->GetToken() >> 32) // 32: tid's offset position in the token
-        << "]";
-    return oss.str();
 }
 } // namespace OHOS::Ace::NG

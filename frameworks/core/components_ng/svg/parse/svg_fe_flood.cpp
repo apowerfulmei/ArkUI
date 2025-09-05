@@ -15,7 +15,11 @@
 
 #include "core/components_ng/svg/parse/svg_fe_flood.h"
 
-#include "core/components_ng/svg/parse/svg_constants.h"
+#include "2d_graphics/include/effect/shader_effect.h"
+
+#include "base/utils/utils.h"
+#include "core/components/declaration/svg/svg_fe_flood_declaration.h"
+#include "core/components_ng/render/drawing.h"
 
 namespace OHOS::Ace::NG {
 
@@ -28,7 +32,7 @@ SvgFeFlood::SvgFeFlood() : SvgFe() {}
 
 void SvgFeFlood::OnAsImageFilter(std::shared_ptr<RSImageFilter>& imageFilter,
     const SvgColorInterpolationType& srcColor, SvgColorInterpolationType& currentColor,
-    std::unordered_map<std::string, std::shared_ptr<RSImageFilter>>& resultHash, bool /*cropRect*/) const
+    std::unordered_map<std::string, std::shared_ptr<RSImageFilter>>& resultHash) const
 {
     imageFilter = MakeImageFilter(feAttr_.in, imageFilter, resultHash);
 
@@ -50,11 +54,11 @@ void SvgFeFlood::OnAsImageFilter(std::shared_ptr<RSImageFilter>& imageFilter,
 bool SvgFeFlood::ParseAndSetSpecializedAttr(const std::string& name, const std::string& value)
 {
     static const LinearMapNode<void (*)(const std::string&, SvgFeFloodAttribute&)> attrs[] = {
-        { SVG_FE_FLOOD_COLOR,
+        { DOM_SVG_FE_FLOOD_COLOR,
             [](const std::string& val, SvgFeFloodAttribute& attr) {
                 attr.floodColor = SvgAttributesParser::GetColor(val);
             } },
-        { SVG_FE_FLOOD_OPACITY,
+        { DOM_SVG_FE_FLOOD_OPACITY,
             [](const std::string& val, SvgFeFloodAttribute& attr) {
                 attr.floodOpacity = SvgAttributesParser::ParseDouble(val);
             } },

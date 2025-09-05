@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -18,9 +18,6 @@
 import { ArkScrollable } from "./ArkScrollable";
 
 class ItemConstraintSizeModifier extends ModifierWithKey<ArkConstraintSizeOptions> {
-  constructor(value: ArkConstraintSizeOptions) {
-    super(value);
-  }
   static identity: Symbol = Symbol('itemConstraintSize');
   applyPeer(node: KNode, reset: boolean): void {
     if (reset) {
@@ -99,9 +96,6 @@ class WaterFlowClipModifier extends ModifierWithKey<boolean | object> {
 }
 
 class RowsGapModifier extends ModifierWithKey<number | string> {
-  constructor(value: number | string) {
-    super(value);
-  }
   static identity: Symbol = Symbol('rowsGap');
   applyPeer(node: KNode, reset: boolean): void {
     if (reset) {
@@ -116,9 +110,6 @@ class RowsGapModifier extends ModifierWithKey<number | string> {
 }
 
 class ColumnsGapModifier extends ModifierWithKey<number | string> {
-  constructor(value: number | string) {
-    super(value);
-  }
   static identity: Symbol = Symbol('columnsGap');
   applyPeer(node: KNode, reset: boolean): void {
     if (reset) {
@@ -161,9 +152,6 @@ class NestedScrollModifier extends ModifierWithKey<ArkNestedScrollOptions> {
 }
 
 class FrictionModifier extends ModifierWithKey<number | Resource> {
-  constructor(value: number | Resource) {
-    super(value);
-  }
   static identity: Symbol = Symbol('friction');
   applyPeer(node: KNode, reset: boolean): void {
     if (reset) {
@@ -176,6 +164,44 @@ class FrictionModifier extends ModifierWithKey<number | Resource> {
     return !isBaseOrResourceEqual(this.stageValue, this.value);
   }
 }
+
+class WaterFlowEdgeEffectModifier extends ModifierWithKey<ArkWaterFlowEdgeEffect> {
+  constructor(value: ArkWaterFlowEdgeEffect) {
+    super(value);
+  }
+  static identity: Symbol = Symbol('waterFlowEdgeEffect');
+  applyPeer(node: KNode, reset: boolean): void {
+    if (reset) {
+      getUINativeModule().waterFlow.resetEdgeEffect(node);
+    } else {
+      getUINativeModule().waterFlow.setEdgeEffect(node, this.value?.value, this.value.options?.alwaysEnabled);
+    }
+  }
+
+  checkObjectDiff(): boolean {
+    return !((this.stageValue.value === this.value.value) &&
+      (this.stageValue.options === this.value.options));
+  }
+}
+
+class WaterFlowFadingEdgeModifier extends ModifierWithKey<ArkFadingEdge> {
+  constructor(value: ArkFadingEdge) {
+    super(value);
+  }
+  static identity: Symbol = Symbol('waterFlowFadingEdge');
+  applyPeer(node: KNode, reset: boolean): void {
+    if (reset) {
+      getUINativeModule().waterFlow.resetFadingEdge(node);
+    } else {
+      getUINativeModule().waterFlow.setFadingEdge(node, this.value.value!, this.value.options?.fadingEdgeLength);
+    }
+  }
+  checkObjectDiff(): boolean {
+    return !((this.stageValue.value === this.value.value) &&
+      (this.stageValue.options === this.value.options));
+  }
+}
+
 
 class WaterFlowScrollBarWidthModifier extends ModifierWithKey<string | number> {
   constructor(value: string | number) {
@@ -233,20 +259,6 @@ class WaterFlowCachedCountModifier extends ModifierWithKey<ArkScrollableCacheOpt
   }
 }
 
-class WaterFlowSyncLoadModifier extends ModifierWithKey<boolean> {
-  constructor(value: boolean) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('waterFlowSyncLoad');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().waterFlow.resetSyncLoad(node);
-    } else {
-      getUINativeModule().waterFlow.setSyncLoad(node, this.value);
-    }
-  }
-}
-
 class WaterFlowFlingSpeedLimitModifier extends ModifierWithKey<number> {
   constructor(value: number) {
     super(value);
@@ -261,120 +273,6 @@ class WaterFlowFlingSpeedLimitModifier extends ModifierWithKey<number> {
   }
 }
 
-class WaterFlowOnScrollFrameBeginModifier extends ModifierWithKey<(offset: number, state: ScrollState) => { offsetRemain: number }> {
-  constructor(value: (offset: number, state: ScrollState) => { offsetRemain: number; }) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('waterFlowOnScrollFrameBegin');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().waterFlow.resetOnScrollFrameBegin(node);
-    } else {
-      getUINativeModule().waterFlow.setOnScrollFrameBegin(node, this.value);
-    }
-  }
-}
-
-class WaterFlowOnWillScrollModifier extends ModifierWithKey<(xOffset: number, yOffset: number,
-  scrollState: ScrollState, scrollSource: ScrollSource) => void | OffsetResult> {
-  constructor(value: (xOffset: number, yOffset: number,
-    scrollState: ScrollState, scrollSource: ScrollSource) => void | OffsetResult) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('waterFlowOnWillScroll');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().waterFlow.resetOnWillScroll(node);
-    } else {
-      getUINativeModule().waterFlow.setOnWillScroll(node, this.value);
-    }
-  }
-}
-
-class WaterFlowOnDidScrollModifier extends ModifierWithKey<(xOffset: number, yOffset: number, scrollState: ScrollState) => void> {
-  constructor(value: (xOffset: number, yOffset: number, scrollState: ScrollState) => void) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('waterFlowOnDidScroll');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().waterFlow.resetOnDidScroll(node);
-    } else {
-      getUINativeModule().waterFlow.setOnDidScroll(node, this.value);
-    }
-  }
-}
-
-class WaterFlowOnReachStartModifier extends ModifierWithKey<() => void> {
-  constructor(value: () => void) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('waterFlowOnReachStart');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().waterFlow.resetOnReachStart(node);
-    } else {
-      getUINativeModule().waterFlow.setOnReachStart(node, this.value);
-    }
-  }
-}
-
-class WaterFlowOnReachEndModifier extends ModifierWithKey<() => void> {
-  constructor(value: () => void) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('waterFlowOnReachEnd');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().waterFlow.resetOnReachEnd(node);
-    } else {
-      getUINativeModule().waterFlow.setOnReachEnd(node, this.value);
-    }
-  }
-}
-
-class WaterFlowOnScrollStartModifier extends ModifierWithKey<() => void> {
-  constructor(value: () => void) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('waterFlowOnScrollStart');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().waterFlow.resetOnScrollStart(node);
-    } else {
-      getUINativeModule().waterFlow.setOnScrollStart(node, this.value);
-    }
-  }
-}
-
-class WaterFlowOnScrollStopModifier extends ModifierWithKey<() => void> {
-  constructor(value: () => void) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('waterFlowOnScrollStop');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().waterFlow.resetOnScrollStop(node);
-    } else {
-      getUINativeModule().waterFlow.setOnScrollStop(node, this.value);
-    }
-  }
-}
-
-class WaterFlowOnScrollIndexModifier extends ModifierWithKey<(first: number, last: number) => void> {
-  constructor(value: (first: number, last: number) => void) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('waterFlowOnScrollIndex');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().waterFlow.resetOnScrollIndex(node);
-    } else {
-      getUINativeModule().waterFlow.setOnScrollIndex(node, this.value);
-    }
-  }
-}
-
 class WaterFlowInitializeModifier extends ModifierWithKey<WaterFlowParam> {
   constructor(value: WaterFlowParam) {
     super(value);
@@ -385,7 +283,7 @@ class WaterFlowInitializeModifier extends ModifierWithKey<WaterFlowParam> {
       getUINativeModule().waterFlow.resetWaterFlowInitialize(node);
     } else {
       getUINativeModule().waterFlow.setWaterFlowInitialize(node,
-        this.value?.scroller, this.value?.sections, this.value?.layoutMode, this.value?.footerContent, this.value?.footer);
+        this.value?.scroller, this.value?.sections, this.value?.layoutMode);
     }
   }
 }
@@ -394,8 +292,6 @@ interface WaterFlowParam {
   scroller?: Scroller;
   sections?: WaterFlowSections;
   layoutMode?: WaterFlowLayoutMode;
-  footerContent?: ComponentContent;
-  footer?: CustomBuilder;
 }
 
 class ArkWaterFlowComponent extends ArkScrollable<WaterFlowAttribute> implements WaterFlowAttribute {
@@ -463,24 +359,31 @@ class ArkWaterFlowComponent extends ArkScrollable<WaterFlowAttribute> implements
     modifierWithKey(this._modifiersWithKeys, WaterFlowCachedCountModifier.identity, WaterFlowCachedCountModifier, opt);
     return this;
   }
-  syncLoad(value: boolean): this {
-    modifierWithKey(this._modifiersWithKeys, WaterFlowSyncLoadModifier.identity, WaterFlowSyncLoadModifier, value);
-    return this;
-  }
   onReachStart(event: () => void): this {
-    modifierWithKey(this._modifiersWithKeys, WaterFlowOnReachStartModifier.identity, WaterFlowOnReachStartModifier, event);
-    return this;
+    throw new Error('Method not implemented.');
   }
   onReachEnd(event: () => void): this {
-    modifierWithKey(this._modifiersWithKeys, WaterFlowOnReachEndModifier.identity, WaterFlowOnReachEndModifier, event);
-    return this;
+    throw new Error('Method not implemented.');
   }
   onScrollFrameBegin(event: (offset: number, state: ScrollState) => { offsetRemain: number; }): this {
-    modifierWithKey(this._modifiersWithKeys, WaterFlowOnScrollFrameBeginModifier.identity, WaterFlowOnScrollFrameBeginModifier, event);
-    return this;
+    throw new Error('Method not implemented.');
   }
   clip(value: boolean | CircleAttribute | EllipseAttribute | PathAttribute | RectAttribute): this {
     modifierWithKey(this._modifiersWithKeys, WaterFlowClipModifier.identity, WaterFlowClipModifier, value);
+    return this;
+  }
+  edgeEffect(value: EdgeEffect, options?: EdgeEffectOptions | undefined): this {
+    let effect: ArkWaterFlowEdgeEffect = new ArkWaterFlowEdgeEffect();
+    effect.value = value;
+    effect.options = options;
+    modifierWithKey(this._modifiersWithKeys, WaterFlowEdgeEffectModifier.identity, WaterFlowEdgeEffectModifier, effect);
+    return this;
+  }
+  fadingEdge(value: boolean, options?: FadingEdgeOptions | undefined): this {
+    let fadingEdge: ArkFadingEdge = new ArkFadingEdge();
+    fadingEdge.value = value;
+    fadingEdge.options = options;
+    modifierWithKey(this._modifiersWithKeys, WaterFlowFadingEdgeModifier.identity, WaterFlowFadingEdgeModifier, fadingEdge);
     return this;
   }
   scrollBarWidth(value: string | number): this {
@@ -497,27 +400,6 @@ class ArkWaterFlowComponent extends ArkScrollable<WaterFlowAttribute> implements
   }
   flingSpeedLimit(value: number): this {
     modifierWithKey(this._modifiersWithKeys, WaterFlowFlingSpeedLimitModifier.identity, WaterFlowFlingSpeedLimitModifier, value);
-    return this;
-  }
-  onWillScroll(callback: (xOffset: number, yOffset: number,
-    scrollState: ScrollState, scrollSource: ScrollSource) => void | OffsetResult): this {
-    modifierWithKey(this._modifiersWithKeys, WaterFlowOnWillScrollModifier.identity, WaterFlowOnWillScrollModifier, callback);
-    return this;
-  }
-  onDidScroll(callback: (xOffset: number, yOffset: number, scrollState: ScrollState) => void): this {
-    modifierWithKey(this._modifiersWithKeys, WaterFlowOnDidScrollModifier.identity, WaterFlowOnDidScrollModifier, callback);
-    return this;
-  }
-  onScrollStart(event: () => void): this {
-    modifierWithKey(this._modifiersWithKeys, WaterFlowOnScrollStartModifier.identity, WaterFlowOnScrollStartModifier, event);
-    return this;
-  }
-  onScrollStop(event: () => void): this {
-    modifierWithKey(this._modifiersWithKeys, WaterFlowOnScrollStopModifier.identity, WaterFlowOnScrollStopModifier, event);
-    return this;
-  }
-  onScrollIndex(event: (first: number, last: number) => void): this {
-    modifierWithKey(this._modifiersWithKeys, WaterFlowOnScrollIndexModifier.identity, WaterFlowOnScrollIndexModifier, event);
     return this;
   }
   initialize(value: Object[]): this {
@@ -542,9 +424,4 @@ globalThis.WaterFlow.attributeModifier = function (modifier: ArkComponent): void
   }, (nativePtr: KNode, classType: ModifierType, modifierJS: ModifierJS) => {
     return new modifierJS.WaterFlowModifier(nativePtr, classType);
   });
-};
-
-globalThis.WaterFlow.onWillStopDragging = function (value: (velocity: number) => void): void {
-  let nodePtr = getUINativeModule().frameNode.getStackTopNode();
-  getUINativeModule().scrollable.setOnWillStopDragging(nodePtr, value);
 };

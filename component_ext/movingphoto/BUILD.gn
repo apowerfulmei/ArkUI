@@ -11,7 +11,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import("//build/config/components/ets_frontend/es2abc_config.gni")
+import("//arkcompiler/ets_frontend/es2panda/es2abc_config.gni")
 import("//build/ohos.gni")
 import("//foundation/arkui/ace_engine/ace_config.gni")
 import("//foundation/arkui/ace_engine/build/ace_gen_obj.gni")
@@ -56,17 +56,13 @@ ohos_shared_library("movingphotoview") {
   include_dirs = [
     "${component_ext_path}/ext_common/",
     "${component_ext_path}/movingphoto/",
-    "$ace_root/frameworks/",
   ]
   include_dirs += additional_include_dirs
-
-  configs = [ "$ace_root/interfaces/inner_api/ace_kit:ace_kit_config" ]
 
   deps = [
     ":gen_obj_src_multimedia_movingphotoview_abc",
     ":gen_obj_src_multimedia_movingphotoview_js",
     "$ace_root/build:libace_compatible",
-    "$ace_root/frameworks/core:ace_container_scope",
     "$ace_root/interfaces/inner_api/ace:ace_uicontent",
     "$ace_root/interfaces/napi/kits/plugincomponent:plugincomponent",
   ]
@@ -77,13 +73,10 @@ ohos_shared_library("movingphotoview") {
     "hilog:libhilog",
     "image_framework:image",
     "image_framework:image_native",
+    "media_library:media_library_manager",
+    "napi:ace_container_scope",
     "napi:ace_napi",
   ]
-
-  if (defined(global_parts_info) &&
-      !defined(global_parts_info.multimedia_media_library)) {
-    external_deps += [ "media_library:media_library_manager" ]
-  }
 
   ldflags = [ "-Wl,--gc-sections" ]
 

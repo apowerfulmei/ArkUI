@@ -18,7 +18,6 @@
 
 #include "core/common/container.h"
 #include "core/components_ng/base/inspector.h"
-#include "core/components_ng/base/frame_node.h"
 
 namespace OHOS::Ace {
 typedef struct {
@@ -26,12 +25,10 @@ typedef struct {
     int32_t frameNodeId = 0;
     std::string nodeType;
     std::string debugline;
-    int32_t parentNodeId = -1;
 } FrameNodeInfo;
 
 typedef std::function<void(bool)> ProfilerStatusCallback;
 typedef std::function<void(FrameNodeInfo)> RsProfilerNodeMountCallback;
-using PixelMapPair = std::pair<uint64_t, std::shared_ptr<Media::PixelMap>>;
 
 class LayoutInspector {
 public:
@@ -39,23 +36,15 @@ public:
     static void SetlayoutInspectorStatus(int32_t containerId);
     static void GetInspectorTreeJsonStr(std::string& treeJsonStr, int32_t containerId);
     static void CreateLayoutInfo(int32_t containerId);
-    static void CreateContainerLayoutInfo(RefPtr<Container>& container);
-    static void CreateLayoutInfoByWinId(uint32_t windId);
     static void SetCallback(int32_t instanceId);
     static void SetStatus(bool layoutInspectorStatus);
     static void GetSnapshotJson(int32_t containerId, std::unique_ptr<JsonValue>& message);
-    static void RegisterConnectCallback();
-    static std::pair<uint32_t, int32_t> ProcessMessages(const std::string& message);
-
-    static void CreateContainer3DLayoutInfo(RefPtr<Container>& container);
-    static void Create3DLayoutInfoByWinId(uint32_t windId);
-    static void SendInspctorAbilities();
 
     // state profiler
     static bool GetStateProfilerStatus();
     static void SetStateProfilerStatus(bool status);
     static void TriggerJsStateProfilerStatusCallback(bool status);
-    static void SendMessage(const std::string& message);
+    static void SendStateProfilerMessage(const std::string& message);
     static void SetJsStateProfilerStatusCallback(ProfilerStatusCallback&& callback);
 
     // rs profiler
@@ -65,15 +54,8 @@ public:
     static void HandleStopRecord();
     static void HandleInnerCallback(FrameNodeInfo node);
     static void ConnectServerCallback();
-    using SetArkUICallback = void (*)(const std::function<void(const char*)>& arkuiCallback);
 
 private:
-    static void SendEmpty3DSnapJson();
-    static std::vector<PixelMapPair> Filter3DSnapshot(const std::vector<PixelMapPair>& snapinfos);
-    static void Get3DSnapshotJson(const RefPtr<NG::FrameNode>& node);
-    static void BuildInfoForIDE(uint64_t id, const std::shared_ptr<Media::PixelMap>& pixelMap,
-        std::unique_ptr<JsonValue>& message);
-    static int64_t RsNodeIdToFrameNodeId(uint64_t rsNodeId);
     static bool stateProfilerStatus_;
     static bool layoutInspectorStatus_;
     static NG::InspectorTreeMap recNodeInfos_;
@@ -81,9 +63,6 @@ private:
     static ProfilerStatusCallback jsStateProfilerStatusCallback_;
     static RsProfilerNodeMountCallback rsProfilerNodeMountCallback_;
     static bool isUseStageModel_;
-    static std::once_flag loadFlag;
-    static void* handlerConnectServerSo;
-    static SetArkUICallback setArkUICallback;
 };
 } // namespace OHOS::Ace
 #endif // FOUNDATION_ACE_FRAMEWORKS_CORE_COMMON_LAYOUT_INSPECTOR_H

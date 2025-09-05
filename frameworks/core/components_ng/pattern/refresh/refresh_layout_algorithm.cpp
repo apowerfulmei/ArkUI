@@ -15,8 +15,14 @@
 
 #include "frameworks/core/components_ng/pattern/refresh/refresh_layout_algorithm.h"
 
+#include "frameworks/base/utils/utils.h"
+#include "frameworks/core/common/container.h"
+#include "frameworks/core/components_ng/base/frame_node.h"
+#include "frameworks/core/components_ng/pattern/refresh/refresh_layout_property.h"
 #include "frameworks/core/components_ng/pattern/refresh/refresh_pattern.h"
-#include "core/components_ng/property/measure_utils.h"
+#include "frameworks/core/components_ng/property/measure_property.h"
+#include "frameworks/core/components_ng/property/measure_utils.h"
+#include "frameworks/core/components_ng/property/property.h"
 
 namespace OHOS::Ace::NG {
 namespace {
@@ -32,9 +38,8 @@ void RefreshLayoutAlgorithm::Measure(LayoutWrapper* layoutWrapper)
     CHECK_NULL_VOID(layoutProperty);
     auto layoutConstraint = layoutProperty->CreateChildConstraint();
     int32_t index = 0;
-    const auto& childlist = layoutWrapper->GetAllChildrenWithBuild();
-    for (auto&& child : childlist) {
-        if (!isHighVersion_) {
+    for (auto&& child : layoutWrapper->GetAllChildrenWithBuild()) {
+        if (!Container::GreatOrEqualAPIVersion(PlatformVersion::VERSION_ELEVEN)) {
             child->Measure(layoutConstraint);
             ++index;
             continue;
@@ -57,7 +62,7 @@ void RefreshLayoutAlgorithm::Measure(LayoutWrapper* layoutWrapper)
         child->Measure(layoutConstraint);
         ++index;
     }
-    PerformMeasureSelfWithChildList(layoutWrapper, childlist);
+    PerformMeasureSelf(layoutWrapper);
 }
 
 OptionalSizeF RefreshLayoutAlgorithm::CalculateBuilderSize(
@@ -89,8 +94,16 @@ OptionalSizeF RefreshLayoutAlgorithm::CalculateBuilderSize(
 void RefreshLayoutAlgorithm::Layout(LayoutWrapper* layoutWrapper)
 {
     PerformLayout(layoutWrapper);
-}
+    auto layoutProperty = AceType::DynamicCast<NG::RefreshLayoutProperty>(layoutWrapper->GetLayoutProperty());
+    CHECK_NULL_VOID(layoutProperty);
 
+    for (auto&& child : layoutWrapper->GetAllChildrenWithBuild()) {
+        if (!child) {
+            continue;
+        }
+        child->Layout();
+    }
+}
 // Called to perform layout render node and child.
 void RefreshLayoutAlgorithm::PerformLayout(LayoutWrapper* layoutWrapper)
 {
@@ -104,6 +117,11 @@ void RefreshLayoutAlgorithm::PerformLayout(LayoutWrapper* layoutWrapper)
     auto left = padding.left.value_or(0);
     auto top = padding.top.value_or(0);
     auto paddingOffset = OffsetF(left, top);
+    auto align = Alignment::TOP_CENTER;
+    auto host = layoutWrapper->GetHostNode();
+    CHECK_NULL_VOID(host);
+    auto pattern = host->GetPattern<RefreshPattern>();
+    CHECK_NULL_VOID(pattern);
     // Update child position.
     // if customBuilder exist, customBuilder is first child
     int32_t index = 0;
@@ -114,10 +132,37 @@ void RefreshLayoutAlgorithm::PerformLayout(LayoutWrapper* layoutWrapper)
             continue;
         }
         auto paddingOffsetChild = paddingOffset;
-        if (HasCustomBuilderIndex()) {
-            if (isHighVersion_) {
-                UpdateChildPosition(layoutWrapper, index, paddingOffsetChild);
-            } else if (index == customBuilderIndex_.value_or(0)) {
+        auto alignChild = align;
+        if (!HasCustomBuilderIndex()) {
+            if (index == layoutWrapper->GetTotalChildCount() - 1) {
+                alignChild = Alignment::TOP_CENTER;
+            }
+        } else {
+            if (Container::GreatOrEqualAPIVersion(PlatformVersion::VERSION_ELEVEN)) {
+                auto builderChild = layoutWrapper->GetOrCreateChildByIndex(customBuilderIndex_.value_or(0));
+                CHECK_NULL_VOID(builderChild);
+                auto geometryNode = builderChild->GetGeometryNode();
+                CHECK_NULL_VOID(geometryNode);
+                auto builderHeight = geometryNode->GetMarginFrameSize().Height();
+                alignChild = Alignment::TOP_CENTER;
+                if (index == customBuilderIndex_.value_or(0)) {
+                    auto builderOffset =
+                        NearEqual(builderHeight, builderBaseHeight_) ? 0.0f : (builderBaseHeight_ - builderHeight);
+                    paddingOffsetChild += OffsetF(0.0f, builderOffset);
+                } else {
+                    auto scrollOffset =
+                        NearEqual(builderHeight, builderBaseHeight_) ? builderHeight : builderBaseHeight_;
+                    paddingOffsetChild += OffsetF(0.0f, scrollOffset);
+                }
+                auto translate =
+                    Alignment::GetAlignPosition(size, child->GetGeometryNode()->GetMarginFrameSize(), alignChild) +
+                    paddingOffsetChild;
+                child->GetGeometryNode()->SetMarginFrameOffset(translate);
+                index++;
+                continue;
+            }
+            if (index == customBuilderIndex_.value_or(0)) {
+                alignChild = Alignment::TOP_CENTER;
                 paddingOffsetChild += OffsetF(0.0f, customBuilderOffset_);
                 auto geometryNode = child->GetGeometryNode();
                 CHECK_NULL_VOID(geometryNode);
@@ -133,30 +178,11 @@ void RefreshLayoutAlgorithm::PerformLayout(LayoutWrapper* layoutWrapper)
                 }
             }
         }
-        auto translate =
-            Alignment::GetAlignPosition(size, child->GetGeometryNode()->GetMarginFrameSize(), Alignment::TOP_CENTER) +
-            paddingOffsetChild;
+        auto translate = Alignment::GetAlignPosition(size, child->GetGeometryNode()->GetMarginFrameSize(), alignChild) +
+                         paddingOffsetChild;
         child->GetGeometryNode()->SetMarginFrameOffset(translate);
-        child->Layout();
         index++;
     }
 }
 
-void RefreshLayoutAlgorithm::UpdateChildPosition(
-    LayoutWrapper* layoutWrapper, int32_t index, OffsetF& paddingOffsetChild)
-{
-    CHECK_NULL_VOID(layoutWrapper);
-    auto builderChild = layoutWrapper->GetOrCreateChildByIndex(customBuilderIndex_.value_or(0));
-    CHECK_NULL_VOID(builderChild);
-    auto geometryNode = builderChild->GetGeometryNode();
-    CHECK_NULL_VOID(geometryNode);
-    auto builderHeight = geometryNode->GetMarginFrameSize().Height();
-    if (index == customBuilderIndex_.value_or(0)) {
-        auto builderOffset = NearEqual(builderHeight, builderBaseHeight_) ? 0.0f : (builderBaseHeight_ - builderHeight);
-        paddingOffsetChild += OffsetF(0.0f, builderOffset);
-    } else {
-        auto scrollOffset = NearEqual(builderHeight, builderBaseHeight_) ? builderHeight : builderBaseHeight_;
-        paddingOffsetChild += OffsetF(0.0f, scrollOffset);
-    }
-}
 } // namespace OHOS::Ace::NG

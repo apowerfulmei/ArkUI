@@ -20,7 +20,6 @@
 #include "core/components_ng/image_provider/image_loading_context.h"
 #include "core/components_ng/layout/box_layout_algorithm.h"
 #include "core/components_ng/layout/layout_wrapper.h"
-#include "core/components_ng/property/layout_policy_property.h"
 
 namespace OHOS::Ace::NG {
 
@@ -30,10 +29,9 @@ class ACE_EXPORT RatingLayoutAlgorithm : public BoxLayoutAlgorithm {
 public:
     RatingLayoutAlgorithm();
     RatingLayoutAlgorithm(const RefPtr<ImageLoadingContext>& foregroundLoadingCtx,
-        const RefPtr<ImageLoadingContext>& secondaryLoadingCtx, const RefPtr<ImageLoadingContext>& backgroundLoadingCtx,
-        const RefPtr<ImageLoadingContext>& backgroundFocusLoadingCtx)
+        const RefPtr<ImageLoadingContext>& secondaryLoadingCtx, const RefPtr<ImageLoadingContext>& backgroundLoadingCtx)
         : foregroundLoadingCtx_(foregroundLoadingCtx), secondaryLoadingCtx_(secondaryLoadingCtx),
-          backgroundLoadingCtx_(backgroundLoadingCtx), backgroundFocusLoadingCtx_(backgroundFocusLoadingCtx)
+          backgroundLoadingCtx_(backgroundLoadingCtx)
     {}
 
     ~RatingLayoutAlgorithm() override = default;
@@ -43,7 +41,6 @@ public:
         foregroundLoadingCtx_ = nullptr;
         secondaryLoadingCtx_ = nullptr;
         backgroundLoadingCtx_ = nullptr;
-        backgroundFocusLoadingCtx_ = nullptr;
     }
 
     std::optional<SizeF> MeasureContent(
@@ -51,14 +48,10 @@ public:
 
     void Layout(LayoutWrapper* layoutWrapper) override;
 
-    std::optional<SizeF> LayoutPolicyIsMatchParent(const LayoutConstraintF& contentConstraint,
-        std::optional<NG::LayoutPolicyProperty> layoutPolicy, int32_t stars);
-
 private:
     RefPtr<ImageLoadingContext> foregroundLoadingCtx_;
     RefPtr<ImageLoadingContext> secondaryLoadingCtx_;
     RefPtr<ImageLoadingContext> backgroundLoadingCtx_;
-    RefPtr<ImageLoadingContext> backgroundFocusLoadingCtx_;
 
     ACE_DISALLOW_COPY_AND_MOVE(RatingLayoutAlgorithm);
 };

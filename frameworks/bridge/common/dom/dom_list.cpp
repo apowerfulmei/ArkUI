@@ -400,9 +400,7 @@ void DOMList::CreateOrUpdateList()
 void DOMList::CreateOrUpdateIndexer()
 {
     CreateOrUpdateList();
-    bool isWatchOrWearable = SystemProperties::GetDeviceType() == DeviceType::WATCH ||
-                             SystemProperties::GetDeviceType() == DeviceType::WEARABLE;
-    bool isCircle = circleMode_.second ? circleMode_.first : isWatchOrWearable;
+    bool isCircle = circleMode_.second ? circleMode_.first : SystemProperties::GetDeviceType() == DeviceType::WATCH;
     bool bubble = bubble_.second ? bubble_.first : true;
     bool multiLanguage = multiLanguage_.second ? multiLanguage_.first : false;
     if (!indexerComponent_) {

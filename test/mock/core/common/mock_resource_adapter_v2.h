@@ -28,57 +28,34 @@ public:
 
     Color GetColor(uint32_t resId) override
     {
-        Color data;
-        return GetMockResourceData(resId, data) ? data : Color();
+        return Color();
     }
 
     Dimension GetDimension(uint32_t resId) override
     {
-        Dimension data;
-        return GetMockResourceData(resId, data) ? data : Dimension();
+        return Dimension();
     }
 
     std::string GetString(uint32_t resId) override
     {
-        std::string data;
-        return GetMockResourceData(resId, data) ? data : "";
+        return "";
     }
 
     std::vector<std::string> GetStringArray(uint32_t resId) const override
     {
-        std::vector<std::string> data;
-        return GetMockResourceData(resId, data) ? data : std::vector<std::string>();
+        return std::vector<std::string>();
     }
 
     double GetDouble(uint32_t resId) override
     {
-        double data = 0.0;
-        return GetMockResourceData(resId, data) ? data : 0.0;
+        return 0;
     }
 
     int32_t GetInt(uint32_t resId) override
     {
-        int32_t data = 0;
-        return GetMockResourceData(resId, data) ? data : 0;
+        return 0;
     }
-
-private:
-    static bool GetMockResourceData(uint32_t id, Color& data);
-    static bool GetMockResourceData(uint32_t id, Dimension& data);
-    static bool GetMockResourceData(uint32_t id, std::string& data);
-    static bool GetMockResourceData(uint32_t id, std::vector<std::string>& data);
-    static bool GetMockResourceData(uint32_t id, double& data);
-    static bool GetMockResourceData(uint32_t id, int32_t& data);
 };
-
-void ResetMockResourceData();
-void AddMockResourceData(uint32_t id, const Color& data);
-void AddMockResourceData(uint32_t id, const Dimension& data);
-void AddMockResourceData(uint32_t id, const std::string& data);
-void AddMockResourceData(uint32_t id, const std::vector<std::string>& data);
-void AddMockResourceData(uint32_t id, const double& data);
-void AddMockResourceData(uint32_t id, const int32_t& data);
-
 } // namespace OHOS::Ace
 
 #endif

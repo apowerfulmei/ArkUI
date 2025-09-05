@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024-2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -24,6 +24,7 @@
 #include "core/components_ng/property/measure_property.h"
 
 namespace OHOS::Ace::NG {
+constexpr int32_t EMPTY_JUMP_INDEX = -2;
 
 enum class WaterFlowLayoutMode;
 
@@ -31,8 +32,6 @@ class WaterFlowLayoutInfoBase : public AceType {
     DECLARE_ACE_TYPE(WaterFlowLayoutInfoBase, AceType);
 
 public:
-    static constexpr int32_t EMPTY_JUMP_INDEX = -2;
-
     WaterFlowLayoutInfoBase() = default;
     ~WaterFlowLayoutInfoBase() override = default;
 
@@ -52,11 +51,6 @@ public:
      * @return amount of adjustment to total offset of content
      */
     virtual float CalibrateOffset() = 0;
-
-    /**
-     * @return estimated total content height.
-     */
-    virtual float EstimateTotalHeight() const = 0;
 
     /**
      * @brief Get which cross-axis lane the item is in.
@@ -95,9 +89,6 @@ public:
      */
     virtual bool ReachEnd(float prevPos, bool firstLayout) const = 0;
 
-    /**
-     * @note should take unconsumed delta into account.
-     */
     virtual bool OutOfBounds() const = 0;
 
     /**
@@ -136,10 +127,6 @@ public:
     /* ========================================== */
 
     virtual void Reset() = 0;
-    virtual void ResetFooter() = 0;
-
-    virtual bool IsAtTopWithDelta() = 0;
-    virtual bool IsAtBottomWithDelta() = 0;
 
     // for compatibility
     virtual void UpdateStartIndex() {};
@@ -194,18 +181,10 @@ public:
         const std::vector<WaterFlowSections::Section>& sections, const ScaleProperty& scale, float percentWidth);
 
     virtual void NotifyDataChange(int32_t index, int32_t count) = 0;
-    virtual void NotifySectionChange(int32_t index) = 0;
     virtual void InitSegmentsForKeepPositionMode(const std::vector<WaterFlowSections::Section>& sections,
         const std::vector<WaterFlowSections::Section>& prevSections, int32_t start) = 0;
 
     void UpdateDefaultCachedCount();
-
-    int32_t GetChildrenCount() const
-    {
-        return firstRepeatCount_ > 0 ? firstRepeatCount_ : childrenCount_;
-    }
-
-    virtual void InvalidatedOffset() = 0;
 
     bool itemStart_ = false;
     /**
@@ -222,7 +201,6 @@ public:
     ScrollAlign align_ = ScrollAlign::START;
     std::optional<int32_t> targetIndex_;
     std::optional<float> extraOffset_;
-    int32_t jumpForRecompose_ = EMPTY_JUMP_INDEX;
 
     int32_t startIndex_ = 0;
     int32_t endIndex_ = -1;
@@ -234,8 +212,6 @@ public:
     float storedOffset_ = 0.0f;
     float restoreOffset_ = 0.0f;
 
-    float expandHeight_ = 0.0f;
-
     // Stores the tail item index of each segment.
     std::vector<int32_t> segmentTails_;
     // K: item index; V: corresponding segment index
@@ -244,15 +220,6 @@ public:
     std::vector<PaddingPropertyF> margins_;
     // default cached count
     int32_t defCachedCount_ = 1;
-
-    int32_t repeatDifference_ = 0;
-    int32_t firstRepeatCount_ = 0;
-    int32_t childrenCount_ = 0;
-
-    // unfold the LazyVGrid during the position calculation.
-    bool duringPositionCalc_ = false;
-
-    bool measureInNextFrame_ = false;
 
     ACE_DISALLOW_COPY_AND_MOVE(WaterFlowLayoutInfoBase);
 };

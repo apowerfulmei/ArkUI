@@ -13,63 +13,60 @@
  * limitations under the License.
  */
 
-#include "base/utils/multi_thread.h"
-#include "base/utils/utf_helper.h"
 #include "core/components_ng/pattern/marquee/marquee_pattern.h"
 
+#include <string>
+
+#include "base/geometry/dimension.h"
+#include "base/geometry/ng/offset_t.h"
+#include "base/geometry/offset.h"
+#include "base/log/dump_log.h"
+#include "base/log/log_wrapper.h"
+#include "base/utils/utils.h"
+#include "core/animation/curves.h"
+#include "core/common/container_scope.h"
+#include "core/components/common/layout/constants.h"
+#include "core/components/common/properties/alignment.h"
+#include "core/components/common/properties/animation_option.h"
+#include "core/components/common/properties/color.h"
 #include "core/components/marquee/marquee_theme.h"
 #include "core/components_ng/pattern/text/text_layout_adapter.h"
 #include "core/components_ng/pattern/text/text_layout_property.h"
 #include "core/components_ng/pattern/text/text_pattern.h"
+#include "core/components_ng/property/calc_length.h"
+#include "core/components_ng/property/property.h"
+#include "core/components_ng/property/transition_property.h"
 #include "core/components_ng/render/animation_utils.h"
+#include "core/pipeline/pipeline_base.h"
+#include "core/pipeline_ng/pipeline_context.h"
 
 namespace OHOS::Ace::NG {
 namespace {
 constexpr double DEFAULT_MARQUEE_SCROLL_DELAY = 85.0; // Delay time between each jump.
 constexpr float HALF = 0.5f;
+constexpr float FAKE_VALUE = 0.1f;
 inline constexpr int32_t DEFAULT_MARQUEE_LOOP = -1;
+constexpr uint64_t ANIMATION_INITIAL_TIME = 0;
 } // namespace
 
 void MarqueePattern::OnAttachToFrameNode()
 {
     auto host = GetHost();
     CHECK_NULL_VOID(host);
-    THREAD_SAFE_NODE_CHECK(host, OnAttachToFrameNode);  // call OnAttachToFrameNodeMultiThread() by multi thread
     host->GetRenderContext()->SetUsingContentRectForRenderFrame(true);
     host->GetRenderContext()->SetClipToFrame(true);
-    auto pipeline = host->GetContext();
+    auto pipeline = PipelineContext::GetCurrentContext();
     CHECK_NULL_VOID(pipeline);
     pipeline->AddWindowSizeChangeCallback(host->GetId());
     pipeline->AddWindowStateChangedCallback(host->GetId());
-    ProcessVisibleAreaCallback();
 }
 
 void MarqueePattern::OnDetachFromFrameNode(FrameNode* frameNode)
 {
-    THREAD_SAFE_NODE_CHECK(frameNode, OnDetachFromFrameNode,
-        frameNode);  // call OnDetachFromFrameNodeMultiThread() by multi thread
-    CHECK_NULL_VOID(frameNode);
-    auto pipeline = frameNode->GetContext();
+    auto pipeline = PipelineContext::GetCurrentContext();
     CHECK_NULL_VOID(pipeline);
     pipeline->RemoveWindowSizeChangeCallback(frameNode->GetId());
     pipeline->RemoveWindowStateChangedCallback(frameNode->GetId());
-    pipeline->RemoveVisibleAreaChangeNode(frameNode->GetId());
-}
-
-void MarqueePattern::OnAttachToMainTree()
-{
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    // call OnAttachToMainTreeMultiThread() by multi thread Pattern::OnAttachToMainTree()
-    THREAD_SAFE_NODE_CHECK(host, OnAttachToMainTree);
-}
-
-void MarqueePattern::OnDetachFromMainTree()
-{
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    // call OnDetachFromMainTreeMultiThread() by multi thread Pattern::OnDetachFromMainTree()
-    THREAD_SAFE_NODE_CHECK(host, OnDetachFromMainTree);
 }
 
 MarqueePattern::~MarqueePattern()
@@ -83,7 +80,9 @@ void MarqueePattern::OnWindowHide()
     if (!playStatus_) {
         return;
     }
-    PauseAnimation();
+    CHECK_NULL_VOID(animation_);
+    playStatus_ = false;
+    AnimationUtils::PauseAnimation(animation_);
 }
 
 void MarqueePattern::OnWindowShow()
@@ -91,7 +90,9 @@ void MarqueePattern::OnWindowShow()
     if (playStatus_) {
         return;
     }
-    ResumeAnimation();
+    CHECK_NULL_VOID(animation_);
+    playStatus_ = true;
+    AnimationUtils::ResumeAnimation(animation_);
 }
 
 bool MarqueePattern::OnDirtyLayoutWrapperSwap(
@@ -130,7 +131,7 @@ void MarqueePattern::OnModifyDone()
     auto gestureHub = textChild->GetOrCreateGestureEventHub();
     CHECK_NULL_VOID(gestureHub);
     gestureHub->SetHitTestMode(HitTestMode::HTMNONE);
-    auto pipelineContext = host->GetContext();
+    auto pipelineContext = PipelineContext::GetCurrentContext();
     CHECK_NULL_VOID(pipelineContext);
     auto theme = pipelineContext->GetTheme<TextTheme>();
     CHECK_NULL_VOID(theme);
@@ -166,8 +167,6 @@ void MarqueePattern::StartMarqueeAnimation()
     auto host = GetHost();
     CHECK_NULL_VOID(host);
     if (!IsRunMarquee()) {
-        UpdateTextTranslateXY(0.0f);
-        StopAndResetAnimation();
         return;
     }
     auto paintProperty = host->GetPaintProperty<MarqueePaintProperty>();
@@ -175,7 +174,7 @@ void MarqueePattern::StartMarqueeAnimation()
     auto pipeline = PipelineContext::GetCurrentContext();
     CHECK_NULL_VOID(pipeline);
     auto repeatCount = paintProperty->GetLoop().value_or(DEFAULT_MARQUEE_LOOP);
-    if (pipeline->IsFormRenderExceptDynamicComponent()) {
+    if (pipeline->IsFormRender()) {
         repeatCount = 1;
     }
     FireStartEvent();
@@ -184,7 +183,7 @@ void MarqueePattern::StartMarqueeAnimation()
     PlayMarqueeAnimation(startPosition, repeatCount, needSecondPlay);
 }
 
-void MarqueePattern::PlayMarqueeAnimation(float start, int32_t playCount, bool needSecondPlay, bool isFirst)
+void MarqueePattern::PlayMarqueeAnimation(float start, int32_t playCount, bool needSecondPlay)
 {
     TAG_LOGD(AceLogTag::ACE_MARQUEE,
         "Play Marquee Animation, startPosition is %{public}f, playCount is %{public}d, needSecondPlay is true ? "
@@ -199,19 +198,23 @@ void MarqueePattern::PlayMarqueeAnimation(float start, int32_t playCount, bool n
     if (GreatNotEqual(step, textWidth)) {
         step = DEFAULT_MARQUEE_SCROLL_AMOUNT.ConvertToPx();
     }
+    bool isFirstStart = start == GetTextOffset() ? true : false;
     float calculateEnd = CalculateEnd();
     float calculateStart = CalculateStart();
     auto direction = GetCurrentTextDirection();
     bool isRtl = direction == TextDirection::RTL ? true : false;
-    if (isRtl) {
-        std::swap(calculateEnd, calculateStart);
-    }
-
-    calculateStart = isFirst ? start : calculateStart;
+    if (isRtl) std::swap(calculateEnd, calculateStart);
+    lastAnimationParam_.lastEnd = calculateEnd;
+    lastAnimationParam_.lastStart = calculateStart;
+    if (isFirstStart) calculateStart = start;
     auto duration = static_cast<int32_t>(std::abs(calculateEnd - calculateStart) * DEFAULT_MARQUEE_SCROLL_DELAY);
+    lastAnimationParam_.lastDistance = std::abs(calculateEnd - calculateStart);
+    lastAnimationParam_.lastStep = 1.0f;
     if (GreatNotEqual(step, 0.0)) {
         duration = static_cast<int32_t>(duration / step);
+        lastAnimationParam_.lastStep = step;
     }
+    lastAnimationParam_.lastDuration = duration;
     AnimationOption option;
     auto iter = frameRateRange_.find(MarqueeDynamicSyncSceneType::ANIMATE);
     if (iter != frameRateRange_.end()) {
@@ -224,7 +227,13 @@ void MarqueePattern::PlayMarqueeAnimation(float start, int32_t playCount, bool n
         "Play Marquee Animation, marqueeNodeId is %{public}d, textNodeId is %{public}d, textWidth is %{public}f, "
         "duration is %{public}d.",
         host->GetId(), textNode->GetId(), textWidth, duration);
-    UpdateTextTranslateXY(calculateStart);
+    auto paintProperty = host->GetPaintProperty<MarqueePaintProperty>();
+    CHECK_NULL_VOID(paintProperty);
+    auto marqueeDirection = paintProperty->GetDirection().value_or(MarqueeDirection::LEFT);
+    lastAnimationParam_.lastDirection = isRtl ?
+        (marqueeDirection == MarqueeDirection::RIGHT ? MarqueeDirection::LEFT : MarqueeDirection::RIGHT)
+        : marqueeDirection;
+    SetTextOffset(calculateStart);
     ActionAnimation(option, calculateEnd, playCount, needSecondPlay);
 }
 
@@ -236,7 +245,7 @@ void MarqueePattern::ActionAnimation(AnimationOption& option, float end, int32_t
         [weak = AceType::WeakClaim(this), end]() {
             auto pattern = weak.Upgrade();
             CHECK_NULL_VOID(pattern);
-            pattern->UpdateTextTranslateXY(end);
+            pattern->SetTextOffset(end);
         },
         [weak = AceType::WeakClaim(this), animationId = animationId_, needSecondPlay, playCount,
             id = Container::CurrentId()]() {
@@ -260,18 +269,20 @@ void MarqueePattern::ActionAnimation(AnimationOption& option, float end, int32_t
 
                 auto direction = pattern->GetCurrentTextDirection();
                 auto newStart = direction == TextDirection::RTL ? pattern->CalculateEnd() : pattern->CalculateStart();
-                pattern->PlayMarqueeAnimation(newStart, newPlayCount, false, false);
+                pattern->lastAnimationParam_.lastAnimationPosition = newStart;
+                pattern->lastAnimationParam_.lastStartMilliseconds = GetMilliseconds();
+                pattern->PlayMarqueeAnimation(newStart, newPlayCount, false);
             };
             if (taskExecutor->WillRunOnCurrentThread(TaskExecutor::TaskType::UI)) {
                 onFinish();
                 return;
             }
-            taskExecutor->PostTask(
-                [onFinish]() { onFinish(); }, TaskExecutor::TaskType::UI, "ArkUIMarqueePlayAnimation");
+            taskExecutor->PostTask([onFinish]() {onFinish();}, TaskExecutor::TaskType::UI, "ArkUIMarqueePlayAnimation");
         },
         [weak = AceType::WeakClaim(this)]() {
             auto pattern = weak.Upgrade();
             CHECK_NULL_VOID(pattern);
+            pattern->lastAnimationParam_.lastStartMilliseconds = GetMilliseconds();
             pattern->FireBounceEvent();
         });
 }
@@ -279,56 +290,40 @@ void MarqueePattern::ActionAnimation(AnimationOption& option, float end, int32_t
 void MarqueePattern::OnAnimationFinish()
 {
     FireFinishEvent();
-    UpdateTextTranslateXY(0.0f);
+    SetTextOffset(0.0f);
 }
 
 void MarqueePattern::StopMarqueeAnimation(bool stopAndStart)
 {
     TAG_LOGD(AceLogTag::ACE_MARQUEE, "Stop Marquee Animation.");
+    animation_ = nullptr;
     animationId_++;
-    if (animation_) {
-        AnimationOption option;
-        option.SetDuration(0);
-        option.SetCurve(Curves::LINEAR);
-        auto cancelAnimationCallbacl = [weak = WeakClaim(this)]() {
-            auto marquee = weak.Upgrade();
-            CHECK_NULL_VOID(marquee);
-            // cancel translate for marquee.
-            marquee->UpdateTextTranslateXY(0.0f, true);
-        };
-        AnimationUtils::OpenImplicitAnimation(option, Curves::LINEAR, nullptr);
-        cancelAnimationCallbacl();
-        bool isSyncSuc = AnimationUtils::CloseImplicitCancelAnimation();
-        if (!isSyncSuc) {
-            ACE_SCOPED_TRACE("Marquee stop property sync failed");
-            //sync cancel animation filed, stop animation.
-            StopAndResetAnimation();
-        } else {
-            PropertyCancelAnimationFinish();
-            animation_.reset();
-        }
-    }
+    SetTextOffset(FAKE_VALUE);
+    AnimationOption option;
+    option.SetCurve(Curves::LINEAR);
+    option.SetDuration(0);
+    auto offset = stopAndStart ? GetTextOffset() : 0.0f;
+    AnimationUtils::Animate(option, [weak = AceType::WeakClaim(this), position = offset]() {
+        auto pattern = weak.Upgrade();
+        CHECK_NULL_VOID(pattern);
+        pattern->SetTextOffset(position);
+    });
     if (stopAndStart) {
-        StartMarqueeAnimation();
+        auto taskExecutor = Container::CurrentTaskExecutor();
+        CHECK_NULL_VOID(taskExecutor);
+        taskExecutor->PostTask(
+            [weak = AceType::WeakClaim(this), animationId = animationId_]() {
+                auto pattern = weak.Upgrade();
+                CHECK_NULL_VOID(pattern);
+                if (animationId == pattern->animationId_) {
+                    pattern->StartMarqueeAnimation();
+                }
+            },
+            TaskExecutor::TaskType::UI, "ArkUIMarqueeStartAnimation");
+    } else {
+        lastAnimationParam_.lastStartMilliseconds = ANIMATION_INITIAL_TIME;
+        lastAnimationParam_.lastAnimationPosition = 0.0f;
     }
-}
-
-void MarqueePattern::StopAndResetAnimation()
-{
-    lastAnimationOffset_ = std::nullopt;
-    CHECK_NULL_VOID(animation_);
-    AnimationUtils::StopAnimation(animation_);
-    animation_.reset();
-}
-
-void MarqueePattern::PropertyCancelAnimationFinish()
-{
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    auto textNode = DynamicCast<FrameNode>(host->GetFirstChild());
-    CHECK_NULL_VOID(textNode);
-    auto renderContext = textNode->GetRenderContext();
-    lastAnimationOffset_ = renderContext->GetTranslateXYProperty();
 }
 
 void MarqueePattern::FireStartEvent() const
@@ -352,7 +347,7 @@ void MarqueePattern::FireFinishEvent() const
     marqueeEventHub->FireFinishEvent();
 }
 
-void MarqueePattern::UpdateTextTranslateXY(float offsetX, bool cancel)
+void MarqueePattern::SetTextOffset(float offsetX)
 {
     auto host = GetHost();
     CHECK_NULL_VOID(host);
@@ -361,20 +356,17 @@ void MarqueePattern::UpdateTextTranslateXY(float offsetX, bool cancel)
     auto renderContext = textNode->GetRenderContext();
     CHECK_NULL_VOID(renderContext);
     TAG_LOGD(AceLogTag::ACE_MARQUEE,
-        "Marquee nodeId %{public}d, textNodeId %{public}d is setted text offsetX is %{public}f cancel: %{public}d.",
-        host->GetId(), textNode->GetId(), offsetX, cancel);
-    if (!cancel) {
-        renderContext->UpdateTranslateInXY(OffsetF { offsetX, 0.0f });
-    } else {
-        renderContext->CancelTranslateXYAnimation();
-    }
-    host->MarkDirtyNode(PROPERTY_UPDATE_RENDER);
+        "Marquee nodeId %{public}d, textNodeId %{public}d is setted text offsetX is %{public}f.", host->GetId(),
+        textNode->GetId(), offsetX);
+    renderContext->UpdateTransformTranslate({ offsetX, 0.0f, 0.0f });
 }
 
 float MarqueePattern::GetTextOffset()
 {
     float offsetX = 0.0f;
     if (!IsRunMarquee()) {
+        lastAnimationParam_.lastStartMilliseconds = ANIMATION_INITIAL_TIME;
+        lastAnimationParam_.lastAnimationPosition = 0.0f;
         return offsetX;
     }
     auto host = GetHost();
@@ -385,22 +377,39 @@ float MarqueePattern::GetTextOffset()
     auto paintProperty = host->GetPaintProperty<MarqueePaintProperty>();
     CHECK_NULL_RETURN(paintProperty, offsetX);
     auto playStatus = paintProperty->GetPlayerStatus().value_or(false);
-    if (playStatus && (marqueeUpdateStrategy == MarqueeUpdateStrategy::PRESERVE_POSITION) &&
-        lastAnimationOffset_.has_value()) {
-        offsetX = lastAnimationOffset_.value().GetX();
-        lastAnimationOffset_ = std::nullopt;
+    if (playStatus && (lastAnimationParam_.lastStartMilliseconds > ANIMATION_INITIAL_TIME) &&
+        (marqueeUpdateStrategy == MarqueeUpdateStrategy::PRESERVE_POSITION)) {
+        auto currentMilliseconds = GetMilliseconds();
+        auto animationSpeed = lastAnimationParam_.lastDistance/ lastAnimationParam_.lastDuration;
+        auto diffMilliseconds =
+            std::abs(static_cast<int32_t>(currentMilliseconds - lastAnimationParam_.lastStartMilliseconds));
+        auto tempStartPosition = lastAnimationParam_.lastAnimationPosition;
+        if (NearEqual(static_cast<int32_t>(lastAnimationParam_.lastDuration), 0.0f) ||
+            (diffMilliseconds / static_cast<int32_t>(lastAnimationParam_.lastDuration)) > 0) {
+            diffMilliseconds -= lastAnimationParam_.lastDuration;
+            auto duration = static_cast<int32_t>(
+                std::abs(lastAnimationParam_.lastEnd - lastAnimationParam_.lastStart) * DEFAULT_MARQUEE_SCROLL_DELAY);
+            duration = duration / lastAnimationParam_.lastStep;
+            diffMilliseconds %= (duration + 1);
+            tempStartPosition = lastAnimationParam_.lastStart;
+        }
+        offsetX = static_cast<int32_t>(animationSpeed * diffMilliseconds);
+        auto factor = lastAnimationParam_.lastDirection == MarqueeDirection::LEFT ? -1.0f : 1.0f;
+        offsetX = offsetX * factor + tempStartPosition;
     }
+    lastAnimationParam_.lastStartMilliseconds = GetMilliseconds();
+    lastAnimationParam_.lastAnimationPosition = offsetX;
     return offsetX;
 }
 
 void MarqueePattern::OnVisibleChange(bool isVisible)
 {
+    CHECK_NULL_VOID(!playStatus_);
+    CHECK_NULL_VOID(animation_);
     if (isVisible) {
-        CHECK_NULL_VOID(!playStatus_);
-        ResumeAnimation();
+        AnimationUtils::ResumeAnimation(animation_);
     } else {
-        CHECK_NULL_VOID(playStatus_);
-        PauseAnimation();
+        AnimationUtils::PauseAnimation(animation_);
     }
 }
 
@@ -435,9 +444,12 @@ void MarqueePattern::ChangeAnimationPlayStatus()
             StartMarqueeAnimation();
             return;
         }
-        ResumeAnimation();
+        playStatus_ = true;
+        AnimationUtils::ResumeAnimation(animation_);
     } else {
-        PauseAnimation();
+        CHECK_NULL_VOID(animation_);
+        playStatus_ = false;
+        AnimationUtils::PauseAnimation(animation_);
     }
 }
 
@@ -574,8 +586,8 @@ void MarqueePattern::DumpInfo()
     CHECK_NULL_VOID(textChild);
     auto textLayoutProperty = textChild->GetLayoutProperty<TextLayoutProperty>();
     CHECK_NULL_VOID(textLayoutProperty);
-    DumpLog::GetInstance().AddDesc(std::string("Marquee text content: ").append(
-        UtfUtils::Str16ToStr8(textLayoutProperty->GetContent().value_or(u""))));
+    DumpLog::GetInstance().AddDesc(
+        std::string("Marquee text content: ").append(textLayoutProperty->GetContent().value_or("")));
     DumpLog::GetInstance().AddDesc(std::string("Play status: ").append(std::to_string(playStatus_)));
     DumpLog::GetInstance().AddDesc(std::string("loop: ").append(std::to_string(loop_)));
     DumpLog::GetInstance().AddDesc(std::string("step: ").append(std::to_string(scrollAmount_)));
@@ -626,20 +638,6 @@ bool MarqueePattern::IsRunMarquee()
     return GreatOrEqual(textWidth + padding, marqueeSize.Width());
 }
 
-void MarqueePattern::DumpInfo(std::unique_ptr<JsonValue>& json)
-{
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    auto textChild = AceType::DynamicCast<FrameNode>(host->GetChildren().front());
-    CHECK_NULL_VOID(textChild);
-    auto textLayoutProperty = textChild->GetLayoutProperty<TextLayoutProperty>();
-    CHECK_NULL_VOID(textLayoutProperty);
-    json->Put("Marquee text content", UtfUtils::Str16ToStr8(textLayoutProperty->GetContent().value_or(u"")).c_str());
-    json->Put("Play status", playStatus_);
-    json->Put("loop", loop_);
-    json->Put("step", scrollAmount_);
-}
-
 TextDirection MarqueePattern::GetTextDirection(const std::string& content, TextDirection direction)
 {
     if (direction == TextDirection::LTR || direction == TextDirection::RTL) {
@@ -669,7 +667,8 @@ TextDirection MarqueePattern::GetCurrentTextDirection()
 void MarqueePattern::CheckTextDirectionChange(TextDirection direction)
 {
     if (direction != currentTextDirection_) {
-        lastAnimationOffset_ = std::nullopt;
+        lastAnimationParam_.lastStartMilliseconds = ANIMATION_INITIAL_TIME;
+        lastAnimationParam_.lastAnimationPosition = 0.0f;
     }
     currentTextDirection_ = direction;
 }
@@ -678,115 +677,10 @@ void MarqueePattern::UpdateTextDirection(
     const RefPtr<MarqueeLayoutProperty>& layoutProperty, const RefPtr<TextLayoutProperty>& textLayoutProperty)
 {
     auto src = layoutProperty->GetSrc().value_or(" ");
-    std::replace(src.begin(), src.end(), '\n', ' ');
     textLayoutProperty->UpdateContent(src);
     auto direction = layoutProperty->GetLayoutDirection();
     auto textDirection = GetTextDirection(src, direction);
     textLayoutProperty->UpdateLayoutDirection(textDirection);
     CheckTextDirectionChange(textDirection);
-}
-
-void MarqueePattern::ProcessVisibleAreaCallback()
-{
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    auto pipeline = GetContext();
-    CHECK_NULL_VOID(pipeline);
-    auto callback = [weak = WeakClaim(this)](bool visible, double ratio) {
-        auto pattern = weak.Upgrade();
-        CHECK_NULL_VOID(pattern);
-        pattern->OnVisibleChange(visible);
-    };
-    std::vector<double> ratioList = { 0.0 };
-    pipeline->AddVisibleAreaChangeNode(host, ratioList, callback, false, true);
-}
-
-void MarqueePattern::PauseAnimation()
-{
-    CHECK_NULL_VOID(animation_);
-    playStatus_ = false;
-    AnimationUtils::PauseAnimation(animation_);
-}
-
-void MarqueePattern::ResumeAnimation()
-{
-    CHECK_NULL_VOID(animation_);
-    playStatus_ = true;
-    AnimationUtils::ResumeAnimation(animation_);
-}
-
-void MarqueePattern::OnFontScaleConfigurationUpdate()
-{
-    if (!AnimationUtils::IsImplicitAnimationOpen()) {
-        return;
-    }
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    auto pipeline = host->GetContext();
-    CHECK_NULL_VOID(pipeline);
-    pipeline->AddAfterReloadAnimationTask([weak = WeakClaim(this)]() {
-        auto pattern = weak.Upgrade();
-        CHECK_NULL_VOID(pattern);
-        auto host = pattern->GetHost();
-        CHECK_NULL_VOID(host);
-        auto paintProperty = host->GetPaintProperty<MarqueePaintProperty>();
-        CHECK_NULL_VOID(paintProperty);
-        auto playStatus = paintProperty->GetPlayerStatus().value_or(false);
-        pattern->StopMarqueeAnimation(playStatus);
-    });
-}
-
-void MarqueePattern::UpdatePropertyImpl(const std::string& key, RefPtr<PropertyValueBase> value)
-{
-    auto frameNode = GetHost();
-    CHECK_NULL_VOID(frameNode);
-    auto property = frameNode->GetLayoutPropertyPtr<MarqueeLayoutProperty>();
-    CHECK_NULL_VOID(property);
-    CHECK_NULL_VOID(value);
-    using Handler = std::function<void(MarqueeLayoutProperty*, RefPtr<PropertyValueBase>)>;
-    const std::unordered_map<std::string, Handler> handlers = {
-        { "FontSize",
-            [](MarqueeLayoutProperty* prop, RefPtr<PropertyValueBase> value) {
-                if (auto realValue = std::get_if<CalcDimension>(&(value->GetValue()))) {
-                    prop->UpdateFontSize(*realValue);
-                }
-            }
-        },
-        { "TextColor",
-            [node = WeakClaim(RawPtr((frameNode))), weak = WeakClaim(this)](
-                MarqueeLayoutProperty* prop, RefPtr<PropertyValueBase> value) {
-                auto frameNode = node.Upgrade();
-                CHECK_NULL_VOID(frameNode);
-                if (auto realValue = std::get_if<Color>(&(value->GetValue()))) {
-                    ACE_UPDATE_NODE_RENDER_CONTEXT(ForegroundColor, *realValue, frameNode);
-                    ACE_RESET_NODE_RENDER_CONTEXT(RenderContext, ForegroundColorStrategy, frameNode);
-                    ACE_UPDATE_NODE_RENDER_CONTEXT(ForegroundColorFlag, true, frameNode);
-                    prop->UpdateFontColor(*realValue);
-                }
-            }
-        },
-        { "FontFamily",
-            [](MarqueeLayoutProperty* prop, RefPtr<PropertyValueBase> value) {
-                if (auto realValue = std::get_if<std::vector<std::string>>(&(value->GetValue()))) {
-                    prop->UpdateFontFamily(*realValue);
-                }
-            }
-        },
-    };
-    auto it = handlers.find(key);
-    if (it != handlers.end()) {
-        it->second(property, value);
-    }
-    if (frameNode->GetRerenderable()) {
-        frameNode->MarkDirtyNode(PROPERTY_UPDATE_MEASURE_SELF);
-    }
-}
-
-void MarqueePattern::OnColorModeChange(uint32_t colorMode)
-{
-    Pattern::OnColorModeChange(colorMode);
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    host->MarkModifyDone();
 }
 } // namespace OHOS::Ace::NG

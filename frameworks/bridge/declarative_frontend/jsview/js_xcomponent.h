@@ -37,14 +37,6 @@ struct XComponentParams {
     JSXComponentController* controller = nullptr;
 };
 
-struct XComponentOptions {
-    std::optional<std::string> id = std::nullopt;
-    XComponentType xcomponentType = XComponentType::SURFACE;
-    std::optional<std::string> libraryName = std::nullopt;
-    std::shared_ptr<InnerXComponentController> xcomponentController = nullptr;
-    std::optional<std::uint64_t> screenId = std::nullopt;
-};
-
 class XComponentClient {
 public:
     using GetJSValCallback = std::function<bool(JSRef<JSVal>& param)>;
@@ -190,9 +182,6 @@ public:
     static void JsEnableAnalyzer(bool enable);
     static void JsRenderFit(const JSCallbackInfo& args);
     static void JsEnableSecure(const JSCallbackInfo& args);
-    static void JsHdrBrightness(const JSCallbackInfo& args);
-    static void JsBlendMode(const JSCallbackInfo& args);
-    static void JsEnableTransparentLayer(const JSCallbackInfo& args);
 
     // For xcomponent node
     static void* Create(const XComponentParams& params);
@@ -211,10 +200,6 @@ public:
 
 private:
     static void ParseImageAIOptions(const JSRef<JSVal>& jsValue);
-    static void ExtractInfoToXComponentOptions(
-        XComponentOptions& options, JSRef<JSObject>& controllerObj,
-        const JSRef<JSObject>& paramObject, const JSCallbackInfo& info);
-
     RefPtr<AceType> frameNode_;
 };
 } // namespace OHOS::Ace::Framework

@@ -29,7 +29,6 @@ uint32_t JSOffscreenRenderingContext::offscreenPatternCount_ = 0;
 
 JSOffscreenRenderingContext::JSOffscreenRenderingContext()
 {
-    apiVersion_ = Container::GetCurrentApiTargetVersion();
     id_ = offscreenPatternCount_;
 #ifdef NG_BUILD
     renderingContext2DModel_ = AceType::MakeRefPtr<NG::OffscreenCanvasRenderingContext2DModelNG>();
@@ -88,8 +87,6 @@ void JSOffscreenRenderingContext::JSBind(BindingTarget globalObj)
         "imageSmoothingEnabled", &JSCanvasRenderer::JSGetEmpty, &JSCanvasRenderer::JsSetImageSmoothingEnabled);
     JSClass<JSOffscreenRenderingContext>::CustomProperty(
         "imageSmoothingQuality", &JSCanvasRenderer::JSGetEmpty, &JSCanvasRenderer::JsSetImageSmoothingQuality);
-    JSClass<JSOffscreenRenderingContext>::CustomProperty(
-        "letterSpacing", &JSCanvasRenderer::JSGetEmpty, &JSCanvasRenderer::JsSetLetterSpacing);
 
     // Define all methods of the "OffscreenCanvasRenderingContext2D"
     JSClass<JSOffscreenRenderingContext>::CustomMethod(
@@ -116,7 +113,6 @@ void JSOffscreenRenderingContext::JSBind(BindingTarget globalObj)
     JSClass<JSOffscreenRenderingContext>::CustomMethod("stroke", &JSCanvasRenderer::JsStroke);
     JSClass<JSOffscreenRenderingContext>::CustomMethod("clip", &JSCanvasRenderer::JsClip);
     JSClass<JSOffscreenRenderingContext>::CustomMethod("rect", &JSCanvasRenderer::JsRect);
-    JSClass<JSOffscreenRenderingContext>::CustomMethod("roundRect", &JSCanvasRenderer::JsRoundRect);
     JSClass<JSOffscreenRenderingContext>::CustomMethod("beginPath", &JSCanvasRenderer::JsBeginPath);
     JSClass<JSOffscreenRenderingContext>::CustomMethod("closePath", &JSCanvasRenderer::JsClosePath);
     JSClass<JSOffscreenRenderingContext>::CustomMethod("restore", &JSCanvasRenderer::JsRestore);
@@ -180,6 +176,7 @@ void JSOffscreenRenderingContext::Constructor(const JSCallbackInfo& args)
         bool anti = jsContextSetting->GetAntialias();
         jsRenderContext->SetAnti(anti);
         jsRenderContext->SetAntiAlias();
+
         int32_t unit = 0;
         if (args.GetInt32Arg(3, unit) && (static_cast<CanvasUnit>(unit) == CanvasUnit::PX)) { // 3: index of parameter
             jsRenderContext->SetUnit(CanvasUnit::PX);
@@ -218,7 +215,10 @@ void JSOffscreenRenderingContext::JsTransferToImageBitmap(const JSCallbackInfo& 
         return;
     }
     void* nativeObj = nullptr;
-    NAPI_CALL_RETURN_VOID(env, napi_unwrap(env, renderImage, &nativeObj));
+    napi_status status = napi_unwrap(env, renderImage, &nativeObj);
+    if (status != napi_ok) {
+        return;
+    }
     auto jsImage = (JSRenderImage*)nativeObj;
     CHECK_NULL_VOID(jsImage);
 #ifndef PIXEL_MAP_SUPPORTED

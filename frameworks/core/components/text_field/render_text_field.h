@@ -45,7 +45,7 @@
 #include "core/pipeline/base/render_node.h"
 
 #if defined(ENABLE_STANDARD_INPUT)
-#include "refbase.h"
+#include "commonlibrary/c_utils/base/include/refbase.h"
 
 namespace OHOS::MiscServices {
 class OnTextChangedListener;
@@ -159,7 +159,6 @@ public:
     void DeleteLeft();
     void DeleteRight();
     void InsertValueDone(const std::string& appendElement);
-    void SyncGeometryProperties() override;
 
     void SetInputFilter(const std::string& inputFilter)
     {
@@ -365,7 +364,6 @@ public:
 
     // distribute
     std::string ProvideRestoreInfo() override;
-
 
     bool hasFocus_ = false;
     void SetEditingValue(TextEditingValue&& newValue, bool needFireChangeEvent = true, bool isClearRecords = true);
@@ -599,7 +597,7 @@ protected:
     int32_t cursorPositionForShow_ = 0;
     CursorPositionType cursorPositionType_ = CursorPositionType::NORMAL;
     DirectionStatus directionStatus_ = DirectionStatus::LEFT_LEFT;
-    CopyOptions copyOption_ = CopyOptions::Local;
+    CopyOptions copyOption_ = CopyOptions::Distributed;
 
     bool showPasswordIcon_ = true; // Whether show password icon, effect only type is password.
     bool showCounter_ = false;     // Whether show counter, 10/100 means maxlength is 100 and 10 has been inputted.
@@ -700,7 +698,7 @@ private:
 
     // distribute
     void ApplyRestoreInfo();
-    void OnTapCallback(const TouchEventInfo& info);
+    void OnTapCallback();
     void HandleSurfacePositionChanged(int32_t posX, int32_t posY);
     void HandleSurfaceChanged(int32_t newWidth, int32_t newHeight, int32_t prevWidth, int32_t prevHeight);
 

@@ -19,7 +19,6 @@
 #include "base/geometry/dimension.h"
 #include "core/components/common/layout/constants.h"
 #include "core/components/common/properties/text_style.h"
-#include "core/components/dialog/dialog_properties.h"
 #include "core/components/dialog/dialog_theme.h"
 #include "core/components_ng/layout/layout_property.h"
 #include "core/components_ng/property/property.h"
@@ -46,7 +45,6 @@ public:
         value->propFontSize_ = CloneFontSize();
         value->propFontWeight_ = CloneFontWeight();
         value->propFontColor_ = CloneFontColor();
-        value->propFontColorSetByUser_ = CloneFontColorSetByUser();
         value->propFontFamily_ = CloneFontFamily();
         value->propFontStyle_ = CloneFontStyle();
         value->propLabel_ = CloneLabel();
@@ -66,7 +64,6 @@ public:
         ResetFontSize();
         ResetFontWeight();
         ResetFontColor();
-        ResetFontColorSetByUser();
         ResetFontFamily();
         ResetFontStyle();
         ResetLabel();
@@ -83,7 +80,6 @@ public:
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(FontSize, Dimension, PROPERTY_UPDATE_NORMAL);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(FontWeight, Ace::FontWeight, PROPERTY_UPDATE_NORMAL);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(FontColor, Color, PROPERTY_UPDATE_NORMAL);
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(FontColorSetByUser, bool, PROPERTY_UPDATE_NORMAL);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(FontFamily, std::vector<std::string>, PROPERTY_UPDATE_NORMAL);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(FontStyle, Ace::FontStyle, PROPERTY_UPDATE_NORMAL);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(Label, std::string, PROPERTY_UPDATE_NORMAL);
@@ -96,70 +92,9 @@ public:
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(ControlSize, ControlSize, PROPERTY_UPDATE_MEASURE);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(ButtonRole, ButtonRole, PROPERTY_UPDATE_NORMAL);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(CreateWithLabel, bool, PROPERTY_UPDATE_NORMAL);
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(AutoDisable, bool, PROPERTY_UPDATE_NORMAL);
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(MinFontScale, float, PROPERTY_UPDATE_NORMAL);
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(MaxFontScale, float, PROPERTY_UPDATE_NORMAL);
 
 private:
     ACE_DISALLOW_COPY_AND_MOVE(ButtonLayoutProperty);
-};
-
-enum class ModuleDialogType {
-    TIMEPICKER_DIALOG = 0,
-    DATEPICKER_DIALOG,
-};
-
-class DialogTypeMargin {
-public:
-    static void BothSidesMargin(bool isRtl, MarginProperty& margin,
-        const RefPtr<DialogTheme>& dialogTheme, bool lessTwelve)
-    {
-        if (lessTwelve) {
-            if (isRtl) {
-                margin.right = CalcLength(0.0_vp);
-                margin.left = CalcLength(dialogTheme->GetDividerPadding().Left());
-            } else {
-                margin.right = CalcLength(dialogTheme->GetDividerPadding().Right());
-                margin.left = CalcLength(0.0_vp);
-            }
-        } else {
-            if (isRtl) {
-                margin.right = CalcLength(0.0_vp);
-                margin.left = CalcLength(dialogTheme->GetActionsPadding().Left());
-            } else {
-                margin.right = CalcLength(dialogTheme->GetActionsPadding().Right());
-                margin.left = CalcLength(0.0_vp);
-            }
-        }
-    }
-    
-    static void UpdateDialogMargin(bool isRtl, MarginProperty& margin,
-        const RefPtr<DialogTheme>& dialogTheme, bool isLessThanTwelve, ModuleDialogType type)
-    {
-        DialogTypeMargin::BothSidesMargin(isRtl, margin, dialogTheme, isLessThanTwelve);
-        switch (type) {
-            case ModuleDialogType::TIMEPICKER_DIALOG:
-                if (isLessThanTwelve) {
-                    margin.top = CalcLength(dialogTheme->GetDividerHeight());
-                    margin.bottom = CalcLength(dialogTheme->GetDividerPadding().Bottom());
-                } else {
-                    margin.top = CalcLength(dialogTheme->GetActionsPadding().Bottom());
-                    margin.bottom = CalcLength(dialogTheme->GetActionsPadding().Bottom());
-                }
-                break;
-            case ModuleDialogType::DATEPICKER_DIALOG:
-                if (isLessThanTwelve) {
-                    margin.top = CalcLength(dialogTheme->GetButtonBottomTopMargin());
-                    margin.bottom = CalcLength(dialogTheme->GetButtonBottomTopMargin());
-                } else {
-                    margin.top = CalcLength(dialogTheme->GetTitlePaddingHorizontal());
-                    margin.bottom = CalcLength(dialogTheme->GetTitlePaddingHorizontal());
-                }
-                break;
-            default:
-                break;
-        }
-    }
 };
 } // namespace OHOS::Ace::NG
 

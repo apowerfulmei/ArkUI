@@ -15,9 +15,10 @@
 
 #include "core/components_ng/pattern/list/list_item_pattern.h"
 
+#include "base/geometry/axis.h"
+#include "base/geometry/ng/size_t.h"
 #include "base/log/dump_log.h"
 #include "base/memory/ace_type.h"
-#include "base/utils/multi_thread.h"
 #include "base/utils/utils.h"
 #include "core/components_ng/pattern/list/list_item_group_layout_property.h"
 #include "core/components/common/properties/color.h"
@@ -28,7 +29,6 @@
 #include "core/components_ng/property/property.h"
 #include "core/components_v2/inspector/inspector_constants.h"
 #include "core/common/container.h"
-#include "core/components_ng/property/measure_utils.h"
 
 namespace OHOS::Ace::NG {
 namespace {
@@ -47,19 +47,10 @@ constexpr Color ITEM_FILL_COLOR = Color(0x1A0A59f7);
 void ListItemPattern::OnAttachToFrameNode()
 {
     auto host = GetHost();
-    // call OnAttachToFrameNodeMultiThread() by multi thread;
-    THREAD_SAFE_NODE_CHECK(host, OnAttachToFrameNode);
     CHECK_NULL_VOID(host);
     if (listItemStyle_ == V2::ListItemStyle::CARD) {
         SetListItemDefaultAttributes(host);
     }
-}
-
-void ListItemPattern::OnAttachToMainTree()
-{
-    auto host = GetHost();
-    // call OnAttachToMainTreeMultiThread() by multi thread
-    THREAD_SAFE_NODE_CHECK(host, OnAttachToMainTree);
 }
 
 void ListItemPattern::OnColorConfigurationUpdate()
@@ -148,30 +139,7 @@ bool ListItemPattern::OnDirtyLayoutWrapperSwap(const RefPtr<LayoutWrapper>& dirt
         FireSwipeActionOffsetChange(curOffset_, newOffset);
         curOffset_ = newOffset;
     }
-    if (pendingSwipeFunc_) {
-        pendingSwipeFunc_();
-        pendingSwipeFunc_ = nullptr;
-    }
     return false;
-}
-
-void ListItemPattern::OnRecycle()
-{
-    if (swiperIndex_ == ListItemSwipeIndex::ITEM_CHILD) {
-        return;
-    }
-    FireSwipeActionStateChange(ListItemSwipeIndex::ITEM_CHILD);
-    if (springController_ && !springController_->IsStopped()) {
-        // clear stop listener before stop
-        springController_->ClearStopListeners();
-        springController_->Stop();
-    }
-    startNodeSize_ = 0.0f;
-    endNodeSize_ = 0.0f;
-    float oldOffset = curOffset_;
-    curOffset_ = 0.0f;
-    FireSwipeActionOffsetChange(oldOffset, curOffset_);
-    MarkDirtyNode();
 }
 
 void ListItemPattern::SetStartNode(const RefPtr<NG::UINode>& startNode)
@@ -333,7 +301,6 @@ void ListItemPattern::OnModifyDone()
     CHECK_NULL_VOID(host);
     auto listItemEventHub = host->GetEventHub<ListItemEventHub>();
     CHECK_NULL_VOID(listItemEventHub);
-    InitOnFocusEvent();
     Pattern::OnModifyDone();
     InitListItemCardStyleForList();
     if (!listItemEventHub->HasStateStyle(UI_STATE_SELECTED)) {
@@ -457,9 +424,7 @@ void ListItemPattern::InitSwiperAction(bool axisChanged)
         PanDirection panDirection = {
             .type = axis_ == Axis::HORIZONTAL ? PanDirection::VERTICAL : PanDirection::HORIZONTAL,
         };
-        PanDistanceMap distanceMap = { { SourceTool::UNKNOWN, DEFAULT_PAN_DISTANCE.ConvertToPx() },
-            { SourceTool::PEN, DEFAULT_PEN_PAN_DISTANCE.ConvertToPx() } };
-        gestureHub->AddPanEvent(panEvent_, panDirection, 1, distanceMap);
+        gestureHub->AddPanEvent(panEvent_, panDirection, 1, DEFAULT_PAN_DISTANCE);
 
         startNodeSize_ = 0.0f;
         endNodeSize_ = 0.0f;
@@ -682,7 +647,7 @@ void ListItemPattern::StartSpringMotion(float start, float end, float velocity, 
         }
         if (NearEqual(position, listItem->curOffset_, 1.0) && !listItem->isSpringMotionRunning_) {
             listItem->isSpringMotionRunning_ = true;
-            AceAsyncTraceBeginCommercial(0, TRAILING_ANIMATION);
+            AceAsyncTraceBegin(0, TRAILING_ANIMATION);
         }
         float delta = listItem->IsRTLAndVertical() ? listItem->curOffset_ - position : position - listItem->curOffset_;
         listItem->UpdatePostion(delta);
@@ -699,11 +664,11 @@ void ListItemPattern::StartSpringMotion(float start, float end, float velocity, 
         }
         if (listItem->isSpringMotionRunning_) {
             listItem->isSpringMotionRunning_ = false;
-            AceAsyncTraceEndCommercial(0, TRAILING_ANIMATION);
+            AceAsyncTraceEnd(0, TRAILING_ANIMATION);
         }
         listItem->MarkDirtyNode();
         if (trigOnFinishEvent) {
-            listItem->FireOnFinishEvent();
+            listItem->FireOnFinshEvent();
         }
     });
 }
@@ -753,7 +718,6 @@ void ListItemPattern::FireSwipeActionStateChange(ListItemSwipeIndex newSwiperInd
     if (newSwiperIndex == swiperIndex_) {
         return;
     }
-    auto oldState = swipeActionState_;
     auto listItemEventHub = host->GetEventHub<ListItemEventHub>();
     CHECK_NULL_VOID(listItemEventHub);
 
@@ -774,14 +738,6 @@ void ListItemPattern::FireSwipeActionStateChange(ListItemSwipeIndex newSwiperInd
                 trigStart = false;
             }
             swipeActionState_ = SwipeActionState::COLLAPSED;
-    }
-    if (swipeActionState_ != oldState) {
-        if (swipeActionState_ == SwipeActionState::COLLAPSED) {
-            host->OnAccessibilityEvent(AccessibilityEventType::SCROLL_END);
-        }
-        if (swipeActionState_ == SwipeActionState::EXPANDED) {
-            host->OnAccessibilityEvent(AccessibilityEventType::SCROLL_END);
-        }
     }
     swiperIndex_ = newSwiperIndex;
     listItemEventHub->FireStateChangeEvent(swipeActionState_, trigStart);
@@ -857,7 +813,7 @@ void ListItemPattern::HandleDragEnd(const GestureEvent& info)
         FireSwipeActionStateChange(ListItemSwipeIndex::ITEM_CHILD);
     }
 
-    if ((GreatNotEqual(curOffset_, 0.0) || !HasEndNode()) && HasStartNode()) {
+    if (GreatNotEqual(curOffset_, 0.0) && HasStartNode()) {
         float width = startNodeSize_;
         if (swiperIndex_ == ListItemSwipeIndex::ITEM_CHILD && reachLeftSpeed) {
             StartSpringMotion(curOffset_, 0, velocity * friction);
@@ -881,7 +837,7 @@ void ListItemPattern::HandleDragEnd(const GestureEvent& info)
             FireSwipeActionStateChange(ListItemSwipeIndex::ITEM_CHILD);
         }
         end = width * static_cast<int32_t>(swiperIndex_);
-    } else if ((LessNotEqual(curOffset_, 0.0) || !HasStartNode()) && HasEndNode()) {
+    } else if (LessNotEqual(curOffset_, 0.0) && HasEndNode()) {
         float width = endNodeSize_;
         if (swiperIndex_ == ListItemSwipeIndex::ITEM_CHILD && reachRightSpeed) {
             StartSpringMotion(curOffset_, 0, velocity * friction);
@@ -956,53 +912,6 @@ void ListItemPattern::ToJsonValue(std::unique_ptr<JsonValue>& json, const Inspec
     json->PutExtAttr("selected", isSelected_, filter);
 }
 
-void ListItemPattern::SwipeCommon(ListItemSwipeIndex targetState)
-{
-    bool isForward = (targetState == ListItemSwipeIndex::SWIPER_END);
-    ListItemSwipeIndex checkPosition = targetState;
-    ListItemSwipeIndex oppositePosition = isForward ? ListItemSwipeIndex::SWIPER_START : ListItemSwipeIndex::SWIPER_END;
-    float collapsedOffset = isForward ? -1.0f : 1.0f;
-
-    auto itemPosition = GetSwiperIndex();
-    if (itemPosition == checkPosition) {
-        return;
-    }
-
-    if (GetSwipeActionState() == SwipeActionState::COLLAPSED) {
-        curOffset_ = collapsedOffset;
-        MarkDirtyNode();
-        pendingSwipeFunc_ = [weakPtr = WeakClaim(this), targetState]() {
-            const auto& pattern = weakPtr.Upgrade();
-            CHECK_NULL_VOID(pattern);
-            pattern->FireSwipeActionStateChange(targetState);
-
-            float targetOffset =
-                (targetState == ListItemSwipeIndex::SWIPER_END) ? -(pattern->endNodeSize_) : pattern->startNodeSize_;
-            pattern->StartSpringMotion(pattern->curOffset_, targetOffset, 0.0f, true);
-        };
-    }
-
-    if (itemPosition == oppositePosition) {
-        FireSwipeActionStateChange(ListItemSwipeIndex::ITEM_CHILD);
-        StartSpringMotion(curOffset_, 0.0f, 0.0f, true);
-    }
-}
-
-void ListItemPattern::SwipeForward()
-{
-    SwipeCommon(ListItemSwipeIndex::SWIPER_END);
-}
-
-void ListItemPattern::SwipeBackward()
-{
-    SwipeCommon(ListItemSwipeIndex::SWIPER_START);
-}
-
-SwipeActionState ListItemPattern::GetSwipeActionState()
-{
-    return swipeActionState_;
-}
-
 void ListItemPattern::SetAccessibilityAction()
 {
     auto host = GetHost();
@@ -1037,20 +946,6 @@ void ListItemPattern::SetAccessibilityAction()
         pattern->MarkIsSelected(false);
         context->OnMouseSelectUpdate(false, ITEM_FILL_COLOR, ITEM_FILL_COLOR);
     });
-    
-    listItemAccessibilityProperty->SetActionScrollForward([weakPtr = WeakClaim(this)]() {
-        const auto& pattern = weakPtr.Upgrade();
-        CHECK_NULL_VOID(pattern);
-        CHECK_EQUAL_VOID(pattern->Selectable(), false);
-        pattern->SwipeForward();
-    });
-
-    listItemAccessibilityProperty->SetActionScrollBackward([weakPtr = WeakClaim(this)]() {
-        const auto& pattern = weakPtr.Upgrade();
-        CHECK_NULL_VOID(pattern);
-        CHECK_EQUAL_VOID(pattern->Selectable(), false);
-        pattern->SwipeBackward();
-    });
 }
 
 void ListItemPattern::InitListItemCardStyleForList()
@@ -1060,17 +955,6 @@ void ListItemPattern::InitListItemCardStyleForList()
         InitHoverEvent();
         InitPressEvent();
         InitDisableEvent();
-    }
-}
-
-void ListItemPattern::SetListItemStyle(V2::ListItemStyle style)
-{
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    if (listItemStyle_ == V2::ListItemStyle::NONE && style == V2::ListItemStyle::CARD) {
-        listItemStyle_ = style;
-        SetListItemDefaultAttributes(host);
-        InitListItemCardStyleForList();
     }
 }
 
@@ -1088,7 +972,7 @@ void ListItemPattern::UpdateListItemAlignToCenter()
 Color ListItemPattern::GetBlendGgColor()
 {
     Color color = Color::TRANSPARENT;
-    auto pipeline = GetContext();
+    auto pipeline = PipelineContext::GetCurrentContext();
     CHECK_NULL_RETURN(pipeline, color);
     auto theme = pipeline->GetTheme<ListItemTheme>();
     CHECK_NULL_RETURN(theme, color);
@@ -1353,104 +1237,5 @@ bool ListItemPattern::RenderCustomChild(int64_t deadline)
     }
     return true;
 }
-
-void ListItemPattern::DumpAdvanceInfo(std::unique_ptr<JsonValue>& json)
-{
-    json->Put("indexInList", indexInList_);
-    json->Put("indexInListItemGroup", indexInListItemGroup_);
-    json->Put("swiperAction.startNodeIndex", startNodeIndex_);
-    json->Put("swiperAction.endNodeIndex", endNodeIndex_);
-    json->Put("swiperAction.childNodeIndex", childNodeIndex_);
-    json->Put("curOffset", curOffset_);
-    json->Put("startNodeSize", startNodeSize_);
-    json->Put("endNodeSize", endNodeSize_);
-    json->Put("startDeleteAreaDistance", startDeleteAreaDistance_);
-    json->Put("endDeleteAreaDistance", endDeleteAreaDistance_);
-
-    switch (swipeActionState_) {
-        case SwipeActionState::COLLAPSED:
-            json->Put("SwipeActionState", "COLLAPSED");
-            break;
-        case SwipeActionState::EXPANDED:
-            json->Put("SwipeActionState", "EXPANDED");
-            break;
-        case SwipeActionState::ACTIONING:
-            json->Put("SwipeActionState", "ACTIONING");
-            break;
-    }
-    json->Put("hasStartDeleteArea", hasStartDeleteArea_);
-    json->Put("hasEndDeleteArea", hasEndDeleteArea_);
-    json->Put("inStartDeleteArea", inStartDeleteArea_);
-    json->Put("inEndDeleteArea", inEndDeleteArea_);
-    json->Put("selectable", selectable_);
-    json->Put("isSelected", isSelected_);
-    json->Put("isHover", isHover_);
-    json->Put("isPressed", isPressed_);
-    json->Put("isLayouted", isLayouted_);
-    json->Put("hasStartDeleteArea", hasStartDeleteArea_);
-    if (enableOpacity_.has_value()) {
-        json->Put("enableOpacity", enableOpacity_.value() ? "true:" : "false");
-    }
-}
-
-void ListItemPattern::InitOnFocusEvent()
-{
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    auto focusHub = host->GetFocusHub();
-    CHECK_NULL_VOID(focusHub);
-    focusHub->SetOnFocusInternal([weak = WeakClaim(this)](FocusReason reason) {
-        auto pattern = weak.Upgrade();
-        if (pattern) {
-            pattern->HandleFocusEvent();
-        }
-    });
-}
-
-void ListItemPattern::HandleFocusEvent()
-{
-    auto list = GetListFrameNode();
-    CHECK_NULL_VOID(list);
-    int32_t groupIndex = GetIndexInListItemGroup();
-    auto pattern = list->GetPattern<ListPattern>();
-    CHECK_NULL_VOID(pattern);
-    pattern->SetFocusIndex(GetIndexInList());
-    if (groupIndex >= 0) {
-        pattern->SetGroupFocusIndex(groupIndex);
-    } else {
-        pattern->ResetGroupFocusIndex();
-    }
-}
-
-bool ListItemPattern::FindHeadOrTailChild(const RefPtr<FocusHub>& childFocus, FocusStep step, WeakPtr<FocusHub>& target)
-{
-    CHECK_NULL_RETURN(childFocus, false);
-    // Support moving focus to the first item of the List when pressing HOME
-    // and to the last item of the List when pressing END.
-    auto isHome = step == FocusStep::LEFT_END || step == FocusStep::UP_END;
-    auto isEnd = step == FocusStep::RIGHT_END || step == FocusStep::DOWN_END;
-    bool isFindTailOrHead = false;
-    if (isHome) {
-        isFindTailOrHead = childFocus->AnyChildFocusHub([&target](const RefPtr<FocusHub>& node) {
-            auto headNode = node->GetHeadOrTailChild(true);
-            if (headNode) {
-                target = headNode;
-                return true;
-            }
-            return false;
-        });
-    } else if (isEnd) {
-        isFindTailOrHead = childFocus->AnyChildFocusHub(
-            [&target](const RefPtr<FocusHub>& node) {
-                auto tailNode = node->GetHeadOrTailChild(false);
-                if (tailNode) {
-                    target = tailNode;
-                    return true;
-                }
-                return false;
-            },
-            true);
-    }
-    return isFindTailOrHead;
-}
 } // namespace OHOS::Ace::NG
+

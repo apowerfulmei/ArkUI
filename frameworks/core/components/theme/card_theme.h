@@ -35,11 +35,11 @@ public:
 
         RefPtr<CardTheme> Build(const RefPtr<ThemeConstants>& themeConstants) const
         {
-            RefPtr<CardTheme> theme = AceType::MakeRefPtr<CardTheme>();
+            RefPtr<CardTheme> theme = AceType::Claim(new CardTheme());
             if (!themeConstants) {
                 return theme;
             }
-            theme = AceType::MakeRefPtr<CardTheme>();
+            theme = AceType::Claim(new CardTheme());
             ParsePattern(themeConstants, theme);
             return theme;
         }

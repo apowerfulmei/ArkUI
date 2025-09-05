@@ -23,10 +23,10 @@
 #include "adapter/ohos/entrance/ace_container.h"
 #include "adapter/ohos/entrance/ace_extra_input_data.h"
 #include "adapter/ohos/entrance/mmi_event_convertor.h"
+#include "base/geometry/offset.h"
 #include "base/utils/utils.h"
 #include "core/common/container.h"
 #include "core/components_ng/event/event_hub.h"
-#include "core/components_ng/pattern/ui_extension/platform_utils.h"
 #include "core/components_ng/pattern/ui_extension/ui_extension_layout_algorithm.h"
 #include "core/components_ng/pattern/window_scene/scene/window_pattern.h"
 #include "core/components_ng/render/adapter/rosen_render_context.h"
@@ -80,8 +80,7 @@ void PlatformPattern::OnModifyDone()
 
 void PlatformPattern::InitKeyEvent(const RefPtr<FocusHub>& focusHub)
 {
-    focusHub->SetIsNodeNeedKey(true);
-    focusHub->SetOnFocusInternal([weak = WeakClaim(this)](FocusReason reason) {
+    focusHub->SetOnFocusInternal([weak = WeakClaim(this)]() {
         auto pattern = weak.Upgrade();
         if (pattern) {
             pattern->HandleFocusEvent();
@@ -194,29 +193,14 @@ void PlatformPattern::HandleTouchEvent(const TouchEventInfo& info)
     CHECK_NULL_VOID(pointerEvent);
     auto host = GetHost();
     CHECK_NULL_VOID(host);
+    auto pipeline = PipelineBase::GetCurrentContext();
+    CHECK_NULL_VOID(pipeline);
+    Platform::CalculatePointerEvent(pointerEvent, host);
+    AceExtraInputData::InsertInterpolatePoints(info);
     auto focusHub = host->GetFocusHub();
     CHECK_NULL_VOID(focusHub);
     focusHub->RequestFocusImmediately();
-
-    if (tag_ != AceLogTag::ACE_DYNAMIC_COMPONENT) {
-        bool ret = HandleTouchEvent(pointerEvent);
-        if (ret) {
-            AceExtraInputData::InsertInterpolatePoints(info);
-        }
-    }
-}
-
-bool PlatformPattern::HandleTouchEvent(
-    const std::shared_ptr<MMI::PointerEvent>& pointerEvent)
-{
-    CHECK_NULL_RETURN(pointerEvent, false);
-    auto host = GetHost();
-    CHECK_NULL_RETURN(host, false);
-    auto newPointerEvent = PlatformUtils::CopyPointerEventWithExtraProperty(pointerEvent, tag_);
-    CHECK_NULL_RETURN(newPointerEvent, false);
-    Platform::CalculatePointerEvent(newPointerEvent, host);
-    DispatchPointerEvent(newPointerEvent);
-    return true;
+    DispatchPointerEvent(pointerEvent);
 }
 
 void PlatformPattern::HandleMouseEvent(const MouseInfo& info)
@@ -226,7 +210,7 @@ void PlatformPattern::HandleMouseEvent(const MouseInfo& info)
     }
     const auto pointerEvent = info.GetPointerEvent();
     CHECK_NULL_VOID(pointerEvent);
-    lastPointerEvent_ = PlatformUtils::CopyPointerEventWithExtraProperty(pointerEvent, tag_);
+    lastPointerEvent_ = pointerEvent;
     auto host = GetHost();
     CHECK_NULL_VOID(host);
     Platform::CalculatePointerEvent(pointerEvent, host);

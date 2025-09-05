@@ -30,7 +30,7 @@ class GestureEventHub;
 class PanRecognizer;
 
 class PanEvent : public virtual AceType {
-    DECLARE_ACE_TYPE(PanEvent, AceType);
+    DECLARE_ACE_TYPE(PanEvent, AceType)
 public:
     PanEvent(GestureEventFunc&& actionStart, GestureEventFunc&& actionUpdate, GestureEventFunc&& actionEnd,
         GestureEventNoParameter&& actionCancel)
@@ -67,14 +67,10 @@ private:
 };
 
 class ACE_FORCE_EXPORT PanEventActuator : public GestureEventActuator {
-    DECLARE_ACE_TYPE(PanEventActuator, GestureEventActuator);
+    DECLARE_ACE_TYPE(PanEventActuator, GestureEventActuator)
 public:
     PanEventActuator(const WeakPtr<GestureEventHub>& gestureEventHub, PanDirection direction, int32_t fingers,
-        float distance);
-    PanEventActuator(const WeakPtr<GestureEventHub>& gestureEventHub, PanDirection direction, int32_t fingers,
-        PanDistanceMap distanceMap);
-    PanEventActuator(const WeakPtr<GestureEventHub>& gestureEventHub, PanDirection direction, int32_t fingers,
-        const PanDistanceMapDimension& distanceMap);
+        float distance, bool isOverrideDistance = false);
     ~PanEventActuator() override = default;
 
     void ReplacePanEvent(const RefPtr<PanEvent>& panEvent)
@@ -123,11 +119,6 @@ public:
         return panEvents_.empty();
     }
 
-    void SetExcludedAxis(bool isExcludedAxis)
-    {
-        isExcludedAxis_ = isExcludedAxis;
-    }
-
     void DumpVelocityInfo(int32_t fingerId);
 
 private:
@@ -135,7 +126,6 @@ private:
     std::list<RefPtr<PanEvent>> panEvents_;
     RefPtr<PanEvent> userCallback_;
     RefPtr<PanRecognizer> panRecognizer_;
-    bool isExcludedAxis_ = false;
 
     PanDirection direction_;
     int32_t fingers_ = 1;

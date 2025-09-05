@@ -31,16 +31,8 @@ void SelectContentOverlayPattern::UpdateMenuIsShow(bool menuIsShow, bool noAnima
     CHECK_NULL_VOID(host);
     auto selectOverlayNode = AceType::DynamicCast<SelectOverlayNode>(host);
     CHECK_NULL_VOID(selectOverlayNode);
-    if (!menuIsShow) {
-        DeleteHotAreas();
-    }
     info_->menuInfo.menuIsShow = menuIsShow;
-    if (info_->menuInfo.menuIsShow && info_->menuInfo.isShowAIMenuOptionChanged) {
-        selectOverlayNode->UpdateToolBar(true, noAnimation);
-    } else {
-        selectOverlayNode->UpdateToolBar(false, noAnimation);
-    }
-    UpdateMenuAccessibility(menuIsShow);
+    selectOverlayNode->UpdateToolBar(false, noAnimation);
 }
 
 void SelectContentOverlayPattern::UpdateMenuInfo(const SelectMenuInfo& info)
@@ -54,7 +46,7 @@ void SelectContentOverlayPattern::UpdateMenuInfo(const SelectMenuInfo& info)
 
 void SelectContentOverlayPattern::UpdateIsShowHandleLine(bool isHandleLineShow)
 {
-    if (info_->isHandleLineShow == isHandleLineShow || IsDraggingSingleHandle()) {
+    if (info_->isHandleLineShow == isHandleLineShow) {
         return;
     }
     auto host = DynamicCast<SelectOverlayNode>(GetHost());
@@ -76,9 +68,6 @@ void SelectContentOverlayPattern::UpdateIsSingleHandle(bool isSingleHandle)
 
 void SelectContentOverlayPattern::RestartHiddenHandleTask(bool isDelay)
 {
-    if (IsDraggingSingleHandle()) {
-        return;
-    }
     CancelHiddenHandleTask();
     StartHiddenHandleTask(isDelay);
 }
@@ -90,13 +79,9 @@ void SelectContentOverlayPattern::CancelHiddenHandleTask()
     auto host = DynamicCast<SelectOverlayNode>(GetHost());
     CHECK_NULL_VOID(host);
     UpdateHandleHotZone();
-    auto gestureEventHub = host->GetOrCreateGestureEventHub();
-    CHECK_NULL_VOID(gestureEventHub);
-    gestureEventHub->SetHitTestMode(info_->hitTestMode);
-    gestureEventHub->AddClickEvent(clickEvent_);
-    PanDistanceMap distanceMap = { { SourceTool::UNKNOWN, DEFAULT_PAN_DISTANCE.ConvertToPx() },
-        { SourceTool::PEN, DEFAULT_PEN_PAN_DISTANCE.ConvertToPx() } };
-    gestureEventHub->AddPanEvent(panEvent_, { PanDirection::ALL }, 1, distanceMap);
+    host->GetOrCreateGestureEventHub()->SetHitTestMode(info_->hitTestMode);
+    host->GetOrCreateGestureEventHub()->AddClickEvent(clickEvent_);
+    host->GetOrCreateGestureEventHub()->AddPanEvent(panEvent_, { PanDirection::ALL }, 1, DEFAULT_PAN_DISTANCE);
     host->MarkDirtyNode(PROPERTY_UPDATE_RENDER);
 }
 
@@ -131,10 +116,10 @@ bool SelectContentOverlayPattern::IsHandleInSameLine(const RectF& first, const R
     float lowerHandleTop = 0.0f;
     RectF heigherHandleRect;
     if (GreatNotEqual(first.Top(), second.Top())) {
-        lowerHandleTop = first.Top() + 0.5f; // 0.5f : for round
+        lowerHandleTop = first.Top() + 0.5f;
         heigherHandleRect = second;
     } else {
-        lowerHandleTop = second.Top() + 0.5f; // 0.5f : for round
+        lowerHandleTop = second.Top() + 0.5f;
         heigherHandleRect = first;
     }
     return GreatNotEqual(lowerHandleTop, heigherHandleRect.Top()) &&
@@ -146,28 +131,11 @@ void SelectContentOverlayPattern::UpdateHandleHotZone()
     if (!CheckIfNeedHandle()) {
         return;
     }
-    if (info_->isUsingMouse) {
-        UpdateMouseHotZone();
-        return;
-    }
     if (info_->handleLevelMode == HandleLevelMode::OVERLAY &&
         (info_->firstHandle.isPaintHandleWithPoints || info_->secondHandle.isPaintHandleWithPoints)) {
         UpdateHandleHotZoneWithPoint();
     } else {
         SelectOverlayPattern::UpdateHandleHotZone();
-    }
-}
-
-void SelectContentOverlayPattern::UpdateMouseHotZone()
-{
-    if (IsCustomMenu() && !info_->isSingleHandle) {
-        std::vector<DimensionRect> responseRegion;
-        AddMenuResponseRegion(responseRegion);
-        auto host = GetHost();
-        CHECK_NULL_VOID(host);
-        auto gestureEventHub = host->GetOrCreateGestureEventHub();
-        CHECK_NULL_VOID(gestureEventHub);
-        gestureEventHub->SetResponseRegion(responseRegion);
     }
 }
 
@@ -215,9 +183,7 @@ bool SelectContentOverlayPattern::UpdateHandleHotZoneWithPoint()
     if (IsCustomMenu()) {
         AddMenuResponseRegion(responseRegion);
     }
-    auto gestureEventHub = host->GetOrCreateGestureEventHub();
-    CHECK_NULL_RETURN(gestureEventHub, false);
-    gestureEventHub->SetResponseRegion(responseRegion);
+    host->GetOrCreateGestureEventHub()->SetResponseRegion(responseRegion);
     return true;
 }
 
@@ -229,9 +195,7 @@ void SelectContentOverlayPattern::UpdateHandleHotRegion(RectF& hotRegion, const 
     DimensionRect newRegion = ConvertToHotRect(hotRegion);
     std::vector<DimensionRect> responseRegion;
     responseRegion.emplace_back(newRegion);
-    auto gestureEventHub = host->GetOrCreateGestureEventHub();
-    CHECK_NULL_VOID(gestureEventHub);
-    gestureEventHub->SetResponseRegion(responseRegion);
+    host->GetOrCreateGestureEventHub()->SetResponseRegion(responseRegion);
 }
 
 DimensionRect SelectContentOverlayPattern::ConvertToHotRect(const RectF& rect)
@@ -254,11 +218,7 @@ void SelectContentOverlayPattern::UpdateViewPort(const std::optional<RectF>& vie
     auto host = GetHost();
     CHECK_NULL_VOID(host);
     info_->ancestorViewPort = viewPort;
-    auto extraFlag = PROPERTY_UPDATE_LAYOUT;
-    if (GetMode() == SelectOverlayMode::HANDLE_ONLY) {
-        extraFlag |= PROPERTY_UPDATE_RENDER;
-    }
-    host->MarkDirtyNode(extraFlag);
+    host->MarkDirtyNode(PROPERTY_UPDATE_LAYOUT);
 }
 
 void SelectContentOverlayPattern::UpdateSelectArea(const RectF& selectArea)
@@ -288,36 +248,5 @@ void SelectContentOverlayPattern::SetIsHandleLineShow(bool isShow)
         CHECK_NULL_VOID(host);
         host->MarkDirtyNode(PROPERTY_UPDATE_RENDER);
     }
-}
-
-void SelectContentOverlayPattern::UpdateMenuAccessibility(bool menuIsShow)
-{
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    auto containerId = GetContainerId();
-    RefPtr<PipelineContext> context = nullptr;
-    if (GetIsMenuShowInSubWindow() && containerId != -1) {
-        auto container = Container::GetContainer(containerId);
-        CHECK_NULL_VOID(container);
-        context = AceType::DynamicCast<PipelineContext>(container->GetPipelineContext());
-        CHECK_NULL_VOID(context);
-    } else {
-        context = PipelineContext::GetCurrentContextSafelyWithCheck();
-        CHECK_NULL_VOID(context);
-    }
-    auto selectOverlayManager = context->GetSelectOverlayManager();
-    CHECK_NULL_VOID(selectOverlayManager);
-    auto contentOverlayManager = selectOverlayManager->GetSelectContentOverlayManager();
-    CHECK_NULL_VOID(contentOverlayManager);
-    if (menuIsShow) {
-        contentOverlayManager->FocusFirstFocusableChildInMenu();
-    } else {
-        contentOverlayManager->NotifyAccessibilityOwner();
-    }
-}
-
-bool SelectContentOverlayPattern::IsDraggingSingleHandle()
-{
-    return info_->isSingleHandle && (IsDraggingHandle(true) || IsDraggingHandle(false));
 }
 } // namespace OHOS::Ace::NG

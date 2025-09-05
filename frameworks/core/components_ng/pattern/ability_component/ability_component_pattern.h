@@ -69,7 +69,6 @@ public:
     void OnAreaChangedInner() override;
 
 private:
-    void OnAttachToFrameNode() override;
     void OnModifyDone() override;
 
     void InitTouchEvent(const RefPtr<GestureEventHub>& gestureHub);

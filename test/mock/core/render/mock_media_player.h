@@ -29,7 +29,7 @@ constexpr int32_t DEFAULT_HEIGHT = 100;
 } // namespace
 
 class MockMediaPlayer : public MediaPlayer {
-    DECLARE_ACE_TYPE(MockMediaPlayer, MediaPlayer);
+    DECLARE_ACE_TYPE(MockMediaPlayer, MediaPlayer)
 public:
     ~MockMediaPlayer() override = default;
     
@@ -53,7 +53,6 @@ public:
     MOCK_METHOD0(Stop, int32_t());
     MOCK_METHOD2(Seek, int32_t(int32_t, SeekMode));
     MOCK_METHOD2(SetVolume, void(float, float));
-    MOCK_METHOD1(SetRenderFirstFrame, int32_t(bool));
 };
 } // namespace OHOS::Ace::NG
 #endif // FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_MOCK_MEDIA_PLAYER_H

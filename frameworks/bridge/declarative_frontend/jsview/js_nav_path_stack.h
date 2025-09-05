@@ -49,6 +49,13 @@ public:
         onStateChangedCallback_ = callback;
     }
 
+    void OnPushDestination(const JSCallbackInfo& info);
+
+    void SetCheckNavDestinationExistsFunc(std::function<int32_t(JSRef<JSObject>)> checkFunc)
+    {
+        checkNavDestinationExistsFunc_ = checkFunc;
+    }
+
     static JSRef<JSObject> CreateNewNavPathStackJSObject();
     static void SetNativeNavPathStack(JSRef<JSObject> jsStack, JSRef<JSObject> nativeStack);
 
@@ -59,27 +66,15 @@ public:
         onPopCallback_ = popCallback;
     }
 
-    void SetIsHomeNameCallback(std::function<bool(const std::string&)>&& callback)
-    {
-        isHomeNameCallback_ = std::move(callback);
-    }
-
     void OnPopCallback(const JSCallbackInfo& info);
-    void GetPathStack(const JSCallbackInfo& info);
-    void SetPathStack(const JSCallbackInfo& info);
-    void IsHomeName(const JSCallbackInfo& info);
 
 private:
     static void Constructor(const JSCallbackInfo& info);
     static void Destructor(JSNavPathStack* stack);
 
-    void CopyPathInfo(const JSRef<JSArray>& origin, JSRef<JSArray>& dest, size_t index);
-    bool FindNavInfoInPreArray(
-        JSRef<JSObject>& destInfo, JSRef<JSArray>& originArray, std::string& navIdStr, std::string& nameStr);
-
     std::function<void()> onStateChangedCallback_;
+    std::function<int32_t(JSRef<JSObject>)> checkNavDestinationExistsFunc_;
     std::function<void(const JSRef<JSVal>)> onPopCallback_;
-    std::function<bool(const std::string&)> isHomeNameCallback_;
     int32_t containerCurrentId_;
 };
 } // namespace OHOS::Ace::Framework

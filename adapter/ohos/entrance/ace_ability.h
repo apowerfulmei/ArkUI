@@ -20,6 +20,7 @@
 #include <vector>
 
 #include "ability.h"
+#include "ability_loader.h"
 #include "want.h"
 #include "window.h"
 
@@ -59,8 +60,7 @@ public:
     bool OnInputEvent(const std::shared_ptr<MMI::AxisEvent>& axisEvent) const override;
 
     // override Rosen::IAvoidAreaChangedListener virtual callback function
-    void OnAvoidAreaChanged(const OHOS::Rosen::AvoidArea avoidArea, OHOS::Rosen::AvoidAreaType type,
-        const sptr<OHOS::Rosen::OccupiedAreaChangeInfo>& info = nullptr) override;
+    void OnAvoidAreaChanged(const OHOS::Rosen::AvoidArea avoidArea, OHOS::Rosen::AvoidAreaType type) override;
 
 private:
     std::shared_ptr<AceAbility> callbackOwner_;
@@ -112,8 +112,7 @@ public:
     uint32_t GetBackgroundColor();
 
     // handle window Rosen::IAvoidAreaChangedListener
-    void OnAvoidAreaChanged(const OHOS::Rosen::AvoidArea& avoidArea, OHOS::Rosen::AvoidAreaType type,
-        const sptr<OHOS::Rosen::OccupiedAreaChangeInfo>& info = nullptr);
+    void OnAvoidAreaChanged(const OHOS::Rosen::AvoidArea& avoidArea, OHOS::Rosen::AvoidAreaType type);
 
     void Dump(const std::vector<std::string>& params, std::vector<std::string>& info) override;
 

@@ -21,7 +21,6 @@
 #include "os_account_manager.h"
 #endif // OS_ACCOUNT_EXISTS
 
-#include "base/log/dump_log.h"
 #include "base/log/log_wrapper.h"
 #include "base/utils/utils.h"
 #include "core/common/plugin_manager.h"
@@ -157,7 +156,7 @@ void PluginPattern::InitPluginManagerDelegate()
         auto uiTaskExecutor =
             SingleTaskExecutor::Make(host->GetContext()->GetTaskExecutor(), TaskExecutor::TaskType::UI);
         uiTaskExecutor.PostTask(
-            [data, weak] {
+            [id, data, weak] {
                 auto plugin = weak.Upgrade();
                 CHECK_NULL_VOID(plugin);
                 plugin->GetPluginSubContainer()->UpdatePlugin(data);
@@ -184,21 +183,8 @@ void PluginPattern::InitPluginManagerDelegate()
         });
 }
 
-void PluginPattern::DumpInfo()
-{
-    DumpLog::GetInstance().AddDesc(std::string("pluginInfo: ").append(pluginInfo_.ToString()));
-    DumpLog::GetInstance().AddDesc(std::string("data: ").append(data_));
-}
-
-void PluginPattern::DumpInfo(std::unique_ptr<JsonValue>& json)
-{
-    json->Put("pluginInfo: ", pluginInfo_.ToString().c_str());
-    json->Put("data: ", data_.c_str());
-}
-
 void PluginPattern::CreatePluginSubContainer()
 {
-    TAG_LOGI(AceLogTag::ACE_PLUGIN_COMPONENT, "CreatePluginSubContainer.");
     auto host = GetHost();
     CHECK_NULL_VOID(host);
     auto context = host->GetContextRefPtr();
@@ -213,7 +199,6 @@ void PluginPattern::CreatePluginSubContainer()
 
     if (pluginSubContainer_) {
         auto currentId = pluginSubContainer_->GetInstanceId();
-        TAG_LOGI(AceLogTag::ACE_PLUGIN_COMPONENT, "destory old pluginSubContainer: %{public}d.", currentId);
         PluginManager::GetInstance().RemovePluginSubContainer(currentId);
         PluginManager::GetInstance().RemovePluginParentContainer(currentId);
         pluginSubContainer_->Destroy();
@@ -225,7 +210,7 @@ void PluginPattern::CreatePluginSubContainer()
 
     PluginManager::GetInstance().AddPluginSubContainer(pluginSubContainerId_, pluginSubContainer_);
     PluginManager::GetInstance().AddPluginParentContainer(pluginSubContainerId_, parentcontainerId);
-    pluginSubContainer_->Initialize(GetPackageCodeLanguage(GetPluginRequestInfo()));
+    pluginSubContainer_->Initialize();
     auto weak = WeakClaim(this);
     pluginSubContainer_->SetPluginPattern(weak);
     auto pattern = weak.Upgrade();
@@ -245,7 +230,6 @@ void PluginPattern::CreatePluginSubContainer()
             CHECK_NULL_VOID(pluginPattern);
             auto pluginSubContainer = pluginPattern->GetPluginSubContainer();
             RequestPluginInfo info = pluginPattern->GetPluginRequestInfo();
-            TAG_LOGI(AceLogTag::ACE_PLUGIN_COMPONENT, "requestPluginInfo: %{public}s.", info.ToString().c_str());
             CHECK_NULL_VOID(pluginSubContainer);
             auto packagePathStr = pluginPattern->GetPackagePath(weak, info);
             if (packagePathStr.empty()) {
@@ -267,7 +251,6 @@ void PluginPattern::CreatePluginSubContainer()
             }
         },
         "ArkUIPluginRun");
-        TAG_LOGI(AceLogTag::ACE_PLUGIN_COMPONENT, "CreatePluginSubContainer end.");
 }
 
 void PluginPattern::ReplaceAll(std::string& str, const std::string& pattern, const std::string& newPattern)
@@ -310,7 +293,6 @@ std::unique_ptr<DrawDelegate> PluginPattern::GetDrawDelegate()
 
 void PluginPattern::FireOnCompleteEvent() const
 {
-    TAG_LOGI(AceLogTag::ACE_PLUGIN_COMPONENT, "FireOnCompleteEvent.");
     if (loadFialState_) {
         return;
     }
@@ -325,7 +307,7 @@ void PluginPattern::FireOnCompleteEvent() const
 void PluginPattern::FireOnErrorEvent(const std::string& code, const std::string& msg)
 {
     loadFialState_ = true;
-    TAG_LOGI(AceLogTag::ACE_PLUGIN_COMPONENT, "code: %{public}s, msg: %{public}s", code.c_str(), msg.c_str());
+    TAG_LOGD(AceLogTag::ACE_PLUGIN_COMPONENT, "code: %{public}s, msg: %{public}s", code.c_str(), msg.c_str());
     auto host = GetHost();
     CHECK_NULL_VOID(host);
     auto eventHub = host->GetEventHub<PluginEventHub>();
@@ -338,7 +320,7 @@ void PluginPattern::FireOnErrorEvent(const std::string& code, const std::string&
 
 void PluginPattern::OnActionEvent(const std::string& action) const
 {
-    TAG_LOGI(AceLogTag::ACE_PLUGIN_COMPONENT, "action: %{public}s", action.c_str());
+    TAG_LOGD(AceLogTag::ACE_PLUGIN_COMPONENT, "action: %{public}s", action.c_str());
     auto eventAction = JsonUtil::ParseJsonString(action);
     if (!eventAction->IsValid()) {
         return;
@@ -386,33 +368,6 @@ void PluginPattern::SplitString(const std::string& str, char tag, std::vector<st
     }
 }
 
-std::string PluginPattern::GetPackageCodeLanguage(const RequestPluginInfo& info) const
-{
-    std::string codeLanguage;
-
-    std::vector<std::string> strList;
-    SplitString(info.bundleName, '/', strList);
-    if (strList.empty()) {
-        return codeLanguage;
-    }
-
-    std::vector<int32_t> userIds;
-    GetActiveAccountIds(userIds);
-
-    auto bms = PluginComponentManager::GetInstance()->GetBundleManager();
-    if (!bms) {
-        return codeLanguage;
-    }
-
-    AppExecFwk::BundleInfo bundleInfo;
-    bool ret = bms->GetBundleInfo(strList[0], AppExecFwk::BundleFlag::GET_BUNDLE_DEFAULT, bundleInfo,
-        userIds.size() > 0 ? userIds[0] : AppExecFwk::Constants::UNSPECIFIED_USERID);
-    if (!ret) {
-        return codeLanguage;
-    }
-    return bundleInfo.applicationInfo.arkTSMode;
-}
-
 std::string PluginPattern::GetPackagePath(const WeakPtr<PluginPattern>& weak, RequestPluginInfo& info) const
 {
     std::string packagePathStr;
@@ -445,7 +400,7 @@ std::string PluginPattern::GetPackagePathByWant(const WeakPtr<PluginPattern>& we
         return packagePathStr;
     }
     GetAbilityNameByWant(weak, info);
-    packagePathStr = GetPackagePathByBms(weak, info, strList, userIds);
+    packagePathStr = GerPackagePathByBms(weak, info, strList, userIds);
 
     return packagePathStr;
 }
@@ -510,7 +465,7 @@ void PluginPattern::GetAbilityNameByWant(const WeakPtr<PluginPattern>& weak, Req
     }
 }
 
-std::string PluginPattern::GetPackagePathByBms(const WeakPtr<PluginPattern>& weak, RequestPluginInfo& info,
+std::string PluginPattern::GerPackagePathByBms(const WeakPtr<PluginPattern>& weak, RequestPluginInfo& info,
     const std::vector<std::string>& strList, const std::vector<int32_t>& userIds) const
 {
     std::string packagePathStr;

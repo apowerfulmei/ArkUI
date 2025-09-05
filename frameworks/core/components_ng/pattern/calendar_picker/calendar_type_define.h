@@ -24,7 +24,6 @@
 #include "core/components/picker/picker_data.h"
 #include "core/components_ng/base/frame_node.h"
 #include "core/components_ng/pattern/picker/picker_type_define.h"
-#include "core/common/resource/resource_object.h"
 
 namespace OHOS::Ace::NG {
 enum class CalendarEdgeAlign {
@@ -44,13 +43,8 @@ enum class CalendarPickerSelectedType {
 
 struct CalendarSettingData {
     PickerDate selectedDate = PickerDate::Current();
-    PickerDate startDate;
-    PickerDate endDate;
     std::optional<Dimension> dayRadius;
-    RefPtr<ResourceObject> dayRadiusResObj;
     WeakPtr<FrameNode> entryNode = nullptr;
-    std::vector<std::pair<PickerDate, PickerDate>> disabledDateRange;
-    bool markToday = false;
 };
 
 struct CalendarPickerOption {

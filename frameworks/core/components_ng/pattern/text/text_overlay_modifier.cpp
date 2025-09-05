@@ -16,6 +16,7 @@
 #include "core/components_ng/pattern/text/text_overlay_modifier.h"
 
 #include "core/common/container.h"
+#include "core/components_ng/render/drawing.h"
 #include "core/components_ng/render/drawing_prop_convertor.h"
 
 namespace OHOS::Ace::NG {
@@ -68,6 +69,7 @@ void TextOverlayModifier::onDraw(DrawingContext& drawingContext)
     }
     drawingContext.canvas.DetachBrush();
     drawingContext.canvas.Restore();
+
     CHECK_NULL_VOID(selectedUrlColor_);
     brush.SetColor(selectedUrlColor_->Get());
     drawingContext.canvas.AttachBrush(brush);

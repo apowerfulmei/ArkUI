@@ -85,15 +85,6 @@ public:
         return xVals_.size();
     }
 
-    void ResetValsFromRaw(const LeastSquareImpl& raw, int32_t cnt)
-    {
-        if (cnt > raw.GetTrackNum()) {
-            cnt = raw.GetTrackNum();
-        }
-        xVals_.assign(raw.xVals_.begin() + cnt, raw.xVals_.end());
-        yVals_.assign(raw.yVals_.begin() + cnt, raw.yVals_.end());
-    }
-
     void Reset()
     {
         xVals_.clear();

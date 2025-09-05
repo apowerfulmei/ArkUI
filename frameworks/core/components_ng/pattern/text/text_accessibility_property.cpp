@@ -13,9 +13,10 @@
  * limitations under the License.
  */
 
-#include "base/utils/utf_helper.h"
 #include "core/components_ng/pattern/text/text_accessibility_property.h"
 
+#include "base/utils/utils.h"
+#include "core/components_ng/base/frame_node.h"
 #include "core/components_ng/pattern/text/text_pattern.h"
 
 namespace OHOS::Ace::NG {
@@ -24,29 +25,17 @@ std::string TextAccessibilityProperty::GetText() const
     std::string value = "";
     auto frameNode = host_.Upgrade();
     CHECK_NULL_RETURN(frameNode, value);
-    auto textPattern = frameNode->GetPattern<TextPattern>();
-    if (textPattern && textPattern->GetSpanStringMode()) {
-        auto spans = textPattern->GetSpanItemChildren();
-        for (const auto& span : spans) {
-            value += UtfUtils::Str16DebugToStr8(span->content);
-        }
-        return value;
-    }
-    auto children = GetChildren(frameNode);
+    auto children = frameNode->GetChildren();
     if (children.empty()) {
         auto textLayoutProperty = frameNode->GetLayoutProperty<TextLayoutProperty>();
         CHECK_NULL_RETURN(textLayoutProperty, value);
-        value = UtfUtils::Str16DebugToStr8(textLayoutProperty->GetContentValue(std::u16string(u"")));
+        value = textLayoutProperty->GetContentValue(value);
     } else {
+        auto textPattern = frameNode->GetPattern<TextPattern>();
         CHECK_NULL_RETURN(textPattern, value);
-        value = UtfUtils::Str16DebugToStr8(textPattern->GetTextForDisplay());
+        value = textPattern->GetTextForDisplay();
     }
     return value;
-}
-
-const std::list<RefPtr<UINode>>& TextAccessibilityProperty::GetChildren(const RefPtr<FrameNode>& host) const
-{
-    return host->GetChildren();
 }
 
 bool TextAccessibilityProperty::IsSelected() const

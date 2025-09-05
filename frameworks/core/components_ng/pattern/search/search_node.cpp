@@ -15,7 +15,7 @@
 
 #include "core/components_ng/pattern/search/search_node.h"
 
-#include "core/pipeline/base/element_register.h"
+#include "base/utils/utils.h"
 
 namespace OHOS::Ace::NG {
 

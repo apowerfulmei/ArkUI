@@ -15,9 +15,12 @@
 
 #include "core/components_ng/pattern/menu/preview/menu_preview_pattern.h"
 
+#include "core/animation/animation_pub.h"
 #include "core/components_ng/manager/drag_drop/utils/drag_animation_helper.h"
+#include "core/components_ng/pattern/menu/menu_pattern.h"
 #include "core/components_ng/pattern/menu/menu_theme.h"
 #include "core/components_ng/pattern/menu/wrapper/menu_wrapper_pattern.h"
+#include "core/components_ng/pattern/text/text_pattern.h"
 
 namespace OHOS::Ace::NG {
 namespace {
@@ -25,7 +28,7 @@ constexpr float PAN_MAX_VELOCITY = 2000.0f;
 
 // custom preview animation params when hover image
 const RefPtr<Curve> CUSTOM_PREVIEW_ANIMATION_CURVE =
-    AceType::MakeRefPtr<InterpolatingSpring>(0.0f, 1.0f, 380.0f, 34.0f);
+    AceType::MakeRefPtr<InterpolatingSpring>(0.0f, 1.0f, 328.0f, 34.0f);
 
 RefPtr<MenuPattern> GetMenuPattern(const RefPtr<FrameNode>& menuWrapper)
 {
@@ -63,55 +66,24 @@ void ShowScaleAnimation(const RefPtr<RenderContext>& context, const RefPtr<MenuT
     scaleOption.SetOnFinishEvent(
         []() { DragEventActuator::ExecutePreDragAction(PreDragStatus::PREVIEW_LIFT_FINISHED); });
     context->UpdateTransformScale(VectorF(previewBeforeAnimationScale, previewBeforeAnimationScale));
-    CHECK_NULL_VOID(menuPattern);
-    auto menuNode = menuPattern->GetHost();
-    CHECK_NULL_VOID(menuNode);
     AnimationUtils::Animate(
         scaleOption,
         [context, previewAfterAnimationScale]() {
             CHECK_NULL_VOID(context);
             context->UpdateTransformScale(VectorF(previewAfterAnimationScale, previewAfterAnimationScale));
         },
-        scaleOption.GetOnFinishEvent(), nullptr, menuNode->GetContextRefPtr());
+        scaleOption.GetOnFinishEvent());
 }
 
-void UpdateWhenNonNegative(BorderRadiusPropertyT<Dimension>& result, const BorderRadiusPropertyT<Dimension>& value)
+void ShowBorderRadiusAndShadowAnimation(
+    const RefPtr<RenderContext>& context, const RefPtr<FrameNode>& frameNode, bool isShowHoverImage)
 {
-    if (value.radiusTopLeft.has_value() && value.radiusTopLeft->IsNonNegative()) {
-        result.radiusTopLeft = value.radiusTopLeft;
-    }
-    if (value.radiusTopRight.has_value() && value.radiusTopRight->IsNonNegative()) {
-        result.radiusTopRight = value.radiusTopRight;
-    }
-    if (value.radiusBottomLeft.has_value() && value.radiusBottomLeft->IsNonNegative()) {
-        result.radiusBottomLeft = value.radiusBottomLeft;
-    }
-    if (value.radiusBottomRight.has_value() && value.radiusBottomRight->IsNonNegative()) {
-        result.radiusBottomRight = value.radiusBottomRight;
-    }
-}
-} // namespace
-
-bool MenuPreviewPattern::GetHoverScaleInterruption() const
-{
-    auto menuWrapper = GetMenuWrapper();
-    CHECK_NULL_RETURN(menuWrapper, false);
-    auto menuWrapperPattern = menuWrapper->GetPattern<MenuWrapperPattern>();
-    CHECK_NULL_RETURN(menuWrapperPattern, false);
-    return menuWrapperPattern->GetHoverScaleInterruption();
-}
-
-void MenuPreviewPattern::ShowBorderRadiusAndShadowAnimation(const MenuParam& menuParam)
-{
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    auto pipeline = host->GetContext();
+    CHECK_NULL_VOID(context && frameNode);
+    auto pipeline = frameNode->GetContext();
     CHECK_NULL_VOID(pipeline);
     auto menuTheme = pipeline->GetTheme<NG::MenuTheme>();
     CHECK_NULL_VOID(menuTheme);
 
-    auto context = host->GetRenderContext();
-    CHECK_NULL_VOID(context);
     auto shadow = context->GetBackShadow();
     if (!shadow.has_value()) {
         shadow = Shadow::CreateShadow(ShadowStyle::None);
@@ -119,15 +91,10 @@ void MenuPreviewPattern::ShowBorderRadiusAndShadowAnimation(const MenuParam& men
 
     auto previewAnimationDuration = menuTheme->GetPreviewAnimationDuration();
     auto previewBorderRadius = menuTheme->GetPreviewBorderRadius();
-    BorderRadiusProperty borderRadius;
-    borderRadius.SetRadius(Dimension(previewBorderRadius));
-    if (menuParam.previewBorderRadius.has_value()) {
-        UpdateWhenNonNegative(borderRadius, menuParam.previewBorderRadius.value());
-    }
-    auto delay = isShowHoverImage_ ? menuTheme->GetHoverImageDelayDuration(GetHoverScaleInterruption()) : 0;
+    auto delay = isShowHoverImage ? menuTheme->GetHoverImageDelayDuration() : 0;
     AnimationOption option;
     option.SetDuration(previewAnimationDuration);
-    if (isShowHoverImage_) {
+    if (isShowHoverImage) {
         option.SetCurve(CUSTOM_PREVIEW_ANIMATION_CURVE);
     } else {
         option.SetCurve(Curves::SHARP);
@@ -135,27 +102,23 @@ void MenuPreviewPattern::ShowBorderRadiusAndShadowAnimation(const MenuParam& men
     option.SetDelay(delay);
 
     context->UpdateBorderRadius(context->GetBorderRadius().value_or(BorderRadiusProperty()));
-    pipeline->AddAfterLayoutTask([option, weakNode = AceType::WeakClaim(AceType::RawPtr(host)), borderRadius, shadow,
-                                     isShowHoverImage = isShowHoverImage_]() {
-        auto host = weakNode.Upgrade();
-        CHECK_NULL_VOID(host);
-        auto renderContext = host->GetRenderContext();
-        CHECK_NULL_VOID(renderContext);
+    pipeline->AddAfterLayoutTask([option, context, previewBorderRadius, shadow]() {
         AnimationUtils::Animate(
             option,
-            [renderContext, borderRadius, shadow, isShowHoverImage]() mutable {
-                CHECK_NULL_VOID(renderContext && shadow);
+            [context, previewBorderRadius, shadow]() mutable {
+                CHECK_NULL_VOID(context && shadow);
                 auto color = shadow->GetColor();
                 auto newColor = Color::FromARGB(100, color.GetRed(), color.GetGreen(), color.GetBlue());
                 shadow->SetColor(newColor);
-                renderContext->UpdateBackShadow(shadow.value());
-                CHECK_NULL_VOID(!isShowHoverImage);
-                renderContext->UpdateBorderRadius(borderRadius);
+                context->UpdateBackShadow(shadow.value());
+                BorderRadiusProperty borderRadius;
+                borderRadius.SetRadius(previewBorderRadius);
+                context->UpdateBorderRadius(borderRadius);
             },
-            option.GetOnFinishEvent(), nullptr, host->GetContextRefPtr());
+            option.GetOnFinishEvent());
     });
 }
-
+} // namespace
 void MenuPreviewPattern::OnModifyDone()
 {
     Pattern::OnModifyDone();
@@ -175,50 +138,22 @@ bool MenuPreviewPattern::OnDirtyLayoutWrapperSwap(const RefPtr<LayoutWrapper>& d
     CHECK_NULL_RETURN(host, false);
     auto context = host->GetRenderContext();
     CHECK_NULL_RETURN(context, false);
-    auto pipeline = host->GetContext();
+    auto pipeline = PipelineBase::GetCurrentContext();
     CHECK_NULL_RETURN(pipeline, false);
     auto menuTheme = pipeline->GetTheme<NG::MenuTheme>();
     CHECK_NULL_RETURN(menuTheme, false);
     context->UpdateBackgroundColor(Color::TRANSPARENT);
     context->SetClipToBounds(true);
-    context->UpdateClipEdge(true);
 
-    auto preview = host->GetHostNode();
-    CHECK_NULL_RETURN(preview, false);
-    auto previewPattern = preview->GetPattern<MenuPreviewPattern>();
-    CHECK_NULL_RETURN(previewPattern, false);
-    auto previewMenuWrapper = previewPattern->GetMenuWrapper();
-    CHECK_NULL_RETURN(previewMenuWrapper, false);
-    auto menuWrapperPattern = previewMenuWrapper->GetPattern<MenuWrapperPattern>();
-    CHECK_NULL_RETURN(menuWrapperPattern, false);
-    auto menuParam = menuWrapperPattern->GetMenuParam();
-    ShowBorderRadiusAndShadowAnimation(menuParam);
-    auto menuWrapper = GetMenuWrapper();
-    auto menuPattern = GetMenuPattern(menuWrapper);
-    DragAnimationHelper::UpdateGatherNodeToTop();
-    UpdateShowScale(context, menuTheme, menuPattern);
-
-    isFirstShow_ = false;
-    return false;
-}
-
-void MenuPreviewPattern::UpdateShowScale(const RefPtr<RenderContext>& context, const RefPtr<MenuTheme>& menuTheme,
-    const RefPtr<MenuPattern>& menuPattern)
-{
-    if (hasPreviewTransitionEffect_) {
-        CHECK_NULL_VOID(context);
-        CHECK_NULL_VOID(menuTheme);
-        auto scaleAfter { -1.0f };
-        if (menuPattern != nullptr) {
-            scaleAfter = menuPattern->GetPreviewAfterAnimationScale();
-        }
-        auto previewAfterAnimationScale =
-            LessOrEqual(scaleAfter, 0.0) ? menuTheme->GetPreviewAfterAnimationScale() : scaleAfter;
-
-        context->UpdateTransformScale(VectorF(previewAfterAnimationScale, previewAfterAnimationScale));
-    } else {
+    ShowBorderRadiusAndShadowAnimation(context, host, isShowHoverImage_);
+    if (!hasPreviewTransitionEffect_) {
+        auto menuWrapper = GetMenuWrapper();
+        auto menuPattern = GetMenuPattern(menuWrapper);
+        DragAnimationHelper::UpdateGatherNodeToTop();
         ShowScaleAnimation(context, menuTheme, menuPattern);
     }
+    isFirstShow_ = false;
+    return false;
 }
 
 RefPtr<FrameNode> MenuPreviewPattern::GetMenuWrapper() const
@@ -252,7 +187,7 @@ void MenuPreviewPattern::InitPanEvent(const RefPtr<GestureEventHub>& gestureHub)
     CHECK_NULL_VOID(targetGestureHub);
     auto dragEventActuator = targetGestureHub->GetDragEventActuator();
     auto actionStartTask = [actuator = AceType::WeakClaim(AceType::RawPtr(dragEventActuator))](
-                               const GestureEvent& info) {
+    const GestureEvent& info) {
         auto dragEventActuator = actuator.Upgrade();
         CHECK_NULL_VOID(dragEventActuator);
         dragEventActuator->RestartDragTask(info);
@@ -272,9 +207,7 @@ void MenuPreviewPattern::InitPanEvent(const RefPtr<GestureEventHub>& gestureHub)
     PanDirection panDirection;
     panDirection.type = PanDirection::ALL;
     auto panEvent = MakeRefPtr<PanEvent>(std::move(actionStartTask), nullptr, std::move(actionEndTask), nullptr);
-    PanDistanceMap distanceMap = { { SourceTool::UNKNOWN, DEFAULT_PAN_DISTANCE.ConvertToPx() },
-        { SourceTool::PEN, DEFAULT_PEN_PAN_DISTANCE.ConvertToPx() } };
-    gestureHub->AddPanEvent(panEvent, panDirection, 1, distanceMap);
+    gestureHub->AddPanEvent(panEvent, panDirection, 1, DEFAULT_PAN_DISTANCE);
 }
 
 void MenuPreviewPattern::HandleDragEnd(float offsetX, float offsetY, float velocity)
@@ -287,7 +220,6 @@ void MenuPreviewPattern::HandleDragEnd(float offsetX, float offsetY, float veloc
     CHECK_NULL_VOID(menuWrapper);
     auto wrapperPattern = menuWrapper->GetPattern<MenuWrapperPattern>();
     CHECK_NULL_VOID(wrapperPattern);
-    TAG_LOGI(AceLogTag::ACE_MENU, "will hide menu");
-    wrapperPattern->HideMenu(HideMenuType::PREVIEW_DRAG_END);
+    wrapperPattern->HideMenu();
 }
 } // namespace OHOS::Ace::NG

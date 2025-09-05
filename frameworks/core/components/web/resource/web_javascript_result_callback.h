@@ -51,16 +51,6 @@ public:
 
     void RemoveTransientJavaScriptObject() override;
 
-    void GetJavaScriptResultV2(const std::vector<std::shared_ptr<NWebHapValue>>& args, const std::string& method,
-        const std::string& objectName, int32_t routingId, int32_t objectId,
-        std::shared_ptr<NWebHapValue> result) override;
-
-    void GetJavaScriptResultFlowbufV2(const std::vector<std::shared_ptr<NWebHapValue>>& args, const std::string& method,
-        const std::string& objectName, int fd, int32_t routingId, int32_t objectId,
-        std::shared_ptr<NWebHapValue> result) override;
-
-    void GetJavaScriptObjectMethodsV2(int32_t objectId, std::shared_ptr<NWebHapValue> result) override;
-    
     using JavaScriptCallBackImpl = std::function<std::shared_ptr<WebJSValue>(
         const std::string& objectName,
         const std::string& objectMethod,
@@ -70,10 +60,6 @@ public:
     {
         javaScriptCallBackImpl_ = javaScriptCallBackImpl;
     }
-
-private:
-    std::shared_ptr<WebJSValue> GetJavaScriptResult(const std::vector<std::shared_ptr<WebJSValue>>& args,
-        const std::string& method, const std::string& object_name);
 
 protected:
     JavaScriptCallBackImpl javaScriptCallBackImpl_;

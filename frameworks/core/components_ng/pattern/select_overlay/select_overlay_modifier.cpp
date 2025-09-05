@@ -15,9 +15,14 @@
 
 #include "core/components_ng/pattern/select_overlay/select_overlay_modifier.h"
 
+#include <vector>
+
+#include "base/geometry/ng/offset_t.h"
+#include "base/utils/utils.h"
+#include "core/components/common/properties/color.h"
 #include "core/components/text_overlay/text_overlay_theme.h"
+#include "core/components_ng/base/modifier.h"
 #include "core/components_ng/render/drawing.h"
-#include "core/pipeline_ng/pipeline_context.h"
 
 namespace OHOS::Ace::NG {
 namespace {
@@ -47,9 +52,7 @@ std::vector<int32_t> circle_x { -1, 0, 1, 0 };
 std::vector<int32_t> circle_Y { 0, -1, 0, 1 };
 } // namespace
 
-SelectOverlayModifier::SelectOverlayModifier(
-    const OffsetF& menuOptionOffset, bool isReverse, const WeakPtr<Pattern>& pattern)
-    : isReverse_(isReverse), pattern_(pattern)
+SelectOverlayModifier::SelectOverlayModifier(const OffsetF& menuOptionOffset, bool isReverse) : isReverse_(isReverse)
 {
     pointRadius_ = AceType::MakeRefPtr<AnimatablePropertyFloat>(Dimension(1.75_vp).ConvertToPx());
     AttachProperty(pointRadius_);
@@ -107,15 +110,12 @@ void SelectOverlayModifier::SetOtherPointRadius(const Dimension& radius, bool no
         AnimationOption option = AnimationOption();
         option.SetDuration(ICON_MICRO_ANIMATION_DURATION2);
         option.SetCurve(Curves::FRICTION);
-        auto pattern = pattern_.Upgrade();
-        auto host = pattern ? pattern->GetHost() : nullptr;
-        auto contextPtr = host ? host->GetContextRefPtr() : nullptr;
         AnimationUtils::Animate(
             option, [weakPointRadius = AceType::WeakClaim(AceType::RawPtr(pointRadius_)), radius]() {
                 auto pointRadius = weakPointRadius.Upgrade();
                 CHECK_NULL_VOID(pointRadius);
                 pointRadius->Set(radius.ConvertToPx());
-            }, nullptr, nullptr, contextPtr);
+            });
     }
 }
 
@@ -125,15 +125,12 @@ void SelectOverlayModifier::SetHeadPointRadius(const Dimension& radius, bool noA
         AnimationOption option = AnimationOption();
         option.SetDuration(ICON_MICRO_ANIMATION_DURATION2);
         option.SetCurve(Curves::FRICTION);
-        auto pattern = pattern_.Upgrade();
-        auto host = pattern ? pattern->GetHost() : nullptr;
-        auto contextPtr = host ? host->GetContextRefPtr() : nullptr;
         AnimationUtils::Animate(
             option, [weakHeadPointRadius = AceType::WeakClaim(AceType::RawPtr(headPointRadius_)), radius]() {
                 auto headPointRadius = weakHeadPointRadius.Upgrade();
                 CHECK_NULL_VOID(headPointRadius);
                 headPointRadius->Set(radius.ConvertToPx());
-            }, nullptr, nullptr, contextPtr);
+            });
     }
 }
 
@@ -199,14 +196,11 @@ void SelectOverlayModifier::LineEndOffsetWithAnimation(bool isMore, bool noAnima
             AnimationOption option = AnimationOption();
             option.SetDuration(ICON_MICRO_ANIMATION_DURATION1);
             option.SetCurve(Curves::FRICTION);
-            auto pattern = pattern_.Upgrade();
-            auto host = pattern ? pattern->GetHost() : nullptr;
-            auto contextPtr = host ? host->GetContextRefPtr() : nullptr;
             AnimationUtils::Animate(option, [weak = AceType::WeakClaim(this)]() {
                 auto overlayModifier = weak.Upgrade();
                 CHECK_NULL_VOID(overlayModifier);
                 overlayModifier->ChangeCircle();
-            }, nullptr, nullptr, contextPtr);
+            });
         } else {
             ChangeCircle();
         }
@@ -241,9 +235,6 @@ void SelectOverlayModifier::BackArrowTransitionAnimation(bool noAnimation)
         AnimationOption option = AnimationOption();
         option.SetDuration(ICON_MICRO_ANIMATION_DURATION1);
         option.SetCurve(Curves::FRICTION);
-        auto pattern = pattern_.Upgrade();
-        auto host = pattern ? pattern->GetHost() : nullptr;
-        auto contextPtr = host ? host->GetContextRefPtr() : nullptr;
 
         for (int32_t i = 0; i < ROUND_NUMBER; i++) {
             auto coordinate =
@@ -254,7 +245,7 @@ void SelectOverlayModifier::BackArrowTransitionAnimation(bool noAnimation)
                     auto overlayModifier = weak.Upgrade();
                     CHECK_NULL_VOID(overlayModifier);
                     overlayModifier->BackArrowTransitionChange(coordinate, i);
-                }, nullptr, nullptr, contextPtr);
+                });
         }
     } else {
         for (int32_t i = 0; i < ROUND_NUMBER; i++) {
@@ -286,11 +277,7 @@ void SelectOverlayModifier::onDraw(DrawingContext& drawingContext)
         return;
     }
 
-    if (Container::GreatOrEqualAPITargetVersion(PlatformVersion::VERSION_TWELVE)) {
-        return;
-    }
-
-    auto pipeline = PipelineContext::GetCurrentContextSafelyWithCheck();
+    auto pipeline = PipelineContext::GetCurrentContextSafely();
     CHECK_NULL_VOID(pipeline);
     auto textOverlayTheme = pipeline->GetTheme<TextOverlayTheme>();
     CHECK_NULL_VOID(textOverlayTheme);

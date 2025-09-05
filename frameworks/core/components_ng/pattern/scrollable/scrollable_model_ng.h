@@ -22,23 +22,16 @@
 #include "core/components_ng/pattern/scrollable/scrollable_paint_property.h"
 #include "core/components_ng/pattern/scrollable/scrollable_properties.h"
 
-#ifdef SUPPORT_DIGITAL_CROWN
-#include "core/event/crown_event.h"
-#endif
-
 namespace OHOS::Ace::NG {
 
 constexpr Dimension DEFAULT_FADING_EDGE_LENGTH_SCROLLABLE = Dimension(32.0f, DimensionUnit::VP); // default value
-class ACE_FORCE_EXPORT ScrollableModelNG {
+class ACE_EXPORT ScrollableModelNG {
 public:
-    static void SetEdgeEffect(EdgeEffect edgeEffect, bool alwaysEnabled, EffectEdge effectEdge = EffectEdge::ALL);
+    static void SetEdgeEffect(EdgeEffect edgeEffect, bool alwaysEnabled);
 
     static void SetScrollBarMode(DisplayMode value);
-    static void SetScrollBarMode(FrameNode* frameNode, const std::optional<DisplayMode>& value);
     static void SetScrollBarColor(const std::string& value);
-    static void SetScrollBarColor(FrameNode* frameNode, const std::optional<Color>& value);
     static void SetScrollBarWidth(const std::string& value);
-    static void SetScrollBarWidth(FrameNode* frameNode, const std::optional<Dimension>& value);
 
     static void SetOnScroll(OnScrollEvent&& onScroll);
     static void SetOnWillScroll(OnWillScrollEvent&& onScroll);
@@ -53,20 +46,17 @@ public:
     static void SetFadingEdge(FrameNode* frameNode, bool fadingEdge,
         const Dimension& fadingEdgeLength = DEFAULT_FADING_EDGE_LENGTH_SCROLLABLE);
     static void SetContentClip(ContentClipMode mode, const RefPtr<ShapeRect>& rect);
-    static void SetMaxFlingSpeed(double max);
-    static void SetOnWillStopDragging(OnWillStopDraggingEvent&& onWillStopDragging);
 
-    static void SetEdgeEffect(
-        FrameNode* frameNode, EdgeEffect edgeEffect, bool alwaysEnabled, EffectEdge effectEdge = EffectEdge::ALL);
+    static void SetEdgeEffect(FrameNode* frameNode, EdgeEffect edgeEffect, bool alwaysEnabled);
     static void SetScrollBarMode(FrameNode* frameNode, int32_t displayNumber);
     static void SetScrollBarWidth(FrameNode* frameNode, const std::string& value);
     static void SetScrollBarColor(FrameNode* frameNode, const std::string& value);
+    static void SetMaxFlingSpeed(double max);
     static void SetOnWillScroll(FrameNode* frameNode, OnWillScrollEvent&& onScroll);
     static void SetOnDidScroll(FrameNode* frameNode, OnScrollEvent&& onScroll);
 
     static int32_t GetEdgeEffect(FrameNode* frameNode);
     static int32_t GetAlwaysEnabled(FrameNode* frameNode);
-    static EffectEdge GetEffectEdge(FrameNode* frameNode);
     static void SetOnScroll(FrameNode* frameNode, OnScrollEvent&& onScroll);
     static void SetOnScrollStart(FrameNode* frameNode, OnScrollStartEvent&& onScrollStart);
     static void SetOnScrollStop(FrameNode* frameNode, OnScrollStopEvent&& onScrollStop);
@@ -74,38 +64,12 @@ public:
     static void SetOnReachEnd(FrameNode* frameNode, OnReachEvent&& onReachEnd);
     static void SetOnScrollFrameBegin(FrameNode* frameNode, OnScrollFrameBeginEvent&& ScrollFrameBegin);
     static void SetMaxFlingSpeed(FrameNode* frameNode, double max);
-    /**
-     * @return maximum fling speed, Unit: vp/s.
-     */
-    static float GetMaxFlingSpeed(FrameNode* frameNode);
-    static void SetContentClip(FrameNode* frameNode, ContentClipMode mode, const RefPtr<ShapeRect>& rect);
-    static ContentClipMode GetContentClip(FrameNode* frameNode);
-    static void ResetContentClip(FrameNode* frameNode);
     static bool GetFadingEdge(FrameNode* frameNode);
     static float GetFadingEdgeLength(FrameNode* frameNode);
-    static void SetOnWillStopDragging(FrameNode* frameNode, OnWillStopDraggingEvent&& onWillStopDragging);
-
-#ifdef SUPPORT_DIGITAL_CROWN
-    static void SetDigitalCrownSensitivity(CrownSensitivity sensitivity);
-#endif
-
-    static void ResetScrollBarWidth(FrameNode* frameNode);
-    static void ResetScrollBarColor(FrameNode* frameNode);
-    static void SetNestedScroll(FrameNode* frameNode, const NestedScrollOptions& nestedOpt);
-    static void SetFriction(FrameNode* frameNode, const std::optional<double>& friction);
-
+    static void SetContentClip(FrameNode* frameNode, ContentClipMode mode, const RefPtr<ShapeRect>& shape);
     static void SetBackToTop(bool backToTop);
-    static void ResetBackToTop();
     static void SetBackToTop(FrameNode* frameNode, bool backToTop);
-    static void SetBackToTopMultiThread(FrameNode* frameNode, bool backToTop);
-    static void ResetBackToTop(FrameNode* frameNode);
     static bool GetBackToTop(FrameNode* frameNode);
-    static void SetScrollBarMargin(const ScrollBarMargin& scrollBarMargin);
-    static void SetScrollBarMargin(FrameNode* frameNode, const ScrollBarMargin& scrollBarMargin);
-    static void ResetScrollBarMargin(FrameNode* frameNode);
-    static void GetScrollBarMargin(FrameNode* frameNode, ScrollBarMargin& scrollBarMargin);
-
-    static void CreateWithResourceObjScrollBarColor(FrameNode* frameNode, const RefPtr<ResourceObject>& resObj);
 };
 } // namespace OHOS::Ace::NG
 #endif // FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_PATTERN_SCROLLABLE_SCROLLABLE_MODEL_H

@@ -20,7 +20,6 @@
 #ifdef ENABLE_ROSEN_BACKEND
 #include "render_service_base/include/platform/common/rs_system_properties.h"
 #include "render_service_client/core/ui/rs_node.h"
-#include "render_service_client/core/ui/rs_root_node.h"
 #include "render_service_client/core/ui/rs_surface_node.h"
 #include "render_service_client/core/ui/rs_ui_director.h"
 #include "render_service_client/core/transaction/rs_transaction.h"
@@ -132,7 +131,7 @@ PipelineContext::PipelineContext(std::shared_ptr<Window> window, RefPtr<TaskExec
 
 PipelineContext::~PipelineContext()
 {
-    LOGI("PipelineContext destroyed");
+    LOG_DESTROY();
 }
 
 void PipelineContext::FlushPipelineWithoutAnimation()
@@ -152,20 +151,12 @@ void PipelineContext::FlushPipelineWithoutAnimation()
     FlushMessages();
 }
 
-void PipelineContext::FlushMessages(std::function<void()> callback)
+void PipelineContext::FlushMessages()
 {
     ACE_FUNCTION_TRACK();
-    if (isFirstPage_) {
-        LOGI("page not loaded, wait..");
-        return;
-    }
 #ifdef ENABLE_ROSEN_BACKEND
     if (SystemProperties::GetRosenBackendEnabled() && rsUIDirector_) {
-        if (!callback) {
-            rsUIDirector_->SendMessages();
-        } else {
-            rsUIDirector_->SendMessages(callback);
-        }
+        rsUIDirector_->SendMessages();
     }
 #endif
 }
@@ -175,10 +166,6 @@ void PipelineContext::FlushBuild()
     CHECK_RUN_ON(UI);
     ACE_FUNCTION_TRACK();
     ACE_FUNCTION_TRACE();
-    if (vsyncListener_) {
-        ACE_SCOPED_TRACE("arkoala build");
-        vsyncListener_();
-    }
 
     if (FrameReport::GetInstance().GetEnable()) {
         FrameReport::GetInstance().BeginFlushBuild();
@@ -339,6 +326,15 @@ void PipelineContext::ShowContainerTitle(bool isShow, bool hasDeco, bool needUpd
     if (containerModal) {
         containerModal->ShowTitle(isShow, hasDeco);
     }
+}
+
+void PipelineContext::SetContainerWindow(bool isShow)
+{
+#ifdef ENABLE_ROSEN_BACKEND
+    if (SystemProperties::GetRosenBackendEnabled() && rsUIDirector_) {
+        rsUIDirector_->SetContainerWindow(isShow, density_); // set container window show state to render service
+    }
+#endif
 }
 
 void PipelineContext::SetContainerButtonHide(bool hideSplit, bool hideMaximize, bool hideMinimize, bool hideClose)
@@ -851,8 +847,7 @@ void PipelineContext::SetupRootElement()
     }
 #ifdef ENABLE_ROSEN_BACKEND
     if (SystemProperties::GetRosenBackendEnabled() && rsUIDirector_ && renderRoot) {
-        rsUIDirector_->SetRSRootNode(
-            Rosen::RSNode::ReinterpretCast<Rosen::RSRootNode>(rootRenderNode->GetRSNode()));
+        rsUIDirector_->SetRoot(rootRenderNode->GetRSNode()->GetId());
         if (windowModal_ == WindowModal::CONTAINER_MODAL) {
             rsUIDirector_->SetAbilityBGAlpha(appBgColor_.GetAlpha());
         } else {
@@ -905,8 +900,7 @@ RefPtr<Element> PipelineContext::SetupSubRootElement()
     window_->SetRootRenderNode(rootRenderNode);
 #ifdef ENABLE_ROSEN_BACKEND
     if (SystemProperties::GetRosenBackendEnabled() && rsUIDirector_) {
-        rsUIDirector_->SetRSRootNode(
-            Rosen::RSNode::ReinterpretCast<Rosen::RSRootNode>(rootRenderNode->GetRSNode()));
+        rsUIDirector_->SetRoot(rootRenderNode->GetRSNode()->GetId());
         auto renderRoot = AceType::DynamicCast<RenderRoot>(rootRenderNode);
         if (renderRoot) {
             rsUIDirector_->SetAbilityBGAlpha(renderRoot->GetBgColor().GetAlpha());
@@ -1285,7 +1279,7 @@ void PipelineContext::ExitAnimation()
 }
 
 // return true if user accept or page is not last, return false if others condition
-bool PipelineContext::CallRouterBackToPopPage(bool* isUserAccept)
+bool PipelineContext::CallRouterBackToPopPage()
 {
     CHECK_RUN_ON(PLATFORM);
     auto frontend = weakFrontend_.Upgrade();
@@ -1297,9 +1291,6 @@ bool PipelineContext::CallRouterBackToPopPage(bool* isUserAccept)
     if (frontend->OnBackPressed()) {
         // if user accept
         LOGI("CallRouterBackToPopPage(): user consume the back key event");
-        if (isUserAccept) {
-            *isUserAccept = true;
-        }
         return true;
     }
     auto stageElement = GetStageElement();
@@ -1545,8 +1536,7 @@ void PipelineContext::OnTouchEvent(const TouchEvent& point, bool isSubPipe)
         return;
     }
     auto scalePoint = point.CreateScalePoint(viewScale_);
-    ReportConfig config;
-    ResSchedReport::GetInstance().OnTouchEvent(scalePoint, config);
+    ResSchedReport::GetInstance().OnTouchEvent(scalePoint);
     if (scalePoint.type == TouchType::DOWN) {
         eventManager_->HandleOutOfRectCallback(
             { scalePoint.x, scalePoint.y, scalePoint.sourceType }, rectCallbackList_);
@@ -1646,7 +1636,7 @@ void PipelineContext::FlushTouchEvents()
     }
 }
 
-bool PipelineContext::OnKeyEvent(const NonPointerEvent& nonPointerEvent)
+bool PipelineContext::OnNonPointerEvent(const NonPointerEvent& nonPointerEvent)
 {
     CHECK_RUN_ON(UI);
     if (nonPointerEvent.eventType != UIInputEventType::KEY) {
@@ -1659,7 +1649,9 @@ bool PipelineContext::OnKeyEvent(const NonPointerEvent& nonPointerEvent)
         return false;
     }
     rootElement_->HandleSpecifiedKey(event);
+
     SetShortcutKey(event);
+
     pressedKeyCodes = event.pressedCodes;
     isKeyCtrlPressed_ = !pressedKeyCodes.empty() && (pressedKeyCodes.back() == KeyCode::KEY_CTRL_LEFT ||
                                                         pressedKeyCodes.back() == KeyCode::KEY_CTRL_RIGHT);
@@ -1696,45 +1688,6 @@ bool PipelineContext::OnKeyEvent(const NonPointerEvent& nonPointerEvent)
     if (rootElement_->HandleKeyEvent(event)) {
         TAG_LOGI(AceLogTag::ACE_INPUTTRACKING, "Default focus system handled this event");
         return true;
-    }
-    return false;
-}
-
-constexpr double ANGULAR_VELOCITY_FACTOR = 0.001f;
-constexpr float ANGULAR_VELOCITY_SLOW = 0.07f;
-constexpr float ANGULAR_VELOCITY_MEDIUM = 0.2f;
-constexpr float ANGULAR_VELOCITY_FAST = 0.54f;
-constexpr float DISPLAY_CONTROL_RATIO_VERY_SLOW = 1.19f;
-constexpr float DISPLAY_CONTROL_RATIO_SLOW = 1.87f;
-constexpr float DISPLAY_CONTROL_RATIO_MEDIUM = 1.67f;
-constexpr float DISPLAY_CONTROL_RATIO_FAST = 1.59f;
-
-double GetCrownRotateVP(const CrownEvent& event)
-{
-    double velocity = std::abs(event.angularVelocity * ANGULAR_VELOCITY_FACTOR);
-    double vp = 0.0;
-    if (LessOrEqualCustomPrecision(velocity, ANGULAR_VELOCITY_SLOW, 0.01f)) { // very slow
-        vp = (Dimension(DISPLAY_CONTROL_RATIO_VERY_SLOW, DimensionUnit::VP) * event.degree).ConvertToVp();
-    } else if (LessOrEqualCustomPrecision(velocity, ANGULAR_VELOCITY_MEDIUM, 0.01f)) { // slow
-        vp = (Dimension(DISPLAY_CONTROL_RATIO_SLOW, DimensionUnit::VP) * event.degree).ConvertToVp();
-    } else if (LessOrEqualCustomPrecision(velocity, ANGULAR_VELOCITY_FAST, 0.01f)) { // medium
-        vp = (Dimension(DISPLAY_CONTROL_RATIO_MEDIUM, DimensionUnit::VP) * event.degree).ConvertToVp();
-    } else { // fast
-        vp = (Dimension(DISPLAY_CONTROL_RATIO_FAST, DimensionUnit::VP) * event.degree).ConvertToVp();
-    }
-    return vp;
-}
-
-bool PipelineContext::OnNonPointerEvent(const NonPointerEvent& nonPointerEvent)
-{
-    CHECK_RUN_ON(UI);
-    if (nonPointerEvent.eventType == UIInputEventType::KEY) {
-        return OnKeyEvent(nonPointerEvent);
-    } else if (nonPointerEvent.eventType == UIInputEventType::CROWN) {
-        const auto& crownEvent = static_cast<const CrownEvent&>(nonPointerEvent);
-        RotationEvent rotationEvent;
-        rotationEvent.value = GetCrownRotateVP(crownEvent);
-        return OnRotationEvent(rotationEvent);
     }
     return false;
 }
@@ -1984,7 +1937,7 @@ void PipelineContext::SetCardViewAccessibilityParams(const std::string& key, boo
     accessibilityManager->SetCardViewParams(key, focus);
 }
 
-void PipelineContext::FlushVsync(uint64_t nanoTimestamp, uint64_t frameCount)
+void PipelineContext::FlushVsync(uint64_t nanoTimestamp, uint32_t frameCount)
 {
     CHECK_RUN_ON(UI);
     ACE_FUNCTION_TRACK();
@@ -3154,7 +3107,7 @@ void PipelineContext::OnDragEvent(const DragPointerEvent& pointerEvent, DragEven
         pageOffset_ = GetPageRect().GetOffset();
     }
 
-    event->SetPressedKeyCodes(pointerEvent.pressedKeyCodes);
+    event->SetPressedKeyCodes(pointerEvent.pressedKeyCodes_);
 
     if (action != DragEventAction::DRAG_EVENT_END) {
         ProcessDragEvent(renderNode, event, globalPoint);
@@ -3293,8 +3246,7 @@ void PipelineContext::AddKeyFrame(
     pendingImplicitLayout_.pop();
 
 #ifdef ENABLE_ROSEN_BACKEND
-    auto rsUIContext = rsUIDirector_ ? rsUIDirector_->GetRSUIContext() : nullptr;
-    RSNode::AddKeyFrame(rsUIContext, fraction, NativeCurveHelper::ToNativeCurve(curve), propertyChangeCallback);
+    RSNode::AddKeyFrame(fraction, NativeCurveHelper::ToNativeCurve(curve), propertyChangeCallback);
 #endif
 }
 
@@ -3323,8 +3275,7 @@ void PipelineContext::AddKeyFrame(float fraction, const std::function<void()>& p
     pendingImplicitLayout_.pop();
 
 #ifdef ENABLE_ROSEN_BACKEND
-    auto rsUIContext = rsUIDirector_ ? rsUIDirector_->GetRSUIContext() : nullptr;
-    RSNode::AddKeyFrame(rsUIContext, fraction, propertyChangeCallback);
+    RSNode::AddKeyFrame(fraction, propertyChangeCallback);
 #endif
 }
 

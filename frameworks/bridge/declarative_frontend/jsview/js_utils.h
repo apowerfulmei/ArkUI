@@ -38,7 +38,7 @@ class WantWrap;
 namespace OHOS::Rosen {
 class VisualEffect;
 class Filter;
-class Blender;
+class BrightnessBlender;
 }
 
 namespace OHOS::Ace::Framework {
@@ -70,7 +70,7 @@ bool GetPixelMapListFromAnimatedDrawable(JSRef<JSVal> obj, std::vector<RefPtr<Pi
 
 const Rosen::VisualEffect* CreateRSEffectFromNapiValue(JSRef<JSVal> obj);
 const Rosen::Filter* CreateRSFilterFromNapiValue(JSRef<JSVal> obj);
-const Rosen::Blender* CreateRSBlenderFromNapiValue(JSRef<JSVal> obj);
+const Rosen::BrightnessBlender* CreateRSBrightnessBlenderFromNapiValue(JSRef<JSVal> obj);
 std::optional<NG::BorderRadiusProperty> HandleDifferentRadius(JsiRef<JSVal> args);
 std::optional<NG::BorderRadiusProperty> ParseBorderRadiusAttr(JsiRef<JSVal> args);
 bool IsDisableEventVersion();
@@ -82,6 +82,5 @@ RefPtr<DrawingColorFilter> CreateDrawingColorFilter(JSRef<JSVal> obj);
 RefPtr<DrawingLattice> CreateDrawingLattice(JSRef<JSVal> obj);
 bool CheckRegexValid(const std::string& pattern);
 napi_env GetCurrentEnv();
-void* UnwrapNapiValue(const JSRef<JSVal>& obj);
 } // namespace OHOS::Ace::Framework
 #endif // FRAMEWORKS_BRIDGE_DECLARATIVE_FRONTEND_JS_VIEW_JS_UTILS_H

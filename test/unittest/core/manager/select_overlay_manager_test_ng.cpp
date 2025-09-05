@@ -92,7 +92,7 @@ public:
         overlayInfo.handleLevelMode = handleLevelMode_;
         overlayInfo.menuInfo.menuIsShow = true;
     }
-
+    
     void OnHandleLevelModeChanged(HandleLevelMode mode) override
     {
         handleLevelMode_ = mode;
@@ -1324,18 +1324,6 @@ HWTEST_F(SelectOverlayManagerTestNg, InitSelectOverlay, TestSize.Level1)
     EXPECT_FALSE(client.SelectOverlayIsOn());
 
     client.InitSelectOverlay();
-    client.selectOverlayInfo_.menuCallback.onTranslate();
-    EXPECT_FALSE(client.SelectOverlayIsOn());
-
-    client.InitSelectOverlay();
-    client.selectOverlayInfo_.menuCallback.onSearch();
-    EXPECT_FALSE(client.SelectOverlayIsOn());
-
-    client.InitSelectOverlay();
-    client.selectOverlayInfo_.menuCallback.onShare();
-    EXPECT_FALSE(client.SelectOverlayIsOn());
-
-    client.InitSelectOverlay();
     client.selectOverlayInfo_.menuCallback.onCameraInput();
     EXPECT_FALSE(client.SelectOverlayIsOn());
 
@@ -1417,6 +1405,7 @@ HWTEST_F(SelectOverlayManagerTestNg, CreateSelectOverlay01, TestSize.Level1)
     selectOverlayInfo.isUsingMouse = IS_USING_MOUSE;
     client.CreateSelectOverlay(clientInfo);
     EXPECT_TRUE(selectOverlayInfo.isUsingMouse);
+
 
     selectOverlayInfo.isUsingMouse = false;
     client.CreateSelectOverlay(clientInfo);
@@ -1608,7 +1597,6 @@ HWTEST_F(SelectOverlayManagerTestNg, SetHolder, TestSize.Level1)
 
     content.selectionHoldId_ = 1;
     content.SetHolder(holder);
-    EXPECT_EQ(content.selectOverlayHolder_, holder);
 }
 
 /**
@@ -1796,11 +1784,11 @@ HWTEST_F(SelectOverlayManagerTestNg, GetSelectOverlayRoot, TestSize.Level1)
 }
 
 /**
- * @tc.name: CloseInternalTest001
+ * @tc.name: CloseInternal
  * @tc.desc: test CloseInternal
  * @tc.type: FUNC
  */
-HWTEST_F(SelectOverlayManagerTestNg, CloseInternalTest001, TestSize.Level1)
+HWTEST_F(SelectOverlayManagerTestNg, CloseInternal, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. CloseInternal
@@ -1813,91 +1801,6 @@ HWTEST_F(SelectOverlayManagerTestNg, CloseInternalTest001, TestSize.Level1)
     CloseReason reason = CloseReason::CLOSE_REASON_NORMAL;
     content.CloseInternal(id, animation, reason);
     EXPECT_EQ(content.selectionHoldId_, -1);
-}
-
-/**
- * @tc.name: CloseInternalTest002
- * @tc.desc: test CloseInternal
- * @tc.type: FUNC
- */
-HWTEST_F(SelectOverlayManagerTestNg, CloseInternalTest002, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. CloseInternal
-     */
-    Init();
-    auto content = SelectContentOverlayManager(root_);
-    auto holder = AceType::MakeRefPtr<MockSelectOverlayHolder>();
-    holder->SetOwner(root_);
-    content.SetHolder(holder);
-    SelectOverlayInfo selectInfo;
-    selectInfo.enableHandleLevel = true;
-    selectInfo.menuInfo.showCut = true;
-    content.shareOverlayInfo_ = std::make_shared<SelectOverlayInfo>(selectInfo);
-    ASSERT_NE(content.shareOverlayInfo_, nullptr);
-    auto frameNode = SelectOverlayNode::CreateSelectOverlayNode(content.shareOverlayInfo_);
-    ASSERT_NE(frameNode, nullptr);
-    content.menuNode_ = AceType::WeakClaim(AceType::RawPtr(frameNode));
-    ASSERT_NE(content.menuNode_.Upgrade(), nullptr);
-
-    /**
-     * @tc.steps: step2. mount menuNode to root node
-     */
-    frameNode->SetParent(root_);
-
-    /**
-     * @tc.steps: step3. call CloseInternal
-     */
-    int32_t id = root_->GetId();
-    bool animation = true;
-    CloseReason reason = CloseReason::CLOSE_REASON_NORMAL;
-    content.shareOverlayInfo_ = std::make_shared<SelectOverlayInfo>();
-    content.shareOverlayInfo_->menuInfo.menuIsShow = true;
-    content.shareOverlayInfo_->enableHandleLevel = true;
-    bool result = content.CloseInternal(id, animation, reason);
-    EXPECT_TRUE(result);
-}
-
-/**
- * @tc.name: CloseInternalTest003
- * @tc.desc: test CloseInternal
- * @tc.type: FUNC
- */
-HWTEST_F(SelectOverlayManagerTestNg, CloseInternalTest003, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. CloseInternal.
-     */
-    Init();
-    auto content = SelectContentOverlayManager(root_);
-    auto holder = AceType::MakeRefPtr<SelectOverlayHolder>();
-    content.SetHolder(holder);
-    SelectOverlayInfo selectInfo;
-    selectInfo.enableHandleLevel = true;
-    selectInfo.menuInfo.showCut = true;
-    content.shareOverlayInfo_ = std::make_shared<SelectOverlayInfo>(selectInfo);
-    ASSERT_NE(content.shareOverlayInfo_, nullptr);
-    auto frameNode = SelectOverlayNode::CreateSelectOverlayNode(content.shareOverlayInfo_);
-    ASSERT_NE(frameNode, nullptr);
-    content.menuNode_ = AceType::WeakClaim(AceType::RawPtr(frameNode));
-    ASSERT_NE(content.menuNode_.Upgrade(), nullptr);
-
-    /**
-     * @tc.steps: step2. mount menuNode to root node
-     */
-    frameNode->SetParent(root_);
-
-    /**
-     * @tc.steps: step3. call CloseInternal
-     */
-    int32_t id = root_->GetId();
-    bool animation = true;
-    CloseReason reason = CloseReason::CLOSE_REASON_NORMAL;
-    content.shareOverlayInfo_ = std::make_shared<SelectOverlayInfo>();
-    content.shareOverlayInfo_->menuInfo.menuIsShow = true;
-    content.shareOverlayInfo_->enableHandleLevel = false;
-    bool result = content.CloseInternal(id, animation, reason);
-    EXPECT_TRUE(result);
 }
 
 /**
@@ -2094,11 +1997,11 @@ HWTEST_F(SelectOverlayManagerTestNg, ContentHandleGlobalEvent, TestSize.Level1)
 }
 
 /**
- * @tc.name: IsTouchInSelectOverlayArea001
+ * @tc.name: IsTouchInSelectOverlayArea
  * @tc.desc: test IsTouchInSelectOverlayArea
  * @tc.type: FUNC
  */
-HWTEST_F(SelectOverlayManagerTestNg, IsTouchInSelectOverlayArea001, TestSize.Level1)
+HWTEST_F(SelectOverlayManagerTestNg, IsTouchInSelectOverlayArea, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. IsTouchInSelectOverlayArea
@@ -2108,33 +2011,6 @@ HWTEST_F(SelectOverlayManagerTestNg, IsTouchInSelectOverlayArea001, TestSize.Lev
     auto holder = AceType::MakeRefPtr<SelectOverlayHolder>();
     PointF point { 9.0f, 12.0f };
     content.SetHolder(holder);
-    content.IsTouchInSelectOverlayArea(point);
-    EXPECT_FALSE(content.IsOpen());
-}
-
-/**
- * @tc.name: IsTouchInSelectOverlayArea002
- * @tc.desc: test IsTouchInSelectOverlayArea
- * @tc.type: FUNC
- */
-HWTEST_F(SelectOverlayManagerTestNg, IsTouchInSelectOverlayArea002, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. init SelectContentOverlayManager
-     */
-    Init();
-    auto content = SelectContentOverlayManager(root_);
-    SelectOverlayInfo selectInfo;
-    selectInfo.enableHandleLevel = true;
-    selectInfo.menuInfo.showCut = true;
-    content.shareOverlayInfo_ = std::make_shared<SelectOverlayInfo>(selectInfo);
-    auto holder = AceType::MakeRefPtr<SelectOverlayHolder>();
-    PointF point { 9.0f, 12.0f };
-    content.SetHolder(holder);
-
-    /**
-     * @tc.steps: step2. call IsTouchInSelectOverlayArea
-     */
     content.IsTouchInSelectOverlayArea(point);
     EXPECT_FALSE(content.IsOpen());
 }
@@ -2262,78 +2138,6 @@ HWTEST_F(SelectOverlayManagerTestNg, SwitchToHandleMode, TestSize.Level1)
 }
 
 /**
- * @tc.name: SwitchToHandleMode001
- * @tc.desc: test SwitchToHandleMode
- * @tc.type: FUNC
- */
-HWTEST_F(SelectOverlayManagerTestNg, SwitchToHandleMode001, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. Crate SelectContentOverlayManager and SelectOverlayHolder.
-     */
-    Init();
-    auto content = AceType::MakeRefPtr<SelectContentOverlayManager>(root_);
-    auto holder = AceType::MakeRefPtr<MockSelectOverlayHolder>();
-    content->SetHolder(holder);
-    content->Show(false, 0);
-    EXPECT_NE(content->handleNode_.Upgrade(), nullptr);
-    EXPECT_NE(content->menuNode_.Upgrade(), nullptr);
-    holder->allowSwitchMode_ = true;
-    holder->SetOwner(root_);
-
-    /**
-     * @tc.steps: step2. SwitchToHandleMode EMBED mode.
-     */
-    content->SwitchToHandleMode(HandleLevelMode::EMBED, false);
-    EXPECT_EQ(holder->handleLevelMode_, HandleLevelMode::EMBED);
-
-    /**
-     * @tc.steps: step3. SwitchToHandleMode OVERLAY mode.
-     */
-    content->SwitchToHandleMode(HandleLevelMode::OVERLAY);
-    EXPECT_EQ(holder->handleLevelMode_, HandleLevelMode::OVERLAY);
-}
-
-/**
- * @tc.name: SwitchToHandleMode002
- * @tc.desc: test SwitchToHandleMode
- * @tc.type: FUNC
- */
-HWTEST_F(SelectOverlayManagerTestNg, SwitchToHandleMode002, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. Crate SelectContentOverlayManager and SelectOverlayHolder.
-     */
-    Init();
-    auto content = AceType::MakeRefPtr<SelectContentOverlayManager>(root_);
-    auto holder = AceType::MakeRefPtr<MockSelectOverlayHolder>();
-    content->SetHolder(holder);
-    content->Show(false, 0);
-    EXPECT_NE(content->handleNode_.Upgrade(), nullptr);
-    EXPECT_NE(content->menuNode_.Upgrade(), nullptr);
-    holder->allowSwitchMode_ = true;
-    holder->SetOwner(root_);
-
-    /**
-     * @tc.steps: step2. Update enableHandleLevel
-     */
-    EXPECT_NE(content->shareOverlayInfo_, nullptr);
-    content->shareOverlayInfo_->enableHandleLevel = false;
-
-    /**
-     * @tc.steps: step3. SwitchToHandleMode EMBED mode.
-     */
-    content->SwitchToHandleMode(HandleLevelMode::EMBED, false);
-    EXPECT_EQ(holder->handleLevelMode_, HandleLevelMode::EMBED);
-
-    /**
-     * @tc.steps: step4. SwitchToHandleMode OVERLAY mode.
-     */
-    content->SwitchToHandleMode(HandleLevelMode::OVERLAY);
-    EXPECT_EQ(holder->handleLevelMode_, HandleLevelMode::OVERLAY);
-}
-
-/**
  * @tc.name: ClickAndSwitchToHandleMode
  * @tc.desc: test click to switch overlay mode.
  * @tc.type: FUNC
@@ -2378,364 +2182,5 @@ HWTEST_F(SelectOverlayManagerTestNg, ClickAndSwitchToHandleMode, TestSize.Level1
     holder->allowSwitchMode_ = true;
     selectOverlayPattern->HandleTouchEvent(info);
     EXPECT_EQ(holder->handleLevelMode_, HandleLevelMode::OVERLAY);
-}
-
-/**
- * @tc.name: CreateSelectOverlay03
- * @tc.desc: test CreateSelectOverlay
- * @tc.type: FUNC
- */
-HWTEST_F(SelectOverlayManagerTestNg, CreateSelectOverlay03, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. CreateSelectOverlay
-     */
-    Init();
-    auto content = AceType::MakeRefPtr<SelectContentOverlayManager>(root_);
-    ASSERT_NE(content, nullptr);
-    SelectOverlayInfo info;
-    info.enableHandleLevel = false;
-    info.enableSubWindowMenu = true;
-    info.isUsingMouse = IS_USING_MOUSE;
-    TextMenuOptions textMenuOptions_;
-    textMenuOptions_.showMode = TextMenuShowMode::PREFER_WINDOW;
-    selectOverlayManager_->SetTextMenuOptions(textMenuOptions_);
-    EXPECT_EQ(selectOverlayManager_->GetMenuShowMode(), TextMenuShowMode::PREFER_WINDOW);
-    bool animation = true;
-    content->CreateSelectOverlay(info, animation);
-    EXPECT_EQ(content->selectionHoldId_, -1);
-}
-
-/**
- * @tc.name: CreateSelectOverlay04
- * @tc.desc: test CreateSelectOverlay
- * @tc.type: FUNC
- */
-HWTEST_F(SelectOverlayManagerTestNg, CreateSelectOverlay04, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. CreateSelectOverlay
-     */
-    Init();
-    auto content = AceType::MakeRefPtr<SelectContentOverlayManager>(root_);
-    ASSERT_NE(content, nullptr);
-    SelectOverlayInfo info;
-    info.enableHandleLevel = true;
-    info.enableSubWindowMenu = true;
-    TextMenuOptions textMenuOptions_;
-    textMenuOptions_.showMode = TextMenuShowMode::PREFER_WINDOW;
-    selectOverlayManager_->SetTextMenuOptions(textMenuOptions_);
-    EXPECT_EQ(selectOverlayManager_->GetMenuShowMode(), TextMenuShowMode::PREFER_WINDOW);
-    bool animation = true;
-    content->CreateSelectOverlay(info, animation);
-    EXPECT_NE(content->handleNode_.Upgrade(), nullptr);
-    EXPECT_NE(content->menuNode_.Upgrade(), nullptr);
-}
-
-/**
- * @tc.name: MountMenuNodeToSubWindow01
- * @tc.desc: test MountMenuNodeToSubWindow
- * @tc.type: FUNC
- */
-HWTEST_F(SelectOverlayManagerTestNg, MountMenuNodeToSubWindow01, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. init SelectContentOverlayManager
-     */
-    Init();
-    auto content = AceType::MakeRefPtr<SelectContentOverlayManager>(root_);
-    ASSERT_NE(content, nullptr);
-    SelectOverlayInfo selectInfo;
-    selectInfo.enableHandleLevel = true;
-    selectInfo.enableSubWindowMenu = true;
-    selectInfo.isUseOverlayNG = true;
-    selectInfo.menuInfo.showCut = true;
-    selectInfo.menuInfo.showCopy = true;
-    TextMenuOptions textMenuOptions_;
-    textMenuOptions_.showMode = TextMenuShowMode::PREFER_WINDOW;
-    selectOverlayManager_->SetTextMenuOptions(textMenuOptions_);
-    EXPECT_EQ(selectOverlayManager_->GetMenuShowMode(), TextMenuShowMode::PREFER_WINDOW);
-
-    /**
-     * @tc.steps: step2. CreateSelectOverlayNode
-     */
-    content->shareOverlayInfo_ = std::make_shared<SelectOverlayInfo>(selectInfo);
-    ASSERT_NE(content->shareOverlayInfo_, nullptr);
-    auto frameNode = SelectOverlayNode::CreateSelectOverlayNode(content->shareOverlayInfo_);
-    ASSERT_NE(frameNode, nullptr);
-    auto selectOverlayNode = AceType::DynamicCast<SelectOverlayNode>(frameNode);
-    ASSERT_NE(selectOverlayNode, nullptr);
-
-    /**
-     * @tc.steps: step3. MountMenuNodeToSubWindow
-     */
-    bool animation = true;
-    content->MountMenuNodeToSubWindow(selectOverlayNode, animation, NodeType::TOUCH_MENU);
-    auto selectoverlayPattern = selectOverlayNode->GetPattern<SelectOverlayPattern>();
-    ASSERT_NE(selectoverlayPattern, nullptr);
-    EXPECT_EQ(selectoverlayPattern->GetIsMenuShowInSubWindow(), false);
-}
-
-/**
- * @tc.name: IsEnableSubWindowMenu01
- * @tc.desc: test IsEnableSubWindowMenu
- * @tc.type: FUNC
- */
-HWTEST_F(SelectOverlayManagerTestNg, IsEnableSubWindowMenu01, TestSize.Level1)
-{
-    Init();
-    auto content = AceType::MakeRefPtr<SelectContentOverlayManager>(root_);
-    ASSERT_NE(content, nullptr);
-    SelectOverlayInfo info;
-    info.enableHandleLevel = true;
-    info.enableSubWindowMenu = true;
-    TextMenuOptions textMenuOptions_;
-    textMenuOptions_.showMode = TextMenuShowMode::PREFER_WINDOW;
-    selectOverlayManager_->SetTextMenuOptions(textMenuOptions_);
-    EXPECT_EQ(selectOverlayManager_->GetMenuShowMode(), TextMenuShowMode::PREFER_WINDOW);
-    content->shareOverlayInfo_ = std::make_shared<SelectOverlayInfo>(info);
-    EXPECT_EQ(content->IsEnableSubWindowMenu(), false);
-}
-
-/**
- * @tc.name: IsEnableSubWindowMenu02
- * @tc.desc: test IsEnableSubWindowMenu
- * @tc.type: FUNC
- */
-HWTEST_F(SelectOverlayManagerTestNg, IsEnableSubWindowMenu02, TestSize.Level1)
-{
-    Init();
-    auto content = AceType::MakeRefPtr<SelectContentOverlayManager>(root_);
-    ASSERT_NE(content, nullptr);
-    SelectOverlayInfo info;
-    info.enableHandleLevel = true;
-    info.enableSubWindowMenu = true;
-    EXPECT_EQ(selectOverlayManager_->GetMenuShowMode(), TextMenuShowMode::DEFAULT);
-    content->shareOverlayInfo_ = std::make_shared<SelectOverlayInfo>(info);
-    EXPECT_EQ(content->IsEnableSubWindowMenu(), false);
-}
-
-/**
- * @tc.name: IsRightClickSubWindowMenu01
- * @tc.desc: test IsRightClickSubWindowMenu
- * @tc.type: FUNC
- */
-HWTEST_F(SelectOverlayManagerTestNg, IsRightClickSubWindowMenu01, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. init SelectContentOverlayManager
-     */
-    Init();
-    auto content = AceType::MakeRefPtr<SelectContentOverlayManager>(root_);
-    ASSERT_NE(content, nullptr);
-    SelectOverlayInfo info;
-    info.enableHandleLevel = false;
-    info.enableSubWindowMenu = true;
-    info.isUsingMouse = IS_USING_MOUSE;
-    info.isUseOverlayNG = true;
-    TextMenuOptions textMenuOptions_;
-    textMenuOptions_.showMode = TextMenuShowMode::PREFER_WINDOW;
-    selectOverlayManager_->SetTextMenuOptions(textMenuOptions_);
-    EXPECT_EQ(selectOverlayManager_->GetMenuShowMode(), TextMenuShowMode::PREFER_WINDOW);
-    content->shareOverlayInfo_ = std::make_shared<SelectOverlayInfo>(info);
-    ASSERT_NE(content->shareOverlayInfo_, nullptr);
-
-    auto wrapperNode_ = FrameNode::CreateFrameNode(V2::MENU_WRAPPER_ETS_TAG,
-        ElementRegister::GetInstance()->MakeUniqueId(), AceType::MakeRefPtr<MenuWrapperPattern>(1));
-    ASSERT_NE(wrapperNode_, nullptr);
-    content->selectOverlayNode_ = wrapperNode_;
-    auto selectoverlayNode = content->selectOverlayNode_.Upgrade();
-    ASSERT_NE(selectoverlayNode, nullptr);
-
-    /**
-     * @tc.steps: step2. Update menunode menuWrapperPattern
-     */
-    auto menuWrapperPattern = selectoverlayNode->GetPattern<MenuWrapperPattern>();
-    ASSERT_NE(menuWrapperPattern, nullptr);
-    menuWrapperPattern->SetIsSelectOverlaySubWindowWrapper(true);
-    EXPECT_EQ(menuWrapperPattern->GetIsSelectOverlaySubWindowWrapper(), true);
-    EXPECT_EQ(content->IsRightClickSubWindowMenu(), true);
-}
-
-/**
- * @tc.name: IsRightClickSubWindowMenu02
- * @tc.desc: test IsRightClickSubWindowMenu
- * @tc.type: FUNC
- */
-HWTEST_F(SelectOverlayManagerTestNg, IsRightClickSubWindowMenu02, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. CreateSelectOverlay
-     */
-    Init();
-    auto content = AceType::MakeRefPtr<SelectContentOverlayManager>(root_);
-    ASSERT_NE(content, nullptr);
-    SelectOverlayInfo info;
-    info.enableHandleLevel = false;
-    info.enableSubWindowMenu = true;
-    info.isUsingMouse = IS_USING_MOUSE;
-    TextMenuOptions textMenuOptions_;
-    textMenuOptions_.showMode = TextMenuShowMode::PREFER_WINDOW;
-    selectOverlayManager_->SetTextMenuOptions(textMenuOptions_);
-    EXPECT_EQ(selectOverlayManager_->GetMenuShowMode(), TextMenuShowMode::PREFER_WINDOW);
-    bool animation = true;
-    content->CreateSelectOverlay(info, animation);
-    EXPECT_EQ(content->IsRightClickSubWindowMenu(), false);
-}
-
-/**
- * @tc.name: IsSelectOverlaySubWindowMenu01
- * @tc.desc: test IsSelectOverlaySubWindowMenu
- * @tc.type: FUNC
- */
-HWTEST_F(SelectOverlayManagerTestNg, IsSelectOverlaySubWindowMenu01, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. CreateSelectOverlay
-     */
-    Init();
-    auto content = AceType::MakeRefPtr<SelectContentOverlayManager>(root_);
-    ASSERT_NE(content, nullptr);
-    SelectOverlayInfo info;
-    info.enableHandleLevel = true;
-    info.enableSubWindowMenu = true;
-    info.isUseOverlayNG = true;
-    TextMenuOptions textMenuOptions_;
-    textMenuOptions_.showMode = TextMenuShowMode::PREFER_WINDOW;
-    selectOverlayManager_->SetTextMenuOptions(textMenuOptions_);
-    EXPECT_EQ(selectOverlayManager_->GetMenuShowMode(), TextMenuShowMode::PREFER_WINDOW);
-    bool animation = true;
-    content->CreateSelectOverlay(info, animation);
-    EXPECT_NE(content->handleNode_.Upgrade(), nullptr);
-    EXPECT_NE(content->menuNode_.Upgrade(), nullptr);
-
-    /**
-     * @tc.steps: step2. Update menunode selectOverlayPattern
-     */
-    RefPtr<Pattern> pattern = content->GetMenuPattern();
-    ASSERT_NE(pattern, nullptr);
-    auto selectOverlayPattern = AceType::DynamicCast<SelectOverlayPattern>(pattern);
-    ASSERT_NE(selectOverlayPattern, nullptr);
-    selectOverlayPattern->SetIsMenuShowInSubWindow(true);
-    EXPECT_EQ(selectOverlayPattern->GetIsMenuShowInSubWindow(), true);
-    EXPECT_EQ(content->IsSelectOverlaySubWindowMenu(), true);
-}
-
-/**
- * @tc.name: IsSelectOverlaySubWindowMenu02
- * @tc.desc: test IsSelectOverlaySubWindowMenu
- * @tc.type: FUNC
- */
-HWTEST_F(SelectOverlayManagerTestNg, IsSelectOverlaySubWindowMenu02, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. CreateSelectOverlay
-     */
-    Init();
-    auto content = AceType::MakeRefPtr<SelectContentOverlayManager>(root_);
-    ASSERT_NE(content, nullptr);
-    SelectOverlayInfo info;
-    info.enableHandleLevel = true;
-    info.enableSubWindowMenu = true;
-    info.isUseOverlayNG = true;
-    TextMenuOptions textMenuOptions_;
-    textMenuOptions_.showMode = TextMenuShowMode::PREFER_WINDOW;
-    selectOverlayManager_->SetTextMenuOptions(textMenuOptions_);
-    EXPECT_EQ(selectOverlayManager_->GetMenuShowMode(), TextMenuShowMode::PREFER_WINDOW);
-    bool animation = true;
-    content->CreateSelectOverlay(info, animation);
-    EXPECT_EQ(content->IsSelectOverlaySubWindowMenu(), false);
-}
-
-/**
- * @tc.name: DisableMenu001
- * @tc.desc: test select_content_overlay_manager.cpp DisableMenu
- * @tc.type: FUNC
- */
-HWTEST_F(SelectOverlayManagerTestNg, DisableMenu001, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. init SelectContentOverlayManager
-     */
-    Init();
-    auto content = AceType::MakeRefPtr<SelectContentOverlayManager>(root_);
-    ASSERT_NE(content, nullptr);
-    SelectOverlayInfo selectInfo;
-    selectInfo.enableHandleLevel = true;
-    selectInfo.menuInfo.showCut = true;
-    selectInfo.isUseOverlayNG = true;
-
-    /**
-     * @tc.steps: step2. CreateSelectOverlayNode
-     */
-    content->shareOverlayInfo_ = std::make_shared<SelectOverlayInfo>(selectInfo);
-    ASSERT_NE(content->shareOverlayInfo_, nullptr);
-    auto frameNode = SelectOverlayNode::CreateSelectOverlayNode(content->shareOverlayInfo_);
-    ASSERT_NE(frameNode, nullptr);
-    content->menuNode_ = AceType::WeakClaim(AceType::RawPtr(frameNode));
-    ASSERT_NE(content->menuNode_.Upgrade(), nullptr);
-
-    /**
-     * @tc.steps: step3. call DisableMenu
-     */
-    content->DisableMenu();
-    auto selectOverlayPattern = frameNode->GetPattern<SelectOverlayPattern>();
-    ASSERT_NE(selectOverlayPattern, nullptr);
-    EXPECT_TRUE(selectOverlayPattern->info_->menuInfo.menuDisable);
-}
-
-/**
- * @tc.name: EnableMenu001
- * @tc.desc: test select_content_overlay_manager.cpp EnableMenu
- * @tc.type: FUNC
- */
-HWTEST_F(SelectOverlayManagerTestNg, EnableMenu001, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. init SelectContentOverlayManager
-     */
-    Init();
-    auto content = AceType::MakeRefPtr<SelectContentOverlayManager>(root_);
-    ASSERT_NE(content, nullptr);
-    SelectOverlayInfo selectInfo;
-    selectInfo.enableHandleLevel = true;
-    selectInfo.menuInfo.showCut = true;
-    selectInfo.isUseOverlayNG = true;
-
-    /**
-     * @tc.steps: step2. CreateSelectOverlayNode
-     */
-    content->shareOverlayInfo_ = std::make_shared<SelectOverlayInfo>(selectInfo);
-    ASSERT_NE(content->shareOverlayInfo_, nullptr);
-    auto frameNode = SelectOverlayNode::CreateSelectOverlayNode(content->shareOverlayInfo_);
-    ASSERT_NE(frameNode, nullptr);
-    content->menuNode_ = AceType::WeakClaim(AceType::RawPtr(frameNode));
-    ASSERT_NE(content->menuNode_.Upgrade(), nullptr);
-
-    /**
-     * @tc.steps: step3. call EnableMenu
-     */
-    content->EnableMenu();
-    auto selectOverlayPattern = frameNode->GetPattern<SelectOverlayPattern>();
-    ASSERT_NE(selectOverlayPattern, nullptr);
-    EXPECT_FALSE(selectOverlayPattern->info_->menuInfo.menuDisable);
-}
-
-/**
- * @tc.name: HideHandle001
- * @tc.desc: test select_content_overlay_manager.cpp HideHandle
- * @tc.type: FUNC
- */
-HWTEST_F(SelectOverlayManagerTestNg, HideHandle001, TestSize.Level1)
-{
-    Init();
-    auto content = AceType::MakeRefPtr<SelectContentOverlayManager>(root_);
-    auto holder = AceType::MakeRefPtr<MockSelectOverlayHolder>();
-    content->SetHolder(holder);
-    content->Show(false, 0);
-    EXPECT_NE(content->handleNode_.Upgrade(), nullptr);
-    EXPECT_NE(content->menuNode_.Upgrade(), nullptr);
-    content->HideHandle();
-    EXPECT_NE(content->handleNode_.Upgrade(), nullptr);
 }
 } // namespace OHOS::Ace::NG

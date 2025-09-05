@@ -20,7 +20,7 @@
 #include "frameworks/core/components/common/properties/paint_state.h"
 
 namespace OHOS::Ace::NG {
-class ACE_FORCE_EXPORT Matrix2D final {
+class Matrix2D final {
 public:
     static bool Invert(TransformParam& param);
     static void Identity(TransformParam& param);
@@ -29,6 +29,7 @@ public:
     static void Rotate(TransformParam& param, double degree, double dx, double dy);
     static std::string ToString();
 };
+Matrix4 SetMatrixPolyToPoly(const Matrix4& matrix, const std::vector<OHOS::Ace::NG::PointT<int32_t>>& totalPoint);
 } // namespace OHOS::Ace::NG
 #endif // FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_RENDER_ADAPTER_MATRIX2D_H
 

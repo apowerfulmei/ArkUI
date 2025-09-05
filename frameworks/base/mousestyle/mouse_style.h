@@ -74,7 +74,7 @@ enum class MouseFormat : int32_t {
 };
 
 class ACE_EXPORT MouseStyle : public AceType {
-    DECLARE_ACE_TYPE(MouseStyle, AceType);
+    DECLARE_ACE_TYPE(MouseStyle, AceType)
 
 public:
     static RefPtr<MouseStyle> CreateMouseStyle();
@@ -91,64 +91,52 @@ public:
 enum class MouseStyleChangeReason {
     INNER_SET_MOUSESTYLE = 0, // inner frameNode call mouseStyle change
     USER_SET_MOUSESTYLE = 1, // user call setCursor change mouseStyle
-    CONTAINER_DESTROY_RESET_MOUSESTYLE = 2, // container is destroyed, reset mouse style
-    WINDOW_LOST_FOCUS_RESET_MOUSESTYLE = 3, // window lost focus, reset mouse style
-    WINDOW_SCENE_LOST_FOCUS_RESET_MOUSESTYLE = 4, // window_scene lost focus, reset mouse style
+    WINDOW_DESTROY_RESET_MOUSESTYLE = 2, // window is destroyed, reset mouse style
 };
 
 struct MouseStyleChangeLog {
-    int32_t windowId;
-    int32_t changeNodeId;
-    MouseFormat beforeMouseStyle;
-    MouseFormat afterMouseStyle;
-    MouseStyleChangeReason reason;
+    int32_t windowId; // the id of window which change mouseStyle
+    int32_t changeNodeId; // the id of node which change mouseStyle
+    MouseFormat beforeMouseStyle; // before this change, the mouseFormat of mouseStyle
+    MouseFormat afterMouseStyle; // after this change, the mouseFormat of mouseStyle
+    MouseStyleChangeReason reason; // the reason of this mouseStyle change
 };
 
 class ACE_EXPORT MouseStyleManager : public AceType {
-    DECLARE_ACE_TYPE(MouseStyleManager, AceType);
+    DECLARE_ACE_TYPE(MouseStyleManager, AceType)
 
 public:
     MouseStyleManager() = default;
+
     bool SetMouseFormat(int32_t windowId, int32_t nodeId, MouseFormat mouseFormat,
         bool isByPass, MouseStyleChangeReason reason);
     
     void VsyncMouseFormat();
     void DumpMouseStyleChangeLog();
 
-    bool SetMouseStyleHoldNode(int32_t id)
+    void SetMouseStyleHoldNode(int32_t id)
     {
         if (!mouseStyleNodeId_.has_value()) {
             mouseStyleNodeId_ = id;
-            return true;
-        } else {
-            return false;
         }
     }
 
-    bool FreeMouseStyleHoldNode(int32_t id)
+    void FreeMouseStyleHoldNode(int32_t id)
     {
         if (mouseStyleNodeId_.has_value() && mouseStyleNodeId_.value() == id) {
             mouseStyleNodeId_.reset();
-            return true;
-        } else {
-            return false;
         }
     }
 
-    bool FreeMouseStyleHoldNode()
+    void FreeMouseStyleHoldNode()
     {
-        CHECK_NULL_RETURN(mouseStyleNodeId_.has_value(), false);
+        CHECK_NULL_VOID(mouseStyleNodeId_.has_value());
         mouseStyleNodeId_.reset();
-        return true;
     }
+
     void SetUserSetCursor(bool userSetCursor)
     {
         userSetCursor_ = userSetCursor;
-    }
-
-    MouseFormat GetCurrentMouseStyle() const
-    {
-        return mouseFormat_;
     }
 
 private:

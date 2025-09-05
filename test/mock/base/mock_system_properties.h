@@ -14,35 +14,9 @@
  */
 #ifndef FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_TEST_MOCK_BASE_MOCK_SYSTEM_PROPERTIES_H
 #define FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_TEST_MOCK_BASE_MOCK_SYSTEM_PROPERTIES_H
-#include "core/common/ace_application_info.h"
 namespace OHOS::Ace {
-namespace MockSystemProperties {
-extern bool g_isSuperFoldDisplayDevice;
-extern bool g_isCompatibleInputTransEnabled;
-extern bool g_isTransformEnabled;
-}
 // unit test globals
+extern bool g_irregularGrid;
 extern bool g_segmentedWaterflow;
-extern bool g_isNeedSymbol;
-extern bool g_isResourceDecoupling;
-extern bool g_isConfigChangePerform;
-extern bool g_isMultiInstanceEnabled;
-
-class APIVersionGuard final {
-public:
-    explicit APIVersionGuard(int32_t apiVersion)
-    {
-        backupApiVersion_ = AceApplicationInfo::GetInstance().GetApiTargetVersion();
-        AceApplicationInfo::GetInstance().SetApiTargetVersion(apiVersion);
-    }
-
-    ~APIVersionGuard()
-    {
-        AceApplicationInfo::GetInstance().SetApiTargetVersion(backupApiVersion_);
-    }
-
-private:
-    int32_t backupApiVersion_ = 0;
-};
 } // namespace OHOS::Ace
 #endif // FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_TEST_MOCK_BASE_MOCK_SYSTEM_PROPERTIES_H

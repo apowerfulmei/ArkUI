@@ -11,12 +11,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import("component_test.gni")
 import("preview_common.gni")
 
 # windows platform defines and configs
 defines += [
   "WINDOWS_PLATFORM",
+  "_USE_MATH_DEFINES",
   "NOGDI",
   "U_CHARSET_IS_UTF8=1",
   "SK_BUILD_FOR_WIN",
@@ -30,7 +30,3 @@ cflags_cc += [
   "-Wno-missing-braces",
   "-Wno-used-but-marked-unused",
 ]
-
-if (defined(enable_component_test) && enable_component_test) {
-  defines += [ "COMPONENT_TEST_ENABLED" ]
-}

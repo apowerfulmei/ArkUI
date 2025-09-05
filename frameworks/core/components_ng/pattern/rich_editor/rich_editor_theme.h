@@ -17,9 +17,9 @@
 #define FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_RICH_EDITOR_RICH_EDITOR_THEME_H
 
 #include "base/geometry/dimension.h"
-#include "core/components/text/text_theme.h"
 #include "core/components/theme/theme.h"
 #include "core/components/theme/theme_constants.h"
+#include "core/components/theme/theme_constants_defines.h"
 
 namespace OHOS::Ace::NG {
 /**
@@ -31,8 +31,6 @@ namespace {
 constexpr Color DEFAULT_TEXT_COLOR = Color(0xe5000000);
 constexpr float DRAG_BACKGROUND_OPACITY = 0.95f;
 constexpr float DEFAULT_TEXT_SIZE = 16.0f;
-constexpr Dimension DEFAULT_PADDING_HORIZONTAL = 16.0_vp;
-constexpr Dimension DEFAULT_PADDING_VERTICAL = 8.0_vp;
 } // namespace
 
 class RichEditorTheme : public virtual Theme {
@@ -46,23 +44,19 @@ public:
 
         RefPtr<RichEditorTheme> Build(const RefPtr<ThemeConstants>& themeConstants) const
         {
-            RefPtr<RichEditorTheme> theme = AceType::MakeRefPtr<RichEditorTheme>();
+            RefPtr<RichEditorTheme> theme = AceType::Claim(new RichEditorTheme());
             if (!themeConstants) {
                 return theme;
             }
-            InitThemeDefaults(themeConstants, theme);
+            theme->padding_ = Edge(themeConstants->GetDimension(THEME_TEXTFIELD_PADDING_HORIZONTAL),
+                themeConstants->GetDimension(THEME_TEXTFIELD_PADDING_VERTICAL),
+                themeConstants->GetDimension(THEME_TEXTFIELD_PADDING_HORIZONTAL),
+                themeConstants->GetDimension(THEME_TEXTFIELD_PADDING_VERTICAL));
             ParsePattern(themeConstants, theme);
             return theme;
         }
 
-    protected:
-        void InitThemeDefaults(const RefPtr<ThemeConstants>& themeConstants, const RefPtr<RichEditorTheme>& theme) const
-        {
-            CHECK_NULL_VOID(theme && themeConstants);
-            theme->padding_ = Edge(DEFAULT_PADDING_HORIZONTAL, DEFAULT_PADDING_VERTICAL,
-                DEFAULT_PADDING_HORIZONTAL, DEFAULT_PADDING_VERTICAL);
-        }
-
+    private:
         void ParsePattern(const RefPtr<ThemeConstants>& themeConstants, const RefPtr<RichEditorTheme>& theme) const
         {
             if (!theme) {
@@ -75,7 +69,7 @@ public:
             auto draggable = pattern->GetAttr<std::string>("draggable", "0");
             theme->draggable_ = StringUtils::StringToInt(draggable);
             auto dragBackgroundColor = pattern->GetAttr<Color>("drag_background_color", Color::WHITE);
-            if (Container::CurrentColorMode() == ColorMode::DARK) {
+            if (SystemProperties::GetColorMode() == ColorMode::DARK) {
                 dragBackgroundColor = dragBackgroundColor.ChangeOpacity(DRAG_BACKGROUND_OPACITY);
             }
             theme->dragBackgroundColor_ = dragBackgroundColor;
@@ -101,18 +95,11 @@ public:
             theme->aiWriteIsSupport_ = pattern->GetAttr<std::string>("rich_editor_writting_is_support", "");
             auto translateIsSupport = pattern->GetAttr<std::string>("menu_translate_is_support", "0");
             theme->translateIsSupport_ = StringUtils::StringToInt(translateIsSupport);
-            auto searchIsSupport = pattern->GetAttr<std::string>("richeditor_menu_search_is_support", "0");
-            theme->searchIsSupport_ = StringUtils::StringToInt(searchIsSupport);
-            theme->urlDisabledOpacity_ = pattern->GetAttr<double>("interactive_disable", URL_DISA_OPACITY);
+            auto disabledOpacity = pattern->GetAttr<double>("interactive_disable", URL_DISA_OPACITY);
             theme->urlDefaultColor_ = pattern->GetAttr<Color>("font_emphasize", Color(0xff007dff));
-            theme->urlDisabledColor_ = theme->urlDefaultColor_.BlendOpacity(theme->urlDisabledOpacity_);
+            theme->urlDisabledColor_ = theme->urlDefaultColor_.BlendOpacity(disabledOpacity);
             theme->urlHoverColor_ = pattern->GetAttr<Color>("interactive_hover", Color(0x0C182431));
             theme->urlPressColor_ = pattern->GetAttr<Color>("interactive_pressed", Color(0x19182431));
-            theme->cameraSymbolId_ = themeConstants->GetSymbolByName("sys.symbol.camera");
-            theme->scanSymbolId_ = themeConstants->GetSymbolByName("sys.symbol.line_viewfinder");
-            theme->imageSymbolId_ = themeConstants->GetSymbolByName("sys.symbol.picture");
-            theme->chevronRightSymbolId_ = themeConstants->GetSymbolByName("sys.symbol.chevron_right");
-            theme->borderRadius_ = Radius(pattern->GetAttr<Dimension>("rich_editor_border_radius", 0.0_vp));
         }
     };
 
@@ -231,11 +218,6 @@ public:
         return translateIsSupport_;
     }
 
-    bool GetSearchIsSupport() const
-    {
-        return searchIsSupport_;
-    }
-
     const Color& GetUrlDisabledColor() const
     {
         return urlDisabledColor_;
@@ -255,39 +237,8 @@ public:
     {
         return urlPressColor_;
     }
-
-    uint32_t GetCameraSymbolId() const
-    {
-        return cameraSymbolId_;
-    }
-
-    uint32_t GetScanSymbolId() const
-    {
-        return scanSymbolId_;
-    }
-
-    uint32_t GetImageSymbolId() const
-    {
-        return imageSymbolId_;
-    }
-
-    uint32_t GetChevronRightSymbolId() const
-    {
-        return chevronRightSymbolId_;
-    }
-
-    const Radius& GetBorderRadius() const
-    {
-        return borderRadius_;
-    }
 protected:
     RichEditorTheme() = default;
-    TextStyle textStyle_;
-    float urlDisabledOpacity_ = URL_DISA_OPACITY;
-    Color urlDisabledColor_ = Color(0x99000000);
-    Color urlDefaultColor_ = Color(0x99000000);
-    Color urlHoverColor_ = Color(0x99000000);
-    Color urlPressColor_ = Color(0x99000000);
 
 private:
     float disabledAlpha_ = 0.0f;
@@ -298,6 +249,7 @@ private:
 
     // UX::insert cursor offset up by 24vp
     Dimension insertCursorOffset_ = 24.0_vp;
+    TextStyle textStyle_;
     Color placeholderColor_ = Color(0x99000000);
     Color caretColor_ = Color(0xff007dff);
     Color selectedBackgroundColor_ = Color(0xff007dff);
@@ -314,12 +266,10 @@ private:
     std::string aiWriteAbilityName_;
     std::string aiWriteIsSupport_;
     bool translateIsSupport_ = false;
-    bool searchIsSupport_ = false;
-    uint32_t cameraSymbolId_;
-    uint32_t scanSymbolId_;
-    uint32_t imageSymbolId_;
-    uint32_t chevronRightSymbolId_;
-    Radius borderRadius_;
+    Color urlDisabledColor_ = Color(0x99000000);
+    Color urlDefaultColor_ = Color(0x99000000);
+    Color urlHoverColor_ = Color(0x99000000);
+    Color urlPressColor_ = Color(0x99000000);
 };
 } // namespace OHOS::Ace::NG
 

@@ -52,10 +52,6 @@ public:
         value->propDisableTextStyleAnimation_ = CloneDisableTextStyleAnimation();
         value->propDefaultTextStyle_ = CloneDefaultTextStyle();
         value->propDefaultTextOverflow_ = CloneDefaultTextOverflow();
-        value->propDigitalCrownSensitivity_ = CloneDigitalCrownSensitivity();
-        value->propDisappearTextOverflow_ = CloneDisappearTextOverflow();
-        value->propTextOverflow_ = CloneTextOverflow();
-        value->propSelectedTextOverflow_ = CloneSelectedTextOverflow();
         return value;
     }
 
@@ -77,10 +73,6 @@ public:
         ResetDisableTextStyleAnimation();
         ResetDefaultTextStyle();
         ResetDefaultTextOverflow();
-        ResetDigitalCrownSensitivity();
-        ResetDisappearTextOverflow();
-        ResetTextOverflow();
-        ResetSelectedTextOverflow();
     }
 
     void ToJsonValue(std::unique_ptr<JsonValue>& json, const InspectorFilter& filter) const override
@@ -92,26 +84,9 @@ public:
         }
         json->PutExtAttr("defaultPickerItemHeight",
             GetDefaultPickerItemHeightValue(Dimension(0)).ToString().c_str(), filter);
-        json->PutExtAttr("gradientHeight", GetGradientHeightValue(Dimension(0)).ToString().c_str(), filter);
+        json->Put("gradientHeight", GetGradientHeightValue(Dimension(0)).ToString().c_str());
         json->PutExtAttr("selected", std::to_string(GetSelectedValue(0)).c_str(), filter);
         json->PutExtAttr("value", GetValueValue("").c_str(), filter);
-        Color defaultDisappearColor = Color::BLACK;
-        Color defaultNormalColor = Color::BLACK;
-        Color defaultSelectColor = Color::BLACK;
-        Color defaultSelectedBgColor = Color(0x0C182431);
-        Dimension defaultSelectedBorderRadius = 24.0_vp;
-        auto pipeline = PipelineBase::GetCurrentContext();
-        auto frameNode = GetHost();
-        if (pipeline && frameNode) {
-            auto pickerTheme = pipeline->GetTheme<PickerTheme>(frameNode->GetThemeScopeId());
-            if (pickerTheme) {
-                defaultDisappearColor = pickerTheme->GetDisappearOptionStyle().GetTextColor();
-                defaultNormalColor = pickerTheme->GetOptionStyle(false, false).GetTextColor();
-                defaultSelectColor = pickerTheme->GetOptionStyle(true, false).GetTextColor();
-                defaultSelectedBgColor = pickerTheme->GetSelectedBackgroundColor();
-                defaultSelectedBorderRadius = *pickerTheme->GetSelectedBorderRadius().radiusTopLeft;
-            }
-        }
         if (propDivider_.has_value()) {
             auto divider = JsonUtil::Create(true);
             divider->Put("strokeWidth", propDivider_.value().strokeWidth.ToString().c_str());
@@ -153,24 +128,16 @@ public:
         disappearFont->Put("weight", V2::ConvertWrapFontWeightToStirng(
             GetDisappearWeight().value_or(FontWeight::NORMAL)).c_str());
         auto disappearTextStyle = JsonUtil::Create(true);
-        disappearTextStyle->Put("color", GetDisappearColor().value_or(defaultDisappearColor).ColorToString().c_str());
+        disappearTextStyle->Put("color", GetDisappearColor().value_or(Color::BLACK).ColorToString().c_str());
         disappearTextStyle->Put("font", disappearFont);
-        disappearTextStyle->Put("minFontSize", GetDisappearMinFontSize().value_or(Dimension()).ToString().c_str());
-        disappearTextStyle->Put("maxFontSize", GetDisappearMaxFontSize().value_or(Dimension()).ToString().c_str());
-        disappearTextStyle->Put("overflow",
-            V2::ConvertWrapTextOverflowToString(GetDisappearTextOverflow().value_or(TextOverflow::CLIP)).c_str());
         json->PutExtAttr("disappearTextStyle", disappearTextStyle, filter);
 
         auto normalFont = JsonUtil::Create(true);
         normalFont->Put("size", GetFontSizeValue(Dimension(0)).ToString().c_str());
         normalFont->Put("weight", V2::ConvertWrapFontWeightToStirng(GetWeight().value_or(FontWeight::NORMAL)).c_str());
         auto normalTextStyle = JsonUtil::Create(true);
-        normalTextStyle->Put("color", GetColor().value_or(defaultNormalColor).ColorToString().c_str());
+        normalTextStyle->Put("color", GetColor().value_or(Color::BLACK).ColorToString().c_str());
         normalTextStyle->Put("font", normalFont);
-        normalTextStyle->Put("minFontSize", GetMinFontSize().value_or(Dimension()).ToString().c_str());
-        normalTextStyle->Put("maxFontSize", GetMaxFontSize().value_or(Dimension()).ToString().c_str());
-        normalTextStyle->Put("overflow",
-            V2::ConvertWrapTextOverflowToString(GetTextOverflow().value_or(TextOverflow::CLIP)).c_str());
         json->PutExtAttr("textStyle", normalTextStyle, filter);
 
         auto selectedFont = JsonUtil::Create(true);
@@ -178,12 +145,8 @@ public:
         selectedFont->Put("weight", V2::ConvertWrapFontWeightToStirng(
             GetSelectedWeight().value_or(FontWeight::NORMAL)).c_str());
         auto selectedTextStyle = JsonUtil::Create(true);
-        selectedTextStyle->Put("color", GetSelectedColor().value_or(defaultSelectColor).ColorToString().c_str());
+        selectedTextStyle->Put("color", GetSelectedColor().value_or(Color::BLACK).ColorToString().c_str());
         selectedTextStyle->Put("font", selectedFont);
-        selectedTextStyle->Put("minFontSize", GetSelectedMinFontSize().value_or(Dimension()).ToString().c_str());
-        selectedTextStyle->Put("maxFontSize", GetSelectedMaxFontSize().value_or(Dimension()).ToString().c_str());
-        selectedTextStyle->Put("overflow",
-            V2::ConvertWrapTextOverflowToString(GetSelectedTextOverflow().value_or(TextOverflow::CLIP)).c_str());
         json->PutExtAttr("selectedTextStyle", selectedTextStyle, filter);
         auto canLoop = GetCanLoopValue();
         json->PutExtAttr("canLoop", canLoop ? "true" : "false", filter);
@@ -203,21 +166,11 @@ public:
             V2::ConvertWrapTextOverflowToString(GetDefaultTextOverflow().value_or(TextOverflow::CLIP)).c_str());
         defaultTextStyle->Put("font", defaultFont);
         json->PutExtAttr("defaultTextStyle", defaultTextStyle, filter);
-        auto crownSensitivity = GetDigitalCrownSensitivity();
-        json->PutExtAttr("digitalCrownSensitivity",
-            std::to_string(crownSensitivity.value_or(DEFAULT_CROWNSENSITIVITY)).c_str(), filter);
-        auto selectedBackgroundStyle = JsonUtil::Create(true);
-        selectedBackgroundStyle->Put("color", GetSelectedBackgroundColor().value_or(
-            defaultSelectedBgColor).ColorToString().c_str());
-        selectedBackgroundStyle->Put("borderRadius", GetSelectedBorderRadius().value_or(
-        NG::BorderRadiusProperty(defaultSelectedBorderRadius)).ToString().c_str());
-        json->PutExtAttr("selectedBackgroundStyle", selectedBackgroundStyle, filter);
     }
 
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(DefaultPickerItemHeight, Dimension, PROPERTY_UPDATE_MEASURE);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(GradientHeight, Dimension, PROPERTY_UPDATE_MEASURE);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(CanLoop, bool, PROPERTY_UPDATE_MEASURE);
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(DigitalCrownSensitivity, int32_t, PROPERTY_UPDATE_MEASURE);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(Selected, uint32_t, PROPERTY_UPDATE_MEASURE);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(Value, std::string, PROPERTY_UPDATE_MEASURE);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(Selecteds, std::vector<uint32_t>, PROPERTY_UPDATE_MEASURE);
@@ -225,8 +178,6 @@ public:
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(SelectedIndex, std::vector<uint32_t>, PROPERTY_UPDATE_MEASURE);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(Divider, ItemDivider, PROPERTY_UPDATE_MEASURE);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(DisableTextStyleAnimation, bool, PROPERTY_UPDATE_MEASURE);
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(SelectedBackgroundColor, Color, PROPERTY_UPDATE_MEASURE_SELF);
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(SelectedBorderRadius, NG::BorderRadiusProperty, PROPERTY_UPDATE_MEASURE);
 
     ACE_DEFINE_PROPERTY_GROUP(DisappearTextStyle, FontStyle);
     ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP_ITEM(
@@ -239,11 +190,6 @@ public:
         DisappearTextStyle, FontFamily, DisappearFontFamily, std::vector<std::string>, PROPERTY_UPDATE_MEASURE);
     ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP_ITEM(
         DisappearTextStyle, ItalicFontStyle, DisappearFontStyle, Ace::FontStyle, PROPERTY_UPDATE_MEASURE);
-    ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP_ITEM(
-        DisappearTextStyle, AdaptMinFontSize, DisappearMinFontSize, Dimension, PROPERTY_UPDATE_MEASURE);
-    ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP_ITEM(
-        DisappearTextStyle, AdaptMaxFontSize, DisappearMaxFontSize, Dimension, PROPERTY_UPDATE_MEASURE);
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(DisappearTextOverflow, TextOverflow, PROPERTY_UPDATE_MEASURE);
 
     ACE_DEFINE_PROPERTY_GROUP(TextStyle, FontStyle);
     ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP_ITEM(TextStyle, FontSize, FontSize, Dimension, PROPERTY_UPDATE_MEASURE);
@@ -253,11 +199,6 @@ public:
         TextStyle, FontFamily, FontFamily, std::vector<std::string>, PROPERTY_UPDATE_MEASURE);
     ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP_ITEM(
         TextStyle, ItalicFontStyle, FontStyle, Ace::FontStyle, PROPERTY_UPDATE_MEASURE);
-    ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP_ITEM(
-        TextStyle, AdaptMinFontSize, MinFontSize, Dimension, PROPERTY_UPDATE_MEASURE);
-    ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP_ITEM(
-        TextStyle, AdaptMaxFontSize, MaxFontSize, Dimension, PROPERTY_UPDATE_MEASURE);
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(TextOverflow, TextOverflow, PROPERTY_UPDATE_MEASURE);
 
     ACE_DEFINE_PROPERTY_GROUP(SelectedTextStyle, FontStyle);
     ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP_ITEM(
@@ -270,11 +211,6 @@ public:
         SelectedTextStyle, FontFamily, SelectedFontFamily, std::vector<std::string>, PROPERTY_UPDATE_MEASURE);
     ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP_ITEM(
         SelectedTextStyle, ItalicFontStyle, SelectedFontStyle, Ace::FontStyle, PROPERTY_UPDATE_MEASURE);
-    ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP_ITEM(
-        SelectedTextStyle, AdaptMinFontSize, SelectedMinFontSize, Dimension, PROPERTY_UPDATE_MEASURE);
-    ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP_ITEM(
-        SelectedTextStyle, AdaptMaxFontSize, SelectedMaxFontSize, Dimension, PROPERTY_UPDATE_MEASURE);
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(SelectedTextOverflow, TextOverflow, PROPERTY_UPDATE_MEASURE);
 
     ACE_DEFINE_PROPERTY_GROUP(DefaultTextStyle, FontStyle);
     ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP_ITEM(
@@ -291,13 +227,8 @@ public:
         DefaultTextStyle, AdaptMinFontSize, DefaultMinFontSize, Dimension, PROPERTY_UPDATE_MEASURE);
     ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP_ITEM(
         DefaultTextStyle, AdaptMaxFontSize, DefaultMaxFontSize, Dimension, PROPERTY_UPDATE_MEASURE);
-
+    
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(DefaultTextOverflow, TextOverflow, PROPERTY_UPDATE_MEASURE);
-
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(DisappearTextColorSetByUser, bool, PROPERTY_UPDATE_MEASURE_SELF);
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(NormalTextColorSetByUser, bool, PROPERTY_UPDATE_MEASURE_SELF);
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(SelectedTextColorSetByUser, bool, PROPERTY_UPDATE_MEASURE_SELF);
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(DefaultTextColorSetByUser, bool, PROPERTY_UPDATE_MEASURE_SELF);
 private:
     ACE_DISALLOW_COPY_AND_MOVE(TextPickerLayoutProperty);
 };

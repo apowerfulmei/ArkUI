@@ -57,12 +57,7 @@ private:
     void CalcChildrenHotZone(LayoutWrapper* layoutWrapper);
     double CalcSearchWidth(const LayoutConstraintF& contentConstraint, LayoutWrapper* layoutWrapper);
     double CalcSearchHeight(const LayoutConstraintF& contentConstraint, LayoutWrapper* layoutWrapper);
-    float CalculateMaxFontScale(LayoutWrapper* layoutWrapper);
-    float CalculateMinFontScale(LayoutWrapper* layoutWrapper);
-    CalcSize searchButtonCalcSize(const RefPtr<SearchTheme>& searchTheme, RefPtr<SearchLayoutProperty> layoutProperty,
-        LayoutWrapper* layoutWrapper, float maxFontScale, float minFontScale);
     void UpdateFontFeature(LayoutWrapper* layoutWrapper);
-    void UpdateTextFieldSize(LayoutWrapper* layoutWrapper);
     void SetTextFieldLayoutConstraintHeight(LayoutConstraintF& contentConstraint, double textFieldHeight,
         LayoutWrapper* layoutWrapper);
 
@@ -81,19 +76,7 @@ private:
     void LayoutTextField(const LayoutSearchParams& params);
     void UpdateClipBounds(LayoutWrapper* layoutWrapper, float height);
     double CalcSymbolIconHeight(LayoutWrapper* layoutWrapper, int32_t index, double defaultImageHeight);
-    float CalculateTextFieldWidth(
-        LayoutWrapper* layoutWrapper, float searchWidthMax, const RefPtr<SearchTheme>& searchTheme);
-    float GetSearchFieldMinWidth(LayoutWrapper* layoutWrapper);
-    std::optional<float> GetSearchFixAtIdealMaxWidth(LayoutWrapper* layoutWrapper);
-    float GetTextFieldMinWidth(LayoutWrapper* layoutWrapper, const RefPtr<SearchTheme>& searchTheme);
-    float GetTextFieldMaxWidth(LayoutWrapper* layoutWrapper, LayoutCalPolicy layoutPolicy, float maxWidth);
-    void ResetChildrenMeasureSize();
 
-    // cached data
-    float maxFontScale_;
-    float minFontScale_;
-    double searchHeight_;
-    float searchWidthReducedLength_ = 0.0f;
     ACE_DISALLOW_COPY_AND_MOVE(SearchLayoutAlgorithm);
 };
 } // namespace OHOS::Ace::NG

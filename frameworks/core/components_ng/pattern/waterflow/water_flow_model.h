@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -18,7 +18,6 @@
 
 #include <mutex>
 
-#include "core/common/resource/resource_object.h"
 #include "core/components/common/layout/constants.h"
 #include "core/components/scroll/scroll_controller_base.h"
 #include "core/components/scroll_bar/scroll_proxy.h"
@@ -29,12 +28,11 @@
 namespace OHOS::Ace {
 class WaterFlowModel {
 public:
-    ACE_FORCE_EXPORT static WaterFlowModel* GetInstance();
+    static WaterFlowModel* GetInstance();
     virtual ~WaterFlowModel() = default;
 
     virtual void Create() = 0;
     virtual void SetFooter(std::function<void()>&& footer) = 0;
-    virtual void SetFooterWithFrameNode(const RefPtr<NG::UINode>& footer) = 0;
     virtual RefPtr<ScrollControllerBase> CreateScrollController() = 0;
     virtual RefPtr<ScrollProxy> CreateScrollBarProxy() = 0;
     virtual void SetScroller(RefPtr<ScrollControllerBase> scroller, RefPtr<ScrollProxy> proxy) = 0;
@@ -67,7 +65,7 @@ public:
     virtual void SetFriction(double friction) = 0;
     virtual void SetCachedCount(int32_t value, bool show = false) = 0;
 
-    virtual void SetEdgeEffect(EdgeEffect edgeEffect, bool alwaysEnabled, EffectEdge effectEdge = EffectEdge::ALL) = 0;
+    virtual void SetEdgeEffect(EdgeEffect edgeEffect, bool alwaysEnabled) = 0;
     EdgeEffect GetEdgeEffect() const
     {
         return EdgeEffect::NONE;
@@ -89,10 +87,6 @@ public:
     }
 
     virtual void ResetSections() {}
-    virtual void ParseResObjFriction(const RefPtr<ResourceObject>& resObj) {};
-
-    virtual void SetSyncLoad(bool syncLoad) {}
-    virtual void ParseResObjScrollBarColor(const RefPtr<ResourceObject>& resObj) {};
 
 private:
     static std::unique_ptr<WaterFlowModel> instance_;

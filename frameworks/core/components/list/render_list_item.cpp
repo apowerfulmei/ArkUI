@@ -106,8 +106,7 @@ void RenderListItem::PerformLayout()
         // update focus animation size
         focusAnimationRRect_.SetRect(Rect(Offset(0, 0), GetPaintSize() * TV_ITEM_SCALE));
 
-        if (SystemProperties::GetDeviceType() == DeviceType::WATCH ||
-            SystemProperties::GetDeviceType() == DeviceType::WEARABLE) {
+        if (SystemProperties::GetDeviceType() == DeviceType::WATCH) {
             CalculateScaleFactorOnWatch();
         }
     }
@@ -280,8 +279,7 @@ bool RenderListItem::IsItemCenter(bool isVertical, Size viewport)
 void RenderListItem::ResetFocusEffect()
 {
 #ifdef WEARABLE_PRODUCT
-    if (SystemProperties::GetDeviceType() == DeviceType::WATCH ||
-        SystemProperties::GetDeviceType() == DeviceType::WEARABLE) {
+    if (SystemProperties::GetDeviceType() == DeviceType::WATCH) {
         focusController_ = AceType::MakeRefPtr<WatchInteractiveEffect>(GetContext());
 #else
     if (SystemProperties::GetDeviceType() == DeviceType::TV) {
@@ -401,8 +399,7 @@ void RenderListItem::UpdateItemFocusRect(double scale)
 
 void RenderListItem::HandleFocusEvent(bool focus, bool isInGroup)
 {
-    if (SystemProperties::GetDeviceType() == DeviceType::WATCH ||
-        SystemProperties::GetDeviceType() == DeviceType::WEARABLE) {
+    if (SystemProperties::GetDeviceType() == DeviceType::WATCH) {
         return;
     }
     focused_ = focus;

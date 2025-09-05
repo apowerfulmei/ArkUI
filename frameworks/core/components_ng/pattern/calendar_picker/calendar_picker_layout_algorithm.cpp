@@ -15,99 +15,12 @@
 
 #include "core/components_ng/pattern/calendar_picker/calendar_picker_layout_algorithm.h"
 #include "core/components_ng/pattern/calendar_picker/calendar_picker_pattern.h"
+#include "core/components_ng/pattern/flex/flex_layout_property.h"
+#include "core/pipeline_ng/pipeline_context.h"
 
 namespace OHOS::Ace::NG {
 namespace {
 constexpr int32_t CHILDREN_SIZE = 5;
-
-void CalculateContentSize(const RefPtr<CalendarTheme>& theme, const RefPtr<LayoutWrapper>& contentWrapper,
-    SizeF& contentSize)
-{
-    CHECK_NULL_VOID(theme);
-    CHECK_NULL_VOID(contentWrapper);
-    auto contentLayoutProperty = contentWrapper->GetLayoutProperty();
-    CHECK_NULL_VOID(contentLayoutProperty);
-
-    float contentWidth = 0.0f;
-    float contentHeight = 0.0f;
-    for (int32_t i = 0; i < CHILDREN_SIZE; i++) {
-        auto textWrapper = contentWrapper->GetOrCreateChildByIndex(i);
-        CHECK_NULL_VOID(textWrapper);
-        contentLayoutProperty->UpdateContentConstraint();
-        textWrapper->Measure(std::nullopt);
-        auto textGeometryNode = textWrapper->GetGeometryNode();
-        CHECK_NULL_VOID(textGeometryNode);
-        contentWidth += textGeometryNode->GetFrameSize().Width();
-        contentHeight = std::max(contentHeight, textGeometryNode->GetFrameSize().Height());
-    }
-
-    if (contentLayoutProperty->GetPaddingProperty() != nullptr) {
-        auto defaultTopMargin = theme->GetEntryDateTopBottomMargin();
-        auto defaultLeftMargin = theme->GetEntryDateLeftRightMargin();
-        PaddingProperty currentPadding = *(contentLayoutProperty->GetPaddingProperty());
-        contentWidth += currentPadding.left.value_or(CalcLength(defaultLeftMargin)).GetDimension().ConvertToPx();
-        contentWidth += currentPadding.right.value_or(CalcLength(defaultLeftMargin)).GetDimension().ConvertToPx();
-        contentHeight += currentPadding.top.value_or(CalcLength(defaultTopMargin)).GetDimension().ConvertToPx();
-        contentHeight += currentPadding.bottom.value_or(CalcLength(defaultTopMargin)).GetDimension().ConvertToPx();
-    }
-    contentSize = SizeF(contentWidth, contentHeight);
-}
-
-void UpdateContentSizeWithLayoutPolicy(const RefPtr<CalendarTheme>& theme, LayoutWrapper* layoutWrapper,
-    SizeF& contentSize)
-{
-    CHECK_NULL_VOID(theme);
-    CHECK_NULL_VOID(layoutWrapper);
-    auto layoutProperty = AceType::DynamicCast<CalendarPickerLayoutProperty>(layoutWrapper->GetLayoutProperty());
-    CHECK_NULL_VOID(layoutProperty);
-    auto layoutPolicy = layoutProperty->GetLayoutPolicyProperty();
-    CHECK_NULL_VOID(layoutPolicy.has_value());
-    auto layoutConstraint = layoutProperty->GetLayoutConstraint();
-    CHECK_NULL_VOID(layoutConstraint.has_value());
-
-    BorderWidthProperty currentBorderWidth;
-    if (layoutProperty->GetBorderWidthProperty() != nullptr) {
-        currentBorderWidth = *(layoutProperty->GetBorderWidthProperty());
-    } else {
-        currentBorderWidth.SetBorderWidth(theme->GetEntryBorderWidth());
-    }
-
-    float contentWidth = contentSize.Width();
-    auto borderAndButtonWidth = theme->GetEntryButtonWidth().ConvertToPx() +
-        currentBorderWidth.topDimen.value_or(theme->GetEntryBorderWidth()).ConvertToPx() +
-        currentBorderWidth.bottomDimen.value_or(theme->GetEntryBorderWidth()).ConvertToPx();
-    if (layoutPolicy->IsWidthMatch()) {
-        contentWidth = layoutConstraint->parentIdealSize.Width().value_or(0) - borderAndButtonWidth;
-        contentSize.SetWidth(contentWidth);
-    } else if (layoutPolicy->IsWidthWrap()) {
-        float maxWidth = layoutConstraint->maxSize.Width() - borderAndButtonWidth;
-        contentSize.SetWidth(std::min(contentWidth, maxWidth));
-    } else if (layoutPolicy->IsWidthFix()) {
-        const auto& calcConstraint = layoutProperty->GetCalcLayoutConstraint();
-        if (calcConstraint && calcConstraint->maxSize->Width().has_value()) {
-            float maxWidth = layoutConstraint->maxSize.Width() - borderAndButtonWidth;
-            contentSize.SetWidth(std::min(contentWidth, maxWidth));
-        }
-    }
-
-    float contentHeight = contentSize.Height();
-    auto borderHeight = currentBorderWidth.leftDimen.value_or(theme->GetEntryBorderWidth()).ConvertToPx() +
-                        currentBorderWidth.rightDimen.value_or(theme->GetEntryBorderWidth()).ConvertToPx();
-    if (layoutPolicy->IsHeightMatch()) {
-        contentHeight = layoutConstraint->parentIdealSize.Height().value_or(0) - borderHeight;
-        contentSize.SetHeight(contentHeight);
-    } else if (layoutPolicy->IsHeightWrap()) {
-        float maxHeight = layoutConstraint->maxSize.Height() - borderHeight;
-        contentSize.SetHeight(std::min(contentHeight, maxHeight));
-    } else if (layoutPolicy->IsHeightFix()) {
-        const auto& calcConstraint = layoutProperty->GetCalcLayoutConstraint();
-        if (calcConstraint && calcConstraint->maxSize->Height().has_value()) {
-            float maxHeight = layoutConstraint->maxSize.Height() - borderHeight;
-            contentSize.SetHeight(std::min(contentHeight, maxHeight));
-        }
-    }
-}
-
 } // namespace
 void CalendarPickerLayoutAlgorithm::Measure(LayoutWrapper* layoutWrapper)
 {
@@ -132,31 +45,47 @@ void CalendarPickerLayoutAlgorithm::CalendarPickerContentMeasure(LayoutWrapper* 
     RefPtr<CalendarTheme> theme = pipelineContext->GetTheme<CalendarTheme>();
     CHECK_NULL_VOID(theme);
 
+    auto defaultTopMargin = theme->GetEntryDateTopBottomMargin();
+    auto defaultLeftMargin = theme->GetEntryDateLeftRightMargin();
+    PaddingProperty currentPadding;
+    if (contentLayoutProperty->GetPaddingProperty() != nullptr) {
+        currentPadding = *(contentLayoutProperty->GetPaddingProperty());
+    }
+    
     auto layoutConstraint = layoutWrapper->GetLayoutProperty()->CreateChildConstraint();
     for (const auto& child : layoutWrapper->GetAllChildrenWithBuild()) {
         child->Measure(layoutConstraint);
     }
-
-    SizeF contentSize = SizeF(0.0f, 0.0f);
-    CalculateContentSize(theme, contentWrapper, contentSize);
+    float widthTotal = 0.0f;
+    float height = 0.0f;
+    for (int32_t i = 0; i < CHILDREN_SIZE; i++) {
+        auto textWrapper = contentWrapper->GetOrCreateChildByIndex(i);
+        CHECK_NULL_VOID(textWrapper);
+        contentLayoutProperty->UpdateContentConstraint();
+        textWrapper->Measure(std::nullopt);
+        auto textGeometryNode = textWrapper->GetGeometryNode();
+        CHECK_NULL_VOID(textGeometryNode);
+        widthTotal += textGeometryNode->GetFrameSize().Width();
+        height = std::max(height, textGeometryNode->GetFrameSize().Height());
+    }
+    widthTotal += currentPadding.left.value_or(CalcLength(defaultLeftMargin)).GetDimension().ConvertToPx();
+    widthTotal += currentPadding.right.value_or(CalcLength(defaultLeftMargin)).GetDimension().ConvertToPx();
+    height += currentPadding.top.value_or(CalcLength(defaultTopMargin)).GetDimension().ConvertToPx();
+    height += currentPadding.bottom.value_or(CalcLength(defaultTopMargin)).GetDimension().ConvertToPx();
 
     auto linearLayoutProperty = AceType::DynamicCast<LinearLayoutProperty>(contentLayoutProperty);
     CHECK_NULL_VOID(linearLayoutProperty);
 
-    SizeF policySize = {constraint->selfIdealSize.Width().value_or(0), constraint->selfIdealSize.Height().value_or(0)};
-    if (LessNotEqual(contentSize.Width(), policySize.Width() - theme->GetEntryButtonWidth().ConvertToPx())) {
-        contentSize.SetWidth(policySize.Width() - theme->GetEntryButtonWidth().ConvertToPx());
+    auto Idealwidth = constraint->selfIdealSize.Width().value_or(0);
+    if (widthTotal < Idealwidth - theme->GetEntryButtonWidth().ConvertToPx()) {
+        widthTotal = Idealwidth - theme->GetEntryButtonWidth().ConvertToPx();
         linearLayoutProperty->UpdateMainAxisAlign(FlexAlign::CENTER);
     } else {
         linearLayoutProperty->UpdateMainAxisAlign(FlexAlign::FLEX_START);
     }
+    height = std::max(height, constraint->selfIdealSize.Height().value_or(0));
 
-    if (LessNotEqual(contentSize.Height(), policySize.Height())) {
-        contentSize.SetHeight(policySize.Height());
-    }
-
-    contentMeasure_ = contentSize;
-    UpdateContentSizeWithLayoutPolicy(theme, layoutWrapper, contentMeasure_);
+    contentMeasure_ = SizeF(widthTotal, height);
     contentGeometryNode->SetFrameSize(contentMeasure_);
 }
 
@@ -178,19 +107,19 @@ void CalendarPickerLayoutAlgorithm::SelfMeasure(LayoutWrapper* layoutWrapper)
         currentBorderWidth.SetBorderWidth(theme->GetEntryBorderWidth());
     }
 
-    auto totalWidth = contentMeasure_.Width() + theme->GetEntryButtonWidth().ConvertToPx();
-    totalWidth += currentBorderWidth.topDimen.value_or(theme->GetEntryBorderWidth()).ConvertToPx();
-    totalWidth += currentBorderWidth.bottomDimen.value_or(theme->GetEntryBorderWidth()).ConvertToPx();
-    auto totalHeight = contentMeasure_.Height();
+    auto width = contentMeasure_.Width() + theme->GetEntryButtonWidth().ConvertToPx();
+    width += currentBorderWidth.topDimen.value_or(theme->GetEntryBorderWidth()).ConvertToPx();
+    width += currentBorderWidth.bottomDimen.value_or(theme->GetEntryBorderWidth()).ConvertToPx();
+    auto height = contentMeasure_.Height();
 
     if (layoutProperty->HasAspectRatio() && layoutProperty->GetAspectRatio() != 0) {
-        totalHeight = totalWidth / layoutProperty->GetAspectRatio();
+        height = width / layoutProperty->GetAspectRatio();
     } else {
-        totalHeight += currentBorderWidth.leftDimen.value_or(theme->GetEntryBorderWidth()).ConvertToPx();
-        totalHeight += currentBorderWidth.rightDimen.value_or(theme->GetEntryBorderWidth()).ConvertToPx();
+        height += currentBorderWidth.leftDimen.value_or(theme->GetEntryBorderWidth()).ConvertToPx();
+        height += currentBorderWidth.rightDimen.value_or(theme->GetEntryBorderWidth()).ConvertToPx();
     }
-
-    geometryNode->SetFrameSize(SizeF(totalWidth, totalHeight));
+    SizeF idealSize(width, height);
+    geometryNode->SetFrameSize(idealSize);
 
     auto flexWrapper = layoutWrapper->GetOrCreateChildByIndex(1);
     CHECK_NULL_VOID(flexWrapper);
@@ -199,15 +128,15 @@ void CalendarPickerLayoutAlgorithm::SelfMeasure(LayoutWrapper* layoutWrapper)
     auto flexGeometryNode = flexWrapper->GetGeometryNode();
     CHECK_NULL_VOID(flexGeometryNode);
 
-    auto flexHeight = totalHeight - currentBorderWidth.leftDimen.value_or(theme->GetEntryBorderWidth()).ConvertToPx();
+    auto flexHeight = height - currentBorderWidth.leftDimen.value_or(theme->GetEntryBorderWidth()).ConvertToPx();
     flexHeight -= currentBorderWidth.rightDimen.value_or(theme->GetEntryBorderWidth()).ConvertToPx();
-    CalcSize flexCalcSize(CalcLength(theme->GetEntryButtonWidth().ConvertToPx()), CalcLength(flexHeight));
+    CalcSize flexCalcSize((CalcLength(theme->GetEntryButtonWidth().ConvertToPx())), CalcLength(flexHeight));
     flexLayoutProperty->UpdateUserDefinedIdealSize(flexCalcSize);
     auto flexLayoutConstraint = layoutProperty->CreateChildConstraint();
     flexWrapper->Measure(flexLayoutConstraint);
     flexMeasure_ = SizeF(theme->GetEntryButtonWidth().ConvertToPx(), flexHeight);
     flexGeometryNode->SetFrameSize(flexMeasure_);
-
+    
     for (int32_t i = 0; i < flexWrapper->GetTotalChildCount(); i++) {
         auto child = flexWrapper->GetChildByIndex(i);
         CHECK_NULL_VOID(child);
@@ -217,5 +146,4 @@ void CalendarPickerLayoutAlgorithm::SelfMeasure(LayoutWrapper* layoutWrapper)
         childGeometryNode->SetFrameSize(childMeasure);
     }
 }
-
 } // namespace OHOS::Ace::NG

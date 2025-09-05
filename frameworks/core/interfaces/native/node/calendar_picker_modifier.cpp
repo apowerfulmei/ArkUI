@@ -15,22 +15,18 @@
 
 #include "core/interfaces/native/node/calendar_picker_modifier.h"
 
+#include "base/json/json_util.h"
+#include "core/components_ng/base/frame_node.h"
 #include "core/components_ng/base/view_abstract.h"
+#include "core/pipeline/base/element_register.h"
 #include "frameworks/core/components_ng/pattern/calendar_picker/calendar_picker_model_ng.h"
+#include "frameworks/core/components_ng/pattern/picker/picker_type_define.h"
 
 namespace OHOS::Ace::NG {
 namespace {
 constexpr int NUM_0 = 0;
 constexpr int NUM_1 = 1;
 constexpr int NUM_2 = 2;
-constexpr int NUM_12 = 12;
-constexpr int DATE_SIZE = 3;
-const bool DEFAULT_MARK_TODAY = false;
-thread_local std::string g_strValue;
-constexpr int TEXT_STYLE_FONT_INFO_SIZE = 2;
-constexpr int TEXT_STYLE_FONT_SIZE_INDEX = 0;
-constexpr int TEXT_STYLE_FONT_WEIGHT_INDEX = 1;
-const char DEFAULT_DELIMITER = '|';
 } // namespace
 void SetHintRadius(ArkUINodeHandle node, float radius, int32_t unit)
 {
@@ -75,66 +71,6 @@ void ResetSelectedDate(ArkUINodeHandle node)
         frameNode, currentDate.GetYear(), currentDate.GetMonth(), currentDate.GetDay());
 }
 
-void SetStartDate(ArkUINodeHandle node, uint32_t year, uint32_t month, uint32_t day)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    CalendarPickerModelNG::SetStartDateWithNode(frameNode, year, month, day);
-}
-
-ArkUI_CharPtr GetStartDate(ArkUINodeHandle node)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_RETURN(frameNode, "");
-    auto pickDate = CalendarPickerModelNG::GetStartDateWithNode(frameNode);
-    if (pickDate.ToDays() <= 0) {
-        return "";
-    }
-    g_strValue = std::to_string(static_cast<uint32_t>(pickDate.GetYear())) + "-";
-    g_strValue = g_strValue + std::to_string(static_cast<uint32_t>(pickDate.GetMonth())) + "-";
-    g_strValue = g_strValue + std::to_string(static_cast<uint32_t>(pickDate.GetDay()));
-    return g_strValue.c_str();
-}
-
-void ResetStartDate(ArkUINodeHandle node)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    PickerDate defaultDate;
-    CalendarPickerModelNG::SetStartDateWithNode(
-        frameNode, defaultDate.GetYear(), defaultDate.GetMonth(), defaultDate.GetDay());
-}
-
-void SetEndDate(ArkUINodeHandle node, uint32_t year, uint32_t month, uint32_t day)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    CalendarPickerModelNG::SetEndDateWithNode(frameNode, year, month, day);
-}
-
-ArkUI_CharPtr GetEndDate(ArkUINodeHandle node)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_RETURN(frameNode, "");
-    auto pickDate = CalendarPickerModelNG::GetEndDateWithNode(frameNode);
-    if (pickDate.ToDays() <= 0) {
-        return "";
-    }
-    g_strValue = std::to_string(static_cast<uint32_t>(pickDate.GetYear())) + "-";
-    g_strValue = g_strValue + std::to_string(static_cast<uint32_t>(pickDate.GetMonth())) + "-";
-    g_strValue = g_strValue + std::to_string(static_cast<uint32_t>(pickDate.GetDay()));
-    return g_strValue.c_str();
-}
-
-void ResetEndDate(ArkUINodeHandle node)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    PickerDate defaultDate;
-    CalendarPickerModelNG::SetEndDateWithNode(
-        frameNode, defaultDate.GetYear(), defaultDate.GetMonth(), defaultDate.GetDay());
-}
-
 void SetTextStyleWithWeightEnum(
     ArkUINodeHandle node, uint32_t color, float fontSize, int32_t fontSizeUnit, int32_t fontWeight)
 {
@@ -162,46 +98,6 @@ void SetTextStyle(ArkUINodeHandle node, uint32_t color, const char* fontSize, co
         textStyle.fontSize = fontSizeDimension;
     }
     textStyle.fontWeight = StringUtils::StringToFontWeight(fontweight, FontWeight::NORMAL);
-    CalendarPickerModelNG::SetTextStyle(frameNode, textStyle);
-}
-
-void SetCalendarPickerTextStyleResObj(NG::PickerTextStyle& textStyle, void* fontSizeRawPtr, void* textColorRawPtr)
-{
-    auto* fontSizePtr = reinterpret_cast<ResourceObject*>(fontSizeRawPtr);
-    if (fontSizePtr) {
-        textStyle.fontSizeResObj = AceType::Claim(fontSizePtr);
-    }
-
-    auto* textColorPtr = reinterpret_cast<ResourceObject*>(textColorRawPtr);
-    if (textColorPtr) {
-        textStyle.textColorResObj = AceType::Claim(textColorPtr);
-    }
-}
-
-void SetTextStyleWithResObj(ArkUINodeHandle node, const struct ArkUIPickerTextStyleStruct* textStyleStruct)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-
-    NG::PickerTextStyle textStyle;
-    std::vector<std::string> res;
-    std::string fontValues = std::string(textStyleStruct->fontInfo);
-    StringUtils::StringSplitter(fontValues, DEFAULT_DELIMITER, res);
-    if (res.size() != TEXT_STYLE_FONT_INFO_SIZE) {
-        return;
-    }
-    CalcDimension fontSizeDimension =
-        StringUtils::StringToCalcDimension(res[TEXT_STYLE_FONT_SIZE_INDEX], false, DimensionUnit::FP);
-    if (fontSizeDimension.Unit() == DimensionUnit::PERCENT) {
-        textStyle.fontSize = Dimension(-1);
-    } else {
-        textStyle.fontSize = fontSizeDimension;
-    }
-    textStyle.fontWeight = StringUtils::StringToFontWeight(res[TEXT_STYLE_FONT_WEIGHT_INDEX], FontWeight::NORMAL);
-    textStyle.textColor = Color(textStyleStruct->textColor);
-    textStyle.textColorSetByUser = textStyleStruct->textColorSetByUser;
-
-    SetCalendarPickerTextStyleResObj(textStyle, textStyleStruct->fontSizeRawPtr, textStyleStruct->textColorRawPtr);
     CalendarPickerModelNG::SetTextStyle(frameNode, textStyle);
 }
 
@@ -250,28 +146,6 @@ void SetEdgeAlign(ArkUINodeHandle node, const ArkUI_Float32* values, const int* 
     CalendarPickerModelNG::SetEdgeAlign(frameNode, align, offset);
 }
 
-void SetEdgeAlignWithResObj(ArkUINodeHandle node, const struct ArkUIPickerEdgeAlignStruct* edgeAlignStruct)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-
-    Dimension dx = Dimension(edgeAlignStruct->dxValue, static_cast<OHOS::Ace::DimensionUnit>(edgeAlignStruct->dxUnit));
-    Dimension dy = Dimension(edgeAlignStruct->dyValue, static_cast<OHOS::Ace::DimensionUnit>(edgeAlignStruct->dyUnit));
-    NG::CalendarEdgeAlign align = static_cast<NG::CalendarEdgeAlign>(edgeAlignStruct->alignType);
-    DimensionOffset offset = DimensionOffset(dx, dy);
-
-    auto* dxPtr = reinterpret_cast<ResourceObject*>(edgeAlignStruct->dxRawPtr);
-    auto dxResObj = AceType::Claim(dxPtr);
-    auto* dyPtr = reinterpret_cast<ResourceObject*>(edgeAlignStruct->dyRawPtr);
-    auto dyResObj = AceType::Claim(dyPtr);
-    if (dxResObj || dyResObj) {
-        std::vector<RefPtr<ResourceObject>> resArray = { dxResObj, dyResObj };
-        CalendarPickerModelNG::ParseEdgeAlignResObj(frameNode, resArray);
-    }
-
-    CalendarPickerModelNG::SetEdgeAlign(frameNode, align, offset);
-}
-
 ArkUIEdgeAlignType GetEdgeAlign(ArkUINodeHandle node)
 {
     ArkUIEdgeAlignType align = { 0, 0.0f, 0.0f };
@@ -290,7 +164,6 @@ void ResetEdgeAlign(ArkUINodeHandle node)
     CHECK_NULL_VOID(frameNode);
     NG::CalendarEdgeAlign alignType = NG::CalendarEdgeAlign::EDGE_ALIGN_END;
     DimensionOffset offset;
-    CalendarPickerModelNG::CalendarPickerRemoveResObj(frameNode, "CalendarPicker.EdgeAlign");
     CalendarPickerModelNG::SetEdgeAlign(frameNode, alignType, offset);
 }
 
@@ -408,7 +281,7 @@ void SetCalendarPickerPadding(ArkUINodeHandle node, const struct ArkUISizeType* 
     paddings.bottom = std::optional<CalcLength>();
     paddings.left = std::optional<CalcLength>();
     paddings.right = std::optional<CalcLength>();
-
+    
     if (IsPaddingValid(paddings, topDim, rightDim, bottomDim, leftDim)) {
         CalendarPickerModelNG::SetPadding(frameNode, paddings);
     } else {
@@ -446,207 +319,27 @@ void ResetCalendarPickerBorder(ArkUINodeHandle node)
     ViewAbstract::SetBorderStyle(frameNode, BorderStyle::SOLID);
 }
 
-void SetCalendarPickerMarkToday(ArkUINodeHandle node, ArkUI_Bool isMarkToday)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    CalendarPickerModelNG::SetMarkToday(frameNode, isMarkToday);
-}
-
-void ResetCalendarPickerMarkToday(ArkUINodeHandle node)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    CalendarPickerModelNG::SetMarkToday(frameNode, DEFAULT_MARK_TODAY);
-}
-
-ArkUI_Bool GetCalendarPickerMarkToday(ArkUINodeHandle node)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_RETURN(frameNode, DEFAULT_MARK_TODAY);
-    auto isMarkToday = CalendarPickerModelNG::GetMarkToday(frameNode);
-    return isMarkToday;
-}
-
-bool IsValidDate(uint32_t year, uint32_t month, uint32_t day)
-{
-    if (year <= 0) {
-        return false;
-    }
-    if (month < NUM_1 || month > NUM_12) {
-        return false;
-    }
-    uint32_t daysInMonth[] = { 31, PickerDate::IsLeapYear(year) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
-    if (day < 1 || day > daysInMonth[month - 1]) {
-        return false;
-    }
-    return true;
-}
-
-PickerDate ParseDateFromString(const std::string& dateStr)
-{
-    std::vector<std::string> dateVec;
-    StringUtils::StringSplitter(dateStr, '-', dateVec);
-    PickerDate date;
-    if (dateVec.size() != DATE_SIZE) {
-        return date;
-    }
-    auto year = StringUtils::StringToInt(dateVec[NUM_0].c_str());
-    auto month = StringUtils::StringToInt(dateVec[NUM_1].c_str());
-    auto day = StringUtils::StringToInt(dateVec[NUM_2].c_str());
-    if (!IsValidDate(year, month, day)) {
-        return date;
-    }
-    date.SetYear(year);
-    date.SetMonth(month);
-    date.SetDay(day);
-    return date;
-}
-
-void SetCalendarPickerDisabledDateRange(ArkUINodeHandle node, ArkUI_CharPtr disabledDateRangeStr)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    std::vector<std::string> dateStrVector;
-    StringUtils::StringSplitter(std::string(disabledDateRangeStr), ',', dateStrVector);
-    std::vector<std::pair<PickerDate, PickerDate>> disabledDateRange;
-    for (size_t i = 0; i + 1 < dateStrVector.size(); i += 2) {  // 2 pair size
-        std::pair<PickerDate, PickerDate> pickerDateRange;
-        auto start = ParseDateFromString(dateStrVector[i]);
-        auto end = ParseDateFromString(dateStrVector[i + 1]);
-        if (start.GetYear() == 0 || end.GetYear() == 0 || end < start) {
-            continue;
-        }
-        pickerDateRange.first = start;
-        pickerDateRange.second = end;
-        disabledDateRange.emplace_back(pickerDateRange);
-    }
-    PickerDate::SortAndMergeDisabledDateRange(disabledDateRange);
-    CalendarPickerModelNG::SetDisabledDateRange(frameNode, disabledDateRange);
-}
-
-void ResetCalendarPickerDisabledDateRange(ArkUINodeHandle node)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    std::vector<std::pair<PickerDate, PickerDate>> disabledDateRange;
-    CalendarPickerModelNG::SetDisabledDateRange(frameNode, disabledDateRange);
-}
-
-ArkUI_CharPtr GetCalendarPickerDisabledDateRange(ArkUINodeHandle node)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_RETURN(frameNode, "");
-
-    g_strValue = CalendarPickerModelNG::GetDisabledDateRange(frameNode);
-    return g_strValue.c_str();
-}
-
-void SetCalendarPickerOnChangeExt(ArkUINodeHandle node, void* callback)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    auto onChange = reinterpret_cast<std::function<void(const std::string&)>*>(callback);
-    CalendarPickerModelNG::SetOnChangeWithNode(frameNode, std::move(*onChange));
-}
-
-void ResetCalendarPickerOnChange(ArkUINodeHandle node)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    CalendarPickerModelNG::SetOnChangeWithNode(frameNode, nullptr);
-}
 namespace NodeModifier {
 const ArkUICalendarPickerModifier* GetCalendarPickerModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
-    static const ArkUICalendarPickerModifier modifier = {
-        .setHintRadius = SetHintRadius,
-        .setSelectDate = SetSelectedDate,
-        .resetSelectDate = ResetSelectedDate,
-        .setTextStyleWithWeightEnum = SetTextStyleWithWeightEnum,
-        .setTextStyle = SetTextStyle,
-        .setTextStyleWithResObj = SetTextStyleWithResObj,
-        .resetTextStyle = ResetTextStyle,
-        .setStartDate = SetStartDate,
-        .resetStartDate = ResetStartDate,
-        .setEndDate = SetEndDate,
-        .resetEndDate = ResetEndDate,
-        .setCalendarPickerMarkToday = SetCalendarPickerMarkToday,
-        .resetCalendarPickerMarkToday = ResetCalendarPickerMarkToday,
-        .setCalendarPickerDisabledDateRange = SetCalendarPickerDisabledDateRange,
-        .resetCalendarPickerDisabledDateRange = ResetCalendarPickerDisabledDateRange,
-        .setEdgeAlign = SetEdgeAlign,
-        .setEdgeAlignWithResObj = SetEdgeAlignWithResObj,
-        .resetEdgeAlign = ResetEdgeAlign,
-        .setCalendarPickerPadding = SetCalendarPickerPadding,
-        .resetCalendarPickerPadding = ResetCalendarPickerPadding,
-        .setCalendarPickerBorder = SetCalendarPickerBorder,
-        .resetCalendarPickerBorder = ResetCalendarPickerBorder,
-        .getHintRadius = GetHintRadius,
-        .getSelectedDate = GetSelectedDate,
-        .getCalendarPickerTextStyle = GetTextStyle,
-        .getStartDate = GetStartDate,
-        .getEndDate = GetEndDate,
-        .getCalendarPickerMarkToday = GetCalendarPickerMarkToday,
-        .getCalendarPickerDisabledDateRange = GetCalendarPickerDisabledDateRange,
-        .getEdgeAlign = GetEdgeAlign,
-        .setCalendarPickerHeight = SetCalendarPickerHeight,
-        .resetCalendarPickerHeight = ResetCalendarPickerHeight,
-        .setCalendarPickerBorderColor = SetCalendarPickerBorderColor,
-        .resetCalendarPickerBorderColor = ResetCalendarPickerBorderColor,
-        .setCalendarPickerBorderRadius = SetCalendarPickerBorderRadius,
-        .resetCalendarPickerBorderRadius = ResetCalendarPickerBorderRadius,
-        .resetCalendarPickerBorderWidth = ResetCalendarPickerBorderWidth,
-        .setCalendarPickerOnChange = SetCalendarPickerOnChangeExt,
-        .resetCalendarPickerOnChange = ResetCalendarPickerOnChange,
-    };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
+    static const ArkUICalendarPickerModifier modifier = { SetHintRadius, SetSelectedDate, ResetSelectedDate,
+        SetTextStyleWithWeightEnum, SetTextStyle, ResetTextStyle, SetEdgeAlign, ResetEdgeAlign,
+        SetCalendarPickerPadding, ResetCalendarPickerPadding, SetCalendarPickerBorder, ResetCalendarPickerBorder,
+        GetHintRadius, GetSelectedDate, GetTextStyle, GetEdgeAlign, SetCalendarPickerHeight, ResetCalendarPickerHeight,
+        SetCalendarPickerBorderColor, ResetCalendarPickerBorderColor, SetCalendarPickerBorderRadius,
+        ResetCalendarPickerBorderRadius, ResetCalendarPickerBorderWidth };
 
     return &modifier;
 }
 
 const CJUICalendarPickerModifier* GetCJUICalendarPickerModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
-    static const CJUICalendarPickerModifier modifier = {
-        .setHintRadius = SetHintRadius,
-        .setSelectDate = SetSelectedDate,
-        .resetSelectDate = ResetSelectedDate,
-        .setTextStyleWithWeightEnum = SetTextStyleWithWeightEnum,
-        .setTextStyle = SetTextStyle,
-        .resetTextStyle = ResetTextStyle,
-        .setStartDate = SetStartDate,
-        .resetStartDate = ResetStartDate,
-        .setEndDate = SetEndDate,
-        .resetEndDate = ResetEndDate,
-        .setCalendarPickerMarkToday = SetCalendarPickerMarkToday,
-        .resetCalendarPickerMarkToday = ResetCalendarPickerMarkToday,
-        .setCalendarPickerDisabledDateRange = SetCalendarPickerDisabledDateRange,
-        .resetCalendarPickerDisabledDateRange = ResetCalendarPickerDisabledDateRange,
-        .setEdgeAlign = SetEdgeAlign,
-        .resetEdgeAlign = ResetEdgeAlign,
-        .setCalendarPickerPadding = SetCalendarPickerPadding,
-        .resetCalendarPickerPadding = ResetCalendarPickerPadding,
-        .setCalendarPickerBorder = SetCalendarPickerBorder,
-        .resetCalendarPickerBorder = ResetCalendarPickerBorder,
-        .getHintRadius = GetHintRadius,
-        .getSelectedDate = GetSelectedDate,
-        .getCalendarPickerTextStyle = GetTextStyle,
-        .getStartDate = GetStartDate,
-        .getEndDate = GetEndDate,
-        .getCalendarPickerMarkToday = GetCalendarPickerMarkToday,
-        .getCalendarPickerDisabledDateRange = GetCalendarPickerDisabledDateRange,
-        .getEdgeAlign = GetEdgeAlign,
-        .setCalendarPickerHeight = SetCalendarPickerHeight,
-        .resetCalendarPickerHeight = ResetCalendarPickerHeight,
-        .setCalendarPickerBorderColor = SetCalendarPickerBorderColor,
-        .resetCalendarPickerBorderColor = ResetCalendarPickerBorderColor,
-        .setCalendarPickerBorderRadius = SetCalendarPickerBorderRadius,
-        .resetCalendarPickerBorderRadius = ResetCalendarPickerBorderRadius,
-        .resetCalendarPickerBorderWidth = ResetCalendarPickerBorderWidth,
-    };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
+    static const CJUICalendarPickerModifier modifier = { SetHintRadius, SetSelectedDate, ResetSelectedDate,
+        SetTextStyleWithWeightEnum, SetTextStyle, ResetTextStyle, SetEdgeAlign, ResetEdgeAlign,
+        SetCalendarPickerPadding, ResetCalendarPickerPadding, SetCalendarPickerBorder, ResetCalendarPickerBorder,
+        GetHintRadius, GetSelectedDate, GetTextStyle, GetEdgeAlign, SetCalendarPickerHeight, ResetCalendarPickerHeight,
+        SetCalendarPickerBorderColor, ResetCalendarPickerBorderColor, SetCalendarPickerBorderRadius,
+        ResetCalendarPickerBorderRadius, ResetCalendarPickerBorderWidth };
 
     return &modifier;
 }
@@ -691,7 +384,7 @@ void SetCalendarPickerOnChange(ArkUINodeHandle node, void* extraParam)
         event.componentAsyncEvent.data[NUM_0].u32 = selectedDate.year;
         event.componentAsyncEvent.data[NUM_1].u32 = selectedDate.month;
         event.componentAsyncEvent.data[NUM_2].u32 = selectedDate.day;
-        SendArkUISyncEvent(&event);
+        SendArkUIAsyncEvent(&event);
     };
     CalendarPickerModelNG::SetOnChangeWithNode(frameNode, std::move(onEvent));
 }

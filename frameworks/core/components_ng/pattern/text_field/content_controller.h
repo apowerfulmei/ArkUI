@@ -22,7 +22,6 @@
 #include "base/memory/ace_type.h"
 #include "base/memory/referenced.h"
 #include "base/utils/string_utils.h"
-#include "base/utils/utf_helper.h"
 #include "core/common/ime/text_input_type.h"
 #include "core/components_ng/pattern/pattern.h"
 
@@ -33,27 +32,26 @@ class ContentController : public virtual AceType {
 public:
     explicit ContentController(const WeakPtr<Pattern>& pattern) : pattern_(pattern) {}
     ~ContentController() override = default;
-    bool InsertValue(int32_t index, const std::u16string& value);
-    bool ReplaceSelectedValue(int32_t startIndex, int32_t endIndex, const std::u16string& value);
-    std::u16string GetSelectedValue(int32_t startIndex, int32_t endIndex);
-    std::u16string GetValueBeforeIndex(int32_t index);
-    std::u16string GetValueAfterIndex(int32_t index);
+    bool InsertValue(int32_t index, const std::string& value);
+    bool ReplaceSelectedValue(int32_t startIndex, int32_t endIndex, const std::string& value);
+    std::string GetSelectedValue(int32_t startIndex, int32_t endIndex);
+    std::string GetValueBeforeIndex(int32_t index);
+    std::string GetValueAfterIndex(int32_t index);
     void erase(int32_t startIndex, int32_t length);
     int32_t Delete(int32_t startIndex, int32_t length, bool isBackward);
     int32_t GetDeleteLength(int32_t startIndex, int32_t length, bool isBackward);
     bool IsIndexBeforeOrInEmoji(int32_t index);
-    bool FilterValue();
-    void FilterValueType(std::u16string& value);
+    void FilterValue();
+    void FilterValueType(std::string& value);
     std::string GetSelectedLimitValue(int32_t& index, int32_t& startIndex);
-    void FilterTextInputStyle(bool& textChanged, std::u16string& result);
-    void FilterValue(std::u16string& value);
+    void FilterTextInputStyle(bool& textChanged, std::string& result);
 
-    std::string GetTextValue()
+    std::wstring GetWideText()
     {
-        return UtfUtils::Str16DebugToStr8(content_);
+        return StringUtils::ToWstring(content_);
     }
 
-    const std::u16string& GetTextUtf16Value()
+    std::string GetTextValue()
     {
         return content_;
     }
@@ -63,50 +61,50 @@ public:
         return content_.empty();
     }
 
-    void SetTextValue(std::u16string&& value)
+    void SetTextValue(std::string&& value)
     {
         content_ = value;
         FilterValue();
     }
 
-    void SetTextValue(const std::u16string& value)
+    void SetTextValue(const std::string& value)
     {
         content_ = value;
         FilterValue();
     }
 
-    void SetTextValueOnly(std::u16string&& value)
+    void SetTextValueOnly(std::string&& value)
     {
         content_ = value;
     }
 
-    void SetTextValueOnly(const std::u16string& value)
+    void SetTextValueOnly(const std::string& value)
     {
         content_ = value;
     }
 
     void Reset()
     {
-        content_ = u"";
+        content_ = "";
     }
 
-    std::u16string GetInsertValue()
+    std::string GetInsertValue()
     {
         return insertValue_;
     }
 
 private:
     void FormatIndex(int32_t& startIndex, int32_t& endIndex);
-    bool FilterWithEvent(const std::u16string& filter, std::u16string& result);
-    std::u16string PreprocessString(int32_t startIndex, int32_t endIndex, const std::u16string& value);
-    static std::u16string RemoveErrorTextFromValue(const std::u16string& value, const std::u16string& errorText);
-    static std::u16string FilterWithRegex(const std::u16string& filter, std::u16string& result);
-    static bool FilterWithEmail(std::u16string& result);
-    static bool FilterWithAscii(std::u16string& result);
-    static bool FilterWithDecimal(std::u16string& result);
+    bool FilterWithEvent(const std::string& filter, std::string& result);
+    std::string PreprocessString(int32_t startIndex, int32_t endIndex, const std::string& value);
+    static std::string RemoveErrorTextFromValue(const std::string& value, const std::string& errorText);
+    static std::string FilterWithRegex(const std::string& filter, std::string& result);
+    static bool FilterWithEmail(std::string& result);
+    static bool FilterWithAscii(std::string& result);
+    static bool FilterWithDecimal(std::string& result);
 
-    std::u16string insertValue_;
-    std::u16string content_;
+    std::string insertValue_;
+    std::string content_;
     WeakPtr<Pattern> pattern_;
 };
 } // namespace OHOS::Ace::NG

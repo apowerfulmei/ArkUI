@@ -119,16 +119,6 @@ public:
         return svgAnimate_;
     }
 
-    void InCreaseSvgNodeCount()
-    {
-        ++totoalSvgNodeCnt_;
-    }
-
-    int32_t GetSvgNodeCount() const
-    {
-        return totoalSvgNodeCnt_;
-    }
-
 private:
     void InitAnimatorGroup(const RefPtr<RenderNode>& node);
     void AddToAnimatorGroup(const RefPtr<RenderNode>& node, RefPtr<AnimatorGroup>& animatorGroup);
@@ -161,7 +151,6 @@ private:
     PushAttr attrCallback_;
     bool svgAnimate_ = false;
     bool hasClipPath_ = false;
-    int32_t totoalSvgNodeCnt_ = 0;
 };
 
 } // namespace OHOS::Ace

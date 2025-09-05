@@ -40,7 +40,7 @@ struct DividerInfo {
 };
 
 class ACE_EXPORT ListPaintMethod : public ScrollablePaintMethod {
-    DECLARE_ACE_TYPE(ListPaintMethod, ScrollablePaintMethod);
+    DECLARE_ACE_TYPE(ListPaintMethod, ScrollablePaintMethod)
 public:
     using PositionMap = ListLayoutAlgorithm::PositionMap;
     ListPaintMethod(const V2::ItemDivider& divider, bool vertical, bool isReverse, int32_t lanes, float space)
@@ -57,9 +57,7 @@ public:
 
     void UpdateContentModifier(PaintWrapper* paintWrapper) override;
 
-    void UpdateBoundsRect(const RectF& frameRect, bool clip);
-
-    void UpdateDividerList(const DividerInfo& dividerInfo, bool clip);
+    void UpdateDividerList(const DividerInfo& dividerInfo);
 
     ListDivider HandleDividerList(int32_t index, bool lastIsGroup, int32_t laneIdx, const DividerInfo& dividerInfo);
     ListDivider HandleLastLineIndex(int32_t index, int32_t laneIdx, const DividerInfo& dividerInfo);
@@ -91,19 +89,12 @@ public:
         listContentModifier_ = modify;
     }
 
-    void SetLaneIdx(int32_t idx)
-    {
-        initLaneIdx_ = idx;
-    }
-
     void SetItemsPosition(const PositionMap& positionMap, const PositionMap& cachedPositionMap,
-        const std::set<int32_t>& pressedItem, bool showCached, bool clip)
+        const std::set<int32_t>& pressedItem)
     {
         itemPosition_ = positionMap;
-        if (showCached || clip) {
-            for (auto& [index, pos] : cachedPositionMap) {
-                itemPosition_[index] = pos;
-            }
+        for (auto& [index, pos] : cachedPositionMap) {
+            itemPosition_[index] = pos;
         }
         if (!pressedItem.empty()) {
             for (auto& child : itemPosition_) {
@@ -136,20 +127,13 @@ public:
 
     void UpdateOverlayModifier(PaintWrapper* paintWrapper) override;
 
-    void SetAdjustOffset(float adjustOffset)
-    {
-        adjustOffset_ = adjustOffset;
-    }
-
 private:
     V2::ItemDivider divider_;
     int32_t lanes_ = 1;
-    int32_t initLaneIdx_ = 0;
     int32_t totalItemCount_ = 0;
     float space_;
     float laneGutter_ = 0.0f;
     PositionMap itemPosition_;
-    float adjustOffset_ = 0.0f;
     RefPtr<ListContentModifier> listContentModifier_;
 
     WeakPtr<ScrollBar> scrollBar_;

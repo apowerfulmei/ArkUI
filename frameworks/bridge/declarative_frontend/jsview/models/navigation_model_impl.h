@@ -21,7 +21,7 @@
 namespace OHOS::Ace::Framework {
 class NavigationModelImpl : public NavigationModel {
 public:
-    void Create(bool useHomeDestination = false) override;
+    void Create() override;
     void SetNavigationStack() override;
     void SetNavigationStack(const RefPtr<NG::NavigationStack>& navigationStack) override;
     void SetNavigationStackProvided(bool provided) override;
@@ -35,24 +35,7 @@ public:
     void SetHideNavBar(bool hideNavBar) override;
     void SetBackButtonIcon(const std::function<void(WeakPtr<NG::FrameNode>)>& symbolApply, const std::string& src,
         const NG::ImageOption& imageOption, RefPtr<PixelMap>& pixMap,
-        const std::vector<std::string>& nameList, bool userDefinedAccessibilityText = false,
-        const std::string& backButtonAccessibilityText = "") override;
-    void SetBackButtonIcon(const std::function<void(WeakPtr<NG::FrameNode>)>& symbolApply,
-        const RefPtr<ResourceObject>& resObj, const NG::ImageOption& imageOption, RefPtr<PixelMap>& pixMap,
-        const std::vector<std::string>& nameList, bool userDefinedAccessibilityText = false,
-        const std::string& backButtonAccessibilityText = "") override;
-    void SetBackButtonIconTextRes(const std::function<void(WeakPtr<NG::FrameNode>)>& symbolApply,
-        const std::string& src, const NG::ImageOption& imageOption, RefPtr<PixelMap>& pixMap,
-        const std::vector<std::string>& nameList, bool userDefinedAccessibilityText,
-        const RefPtr<ResourceObject>& resObj) override;
-    void SetBackButtonIconSrcAndTextRes(const std::function<void(WeakPtr<NG::FrameNode>)>& symbolApply,
-        const RefPtr<ResourceObject>& backButtonResObj, const NG::ImageOption& imageOption, RefPtr<PixelMap>& pixMap,
-        const std::vector<std::string>& nameList, bool userDefinedAccessibilityText,
-        const RefPtr<ResourceObject>& backButtonTextResObj) override;
-    void UpdateBackButtonIcon(const std::vector<std::string>& nameList,
-        NG::FrameNode* frameNode, const RefPtr<ResourceObject>& backButtonIconResObj) override;
-    void UpdateBackButtonIconText(bool userDefinedAccessibilityText,
-        const RefPtr<NG::TitleBarNode>& titleBarNode, const RefPtr<ResourceObject>& backButtonTextResObj) override;
+        const std::vector<std::string>& nameList) override;
     void SetHideBackButton(bool hideBackButton) override;
     void SetHideToolBar(bool hideToolBar, bool animated = false) override;
     void SetCustomToolBar(const RefPtr<AceType>& customToolBar) override;
@@ -67,7 +50,7 @@ public:
         std::function<void(const BaseEventInfo* baseInfo)>&& eventInfo) override;
     void SetUsrNavigationMode(NG::NavigationMode mode) override;
     void SetNavBarPosition(NG::NavBarPosition mode) override;
-    void SetNavBarWidth(const Dimension& value, bool isDoubleBind = false) override;
+    void SetNavBarWidth(const Dimension& value) override;
     void SetMinNavBarWidth(const Dimension& value) override {}
     void SetMaxNavBarWidth(const Dimension& value) override {}
     void SetMinContentWidth(const Dimension& value) override {}
@@ -79,7 +62,7 @@ public:
     void SetOnNavigationModeChange(std::function<void(NG::NavigationMode)>&& modeChange) override;
     void SetIsCustomAnimation(bool isCustom) override;
     void SetCustomTransition(NavigationTransitionEvent&& animationTransition) override;
-    void SetIgnoreLayoutSafeArea(const NG::IgnoreLayoutSafeAreaOpts& opts) override;
+    void SetIgnoreLayoutSafeArea(const NG::SafeAreaExpandOpts& opts) override;
 };
 } // namespace OHOS::Ace::Framework
 #endif // FRAMEWORKS_BRIDGE_DECLARATIVE_FRONTEND_JS_VIEW_MODELS_NAVIGATION_MODEL_IMPL_H

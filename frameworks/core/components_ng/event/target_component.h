@@ -76,9 +76,9 @@ public:
 
     GestureRecognizerJudgeFunc GetOnGestureRecognizerJudgeBegin() const;
 
-    void SetInnerNodeGestureRecognizerJudge(bool flag)
+    void SetInnerNodeGestureRecognizerJudge()
     {
-        isInnerNodeGestureRecognizerJudgeSet_ = flag;
+        isInnerNodeGestureRecognizerJudgeSet_ = true;
     }
 
     bool IsInnerNodeGestureRecognizerJudgeSet() const

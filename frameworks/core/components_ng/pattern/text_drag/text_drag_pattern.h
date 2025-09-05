@@ -20,12 +20,10 @@
 #include "core/components_ng/pattern/text_drag/text_drag_base.h"
 #include "core/components_ng/pattern/text_drag/text_drag_overlay_modifier.h"
 #include "core/components_ng/pattern/text_drag/text_drag_paint_method.h"
-#include "core/components_ng/pattern/rich_editor_drag/rich_editor_drag_info.h"
 #include "core/components_ng/render/drawing.h"
 #include "core/components_ng/render/paragraph.h"
 
 namespace OHOS::Ace::NG {
-constexpr Dimension TEXT_DRAG_RADIUS_2IN1 = 8.0_vp;
 constexpr Dimension TEXT_DRAG_RADIUS = 18.0_vp;
 constexpr Dimension TEXT_DRAG_OFFSET = 8.0_vp;
 constexpr Dimension TEXT_DRAG_MIN_WIDTH = 64.0_vp;
@@ -105,9 +103,7 @@ public:
         if (!overlayModifier_) {
             overlayModifier_ = AceType::MakeRefPtr<TextDragOverlayModifier>(WeakClaim(this));
         }
-        auto paintMethod = AceType::MakeRefPtr<TextDragPaintMethod>(WeakClaim(this), overlayModifier_);
-        paintMethod->UpdateHandleInfo(info_);
-        return paintMethod;
+        return MakeRefPtr<TextDragPaintMethod>(WeakClaim(this), overlayModifier_);
     }
 
     const WeakPtr<Paragraph>& GetParagraph() const
@@ -210,33 +206,14 @@ public:
         return rectsForPlaceholders_;
     }
 
-    virtual Dimension GetDragCornerRadius();
-
-    void UpdateHandleAnimationInfo(const TextDragInfo& info)
+    virtual Dimension GetDragCornerRadius()
     {
-        info_ = info;
+        return TEXT_DRAG_RADIUS;
     }
 
-    void OnDetachFromMainTree() override;
     Color GetDragBackgroundColor();
-
-    bool IsAnimating()
-    {
-        return overlayModifier_ && overlayModifier_->IsAnimating();
-    }
-
-    void UpdateAnimatingParagraph()
-    {
-        animatingParagraph_ = paragraph_.Upgrade();
-    }
-
-    void ResetAnimatingParagraph()
-    {
-        animatingParagraph_.Reset();
-    }
 protected:
     static TextDragData CalculateTextDragData(RefPtr<TextDragBase>& pattern, RefPtr<FrameNode>& dragNode);
-    virtual void AdjustMaxWidth(float& width, const RectF& contentRect, const std::vector<RectF>& boxes);
     static RectF GetHandler(const bool isLeftHandler, const std::vector<RectF> boxes, const RectF contentRect,
         const OffsetF globalOffset, const OffsetF textStartOffset);
     static void AdjustHandlers(const RectF contentRect, RectF& leftHandler, RectF& rightHandler);
@@ -245,17 +222,10 @@ protected:
     void GenerateBackgroundPoints(std::vector<TextPoint>& points, float offset, bool needAdjust = true);
     void CalculateLineAndArc(std::vector<TextPoint>& points, std::shared_ptr<RSPath>& path, float radiusRatio);
     void CalculateLine(std::vector<TextPoint>& points, std::shared_ptr<RSPath>& path);
-    static void CalculateOverlayOffset(RefPtr<FrameNode>& dragNode, OffsetF& offset);
-    static void DropBlankLines(std::vector<RectF>& boxes);
 
     void SetLastLineHeight(float lineHeight)
     {
         lastLineHeight_ = lineHeight;
-    }
-
-    void SetOnDetachFromMainTree(std::function<void()>&& callback)
-    {
-        onDetachFromMainTree_ = std::move(callback);
     }
 
 protected:
@@ -266,14 +236,11 @@ private:
     float lastLineHeight_ = 0.0f;
     OffsetF contentOffset_;
     WeakPtr<Paragraph> paragraph_;
-    RefPtr<Paragraph> animatingParagraph_;
     std::shared_ptr<RSPath> clipPath_;
     std::shared_ptr<RSPath> backGroundPath_;
     std::shared_ptr<RSPath> selBackGroundPath_;
     std::list<RefPtr<FrameNode>> imageChildren_;
     std::vector<RectF> rectsForPlaceholders_;
-    TextDragInfo info_;
-    std::function<void()> onDetachFromMainTree_ = nullptr;
 
     ACE_DISALLOW_COPY_AND_MOVE(TextDragPattern);
 };

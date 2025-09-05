@@ -100,10 +100,8 @@ public:
     }
 
 private:
-    static void HandleFrictionMotion(const JSCallbackInfo& info, RefPtr<JSMotion>& obj);
-    static void HandleSpringMotion(const JSCallbackInfo& info, RefPtr<JSMotion>& obj);
-    static void HandleScrollMotion(const JSCallbackInfo& info, RefPtr<JSMotion>& obj);
     RefPtr<Motion> motion_;
+
 };
 
 } // namespace OHOS::Ace::Framework

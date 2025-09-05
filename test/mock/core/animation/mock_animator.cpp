@@ -17,7 +17,6 @@
 
 namespace OHOS::Ace {
 float Animator::scale_ = 1.0f;
-float MAX_TIME = 1000000000.0f;
 
 void Animator::SetDurationScale(float scale)
 {
@@ -42,15 +41,7 @@ Animator::Animator(const WeakPtr<PipelineBase>& context, const char* name)
 
 Animator::~Animator() {}
 
-void Animator::AttachScheduler(const WeakPtr<PipelineBase>& context)
-{
-    auto&& callback = [weak = AceType::WeakClaim(this)](uint64_t duration) {
-        auto controller = weak.Upgrade();
-        CHECK_NULL_VOID(controller);
-        controller->OnFrame(duration);
-    };
-    scheduler_ = SchedulerBuilder::Build(callback, context);
-}
+void Animator::AttachScheduler(const WeakPtr<PipelineBase>& context) {}
 
 bool Animator::HasScheduler() const
 {
@@ -183,7 +174,6 @@ void Animator::PlayMotion(const RefPtr<Motion>& motion)
     isReverse_ = false;
     motion_ = motion;
     status_ = Status::RUNNING; // StartInner
-    motion_->OnTimestampChanged(MAX_TIME, 0.0f, false);
 }
 
 void Animator::Play()

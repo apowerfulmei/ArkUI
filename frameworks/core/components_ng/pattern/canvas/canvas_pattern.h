@@ -32,9 +32,10 @@ class ImageAnalyzerManager;
 
 namespace OHOS::Ace::NG {
 class CanvasPaintMethod;
+class OffscreenCanvasPattern;
 class CanvasModifier;
 // CanvasPattern is the base class for custom paint render node to perform paint canvas.
-class ACE_FORCE_EXPORT CanvasPattern : public Pattern {
+class ACE_EXPORT CanvasPattern : public Pattern {
     DECLARE_ACE_TYPE(CanvasPattern, Pattern);
 
 public:
@@ -43,16 +44,6 @@ public:
 
     void SetOnContext2DAttach(std::function<void()>&& callback);
     void SetOnContext2DDetach(std::function<void()>&& callback);
-
-    bool IsEnableMatchParent() override
-    {
-        return true;
-    }
-
-    bool IsEnableFix() override
-    {
-        return true;
-    }
 
     int32_t GetId() const
     {
@@ -67,8 +58,7 @@ public:
 
     std::optional<RenderContext::ContextParam> GetContextParam() const override
     {
-        return RenderContext::ContextParam { .type = RenderContext::ContextType::INCREMENTAL_CANVAS,
-            .surfaceName = std::nullopt };
+        return RenderContext::ContextParam { RenderContext::ContextType::INCREMENTAL_CANVAS };
     }
 
     RefPtr<NodePaintMethod> CreateNodePaintMethod() override;
@@ -116,7 +106,6 @@ public:
     void Arc(const ArcParam& param);
     void ArcTo(const ArcToParam& param);
     void AddRect(const Rect& rect);
-    void AddRoundRect(const Rect& rect, const std::vector<double>& radii);
     void Ellipse(const EllipseParam& param);
     void BezierCurveTo(const BezierCurveParam& param);
     void QuadraticCurveTo(const QuadraticCurveParam& param);
@@ -179,7 +168,6 @@ public:
     void UpdateFontStyle(FontStyle style);
     void UpdateFontFamilies(const std::vector<std::string>& families);
     void UpdateFontSize(const Dimension& size);
-    void UpdateLetterSpacing(const Dimension& letterSpacing);
     void UpdateLineJoin(LineJoinStyle join);
     void SetFillGradient(const std::shared_ptr<Ace::Gradient>& gradient);
     void UpdateFillPattern(const std::weak_ptr<Ace::Pattern>& pattern);
@@ -189,7 +177,6 @@ public:
     void SetFilterParam(const std::string& filterStr);
     TransformParam GetTransform() const;
     void SetDensity(double density);
-    void SetTransform(std::shared_ptr<Ace::Pattern> pattern, const TransformParam& transform);
     int32_t GetId();
 
     void SaveLayer();
@@ -200,8 +187,7 @@ public:
     void StopImageAnalyzer();
     void Reset();
     void DumpInfo() override;
-    void DumpInfo(std::unique_ptr<JsonValue>& json) override;
-    void DumpSimplifyInfo(std::shared_ptr<JsonValue>& json) override;
+    void DumpSimplifyInfo(std::unique_ptr<JsonValue>& json) override;
 
 private:
     void OnAttachToFrameNode() override;
@@ -231,7 +217,6 @@ private:
     TextDirection currentSetTextDirection_ = TextDirection::INHERIT;
     RefPtr<CanvasModifier> contentModifier_;
     bool isAttached_ = false;
-    int32_t id_ = -1;
     ACE_DISALLOW_COPY_AND_MOVE(CanvasPattern);
 };
 } // namespace OHOS::Ace::NG

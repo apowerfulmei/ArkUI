@@ -32,15 +32,6 @@ public:
         return MakeRefPtr<UIExtensionLayoutAlgorithm>();
     }
 
-    void OnDetachFromFrameNode(FrameNode* framenode) override
-    {
-        LOGI("UIExtensionSurface: OnDetachFromFrameNode");
-        CHECK_NULL_VOID(framenode);
-        auto renderContext = framenode->GetRenderContext();
-        CHECK_NULL_VOID(renderContext);
-        renderContext->RemoveFromTree();
-    }
-
     void BeforeSyncGeometryProperties(const DirtySwapConfig& config) override
     {
         auto host = GetHost();

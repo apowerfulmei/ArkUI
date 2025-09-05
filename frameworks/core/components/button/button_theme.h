@@ -39,7 +39,7 @@ public:
 
         RefPtr<ButtonTheme> Build(const RefPtr<ThemeConstants>& themeConstants) const
         {
-            RefPtr<ButtonTheme> theme = AceType::MakeRefPtr<ButtonTheme>();
+            RefPtr<ButtonTheme> theme = AceType::Claim(new ButtonTheme());
             if (!themeConstants) {
                 return theme;
             }
@@ -118,15 +118,6 @@ public:
             theme->downloadFontSize_ = buttonPattern->GetAttr<Dimension>("button_download_font_size", 0.0_fp);
             theme->progressDiameter_ = buttonPattern->GetAttr<Dimension>("button_progress_diameter", 0.0_vp);
             theme->innerPadding_ = buttonPattern->GetAttr<Dimension>("button_inner_padding", 0.0_vp);
-            theme->borderWidthSmall_ = buttonPattern->GetAttr<Dimension>("width_border_small", 0.0_vp);
-            theme->borderColorSmall_ = buttonPattern->GetAttr<Color>("color_border_small", Color());
-            theme->shadowNormal_ = static_cast<uint32_t>(buttonPattern->GetAttr<double>("shadow_default", 0.0));
-            theme->shadowFocus_ = static_cast<uint32_t>(buttonPattern->GetAttr<double>("shadow_focus", 0.0));
-            theme->scaleHoverOrFocus_ =  buttonPattern->GetAttr<double>("scale_focus", 0.0);
-            theme->paddingText_ = buttonPattern->GetAttr<Dimension>("padding_text", 0.0_vp);
-            theme->textBackgroundFocus_ = buttonPattern->GetAttr<Color>("focus_bg_text", Color());
-            theme->normalBackgroundFocus_ = buttonPattern->GetAttr<Color>("normal_button_focus_bgcolor", Color());
-            theme->emphasizeBackgroundFocus_ = buttonPattern->GetAttr<Color>("emphasize_focus_color", Color());
             theme->bigFontSizeScale_ = buttonPattern->GetAttr<double>("button_aging_big_font_size_scale", 0.0);
             theme->largeFontSizeScale_ = buttonPattern->GetAttr<double>("button_aging_large_font_size_scale", 0.0);
             theme->maxFontSizeScale_ = buttonPattern->GetAttr<double>("button_aging_max_font_size_scale", 0.0);
@@ -134,9 +125,6 @@ public:
             theme->agingSmallPadding_ = buttonPattern->GetAttr<Dimension>("button_aging_small_padding", 0.0_vp);
             theme->agingTextMaxLines_ =
                 static_cast<uint32_t>(buttonPattern->GetAttr<double>("button_aging_text_max_lines", 0.0));
-            theme->textButtonFontSize_ = buttonPattern->GetAttr<Dimension>("text_button_font_size", 0.0_fp);
-            theme->isApplyFontSize_ =
-                static_cast<bool>(buttonPattern->GetAttr<double>("apply_text_font_size", 0.0));
             ParseSubStylePattern(buttonPattern, theme);
         }
 
@@ -156,12 +144,8 @@ public:
                 ButtonStyleMode::EMPHASIZE, buttonPattern->GetAttr<Color>("emphasize_button_text_color", Color())));
             theme->textColorMap_.insert(
                 std::pair<ButtonStyleMode, Color>(ButtonStyleMode::NORMAL, theme->normalTextColor_));
-            theme->textColorMap_.insert(std::pair<ButtonStyleMode, Color>(
-                ButtonStyleMode::TEXT, buttonPattern->GetAttr<Color>("text_button_text_color", Color())));
-            theme->focusTextColorMap_.insert(std::pair<ButtonStyleMode, Color>(
-                ButtonStyleMode::NORMAL, buttonPattern->GetAttr<Color>("normal_button_text_focus_color", Color())));
-            theme->focusTextColorMap_.insert(std::pair<ButtonStyleMode, Color>(
-                ButtonStyleMode::TEXT, buttonPattern->GetAttr<Color>("text_button_text_focus_color", Color())));
+            theme->textColorMap_.insert(
+                std::pair<ButtonStyleMode, Color>(ButtonStyleMode::TEXT, theme->normalTextColor_));
             theme->textColorByRoleMap_.insert(
                 std::pair<ButtonRole, Color>(ButtonRole::NORMAL, theme->normalTextColor_));
             theme->textColorByRoleMap_.insert(
@@ -186,8 +170,6 @@ public:
                 ControlSize::NORMAL, buttonPattern->GetAttr<Dimension>("button_border_radius_normal", 20.0_vp)));
             theme->borderRadiusMap_.insert(std::pair<ControlSize, Dimension>(
                 ControlSize::SMALL, buttonPattern->GetAttr<Dimension>("button_border_radius_small", 14.0_vp)));
-            theme->pasteText_ = buttonPattern->GetAttr<std::string>("textoverlay_paste", "");
-            theme->cancelText_ = buttonPattern->GetAttr<std::string>("common_cancel_text", "");
         }
     };
 
@@ -313,21 +295,6 @@ public:
         return textMaxLines_;
     }
 
-    uint32_t GetShadowNormal() const
-    {
-        return shadowNormal_;
-    }
-
-    uint32_t GetShadowFocus() const
-    {
-        return shadowFocus_;
-    }
-
-    double GetScaleHoverOrFocus() const
-    {
-        return scaleHoverOrFocus_;
-    }
-
     const Dimension& GetMinCircleButtonDiameter() const
     {
         return minCircleButtonDiameter_;
@@ -417,19 +384,6 @@ public:
         return normalTextColor_;
     }
 
-    const Color& GetFocusTextColor(ButtonStyleMode buttonStyle, ButtonRole buttonRole) const
-    {
-        auto roleResult = textColorByRoleMap_.find(buttonRole);
-        auto result = focusTextColorMap_.find(buttonStyle);
-        if (roleResult == textColorByRoleMap_.end() || result == focusTextColorMap_.end()) {
-            return normalTextColor_;
-        }
-        if (buttonRole == ButtonRole::ERROR && buttonStyle != ButtonStyleMode::EMPHASIZE) {
-            return roleResult->second;
-        }
-        return result->second;
-    }
-
     const Dimension& GetHeight(ControlSize controlSize) const
     {
         auto result = heightMap_.find(controlSize);
@@ -466,36 +420,6 @@ public:
         return padding_;
     }
 
-    const Dimension& GetBorderWidthSmall() const
-    {
-        return borderWidthSmall_;
-    }
-
-    const Dimension& GetPaddingText() const
-    {
-        return paddingText_;
-    }
-
-    const Color& GetBorderColorSmall() const
-    {
-        return borderColorSmall_;
-    }
-
-    const Color& GetTextBackgroundFocus() const
-    {
-        return textBackgroundFocus_;
-    }
-
-    const Color& GetNormalBackgroundFocus() const
-    {
-        return normalBackgroundFocus_;
-    }
-
-    const Color& GetEmphasizeBackgroundFocus() const
-    {
-        return emphasizeBackgroundFocus_;
-    }
-
     float GetBigFontSizeScale() const
     {
         return bigFontSizeScale_;
@@ -526,26 +450,6 @@ public:
         return agingTextMaxLines_;
     }
 
-    const Dimension& GetTextButtonFontSize() const
-    {
-        return textButtonFontSize_;
-    }
-
-    bool GetIsApplyTextFontSize() const
-    {
-        return isApplyFontSize_;
-    }
-
-    const std::string& GetPasteText() const
-    {
-        return pasteText_;
-    }
-
-    const std::string& GetCancelText() const
-    {
-        return cancelText_;
-    }
-
 protected:
     ButtonTheme() = default;
 
@@ -567,11 +471,6 @@ private:
     Color downloadTextColor_;
     Color downloadBorderColor_;
     Color downloadProgressColor_;
-    Color focusBorderColor_;
-    Color borderColorSmall_;
-    Color textBackgroundFocus_;
-    Color normalBackgroundFocus_;
-    Color emphasizeBackgroundFocus_;
     TextStyle textStyle_;
     Edge padding_;
     Edge minCircleButtonPadding_;
@@ -591,12 +490,7 @@ private:
     Dimension borderWidth_;
     Dimension downloadHeight_;
     Dimension borderRadius_;
-    Dimension focusBorderWidth_;
-    Dimension borderWidthSmall_;
-    Dimension paddingText_;
-    Dimension textButtonFontSize_;
     std::unordered_map<ButtonRole, std::unordered_map<ButtonStyleMode, Color>> bgColorMap_;
-    std::unordered_map<ButtonStyleMode, Color> focusTextColorMap_;
     std::unordered_map<ButtonRole, Color> textColorByRoleMap_;
     std::unordered_map<ButtonStyleMode, Color> textColorMap_;
     std::unordered_map<ControlSize, Dimension> heightMap_;
@@ -604,19 +498,13 @@ private:
     std::unordered_map<ControlSize, Edge> paddingMap_;
     std::unordered_map<ControlSize, Dimension> borderRadiusMap_;
     double bgDisabledAlpha_ = 1.0;
-    double scaleHoverOrFocus_ = 1.0;
     uint32_t textMaxLines_ = 1;
-    uint32_t shadowNormal_ = 0;
-    uint32_t shadowFocus_ = 0;
     float bigFontSizeScale_ = 1.75f;
     float largeFontSizeScale_ = 2.0f;
     float maxFontSizeScale_ = 3.2f;
     Dimension agingNormalPadding_;
     Dimension agingSmallPadding_;
     uint32_t agingTextMaxLines_ = 2;
-    bool isApplyFontSize_ = false;
-    std::string pasteText_;
-    std::string cancelText_;
 };
 
 } // namespace OHOS::Ace

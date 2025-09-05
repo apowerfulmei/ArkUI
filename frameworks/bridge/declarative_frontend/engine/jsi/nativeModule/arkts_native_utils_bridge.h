@@ -31,11 +31,6 @@ struct NativeWeakRef {
         return weakRef.Invalid();
     }
 
-    bool ReleaseImmediately() const
-    {
-        return true;
-    }
-
     AceType* rawPtr = nullptr;
     WeakPtr<AceType> weakRef;
 };
@@ -48,23 +43,13 @@ struct NativeStrongRef {
         return AceType::RawPtr(strongRef);
     }
 
-    bool ReleaseImmediately() const
-    {
-        return strongRef == nullptr;
-    }
-
     RefPtr<AceType> strongRef;
 };
 
-// Only used by NativeWeakRef or NativeStrongRef.
 template<typename T>
 void DestructorInterceptor(void* env, void* nativePtr, void* data)
 {
     auto* typePtr = reinterpret_cast<T*>(nativePtr);
-    if (typePtr && typePtr->ReleaseImmediately()) {
-        delete typePtr;
-        return;
-    }
     NativeRefManager::GetInstance().PostDestructorInterceptorTask([typePtr]() { delete typePtr; });
 }
 
@@ -156,6 +141,7 @@ public:
 private:
     T value_;
 };
+
 
 template<typename T>
 class JSFuncObjRef {

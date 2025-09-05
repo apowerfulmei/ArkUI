@@ -266,7 +266,18 @@ public:
         bottom_.SetColor(color, option);
     }
 
-    void SetContextAndCallback(const WeakPtr<PipelineContext>& context, const RenderNodeAnimationCallback& callback);
+    void SetContextAndCallback(const WeakPtr<PipelineContext>& context, const RenderNodeAnimationCallback& callback)
+    {
+        left_.SetContextAndCallback(context, callback);
+        top_.SetContextAndCallback(context, callback);
+        right_.SetContextAndCallback(context, callback);
+        bottom_.SetContextAndCallback(context, callback);
+
+        topLeftRadius_.SetContextAndCallback(context, callback);
+        topRightRadius_.SetContextAndCallback(context, callback);
+        bottomLeftRadius_.SetContextAndCallback(context, callback);
+        bottomRightRadius_.SetContextAndCallback(context, callback);
+    }
 
     void SetBorderImageWidth(const Dimension& width, BorderImageDirection direction)
     {

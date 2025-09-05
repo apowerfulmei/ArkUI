@@ -24,10 +24,9 @@
 #endif
 
 #include "core/pipeline/base/rosen_render_context.h"
-#include "core/pipeline/base/constants.h"
 
 namespace OHOS::Ace {
-const double RADIAN_TO_DEGREE = 180 / ACE_PI;
+constexpr double RADIAN_TO_DEGREE = 180 / M_PI;
 
 void RosenRenderTriangle::Paint(RenderContext& context, const Offset& offset)
 {

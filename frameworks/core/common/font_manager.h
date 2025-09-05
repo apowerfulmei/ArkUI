@@ -23,8 +23,6 @@
 #include "base/memory/ace_type.h"
 #include "core/common/font_change_observer.h"
 #include "core/common/font_loader.h"
-#include "core/components/common/layout/constants.h"
-#include "core/components_ng/base/frame_node.h"
 #include "core/pipeline/pipeline_base.h"
 
 namespace OHOS::Ace {
@@ -79,8 +77,6 @@ typedef struct FontConfigJsonInfo {
     FallbackGroupSet fallbackGroupSet;
 } FontConfigJsonInfo;
 
-using ExternalLoadFontPair = std::pair<std::string, std::function<void()>>;
-
 class FontManager : public virtual AceType {
     DECLARE_ACE_TYPE(FontManager, AceType);
 
@@ -104,7 +100,7 @@ public:
     const std::vector<std::string>& GetFontNames() const;
     void AddFontNode(const WeakPtr<RenderNode>& node);
     void RemoveFontNode(const WeakPtr<RenderNode>& node);
-    void SetFontFamily(const char* familyName, const std::vector<std::string>& familySrc);
+    void SetFontFamily(const char* familyName, const char* familySrc);
     void RebuildFontNode();
     void RebuildFontNodeNG();
     void UpdateFontWeightScale();
@@ -126,42 +122,6 @@ public:
     const std::string& GetAppCustomFont() const;
     void AddFontObserver(WeakPtr<FontChangeObserver> node);
     void RemoveFontChangeObserver(WeakPtr<FontChangeObserver> node);
-    std::vector<std::string> GetFontNames();
-
-    void AddHybridRenderNode(const WeakPtr<NG::UINode>& node);
-    void RemoveHybridRenderNode(const WeakPtr<NG::UINode>& node);
-    void UpdateHybridRenderNodes();
-
-    using StartAbilityOnInstallAppInStoreHandler = std::function<void(const std::string& appName)>;
-    void SetStartAbilityOnInstallAppInStoreHandler(StartAbilityOnInstallAppInStoreHandler&& listener)
-    {
-        startAbilityOnInstallAppInStoreHandler_ = std::move(listener);
-    }
-
-    using StartAbilityOnJumpBrowserHandler = std::function<void(const std::string& appName)>;
-    void SetStartAbilityOnJumpBrowserHandler(StartAbilityOnJumpBrowserHandler&& listener)
-    {
-        startAbilityOnJumpBrowserHandler_ = std::move(listener);
-    }
-
-    using OpenLinkOnMapSearchHandler = std::function<void(const std::string& address)>;
-    void SetOpenLinkOnMapSearchHandler(OpenLinkOnMapSearchHandler&& listener)
-    {
-        startOpenLinkOnMapSearchHandler_ = std::move(listener);
-    }
-
-    using StartAbilityOnCanlendarHandler = std::function<void(const std::map<std::string, std::string>& params)>;
-    void SetStartAbilityOnCalendar(StartAbilityOnCanlendarHandler&& listener)
-    {
-        startAbilityOnCalendarHandler_ = std::move(listener);
-    }
-
-    void StartAbilityOnJumpBrowser(const std::string& address) const;
-    void StartAbilityOnInstallAppInStore(const std::string& appName) const;
-    void StartAbilityOnCalendar(const std::map<std::string, std::string>& params) const;
-    void OpenLinkOnMapSearch(const std::string& address);
-
-    void OnPreviewMenuOptionClick(TextDataDetectType type, const std::string& content);
 
 protected:
     static float fontWeightScale_;
@@ -169,10 +129,6 @@ protected:
     static std::string appCustomFont_;
 
 private:
-    void FontNodeChangeStyleNG();
-    void RegisterLoadFontCallbacks();
-    void OnLoadFontChanged(const WeakPtr<PipelineBase>& context, const std::string& fontName);
-
     std::list<RefPtr<FontLoader>> fontLoaders_;
     std::vector<std::string> fontNames_;
     std::set<WeakPtr<RenderNode>> fontNodes_;
@@ -181,16 +137,6 @@ private:
     std::set<WeakPtr<RenderNode>> variationNodes_;
     std::set<WeakPtr<NG::UINode>> variationNodesNG_;
     std::set<WeakPtr<FontChangeObserver>> observers_;
-    std::map<WeakPtr<NG::UINode>, ExternalLoadFontPair> externalLoadCallbacks_;
-    bool hasRegisterLoadFontCallback_ = false;
-
-    StartAbilityOnInstallAppInStoreHandler startAbilityOnInstallAppInStoreHandler_;
-    StartAbilityOnJumpBrowserHandler startAbilityOnJumpBrowserHandler_;
-    OpenLinkOnMapSearchHandler startOpenLinkOnMapSearchHandler_;
-    StartAbilityOnCanlendarHandler startAbilityOnCalendarHandler_;
-
-    std::mutex hybridRenderNodesMutex_;
-    std::set<WeakPtr<NG::UINode>> hybridRenderNodes_;
 };
 
 } // namespace OHOS::Ace

@@ -48,32 +48,19 @@ public:
     void SetOnDidChange(std::function<void(const RichEditorChangeValue&)>&& func) override;
     void SetOnCut(std::function<void(NG::TextCommonEvent&)>&& func) override;
     void SetOnCopy(std::function<void(NG::TextCommonEvent&)>&& func) override;
-    void SetOnShare(std::function<void(NG::TextCommonEvent&)>&& func) override;
     void SetSelectionMenuOptions(const OnCreateMenuCallback&& onCreateMenuCallback,
-        const OnMenuItemClickCallback&& onMenuItemClick,
-        const OnPrepareMenuCallback&& onPrepareMenuCallback) override;
+        const OnMenuItemClickCallback&& onMenuItemClick) override;
     void SetRequestKeyboardOnFocus(bool needToRequest) override;
     void SetEnableHapticFeedback(bool isEnabled) override;
+    void SetBarState(DisplayMode mode) override;
     void SetPreviewMenuParam(TextSpanType spanType, std::function<void()>& buildFunc,
         const SelectMenuParam& menuParam) override;
-    void SetBarState(DisplayMode mode) override;
-    void SetMaxLength(std::optional<int32_t> value) override;
-    void ResetMaxLength() override;
-    void SetMaxLines(uint32_t value) override;
-    void SetEnableAutoSpacing(bool enabled) override;
-    void SetStopBackPress(bool isStopBackPress) override;
     void SetKeyboardAppearance(KeyboardAppearance value) override;
-    void SetSupportStyledUndo(bool enabled) override;
-    void SetScrollBarColor(std::optional<Color> value) override;
 
     static void SetTextDetectEnable(FrameNode* frameNode, bool value);
     static void SetTextDetectConfig(FrameNode* frameNode, const TextDetectConfig& textDetectConfig);
     static void SetOnIMEInputComplete(FrameNode* frameNode,
         std::function<void(const RichEditorAbstractSpanResult&)>&& callback);
-    static void SetOnWillChange(FrameNode* frameNode, std::function<bool(const RichEditorChangeValue&)>&& func);
-    static void SetOnDidChange(FrameNode* frameNode, std::function<void(const RichEditorChangeValue&)>&& func);
-    static void SetPlaceholder(FrameNode* frameNode, PlaceholderOptions& options);
-    static void SetAboutToDelete(FrameNode* frameNode, std::function<bool(const RichEditorDeleteValue&)>&& func);
     static void SetOnDidIMEInput(FrameNode* frameNode, std::function<void(const TextRange&)>&& callback);
     static void SetCopyOption(FrameNode* frameNode, CopyOptions& copyOptions);
     static void SetOnSelectionChange(FrameNode* frameNode, std::function<void(const BaseEventInfo*)>&& callback);
@@ -92,21 +79,9 @@ public:
     static void SetOnSubmit(FrameNode* frameNode, std::function<void(int32_t, NG::TextFieldCommonEvent&)>&& callback);
     static void SetAboutToIMEInput(FrameNode* frameNode, std::function<bool(const RichEditorInsertValue&)>&& callback);
     static void SetRequestKeyboardOnFocus(FrameNode* frameNode, bool needToRequest);
-    static void SetSupportPreviewText(FrameNode* frameNode, bool value);
-    static void SetSelectionMenuOptions(FrameNode* frameNode,
-        const OnCreateMenuCallback&& onCreateMenuCallback, const OnMenuItemClickCallback&& onMenuItemClick,
-        const OnPrepareMenuCallback&& onPrepareMenuCallback);
     static void SetPreviewMenuParam(FrameNode* frameNode,
         TextSpanType spanType, std::function<void()>& buildFunc, const SelectMenuParam& menuParam);
-    static void SetBarState(FrameNode* frameNode, DisplayMode mode);
-    static void SetMaxLength(FrameNode* frameNode, std::optional<int32_t> value);
-    static void SetMaxLines(FrameNode* frameNode, uint32_t value);
-    static void SetEnableAutoSpacing(FrameNode* frameNode, bool enabled);
-    static void SetStopBackPress(FrameNode* frameNode, bool isStopBackPress);
     static void SetKeyboardAppearance(FrameNode* frameNode, KeyboardAppearance value);
-    static void SetEnableHapticFeedback(FrameNode* frameNode, bool isEnabled);
-    static void SetSupportStyledUndo(FrameNode* frameNode, bool enabled);
-    static void SetScrollBarColor(FrameNode* frameNode, std::optional<Color> value);
 
 private:
     void SetDraggable(bool draggable);

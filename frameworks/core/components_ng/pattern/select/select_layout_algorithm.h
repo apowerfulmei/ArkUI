@@ -33,15 +33,11 @@ public:
 
 private:
     SizeF MeasureAndGetSize(const RefPtr<LayoutWrapper>& childLayoutWrapper, const LayoutConstraintF& constraint);
-    SizeF MeasureSelectText(
-        RefPtr<LayoutWrapper> textWrapper, const LayoutConstraintF& childConstraint, std::optional<float> maxWidth);
     void MeasureAndGetTextSize(double fontSize, SizeF& textSize, bool& isTextMin);
     float MeasureAndGetDefaultHeight(RefPtr<LayoutProperty> layoutProps, RefPtr<SelectTheme> theme);
     void NeedAgingUpdateParams(LayoutWrapper* layoutWrapper);
     void UpdateOptionsMaxLines(const std::vector<RefPtr<FrameNode>>& options, int32_t maxLines);
     void UpdateMargin(LayoutWrapper* layoutWrapper, RefPtr<SelectTheme> theme);
-    void RemoveParentRestrictionsForFixIdeal(
-        const RefPtr<LayoutProperty> layoutProperty, LayoutConstraintF& childConstraint);
     float fontScale_ = 0.0f;
 
     ACE_DISALLOW_COPY_AND_MOVE(SelectLayoutAlgorithm);

@@ -21,20 +21,27 @@
 #include "frameworks/bridge/declarative_frontend/jsview/models/row_model_impl.h"
 
 namespace OHOS::Ace {
+
+std::unique_ptr<RowModel> RowModel::instance_ = nullptr;
+std::mutex RowModel::mutex_;
+
 RowModel* RowModel::GetInstance()
 {
+    if (!instance_) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (!instance_) {
 #ifdef NG_BUILD
-    static NG::RowModelNG instance;
-    return &instance;
+            instance_.reset(new NG::RowModelNG());
 #else
-    if (Container::IsCurrentUseNewPipeline()) {
-        static NG::RowModelNG instance;
-        return &instance;
-    } else {
-        static Framework::RowModelImpl instance;
-        return &instance;
-    }
+            if (Container::IsCurrentUseNewPipeline()) {
+                instance_.reset(new NG::RowModelNG());
+            } else {
+                instance_.reset(new Framework::RowModelImpl());
+            }
 #endif
+        }
+    }
+    return instance_.get();
 }
 } // namespace OHOS::Ace
 
@@ -43,12 +50,11 @@ namespace OHOS::Ace::Framework {
 void JSRow::Create(const JSCallbackInfo& info)
 {
     std::optional<CalcDimension> space;
-    RefPtr<ResourceObject> spaceResObj;
     if (info.Length() > 0 && info[0]->IsObject()) {
         JSRef<JSObject> obj = JSRef<JSObject>::Cast(info[0]);
         JSRef<JSVal> spaceVal = obj->GetProperty("space");
         CalcDimension value;
-        if (ParseJsDimensionVp(spaceVal, value, spaceResObj)) {
+        if (ParseJsDimensionVp(spaceVal, value)) {
             space = value;
         } else if (Container::GreatOrEqualAPIVersion(PlatformVersion::VERSION_TEN)) {
             space = Dimension();
@@ -63,11 +69,7 @@ void JSRow::Create(const JSCallbackInfo& info)
         }
     }
 
-    if (SystemProperties::ConfigChangePerform() && spaceResObj) {
-        RowModel::GetInstance()->Create(spaceResObj, declaration, "");
-    } else {
-        RowModel::GetInstance()->Create(space, declaration, "");
-    }
+    RowModel::GetInstance()->Create(space, declaration, "");
 }
 
 void JSRow::CreateWithWrap(const JSCallbackInfo& info)

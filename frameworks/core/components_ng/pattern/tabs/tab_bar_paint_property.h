@@ -26,7 +26,7 @@
 namespace OHOS::Ace::NG {
 
 class TabBarPaintProperty : public PaintProperty {
-    DECLARE_ACE_TYPE(TabBarPaintProperty, PaintProperty);
+    DECLARE_ACE_TYPE(TabBarPaintProperty, PaintProperty)
 
 public:
     TabBarPaintProperty() = default;
@@ -38,6 +38,7 @@ public:
         paintProperty->PaintProperty::UpdatePaintProperty(DynamicCast<PaintProperty>(this));
         paintProperty->propIndicator_ = CloneIndicator();
         paintProperty->propFadingEdge_ = CloneFadingEdge();
+        paintProperty->propTabBarBlurStyle_ = CloneTabBarBlurStyle();
         return paintProperty;
     }
 
@@ -66,6 +67,7 @@ public:
     /* Need to render when indicator has animation */
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(Indicator, int32_t, PROPERTY_UPDATE_RENDER);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(FadingEdge, bool, PROPERTY_UPDATE_RENDER);
+    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(TabBarBlurStyle, BlurStyle, PROPERTY_UPDATE_RENDER);
 };
 
 } // namespace OHOS::Ace::NG

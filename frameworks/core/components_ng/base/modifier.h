@@ -98,7 +98,6 @@ public:
     DrawModifierFunc drawBehindFunc;
     DrawModifierFunc drawContentFunc;
     DrawModifierFunc drawFrontFunc;
-    DrawModifierFunc drawForegroundFunc;
 };
 
 template<typename T>
@@ -190,17 +189,13 @@ DECLARE_PROP_TYPED_CLASS(PropertyOffsetF, NormalProperty, OffsetF);
 DECLARE_PROP_TYPED_CLASS(PropertyInt, NormalProperty, int32_t);
 DECLARE_PROP_TYPED_CLASS(PropertyFloat, NormalProperty, float);
 DECLARE_PROP_TYPED_CLASS(PropertyString, NormalProperty, std::string);
-DECLARE_PROP_TYPED_CLASS(PropertyU16String, NormalProperty, std::u16string);
 DECLARE_PROP_TYPED_CLASS(PropertyColor, NormalProperty, Color);
 DECLARE_PROP_TYPED_CLASS(PropertyRectF, NormalProperty, RectF);
-DECLARE_PROP_TYPED_CLASS(PropertyVectorFloat, NormalProperty, LinearVector<float>);
-DECLARE_PROP_TYPED_CLASS(PropertyCanvasImageModifierWrapper, NormalProperty, CanvasImageModifierWrapper);
 DECLARE_PROP_TYPED_CLASS(AnimatablePropertyFloat, AnimatableProperty, float);
 DECLARE_PROP_TYPED_CLASS(AnimatablePropertyUint8, AnimatableProperty, uint8_t);
 DECLARE_PROP_TYPED_CLASS(AnimatablePropertyColor, AnimatableProperty, LinearColor);
 DECLARE_PROP_TYPED_CLASS(AnimatablePropertyVectorFloat, AnimatableProperty, LinearVector<float>);
 DECLARE_PROP_TYPED_CLASS(AnimatablePropertyVectorColor, AnimatableProperty, GradientArithmetic);
-DECLARE_PROP_TYPED_CLASS(AnimatablePropertyVectorLinearVector, AnimatableProperty, LinearVector<LinearColor>);
 DECLARE_PROP_TYPED_CLASS(AnimatablePropertyOffsetF, AnimatableProperty, OffsetF);
 DECLARE_PROP_TYPED_CLASS(AnimatablePropertySizeF, AnimatableProperty, SizeF);
 DECLARE_PROP_TYPED_CLASS(AnimatableArithmeticProperty, AnimatableProperty, RefPtr<CustomAnimatableArithmetic>);
@@ -434,28 +429,13 @@ public:
         }
         return {};
     }
-
-    T GetStagingValue() const
-    {
-        auto property = AceType::DynamicCast<S>(GetProperty());
-        if (property) {
-            return property->GetStagingValue();
-        }
-        return {};
-    }
-
     void AnimateWithVelocity(const AnimationOption& option, T value, T velocity,
         const FinishCallback& finishCallback);
 private:
     ACE_DISALLOW_COPY_AND_MOVE(NodeAnimatableProperty);
 };
 
-// Explicit instantiation declarations
-extern template class NodeAnimatableProperty<float, AnimatablePropertyFloat>;
-extern template class NodeAnimatableProperty<OffsetF, AnimatablePropertyOffsetF>;
-
 using NodeAnimatablePropertyFloat = NodeAnimatableProperty<float, AnimatablePropertyFloat>;
-using NodeAnimatablePropertyOffsetF = NodeAnimatableProperty<OffsetF, AnimatablePropertyOffsetF>;
 using NodeAnimatableArithmeticProperty =
     NodeAnimatableProperty<RefPtr<CustomAnimatableArithmetic>, AnimatableArithmeticProperty>;
 } // namespace OHOS::Ace::NG

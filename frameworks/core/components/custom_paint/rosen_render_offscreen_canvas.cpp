@@ -16,9 +16,14 @@
 #include "core/components/custom_paint/rosen_render_offscreen_canvas.h"
 
 
+#ifndef USE_GRAPHIC_TEXT_GINE
+#include "txt/paragraph_builder.h"
+#include "txt/paragraph_style.h"
+#else
 #include "rosen_text/typography_create.h"
 #include "rosen_text/typography_style.h"
 #include "unicode/ubidi.h"
+#endif
 #ifndef USE_ROSEN_DRAWING
 #include "include/core/SkBlendMode.h"
 #include "include/core/SkColor.h"
@@ -30,11 +35,7 @@
 #include "include/encode/SkJpegEncoder.h"
 #include "include/encode/SkPngEncoder.h"
 #include "include/encode/SkWebpEncoder.h"
-#ifdef USE_NEW_SKIA
-#include "src/base/SkBase64.h"
-#else
 #include "include/utils/SkBase64.h"
-#endif
 
 #include "base/i18n/localization.h"
 #include "core/components/common/painter/rosen_decoration_painter.h"
@@ -43,7 +44,6 @@
 #ifdef USE_ROSEN_DRAWING
 #include "core/components_ng/render/drawing.h"
 #endif
-#include "core/pipeline/base/constants.h"
 
 namespace OHOS::Ace {
 namespace {
@@ -1043,11 +1043,7 @@ std::string RosenRenderOffscreenCanvas::ToDataURL(const std::string& type, const
         return UNSUPPORTED;
     }
     SkString info(len);
-#ifdef USE_NEW_SKIA
-    SkBase64::Encode(result->data(), result->size(), info.data());
-#else
     SkBase64::Encode(result->data(), result->size(), info.writable_str());
-#endif
     return std::string(URL_PREFIX).append(mimeType).append(URL_SYMBOL).append(info.c_str());
 }
 
@@ -1252,8 +1248,8 @@ void RosenRenderOffscreenCanvas::Arc(const ArcParam& param)
     double top = param.y - param.radius;
     double right = param.x + param.radius;
     double bottom = param.y + param.radius;
-    double startAngle = param.startAngle * HALF_CIRCLE_ANGLE / ACE_PI;
-    double endAngle = param.endAngle * HALF_CIRCLE_ANGLE / ACE_PI;
+    double startAngle = param.startAngle * HALF_CIRCLE_ANGLE / M_PI;
+    double endAngle = param.endAngle * HALF_CIRCLE_ANGLE / M_PI;
     double sweepAngle = endAngle - startAngle;
     if (param.anticlockwise) {
         sweepAngle =
@@ -1588,8 +1584,8 @@ void RosenRenderOffscreenCanvas::Path2DArc(const PathArgs& args)
     double r = args.para3;
 #ifndef USE_ROSEN_DRAWING
     auto rect = SkRect::MakeLTRB(x - r, y - r, x + r, y + r);
-    double startAngle = args.para4 * HALF_CIRCLE_ANGLE / ACE_PI;
-    double endAngle = args.para5 * HALF_CIRCLE_ANGLE / ACE_PI;
+    double startAngle = args.para4 * HALF_CIRCLE_ANGLE / M_PI;
+    double endAngle = args.para5 * HALF_CIRCLE_ANGLE / M_PI;
     double sweepAngle = endAngle - startAngle;
     if (!NearZero(args.para6)) {
         sweepAngle =
@@ -1611,8 +1607,8 @@ void RosenRenderOffscreenCanvas::Path2DArc(const PathArgs& args)
 #else
     RSPoint point1(x - r, y - r);
     RSPoint point2(x + r, y + r);
-    double startAngle = args.para4 * HALF_CIRCLE_ANGLE / ACE_PI;
-    double endAngle = args.para5 * HALF_CIRCLE_ANGLE / ACE_PI;
+    double startAngle = args.para4 * HALF_CIRCLE_ANGLE / M_PI;
+    double endAngle = args.para5 * HALF_CIRCLE_ANGLE / M_PI;
     double sweepAngle = endAngle - startAngle;
     if (!NearZero(args.para6)) {
         sweepAngle =
@@ -1686,12 +1682,12 @@ void RosenRenderOffscreenCanvas::Path2DEllipse(const PathArgs& args)
     double y = args.para2;
     double rx = args.para3;
     double ry = args.para4;
-    double rotation = args.para5 * HALF_CIRCLE_ANGLE / ACE_PI;
-    double startAngle = std::fmod(args.para6, ACE_PI * 2.0);
-    double endAngle = std::fmod(args.para7, ACE_PI * 2.0);
+    double rotation = args.para5 * HALF_CIRCLE_ANGLE / M_PI;
+    double startAngle = std::fmod(args.para6, M_PI * 2.0);
+    double endAngle = std::fmod(args.para7, M_PI * 2.0);
     bool anticlockwise = NearZero(args.para8) ? false : true;
-    startAngle = (startAngle < 0.0 ? startAngle + ACE_PI * 2.0 : startAngle) * HALF_CIRCLE_ANGLE / ACE_PI;
-    endAngle = (endAngle < 0.0 ? endAngle + ACE_PI * 2.0 : endAngle) * HALF_CIRCLE_ANGLE / ACE_PI;
+    startAngle = (startAngle < 0.0 ? startAngle + M_PI * 2.0 : startAngle) * HALF_CIRCLE_ANGLE / M_PI;
+    endAngle = (endAngle < 0.0 ? endAngle + M_PI * 2.0 : endAngle) * HALF_CIRCLE_ANGLE / M_PI;
     double sweepAngle = endAngle - startAngle;
     if (anticlockwise) {
         if (sweepAngle > 0.0) { // Make sure the sweepAngle is negative when anticlockwise.
@@ -1952,9 +1948,9 @@ void RosenRenderOffscreenCanvas::ClosePath()
 void RosenRenderOffscreenCanvas::Rotate(double angle)
 {
 #ifndef USE_ROSEN_DRAWING
-    skCanvas_->rotate(angle * 180 / ACE_PI);
+    skCanvas_->rotate(angle * 180 / M_PI);
 #else
-    canvas_->Rotate(angle * 180 / ACE_PI);
+    canvas_->Rotate(angle * 180 / M_PI);
 #endif
 }
 void RosenRenderOffscreenCanvas::Scale(double x, double y)
@@ -1992,9 +1988,15 @@ void RosenRenderOffscreenCanvas::StrokeText(const std::string& text, double x, d
 double RosenRenderOffscreenCanvas::MeasureText(const std::string& text, const PaintState& state)
 {
     using namespace Constants;
+#ifndef USE_GRAPHIC_TEXT_GINE
+    txt::ParagraphStyle style;
+    style.text_align = ConvertTxtTextAlign(state.GetTextAlign());
+    style.text_direction = ConvertTxtTextDirection(state.GetOffTextDirection());
+#else
     Rosen::TypographyStyle style;
     style.textAlign = ConvertTxtTextAlign(state.GetTextAlign());
     style.textDirection = ConvertTxtTextDirection(state.GetOffTextDirection());
+#endif
 #ifndef USE_ROSEN_DRAWING
 
     auto fontCollection = RosenFontCollection::GetInstance().GetFontCollection();
@@ -2005,6 +2007,15 @@ double RosenRenderOffscreenCanvas::MeasureText(const std::string& text, const Pa
         LOGW("MeasureText: fontCollection is null");
         return 0.0;
     }
+#ifndef USE_GRAPHIC_TEXT_GINE
+    std::unique_ptr<txt::ParagraphBuilder> builder = txt::ParagraphBuilder::CreateTxtBuilder(style, fontCollection);
+    txt::TextStyle txtStyle;
+    ConvertTxtStyle(state.GetTextStyle(), pipelineContext_, txtStyle);
+    txtStyle.font_size = state.GetTextStyle().GetFontSize().Value();
+    builder->PushStyle(txtStyle);
+    builder->AddText(StringUtils::Str8ToStr16(text));
+    auto paragraph = builder->Build();
+#else
     std::unique_ptr<Rosen::TypographyCreate> builder = Rosen::TypographyCreate::Create(style, fontCollection);
     Rosen::TextStyle txtStyle;
     ConvertTxtStyle(state.GetTextStyle(), pipelineContext_, txtStyle);
@@ -2012,6 +2023,7 @@ double RosenRenderOffscreenCanvas::MeasureText(const std::string& text, const Pa
     builder->PushStyle(txtStyle);
     builder->AppendText(StringUtils::Str8ToStr16(text));
     auto paragraph = builder->CreateTypography();
+#endif
     paragraph->Layout(Size::INFINITE_SIZE);
     return paragraph->GetMaxIntrinsicWidth();
 }
@@ -2019,9 +2031,15 @@ double RosenRenderOffscreenCanvas::MeasureText(const std::string& text, const Pa
 double RosenRenderOffscreenCanvas::MeasureTextHeight(const std::string& text, const PaintState& state)
 {
     using namespace Constants;
+#ifndef USE_GRAPHIC_TEXT_GINE
+    txt::ParagraphStyle style;
+    style.text_align = ConvertTxtTextAlign(state.GetTextAlign());
+    style.text_direction = ConvertTxtTextDirection(state.GetOffTextDirection());
+#else
     Rosen::TypographyStyle style;
     style.textAlign = ConvertTxtTextAlign(state.GetTextAlign());
     style.textDirection = ConvertTxtTextDirection(state.GetOffTextDirection());
+#endif
 #ifndef USE_ROSEN_DRAWING
 
     auto fontCollection = RosenFontCollection::GetInstance().GetFontCollection();
@@ -2032,6 +2050,15 @@ double RosenRenderOffscreenCanvas::MeasureTextHeight(const std::string& text, co
         LOGW("MeasureText: fontCollection is null");
         return 0.0;
     }
+#ifndef USE_GRAPHIC_TEXT_GINE
+    std::unique_ptr<txt::ParagraphBuilder> builder = txt::ParagraphBuilder::CreateTxtBuilder(style, fontCollection);
+    txt::TextStyle txtStyle;
+    ConvertTxtStyle(state.GetTextStyle(), pipelineContext_, txtStyle);
+    txtStyle.font_size = state.GetTextStyle().GetFontSize().Value();
+    builder->PushStyle(txtStyle);
+    builder->AddText(StringUtils::Str8ToStr16(text));
+    auto paragraph = builder->Build();
+#else
     std::unique_ptr<Rosen::TypographyCreate> builder = Rosen::TypographyCreate::Create(style, fontCollection);
     Rosen::TextStyle txtStyle;
     ConvertTxtStyle(state.GetTextStyle(), pipelineContext_, txtStyle);
@@ -2039,6 +2066,7 @@ double RosenRenderOffscreenCanvas::MeasureTextHeight(const std::string& text, co
     builder->PushStyle(txtStyle);
     builder->AppendText(StringUtils::Str8ToStr16(text));
     auto paragraph = builder->CreateTypography();
+#endif
     paragraph->Layout(Size::INFINITE_SIZE);
     return paragraph->GetHeight();
 }
@@ -2046,9 +2074,15 @@ double RosenRenderOffscreenCanvas::MeasureTextHeight(const std::string& text, co
 TextMetrics RosenRenderOffscreenCanvas::MeasureTextMetrics(const std::string& text, const PaintState& state)
 {
     using namespace Constants;
+#ifndef USE_GRAPHIC_TEXT_GINE
+    txt::ParagraphStyle style;
+    style.text_align = ConvertTxtTextAlign(state.GetTextAlign());
+    style.text_direction = ConvertTxtTextDirection(state.GetOffTextDirection());
+#else
     Rosen::TypographyStyle style;
     style.textAlign = ConvertTxtTextAlign(state.GetTextAlign());
     style.textDirection = ConvertTxtTextDirection(state.GetOffTextDirection());
+#endif
 #ifndef USE_ROSEN_DRAWING
 
     auto fontCollection = RosenFontCollection::GetInstance().GetFontCollection();
@@ -2059,6 +2093,15 @@ TextMetrics RosenRenderOffscreenCanvas::MeasureTextMetrics(const std::string& te
         LOGW("MeasureText: fontCollection is null");
         return { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 };
     }
+#ifndef USE_GRAPHIC_TEXT_GINE
+    std::unique_ptr<txt::ParagraphBuilder> builder = txt::ParagraphBuilder::CreateTxtBuilder(style, fontCollection);
+    txt::TextStyle txtStyle;
+    ConvertTxtStyle(state.GetTextStyle(), pipelineContext_, txtStyle);
+    txtStyle.font_size = state.GetTextStyle().GetFontSize().Value();
+    builder->PushStyle(txtStyle);
+    builder->AddText(StringUtils::Str8ToStr16(text));
+    auto paragraph = builder->Build();
+#else
     std::unique_ptr<Rosen::TypographyCreate> builder = Rosen::TypographyCreate::Create(style, fontCollection);
     Rosen::TextStyle txtStyle;
     ConvertTxtStyle(state.GetTextStyle(), pipelineContext_, txtStyle);
@@ -2066,6 +2109,7 @@ TextMetrics RosenRenderOffscreenCanvas::MeasureTextMetrics(const std::string& te
     builder->PushStyle(txtStyle);
     builder->AppendText(StringUtils::Str8ToStr16(text));
     auto paragraph = builder->CreateTypography();
+#endif
     paragraph->Layout(Size::INFINITE_SIZE);
 
     auto textAlign = state.GetTextAlign();
@@ -2116,8 +2160,13 @@ void RosenRenderOffscreenCanvas::PaintText(const std::string& text, double x, do
 #endif
 }
 
+#ifndef USE_GRAPHIC_TEXT_GINE
+double RosenRenderOffscreenCanvas::GetAlignOffset(
+    const std::string& text, TextAlign align, std::unique_ptr<txt::Paragraph>& paragraph)
+#else
 double RosenRenderOffscreenCanvas::GetAlignOffset(
     const std::string& text, TextAlign align, std::unique_ptr<Rosen::Typography>& paragraph)
+#endif
 {
     double x = 0.0;
     switch (align) {
@@ -2174,13 +2223,29 @@ bool RosenRenderOffscreenCanvas::UpdateOffParagraph(
     const std::string& text, bool isStroke, const PaintState& state, bool hasShadow)
 {
     using namespace Constants;
+#ifndef USE_GRAPHIC_TEXT_GINE
+    txt::ParagraphStyle style;
+#else
     Rosen::TypographyStyle style;
+#endif
     if (isStroke) {
+#ifndef USE_GRAPHIC_TEXT_GINE
+        style.text_align = ConvertTxtTextAlign(strokeState_.GetTextAlign());
+#else
         style.textAlign = ConvertTxtTextAlign(strokeState_.GetTextAlign());
+#endif
     } else {
+#ifndef USE_GRAPHIC_TEXT_GINE
+        style.text_align = ConvertTxtTextAlign(fillState_.GetTextAlign());
+#else
         style.textAlign = ConvertTxtTextAlign(fillState_.GetTextAlign());
+#endif
     }
+#ifndef USE_GRAPHIC_TEXT_GINE
+    style.text_direction = ConvertTxtTextDirection(state.GetOffTextDirection());
+#else
     style.textDirection = ConvertTxtTextDirection(state.GetOffTextDirection());
+#endif
 #ifndef USE_ROSEN_DRAWING
 
     auto fontCollection = RosenFontCollection::GetInstance().GetFontCollection();
@@ -2190,54 +2255,104 @@ bool RosenRenderOffscreenCanvas::UpdateOffParagraph(
     if (!fontCollection) {
         return false;
     }
+#ifndef USE_GRAPHIC_TEXT_GINE
+    std::unique_ptr<txt::ParagraphBuilder> builder = txt::ParagraphBuilder::CreateTxtBuilder(style, fontCollection);
+    txt::TextStyle txtStyle;
+#else
     std::unique_ptr<Rosen::TypographyCreate> builder = Rosen::TypographyCreate::Create(style, fontCollection);
     Rosen::TextStyle txtStyle;
+#endif
     if (!isStroke && hasShadow) {
+#ifndef USE_GRAPHIC_TEXT_GINE
+        txt::TextShadow txtShadow;
+#else
         Rosen::TextShadow txtShadow;
+#endif
         txtShadow.color = shadow_.GetColor().GetValue();
+#ifndef USE_GRAPHIC_TEXT_GINE
+#ifndef USE_ROSEN_DRAWING
+        txtShadow.offset.fX = shadow_.GetOffset().GetX();
+        txtShadow.offset.fY = shadow_.GetOffset().GetY();
+#else
+        txtShadow.offset.SetX(shadow_.GetOffset().GetX());
+        txtShadow.offset.SetY(shadow_.GetOffset().GetY());
+#endif
+        txtShadow.blur_sigma = shadow_.GetBlurRadius();
+        txtStyle.text_shadows.emplace_back(txtShadow);
+#else
         txtShadow.offset.SetX(shadow_.GetOffset().GetX());
         txtShadow.offset.SetY(shadow_.GetOffset().GetY());
         txtShadow.blurRadius = shadow_.GetBlurRadius();
         txtStyle.shadows.emplace_back(txtShadow);
+#endif
     }
     txtStyle.locale = Localization::GetInstance()->GetFontLocale();
     UpdateTextStyleForeground(isStroke, txtStyle, hasShadow);
     builder->PushStyle(txtStyle);
+#ifndef USE_GRAPHIC_TEXT_GINE
+    builder->AddText(StringUtils::Str8ToStr16(text));
+    paragraph_ = builder->Build();
+#else
     builder->AppendText(StringUtils::Str8ToStr16(text));
     paragraph_ = builder->CreateTypography();
+#endif
     return true;
 }
 
+#ifndef USE_GRAPHIC_TEXT_GINE
+void RosenRenderOffscreenCanvas::UpdateTextStyleForeground(bool isStroke, txt::TextStyle& txtStyle, bool hasShadow)
+#else
 void RosenRenderOffscreenCanvas::UpdateTextStyleForeground(bool isStroke, Rosen::TextStyle& txtStyle, bool hasShadow)
+#endif
 {
     using namespace Constants;
 #ifndef USE_ROSEN_DRAWING
     if (!isStroke) {
         txtStyle.color = ConvertSkColor(fillState_.GetColor());
+#ifndef USE_GRAPHIC_TEXT_GINE
+        txtStyle.font_size = fillState_.GetTextStyle().GetFontSize().Value();
+#else
         txtStyle.fontSize = fillState_.GetTextStyle().GetFontSize().Value();
+#endif
         ConvertTxtStyle(fillState_.GetTextStyle(), pipelineContext_, txtStyle);
         if (fillState_.GetGradient().IsValid()) {
             SkPaint paint;
             paint.setStyle(SkPaint::Style::kFill_Style);
             UpdatePaintShader(paint, fillState_.GetGradient());
             txtStyle.foreground = paint;
+#ifndef USE_GRAPHIC_TEXT_GINE
+            txtStyle.has_foreground = true;
+#endif
         }
         if (globalState_.HasGlobalAlpha()) {
+#ifndef USE_GRAPHIC_TEXT_GINE
+            if (txtStyle.has_foreground) {
+                txtStyle.foreground.setColor(fillState_.GetColor().GetValue());
+                txtStyle.foreground.setAlphaf(globalState_.GetAlpha()); // set alpha after color
+#else
             if (txtStyle.foreground.has_value()) {
                 txtStyle.foreground->setColor(fillState_.GetColor().GetValue());
                 txtStyle.foreground->setAlphaf(globalState_.GetAlpha()); // set alpha after color
+#endif
             } else {
                 SkPaint paint;
                 paint.setColor(fillState_.GetColor().GetValue());
                 paint.setAlphaf(globalState_.GetAlpha()); // set alpha after color
                 txtStyle.foreground = paint;
+#ifndef USE_GRAPHIC_TEXT_GINE
+                txtStyle.has_foreground = true;
+#endif
             }
         }
     } else {
         // use foreground to draw stroke
         SkPaint paint = GetStrokePaint();
         ConvertTxtStyle(strokeState_.GetTextStyle(), pipelineContext_, txtStyle);
+#ifndef USE_GRAPHIC_TEXT_GINE
+        txtStyle.font_size = strokeState_.GetTextStyle().GetFontSize().Value();
+#else
         txtStyle.fontSize = strokeState_.GetTextStyle().GetFontSize().Value();
+#endif
         if (strokeState_.GetGradient().IsValid()) {
             UpdatePaintShader(paint, strokeState_.GetGradient());
         }
@@ -2248,14 +2363,21 @@ void RosenRenderOffscreenCanvas::UpdateTextStyleForeground(bool isStroke, Rosen:
                 RosenDecorationPainter::ConvertRadiusToSigma(shadow_.GetBlurRadius())));
         }
         txtStyle.foreground = paint;
+#ifndef USE_GRAPHIC_TEXT_GINE
+        txtStyle.has_foreground = true;
+#endif
     }
 #else
     LOGE("Drawing is not supported");
 #endif
 }
 
+#ifndef USE_GRAPHIC_TEXT_GINE
+double RosenRenderOffscreenCanvas::GetBaselineOffset(TextBaseline baseline, std::unique_ptr<txt::Paragraph>& paragraph)
+#else
 double RosenRenderOffscreenCanvas::GetBaselineOffset(
     TextBaseline baseline, std::unique_ptr<Rosen::Typography>& paragraph)
+#endif
 {
     double y = 0.0;
     switch (baseline) {
@@ -2315,14 +2437,14 @@ void RosenRenderOffscreenCanvas::QuadraticCurveTo(const QuadraticCurveParam& par
 void RosenRenderOffscreenCanvas::Ellipse(const EllipseParam& param)
 {
     // Init the start and end angle, then calculated the sweepAngle.
-    double startAngle = std::fmod(param.startAngle, ACE_PI * 2.0);
-    double endAngle = std::fmod(param.endAngle, ACE_PI * 2.0);
-    startAngle = (startAngle < 0.0 ? startAngle + ACE_PI * 2.0 : startAngle) * HALF_CIRCLE_ANGLE / ACE_PI;
-    endAngle = (endAngle < 0.0 ? endAngle + ACE_PI * 2.0 : endAngle) * HALF_CIRCLE_ANGLE / ACE_PI;
+    double startAngle = std::fmod(param.startAngle, M_PI * 2.0);
+    double endAngle = std::fmod(param.endAngle, M_PI * 2.0);
+    startAngle = (startAngle < 0.0 ? startAngle + M_PI * 2.0 : startAngle) * HALF_CIRCLE_ANGLE / M_PI;
+    endAngle = (endAngle < 0.0 ? endAngle + M_PI * 2.0 : endAngle) * HALF_CIRCLE_ANGLE / M_PI;
     if (NearEqual(param.startAngle, param.endAngle)) {
         return; // Just return when startAngle is same as endAngle.
     }
-    double rotation = param.rotation * HALF_CIRCLE_ANGLE / ACE_PI;
+    double rotation = param.rotation * HALF_CIRCLE_ANGLE / M_PI;
     double sweepAngle = endAngle - startAngle;
     if (param.anticlockwise) {
         if (sweepAngle > 0.0) { // Make sure the sweepAngle is negative when anticlockwise.

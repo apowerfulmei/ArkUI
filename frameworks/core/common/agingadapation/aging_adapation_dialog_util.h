@@ -27,23 +27,15 @@ namespace OHOS::Ace::NG {
 
 class AgingAdapationDialogUtil {
 public:
-    static RefPtr<FrameNode> ShowLongPressDialog(
-        const std::string& message, const RefPtr<FrameNode>& iconNode, bool isWithDialogTheme = false);
-    static RefPtr<FrameNode> ShowLongPressDialog(
-        const std::u16string& message, const RefPtr<FrameNode>& iconNode, bool isWithDialogTheme = false);
-    static RefPtr<FrameNode> ShowLongPressDialog(
-        const std::string& message, ImageSourceInfo& imageSourceInfo, int32_t themeScopeId = 0);
-    static RefPtr<FrameNode> ShowLongPressDialog(
-        const std::u16string& message, ImageSourceInfo& imageSourceInfo, int32_t themeScopeId = 0);
-    static RefPtr<FrameNode> ShowLongPressDialog(const std::u16string& message);
+    static RefPtr<FrameNode> ShowLongPressDialog(const std::string& message, ImageSourceInfo& imageSourceInfo);
+    static RefPtr<FrameNode> ShowLongPressDialog(const std::string& message, const RefPtr<FrameNode>& iconNode);
     static float GetDialogBigFontSizeScale();
     static float GetDialogLargeFontSizeScale();
     static float GetDialogMaxFontSizeScale();
 
 private:
-    static void CreateDialogTextNode(
-        const RefPtr<FrameNode>& columnNode, const std::u16string& message, int32_t themeScopeId);
-    static RefPtr<FrameNode> CreateCustomDialog(const RefPtr<FrameNode>& columnNode, int32_t themeScopeId);
+    static void CreateDialogTextNode(const RefPtr<FrameNode>& columnNode, const std::string& message);
+    static RefPtr<FrameNode> CreateCustomDialog(const RefPtr<FrameNode>& columnNode);
 };
 
 } // namespace OHOS::Ace::NG

@@ -16,9 +16,10 @@
 #include "bridge/declarative_frontend/jsview/models/navigation_model_impl.h"
 
 #include "bridge/declarative_frontend/view_stack_processor.h"
+#include "core/components/navigation_bar/navigation_container_component.h"
 
 namespace OHOS::Ace::Framework {
-void NavigationModelImpl::Create(bool useHomeDestination)
+void NavigationModelImpl::Create()
 {
     auto navigationContainer = AceType::MakeRefPtr<NavigationContainerComponent>();
     ViewStackProcessor::GetInstance()->Push(navigationContainer);
@@ -103,44 +104,7 @@ void NavigationModelImpl::SetHideNavBar(bool hideNavBar)
 
 void NavigationModelImpl::SetBackButtonIcon(const std::function<void(WeakPtr<NG::FrameNode>)>& symbolApply,
     const std::string& src, const NG::ImageOption& imageOption, RefPtr<PixelMap>& pixMap,
-    const std::vector<std::string>& nameList, bool userDefinedAccessibilityText,
-    const std::string& backButtonAccessibilityText)
-{
-    return;
-}
-
-void NavigationModelImpl::SetBackButtonIcon(const std::function<void(WeakPtr<NG::FrameNode>)>& symbolApply,
-    const RefPtr<ResourceObject>& resObj, const NG::ImageOption& imageOption, RefPtr<PixelMap>& pixMap,
-    const std::vector<std::string>& nameList, bool userDefinedAccessibilityText,
-    const std::string& backButtonAccessibilityText)
-{
-    return;
-}
-
-void NavigationModelImpl::SetBackButtonIconTextRes(const std::function<void(WeakPtr<NG::FrameNode>)>& symbolApply,
-    const std::string& src, const NG::ImageOption& imageOption, RefPtr<PixelMap>& pixMap,
-    const std::vector<std::string>& nameList, bool userDefinedAccessibilityText, const RefPtr<ResourceObject>& resObj)
-{
-    return;
-}
-
-void NavigationModelImpl::SetBackButtonIconSrcAndTextRes(
-    const std::function<void(WeakPtr<NG::FrameNode>)>& symbolApply,
-    const RefPtr<ResourceObject>& backButtonResObj, const NG::ImageOption& imageOption, RefPtr<PixelMap>& pixMap,
-    const std::vector<std::string>& nameList, bool userDefinedAccessibilityText,
-    const RefPtr<ResourceObject>& backButtonTextResObj)
-{
-    return;
-}
-
-void NavigationModelImpl::UpdateBackButtonIcon(const std::vector<std::string>& nameList,
-    NG::FrameNode* frameNode, const RefPtr<ResourceObject>& backButtonIconResObj)
-{
-    return;
-}
-
-void NavigationModelImpl::UpdateBackButtonIconText(bool userDefinedAccessibilityText,
-    const RefPtr<NG::TitleBarNode>& titleBarNode, const RefPtr<ResourceObject>& backButtonTextResObj)
+    const std::vector<std::string>& nameList)
 {
     return;
 }
@@ -261,7 +225,7 @@ void NavigationModelImpl::SetNavBarPosition(NG::NavBarPosition mode)
     return;
 }
 
-void NavigationModelImpl::SetNavBarWidth(const Dimension& value, bool isDoubleBind)
+void NavigationModelImpl::SetNavBarWidth(const Dimension& value)
 {
     return;
 }
@@ -319,5 +283,5 @@ void NavigationModelImpl::SetCustomTransition(NavigationTransitionEvent&& animat
 
 void NavigationModelImpl::SetIsCustomAnimation(bool isCustom) {}
 
-void NavigationModelImpl::SetIgnoreLayoutSafeArea(const NG::IgnoreLayoutSafeAreaOpts& opts) {}
+void NavigationModelImpl::SetIgnoreLayoutSafeArea(const NG::SafeAreaExpandOpts& opts) {}
 } // namespace OHOS::Ace::Framework

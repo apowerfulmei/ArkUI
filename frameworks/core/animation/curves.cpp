@@ -52,7 +52,7 @@ std::string Curves::ToString(const RefPtr<Curve>& curve)
     if (iter != curveNames.end()) {
         return iter->second;
     }
-    return curve->ToString().c_str();
+    return Curves::DEFAULT_CURVE_NAME;
 }
 
 } // namespace OHOS::Ace

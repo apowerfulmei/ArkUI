@@ -59,7 +59,8 @@ ScrollerObserver CreateObserver(
     };
 
     observer.onDidScrollEvent =
-        [weakProcessor, weakScroller](Dimension dimension, ScrollSource source, bool isAtTop, bool isAtBottom) {
+        [weakProcessor, weakScroller](
+            Dimension dimension, ScrollState state, ScrollSource source, bool isAtTop, bool isAtBottom) {
             auto processor = weakProcessor.Upgrade();
             CHECK_NULL_VOID(processor);
             processor->HandleOnDidScrollEvent(weakScroller, dimension, source, isAtTop, isAtBottom);

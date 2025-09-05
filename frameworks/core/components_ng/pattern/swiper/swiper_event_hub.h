@@ -25,7 +25,6 @@
 #include "core/components_ng/base/frame_node.h"
 #include "core/components_ng/event/event_hub.h"
 #include "core/components_ng/pattern/swiper/swiper_model.h"
-#include "core/pipeline_ng/pipeline_context.h"
 
 namespace OHOS::Ace::NG {
 
@@ -42,7 +41,7 @@ using ChangeEventWithPreIndexPtr = std::shared_ptr<ChangeEventWithPreIndex>;
 using ChangeDoneEvent = std::function<void()>;
 
 class SwiperEventHub : public EventHub {
-    DECLARE_ACE_TYPE(SwiperEventHub, EventHub);
+    DECLARE_ACE_TYPE(SwiperEventHub, EventHub)
 
 public:
     SwiperEventHub() = default;
@@ -89,11 +88,6 @@ public:
         gestureSwipeEvent_ = std::move(gestureSwipeEvent);
     }
 
-    void AddOnSlectedEvent(const ChangeEventPtr& changeEvent)
-    {
-        selectedEvents_.emplace_back(changeEvent);
-    }
-
     void FireChangeDoneEvent(bool direction)
     {
         if (changeDoneEvent_) {
@@ -106,65 +100,20 @@ public:
         }
     }
 
-    void AddOnUnselectedEvent(const ChangeEventPtr& changeEvent)
+    void FireChangeEvent(int32_t preIndex, int32_t currentIndex) const
     {
-        unselectedEvents_.emplace_back(changeEvent);
-    }
-
-    void FireUnselectedEvent(int32_t index)
-    {
-        auto frameNode = GetFrameNode();
-        TAG_LOGI(AceLogTag::ACE_SWIPER, "Swiper FireUnselectedEvent id:%{public}d, index:%{public}d",
-            frameNode ? frameNode->GetId() : -1, index);
-        ACE_SCOPED_TRACE("Swiper FireUnselectedEvent, id: %d, index: %d", frameNode ? frameNode->GetId() : -1, index);
-        if (!unselectedEvents_.empty()) {
-            std::for_each(unselectedEvents_.begin(), unselectedEvents_.end(),
-                [index](const ChangeEventPtr& changeEvent) {
-                if (!changeEvent || !(*changeEvent)) {
-                    return;
-                }
-                auto event = *changeEvent;
-                event(index);
-            });
+        ACE_SCOPED_TRACE("Swiper FireChangeEvent, preIndex: %d currentIndex: %d eventSize: %zu",
+            preIndex, currentIndex, changeEvents_.size() + changeEventsWithPreIndex_.size());
+        if (!changeEvents_.empty()) {
+            std::for_each(
+                changeEvents_.begin(), changeEvents_.end(), [currentIndex](const ChangeEventPtr& changeEvent) {
+                    auto event = *changeEvent;
+                    event(currentIndex);
+                });
         }
-    }
-
-    void AddOnScrollStateChangedEvent(const ChangeEventPtr& changeEvent)
-    {
-        scrollStateChangedEvent_ = changeEvent;
-    }
-
-    void FireScrollStateChangedEvent(ScrollState scrollState)
-    {
-        if (!scrollStateChangedEvent_ || !(*scrollStateChangedEvent_)) {
-            return;
-        }
-        auto event = *scrollStateChangedEvent_;
-        event(static_cast<int32_t>(scrollState));
-    }
-
-    void FireChangeEvent(int32_t preIndex, int32_t currentIndex, bool isInLayout)
-    {
-        if (isInLayout) {
-            auto frameNode = GetFrameNode();
-            CHECK_NULL_VOID(frameNode);
-            auto pipeline = frameNode->GetContext();
-            CHECK_NULL_VOID(pipeline);
-            pipeline->AddAfterLayoutTask([weak = WeakClaim(this), preIndex, currentIndex]() {
-                auto eventHub = weak.Upgrade();
-                CHECK_NULL_VOID(eventHub);
-                eventHub->FireJSChangeEvent(preIndex, currentIndex);
-            });
-        } else {
-            FireJSChangeEvent(preIndex, currentIndex);
-        }
-
         if (!changeEventsWithPreIndex_.empty()) {
             std::for_each(changeEventsWithPreIndex_.begin(), changeEventsWithPreIndex_.end(),
                 [preIndex, currentIndex](const ChangeEventWithPreIndexPtr& changeEventWithPreIndex) {
-                    if (!changeEventWithPreIndex || !(*changeEventWithPreIndex)) {
-                        return;
-                    }
                     auto event = *changeEventWithPreIndex;
                     event(preIndex, currentIndex);
                 });
@@ -175,10 +124,7 @@ public:
             auto host = GetFrameNode();
             if (host) {
                 auto id = host->GetInspectorIdValue("");
-                builder.SetId(id)
-                    .SetType(host->GetHostTag())
-                    .SetDescription(host->GetAutoEventParamValue(""))
-                    .SetHost(host);
+                builder.SetId(id).SetType(host->GetHostTag()).SetDescription(host->GetAutoEventParamValue(""));
                 if (!id.empty()) {
                     Recorder::NodeDataCache::Get().PutInt(host, id, currentIndex);
                 }
@@ -217,9 +163,6 @@ public:
         if (!animationStartEvents_.empty()) {
             std::for_each(animationStartEvents_.begin(), animationStartEvents_.end(),
                 [index, targetIndex, info](const AnimationStartEventPtr& animationStartEvent) {
-                    if (!animationStartEvent || !(*animationStartEvent)) {
-                        return;
-                    }
                     auto event = *animationStartEvent;
                     event(index, targetIndex, info);
                 });
@@ -227,9 +170,7 @@ public:
         // animationEnd callback need to be fired after animationStart callback, use flag for protection.
         ++aniStartCalledCount_;
         if (delayCallback_) {
-            auto frameNode = GetFrameNode();
-            TAG_LOGI(AceLogTag::ACE_SWIPER, "the timing of the animation callback has been corrected id:%{public}d",
-                frameNode ? frameNode->GetId() : -1);
+            TAG_LOGI(AceLogTag::ACE_SWIPER, "the timing of the animation callback has been corrected");
             delayCallback_();
             delayCallback_ = nullptr;
         }
@@ -254,9 +195,6 @@ public:
         if (!animationEndEvents_.empty()) {
             std::for_each(animationEndEvents_.begin(), animationEndEvents_.end(),
                 [index, info](const AnimationEndEventPtr& animationEndEvent) {
-                    if (!animationEndEvent || !(*animationEndEvent)) {
-                        return;
-                    }
                     auto event = *animationEndEvent;
                     event(index, info);
                 });
@@ -277,22 +215,17 @@ public:
             };
             return;
         }
-        if (animationEndEvents_.empty()) {
-            --aniStartCalledCount_;
-            return;
+        if (!animationEndEvents_.empty()) {
+            auto context = GetFrameNode()->GetContext();
+            CHECK_NULL_VOID(context);
+            context->AddBuildFinishCallBack([this, index, info]() {
+                std::for_each(animationEndEvents_.begin(), animationEndEvents_.end(),
+                    [index, info](const AnimationEndEventPtr& animationEndEvent) {
+                        auto event = *animationEndEvent;
+                        event(index, info);
+                    });
+            });
         }
-        auto context = GetFrameNode()->GetContext();
-        CHECK_NULL_VOID(context);
-        context->AddBuildFinishCallBack([this, index, info]() {
-            std::for_each(animationEndEvents_.begin(), animationEndEvents_.end(),
-                [index, info](const AnimationEndEventPtr& animationEndEvent) {
-                    if (!animationEndEvent || !(*animationEndEvent)) {
-                        return;
-                    }
-                    auto event = *animationEndEvent;
-                    event(index, info);
-                });
-        });
         --aniStartCalledCount_;
     }
 
@@ -305,50 +238,15 @@ public:
         }
     }
 
-    void FireSelectedEvent(int32_t index)
-    {
-        auto frameNode = GetFrameNode();
-        ACE_SCOPED_TRACE("Swiper FireSelectedEvent, id: %d, index: %d", frameNode ? frameNode->GetId() : -1, index);
-        if (!selectedEvents_.empty()) {
-            std::for_each(selectedEvents_.begin(), selectedEvents_.end(), [index](const ChangeEventPtr& changeEvent) {
-                if (!changeEvent || !(*changeEvent)) {
-                    return;
-                }
-                auto event = *changeEvent;
-                event(index);
-            });
-        }
-    }
-
     void SetSwiperId(int32_t swiperId)
     {
         swiperId_ = swiperId;
     }
 
 private:
-    void FireJSChangeEvent(int32_t preIndex, int32_t index)
-    {
-        auto frameNode = GetFrameNode();
-        ACE_SCOPED_TRACE("Swiper FireChangeEvent, id: %d, preIndex: %d, index: %d", frameNode ? frameNode->GetId() : -1,
-            preIndex, index);
-        if (changeEvents_.empty()) {
-            return;
-        }
-        std::for_each(changeEvents_.begin(), changeEvents_.end(), [index](const ChangeEventPtr& changeEvent) {
-            if (!changeEvent || !(*changeEvent)) {
-                return;
-            }
-            auto event = *changeEvent;
-            event(index);
-        });
-    }
-
     Direction direction_;
-    std::list<ChangeEventPtr> unselectedEvents_;
     std::list<ChangeEventPtr> changeEvents_;
-    std::list<ChangeEventPtr> selectedEvents_;
     std::list<ChangeEventWithPreIndexPtr> changeEventsWithPreIndex_;
-    ChangeEventPtr scrollStateChangedEvent_;
     ChangeDoneEvent changeDoneEvent_;
     ChangeIndicatorEvent changeIndicatorEvent_;
     IndicatorIndexChangeEvent indicatorIndexChangeEvent_;

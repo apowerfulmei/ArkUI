@@ -64,7 +64,7 @@ extern "C" {
 
         // Parse alignment
         auto alignment = alertDialog.alignment;
-        if (alignment >= 0 && alignment <= static_cast<int32_t>(DIALOG_ALIGNMENT.size())) {
+        if (alignment >= 0 && alignment < static_cast<int32_t>(DIALOG_ALIGNMENT.size())) {
             properties.alignment = DIALOG_ALIGNMENT[alignment];
         }
 
@@ -93,7 +93,7 @@ extern "C" {
 
         // Parse showInSubWindowValue.
         properties.isShowInSubWindow = alertDialog.showInSubWindow;
-
+        
         // Parse isModal.
         properties.isModal = alertDialog.isModal;
 
@@ -138,7 +138,7 @@ extern "C" {
             Color fontColor = Color(ColorAlphaAdapt(*objInner.fontColor));
             buttonInfo.textColor = fontColor.ColorToString();
         }
-
+        
         // Parse backgroundColor
         if (objInner.backgroundColor != nullptr) {
             Color backgroundColor = Color(ColorAlphaAdapt(*objInner.backgroundColor));
@@ -217,7 +217,7 @@ extern "C" {
         ParseButtonArray(properties, buttons, "buttons");
 
         // Parse buttons direction.
-        if (buttonDirection >= 0 && buttonDirection <= static_cast<int32_t>(DIALOG_BUTTONS_DIRECTION.size())) {
+        if (buttonDirection >= 0 && buttonDirection < static_cast<int32_t>(DIALOG_BUTTONS_DIRECTION.size())) {
             properties.buttonDirection = DIALOG_BUTTONS_DIRECTION[buttonDirection];
         }
 

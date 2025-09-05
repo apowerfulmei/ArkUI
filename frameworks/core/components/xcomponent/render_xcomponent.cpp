@@ -16,6 +16,8 @@
 #include "core/components/xcomponent/render_xcomponent.h"
 
 #include "base/ressched/ressched_report.h"
+#include "base/utils/time_util.h"
+#include "core/event/touch_event.h"
 namespace OHOS::Ace {
 namespace {
 #ifdef OHOS_PLATFORM
@@ -464,9 +466,6 @@ bool RenderXComponent::HandleMouseEvent(const MouseEvent& event)
             break;
         case MouseAction::MOVE:
             mouseEventPoint.action = OH_NativeXComponent_MouseEventAction::OH_NATIVEXCOMPONENT_MOUSE_MOVE;
-            break;
-        case MouseAction::CANCEL:
-            mouseEventPoint.action = OH_NativeXComponent_MouseEventAction::OH_NATIVEXCOMPONENT_MOUSE_CANCEL;
             break;
         default:
             mouseEventPoint.action = OH_NativeXComponent_MouseEventAction::OH_NATIVEXCOMPONENT_MOUSE_NONE;

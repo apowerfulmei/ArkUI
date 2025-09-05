@@ -32,8 +32,6 @@ public:
     ~NavBarLayoutAlgorithm() override = default;
     void Measure(LayoutWrapper* layoutWrapper) override;
     void Layout(LayoutWrapper* layoutWrapper) override;
-    void MeasureAdaptiveLayoutChildren(
-        LayoutWrapper* layoutWrapper, SizeF& realSize, float titleBarHeight, float toolBarHeight);
 
 private:
     ACE_DISALLOW_COPY_AND_MOVE(NavBarLayoutAlgorithm);

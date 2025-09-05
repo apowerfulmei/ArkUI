@@ -34,6 +34,7 @@ template("ace_core_interfaces_native_node") {
       "node/badge_modifier.cpp",
       "node/blank_modifier.cpp",
       "node/button_modifier.cpp",
+      "node/calendar_picker_modifier.cpp",
       "node/canvas_rendering_context_2d_modifier.cpp",
       "node/checkboxgroup_modifier.cpp",
       "node/column_modifier.cpp",
@@ -48,7 +49,6 @@ template("ace_core_interfaces_native_node") {
       "node/extension_custom_node.cpp",
       "node/flex_modifier.cpp",
       "node/frame_node_modifier.cpp",
-      "node/frame_node_modifier_multi_thread.cpp",
       "node/gauge_modifier.cpp",
       "node/grid_col_modifier.cpp",
       "node/grid_item_modifier.cpp",
@@ -56,9 +56,7 @@ template("ace_core_interfaces_native_node") {
       "node/grid_row_modifier.cpp",
       "node/hyperlink_modifier.cpp",
       "node/image_animator_modifier.cpp",
-      "node/lazy_grid_layout_modifier.cpp",
       "node/line_modifier.cpp",
-      "node/linear_indicator_modifier.cpp",
       "node/marquee_modifier.cpp",
       "node/menu_item_modifier.cpp",
       "node/menu_modifier.cpp",
@@ -69,17 +67,15 @@ template("ace_core_interfaces_native_node") {
       "node/node_adapter_impl.cpp",
       "node/node_animate.cpp",
       "node/node_api.cpp",
-      "node/node_api_multi_thread.cpp",
       "node/node_canvas_modifier.cpp",
       "node/node_checkbox_modifier.cpp",
       "node/node_common_modifier.cpp",
-      "node/node_common_modifier_multi_thread.cpp",
       "node/node_container_modifier.cpp",
       "node/node_container_span_modifier.cpp",
       "node/node_content_modifier.cpp",
-      "node/node_custom_node_ext_modifier.cpp",
       "node/node_date_picker_modifier.cpp",
       "node/node_drag_modifier.cpp",
+      "node/node_folder_stack_modifier.cpp",
       "node/node_gesture_modifier.cpp",
       "node/node_image_modifier.cpp",
       "node/node_image_span_modifier.cpp",
@@ -91,7 +87,6 @@ template("ace_core_interfaces_native_node") {
       "node/node_modifiers.cpp",
       "node/node_refresh_modifier.cpp",
       "node/node_relative_container_modifier.cpp",
-      "node/node_render_node_modifier.cpp",
       "node/node_scroll_bar_modifier.cpp",
       "node/node_scroll_modifier.cpp",
       "node/node_slider_modifier.cpp",
@@ -113,6 +108,7 @@ template("ace_core_interfaces_native_node") {
       "node/polygon_modifier.cpp",
       "node/polyline_modifier.cpp",
       "node/progress_modifier.cpp",
+      "node/qrcode_modifier.cpp",
       "node/radio_modifier.cpp",
       "node/rating_modifier.cpp",
       "node/rect_modifier.cpp",
@@ -127,35 +123,17 @@ template("ace_core_interfaces_native_node") {
       "node/shape_modifier.cpp",
       "node/side_bar_container_modifier.cpp",
       "node/stepper_item_modifier.cpp",
-      "node/stepper_modifier.cpp",
       "node/swiper_controller_modifier.cpp",
       "node/tab_content_modifier.cpp",
       "node/tabs_modifier.cpp",
       "node/text_clock_modifier.cpp",
       "node/text_timer_modifier.cpp",
-      "node/theme_modifier.cpp",
       "node/util_modifier.cpp",
       "node/video_modifier.cpp",
       "node/view_model.cpp",
-      "node/view_model_multi_thread.cpp",
       "node/water_flow_modifier.cpp",
-      "runtime/runtime_init.cpp"
     ]
-
-    sources += [
-      "$ace_root/frameworks/bridge/arkts_frontend/ani_context_module.cpp",
-      "ani/common_ani_modifier.cpp",
-      "ani/content_slot_ani_modifier.cpp",
-      "ani/image_ani_modifier.cpp",
-      "ani/node_ani_modifier.cpp",
-      "ani/web_ani_modifier.cpp",
-    ]
-
     deps = [ "$ace_root/frameworks/core/components/theme:build_theme_code" ]
-    if (defined(config.web_components_support) &&
-        config.web_components_support) {
-      sources += [ "node/web_modifier.cpp" ]
-    }
     if (is_arkui_x) {
       deps += [
         "//foundation/graphic/graphic_2d/rosen/modules/render_service_client:librender_service_client_static",
@@ -166,12 +144,7 @@ template("ace_core_interfaces_native_node") {
       "${ace_root}/interfaces/inner_api/ace",
       "${ace_root}/interfaces/native",
       "${ace_root}/interfaces/native/node",
-      "${ace_root}/interfaces/native/runtime",
     ]
-
-    if (qrcodegen_support) {
-      sources += [ "node/qrcode_modifier.cpp" ]
-    }
 
     if (defined(config.model_component_support) &&
         config.model_component_support) {
@@ -192,52 +165,16 @@ template("ace_core_interfaces_native_node") {
         config.plugin_components_support) {
       sources += [ "node/plugin_modifier.cpp" ]
     }
-
-    if (!ace_engine_feature_wearable) {
-      sources += [
-        "node/calendar_picker_modifier.cpp",
-        "node/node_folder_stack_modifier.cpp",
-      ]
-    }
-
-    if (defined(config.window_scene_support) &&
-        config.window_scene_support) {
-      sources += [ "node/embeddedComponent_modifier.cpp" ]
-    }
-
-    if (is_arkui_x) {
-      deps += [
-        "//foundation/arkui/napi:ace_napi",
-      ]
-    }
-
-    if (ace_engine_feature_enable_upgrade_skia) {
-      defines += [ "USE_NEW_SKIA" ]
-    }
-    
     external_deps = [
       "graphic_2d:drawing_napi_impl",
       "graphic_2d:librender_service_client",
-      "napi:ace_napi",
-      "runtime_core:ani",
     ]
-    if (build_ohos_sdk || is_arkui_x) {
-      sources -= [ "$ace_root/frameworks/bridge/arkts_frontend/ani_context_module.cpp" ]
-      external_deps -= [ "runtime_core:ani" ]
-    }
     if (defined(config.model_component_support) &&
         config.model_component_support) {
       external_deps += [ "graphic_3d:lib3dWidgetAdapter" ]
     }
     if (use_hilog) {
       external_deps += [ "hilog:libhilog" ]
-    }
-    if (defined(config.window_scene_support) &&
-        config.window_scene_support) {
-      external_deps += [
-        "ability_base:ability_base_want",
-        "ability_base:want",
-      ]
     }
 
     cflags_cc = []

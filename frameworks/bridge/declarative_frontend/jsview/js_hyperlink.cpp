@@ -77,50 +77,31 @@ void JSHyperlink::JSBind(BindingTarget globalObj)
 void JSHyperlink::Create(const JSCallbackInfo& args)
 {
     std::string address;
-    RefPtr<ResourceObject> addressResObj;
-    std::string summary;
-    RefPtr<ResourceObject> contentResObj;
-    auto addressRet = ParseJsString(args[0], address, addressResObj);
-    bool contentRet = false;
+    ParseJsString(args[0], address);
 
+    std::string summary;
     if (args.Length() == 2) {
-        contentRet = ParseJsString(args[1], summary, contentResObj);
+        ParseJsString(args[1], summary);
     }
+
     HyperlinkModel::GetInstance()->Create(address, summary);
-    if (addressRet && SystemProperties::ConfigChangePerform() && addressResObj) {
-        RegisterResource<std::string>("Address", addressResObj, address);
-    } else {
-        UnRegisterResource("Address");
-    }
-    if (contentRet && SystemProperties::ConfigChangePerform() && contentResObj) {
-        RegisterResource<std::string>("Content", contentResObj, summary);
-    } else {
-        UnRegisterResource("Content");
-    }
 }
 
 void JSHyperlink::SetColor(const JSCallbackInfo& info)
 {
     Color color;
-    RefPtr<ResourceObject> resObj;
-    if (!ParseJsColor(info[0], color, resObj)) {
+    if (!ParseJsColor(info[0], color)) {
         auto pipelineContext = PipelineBase::GetCurrentContext();
         CHECK_NULL_VOID(pipelineContext);
         auto theme = pipelineContext->GetTheme<HyperlinkTheme>();
         CHECK_NULL_VOID(theme);
         color = theme->GetTextColor();
-        UnRegisterResource("Color");
-    } else if (SystemProperties::ConfigChangePerform() && resObj) {
-        RegisterResource<Color>("Color", resObj, color);
     }
     HyperlinkModel::GetInstance()->SetColor(color);
 }
 
 void JSHyperlink::Pop()
 {
-    if (ViewStackModel::GetInstance()->IsPrebuilding()) {
-        return ViewStackModel::GetInstance()->PushPrebuildCompCmd("[JSHyperlink][pop]", &JSHyperlink::Pop);
-    }
     if (Container::IsCurrentUseNewPipeline()) {
         ViewStackModel::GetInstance()->PopContainer();
         return;

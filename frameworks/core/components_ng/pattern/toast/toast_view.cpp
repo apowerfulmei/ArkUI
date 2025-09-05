@@ -14,15 +14,30 @@
  */
 #include "core/components_ng/pattern/toast/toast_view.h"
 
+#include "base/geometry/dimension.h"
+#include "base/memory/referenced.h"
+#include "base/utils/utils.h"
+#include "core/components/common/properties/shadow_config.h"
+#include "core/components/toast/toast_theme.h"
 #include "core/components/theme/shadow_theme.h"
+#include "core/components_ng/pattern/text/text_layout_property.h"
 #include "core/components_ng/pattern/text/text_pattern.h"
+#include "core/components_ng/pattern/toast/toast_layout_property.h"
 #include "core/components_ng/pattern/toast/toast_pattern.h"
+#include "core/components_ng/property/property.h"
 #include "core/components_v2/inspector/inspector_constants.h"
+#include "core/pipeline/base/element_register.h"
+#include "core/pipeline/pipeline_base.h"
 
 namespace OHOS::Ace::NG {
 constexpr float MAX_TOAST_SCALE = 2.0f;
 RefPtr<FrameNode> ToastView::CreateToastNode(const ToastInfo& toastInfo)
 {
+    auto context = PipelineBase::GetCurrentContext();
+    CHECK_NULL_RETURN(context, nullptr);
+    auto toastTheme = context->GetTheme<ToastTheme>();
+    CHECK_NULL_RETURN(toastTheme, nullptr);
+
     auto textId = ElementRegister::GetInstance()->MakeUniqueId();
     auto toastId = ElementRegister::GetInstance()->MakeUniqueId();
     // make toast node
@@ -33,14 +48,9 @@ RefPtr<FrameNode> ToastView::CreateToastNode(const ToastInfo& toastInfo)
     CHECK_NULL_RETURN(toastProperty, nullptr);
     auto toastContext = toastNode->GetRenderContext();
     CHECK_NULL_RETURN(toastContext, nullptr);
-    auto context = toastNode->GetContext();
-    CHECK_NULL_RETURN(context, nullptr);
-    auto toastTheme = context->GetTheme<ToastTheme>();
-    CHECK_NULL_RETURN(toastTheme, nullptr);
     auto toastAccessibilityProperty = toastNode->GetAccessibilityProperty<AccessibilityProperty>();
     CHECK_NULL_RETURN(toastAccessibilityProperty, nullptr);
-    toastAccessibilityProperty->SetUserTextValue(toastInfo.message);
-    toastAccessibilityProperty->SetAccessibilityLevel(AccessibilityProperty::Level::NO_HIDE_DESCENDANTS);
+    toastAccessibilityProperty->SetText(toastInfo.message);
     // create text in toast
     auto textNode = FrameNode::CreateFrameNode(V2::TEXT_ETS_TAG, textId, AceType::MakeRefPtr<TextPattern>());
     CHECK_NULL_RETURN(textNode, nullptr);
@@ -68,8 +78,7 @@ RefPtr<FrameNode> ToastView::CreateToastNode(const ToastInfo& toastInfo)
         StringUtils::StringToDimensionWithThemeValue(toastInfo.bottom, true, toastTheme->GetBottom()));
     toastProperty->UpdateShowMode(toastInfo.showMode);
     toastProperty->UpdateHoverModeArea(toastInfo.hoverModeArea);
-    toastNode->GetEventHub<EventHub>()->GetOrCreateGestureEventHub()
-        ->SetHitTestMode(HitTestMode::HTMTRANSPARENT);
+    toastNode->GetEventHub<EventHub>()->GetOrCreateGestureEventHub()->SetHitTestMode(HitTestMode::HTMTRANSPARENT);
     toastNode->MarkModifyDone();
     return toastNode;
 }
@@ -80,7 +89,7 @@ void ToastView::UpdateTextLayoutProperty(
 {
     auto textLayoutProperty = textNode->GetLayoutProperty<TextLayoutProperty>();
     CHECK_NULL_VOID(textLayoutProperty);
-    auto context = textNode->GetContext();
+    auto context = PipelineBase::GetCurrentContext();
     CHECK_NULL_VOID(context);
     auto toastTheme = context->GetTheme<ToastTheme>();
     CHECK_NULL_VOID(toastTheme);
@@ -88,7 +97,7 @@ void ToastView::UpdateTextLayoutProperty(
     auto padding = toastTheme->GetPadding();
     auto fontWeight = toastTheme->GetTextStyle().GetFontWeight();
     auto defaultColor = toastTheme->GetTextStyle().GetTextColor();
-    textLayoutProperty->UpdateMaxFontScale(std::min(MAX_TOAST_SCALE, context->GetMaxAppFontScale()));
+    textLayoutProperty->UpdateMaxFontScale(MAX_TOAST_SCALE);
     PaddingProperty paddings;
     paddings.top = NG::CalcLength(padding.Top());
     paddings.bottom = NG::CalcLength(padding.Bottom());
@@ -117,7 +126,7 @@ void ToastView::UpdateToastContext(const RefPtr<FrameNode>& toastNode)
     CHECK_NULL_VOID(toastContext);
     auto pattern = toastNode->GetPattern<ToastPattern>();
     CHECK_NULL_VOID(pattern);
-    auto pipelineContext = toastNode->GetContext();
+    auto pipelineContext = PipelineBase::GetCurrentContext();
     CHECK_NULL_VOID(pipelineContext);
     auto toastTheme = pipelineContext->GetTheme<ToastTheme>();
     CHECK_NULL_VOID(toastTheme);
@@ -125,26 +134,6 @@ void ToastView::UpdateToastContext(const RefPtr<FrameNode>& toastNode)
     BorderRadiusProperty borderRadius;
     borderRadius.SetRadius(Dimension(radius.GetX().ConvertToPx()));
     toastContext->UpdateBorderRadius(borderRadius);
-    if (toastTheme->GetToastDoubleBorderEnable()) {
-        toastContext->UpdateOuterBorderRadius(borderRadius);
-        auto toastProperty = toastNode->GetLayoutProperty<ToastLayoutProperty>();
-        CHECK_NULL_VOID(toastProperty);
-
-        BorderWidthProperty innerWidthProp;
-        innerWidthProp.SetBorderWidth(Dimension(toastTheme->GetToastInnerBorderWidth()));
-        toastContext->UpdateBorderWidth(innerWidthProp);
-        BorderColorProperty innerColorProp;
-        innerColorProp.SetColor(toastTheme->GetToastInnerBorderColor());
-        toastContext->UpdateBorderColor(innerColorProp);
-        toastProperty->UpdateBorderWidth(innerWidthProp);
-
-        BorderWidthProperty outerWidthProp;
-        outerWidthProp.SetBorderWidth(Dimension(toastTheme->GetToastOuterBorderWidth()));
-        toastContext->UpdateOuterBorderWidth(outerWidthProp);
-        BorderColorProperty outerColorProp;
-        outerColorProp.SetColor(toastTheme->GetToastOuterBorderColor());
-        toastContext->UpdateOuterBorderColor(outerColorProp);
-    }
     auto toastInfo = pattern->GetToastInfo();
     ToastView::UpdateToastNodeStyle(toastNode);
 }
@@ -155,16 +144,19 @@ void ToastView::UpdateToastNodeStyle(const RefPtr<FrameNode>& toastNode)
     CHECK_NULL_VOID(toastContext);
     auto pattern = toastNode->GetPattern<ToastPattern>();
     CHECK_NULL_VOID(pattern);
-    auto pipelineContext = toastNode->GetContext();
+    auto pipelineContext = PipelineBase::GetCurrentContext();
     CHECK_NULL_VOID(pipelineContext);
     auto toastTheme = pipelineContext->GetTheme<ToastTheme>();
     CHECK_NULL_VOID(toastTheme);
     auto toastInfo = pattern->GetToastInfo();
-    auto shadowStyle = toastTheme->GetToastShadowStyle();
-    auto shadow = toastInfo.shadow.value_or(Shadow::CreateShadow(shadowStyle));
-
+    Shadow shadow;
+    if (toastInfo.shadow.has_value()) {
+        shadow = toastInfo.shadow.value();
+    } else {
+        shadow = Shadow::CreateShadow(ShadowStyle::OuterDefaultMD);
+    }
     if (toastInfo.isTypeStyleShadow) {
-        auto colorMode = pipelineContext->GetColorMode();
+        auto colorMode = SystemProperties::GetColorMode();
         auto shadowStyle = shadow.GetStyle();
         auto shadowTheme = pipelineContext->GetTheme<ShadowTheme>();
         if (shadowTheme) {
@@ -173,14 +165,10 @@ void ToastView::UpdateToastNodeStyle(const RefPtr<FrameNode>& toastNode)
     }
     toastContext->UpdateBackShadow(shadow);
     if (Container::GreatOrEqualAPITargetVersion(PlatformVersion::VERSION_TWELVE)) {
-        toastContext->UpdateBackgroundColor(toastInfo.backgroundColor.value_or(toastTheme->GetDefaultBGColor()));
+        toastContext->UpdateBackgroundColor(toastInfo.backgroundColor.value_or(Color::TRANSPARENT));
         BlurStyleOption styleOption;
         styleOption.blurStyle = static_cast<BlurStyle>(
-            toastInfo.backgroundBlurStyle.value_or(toastTheme->GetToastBackgroundBlurStyle()));
-        styleOption.policy = BlurStyleActivePolicy::ALWAYS_ACTIVE;
-        if (!toastInfo.backgroundColor.has_value()) {
-            styleOption.colorMode = static_cast<ThemeColorMode>(toastTheme->GetBgThemeColorMode());
-        }
+            toastInfo.backgroundBlurStyle.value_or(static_cast<int>(BlurStyle::COMPONENT_ULTRA_THICK)));
         toastContext->UpdateBackBlurStyle(styleOption);
     } else {
         auto toastBackgroundColor = toastTheme->GetBackgroundColor();

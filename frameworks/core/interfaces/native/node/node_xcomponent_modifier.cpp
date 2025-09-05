@@ -14,15 +14,18 @@
  */
 #include "core/interfaces/native/node/node_xcomponent_modifier.h"
 
+#include "core/components_ng/base/frame_node.h"
 #include "core/components_ng/pattern/xcomponent/xcomponent_model_ng.h"
 #include "core/components_ng/pattern/xcomponent/xcomponent_pattern.h"
-#include "core/components_ng/pattern/xcomponent/xcomponent_pattern_v2.h"
+#include "core/pipeline/base/element_register.h"
 #include "core/components_ng/base/view_abstract.h"
+#include "frameworks/bridge/common/utils/utils.h"
+#include "core/interfaces/native/node/node_api.h"
 
 namespace OHOS::Ace::NG {
 namespace {
 const uint32_t ERROR_UINT_CODE = -1;
-thread_local std::string g_strValue;
+std::string g_strValue;
 
 void SetXComponentEnableAnalyzer(ArkUINodeHandle node, ArkUI_Bool enable)
 {
@@ -40,7 +43,7 @@ void ResetXComponentEnableAnalyzer(ArkUINodeHandle node)
 
 void SetXComponentBackgroundColor(ArkUINodeHandle node, uint32_t color)
 {
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
+    auto *frameNode = reinterpret_cast<FrameNode *>(node);
     CHECK_NULL_VOID(frameNode);
     auto type = XComponentModelNG::GetType(frameNode);
     if (!XComponentModel::IsBackGroundColorAvailable(type)) {
@@ -49,27 +52,9 @@ void SetXComponentBackgroundColor(ArkUINodeHandle node, uint32_t color)
     ViewAbstract::SetBackgroundColor(frameNode, Color(color));
 }
 
-void SetXComponentBackgroundColorWithColorSpace(
-    ArkUINodeHandle node, ArkUI_Uint32 color, ArkUI_Int32 colorSpace)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    auto type = XComponentModelNG::GetType(frameNode);
-    if (!XComponentModel::IsBackGroundColorAvailable(type)) {
-        return;
-    }
-    Color backgroundColor { color };
-    if (ColorSpace::DISPLAY_P3 == colorSpace) {
-        backgroundColor.SetColorSpace(ColorSpace::DISPLAY_P3);
-    } else {
-        backgroundColor.SetColorSpace(ColorSpace::SRGB);
-    }
-    ViewAbstract::SetBackgroundColor(frameNode, backgroundColor);
-}
-
 void ResetXComponentBackgroundColor(ArkUINodeHandle node)
 {
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
+    auto *frameNode = reinterpret_cast<FrameNode *>(node);
     CHECK_NULL_VOID(frameNode);
     auto type = XComponentModelNG::GetType(frameNode);
     if (!XComponentModel::IsBackGroundColorAvailable(type)) {
@@ -82,8 +67,7 @@ void SetXComponentOpacity(ArkUINodeHandle node, ArkUI_Float32 opacity)
 {
     auto *frameNode = reinterpret_cast<FrameNode *>(node);
     CHECK_NULL_VOID(frameNode);
-    auto type = XComponentModelNG::GetXComponentType(frameNode);
-    if (type == XComponentType::SURFACE || type == XComponentType::COMPONENT) {
+    if (!XComponentModelNG::IsTexture(frameNode)) {
         return;
     }
     if ((LessNotEqual(opacity, 0.0)) || opacity > 1) {
@@ -96,8 +80,7 @@ void ResetXComponentOpacity(ArkUINodeHandle node)
 {
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
-    auto type = XComponentModelNG::GetXComponentType(frameNode);
-    if (type == XComponentType::SURFACE || type == XComponentType::COMPONENT) {
+    if (!XComponentModelNG::IsTexture(frameNode)) {
         return;
     }
     ViewAbstract::SetOpacity(frameNode, 1.0f);
@@ -159,11 +142,7 @@ void* GetNativeXComponent(ArkUINodeHandle node)
     CHECK_NULL_RETURN(frameNode, nullptr);
     auto xcPattern = frameNode->GetPattern<XComponentPattern>();
     CHECK_NULL_RETURN(xcPattern, nullptr);
-    if (xcPattern->HasGotSurfaceHolder() || xcPattern->IsNativeXComponentDisabled()) {
-        return nullptr;
-    }
     auto pair = xcPattern->GetNativeXComponent();
-    xcPattern->SetHasGotNativeXComponent(true);
     return reinterpret_cast<void*>(pair.second.lock().get());
 }
 
@@ -202,34 +181,6 @@ void ResetXComponentEnableSecure(ArkUINodeHandle node)
     XComponentModelNG::EnableSecure(frameNode, false);
 }
 
-void SetXComponentHdrBrightness(ArkUINodeHandle node, ArkUI_Float32 hdrBrightness)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    XComponentModelNG::HdrBrightness(frameNode, hdrBrightness);
-}
-
-void ResetXComponentHdrBrightness(ArkUINodeHandle node)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    XComponentModelNG::HdrBrightness(frameNode, 1.0f);
-}
-
-void SetXComponentEnableTransparentLayer(ArkUINodeHandle node, ArkUI_Bool enable)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    XComponentModelNG::EnableTransparentLayer(frameNode, enable);
-}
-
-void ResetXComponentEnableTransparentLayer(ArkUINodeHandle node)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    XComponentModelNG::EnableTransparentLayer(frameNode, false);
-}
-
 void SetXComponentRenderFit(ArkUINodeHandle node, ArkUI_Int32 renderFitNumber)
 {
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
@@ -240,9 +191,6 @@ void SetXComponentRenderFit(ArkUINodeHandle node, ArkUI_Int32 renderFitNumber)
         renderFit = static_cast<RenderFit>(renderFitNumber);
     }
     auto type = XComponentModelNG::GetXComponentType(frameNode);
-    if (type == XComponentType::COMPONENT || type == XComponentType::NODE) {
-        return;
-    }
     if (type == XComponentType::TEXTURE) {
         ViewAbstract::SetRenderFit(frameNode, renderFit);
         return;
@@ -255,321 +203,70 @@ void ResetXComponentRenderFit(ArkUINodeHandle node)
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
     auto type = XComponentModelNG::GetXComponentType(frameNode);
-    if (type == XComponentType::COMPONENT || type == XComponentType::NODE) {
-        return;
-    }
     if (type == XComponentType::TEXTURE) {
         ViewAbstract::SetRenderFit(frameNode, RenderFit::RESIZE_FILL);
         return;
     }
     XComponentModelNG::SetRenderFit(frameNode, RenderFit::RESIZE_FILL);
 }
-
-ArkUI_Int32 GetXComponentRenderFit(ArkUINodeHandle node)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_RETURN(frameNode, static_cast<ArkUI_Int32>(RenderFit::RESIZE_FILL));
-    auto type = XComponentModelNG::GetXComponentType(frameNode);
-    if (type == XComponentType::TEXTURE) {
-        return static_cast<ArkUI_Int32>(ViewAbstract::GetRenderFit(frameNode));
-    }
-    return static_cast<ArkUI_Int32>(XComponentModelNG::GetSurfaceRenderFit(frameNode));
-}
-
-void SetXComponentSurfaceRect(ArkUINodeHandle node, ArkUI_Int32 offsetX,
-    ArkUI_Int32 offsetY, ArkUI_Int32 surfaceWidth, ArkUI_Int32 surfaceHeight)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    if (surfaceWidth <= 0 || surfaceHeight <= 0) {
-        return;
-    }
-    XComponentModelNG::SetXComponentSurfaceRect(frameNode, static_cast<float>(offsetX), static_cast<float>(offsetY),
-        static_cast<float>(surfaceWidth), static_cast<float>(surfaceHeight));
-}
-
-void GetXComponentSurfaceRect(ArkUINodeHandle node, ArkUI_Int32& offsetX, ArkUI_Int32& offsetY,
-    ArkUI_Int32& surfaceWidth, ArkUI_Int32& surfaceHeight)
-{
-    float surfaceRectOffsetX = 0.0f;
-    float surfaceRectOffsetY = 0.0f;
-    float surfaceRectWidth = 0.0f;
-    float surfaceRectHeight = 0.0f;
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    XComponentModelNG::GetXComponentSurfaceRect(frameNode, surfaceRectOffsetX, surfaceRectOffsetY,
-        surfaceRectWidth, surfaceRectHeight);
-    offsetX = static_cast<ArkUI_Int32>(surfaceRectOffsetX);
-    offsetY = static_cast<ArkUI_Int32>(surfaceRectOffsetY);
-    surfaceWidth = static_cast<ArkUI_Int32>(surfaceRectWidth);
-    surfaceHeight = static_cast<ArkUI_Int32>(surfaceRectHeight);
-}
-
-void ResetXComponentSurfaceRect(ArkUINodeHandle node)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    float width  = ViewAbstract::GetWidth(frameNode).GetNativeValue(static_cast<DimensionUnit>(0));
-    float height = ViewAbstract::GetHeight(frameNode).GetNativeValue(static_cast<DimensionUnit>(0));
-    XComponentModelNG::SetXComponentSurfaceRect(frameNode, 0.0f, 0.0f, width, height);
-}
-
-ArkUI_Bool GetXComponentEnableAnalyzer(ArkUINodeHandle node)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_RETURN(frameNode, false);
-    auto type = XComponentModelNG::GetXComponentType(frameNode);
-    if (type != XComponentType::SURFACE && type != XComponentType::TEXTURE) {
-        return false;
-    }
-    ArkUI_Bool isEnable = XComponentModelNG::GetXComponentEnableAnalyzer(frameNode);
-    return isEnable;
-}
-
-void StartImageAnalyzer(ArkUINodeHandle node, void* arkuiNode, void* userData,
-    XComponentAnalyzerCallback callback)
-{
-    auto *frameNode = reinterpret_cast<FrameNode *>(node);
-    CHECK_NULL_VOID(frameNode);
-    auto xcPattern = frameNode->GetPattern<XComponentPattern>();
-    CHECK_NULL_VOID(xcPattern);
-    std::function<void(int32_t)> nativeAnalyzerCallback = [arkuiNode, userData, callback](int32_t statusCode) {
-        if (callback) {
-            callback(arkuiNode, statusCode, userData);
-        }
-    };
-    xcPattern->NativeStartImageAnalyzer(nativeAnalyzerCallback);
-}
-
-void StopImageAnalyzer(ArkUINodeHandle node)
-{
-    auto *frameNode = reinterpret_cast<FrameNode *>(node);
-    CHECK_NULL_VOID(frameNode);
-    auto xcPattern = frameNode->GetPattern<XComponentPattern>();
-    CHECK_NULL_VOID(xcPattern);
-    xcPattern->StopImageAnalyzer();
-}
-
-void* CreateSurfaceHolder(ArkUINodeHandle node)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_RETURN(frameNode, nullptr);
-    auto xcPattern = frameNode->GetPattern<XComponentPatternV2>();
-    CHECK_NULL_RETURN(xcPattern, nullptr);
-    if (xcPattern->IsCreateSurfaceHolderForbidden()) {
-        return nullptr;
-    }
-    OH_ArkUI_SurfaceHolder* surfaceHolder = xcPattern->GetSurfaceHolder();
-    if (surfaceHolder == nullptr) {
-        surfaceHolder = new OH_ArkUI_SurfaceHolder();
-        xcPattern->SetSurfaceHolder(surfaceHolder);
-    }
-    return reinterpret_cast<void*>(surfaceHolder);
-}
-
-void Dispose(ArkUINodeHandle node)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    auto xcPattern = frameNode->GetPattern<XComponentPatternV2>();
-    CHECK_NULL_VOID(xcPattern);
-    xcPattern->SetSurfaceHolder(nullptr);
-}
-
-ArkUI_Int32 SetAutoInitialize(ArkUINodeHandle node, ArkUI_Bool autoInitialize)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_RETURN(frameNode, ERROR_CODE_PARAM_INVALID);
-    auto xcPattern = frameNode->GetPattern<XComponentPatternV2>();
-    CHECK_NULL_RETURN(xcPattern, ERROR_CODE_PARAM_INVALID);
-    auto nodeType = xcPattern->GetXComponentNodeType();
-    if (nodeType != XComponentNodeType::TYPE_NODE && nodeType != XComponentNodeType::CNODE) {
-        return ERROR_CODE_PARAM_INVALID;
-    }
-    return xcPattern->SetAutoInitialize(autoInitialize);
-}
-
-ArkUI_Int32 Initialize(ArkUINodeHandle node)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_RETURN(frameNode, ERROR_CODE_PARAM_INVALID);
-    auto xcPattern = frameNode->GetPattern<XComponentPatternV2>();
-    CHECK_NULL_RETURN(xcPattern, ERROR_CODE_PARAM_INVALID);
-    auto nodeType = xcPattern->GetXComponentNodeType();
-    if (nodeType != XComponentNodeType::TYPE_NODE && nodeType != XComponentNodeType::CNODE) {
-        return ERROR_CODE_PARAM_INVALID;
-    }
-    return xcPattern->Initialize();
-}
-
-ArkUI_Int32 IsInitialized(ArkUINodeHandle node, ArkUI_Bool* isInitialized)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_RETURN(frameNode, ERROR_CODE_PARAM_INVALID);
-    auto xcPattern = frameNode->GetPattern<XComponentPatternV2>();
-    CHECK_NULL_RETURN(xcPattern, ERROR_CODE_PARAM_INVALID);
-    auto nodeType = xcPattern->GetXComponentNodeType();
-    if (nodeType != XComponentNodeType::TYPE_NODE && nodeType != XComponentNodeType::CNODE) {
-        return ERROR_CODE_PARAM_INVALID;
-    }
-    bool value;
-    auto res = xcPattern->IsInitialized(value);
-    *isInitialized = value;
-    return res;
-}
-
-ArkUI_Int32 Finalize(ArkUINodeHandle node)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_RETURN(frameNode, ERROR_CODE_PARAM_INVALID);
-    auto xcPattern = frameNode->GetPattern<XComponentPatternV2>();
-    CHECK_NULL_RETURN(xcPattern, ERROR_CODE_PARAM_INVALID);
-    auto nodeType = xcPattern->GetXComponentNodeType();
-    if (nodeType != XComponentNodeType::TYPE_NODE && nodeType != XComponentNodeType::CNODE) {
-        return ERROR_CODE_PARAM_INVALID;
-    }
-    return xcPattern->Finalize();
-}
-
-ArkUI_Bool GetXComponentIsBindNative(ArkUINodeHandle node)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_RETURN(frameNode, false);
-    auto xcPattern = frameNode->GetPattern<XComponentPattern>();
-    CHECK_NULL_RETURN(xcPattern, false);
-    return static_cast<ArkUI_Bool>(xcPattern->IsBindNative());
-}
-
-ArkUI_Int32 SetExpectedFrameRateRange(
-    ArkUINodeHandle node, ArkUI_Int32 min, ArkUI_Int32 max, ArkUI_Int32 expected)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_RETURN(frameNode, ERROR_CODE_PARAM_INVALID);
-    if (!(min <= max && expected >= min && expected <= max)) {
-        LOGE("Xcomponent Expeted FrameRateRange Error.");
-        return ERROR_CODE_PARAM_INVALID;
-    }
-    return XComponentModelNG::SetExpectedRateRange(frameNode, min, max, expected);
-}
-
-ArkUI_Int32 RegisterOnFrameCallback(ArkUINodeHandle node,
-    void(*callback)(void*, uint64_t, uint64_t), void* arkuiNode)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_RETURN(frameNode, ERROR_CODE_PARAM_INVALID);
-    return XComponentModelNG::SetOnFrameCallback(frameNode, callback, arkuiNode);
-}
-
-ArkUI_Int32 UnregisterOnFrameCallback(ArkUINodeHandle node)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_RETURN(frameNode, ERROR_CODE_PARAM_INVALID);
-    return XComponentModelNG::UnregisterOnFrameCallback(frameNode);
-}
-
-ArkUI_Int32 SetNeedSoftKeyboard(ArkUINodeHandle node, bool needSoftKeyboard)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_RETURN(frameNode, ERROR_CODE_PARAM_INVALID);
-    return XComponentModelNG::SetNeedSoftKeyboard(frameNode, needSoftKeyboard);
-}
-
-void* CreateAccessibilityProvider(ArkUINodeHandle node)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_RETURN(frameNode, nullptr);
-    return XComponentModelNG::CreateAccessibilityProvider(frameNode);
-}
-
-void DisposeAccessibilityProvider(void* provider)
-{
-    XComponentModelNG::DisposeAccessibilityProvider(
-        reinterpret_cast<ArkUI_AccessibilityProvider*>(provider));
-}
 } // namespace
 
 namespace NodeModifier {
 const ArkUIXComponentModifier* GetXComponentModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
     static const ArkUIXComponentModifier modifier = {
-        .setXComponentEnableAnalyzer = SetXComponentEnableAnalyzer,
-        .resetXComponentEnableAnalyzer = ResetXComponentEnableAnalyzer,
-        .setXComponentBackgroundColor = SetXComponentBackgroundColor,
-        .setXComponentBackgroundColorWithColorSpace = SetXComponentBackgroundColorWithColorSpace,
-        .resetXComponentBackgroundColor = ResetXComponentBackgroundColor,
-        .setXComponentOpacity = SetXComponentOpacity,
-        .resetXComponentOpacity = ResetXComponentOpacity,
-        .setXComponentId = SetXComponentId,
-        .setXComponentType = SetXComponentType,
-        .setXComponentSurfaceSize = SetXComponentSurfaceSize,
-        .getXComponentId = GetXComponentId,
-        .getXComponentType = GetXComponentType,
-        .getXComponentSurfaceWidth = GetXComponentSurfaceWidth,
-        .getXComponentSurfaceHeight = GetXComponentSurfaceHeight,
-        .getNativeXComponent = GetNativeXComponent,
-        .setXComponentLibraryname = SetXComponentLibraryname,
-        .setImageAIOptions = SetImageAIOptions,
-        .initXComponent = InitXComponent,
-        .setXComponentEnableSecure = SetXComponentEnableSecure,
-        .resetXComponentEnableSecure = ResetXComponentEnableSecure,
-        .setXComponentHdrBrightness = SetXComponentHdrBrightness,
-        .resetXComponentHdrBrightness = ResetXComponentHdrBrightness,
-        .setXComponentEnableTransparentLayer = SetXComponentEnableTransparentLayer,
-        .resetXComponentEnableTransparentLayer = ResetXComponentEnableTransparentLayer,
-        .setXComponentRenderFit = SetXComponentRenderFit,
-        .resetXComponentRenderFit = ResetXComponentRenderFit,
-        .getXComponentRenderFit = GetXComponentRenderFit,
-        .setXComponentSurfaceRect = SetXComponentSurfaceRect,
-        .getXComponentSurfaceRect = GetXComponentSurfaceRect,
-        .resetXComponentSurfaceRect = ResetXComponentSurfaceRect,
-        .getXComponentEnableAnalyzer = GetXComponentEnableAnalyzer,
-        .startImageAnalyzer = StartImageAnalyzer,
-        .stopImageAnalyzer = StopImageAnalyzer,
-        .createSurfaceHolder = CreateSurfaceHolder,
-        .dispose = Dispose,
-        .setAutoInitialize = SetAutoInitialize,
-        .initialize = Initialize,
-        .isInitialized = IsInitialized,
-        .finalize = Finalize,
-        .getXComponentIsBindNative = GetXComponentIsBindNative,
-        .setExpectedFrameRateRange = SetExpectedFrameRateRange,
-        .registerOnFrameCallback = RegisterOnFrameCallback,
-        .unregisterOnFrameCallback = UnregisterOnFrameCallback,
-        .setNeedSoftKeyboard = SetNeedSoftKeyboard,
-        .createAccessibilityProvider = CreateAccessibilityProvider,
-        .disposeAccessibilityProvider = DisposeAccessibilityProvider,
+        nullptr, // loadXComponent
+        nullptr, // setXComponentOptions
+        nullptr, // getXComponentSurfaceId
+        nullptr, // getXComponentController
+        SetXComponentEnableAnalyzer,
+        ResetXComponentEnableAnalyzer,
+        SetXComponentBackgroundColor,
+        ResetXComponentBackgroundColor,
+        SetXComponentOpacity,
+        ResetXComponentOpacity,
+        SetXComponentId,
+        SetXComponentType,
+        SetXComponentSurfaceSize,
+        GetXComponentId,
+        GetXComponentType,
+        GetXComponentSurfaceWidth,
+        GetXComponentSurfaceHeight,
+        GetNativeXComponent,
+        SetXComponentLibraryname,
+        SetImageAIOptions,
+        InitXComponent,
+        SetXComponentEnableSecure,
+        ResetXComponentEnableSecure,
+        SetXComponentRenderFit,
+        ResetXComponentRenderFit,
     };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
 
     return &modifier;
 }
 
 const CJUIXComponentModifier* GetCJUIXComponentModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
     static const CJUIXComponentModifier modifier = {
-        .loadXComponent = nullptr, // loadXComponent
-        .setXComponentOptions = nullptr, // setXComponentOptions
-        .getXComponentSurfaceId = nullptr, // getXComponentSurfaceId
-        .getXComponentController = nullptr, // getXComponentController
-        .setXComponentBackgroundColor = SetXComponentBackgroundColor,
-        .setXComponentBackgroundColorWithColorSpace = SetXComponentBackgroundColorWithColorSpace,
-        .resetXComponentBackgroundColor = ResetXComponentBackgroundColor,
-        .setXComponentOpacity = SetXComponentOpacity,
-        .resetXComponentOpacity = ResetXComponentOpacity,
-        .setXComponentId = SetXComponentId,
-        .setXComponentType = SetXComponentType,
-        .setXComponentSurfaceSize = SetXComponentSurfaceSize,
-        .getXComponentId = GetXComponentId,
-        .getXComponentType = GetXComponentType,
-        .getXComponentSurfaceWidth = GetXComponentSurfaceWidth,
-        .getXComponentSurfaceHeight = GetXComponentSurfaceHeight,
-        .getNativeXComponent = GetNativeXComponent,
-        .setXComponentLibraryname = SetXComponentLibraryname,
-        .setImageAIOptions = SetImageAIOptions,
+        nullptr, // loadXComponent
+        nullptr, // setXComponentOptions
+        nullptr, // getXComponentSurfaceId
+        nullptr, // getXComponentController
+        SetXComponentBackgroundColor,
+        ResetXComponentBackgroundColor,
+        SetXComponentOpacity,
+        ResetXComponentOpacity,
+        SetXComponentId,
+        SetXComponentType,
+        SetXComponentSurfaceSize,
+        GetXComponentId,
+        GetXComponentType,
+        GetXComponentSurfaceWidth,
+        GetXComponentSurfaceHeight,
+        GetNativeXComponent,
+        SetXComponentLibraryname,
+        SetImageAIOptions,
     };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
 
     return &modifier;
 }

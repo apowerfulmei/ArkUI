@@ -15,13 +15,5 @@ import("//foundation/arkui/ace_engine/test/unittest/ace_unittest.gni")
 
 ace_unittest("stage_test_ng") {
   type = "new"
-  sources = [
-    "page_test_ng.cpp",
-    "stage_test_ng.cpp",
-  ]
-}
-
-ace_unittest("force_split_stage_test_ng") {
-  type = "new"
-  sources = [ "force_split_stage_test_ng.cpp" ]
+  sources = [ "stage_test_ng.cpp" ]
 }

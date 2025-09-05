@@ -35,23 +35,7 @@ const char* AXIS_TYPE[] = {
     "Axis.FREE",
     "Axis.NONE",
 };
-const FontWeight FONT_WEIGHT_CONVERT_MAP[] = {
-    FontWeight::W100,
-    FontWeight::W200,
-    FontWeight::W300,
-    FontWeight::W400,
-    FontWeight::W500,
-    FontWeight::W600,
-    FontWeight::W700,
-    FontWeight::W800,
-    FontWeight::W900,
-    FontWeight::W700,       // FontWeight::BOLD
-    FontWeight::W400,       // FontWeight::NORMAL
-    FontWeight::W900,       // FontWeight::BOLDER,
-    FontWeight::W100,       // FontWeight::LIGHTER
-    FontWeight::W500,       // FontWeight::MEDIUM
-    FontWeight::W400,       // FontWeight::REGULAR
-};
+
 } // namespace
 
 inline std::string ConvertStackFitToString(StackFit stackFit)
@@ -312,19 +296,6 @@ inline std::string ConvertWrapTextDecorationToStirng(TextDecoration decoration)
     return index < 0 ? "TextDecorationType.None" : decorationTable[index].value;
 }
 
-inline std::string ConvertWrapTextDecorationToStirng(std::vector<TextDecoration> decorations)
-{
-    if (decorations.size() == 0) {
-        return ConvertWrapTextDecorationToStirng(TextDecoration::NONE);
-    }
-    std::string ret = "";
-    for (TextDecoration decoration: decorations) {
-        ret += ConvertWrapTextDecorationToStirng(decoration) + ",";
-    }
-    ret.pop_back();
-    return ret;
-}
-
 inline std::string ConvertWrapTextDecorationStyleToString(TextDecorationStyle decorationStyle)
 {
     static const LinearEnumMapNode<TextDecorationStyle, std::string> decorationStyleTable[] = {
@@ -437,44 +408,6 @@ inline TextAlign ConvertWrapStringToTextAlign(const std::string& str)
     return TextAlign::START;
 }
 
-inline std::string ConvertWrapTextContentAlignToString(TextContentAlign textContentAlign)
-{
-    static const LinearEnumMapNode<TextContentAlign, std::string> textContentAlignTable[] = {
-        { TextContentAlign::TOP, "TextContentAlign.TOP" },
-        { TextContentAlign::CENTER, "TextContentAlign.CENTER" },
-        { TextContentAlign::BOTTOM, "TextContentAlign.BOTTOM" },
-    };
-
-    auto index = BinarySearchFindIndex(textContentAlignTable, ArraySize(textContentAlignTable), textContentAlign);
-    return index < 0 ? "TextContentAlign.CENTER" : textContentAlignTable[index].value;
-}
-
-inline std::string ConvertWrapTextVerticalAlignToString(TextVerticalAlign textVerticalAlign)
-{
-    static const LinearEnumMapNode<TextVerticalAlign, std::string> textVerticalAlignTable[] = {
-        { TextVerticalAlign::BASELINE, "TextVerticalAlign.BASELINE" },
-        { TextVerticalAlign::BOTTOM, "TextVerticalAlign.BOTTOM" },
-        { TextVerticalAlign::CENTER, "TextVerticalAlign.CENTER" },
-        { TextVerticalAlign::TOP, "TextVerticalAlign.TOP" },
-    };
-
-    auto index = BinarySearchFindIndex(
-        textVerticalAlignTable, ArraySize(textVerticalAlignTable), textVerticalAlign);
-    return index < 0 ? "TextVerticalAlign.BASELINE" : textVerticalAlignTable[index].value;
-}
-
-inline TextVerticalAlign ConvertWrapStringToTextVerticalAlign(const std::string& str)
-{
-    static const std::unordered_map<std::string, TextVerticalAlign> uMap {
-        { "TextVerticalAlign.BASELINE", TextVerticalAlign::BASELINE },
-        { "TextVerticalAlign.BOTTOM", TextVerticalAlign::BOTTOM },
-        { "TextVerticalAlign.CENTER", TextVerticalAlign::CENTER },
-        { "TextVerticalAlign.TOP", TextVerticalAlign::TOP },
-    };
-    auto iter = uMap.find(str);
-    return iter != uMap.end() ? iter->second : TextVerticalAlign::BASELINE;
-}
-
 inline std::string ConvertWrapTextOverflowToString(TextOverflow textOverflow)
 {
     static const LinearEnumMapNode<TextOverflow, std::string> textOverflowTable[] = {
@@ -485,7 +418,7 @@ inline std::string ConvertWrapTextOverflowToString(TextOverflow textOverflow)
     };
 
     auto index = BinarySearchFindIndex(textOverflowTable, ArraySize(textOverflowTable), textOverflow);
-    return index < 0 ? "TextOverflow.Clip" : textOverflowTable[index].value;
+    return index < 0 ? "TextAlign.Start" : textOverflowTable[index].value;
 }
 
 inline TextOverflow ConvertWrapStringToTextOverflow(const std::string& str)
@@ -503,26 +436,6 @@ inline TextOverflow ConvertWrapStringToTextOverflow(const std::string& str)
     return TextOverflow::CLIP;
 }
 
-inline MarqueeDirection ConvertWrapStringToMarqueeDirection(const std::string& str)
-{
-    static const std::unordered_map<std::string, MarqueeDirection> uMap {
-        { "MarqueeDirection.LEFT", MarqueeDirection::LEFT },
-        { "MarqueeDirection.RIGHT", MarqueeDirection::RIGHT },
-    };
-
-    return uMap.count(str) ? uMap.at(str) : MarqueeDirection::LEFT;
-}
-
-inline MarqueeStartPolicy ConvertWrapStringToMarqueeStartPolicy(const std::string& str)
-{
-    static const std::unordered_map<std::string, MarqueeStartPolicy> uMap {
-        { "MarqueeStartPolicy.DEFAULT", MarqueeStartPolicy::DEFAULT },
-        { "MarqueeStartPolicy.ON_FOCUS", MarqueeStartPolicy::ON_FOCUS },
-    };
-
-    return uMap.count(str) ? uMap.at(str) : MarqueeStartPolicy::DEFAULT;
-}
-
 inline std::string ConvertWrapFontStyleToStirng(FontStyle fontStyle)
 {
     static const LinearEnumMapNode<FontStyle, std::string> fontStyleTable[] = {
@@ -532,11 +445,6 @@ inline std::string ConvertWrapFontStyleToStirng(FontStyle fontStyle)
 
     auto index = BinarySearchFindIndex(fontStyleTable, ArraySize(fontStyleTable), fontStyle);
     return index < 0 ? "FontStyle.Normal" : fontStyleTable[index].value;
-}
-
-inline FontWeight ConvertFontWeight(FontWeight fontWeight)
-{
-    return FONT_WEIGHT_CONVERT_MAP[static_cast<int>(fontWeight)];
 }
 
 inline std::string ConvertWrapFontWeightToStirng(FontWeight fontWeight)
@@ -620,24 +528,10 @@ inline std::string ConvertWrapWordBreakToString(WordBreak wordBreak)
         { WordBreak::NORMAL, "normal" },
         { WordBreak::BREAK_ALL, "break-all" },
         { WordBreak::BREAK_WORD, "break-word" },
-        { WordBreak::HYPHENATION, "hyphenation" },
     };
 
     auto index = BinarySearchFindIndex(wordBreakTable, ArraySize(wordBreakTable), wordBreak);
     return index < 0 ? "break-word" : wordBreakTable[index].value;
-}
-
-inline std::string ConvertTextDirectionToString(TextDirection direction)
-{
-    static const LinearEnumMapNode<TextDirection, std::string> textDirectionTable[] = {
-        { TextDirection::LTR, "LTR" },
-        { TextDirection::RTL, "RTL" },
-        { TextDirection::INHERIT, "INHERIT" },
-        { TextDirection::AUTO, "AUTO" },
-    };
-
-    auto index = BinarySearchFindIndex(textDirectionTable, ArraySize(textDirectionTable), direction);
-    return index < 0 ? "AUTO" : textDirectionTable[index].value;
 }
 
 inline std::string ConvertWrapLineBreakStrategyToString(LineBreakStrategy lineBreakStrategy)
@@ -734,52 +628,6 @@ inline std::string ConvertWrapMarqueeUpdateStrategyToStirng(MarqueeUpdateStrateg
     return index < 0 ? "MarqueeUpdateStrategy.DEFAULT" : marqueeUpdateStrategyTable[index].value;
 }
 
-inline std::string ConvertSymbolColorToString(const std::vector<Color>& colors)
-{
-    if (colors.size() <= 0) {
-        return "";
-    }
-    auto colorStr = std::string("[");
-    for (auto color : colors) {
-        colorStr.append(color.ColorToString());
-        colorStr.append(",");
-    }
-    colorStr.append("]");
-    return colorStr;
-}
-
-inline bool IsValidTextDecorations(const std::vector<TextDecoration>& decorations)
-{
-    if (decorations.size() <= 0) {
-        return false;
-    }
-    for (TextDecoration decoration : decorations) {
-        if (decoration != TextDecoration::NONE) {
-            return true;
-        }
-    }
-    return false;
-}
-
-inline bool HasTextDecoration(const std::vector<TextDecoration>& decorations, TextDecoration value)
-{
-    auto iter = std::find(decorations.begin(), decorations.end(), value);
-    return iter != decorations.end();
-}
-
-inline bool IsEqualTextDecorations(
-    const std::vector<TextDecoration>& left, const std::vector<TextDecoration>& right)
-{
-    if (left.size() != right.size()) {
-        return false;
-    }
-    for (int index = 0; index < static_cast<int>(left.size()); index++) {
-        if (!HasTextDecoration(right, left[index])) {
-            return false;
-        }
-    }
-    return true;
-}
 } // namespace OHOS::Ace::V2
 
 #endif // FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_V2_INSPECTOR_UTILS_H

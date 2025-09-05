@@ -47,7 +47,6 @@ using GetNamedRouterInfoCallback = std::function<std::unique_ptr<JsonValue>()>;
 using IsNamedRouterNeedPreloadCallback = std::function<bool(const std::string&)>;
 using PreloadNamedRouterCallback = std::function<void(const std::string&, std::function<void(bool)>&&)>;
 using UpdateRootComponentCallback = std::function<bool()>;
-using GenerateIntentPageCallback = std::function<bool(const std::string&, const std::string&, const std::string&)>;
 #if defined(PREVIEW)
 using IsComponentPreviewCallback = std::function<bool()>;
 #endif
@@ -55,25 +54,6 @@ using IsComponentPreviewCallback = std::function<bool()>;
 enum class RouterMode {
     STANDARD = 0,
     SINGLE,
-};
-
-struct RouterIntentInfo {
-    std::string bundleName;
-    std::string moduleName;
-    std::string pagePath;
-    std::string param;
-    std::function<void()> loadPageCallback;
-    bool isColdStart;
-
-    std::string ToString()
-    {
-        return "----------- RouterIntentInfo -----------\n"
-               "bundleName:  " + bundleName + "\n"
-               "moduleName:  " + moduleName + "\n"
-               "pagePath:    " + pagePath + "\n"
-               "isColdStart: " + (isColdStart? "yes" : "no") + "\n"
-               "----------------------------------------\n";
-    }
 };
 
 struct RouterPageInfo {
@@ -85,12 +65,10 @@ struct RouterPageInfo {
     std::string path;
     bool isNamedRouterMode = false;
     std::shared_ptr<std::vector<uint8_t>> content;
-    RouterIntentInfo intentInfo;
-    bool isUseIntent = false;
 };
 
 class PageRouterManager : public AceType {
-    DECLARE_ACE_TYPE(PageRouterManager, AceType);
+    DECLARE_ACE_TYPE(PageRouterManager, AceType)
 public:
     PageRouterManager() = default;
     ~PageRouterManager() override = default;
@@ -160,11 +138,6 @@ public:
     {
         updateRootComponent_ = callback;
     }
-
-    void SetGenerateIntentPageCallback(GenerateIntentPageCallback&& callback)
-    {
-        generateIntentPageCallback_ = callback;
-    }
 #if defined(PREVIEW)
     void SetIsComponentPreview(IsComponentPreviewCallback&& callback)
     {
@@ -178,12 +151,6 @@ public:
 
     // router operation
     void Push(const RouterPageInfo& target);
-
-    // For ArkTS1.2
-    RefPtr<FrameNode> PushExtender(const RouterPageInfo& target);
-    RefPtr<FrameNode> ReplaceExtender(const RouterPageInfo& target, std::function<void()>&& enterFinishCallback);
-    RefPtr<FrameNode> RunPageExtender(const RouterPageInfo& target);
-
     void PushNamedRoute(const RouterPageInfo& target);
     bool Pop();
     void Replace(const RouterPageInfo& target);
@@ -202,7 +169,6 @@ public:
     void GetPageNameAndPath(const std::string& url, std::string& name, std::string& path);
     int32_t GetPageIndex(const WeakPtr<FrameNode>& page);
 
-    std::string GetInitParams() const;
     std::string GetParams() const;
 
     int32_t GetIndexByUrl(const std::string& url) const;
@@ -239,12 +205,6 @@ public:
     // begin from 1
     bool IsUnrestoreByIndex(int32_t index);
 
-    void RunIntentPage();
-    bool FireNavigationIntentActively(int32_t pageId, bool needTransition);
-    void SetRouterIntentInfo(const std::string& intentInfoSerialized, bool isColdStart,
-        const std::function<void()>&& loadPageCallback);
-    std::string GetTopNavDestinationInfo(bool onlyFullScreen, bool needParam);
-
 protected:
     class RouterOptScope {
     public:
@@ -270,11 +230,10 @@ protected:
     }
 
     std::pair<int32_t, RefPtr<FrameNode>> FindPageInStack(const std::string& url, bool needIgnoreBegin = false);
-    std::pair<int32_t, RefPtr<FrameNode>> FindPageInStackByRouteName(
-        const std::string& name, bool needIgnoreBegin = false);
+    std::pair<int32_t, RefPtr<FrameNode>> FindPageInStackByRouteName(const std::string& name) const;
     int32_t FindPageInRestoreStack(const std::string& url);
 
-    void SetPageInfoRouteName(const RefPtr<EntryPageInfo>& info);
+    void SetPageInfoRouteName(const RefPtr<EntryPageInfo>& info, bool isNamedRouterMode);
 
     void LoadOhmUrl(const RouterPageInfo& target);
     void PushOhmUrl(const RouterPageInfo& target);
@@ -289,8 +248,6 @@ protected:
     void BackToIndexCheckAlert(int32_t index, const std::string& params);
     void StartClean();
     void CleanPageOverlay();
-
-    void UpdateSrcPage();
 
     enum class RestorePageDestination : int32_t {
         TOP = 0,         // restore page to pageRouterStack_'s top
@@ -315,19 +272,13 @@ protected:
     void PopPage(const std::string& params, bool needShowNext, bool needTransition, bool needReplaceParams = true);
     void PopPageToIndex(int32_t index, const std::string& params, bool needShowNext, bool needTransition);
     void DealReplacePage(const RouterPageInfo& target);
-    virtual void ReplacePageInNewLifecycle(const RouterPageInfo& info);
+    virtual void ReplacePageInNewLifecycle(const RouterPageInfo& target);
 
     static bool OnPageReady(const RefPtr<FrameNode>& pageNode, bool needHideLast, bool needTransition,
         bool isCardRouter = false, int64_t cardId = 0);
-    bool OnPageReadyAndHandleIntent(const RefPtr<FrameNode>& pageNode, bool needHideLast);
-    bool OnPopPage(bool needShowNext, bool needTransition);
+    static bool OnPopPage(bool needShowNext, bool needTransition);
     static bool OnPopPageToIndex(int32_t index, bool needShowNext, bool needTransition);
     static bool OnCleanPageStack();
-
-    // For ArkTS1.2
-    virtual bool LoadPageExtender(int32_t pageId, const RouterPageInfo& target,
-        bool needHideLast = true, bool needTransition = true, bool isPush = false);
-    RefPtr<FrameNode> CreatePageExtender(int32_t pageId, const RouterPageInfo& target);
 
     UIContentErrorCode LoadCard(int32_t pageId, const RouterPageInfo& target, const std::string& params, int64_t cardId,
         bool isRestore = false, bool needHideLast = true, const std::string& entryPoint = "");
@@ -350,11 +301,6 @@ protected:
     void LoadOhmUrlPage(const std::string& url, std::function<void()>&& finishCallback,
         const std::function<void(const std::string& errorMsg, int32_t errorCode)>& errorCallback,
         const std::string& finishCallbackTaskName, const std::string& errorCallbackTaskName);
-    bool GenerateRouterPageInner(const RouterPageInfo& target);
-    std::pair<int32_t, RefPtr<FrameNode>> FindIntentPageInStack() const;
-    RouterIntentInfo ParseRouterIntentInfo(const std::string& intentInfoSerialized);
-    // only for @normalized ohmUrl
-    std::string ParseUrlNameFromOhmUrl(const std::string& ohmUrl);
 
     RefPtr<Framework::ManifestParser> manifestParser_;
 
@@ -376,7 +322,6 @@ protected:
     IsNamedRouterNeedPreloadCallback isNamedRouterNeedPreload_;
     PreloadNamedRouterCallback preloadNamedRouter_;
     UpdateRootComponentCallback updateRootComponent_;
-    GenerateIntentPageCallback generateIntentPageCallback_;
     bool isCardRouter_ = false;
     int32_t pageId_ = 0;
     std::list<WeakPtr<FrameNode>> pageRouterStack_;
@@ -386,7 +331,6 @@ protected:
 #if defined(PREVIEW)
     IsComponentPreviewCallback isComponentPreview_;
 #endif
-    std::optional<RouterIntentInfo> intentInfo_ = std::nullopt;
 
     ACE_DISALLOW_COPY_AND_MOVE(PageRouterManager);
 };

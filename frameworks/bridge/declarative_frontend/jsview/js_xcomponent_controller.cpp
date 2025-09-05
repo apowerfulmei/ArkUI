@@ -15,7 +15,6 @@
 
 #include "frameworks/bridge/declarative_frontend/jsview/js_xcomponent_controller.h"
 
-#include "canvas_napi/js_canvas.h"
 #include "interfaces/inner_api/ace/ai/image_analyzer.h"
 #include "js_utils.h"
 
@@ -30,15 +29,6 @@
 #include "frameworks/bridge/declarative_frontend/jsview/js_view_common_def.h"
 
 namespace OHOS::Ace::Framework {
-extern "C" ACE_FORCE_EXPORT void OHOS_ACE_GetXComponentController(void* jsController, void* controller)
-{
-    auto* jsXComponentController = static_cast<Framework::JSXComponentController*>(jsController);
-    CHECK_NULL_VOID(jsXComponentController);
-    auto xComponentController = reinterpret_cast<std::shared_ptr<InnerXComponentController>*>(controller);
-    CHECK_NULL_VOID(xComponentController);
-    *xComponentController = jsXComponentController->GetController();
-}
-
 struct XComponentAsyncCxt {
     napi_env env = nullptr;
     napi_deferred deferred = nullptr;
@@ -130,8 +120,6 @@ void JSXComponentController::JSBind(BindingTarget globalObj)
         "setXComponentSurfaceRotation", &JSXComponentController::SetXComponentSurfaceRotation);
     JSClass<JSXComponentController>::CustomMethod(
         "getXComponentSurfaceRotation", &JSXComponentController::GetXComponentSurfaceRotation);
-    JSClass<JSXComponentController>::CustomMethod("lockCanvas", &JSXComponentController::LockCanvas);
-    JSClass<JSXComponentController>::CustomMethod("unlockCanvasAndPost", &JSXComponentController::UnlockCanvasAndPost);
     JSClass<JSXComponentController>::Bind(
         globalObj, JSXComponentController::Constructor, JSXComponentController::Destructor);
 }
@@ -156,18 +144,20 @@ void JSXComponentController::Constructor(const JSCallbackInfo& args)
 
 void JSXComponentController::Destructor(JSXComponentController* xcomponentController)
 {
-    CHECK_NULL_VOID(xcomponentController);
-    xcomponentController->DecRefCount();
+    if (xcomponentController) {
+        xcomponentController->DecRefCount();
+    }
 }
 
 void JSXComponentController::GetSurfaceId(const JSCallbackInfo& args)
 {
-    CHECK_NULL_VOID(xcomponentController_);
-    auto surfaceId = xcomponentController_->GetSurfaceId();
-    auto returnValue = JSVal(ToJSValue(surfaceId));
-    auto returnPtr = JSRef<JSVal>::Make(returnValue);
-    TAG_LOGI(AceLogTag::ACE_XCOMPONENT, "Controller GetSurfaceId:%{public}s", surfaceId.c_str());
-    args.SetReturnValue(returnPtr);
+    if (xcomponentController_) {
+        auto surfaceId = xcomponentController_->GetSurfaceId();
+        auto returnValue = JSVal(ToJSValue(surfaceId));
+        auto returnPtr = JSRef<JSVal>::Make(returnValue);
+        TAG_LOGI(AceLogTag::ACE_XCOMPONENT, "Controller GetSurfaceId:%{public}s", surfaceId.c_str());
+        args.SetReturnValue(returnPtr);
+    }
 }
 
 void JSXComponentController::SetSurfaceConfig(const JSCallbackInfo& args)
@@ -186,13 +176,16 @@ void JSXComponentController::SetSurfaceConfig(const JSCallbackInfo& args)
         return;
     }
 
-    CHECK_NULL_VOID(xcomponentController_);
-    xcomponentController_->ConfigSurface(surfaceWidth, surfaceHeight);
+    if (xcomponentController_) {
+        xcomponentController_->ConfigSurface(surfaceWidth, surfaceHeight);
+    }
 }
 
 void JSXComponentController::GetXComponentSurfaceRect(const JSCallbackInfo& args)
 {
-    CHECK_NULL_VOID(xcomponentController_);
+    if (!xcomponentController_) {
+        return;
+    }
     auto retObj = JSRef<JSObject>::New();
     float offsetX = 0.0f;
     float offsetY = 0.0f;
@@ -212,7 +205,9 @@ void JSXComponentController::SetXComponentSurfaceRect(const JSCallbackInfo& args
     if (args.Length() < 1 || !args[0]->IsObject()) {
         return;
     }
-    CHECK_NULL_VOID(xcomponentController_);
+    if (!xcomponentController_) {
+        return;
+    }
 
     JSRef<JSObject> obj = JSRef<JSObject>::Cast(args[0]);
     auto jsSurfaceWidth = obj->GetProperty("surfaceWidth");
@@ -314,39 +309,5 @@ void JSXComponentController::GetXComponentSurfaceRotation(const JSCallbackInfo& 
     bool lock = xcomponentController_->GetSurfaceRotation();
     retObj->SetProperty("lock", lock);
     args.SetReturnValue(retObj);
-}
-
-void JSXComponentController::LockCanvas(const JSCallbackInfo& args)
-{
-    CHECK_NULL_VOID(xcomponentController_);
-    auto rsCanvas = xcomponentController_->LockCanvas();
-    CHECK_NULL_VOID(rsCanvas);
-    auto engine = EngineHelper::GetCurrentEngine();
-    CHECK_NULL_VOID(engine);
-    NativeEngine* nativeEngine = engine->GetNativeEngine();
-    napi_env env = reinterpret_cast<napi_env>(nativeEngine);
-    ScopeRAII scope(env);
-    auto jsCanvas = OHOS::Rosen::Drawing::JsCanvas::CreateJsCanvas(env, rsCanvas);
-    JSRef<JSVal> jsCanvasVal = JsConverter::ConvertNapiValueToJsVal(jsCanvas);
-    args.SetReturnValue(jsCanvasVal);
-}
-
-void JSXComponentController::UnlockCanvasAndPost(const JSCallbackInfo& args)
-{
-    if (args.Length() < 1 || !args[0]->IsObject()) {
-        return;
-    }
-    auto engine = EngineHelper::GetCurrentEngine();
-    CHECK_NULL_VOID(engine);
-    NativeEngine* nativeEngine = engine->GetNativeEngine();
-    napi_env env = reinterpret_cast<napi_env>(nativeEngine);
-    ScopeRAII scope(env);
-    auto jsCanvas = JsConverter::ConvertJsValToNapiValue(args[0]);
-    OHOS::Rosen::Drawing::JsCanvas* unwrapCanvas = nullptr;
-    napi_unwrap(env, jsCanvas, reinterpret_cast<void**>(&unwrapCanvas));
-    CHECK_NULL_VOID(unwrapCanvas);
-    auto rsCanvas = unwrapCanvas->GetCanvas();
-    CHECK_NULL_VOID(xcomponentController_);
-    xcomponentController_->UnlockCanvasAndPost(rsCanvas);
 }
 } // namespace OHOS::Ace::Framework

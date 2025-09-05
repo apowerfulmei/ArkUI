@@ -20,7 +20,6 @@
 
 #include "base/memory/ace_type.h"
 #include "base/utils/string_utils.h"
-#include "base/utils/utf_helper.h"
 #include "core/common/ime/text_editing_value.h"
 #include "core/common/ime/text_input_action.h"
 #include "core/event/key_event.h"
@@ -96,10 +95,6 @@ public:
     virtual void PerformAction(TextInputAction action, bool forceCloseKeyboard = false) = 0;
 
     virtual void InsertValue(const std::string& insertValue, bool isIME = false) {};
-    virtual void InsertValue(const std::u16string& insertValue, bool isIME = false)
-    {
-        InsertValue(UtfUtils::Str16DebugToStr8(insertValue), isIME);
-    };
     virtual void DeleteBackward(int32_t length) {};
     virtual void DeleteForward(int32_t length) {};
     virtual void SetInputMethodStatus(bool keyboardShown) {}
@@ -131,10 +126,6 @@ public:
     };
 #endif
     virtual void UpdateInputFilterErrorText(const std::string& errorText) {};
-    virtual void UpdateInputFilterErrorText(const std::u16string& errorText)
-    {
-        UpdateInputFilterErrorText(UtfUtils::Str16DebugToStr8(errorText));
-    };
     virtual void ResetTouchAtLeftOffsetFlag() {}
 
     // Requests that this client Y point.
@@ -178,11 +169,6 @@ public:
 
     virtual void HandleSelect(CaretMoveIntent direction) {}
 
-    virtual void HandleSelectExtend(CaretMoveIntent direction)
-    {
-        CursorMove(direction);
-    }
-
     virtual void HandleSelectFontStyle(KeyCode code) {}
 
     virtual void HandleOnSelectAll() {}
@@ -199,8 +185,6 @@ public:
 
     virtual void HandleOnUndoAction() {}
 
-    virtual void HandleOnExtendUndoAction() {}
-
     virtual void HandleOnRedoAction() {}
 
     virtual void HandleOnDelete(bool backward) {}
@@ -208,11 +192,6 @@ public:
     virtual bool HandleOnDeleteComb(bool backward)
     {
         return false;
-    }
-
-    virtual int32_t SetPreviewText(const std::u16string& previewValue, const PreviewRange range)
-    {
-        return SetPreviewText(UtfUtils::Str16DebugToStr8(previewValue), range);
     }
 
     virtual int32_t SetPreviewText(const std::string& previewValue, const PreviewRange range)
@@ -226,11 +205,6 @@ public:
     virtual int32_t CheckPreviewTextValidate(const std::string& previewValue, const PreviewRange range)
     {
         return 0;
-    }
-
-    virtual int32_t CheckPreviewTextValidate(const std::u16string& previewValue, const PreviewRange range)
-    {
-        return CheckPreviewTextValidate(UtfUtils::Str16DebugToStr8(previewValue), range);
     }
 
     static std::map<KeyComb, std::function<bool(TextInputClient*)>> functionKeys_;
@@ -254,7 +228,6 @@ public:
     virtual void HandleOnPageDown() {};
     virtual void ResetOriginCaretPosition() {};
     virtual bool RecordOriginCaretPosition() { return false; };
-    virtual bool IsShortCutBlocked() { return false; };
 protected:
     int32_t instanceId_ = -1;
     bool shiftFlag_ = false;

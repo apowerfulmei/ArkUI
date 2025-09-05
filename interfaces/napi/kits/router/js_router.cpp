@@ -13,11 +13,21 @@
  * limitations under the License.
  */
 
+#include <cstdint>
+#include <memory>
+#include <string>
 
 #include "interfaces/napi/kits/utils/napi_utils.h"
+#include "js_native_api.h"
+#include "js_native_api_types.h"
+#include "napi/native_api.h"
+#include "napi/native_engine/native_value.h"
+#include "napi/native_node_api.h"
 
 #include "core/common/ace_engine.h"
+#include "frameworks/base/log/log.h"
 #include "frameworks/bridge/common/utils/engine_helper.h"
+#include "frameworks/bridge/js_frontend/engine/common/js_engine.h"
 
 namespace OHOS::Ace::Napi {
 const char EN_ALERT_APPROVE[] = "enableAlertBeforeBackPage:ok";
@@ -78,19 +88,19 @@ static napi_value ParseJSONParams(napi_env env, const std::string& paramsStr)
     napi_get_named_property(env, globalValue, "JSON", &jsonValue);
     napi_value parseValue;
     napi_get_named_property(env, jsonValue, "parse", &parseValue);
-    
+
     napi_value paramsNApi;
     napi_create_string_utf8(env, paramsStr.c_str(), NAPI_AUTO_LENGTH, &paramsNApi);
     napi_value funcArgv[1] = { paramsNApi };
     napi_value result;
     napi_call_function(env, jsonValue, parseValue, 1, funcArgv, &result);
-    
+
     napi_valuetype valueType = napi_undefined;
     napi_typeof(env, result, &valueType);
     if (valueType != napi_object) {
         return nullptr;
     }
-    
+
     return result;
 }
 
@@ -183,7 +193,6 @@ static napi_value JSRouterPush(napi_env env, napi_callback_info info)
         if (!delegate) {
             return;
         }
-        TAG_LOGI(AceLogTag::ACE_ROUTER, "push URI: %{public}s with mode: %{public}u", uri.c_str(), mode);
         if (mode == INVALID) {
             delegate->Push(uri, params);
         } else {
@@ -201,7 +210,6 @@ static napi_value JSRouterReplace(napi_env env, napi_callback_info info)
         if (!delegate) {
             return;
         }
-        TAG_LOGI(AceLogTag::ACE_ROUTER, "replace URI: %{public}s with mode: %{public}u", uri.c_str(), mode);
         if (mode == INVALID) {
             delegate->Replace(uri, params);
         } else {
@@ -351,8 +359,6 @@ static napi_value JSRouterPushWithCallback(napi_env env, napi_callback_info info
             NapiThrow(context->env, "UI execution context not found.", ERROR_CODE_INTERNAL_ERROR);
             return;
         }
-        TAG_LOGI(AceLogTag::ACE_ROUTER, "call pushUrl with mode: %{public}d, url: %{public}s",
-            context->mode, context->uriString.c_str());
         if (delegate) {
             delegate->PushWithCallback(context->uriString, context->paramsString,
                 context->recoverable, errorCallback, context->mode);
@@ -373,8 +379,6 @@ static napi_value JSRouterReplaceWithCallback(napi_env env, napi_callback_info i
             NapiThrow(context->env, "UI execution context not found.", ERROR_CODE_INTERNAL_ERROR);
             return;
         }
-        TAG_LOGI(AceLogTag::ACE_ROUTER, "call replaceUrl: %{public}s with mode: %{public}u",
-            context->uriString.c_str(), context->mode);
         if (delegate) {
             delegate->ReplaceWithCallback(context->uriString, context->paramsString,
                 context->recoverable, errorCallback, context->mode);
@@ -394,8 +398,6 @@ static napi_value JSPushNamedRoute(napi_env env, napi_callback_info info)
             NapiThrow(context->env, "UI execution context not found.", ERROR_CODE_INTERNAL_ERROR);
             return;
         }
-        TAG_LOGI(AceLogTag::ACE_ROUTER, "pushNamedRoute named route: %{public}s with mode: %{public}u",
-            context->uriString.c_str(), context->mode);
         delegate->PushNamedRoute(context->uriString, context->paramsString,
             context->recoverable, errorCallback, context->mode);
     };
@@ -410,10 +412,8 @@ static napi_value JSReplaceNamedRoute(napi_env env, napi_callback_info info)
             NapiThrow(context->env, "UI execution context not found.", ERROR_CODE_INTERNAL_ERROR);
             return;
         }
-        TAG_LOGI(AceLogTag::ACE_ROUTER, "replaceNamedRoute named route: %{public}s with mode: %{public}u",
-            context->uriString.c_str(), context->mode);
-        delegate->ReplaceNamedRoute(
-            context->uriString, context->paramsString, context->recoverable, errorCallback, context->mode);
+        delegate->ReplaceNamedRoute(context->uriString, context->paramsString,
+            context->recoverable, errorCallback, context->mode);
     };
     return CommonRouterWithCallbackProcess(env, info, callback, "name");
 }
@@ -464,7 +464,7 @@ static napi_value JSRouterBack(napi_env env, napi_callback_info info)
     }
     auto delegate = EngineHelper::GetCurrentDelegateSafely();
     if (!delegate) {
-        NapiThrow(env, "UI execution context not found.", ERROR_CODE_INTERNAL_ERROR);
+        NapiThrow(env, "UI execution context not found.", ERROR_CODE_PARAM_INVALID);
         return nullptr;
     }
     std::string uriString = "";
@@ -488,7 +488,6 @@ static napi_value JSRouterBack(napi_env env, napi_callback_info info)
             ParseParams(env, params, paramsString);
         }
     }
-    TAG_LOGI(AceLogTag::ACE_ROUTER, "back to URI: %{public}s", uriString.c_str());
     delegate->Back(uriString, paramsString);
     return nullptr;
 }
@@ -500,7 +499,6 @@ static napi_value JSRouterClear(napi_env env, napi_callback_info info)
         NapiThrow(env, "UI execution context not found.", ERROR_CODE_INTERNAL_ERROR);
         return nullptr;
     }
-    TAG_LOGI(AceLogTag::ACE_ROUTER, "clear router stack");
     delegate->Clear();
     return nullptr;
 }
@@ -586,7 +584,7 @@ static napi_value JSGetStateByIndex(napi_env env, napi_callback_info info)
     napi_create_int32(env, routeIndex, &resultArray[RESULT_ARRAY_INDEX_INDEX]);
     napi_create_string_utf8(env, routeName.c_str(), routeNameLen, &resultArray[RESULT_ARRAY_NAME_INDEX]);
     napi_create_string_utf8(env, routePath.c_str(), routePathLen, &resultArray[RESULT_ARRAY_PATH_INDEX]);
-    
+
     napi_value parsedParams = nullptr;
     if (!routeParams.empty()) {
         parsedParams = ParseJSONParams(env, routeParams);
@@ -706,8 +704,7 @@ void CallBackToJSTread(std::shared_ptr<RouterAsyncContext> context)
 
             napi_close_handle_scope(context->env, scope);
         },
-        TaskExecutor::TaskType::JS, "ArkUIRouterAlertCallback",
-        TaskExecutor::GetPriorityTypeWithCheck(PriorityType::VIP));
+        TaskExecutor::TaskType::JS, "ArkUIRouterAlertCallback");
 }
 
 static napi_value JSRouterEnableAlertBeforeBackPage(napi_env env, napi_callback_info info)
@@ -834,10 +831,12 @@ static napi_value JSRouterGetParams(napi_env env, napi_callback_info info)
         NapiThrow(env, "UI execution context not found.", ERROR_CODE_INTERNAL_ERROR);
         return nullptr;
     }
+
     std::string paramsStr = delegate->GetParams();
     if (paramsStr.empty()) {
         return nullptr;
     }
+
     napi_value result = ParseJSONParams(env, paramsStr);
     return result;
 }

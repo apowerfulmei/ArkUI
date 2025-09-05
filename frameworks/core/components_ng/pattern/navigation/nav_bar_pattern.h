@@ -18,7 +18,6 @@
 
 #include "base/memory/referenced.h"
 #include "core/components_ng/base/ui_node.h"
-#include "core/components_ng/pattern/navigation/nav_bar_event_hub.h"
 #include "core/components_ng/pattern/navigation/nav_bar_layout_algorithm.h"
 #include "core/components_ng/pattern/navigation/nav_bar_layout_property.h"
 #include "core/components_ng/pattern/navigation/nav_bar_node.h"
@@ -37,21 +36,6 @@ public:
     NavBarPattern() = default;
     ~NavBarPattern() override = default;
 
-    bool IsEnableMatchParent() override
-    {
-        return true;
-    }
-
-    bool IsEnableFix() override
-    {
-        return true;
-    }
-
-    bool IsEnableChildrenMatchParent() override
-    {
-        return true;
-    }
-
     RefPtr<LayoutProperty> CreateLayoutProperty() override
     {
         return MakeRefPtr<NavBarLayoutProperty>();
@@ -61,36 +45,30 @@ public:
     {
         return MakeRefPtr<NavBarLayoutAlgorithm>();
     }
-    
-    RefPtr<EventHub> CreateEventHub() override
-    {
-        return MakeRefPtr<NavBarEventHub>();
-    }
 
-    void OnCoordScrollStart() override;
-    float OnCoordScrollUpdate(float offset, float currentOffset) override;
-    void OnCoordScrollEnd() override;
-    bool CanCoordScrollUp(float offset) const override;
+    void OnCoordScrollStart();
+    float OnCoordScrollUpdate(float offset);
+    void OnCoordScrollEnd();
+    bool CanCoordScrollUp(float offset) const;
 
     void OnAttachToFrameNode() override;
-
-    bool NeedCoordWithScroll() override
+    void OnWindowFocused() override
     {
-        return !isHideTitlebar_ && (titleMode_ == NavigationTitleMode::FREE || IsNeedHandleScroll());
+        WindowFocus(true);
     }
-    bool IsNeedHandleScroll() const override
+
+    void OnWindowUnfocused() override
     {
-        auto eventHub = GetEventHub<NavBarEventHub>();
-        if (eventHub && eventHub->HasOnCoordScrollStartAction()) {
-            return true;
-        }
-        return false;
+        WindowFocus(false);
     }
-    OffsetF GetShowMenuOffset(const RefPtr<BarItemNode>& barItemNode, const RefPtr<FrameNode>& menuNode);
 
-    float GetTitleBarHeightLessThanMaxBarHeight() const override;
+    bool NeedCoordWithScroll()
+    {
+        return !isHideTitlebar_ && titleMode_ == NavigationTitleMode::FREE;
+    }
+    OffsetF GetShowMenuOffset(const RefPtr<BarItemNode> barItemNode, RefPtr<FrameNode> menuNode);
 
-    void BeforeCreateLayoutWrapper() override;
+    float GetTitleBarHeightLessThanMaxBarHeight() const;
 
 protected:
     void OnDetachFromFrameNode(FrameNode* frameNode) override;
@@ -98,15 +76,18 @@ protected:
     void MountTitleBar(const RefPtr<FrameNode>& host, bool& needRunTitleBarAnimation);
 
 private:
+    void WindowFocus(bool isFocus);
     void OnWindowSizeChanged(int32_t width, int32_t height, WindowSizeChangeReason type) override;
     void OnModifyDone() override;
-    bool OnDirtyLayoutWrapperSwap(const RefPtr<LayoutWrapper>& dirty, const DirtySwapConfig& config) override;
+    void OnColorConfigurationUpdate() override;
+    void SetNavBarMask(bool isWindowFocus);
 
     RefPtr<PanEvent> panEvent_;
     WeakPtr<FrameNode> scrollableNode_;
     RefPtr<FrictionMotion> motion_;
     RefPtr<Animator> controller_;
     NavigationTitleMode titleMode_ = NavigationTitleMode::FREE;
+    bool isWindowFocus_ = true;
 };
 
 } // namespace OHOS::Ace::NG

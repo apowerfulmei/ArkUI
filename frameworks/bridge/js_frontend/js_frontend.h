@@ -64,13 +64,11 @@ public:
 
     RefPtr<AcePage> GetPage(int32_t pageId) const override
     {
-        CHECK_NULL_RETURN(delegate_, nullptr);
         return delegate_->GetPage(pageId);
     }
 
     WeakPtr<AcePage> GetCurrentReadyPage() const
     {
-        CHECK_NULL_RETURN(delegate_, nullptr);
         return delegate_->GetCurrentReadyPage();
     }
 
@@ -128,8 +126,6 @@ public:
 
     void OnLayoutCompleted(const std::string& componentId) override;
     void OnDrawCompleted(const std::string& componentId) override;
-    void OnDrawChildrenCompleted(const std::string& componentId) override;
-    bool IsDrawChildrenCallbackFuncExist(const std::string& componentId) override;
 
     void DumpFrontend() const override;
     std::string GetPagePath() const override;

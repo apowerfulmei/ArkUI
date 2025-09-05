@@ -17,12 +17,11 @@
 #define FOUNDATION_ACE_FRAMEWORKS_COMPONENTS_NG_PROPERTIES_BORDER_PROPERTY_H
 
 #include <optional>
-#include <functional>
+
 #include "base/geometry/dimension.h"
 #include "base/json/json_util.h"
 #include "core/components/common/layout/constants.h"
 #include "core/components/common/properties/color.h"
-#include "core/common/resource/resource_object.h"
 
 namespace OHOS::Ace::NG {
 class InspectorFilter;
@@ -98,11 +97,6 @@ struct BorderRadiusPropertyT<Dimension> {
     std::optional<Dimension> radiusBottomEnd;
     std::optional<Dimension> radiusBottomStart;
     bool multiValued = true;
-    struct resourceUpdater {
-        RefPtr<ResourceObject> resObj;
-        std::function<void(const RefPtr<ResourceObject>&, NG::BorderRadiusPropertyT<Dimension>&)> updateFunc;
-    };
-    std::unordered_map<std::string, resourceUpdater> resMap_;
 
     BorderRadiusPropertyT<Dimension>() = default;
     explicit BorderRadiusPropertyT<Dimension>(Dimension radius)
@@ -115,7 +109,6 @@ struct BorderRadiusPropertyT<Dimension> {
     {}
 
     bool operator==(const BorderRadiusPropertyT<Dimension>& value) const;
-    bool operator!=(const BorderRadiusPropertyT<Dimension>& value) const;
 
     void SetRadius(const Dimension& borderRadius);
 
@@ -138,42 +131,6 @@ struct BorderRadiusPropertyT<Dimension> {
             .append(radiusBottomRight.has_value() ? radiusBottomRight->ToString() : "NA")
             .append("]");
         return str;
-    }
-    
-    void AddResource(
-        const std::string& key,
-        const RefPtr<ResourceObject>& resObj,
-        std::function<void(const RefPtr<ResourceObject>&, NG::BorderRadiusPropertyT<Dimension>&)>&& updateFunc)
-    {
-        if (resObj == nullptr || !updateFunc) {
-            return;
-        }
-        resMap_[key] = {resObj, std::move(updateFunc)};
-    }
-
-    bool HasResources() const
-    {
-        return !resMap_.empty();
-    }
-
-    void ReloadResources()
-    {
-        for (const auto& [key, resourceUpdater] : resMap_) {
-            resourceUpdater.updateFunc(resourceUpdater.resObj, *this);
-        }
-    }
-
-    void RemoveResource(const std::string& key)
-    {
-        auto iter = resMap_.find(key);
-        if (iter != resMap_.end()) {
-            resMap_.erase(iter);
-        }
-    }
-
-    void ClearResources()
-    {
-        resMap_.clear();
     }
 };
 
@@ -240,11 +197,6 @@ struct BorderColorProperty {
     std::optional<Color> startColor;
     std::optional<Color> endColor;
     bool multiValued = false;
-    struct resourceUpdater {
-        RefPtr<ResourceObject> resObj;
-        std::function<void(const RefPtr<ResourceObject>&, NG::BorderColorProperty&)> updateFunc;
-    };
-    std::unordered_map<std::string, resourceUpdater> resMap_;
 
     void SetColor(const Color& borderColor)
     {
@@ -264,37 +216,6 @@ struct BorderColorProperty {
 
     void ToJsonValue(std::unique_ptr<JsonValue>& json, std::unique_ptr<JsonValue>& borderJson,
         const InspectorFilter& filter, bool isOutline = false) const;
-
-    void AddResource(
-        const std::string& key,
-        const RefPtr<ResourceObject>& resObj,
-        std::function<void(const RefPtr<ResourceObject>&, NG::BorderColorProperty&)>&& updateFunc)
-    {
-        if (resObj == nullptr || !updateFunc) {
-            return;
-        }
-        resMap_[key] = {resObj, std::move(updateFunc)};
-    }
-
-    bool HasResources() const
-    {
-        return !resMap_.empty();
-    }
-
-    void ReloadResources()
-    {
-        for (const auto& [key, resourceUpdater] : resMap_) {
-            resourceUpdater.updateFunc(resourceUpdater.resObj, *this);
-        }
-    }
-
-    void RemoveResource(const std::string& key)
-    {
-        auto iter = resMap_.find(key);
-        if (iter != resMap_.end()) {
-            resMap_.erase(iter);
-        }
-    }
 };
 
 template<typename T>
@@ -350,11 +271,6 @@ struct BorderWidthPropertyT<Dimension> {
     std::optional<Dimension> startDimen;
     std::optional<Dimension> endDimen;
     bool multiValued = false;
-    struct resourceUpdater {
-        RefPtr<ResourceObject> resObj;
-        std::function<void(const RefPtr<ResourceObject>&, NG::BorderWidthPropertyT<Dimension>&)> updateFunc;
-    };
-    std::unordered_map<std::string, resourceUpdater> resMap_;
 
     void SetBorderWidth(const Dimension& borderWidth);
 
@@ -369,29 +285,6 @@ struct BorderWidthPropertyT<Dimension> {
         const InspectorFilter& filter, const std::string& keyValue) const;
 
     std::string ToString() const;
-
-    void AddResource(
-        const std::string& key,
-        const RefPtr<ResourceObject>& resObj,
-        std::function<void(const RefPtr<ResourceObject>&, NG::BorderWidthPropertyT<Dimension>&)>&& updateFunc)
-    {
-        if (resObj == nullptr || !updateFunc) {
-            return;
-        }
-        resMap_[key] = {resObj, std::move(updateFunc)};
-    }
-
-    bool HasResources() const
-    {
-        return !resMap_.empty();
-    }
-
-    void ReloadResources()
-    {
-        for (const auto& [key, resourceUpdater] : resMap_) {
-            resourceUpdater.updateFunc(resourceUpdater.resObj, *this);
-        }
-    }
 };
 
 template<>

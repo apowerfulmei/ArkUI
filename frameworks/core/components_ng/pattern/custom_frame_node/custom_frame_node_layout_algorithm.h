@@ -29,9 +29,7 @@ public:
 
     void Measure(LayoutWrapper* layoutWrapper) override
     {
-        auto layoutProp = layoutWrapper->GetLayoutProperty();
-        CHECK_NULL_VOID(layoutProp);
-        auto layoutConstraint = layoutProp->CreateChildConstraint();
+        auto layoutConstraint = layoutWrapper->GetLayoutProperty()->CreateChildConstraint();
         for (auto&& child : layoutWrapper->GetAllChildrenWithBuild()) {
             if (child->GetHostTag() == "RenderNode") {
                 child->Measure(std::nullopt);

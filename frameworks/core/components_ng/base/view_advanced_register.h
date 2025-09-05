@@ -22,20 +22,22 @@
 #include "frameworks/core/components_ng/pattern/stage/stage_manager.h"
 
 namespace OHOS::Ace::NG {
-class ViewAdvancedRegister : public AceType {
+class ACE_EXPORT ViewAdvancedRegister : public AceType {
 public:
     ACE_FORCE_EXPORT static ViewAdvancedRegister* GetInstance();
 
-    ACE_FORCE_EXPORT RefPtr<PagePattern> CreatePagePattern(const RefPtr<PageInfo>& pageInfo);
+    RefPtr<PagePattern> CreatePagePattern(const RefPtr<PageInfo>& pageInfo);
 
     RefPtr<Pattern> GeneratePattern(const std::string& patternName);
 
     RefPtr<StageManager> GenerateStageManager(const RefPtr<FrameNode>& stage);
 
 private:
+    // Singleton instance
+    static thread_local ViewAdvancedRegister* instance_;
+
     ViewAdvancedRegister() = default;
 
-    static thread_local ViewAdvancedRegister* instance_;
     ACE_DISALLOW_COPY_AND_MOVE(ViewAdvancedRegister);
 };
 } // namespace OHOS::Ace::NG

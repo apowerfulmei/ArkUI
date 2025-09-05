@@ -100,13 +100,14 @@ private:
     float GetTitleWidth(const RefPtr<TitleBarNode>& titleBarNode,
     const RefPtr<TitleBarLayoutProperty>& titleBarLayoutProperty, const SizeF& titleBarSize);
 
-    float WidthAfterAvoidMenuBarAndContainerModal(const RefPtr<TitleBarNode>& titleBarNode, float width);
+    float WidthAfterAvoidMenubar(const RefPtr<TitleBarNode>& titleBarNode, float width);
 
     void MeasureMenu(LayoutWrapper* layoutWrapper, const RefPtr<TitleBarNode>& titleBarNode,
         const RefPtr<TitleBarLayoutProperty>& titleBarLayoutProperty);
 
-    void ShowBackButtonLayout(LayoutWrapper* layoutWrapper, RefPtr<GeometryNode>& geometryNode,
-        const RefPtr<LayoutWrapper>& backButtonWrapper, float titleBarHeight);
+    void ShowBackButtonLayout(LayoutWrapper* layoutWrapper,
+        const RefPtr<TitleBarLayoutProperty>& titleBarLayoutProperty,
+        RefPtr<GeometryNode>& geometryNode, const RefPtr<LayoutWrapper>& backButtonWrapper);
 
     void LayoutBackButton(LayoutWrapper* layoutWrapper, const RefPtr<TitleBarNode>& titleBarNode,
         const RefPtr<TitleBarLayoutProperty>& titleBarLayoutProperty);
@@ -122,6 +123,7 @@ private:
         const RefPtr<TitleBarLayoutProperty>& titleBarLayoutProperty, float subtitleHeight);
     float ChangeOffsetByDirection(LayoutWrapper* layoutWrapper,
         const RefPtr<NG::GeometryNode>& childGeometryNode, float offsetX) const;
+    float ParseCalcDimensionToPx(const std::optional<CalcDimension>& value, const SizeF& titleBarSize);
 
     // set variables from theme
     void InitializeTheme(const RefPtr<TitleBarNode>& titleBarNode, const SizeF& titleBarSize);
@@ -140,23 +142,21 @@ private:
     Dimension paddingTopTwolines_;
     Dimension titleSpaceVertical_;
 
-    float menuOccupiedHeight_ = 0.0f;
+    float menuHeight_ = 0.0f;
     float initialTitleOffsetY_ = 0.0f;
 
     bool isInitialTitle_ = true;
     float initialSubtitleOffsetY_ = 0.0f;
     bool isInitialSubtitle_ = true;
     float minTitleHeight_ = 0.0f;
-    float menuOccupiedWidth_ = 0.0f;
+    float menuWidth_ = 0.0f;
     bool showBackButton_ = false;
 
     float singleLineTitleHeight_ = 0.0f;
     float doubleLineTitleBarHeight_ = 0.0f;
     float navTitleSpaceVertical_ = 0.0f;
     float paddingLeft_ = 0.0f;
-    float paddingLeftForBackButton_ = 0.0f;
     float paddingRight_ = 0.0f;
-    float paddingRightForMenu_ = 0.0f;
     float navBackIconWidth_ = 0.0f;
     float navButtonPadding_ = 0.0f;
     float navHorizontalMargin_ = 0.0f;

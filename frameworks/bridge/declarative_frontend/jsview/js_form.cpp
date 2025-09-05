@@ -15,10 +15,16 @@
 
 #include "frameworks/bridge/declarative_frontend/jsview/js_form.h"
 
+#include "base/geometry/dimension.h"
+#include "base/geometry/ng/size_t.h"
 #include "base/log/ace_scoring_log.h"
+#include "base/log/log_wrapper.h"
+#include "base/utils/string_utils.h"
 #include "bridge/declarative_frontend/jsview/models/form_model_impl.h"
+#include "core/components_ng/base/view_abstract.h"
 #include "core/components_ng/pattern/form/form_model_ng.h"
 #include "frameworks/bridge/declarative_frontend/jsview/js_utils.h"
+#include "frameworks/bridge/declarative_frontend/view_stack_processor.h"
 
 #if !defined(WEARABLE_PRODUCT)
 #include "frameworks/core/components/form/form_component.h"
@@ -52,27 +58,6 @@ FormModel* FormModel::GetInstance()
 
 namespace OHOS::Ace::Framework {
 
-bool ParseFormId(RequestFormInfo formInfo, JSRef<JSVal> id)
-{
-    if (id->IsString()) {
-        if (!StringUtils::IsNumber(id->ToString())) {
-            TAG_LOGE(AceLogTag::ACE_FORM, "Invalid form id : %{public}s", id->ToString().c_str());
-            return false;
-        }
-        int64_t inputFormId = StringUtils::StringToLongInt(id->ToString().c_str(), -1);
-        if (inputFormId == -1) {
-            TAG_LOGE(
-                AceLogTag::ACE_FORM, "StringToLongInt failed, invalid formId : %{public}s", id->ToString().c_str());
-            return false;
-        }
-        formInfo.id = inputFormId;
-    } else if (id->IsNumber()) {
-        formInfo.id = id->ToNumber<int64_t>();
-    }
-    TAG_LOGI(AceLogTag::ACE_FORM, "JSForm Create, info.id: %{public}" PRId64, formInfo.id);
-    return true;
-}
-
 void JSForm::Create(const JSCallbackInfo& info)
 {
     if (info.Length() == 0 || !info[0]->IsObject()) {
@@ -89,16 +74,26 @@ void JSForm::Create(const JSCallbackInfo& info)
     JSRef<JSVal> wantValue = obj->GetProperty("want");
     JSRef<JSVal> renderingMode = obj->GetProperty("renderingMode");
     JSRef<JSVal> shape = obj->GetProperty("shape");
-    JSRef<JSVal> exemptAppLock = obj->GetProperty("exemptAppLock");
     RequestFormInfo formInfo;
-    if (!ParseFormId(formInfo, id)) {
-        return;
+    if (id->IsString()) {
+        if (!StringUtils::IsNumber(id->ToString())) {
+            LOGE("Invalid form id : %{public}s", id->ToString().c_str());
+            return;
+        }
+        int64_t inputFormId = StringUtils::StringToLongInt(id->ToString().c_str(), -1);
+        if (inputFormId == -1) {
+            LOGE("StringToLongInt failed : %{public}s", id->ToString().c_str());
+            return;
+        }
+        formInfo.id = inputFormId;
+    } else if (id->IsNumber()) {
+        formInfo.id = id->ToNumber<int64_t>();
     }
+    LOGI("JSForm Create, info.id: %{public}" PRId64, formInfo.id);
     formInfo.cardName = name->ToString();
     formInfo.bundleName = bundle->ToString();
     formInfo.abilityName = ability->ToString();
     formInfo.moduleName = module->ToString();
-    formInfo.exemptAppLock = exemptAppLock->ToBoolean();
     if (!dimension->IsNull() && !dimension->IsEmpty()) {
         formInfo.dimension = dimension->ToNumber<int32_t>();
     }
@@ -188,7 +183,7 @@ void JSForm::JsOnAcquired(const JSCallbackInfo& info)
         auto onAcquired = [execCtx = info.GetExecutionContext(), func = std::move(jsFunc)](const std::string& param) {
             JAVASCRIPT_EXECUTION_SCOPE_WITH_CHECK(execCtx);
             ACE_SCORING_EVENT("Form.onAcquired");
-            std::vector<std::string> keys = { "id", "idString", "isLocked" };
+            std::vector<std::string> keys = { "id", "idString" };
             func->Execute(keys, param);
         };
         FormModel::GetInstance()->SetOnAcquired(std::move(onAcquired));
@@ -216,7 +211,7 @@ void JSForm::JsOnUninstall(const JSCallbackInfo& info)
         auto onUninstall = [execCtx = info.GetExecutionContext(), func = std::move(jsFunc)](const std::string& param) {
             JAVASCRIPT_EXECUTION_SCOPE_WITH_CHECK(execCtx);
             ACE_SCORING_EVENT("Form.onUninstall");
-            std::vector<std::string> keys = { "id", "idString", "isLocked" };
+            std::vector<std::string> keys = { "id", "idString" };
             func->Execute(keys, param);
         };
         FormModel::GetInstance()->SetOnUninstall(std::move(onUninstall));
@@ -251,28 +246,14 @@ void JSForm::JsOnLoad(const JSCallbackInfo& info)
     }
 }
 
-void JSForm::JsOnUpdate(const JSCallbackInfo& info)
-{
-    if (info[0]->IsFunction()) {
-        auto jsFunc = AceType::MakeRefPtr<JsFunction>(JSRef<JSObject>(), JSRef<JSFunc>::Cast(info[0]));
-        auto onUpdate = [execCtx = info.GetExecutionContext(), func = std::move(jsFunc)](const std::string& param) {
-            JAVASCRIPT_EXECUTION_SCOPE_WITH_CHECK(execCtx);
-            ACE_SCORING_EVENT("Form.onUpdate");
-            std::vector<std::string> keys = { "id", "idString" };
-            func->Execute(keys, param);
-        };
-        FormModel::GetInstance()->SetOnUpdate(std::move(onUpdate));
-    }
-}
-
 void JSForm::JsObscured(const JSCallbackInfo& info)
 {
     if (info[0]->IsUndefined()) {
-        TAG_LOGE(AceLogTag::ACE_FORM, "Obscured reasons undefined");
+        LOGE("Obscured reasons undefined");
         return;
     }
     if (!info[0]->IsArray()) {
-        TAG_LOGE(AceLogTag::ACE_FORM, "Obscured reasons not Array");
+        LOGE("Obscured reasons not Array");
         return;
     }
     auto obscuredArray = JSRef<JSArray>::Cast(info[0]);
@@ -306,7 +287,6 @@ void JSForm::JSBind(BindingTarget globalObj)
     JSClass<JSForm>::StaticMethod("onUninstall", &JSForm::JsOnUninstall);
     JSClass<JSForm>::StaticMethod("onRouter", &JSForm::JsOnRouter);
     JSClass<JSForm>::StaticMethod("onLoad", &JSForm::JsOnLoad);
-    JSClass<JSForm>::StaticMethod("onUpdate", &JSForm::JsOnUpdate);
     JSClass<JSForm>::StaticMethod("onAttach", &JSInteractableView::JsOnAttach);
     JSClass<JSForm>::StaticMethod("onAppear", &JSInteractableView::JsOnAppear);
     JSClass<JSForm>::StaticMethod("onDetach", &JSInteractableView::JsOnDetach);

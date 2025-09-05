@@ -15,8 +15,15 @@
 
 #include "bridge/cj_frontend/interfaces/cj_ffi/cj_scrollbar_ffi.h"
 
+#include "utils.h"
+
+#include "base/memory/ace_type.h"
 #include "bridge/cj_frontend/interfaces/cj_ffi/cj_scroll_ffi.h"
+#include "core/common/container.h"
+#include "core/components_ng/pattern/scroll_bar/scroll_bar_pattern.h"
+#include "core/components_ng/pattern/scroll_bar/scroll_bar_model_ng.h"
 #include "core/components_ng/pattern/scroll_bar/scroll_bar_model.h"
+#include "cj_lambda.h"
 
 using namespace OHOS::Ace;
 using namespace OHOS::FFI;
@@ -50,10 +57,5 @@ void FfiOHOSAceFrameworkScrollBarCreate(int64_t scrollerID, int32_t direction, i
     auto proxy = ScrollBarModel::GetInstance()->GetScrollBarProxy(scrollBarProxy);
 
     ScrollBarModel::GetInstance()->Create(proxy, infoflag, proxyFlag, direction, state);
-}
-
-void FfiOHOSAceFrameworkSetEnableNestedScroll(bool value)
-{
-    ScrollBarModel::GetInstance()->SetEnableNestedScroll(value);
 }
 }

@@ -15,9 +15,19 @@
 
 #include "core/components_ng/pattern/toggle/switch_pattern.h"
 
-#include "base/log/dump_log.h"
+#include <cmath>
+#include <cstdint>
+
+#include "base/memory/referenced.h"
+#include "base/utils/utils.h"
+#include "core/animation/curve.h"
+#include "core/animation/curves.h"
+#include "core/common/container.h"
 #include "core/common/recorder/node_data_cache.h"
-#include "core/components/toggle/toggle_theme.h"
+#include "core/components/checkable/checkable_theme.h"
+#include "core/components_ng/pattern/toggle/switch_layout_algorithm.h"
+#include "core/components_ng/pattern/toggle/switch_paint_property.h"
+#include "core/components_ng/property/property.h"
 #include "core/pipeline_ng/pipeline_context.h"
 
 namespace OHOS::Ace::NG {
@@ -25,17 +35,7 @@ namespace {
 constexpr int32_t DEFAULT_DURATION = 200;
 const Color ITEM_FILL_COLOR = Color::TRANSPARENT;
 constexpr double NUMBER_TWO = 2.0;
-constexpr int32_t  HOTZONE_SPACE = 2;
 } // namespace
-
-void SwitchPattern::OnAttachToFrameNode()
-{
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    auto renderContext = host->GetRenderContext();
-    CHECK_NULL_VOID(renderContext);
-    renderContext->SetAlphaOffscreen(true);
-}
 
 bool SwitchPattern::OnDirtyLayoutWrapperSwap(const RefPtr<LayoutWrapper>& dirty, bool skipMeasure, bool skipLayout)
 {
@@ -75,120 +75,23 @@ void SwitchPattern::OnModifyDone()
     CHECK_NULL_VOID(host);
     auto hub = host->GetEventHub<EventHub>();
     CHECK_NULL_VOID(hub);
+    auto enabled = hub->IsEnabled();
+    if (enabled_ != enabled) {
+        enabled_ = enabled;
+        auto paintProperty = GetPaintProperty<SwitchPaintProperty>();
+        CHECK_NULL_VOID(paintProperty);
+        paintProperty->UpdatePropertyChangeFlag(PROPERTY_UPDATE_RENDER);
+    }
     auto gestureHub = hub->GetOrCreateGestureEventHub();
     CHECK_NULL_VOID(gestureHub);
-    auto pipeline = host->GetContextRefPtr();
-    CHECK_NULL_VOID(pipeline);
-    switchTheme_ = pipeline->GetTheme<SwitchTheme>(host->GetThemeScopeId());
     InitPanEvent(gestureHub);
     InitTouchEvent();
     InitMouseEvent();
-    InitFocusEvent();
     auto focusHub = host->GetFocusHub();
     CHECK_NULL_VOID(focusHub);
     InitOnKeyEvent(focusHub);
     SetAccessibilityAction();
     FireBuilder();
-    HandleEnabled();
-}
-
-void SwitchPattern::InitFocusEvent()
-{
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    auto focusHub = host->GetOrCreateFocusHub();
-    CHECK_NULL_VOID(focusHub);
-    auto focusTask = [weak = WeakClaim(this)](FocusReason reason) {
-        TAG_LOGD(AceLogTag::ACE_SELECT_COMPONENT, "switch button handle focus event");
-        auto pattern = weak.Upgrade();
-        CHECK_NULL_VOID(pattern);
-        pattern->HandleFocusEvent();
-    };
-    focusHub->SetOnFocusInternal(focusTask);
-
-    auto blurTask = [weak = WeakClaim(this)]() {
-        TAG_LOGD(AceLogTag::ACE_SELECT_COMPONENT, "switch button handle blur event");
-        auto pattern = weak.Upgrade();
-        CHECK_NULL_VOID(pattern);
-        pattern->HandleBlurEvent();
-    };
-    focusHub->SetOnBlurInternal(blurTask);
-}
-
-void SwitchPattern::HandleBlurEvent()
-{
-    RemoveIsFocusActiveUpdateEvent();
-    OnIsFocusActiveUpdate(false);
-}
-
-void SwitchPattern::HandleFocusEvent()
-{
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    auto pipeline = host->GetContextRefPtr();
-    CHECK_NULL_VOID(pipeline);
-    AddIsFocusActiveUpdateEvent();
-    if (pipeline->GetIsFocusActive()) {
-        OnIsFocusActiveUpdate(true);
-    }
-}
-
-void SwitchPattern::AddIsFocusActiveUpdateEvent()
-{
-    if (!isFocusActiveUpdateEvent_) {
-        isFocusActiveUpdateEvent_ = [weak = WeakClaim(this)](bool isFocusAcitve) {
-            auto pattern = weak.Upgrade();
-            CHECK_NULL_VOID(pattern);
-            pattern->OnIsFocusActiveUpdate(isFocusAcitve);
-        };
-    }
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    auto pipeline = host->GetContextRefPtr();
-    CHECK_NULL_VOID(pipeline);
-    pipeline->AddIsFocusActiveUpdateEvent(host, isFocusActiveUpdateEvent_);
-}
-
-void SwitchPattern::RemoveIsFocusActiveUpdateEvent()
-{
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    auto pipeline = host->GetContextRefPtr();
-    CHECK_NULL_VOID(pipeline);
-    pipeline->RemoveIsFocusActiveUpdateEvent(host);
-}
-
-void SwitchPattern::OnIsFocusActiveUpdate(bool isFocusAcitve)
-{
-    if (isFocusAcitve) {
-        touchHoverType_ = TouchHoverAnimationType::FOCUS;
-    } else {
-        touchHoverType_ = TouchHoverAnimationType::NONE;
-    }
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    host->MarkDirtyNode(PROPERTY_UPDATE_RENDER);
-}
-
-void SwitchPattern::HandleEnabled()
-{
-    if (UseContentModifier()) {
-        return;
-    }
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    auto eventHub = host->GetEventHub<EventHub>();
-    CHECK_NULL_VOID(eventHub);
-    auto enabled = eventHub->IsEnabled();
-    auto renderContext = host->GetRenderContext();
-    CHECK_NULL_VOID(renderContext);
-    auto pipeline = host->GetContextWithCheck();
-    CHECK_NULL_VOID(pipeline);
-    auto theme = pipeline->GetTheme<ToggleTheme>();
-    CHECK_NULL_VOID(theme);
-    auto alpha = theme->GetDisabledAlpha();
-    auto originalOpacity = renderContext->GetOpacityValue(1.0);
-    renderContext->OnOpacityUpdate(enabled ? originalOpacity : alpha * originalOpacity);
 }
 
 void SwitchPattern::UpdateSwitchPaintProperty()
@@ -215,39 +118,16 @@ void SwitchPattern::UpdateSwitchLayoutProperty()
     CHECK_NULL_VOID(pipeline);
     auto switchTheme = pipeline->GetTheme<SwitchTheme>();
     CHECK_NULL_VOID(switchTheme);
-    hotZoneHorizontalPadding_ = switchTheme->GetHotZoneHorizontalPadding();
-    hotZoneVerticalPadding_ = switchTheme->GetHotZoneVerticalPadding();
-    hotZoneHorizontalSize_ = switchTheme->GetHotZoneHorizontalSize();
-    hotZoneVerticalSize_ = switchTheme->GetHotZoneVerticalSize();
+    MarginProperty margin;
+    margin.left = CalcLength(switchTheme->GetHotZoneHorizontalPadding().Value());
+    margin.right = CalcLength(switchTheme->GetHotZoneHorizontalPadding().Value());
+    margin.top = CalcLength(switchTheme->GetHotZoneVerticalPadding().Value());
+    margin.bottom = CalcLength(switchTheme->GetHotZoneVerticalPadding().Value());
     auto host = GetHost();
     CHECK_NULL_VOID(host);
     auto layoutProperty = host->GetLayoutProperty();
     CHECK_NULL_VOID(layoutProperty);
     direction_ = layoutProperty->GetNonAutoLayoutDirection();
-    InitDefaultMargin();
-    if (layoutProperty->GetPositionProperty()) {
-        layoutProperty->UpdateAlignment(
-            layoutProperty->GetPositionProperty()->GetAlignment().value_or(Alignment::CENTER));
-    } else {
-        layoutProperty->UpdateAlignment(Alignment::CENTER);
-    }
-}
-
-void SwitchPattern::InitDefaultMargin()
-{
-    if (makeFunc_.has_value()) {
-        ResetDefaultMargin();
-        return;
-    }
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    auto layoutProperty = host->GetLayoutProperty();
-    CHECK_NULL_VOID(layoutProperty);
-    MarginProperty margin;
-    margin.left = CalcLength(hotZoneHorizontalPadding_.Value());
-    margin.right = CalcLength(hotZoneHorizontalPadding_.Value());
-    margin.top = CalcLength(hotZoneVerticalPadding_.Value());
-    margin.bottom = CalcLength(hotZoneVerticalPadding_.Value());
     auto& setMargin = layoutProperty->GetMarginProperty();
     if (setMargin) {
         if (setMargin->left.has_value()) {
@@ -264,19 +144,14 @@ void SwitchPattern::InitDefaultMargin()
         }
     }
     layoutProperty->UpdateMargin(margin);
-}
-
-void SwitchPattern::ResetDefaultMargin()
-{
-    if (isUserSetMargin_) {
-        return;
+    hotZoneHorizontalPadding_ = switchTheme->GetHotZoneHorizontalPadding();
+    hotZoneVerticalPadding_ = switchTheme->GetHotZoneVerticalPadding();
+    if (layoutProperty->GetPositionProperty()) {
+        layoutProperty->UpdateAlignment(
+            layoutProperty->GetPositionProperty()->GetAlignment().value_or(Alignment::CENTER));
+    } else {
+        layoutProperty->UpdateAlignment(Alignment::CENTER);
     }
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    auto layoutProperty = host->GetLayoutProperty();
-    CHECK_NULL_VOID(layoutProperty);
-    MarginProperty margin;
-    layoutProperty->UpdateMargin(margin);
 }
 
 void SwitchPattern::SetAccessibilityAction()
@@ -354,10 +229,6 @@ void SwitchPattern::OnChange()
     CHECK_NULL_VOID(host);
     auto switchPaintProperty = host->GetPaintProperty<SwitchPaintProperty>();
     CHECK_NULL_VOID(switchPaintProperty);
-    CHECK_NULL_VOID(paintMethod_);
-    auto switchModifier = paintMethod_->GetSwitchModifier();
-    CHECK_NULL_VOID(switchModifier);
-    switchModifier->SetIsOn(isOn_.value_or(false));
     switchPaintProperty->UpdateIsOn(isOn_.value_or(false));
     UpdateChangeEvent();
     host->MarkDirtyNode(PROPERTY_UPDATE_RENDER);
@@ -386,7 +257,7 @@ void SwitchPattern::UpdateChangeEvent() const
 {
     auto switchEventHub = GetEventHub<SwitchEventHub>();
     CHECK_NULL_VOID(switchEventHub);
-    switchEventHub->UpdateChangeEvent(isOn_.value_or(false));
+    switchEventHub->UpdateChangeEvent(isOn_.value());
 }
 
 void SwitchPattern::OnClick()
@@ -396,39 +267,10 @@ void SwitchPattern::OnClick()
     }
     isOn_ = !isOn_.value_or(false);
     TAG_LOGI(AceLogTag::ACE_SELECT_COMPONENT, "switch click result %{public}d", isOn_.value_or(false));
-    UpdateColorWhenIsOn(isOn_.value_or(false));
     OnChange();
     auto host = GetHost();
     CHECK_NULL_VOID(host);
     host->OnAccessibilityEvent(AccessibilityEventType::COMPONENT_CHANGE);
-}
-
-void SwitchPattern::UpdateColorWhenIsOn(bool isOn)
-{
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    auto switchPaintProperty = host->GetPaintProperty<SwitchPaintProperty>();
-    CHECK_NULL_VOID(switchPaintProperty);
-    CHECK_NULL_VOID(switchTheme_);
-    CHECK_NULL_VOID(paintMethod_);
-    auto switchModifier = paintMethod_->GetSwitchModifier();
-    CHECK_NULL_VOID(switchModifier);
-
-    Color onBgColor = switchTheme_->GetActiveColor();
-    Color offBgColor = switchTheme_->GetInactiveColor();
-    if (isOn) {
-        if (switchPaintProperty->HasSelectedColor() && switchPaintProperty->GetSelectedColor() == onBgColor) {
-            switchPaintProperty->UpdateSelectedColor(onBgColor);
-        }
-    } else {
-        if (switchPaintProperty->HasUnselectedColor() && switchPaintProperty->GetUnselectedColor() == offBgColor) {
-            Color bgColor = isFocus_ ? switchTheme_->GetFocusedBGColorUnselected() : switchTheme_->GetInactiveColor();
-            switchPaintProperty->UpdateUnselectedColor(bgColor);
-        }
-        if (isFocus_) {
-            switchModifier->SetFocusPointColor(switchTheme_->GetPointColorUnselectedFocus());
-        }
-    }
 }
 
 void SwitchPattern::OnTouchDown()
@@ -510,9 +352,7 @@ void SwitchPattern::InitPanEvent(const RefPtr<GestureEventHub>& gestureHub)
 
     panEvent_ = MakeRefPtr<PanEvent>(
         std::move(actionStartTask), std::move(actionUpdateTask), std::move(actionEndTask), std::move(actionCancelTask));
-    PanDistanceMap distanceMap = { { SourceTool::UNKNOWN, DEFAULT_PAN_DISTANCE.ConvertToPx() },
-        { SourceTool::PEN, DEFAULT_PEN_PAN_DISTANCE.ConvertToPx() } };
-    gestureHub->AddPanEvent(panEvent_, panDirection, 1, distanceMap);
+    gestureHub->AddPanEvent(panEvent_, panDirection, 1, DEFAULT_PAN_DISTANCE);
 }
 
 void SwitchPattern::InitClickEvent()
@@ -588,24 +428,6 @@ void SwitchPattern::InitOnKeyEvent(const RefPtr<FocusHub>& focusHub)
         }
     };
     focusHub->SetInnerFocusPaintRectCallback(getInnerPaintRectCallback);
-    auto onKeyCallbackFunc = [wp = WeakClaim(this)](const KeyEvent& keyEventInfo) -> bool {
-        auto pattern = wp.Upgrade();
-        if (pattern) {
-            return pattern->OnKeyEvent(keyEventInfo);
-        }
-        TAG_LOGI(AceLogTag::ACE_SELECT_COMPONENT, "InitOnKeyEvent return false");
-        return false;
-    };
-    focusHub->SetOnKeyEventInternal(std::move(onKeyCallbackFunc));
-}
-
-bool SwitchPattern::OnKeyEvent(const KeyEvent& keyEventInfo)
-{
-    if (keyEventInfo.action == KeyAction::DOWN && keyEventInfo.code == KeyCode::KEY_FUNCTION) {
-        this->OnClick();
-        return true;
-    }
-    return false;
 }
 
 void SwitchPattern::GetInnerFocusPaintRect(RoundRect& paintRect)
@@ -687,11 +509,11 @@ void SwitchPattern::HandleDragEnd()
     auto mainSize = GetSwitchWidth();
     auto contentOffset = GetSwitchContentOffsetX();
     if ((direction_ == TextDirection::RTL &&
-        ((isOn_.value_or(false) && dragOffsetX_ - contentOffset > mainSize / 2) ||
-        (!isOn_.value_or(false) && dragOffsetX_ - contentOffset <= mainSize / 2))) ||
+        ((isOn_.value() && dragOffsetX_ - contentOffset > mainSize / 2) ||
+        (!isOn_.value() && dragOffsetX_ - contentOffset <= mainSize / 2))) ||
         (direction_ != TextDirection::RTL &&
-        ((isOn_.value_or(false) && dragOffsetX_ - contentOffset < mainSize / 2) ||
-        (!isOn_.value_or(false) && dragOffsetX_ - contentOffset >= mainSize / 2)))) {
+        ((isOn_.value() && dragOffsetX_ - contentOffset < mainSize / 2) ||
+        (!isOn_.value() && dragOffsetX_ - contentOffset >= mainSize / 2)))) {
         OnClick();
     }
     isDragEvent_ = false;
@@ -709,10 +531,10 @@ bool SwitchPattern::IsOutOfBoundary(double mainOffset) const
 // Set the default hot zone for the component.
 void SwitchPattern::AddHotZoneRect()
 {
-    hotZoneOffset_.SetX(offset_.GetX() - hotZoneHorizontalSize_.ConvertToPx());
-    hotZoneOffset_.SetY(offset_.GetY() - hotZoneVerticalSize_.ConvertToPx());
-    hotZoneSize_.SetWidth(size_.Width() + HOTZONE_SPACE * hotZoneHorizontalSize_.ConvertToPx());
-    hotZoneSize_.SetHeight(size_.Height() + HOTZONE_SPACE * hotZoneVerticalSize_.ConvertToPx());
+    hotZoneOffset_.SetX(offset_.GetX() - hotZoneHorizontalPadding_.ConvertToPx());
+    hotZoneOffset_.SetY(offset_.GetY() - hotZoneVerticalPadding_.ConvertToPx());
+    hotZoneSize_.SetWidth(size_.Width() + 2 * hotZoneHorizontalPadding_.ConvertToPx());
+    hotZoneSize_.SetHeight(size_.Height() + 2 * hotZoneVerticalPadding_.ConvertToPx());
     DimensionRect hotZoneRegion;
     hotZoneRegion.SetSize(DimensionSize(Dimension(hotZoneSize_.Width()), Dimension(hotZoneSize_.Height())));
     hotZoneRegion.SetOffset(DimensionOffset(Dimension(hotZoneOffset_.GetX()), Dimension(hotZoneOffset_.GetY())));
@@ -758,74 +580,16 @@ void SwitchPattern::OnColorConfigurationUpdate()
     CHECK_NULL_VOID(host);
     auto pipeline = PipelineBase::GetCurrentContext();
     CHECK_NULL_VOID(pipeline);
-    auto switchTheme = pipeline->GetTheme<SwitchTheme>(host->GetThemeScopeId());
+    auto switchTheme = pipeline->GetTheme<SwitchTheme>();
     CHECK_NULL_VOID(switchTheme);
+    auto switchPaintProperty = host->GetPaintProperty<SwitchPaintProperty>();
+    CHECK_NULL_VOID(switchPaintProperty);
+    switchPaintProperty->UpdateSwitchPointColor(switchTheme->GetPointColor());
     CHECK_NULL_VOID(paintMethod_);
     auto switchModifier = paintMethod_->GetSwitchModifier();
     CHECK_NULL_VOID(switchModifier);
-    switchModifier->InitializeParam(host->GetThemeScopeId());
-    if (SystemProperties::ConfigChangePerform()) {
-        auto pipeline = host->GetContext();
-        CHECK_NULL_VOID(pipeline);
-        auto theme = pipeline->GetTheme<SwitchTheme>();
-        CHECK_NULL_VOID(theme);
-        auto pops = host->GetPaintProperty<SwitchPaintProperty>();
-        CHECK_NULL_VOID(pops);
-        if (!pops->GetSelectedColorSetByUserValue(false)) {
-            Color color = theme->GetActiveColor();
-            pops->UpdateSelectedColor(color);
-        }
-        if (!pops->GetSwitchPointColorSetByUserValue(false)) {
-            Color color = theme->GetPointColor();
-            pops->UpdateSwitchPointColor(color);
-        }
-        if (!pops->GetUnselectedColorSetByUserValue(false)) {
-            Color color = theme->GetInactiveColor();
-            pops->UpdateUnselectedColor(color);
-        }
-    }
+    switchModifier->InitializeParam();
     host->MarkDirtyNode();
-    host->SetNeedCallChildrenUpdate(false);
-}
-
-bool SwitchPattern::OnThemeScopeUpdate(int32_t themeScopeId)
-{
-    bool result = false;
-    auto host = GetHost();
-    CHECK_NULL_RETURN(host, false);
-    auto paintProperty = host->GetPaintProperty<SwitchPaintProperty>();
-    CHECK_NULL_RETURN(paintProperty, false);
-
-    if (!paintProperty->HasSelectedColor() || !paintProperty->HasSwitchPointColor()) {
-        result = true;
-    }
-
-    return result;
-}
-
-void SwitchPattern::DumpInfo()
-{
-    auto paintProperty = GetPaintProperty<SwitchPaintProperty>();
-    CHECK_NULL_VOID(paintProperty);
-    if (paintProperty->HasIsOn()) {
-        DumpLog::GetInstance().AddDesc("IsOn: " + std::string(paintProperty->GetIsOn().value() ? "true" : "false"));
-    }
-    if (paintProperty->HasSelectedColor()) {
-        DumpLog::GetInstance().AddDesc("SelectedColor: " + paintProperty->GetSelectedColor().value().ToString());
-    }
-    if (paintProperty->HasUnselectedColor()) {
-        DumpLog::GetInstance().AddDesc("UnselectedColor: " + paintProperty->GetUnselectedColor().value().ToString());
-    }
-    if (paintProperty->HasSwitchPointColor()) {
-        DumpLog::GetInstance().AddDesc("SwitchPointColor: " + paintProperty->GetSwitchPointColor().value().ToString());
-    }
-    if (paintProperty->HasPointRadius()) {
-        DumpLog::GetInstance().AddDesc("PointRadius: " + paintProperty->GetPointRadius().value().ToString());
-    }
-    if (paintProperty->HasTrackBorderRadius()) {
-        DumpLog::GetInstance().AddDesc(
-            "TrackBorderRadius: " + paintProperty->GetTrackBorderRadius().value().ToString());
-    }
 }
 
 void SwitchPattern::SetSwitchIsOn(bool ison)

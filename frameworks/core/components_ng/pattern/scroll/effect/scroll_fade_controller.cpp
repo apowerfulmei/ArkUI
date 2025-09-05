@@ -65,9 +65,7 @@ void ScrollFadeController::Initialize()
         }
     });
 
-    auto context = PipelineContext::GetCurrentContextSafelyWithCheck();
-    CHECK_NULL_VOID(context);
-    controller_ = CREATE_ANIMATOR(context);
+    controller_ = CREATE_ANIMATOR(PipelineContext::GetCurrentContext());
     controller_->AddInterpolator(decele_);
     controller_->AddStopListener([weak]() {
         auto controller = weak.Upgrade();
@@ -168,7 +166,7 @@ void ScrollFadeController::ChangeState()
 
 void ScrollFadeController::SchedulePullHoldTask()
 {
-    auto context = PipelineContext::GetCurrentContextSafelyWithCheck();
+    auto context = PipelineContext::GetCurrentContext();
     if (!context) {
         LOGW("No context exists.");
         return;

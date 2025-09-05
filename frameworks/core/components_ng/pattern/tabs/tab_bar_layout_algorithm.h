@@ -129,7 +129,6 @@ private:
     void MeasureMask(LayoutWrapper* layoutWrapper) const;
     void UpdateChildMarginProperty(float rightMargin, float leftMargin, const RefPtr<LayoutWrapper>& childWrapper);
     bool GetBarAdaptiveHeight(LayoutWrapper* layoutWrapper);
-    bool GetNoMinHeightLimit(LayoutWrapper* layoutWrapper);
     bool NeedAdaptForAging(RefPtr<FrameNode> host);
     void SetTabBarMargin(RefPtr<LayoutWrapper> layoutWrapper, int32_t index);
     void UpdateMaxLines(LayoutWrapper* layoutWrapper, int32_t index);
@@ -156,7 +155,6 @@ private:
     std::optional<float> maxHeight_;
     std::optional<float> defaultHeight_;
     bool isBarAdaptiveHeight_ = false;
-    bool isNoMinHeightLimit_ = false;
     bool useItemWidth_ = true;
     bool canOverScroll_ = false;
     Dimension leftAndRightMargin_ = 0.0_vp;

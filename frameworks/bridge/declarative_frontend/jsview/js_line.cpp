@@ -21,21 +21,29 @@
 #include "core/components_ng/pattern/shape/line_model_ng.h"
 
 namespace OHOS::Ace {
+
+std::unique_ptr<LineModel> LineModel::instance_ = nullptr;
+std::mutex LineModel::mutex_;
+
 LineModel* LineModel::GetInstance()
 {
+    if (!instance_) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (!instance_) {
 #ifdef NG_BUILD
-    static NG::LineModelNG instance;
-    return &instance;
+            instance_.reset(new NG::LineModelNG());
 #else
-    if (Container::IsCurrentUseNewPipeline()) {
-        static NG::LineModelNG instance;
-        return &instance;
-    } else {
-        static Framework::LineModelImpl instance;
-        return &instance;
-    }
+            if (Container::IsCurrentUseNewPipeline()) {
+                instance_.reset(new NG::LineModelNG());
+            } else {
+                instance_.reset(new Framework::LineModelImpl());
+            }
 #endif
+        }
+    }
+    return instance_.get();
 }
+
 } // namespace OHOS::Ace
 
 namespace OHOS::Ace::Framework {
@@ -70,16 +78,9 @@ void JSLine::SetStart(const JSCallbackInfo& info)
     if (info.Length() < 1 || !info[0]->IsArray()) {
         return;
     }
-    UnRegisterResource("LineStartPoint");
     JSRef<JSArray> pointArray = JSRef<JSArray>::Cast(info[0]);
     ShapePoint startPoint;
-    RefPtr<ResourceObject> pointResObjFirst;
-    RefPtr<ResourceObject> pointResObjSecond;
-    SetPoint(pointArray, startPoint, pointResObjFirst, pointResObjSecond);
-    if (SystemProperties::ConfigChangePerform() && (pointResObjFirst || pointResObjSecond)) {
-        std::vector<RefPtr<ResourceObject>> resObjArray = { pointResObjFirst, pointResObjSecond };
-        LineModel::GetInstance()->StartPoint(startPoint, resObjArray);
-    }
+    SetPoint(pointArray, startPoint);
     LineModel::GetInstance()->StartPoint(startPoint);
 }
 
@@ -88,27 +89,19 @@ void JSLine::SetEnd(const JSCallbackInfo& info)
     if (info.Length() < 1 || !info[0]->IsArray()) {
         return;
     }
-    UnRegisterResource("LineEndPoint");
     JSRef<JSArray> pointArray = JSRef<JSArray>::Cast(info[0]);
     ShapePoint endPoint;
-    RefPtr<ResourceObject> pointResObjFirst;
-    RefPtr<ResourceObject> pointResObjSecond;
-    SetPoint(pointArray, endPoint, pointResObjFirst, pointResObjSecond);
-    if (SystemProperties::ConfigChangePerform() && (pointResObjFirst || pointResObjSecond)) {
-        std::vector<RefPtr<ResourceObject>> resObjArray = { pointResObjFirst, pointResObjSecond };
-        LineModel::GetInstance()->EndPoint(endPoint, resObjArray);
-    }
+    SetPoint(pointArray, endPoint);
     LineModel::GetInstance()->EndPoint(endPoint);
 }
 
-void JSLine::SetPoint(const JSRef<JSArray>& array, ShapePoint& point, RefPtr<ResourceObject>& pointResObjFirst,
-    RefPtr<ResourceObject>& pointResObjSecond)
+void JSLine::SetPoint(const JSRef<JSArray>& array, ShapePoint& point)
 {
     if (array->Length() < 1) {
         return;
     }
 
-    auto parseJsDimension = [](const JSRef<JSVal>& jsValue, Dimension &val, RefPtr<ResourceObject>& resObj) {
+    auto parseJsDimension = [](const JSRef<JSVal>& jsValue, Dimension &val) {
         if (jsValue->IsNumber()) {
             val = Dimension(jsValue->ToNumber<double>(), DimensionUnit::VP);
         } else if (jsValue->IsString()) {
@@ -120,7 +113,7 @@ void JSLine::SetPoint(const JSRef<JSArray>& array, ShapePoint& point, RefPtr<Res
             }
         } else if (jsValue->IsObject()) {
             CalcDimension value;
-            ParseJsDimensionVpNG(jsValue, value, resObj);
+            ParseJsDimensionVpNG(jsValue, value);
             if (!StringUtils::StringToDimensionWithUnitNG(value.ToString(), val, DimensionUnit::VP, 0.0)) {
                 // unit is invalid, use default value(0.0vp) instead.
                 val = 0.0_vp;
@@ -128,8 +121,8 @@ void JSLine::SetPoint(const JSRef<JSArray>& array, ShapePoint& point, RefPtr<Res
         }
     };
 
-    parseJsDimension(array->GetValueAt(0), point.first, pointResObjFirst);
-    parseJsDimension(array->GetValueAt(1), point.second, pointResObjSecond);
+    parseJsDimension(array->GetValueAt(0), point.first);
+    parseJsDimension(array->GetValueAt(1), point.second);
 }
 
 } // namespace OHOS::Ace::Framework

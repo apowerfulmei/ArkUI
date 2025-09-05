@@ -15,12 +15,28 @@
 
 #include "bridge/declarative_frontend/jsview/models/view_abstract_model_impl.h"
 
+#include <functional>
+
+#include "base/geometry/animatable_dimension.h"
 #include "base/log/ace_scoring_log.h"
+#include "base/memory/ace_type.h"
+#include "base/memory/referenced.h"
+#include "base/utils/utils.h"
 #include "bridge/declarative_frontend/jsview/js_interactable_view.h"
 #include "bridge/declarative_frontend/jsview/models/grid_container_model_impl.h"
 #include "bridge/declarative_frontend/view_stack_processor.h"
 #include "core/components/box/box_component_helper.h"
+#include "core/components/box/drag_drop_event.h"
+#include "core/components/common/layout/grid_layout_info.h"
+#include "core/components/common/properties/border_image.h"
+#include "core/components/common/properties/decoration.h"
+#include "core/components/common/properties/placement.h"
+#include "core/components_ng/pattern/menu/menu_pattern.h"
+#include "core/event/ace_event_handler.h"
+#include "core/event/touch_event.h"
+#include "core/gestures/gesture_info.h"
 #include "core/gestures/long_press_gesture.h"
+#include "core/image/image_source_info.h"
 
 // avoid windows build error about macro defined in winuser.h
 #ifdef GetMessage
@@ -215,8 +231,6 @@ void ViewAbstractModelImpl::SetHeight(const CalcDimension& height)
     }
 }
 
-void ViewAbstractModelImpl::SetToolbarBuilder(std::function<void()>&& buildFunc) {}
-
 void ViewAbstractModelImpl::SetMinWidth(const CalcDimension& minWidth)
 {
     auto box = ViewStackProcessor::GetInstance()->GetBoxComponent();
@@ -294,7 +308,7 @@ void ViewAbstractModelImpl::SetBackgroundImageRepeat(const ImageRepeat& imageRep
     decoration->SetImage(image);
 }
 
-void ViewAbstractModelImpl::SetBackgroundImageSize(BackgroundImageSize& bgImgSize)
+void ViewAbstractModelImpl::SetBackgroundImageSize(const BackgroundImageSize& bgImgSize)
 {
     auto decoration = GetBackDecoration();
     auto image = decoration->GetImage();
@@ -305,7 +319,7 @@ void ViewAbstractModelImpl::SetBackgroundImageSize(BackgroundImageSize& bgImgSiz
     decoration->SetImage(image);
 }
 
-void ViewAbstractModelImpl::SetBackgroundImagePosition(BackgroundImagePosition& bgImgPosition)
+void ViewAbstractModelImpl::SetBackgroundImagePosition(const BackgroundImagePosition& bgImgPosition)
 {
     auto decoration = GetBackDecoration();
     auto image = decoration->GetImage();
@@ -316,7 +330,7 @@ void ViewAbstractModelImpl::SetBackgroundImagePosition(BackgroundImagePosition& 
     decoration->SetImage(image);
 }
 
-void ViewAbstractModelImpl::SetBackgroundBlurStyle(const BlurStyleOption& bgBlurStyle, const SysOptions& sysOptions)
+void ViewAbstractModelImpl::SetBackgroundBlurStyle(const BlurStyleOption& bgBlurStyle)
 {
     auto decoration = GetBackDecoration();
     decoration->SetBlurStyle(bgBlurStyle);
@@ -675,8 +689,6 @@ void ViewAbstractModelImpl::SetRotate(float x, float y, float z, float angle, fl
     transform->Rotate(x, y, z, angle, option);
 }
 
-void ViewAbstractModelImpl::SetRotateAngle(float x, float y, float z, float perspective) {}
-
 void ViewAbstractModelImpl::SetTransformMatrix(const std::vector<float>& matrix)
 {
     RefPtr<TransformComponent> transform = ViewStackProcessor::GetInstance()->GetTransformComponent();
@@ -927,16 +939,14 @@ void ViewAbstractModelImpl::SetMask(const RefPtr<BasicShape>& shape)
     box->SetMask(maskPath);
 }
 
-void ViewAbstractModelImpl::SetBackdropBlur(
-    const Dimension& radius, const BlurOption& blurOption, const SysOptions& sysOptions)
+void ViewAbstractModelImpl::SetBackdropBlur(const Dimension& radius, const BlurOption& blurOption)
 {
     auto decoration = GetBackDecoration();
     decoration->SetBlurRadius(ToAnimatableDimension(radius));
     decoration->SetBlurStyle(BlurStyleOption());
 }
 
-void ViewAbstractModelImpl::SetFrontBlur(
-    const Dimension& radius, const BlurOption& blurOption, const SysOptions& sysOptions)
+void ViewAbstractModelImpl::SetFrontBlur(const Dimension& radius, const BlurOption& blurOption)
 {
     auto decoration = GetFrontDecoration();
     decoration->SetBlurRadius(ToAnimatableDimension(radius));
@@ -1051,39 +1061,6 @@ void ViewAbstractModelImpl::SetOnClick(
     }
 }
 
-void ViewAbstractModelImpl::SetOnClick(
-    GestureEventFunc&& tapEventFunc, ClickEventFunc&& clickEventFunc, Dimension distanceThreshold)
-{
-    auto inspector = ViewStackProcessor::GetInstance()->GetInspectorComposedComponent();
-    CHECK_NULL_VOID(inspector);
-    auto impl = inspector->GetInspectorFunctionImpl();
-    RefPtr<Gesture> tapGesture = AceType::MakeRefPtr<TapGesture>(1, 1, distanceThreshold.ConvertToPx());
-    tapGesture->SetOnActionId([func = std::move(tapEventFunc), impl](GestureEvent& info) {
-        if (impl) {
-            impl->UpdateEventInfo(info);
-        }
-        func(info);
-    });
-    auto click = ViewStackProcessor::GetInstance()->GetBoxComponent();
-    click->SetOnClick(tapGesture);
-
-    auto onClickId = EventMarker([func = std::move(clickEventFunc), impl](const BaseEventInfo* info) {
-        const auto* clickInfo = TypeInfoHelper::DynamicCast<ClickInfo>(info);
-        if (!clickInfo) {
-            return;
-        }
-        auto newInfo = *clickInfo;
-        if (impl) {
-            impl->UpdateEventInfo(newInfo);
-        }
-        func(clickInfo);
-    });
-    auto focusableComponent = ViewStackProcessor::GetInstance()->GetFocusableComponent(false);
-    if (focusableComponent) {
-        focusableComponent->SetOnClickId(onClickId);
-    }
-}
-
 void ViewAbstractModelImpl::SetOnTouch(TouchEventFunc&& touchEventFunc)
 {
     auto inspector = ViewStackProcessor::GetInstance()->GetInspectorComposedComponent();
@@ -1130,8 +1107,6 @@ void ViewAbstractModelImpl::SetOnMouse(OnMouseEventFunc&& onMouseEventFunc)
     auto box = ViewStackProcessor::GetInstance()->GetBoxComponent();
     box->SetOnMouseId(onMouseId);
 }
-
-void ViewAbstractModelImpl::SetOnAxisEvent(OnAxisEventFunc&& onAxisEventFunc) {}
 
 void ViewAbstractModelImpl::SetOnHover(OnHoverFunc&& onHoverEventFunc)
 {
@@ -1227,12 +1202,6 @@ void ViewAbstractModelImpl::SetOnDragEnd(OnNewDragFunc&& onDragEnd)
     box->SetOnDragEndId(onDragEnd);
 }
 
-void ViewAbstractModelImpl::SetOnDragSpringLoading(NG::OnDragDropSpringLoadingFunc&& onDragSpringLoading) {}
-
-void ViewAbstractModelImpl::SetOnDragSpringLoadingConfiguration(
-    const RefPtr<NG::DragSpringLoadingConfiguration>& dragSpringLoadingConfiguration)
-{}
-
 void ViewAbstractModelImpl::SetOnDragLeave(NG::OnDragDropFunc&& onDragLeave)
 {
     auto box = ViewStackProcessor::GetInstance()->GetBoxComponent();
@@ -1252,7 +1221,7 @@ void ViewAbstractModelImpl::SetOnDrop(NG::OnDragDropFunc&& onDrop)
 }
 
 void ViewAbstractModelImpl::SetOnVisibleChange(
-    std::function<void(bool, double)>&& onVisibleChange, const std::vector<double>& ratios, bool isOutOfBoundsAllowed)
+    std::function<void(bool, double)>&& onVisibleChange, const std::vector<double>& ratios)
 {
     auto inspector = ViewStackProcessor::GetInstance()->GetInspectorComposedComponent();
     CHECK_NULL_VOID(inspector);
@@ -1484,23 +1453,6 @@ void ViewAbstractModelImpl::BindPopup(const RefPtr<PopupParam>& param, const Ref
     }
 }
 
-void ViewAbstractModelImpl::BindTips(const RefPtr<PopupParam>& param, const RefPtr<SpanString>& spanString)
-{
-    ViewStackProcessor::GetInstance()->GetCoverageComponent();
-    auto tipsComponent = ViewStackProcessor::GetInstance()->GetPopupComponent(true);
-    CHECK_NULL_VOID(tipsComponent);
-
-    auto boxComponent = ViewStackProcessor::GetInstance()->GetBoxComponent();
-    param->SetTargetMargin(boxComponent->GetMargin());
-    auto inspector = ViewStackProcessor::GetInstance()->GetInspectorComposedComponent();
-    CHECK_NULL_VOID(inspector);
-    param->SetTargetId(inspector->GetId());
-
-    tipsComponent->SetPopupParam(param);
-    tipsComponent->SetMessage(param->GetMessage());
-    tipsComponent->SetPlacementOnTop(param->GetPlacement() == Placement::TOP);
-}
-
 RefPtr<SelectTheme> GetSelectTheme()
 {
     auto container = Container::Current();
@@ -1707,37 +1659,5 @@ void ViewAbstractModelImpl::SetAccessibilityChecked(bool checked, bool resetValu
 {}
 
 void ViewAbstractModelImpl::SetAccessibilityTextPreferred(bool accessibilityTextPreferred)
-{}
-
-void ViewAbstractModelImpl::SetAccessibilityNextFocusId(const std::string& nextFocusId)
-{}
-
-void ViewAbstractModelImpl::SetAccessibilityRole(const std::string& role, bool resetValue)
-{}
-
-void ViewAbstractModelImpl::SetOnAccessibilityFocus(
-    NG::OnAccessibilityFocusCallbackImpl&& onAccessibilityFocusCallbackImpl)
-{}
-
-void ViewAbstractModelImpl::ResetOnAccessibilityFocus()
-{}
-
-void ViewAbstractModelImpl::SetAccessibilityDefaultFocus(bool isFocus)
-{}
-
-void ViewAbstractModelImpl::SetAccessibilityUseSamePage(const std::string& pageMode)
-{}
-
-void ViewAbstractModelImpl::SetAccessibilityScrollTriggerable(bool triggerable, bool resetValue)
-{}
-
-void ViewAbstractModelImpl::SetAccessibilityFocusDrawLevel(int32_t drawLevel)
-{}
-
-void ViewAbstractModelImpl::SetOnAccessibilityActionIntercept(
-    NG::ActionAccessibilityActionIntercept&& onActionAccessibilityActionIntercept)
-{}
-
-void ViewAbstractModelImpl::SetOnAccessibilityHoverTransparent(TouchEventFunc&& touchEventFunc)
 {}
 } // namespace OHOS::Ace::Framework

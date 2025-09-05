@@ -293,7 +293,7 @@ RefPtr<TransitionTweenOption> TransitionTweenOptionFactory::CreateTransitionTwee
         case DeviceType::WATCH:
             return AceType::MakeRefPtr<TransitionWatchTweenOption>(event, isRightToLeft, context);
         default:
-            LOGE("unknown transition type, use default type");
+            LOGE("unknown transition type: %{public}d, use default type", deviceType);
             return AceType::MakeRefPtr<TransitionPhoneTweenOption>(event, isRightToLeft, context);
     }
 }

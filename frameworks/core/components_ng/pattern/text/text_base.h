@@ -26,19 +26,6 @@
 namespace OHOS::Ace::NG {
 
 enum class MouseStatus { PRESSED, RELEASED, MOVE, NONE };
-enum {
-    ACTION_SELECT_ALL, // Smallest code unit.
-    ACTION_UNDO,
-    ACTION_REDO,
-    ACTION_CUT,
-    ACTION_COPY,
-    ACTION_PASTE,
-    ACTION_SHARE,
-    ACTION_PASTE_AS_PLAIN_TEXT,
-    ACTION_REPLACE,
-    ACTION_ASSIST,
-    ACTION_AUTOFILL,
-};
 
 struct HandleMoveStatus {
     bool isFirsthandle = false;
@@ -74,11 +61,6 @@ void GetTextCaretMetrics(RefPtr<FrameNode>& targetNode, CaretMetricsF& caretMetr
     }
 }
 
-namespace TextChangeType {
-    const std::string ADD = "addText";
-    const std::string REMOVE = "removeText";
-};
-
 class TextGestureSelector : public virtual AceType {
     DECLARE_ACE_TYPE(TextGestureSelector, AceType);
 
@@ -91,16 +73,17 @@ public:
         startOffset_ = startOffset;
     }
 
-    void CancelGestureSelection()
+    void EndGestureSelection()
     {
-        DoTextSelectionTouchCancel();
-        ResetGestureSelection();
-    }
-
-    void EndGestureSelection(const TouchLocationInfo& locationInfo)
-    {
-        OnTextGestureSelectionEnd(locationInfo);
-        ResetGestureSelection();
+        if (!isStarted_) {
+            return;
+        }
+        OnTextGenstureSelectionEnd();
+        start_ = -1;
+        end_ = -1;
+        isStarted_ = false;
+        startOffset_.Reset();
+        isSelecting_ = false;
     }
 
     void DoGestureSelection(const TouchEventInfo& info);
@@ -111,27 +94,9 @@ protected:
         return -1;
     }
     virtual void OnTextGestureSelectionUpdate(int32_t start, int32_t end, const TouchEventInfo& info) {}
-    virtual void OnTextGestureSelectionEnd(const TouchLocationInfo& locationInfo) {}
+    virtual void OnTextGenstureSelectionEnd() {}
     virtual void DoTextSelectionTouchCancel() {}
-    int32_t GetSelectingFingerId()
-    {
-        return selectingFingerId_;
-    }
-
-    bool IsGestureSelectingText()
-    {
-        return isSelecting_;
-    }
 private:
-    void ResetGestureSelection()
-    {
-        start_ = -1;
-        end_ = -1;
-        isStarted_ = false;
-        startOffset_.Reset();
-        isSelecting_ = false;
-        selectingFingerId_ = -1;
-    }
     void DoTextSelectionTouchMove(const TouchEventInfo& info);
     int32_t start_ = -1;
     int32_t end_ = -1;
@@ -139,7 +104,6 @@ private:
     bool isSelecting_ = false;
     Dimension minMoveDistance_ = 5.0_vp;
     Offset startOffset_;
-    int32_t selectingFingerId_ = -1;
 };
 
 class TextBase : public SelectOverlayClient {
@@ -162,11 +126,6 @@ public:
     virtual bool IsSelected() const
     {
         return textSelector_.IsValid() && !textSelector_.StartEqualToDest();
-    }
-
-    virtual bool CanAIEntityDrag()
-    {
-        return false;
     }
 
     MouseStatus GetMouseStatus() const
@@ -244,23 +203,10 @@ public:
 
     virtual void OnHandleAreaChanged() {}
     virtual void SetIsTextDraggable(bool isTextDraggable = true) {}
-
-    virtual bool IsStopBackPress() const
-    {
-        return true;
-    }
-
     static void SetSelectionNode(const SelectedByMouseInfo& info);
-    static int32_t GetGraphemeClusterLength(const std::u16string& text, int32_t extend, bool checkPrev = false);
+    static int32_t GetGraphemeClusterLength(const std::wstring& text, int32_t extend, bool checkPrev = false);
     static void CalculateSelectedRect(
         std::vector<RectF>& selectedRect, float longestLine, TextDirection direction = TextDirection::LTR);
-    static float GetSelectedBlankLineWidth();
-    static void CalculateSelectedRectEx(std::vector<RectF>& selectedRect, float lastLineBottom,
-        const std::optional<TextDirection>& direction = std::nullopt);
-    static bool UpdateSelectedBlankLineRect(RectF& rect, float blankWidth, TextAlign textAlign, float longestLine);
-    static void SelectedRectsToLineGroup(const std::vector<RectF>& selectedRect,
-        std::map<float, std::pair<RectF, std::vector<RectF>>>& lineGroup);
-    static TextAlign CheckTextAlignByDirection(TextAlign textAlign, TextDirection direction);
 
     static void RevertLocalPointWithTransform(const RefPtr<FrameNode>& targetNode, OffsetF& point);
     static bool HasRenderTransform(const RefPtr<FrameNode>& targetNode);
@@ -268,50 +214,14 @@ public:
     {
         return false;
     }
-    static std::u16string ConvertStr8toStr16(const std::string& value);
-    static bool isMouseOrTouchPad(SourceTool sourceTool)
-    {
-        return (sourceTool == SourceTool::MOUSE || sourceTool == SourceTool::TOUCHPAD);
-    }
-    std::u16string TruncateText(const std::u16string& text, const size_t& length) const;
-    size_t CountUtf16Chars(const std::u16string& s);
-    std::pair<std::string, std::string> DetectTextDiff(const std::string& latestContent);
-    static LayoutCalPolicy GetLayoutCalPolicy(LayoutWrapper* layoutWrapper, bool isHorizontal);
-    static float GetConstraintMaxLength(
-        LayoutWrapper* layoutWrapper, const LayoutConstraintF& constraint, bool isHorizontal);
-    static std::optional<float> GetCalcLayoutConstraintLength(LayoutWrapper* layoutWrapper, bool isMax, bool isWidth);
-    template <typename Callback>
-    void ProcessAccessibilityTextChange(const std::string& currentContent,
-        Callback&& callback, const AceLogTag& logTag)
-    {
-        if (suppressAccessibilityEvent_) {
-            auto [addedText, removedText] = DetectTextDiff(currentContent);
-            TAG_LOGI(logTag,  "addedLen=%{public}d, removedLen=%{public}d",
-                static_cast<int>(addedText.length()), static_cast<int>(removedText.length()));
-            if (!removedText.empty()) {
-                callback(TextChangeType::REMOVE, removedText);
-            }
-            if (!addedText.empty()) {
-                callback(TextChangeType::ADD, addedText);
-            }
-        }
-        textCache_ = currentContent;
-        suppressAccessibilityEvent_ = true;
-    }
 
 protected:
     TextSelector textSelector_;
     bool showSelect_ = true;
-    bool afterDragSelect_ = false;
-    bool releaseInDrop_ = false;
-    SourceTool sourceTool_ = SourceTool::UNKNOWN;
-    std::vector<std::u16string> dragContents_;
+    std::vector<std::string> dragContents_;
     MouseStatus mouseStatus_ = MouseStatus::NONE;
     RectF contentRect_;
     Dimension avoidKeyboardOffset_ = 24.0_vp;
-    // for text change accessibility event
-    std::string textCache_;
-    bool suppressAccessibilityEvent_ = true;
     ACE_DISALLOW_COPY_AND_MOVE(TextBase);
 };
 } // namespace OHOS::Ace::NG

@@ -21,15 +21,10 @@
 
 #include "base/geometry/dimension.h"
 #include "base/utils/macros.h"
-#include "core/common/resource/resource_object.h"
 #include "core/components/common/properties/color.h"
 
 namespace OHOS::Ace {
-enum class JsCounterResourceType {
-    Height,
-    Width,
-    BackgroundColor
-};
+
 class ACE_FORCE_EXPORT CounterModel {
 public:
     static CounterModel* GetInstance();
@@ -47,7 +42,6 @@ public:
     virtual void SetBackgroundColor(const Color& value) = 0;
     virtual void SetEnableDec(bool enableDec) = 0;
     virtual void SetEnableInc(bool enableInc) = 0;
-    virtual void CreateWithResourceObj(JsCounterResourceType resourceType, const RefPtr<ResourceObject>& resObj) = 0;
 
 private:
     static std::unique_ptr<CounterModel> instance_;

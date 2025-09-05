@@ -16,18 +16,18 @@
 #include "core/components_ng/pattern/canvas/offscreen_canvas_paint_method.h"
 
 #ifndef ACE_UNITTEST
-#ifdef USE_NEW_SKIA
-#include "src/base/SkBase64.h"
-#else
 #include "include/utils/SkBase64.h"
-#endif
 #include "core/components/common/painter/rosen_decoration_painter.h"
 #include "core/components/font/constants_converter.h"
 #include "core/components/font/rosen_font_collection.h"
 #endif
 
+#include "base/geometry/ng/offset_t.h"
 #include "base/i18n/localization.h"
+#include "base/image/pixel_map.h"
+#include "base/utils/utils.h"
 #include "core/common/container.h"
+#include "core/components/common/properties/paint_state.h"
 #include "core/components_ng/pattern/canvas/custom_paint_util.h"
 
 namespace OHOS::Ace::NG {
@@ -41,12 +41,8 @@ OffscreenCanvasPaintMethod::OffscreenCanvasPaintMethod(int32_t width, int32_t he
     lastLayoutSize_.SetWidth(static_cast<float>(width));
     lastLayoutSize_.SetHeight(static_cast<float>(height));
     InitBitmap();
-    // The default value of the font size in canvas is 14px.
+    // The initial value of the font size in canvas is 14px.
     SetFontSize(DEFAULT_FONT_SIZE);
-    if (apiVersion_ >= static_cast<int32_t>(PlatformVersion::VERSION_EIGHTEEN)) {
-        isPathChanged_ = false;
-        isPath2dChanged_ = false;
-    }
 }
 
 void OffscreenCanvasPaintMethod::InitBitmap()
@@ -55,7 +51,7 @@ void OffscreenCanvasPaintMethod::InitBitmap()
     bool ret = bitmap_.Build(width_, height_, bitmapFormat);
     if (!ret) {
         TAG_LOGE(AceLogTag::ACE_CANVAS, "The width and height exceed the limit size.");
-        return;
+        return ;
     }
     bitmap_.ClearWithColor(RSColor::COLOR_TRANSPARENT);
     bitmapSize_ = bitmap_.ComputeByteSize();
@@ -95,11 +91,6 @@ void OffscreenCanvasPaintMethod::Reset()
     InitBitmap();
 }
 
-TextDirection OffscreenCanvasPaintMethod::GetSystemDirection()
-{
-    return AceApplicationInfo::GetInstance().IsRightToLeft() ? TextDirection::RTL : TextDirection::LTR;
-}
-
 void OffscreenCanvasPaintMethod::UpdateSize(int32_t width, int32_t height)
 {
     width_ = width;
@@ -116,11 +107,7 @@ void OffscreenCanvasPaintMethod::DrawPixelMap(RefPtr<PixelMap> pixelMap, const A
     CHECK_NULL_VOID(pixelMap);
     auto rsBitmapFormat = Ace::ImageProvider::MakeRSBitmapFormatFromPixelMap(pixelMap);
     auto rsBitmap = std::make_shared<RSBitmap>();
-    bool ret = rsBitmap->Build(pixelMap->GetWidth(), pixelMap->GetHeight(), rsBitmapFormat, pixelMap->GetRowStride());
-    if (!ret) {
-        TAG_LOGE(AceLogTag::ACE_CANVAS, "The width and height exceed the limit size.");
-        return;
-    }
+    rsBitmap->Build(pixelMap->GetWidth(), pixelMap->GetHeight(), rsBitmapFormat, pixelMap->GetRowStride());
     rsBitmap->SetPixels(const_cast<void*>(reinterpret_cast<const void*>(pixelMap->GetPixels())));
 
     // Step2: Create Image and draw it, using gpu or cpu
@@ -138,7 +125,7 @@ std::unique_ptr<Ace::ImageData> OffscreenCanvasPaintMethod::GetImageData(
     double scaledLeft = left + std::min(width, 0.0);
     double scaledTop = top + std::min(height, 0.0);
     // copy the bitmap to tempCanvas
-    RSBitmapFormat format { RSColorType::COLORTYPE_BGRA_8888, RSAlphaType::ALPHATYPE_PREMUL };
+    RSBitmapFormat format { RSColorType::COLORTYPE_BGRA_8888, RSAlphaType::ALPHATYPE_OPAQUE };
     int32_t size = dirtyWidth * dirtyHeight;
     auto srcRect =
         RSRect(scaledLeft, scaledTop, dirtyWidth + scaledLeft, dirtyHeight + scaledTop);
@@ -222,11 +209,7 @@ std::string OffscreenCanvasPaintMethod::ToDataURL(const std::string& type, const
         return UNSUPPORTED;
     }
     SkString info(len);
-#ifdef USE_NEW_SKIA
-    SkBase64::Encode(result->data(), result->size(), info.data());
-#else
     SkBase64::Encode(result->data(), result->size(), info.writable_str());
-#endif
     return std::string(URL_PREFIX).append(mimeType).append(URL_SYMBOL).append(info.c_str());
 #else
     return UNSUPPORTED;

@@ -21,12 +21,10 @@
 #include "base/log/ace_scoring_log.h"
 #include "bridge/common/utils/engine_helper.h"
 #include "bridge/declarative_frontend/engine/functions/js_function.h"
-#include "bridge/declarative_frontend/engine/js_converter.h"
 #include "bridge/declarative_frontend/jsview/models/action_sheet_model_impl.h"
 #include "core/common/container.h"
 #include "core/components_ng/base/view_stack_processor.h"
 #include "core/components_ng/pattern/action_sheet/action_sheet_model_ng.h"
-#include "core/components_ng/pattern/overlay/level_order.h"
 
 namespace OHOS::Ace {
 std::unique_ptr<ActionSheetModel> ActionSheetModel::instance_ = nullptr;
@@ -309,6 +307,7 @@ void ParseMaskRect(DialogProperties& properties, JSRef<JSObject> obj)
 
 void ParseDialogLevelMode(DialogProperties& properties, JSRef<JSObject> obj)
 {
+#ifndef ARKUI_WAERABLE
     auto levelMode = obj->GetProperty("levelMode");
     auto levelUniqueId = obj->GetProperty("levelUniqueId");
     auto immersiveMode = obj->GetProperty("immersiveMode");
@@ -331,35 +330,7 @@ void ParseDialogLevelMode(DialogProperties& properties, JSRef<JSObject> obj)
             properties.dialogImmersiveMode = DIALOG_IMMERSIVE_MODE[immersiveVal];
         }
     }
-}
-
-void ParseLevelOrder(DialogProperties& properties, JSRef<JSObject> obj)
-{
-    if (properties.isShowInSubWindow) {
-        return;
-    }
-
-    auto levelOrderValue = obj->GetProperty("levelOrder");
-    if (!levelOrderValue->IsObject()) {
-        return;
-    }
-    napi_value levelOrderApi = JsConverter::ConvertJsValToNapiValue(levelOrderValue);
-    CHECK_NULL_VOID(levelOrderApi);
-
-    auto engine = EngineHelper::GetCurrentEngine();
-    CHECK_NULL_VOID(engine);
-    NativeEngine* nativeEngine = engine->GetNativeEngine();
-    CHECK_NULL_VOID(nativeEngine);
-    auto env = reinterpret_cast<napi_env>(nativeEngine);
-    NG::LevelOrder* levelOrder = nullptr;
-    napi_status status = napi_unwrap(env, levelOrderApi, reinterpret_cast<void**>(&levelOrder));
-    if (status != napi_ok || !levelOrder) {
-        LOGE("Failed to unwrap LevelOrder.");
-        return;
-    }
-
-    double order = levelOrder->GetOrder();
-    properties.levelOrder = std::make_optional(order);
+#endif
 }
 
 void JSActionSheet::Show(const JSCallbackInfo& args)
@@ -446,11 +417,9 @@ void JSActionSheet::Show(const JSCallbackInfo& args)
         ActionSheetModel::GetInstance()->SetCancel(eventFunc, properties);
     }
 
-    std::function<void(const int32_t& info, const int32_t& instanceId)> onWillDismissFunc = nullptr;
+    std::function<void(const int32_t& info)> onWillDismissFunc = nullptr;
     ParseDialogCallback(obj, onWillDismissFunc);
     ActionSheetModel::GetInstance()->SetOnWillDismiss(std::move(onWillDismissFunc), properties);
-
-    JSViewAbstract::ParseAppearDialogCallback(args, properties);
 
     // Parse sheets
     auto sheetsVal = obj->GetProperty("sheets");
@@ -503,11 +472,8 @@ void JSActionSheet::Show(const JSCallbackInfo& args)
     }
     // Parse transition.
     properties.transitionEffect = ParseJsTransitionEffect(args);
-    ParseLevelOrder(properties, obj);
     JSViewAbstract::SetDialogProperties(obj, properties);
     JSViewAbstract::SetDialogHoverModeProperties(obj, properties);
-    JSViewAbstract::SetDialogBlurStyleOption(obj, properties);
-    JSViewAbstract::SetDialogEffectOption(obj, properties);
     ActionSheetModel::GetInstance()->ShowActionSheet(properties);
     args.SetReturnValue(args.This());
 }

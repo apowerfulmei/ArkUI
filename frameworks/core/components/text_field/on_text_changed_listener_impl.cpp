@@ -15,11 +15,13 @@
 
 #include "core/components/text_field/on_text_changed_listener_impl.h"
 
+#include "base/utils/utils.h"
+
 namespace OHOS::Ace {
 
 void OnTextChangedListenerImpl::InsertText(const std::u16string& text)
 {
-    LOGI("[OnTextChangedListenerImpl] insert size %{public}zu", StringUtils::Str16ToStr8(text).size());
+    LOGI("[OnTextChangedListenerImpl] insert value %{private}s", StringUtils::Str16ToStr8(text).c_str());
     if (text.length() <= 0) {
         LOGE("the text is null");
         return;

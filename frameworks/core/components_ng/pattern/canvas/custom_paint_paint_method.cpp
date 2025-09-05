@@ -26,15 +26,16 @@
 #include "base/utils/string_utils.h"
 #include "base/utils/utils.h"
 #include "bridge/common/utils/utils.h"
+#include "core/components/common/properties/decoration.h"
 #include "core/components_ng/render/drawing.h"
+#include "core/image/image_cache.h"
 #ifndef ACE_UNITTEST
 #include "core/components/common/painter/rosen_decoration_painter.h"
 #include "core/components/font/constants_converter.h"
 #include "core/components/font/rosen_font_collection.h"
 #include "core/image/image_provider.h"
-#include "core/image/image_cache.h"
+#include "core/image/sk_image_cache.h"
 #endif
-#include "core/pipeline/base/constants.h"
 
 namespace OHOS::Ace::NG {
 namespace {
@@ -120,11 +121,6 @@ const LinearMapNode<void (*)(std::shared_ptr<RSImage>&, std::shared_ptr<RSShader
             } },
     };
 
-CustomPaintPaintMethod::CustomPaintPaintMethod()
-{
-    apiVersion_ = Container::GetCurrentApiTargetVersion();
-}
-
 bool CustomPaintPaintMethod::CheckFilterProperty(FilterType filterType, const std::string& filterParam)
 {
     switch (filterType) {
@@ -135,16 +131,16 @@ bool CustomPaintPaintMethod::CheckFilterProperty(FilterType filterType, const st
         case FilterType::OPACITY:
         case FilterType::BRIGHTNESS:
         case FilterType::CONTRAST: {
-            static const std::regex contrastRegexExpression(R"((?:-?0)|(?:\d+(?:\.\d+)?%?))");
-            return filterParam.empty() ? true : std::regex_match(filterParam, contrastRegexExpression);
+            std::regex contrastRegexExpression(R"((\d+(\.\d+)?%?)|(^$))");
+            return std::regex_match(filterParam, contrastRegexExpression);
         }
         case FilterType::BLUR: {
-            static const std::regex blurRegexExpression(R"((?:-?0)|(?:\d+(?:\.\d+)?(?:px|vp|rem)))");
-            return filterParam.empty() ? true : std::regex_match(filterParam, blurRegexExpression);
+            std::regex blurRegexExpression(R"((-?0)|(\d+(\.\d+)?(px|vp|rem))|(^$))");
+            return std::regex_match(filterParam, blurRegexExpression);
         }
         case FilterType::HUE_ROTATE: {
-            static const std::regex hueRotateRegexExpression(R"((?:-?0)|(?:-?\d+(?:\.\d+)?(?:deg|grad|rad|turn)))");
-            return filterParam.empty() ? true : std::regex_match(filterParam, hueRotateRegexExpression);
+            std::regex hueRotateRegexExpression(R"((\d+(\.\d+)?(deg|grad|rad|turn))|(^$))");
+            return std::regex_match(filterParam, hueRotateRegexExpression);
         }
         default:
             return false;
@@ -212,8 +208,7 @@ void CustomPaintPaintMethod::UpdateFontFamilies()
     }
 }
 
-std::shared_ptr<RSShaderEffect> CustomPaintPaintMethod::MakeConicGradient(
-    const Ace::Gradient& gradient, const std::shared_ptr<RSColorSpace>& colorSpace)
+std::shared_ptr<RSShaderEffect> CustomPaintPaintMethod::MakeConicGradient(RSBrush* brush, const Ace::Gradient& gradient)
 {
     std::shared_ptr<RSShaderEffect> shaderEffect = nullptr;
     if (gradient.GetType() == Ace::GradientType::CONIC) {
@@ -228,18 +223,18 @@ std::shared_ptr<RSShaderEffect> CustomPaintPaintMethod::MakeConicGradient(
         std::stable_sort(gradientColors.begin(), gradientColors.end(),
             [](auto& colorA, auto& colorB) { return colorA.GetDimension() < colorB.GetDimension(); });
         uint32_t colorsSize = gradientColors.size();
-        std::vector<RSColor4f> colors(colorsSize, { 0, 0, 0, 0 });
-        std::vector<RSScalar> pos(colorsSize, 0);
-        double angle = gradient.GetConicGradient().startAngle->Value() / ACE_PI * 180.0;
+        std::vector<RSColorQuad> colors(gradientColors.size(), 0);
+        std::vector<RSScalar> pos(gradientColors.size(), 0);
+        double angle = gradient.GetConicGradient().startAngle->Value() / M_PI * 180.0;
         RSScalar startAngle = static_cast<RSScalar>(angle);
         matrix.PreRotate(startAngle, centerX, centerY);
         for (uint32_t i = 0; i < colorsSize; ++i) {
             const auto& gradientColor = gradientColors[i];
-            colors.at(i) = RSColor(gradientColor.GetColor().GetValue()).GetColor4f();
+            colors.at(i) = gradientColor.GetColor().GetValue();
             pos.at(i) = gradientColor.GetDimension().Value();
         }
         auto mode = RSTileMode::CLAMP;
-        shaderEffect = RSShaderEffect::CreateSweepGradient(RSPoint(centerX, centerY), colors, colorSpace, pos, mode,
+        shaderEffect = RSShaderEffect::CreateSweepGradient(RSPoint(centerX, centerY), colors, pos, mode,
             static_cast<RSScalar>(CONIC_START_ANGLE), static_cast<RSScalar>(CONIC_END_ANGLE), &matrix);
     }
     return shaderEffect;
@@ -249,44 +244,35 @@ void CustomPaintPaintMethod::UpdatePaintShader(RSPen* pen, RSBrush* brush, const
 {
     RSPoint beginPoint = RSPoint(static_cast<RSScalar>(gradient.GetBeginOffset().GetX()),
         static_cast<RSScalar>(gradient.GetBeginOffset().GetY()));
-    RSPoint endPoint = RSPoint(
-        static_cast<RSScalar>(gradient.GetEndOffset().GetX()), static_cast<RSScalar>(gradient.GetEndOffset().GetY()));
+    RSPoint endPoint = RSPoint(static_cast<RSScalar>(gradient.GetEndOffset().GetX()),
+        static_cast<RSScalar>(gradient.GetEndOffset().GetY()));
     std::vector<RSPoint> pts = { beginPoint, endPoint };
     auto gradientColors = gradient.GetColors();
     std::stable_sort(gradientColors.begin(), gradientColors.end(),
         [](auto& colorA, auto& colorB) { return colorA.GetDimension() < colorB.GetDimension(); });
     uint32_t colorsSize = gradientColors.size();
-    std::vector<RSColor4f> colors(colorsSize, { 0, 0, 0, 0 });
-    std::vector<RSScalar> pos(colorsSize, 0);
+    std::vector<RSColorQuad> colors(gradientColors.size(), 0);
+    std::vector<RSScalar> pos(gradientColors.size(), 0);
     for (uint32_t i = 0; i < colorsSize; ++i) {
         const auto& gradientColor = gradientColors[i];
-        colors.at(i) = RSColor(gradientColor.GetColor().GetValue()).GetColor4f();
+        colors.at(i) = gradientColor.GetColor().GetValue();
         pos.at(i) = gradientColor.GetDimension().Value();
     }
 
     auto mode = RSTileMode::CLAMP;
 
-    std::shared_ptr<RSColorSpace> colorSpace = RSColorSpace::CreateSRGB();
-    ColorSpace colorSpaceType = ColorSpace::SRGB;
-    if (colorsSize > 0) {
-        colorSpaceType = gradientColors.back().GetColor().GetColorSpace();
-    }
-    if (ColorSpace::DISPLAY_P3 == colorSpaceType) {
-        colorSpace = RSColorSpace::CreateRGB(RSCMSTransferFuncType::SRGB, RSCMSMatrixType::DCIP3);
-    }
     std::shared_ptr<RSShaderEffect> shaderEffect = nullptr;
     if (gradient.GetType() == Ace::GradientType::LINEAR) {
-        shaderEffect = RSShaderEffect::CreateLinearGradient(pts.at(0), pts.at(1), colors, colorSpace, pos, mode);
+        shaderEffect = RSShaderEffect::CreateLinearGradient(pts.at(0), pts.at(1), colors, pos, mode);
     } else if (gradient.GetType() == Ace::GradientType::CONIC) {
-        shaderEffect = MakeConicGradient(gradient, colorSpace);
+        shaderEffect = MakeConicGradient(nullptr, gradient);
     } else {
         if (gradient.GetInnerRadius() <= 0.0 && beginPoint == endPoint) {
-            shaderEffect = RSShaderEffect::CreateRadialGradient(
-                endPoint, gradient.GetOuterRadius(), colors, colorSpace, pos, mode);
+            shaderEffect = RSShaderEffect::CreateRadialGradient(endPoint, gradient.GetOuterRadius(), colors, pos, mode);
         } else {
             RSMatrix matrix;
             shaderEffect = RSShaderEffect::CreateTwoPointConical(beginPoint, gradient.GetInnerRadius(), endPoint,
-                gradient.GetOuterRadius(), colors, colorSpace, pos, mode, &matrix);
+                gradient.GetOuterRadius(), colors, pos, mode, &matrix);
         }
     }
     if (pen != nullptr) {
@@ -512,7 +498,8 @@ void CustomPaintPaintMethod::DrawSvgImage(
     rsCanvas_->Restore();
 }
 
-void CustomPaintPaintMethod::DrawImageInternal(const Ace::CanvasImage& info, const std::shared_ptr<RSImage>& image)
+void CustomPaintPaintMethod::DrawImageInternal(
+    const Ace::CanvasImage& canvasImage, const std::shared_ptr<RSImage>& image)
 {
     CHECK_NULL_VOID(rsCanvas_);
     RSBrush compositeOperationpBrush;
@@ -527,27 +514,29 @@ void CustomPaintPaintMethod::DrawImageInternal(const Ace::CanvasImage& info, con
         imageBrush_.SetAlphaF(state_.globalState.GetAlpha());
     }
     if (HasShadow()) {
-        auto width = info.dx + (info.flag == DrawImageType::THREE_PARAMS ? image->GetWidth() : info.dWidth);
-        auto height = info.dy + (info.flag == DrawImageType::THREE_PARAMS ? image->GetHeight() : info.dHeight);
-        RSRect rsRect = RSRect(info.dx, info.dy, width, height);
+        RSRect rsRect = RSRect(
+            canvasImage.dx, canvasImage.dy, canvasImage.dWidth + canvasImage.dx, canvasImage.dHeight + canvasImage.dy);
         RSPath path;
         path.AddRect(rsRect);
         PaintImageShadow(path, state_.shadow, &imageBrush_, nullptr,
             (state_.globalState.GetType() != CompositeOperation::SOURCE_OVER) ? &slo : nullptr);
     }
     rsCanvas_->AttachBrush(imageBrush_);
-    switch (info.flag) {
+    switch (canvasImage.flag) {
         case DrawImageType::THREE_PARAMS:
-            rsCanvas_->DrawImage(*image, info.dx, info.dy, sampleOptions_);
+            rsCanvas_->DrawImage(*image, canvasImage.dx, canvasImage.dy, sampleOptions_);
             break;
         case DrawImageType::FIVE_PARAMS: {
-            RSRect rect = RSRect(info.dx, info.dy, info.dWidth + info.dx, info.dHeight + info.dy);
+            RSRect rect = RSRect(canvasImage.dx, canvasImage.dy, canvasImage.dWidth + canvasImage.dx,
+                canvasImage.dHeight + canvasImage.dy);
             rsCanvas_->DrawImageRect(*image, rect, sampleOptions_);
             break;
         }
         case DrawImageType::NINE_PARAMS: {
-            RSRect dstRect = RSRect(info.dx, info.dy, info.dWidth + info.dx, info.dHeight + info.dy);
-            RSRect srcRect = RSRect(info.sx, info.sy, info.sWidth + info.sx, info.sHeight + info.sy);
+            RSRect dstRect = RSRect(canvasImage.dx, canvasImage.dy, canvasImage.dWidth + canvasImage.dx,
+                canvasImage.dHeight + canvasImage.dy);
+            RSRect srcRect = RSRect(canvasImage.sx, canvasImage.sy, canvasImage.sWidth + canvasImage.sx,
+                canvasImage.sHeight + canvasImage.sy);
             rsCanvas_->DrawImageRect(*image, srcRect, dstRect, sampleOptions_,
                 RSSrcRectConstraint::FAST_SRC_RECT_CONSTRAINT);
             break;
@@ -573,7 +562,7 @@ void CustomPaintPaintMethod::DrawImage(const Ace::CanvasImage& canvasImage, doub
             return;
         }
         RSBitmap bitmap;
-        RSBitmapFormat format { RSColorType::COLORTYPE_BGRA_8888, RSAlphaType::ALPHATYPE_PREMUL };
+        RSBitmapFormat format { RSColorType::COLORTYPE_BGRA_8888, RSAlphaType::ALPHATYPE_OPAQUE };
         bitmap.Build(imageData.dirtyWidth, imageData.dirtyHeight, format);
         bitmap.SetPixels(const_cast<void*>(reinterpret_cast<const void*>(imageData.data.data())));
         image->BuildFromBitmap(bitmap);
@@ -593,7 +582,7 @@ void CustomPaintPaintMethod::PutImageData(const Ace::ImageData& imageData)
         return;
     }
     RSBitmap bitmap;
-    RSBitmapFormat format { RSColorType::COLORTYPE_BGRA_8888, RSAlphaType::ALPHATYPE_PREMUL };
+    RSBitmapFormat format { RSColorType::COLORTYPE_BGRA_8888, RSAlphaType::ALPHATYPE_OPAQUE };
     bitmap.Build(imageData.dirtyWidth, imageData.dirtyHeight, format);
     bitmap.SetPixels(const_cast<void*>(reinterpret_cast<const void*>(imageData.data.data())));
     RSBrush brush;
@@ -735,9 +724,6 @@ void CustomPaintPaintMethod::Fill(const RefPtr<CanvasPath2D>& path)
     ParsePath2D(path);
     Path2DFill();
     rsPath2d_.Reset();
-    if (apiVersion_ >= static_cast<int32_t>(PlatformVersion::VERSION_EIGHTEEN)) {
-        isPath2dChanged_ = false;
-    }
 }
 
 void CustomPaintPaintMethod::Path2DFill()
@@ -802,9 +788,6 @@ void CustomPaintPaintMethod::Stroke(const RefPtr<CanvasPath2D>& path)
     ParsePath2D(path);
     Path2DStroke();
     rsPath2d_.Reset();
-    if (apiVersion_ >= static_cast<int32_t>(PlatformVersion::VERSION_EIGHTEEN)) {
-        isPath2dChanged_ = false;
-    }
 }
 
 void CustomPaintPaintMethod::Path2DStroke()
@@ -847,9 +830,6 @@ void CustomPaintPaintMethod::Clip(const RefPtr<CanvasPath2D>& path)
     ParsePath2D(path);
     Path2DClip();
     rsPath2d_.Reset();
-    if (apiVersion_ >= static_cast<int32_t>(PlatformVersion::VERSION_EIGHTEEN)) {
-        isPath2dChanged_ = false;
-    }
 }
 
 void CustomPaintPaintMethod::Path2DClip()
@@ -861,9 +841,6 @@ void CustomPaintPaintMethod::Path2DClip()
 void CustomPaintPaintMethod::BeginPath()
 {
     rsPath_.Reset();
-    if (apiVersion_ >= static_cast<int32_t>(PlatformVersion::VERSION_EIGHTEEN)) {
-        isPathChanged_ = false;
-    }
 }
 
 void CustomPaintPaintMethod::ClosePath()
@@ -874,16 +851,11 @@ void CustomPaintPaintMethod::ClosePath()
 void CustomPaintPaintMethod::MoveTo(double x, double y)
 {
     rsPath_.MoveTo(static_cast<RSScalar>(x), static_cast<RSScalar>(y));
-    isPathChanged_ = true;
 }
 
 void CustomPaintPaintMethod::LineTo(double x, double y)
 {
-    if (!isPathChanged_) {
-        rsPath_.MoveTo(static_cast<RSScalar>(x), static_cast<RSScalar>(y));
-    }
     rsPath_.LineTo(static_cast<RSScalar>(x), static_cast<RSScalar>(y));
-    isPathChanged_ = true;
 }
 
 void CustomPaintPaintMethod::Arc(const ArcParam& param)
@@ -892,8 +864,8 @@ void CustomPaintPaintMethod::Arc(const ArcParam& param)
     double top = param.y - param.radius;
     double right = param.x + param.radius;
     double bottom = param.y + param.radius;
-    double startAngle = param.startAngle * HALF_CIRCLE_ANGLE / ACE_PI;
-    double endAngle = param.endAngle * HALF_CIRCLE_ANGLE / ACE_PI;
+    double startAngle = param.startAngle * HALF_CIRCLE_ANGLE / M_PI;
+    double endAngle = param.endAngle * HALF_CIRCLE_ANGLE / M_PI;
     double sweepAngle = endAngle - startAngle;
     if (param.anticlockwise) {
         sweepAngle =
@@ -920,50 +892,29 @@ void CustomPaintPaintMethod::Arc(const ArcParam& param)
     } else {
         rsPath_.ArcTo(point1, point2, static_cast<RSScalar>(startAngle), static_cast<RSScalar>(sweepAngle));
     }
-    isPathChanged_ = true;
 }
 
 void CustomPaintPaintMethod::ArcTo(const ArcToParam& param)
 {
-    if (!isPathChanged_) {
-        rsPath_.MoveTo(static_cast<RSScalar>(param.x1), static_cast<RSScalar>(param.y1));
-    }
     rsPath_.ArcTo(static_cast<RSScalar>(param.x1), static_cast<RSScalar>(param.y1), static_cast<RSScalar>(param.x2),
         static_cast<RSScalar>(param.y2), static_cast<RSScalar>(param.radius));
-    isPathChanged_ = true;
 }
 
 void CustomPaintPaintMethod::AddRect(const Rect& rect)
 {
     RSRect rsRect(rect.Left(), rect.Top(), rect.Right(), rect.Bottom());
     rsPath_.AddRect(rsRect);
-    isPathChanged_ = true;
-}
-
-void CustomPaintPaintMethod::AddRoundRect(const Rect& rect, const std::vector<double>& radii)
-{
-    if (radii.size() != 4) { // 4: four corners.
-        return;
-    }
-    RSRect rsRect(rect.Left(), rect.Top(), rect.Right(), rect.Bottom());
-    std::vector<RSPoint> radiusXY = {
-        RSPoint(radii[0], radii[0]), RSPoint(radii[1], radii[1]),   // 0: top-left, 1: top-right.
-        RSPoint(radii[2], radii[2]), RSPoint(radii[3], radii[3])    // 2: bottom-right, 3: bottom-left.
-    };
-    RSRoundRect rsRoundRect(rsRect, radiusXY);
-    rsPath_.AddRoundRect(rsRoundRect, RSPathDirection::CCW_DIRECTION);
-    isPathChanged_ = true;
 }
 
 void CustomPaintPaintMethod::Ellipse(const EllipseParam& param)
 {
     // Init the start and end angle, then calculated the sweepAngle.
-    double startAngle = param.startAngle * HALF_CIRCLE_ANGLE / ACE_PI;
-    double endAngle = param.endAngle * HALF_CIRCLE_ANGLE / ACE_PI;
+    double startAngle = param.startAngle * HALF_CIRCLE_ANGLE / M_PI;
+    double endAngle = param.endAngle * HALF_CIRCLE_ANGLE / M_PI;
     if (NearEqual(param.startAngle, param.endAngle)) {
         return; // Just return when startAngle is same as endAngle.
     }
-    double rotation = param.rotation * HALF_CIRCLE_ANGLE / ACE_PI;
+    double rotation = param.rotation * HALF_CIRCLE_ANGLE / M_PI;
     double sweepAngle = endAngle - startAngle;
     if (param.anticlockwise) {
         sweepAngle =
@@ -1004,29 +955,20 @@ void CustomPaintPaintMethod::Ellipse(const EllipseParam& param)
         matrix.Rotate(rotation, param.x, param.y);
         rsPath_.Transform(matrix);
     }
-    isPathChanged_ = true;
 }
 
 void CustomPaintPaintMethod::BezierCurveTo(const BezierCurveParam& param)
 {
-    if (!isPathChanged_) {
-        rsPath_.MoveTo(static_cast<RSScalar>(param.cp1x), static_cast<RSScalar>(param.cp1y));
-    }
     rsPath_.CubicTo(static_cast<RSScalar>(param.cp1x),
         static_cast<RSScalar>(param.cp1y), static_cast<RSScalar>(param.cp2x),
         static_cast<RSScalar>(param.cp2y), static_cast<RSScalar>(param.x),
         static_cast<RSScalar>(param.y));
-    isPathChanged_ = true;
 }
 
 void CustomPaintPaintMethod::QuadraticCurveTo(const QuadraticCurveParam& param)
 {
-    if (!isPathChanged_) {
-        rsPath_.MoveTo(static_cast<RSScalar>(param.cpx), static_cast<RSScalar>(param.cpy));
-    }
     rsPath_.QuadTo(static_cast<RSScalar>(param.cpx), static_cast<RSScalar>(param.cpy),
         static_cast<RSScalar>(param.x), static_cast<RSScalar>(param.y));
-    isPathChanged_ = true;
 }
 
 void CustomPaintPaintMethod::ParsePath2D(const RefPtr<CanvasPath2D>& path)
@@ -1063,9 +1005,6 @@ void CustomPaintPaintMethod::ParsePath2D(const RefPtr<CanvasPath2D>& path)
             case PathCmd::RECT:
                 Path2DRect(args);
                 break;
-            case PathCmd::ROUND_RECT:
-                Path2DRoundRect(args);
-                break;
             case PathCmd::CLOSE_PATH:
                 Path2DClosePath();
                 break;
@@ -1090,24 +1029,19 @@ void CustomPaintPaintMethod::Path2DClosePath()
 void CustomPaintPaintMethod::Path2DMoveTo(const PathArgs& args)
 {
     rsPath2d_.MoveTo(args.para1, args.para2);
-    isPath2dChanged_ = true;
 }
 
 void CustomPaintPaintMethod::Path2DLineTo(const PathArgs& args)
 {
-    if (!isPath2dChanged_) {
-        rsPath2d_.MoveTo(static_cast<RSScalar>(args.para1), static_cast<RSScalar>(args.para2));
-    }
     rsPath2d_.LineTo(args.para1, args.para2);
-    isPath2dChanged_ = true;
 }
 
 void CustomPaintPaintMethod::Path2DArc(const PathArgs& args)
 {
     RSPoint point1(args.para1 - args.para3, args.para2 - args.para3);
     RSPoint point2(args.para1 + args.para3, args.para2 + args.para3);
-    double startAngle = args.para4 * HALF_CIRCLE_ANGLE / ACE_PI;
-    double endAngle = args.para5 * HALF_CIRCLE_ANGLE / ACE_PI;
+    double startAngle = args.para4 * HALF_CIRCLE_ANGLE / M_PI;
+    double endAngle = args.para5 * HALF_CIRCLE_ANGLE / M_PI;
     double sweepAngle = endAngle - startAngle;
     if (!NearZero(args.para6)) {
         sweepAngle =
@@ -1131,17 +1065,12 @@ void CustomPaintPaintMethod::Path2DArc(const PathArgs& args)
     } else {
         rsPath2d_.ArcTo(point1, point2, startAngle, sweepAngle);
     }
-    isPath2dChanged_ = true;
 }
 
 void CustomPaintPaintMethod::Path2DArcTo(const PathArgs& args)
 {
-    if (!isPath2dChanged_) {
-        rsPath2d_.MoveTo(static_cast<RSScalar>(args.para1), static_cast<RSScalar>(args.para2));
-    }
     rsPath2d_.ArcTo(static_cast<RSScalar>(args.para1), static_cast<RSScalar>(args.para2),
         static_cast<RSScalar>(args.para3), static_cast<RSScalar>(args.para4), static_cast<RSScalar>(args.para5));
-    isPath2dChanged_ = true;
 }
 
 void CustomPaintPaintMethod::Path2DEllipse(const PathArgs& args)
@@ -1150,9 +1079,9 @@ void CustomPaintPaintMethod::Path2DEllipse(const PathArgs& args)
         return; // Just return when startAngle is same as endAngle.
     }
 
-    double rotation = args.para5 * HALF_CIRCLE_ANGLE / ACE_PI;
-    double startAngle = args.para6 * HALF_CIRCLE_ANGLE / ACE_PI;
-    double endAngle = args.para7 * HALF_CIRCLE_ANGLE / ACE_PI;
+    double rotation = args.para5 * HALF_CIRCLE_ANGLE / M_PI;
+    double startAngle = args.para6 * HALF_CIRCLE_ANGLE / M_PI;
+    double endAngle = args.para7 * HALF_CIRCLE_ANGLE / M_PI;
     bool anticlockwise = NearZero(args.para8) ? false : true;
     double sweepAngle = endAngle - startAngle;
     if (anticlockwise) {
@@ -1189,25 +1118,16 @@ void CustomPaintPaintMethod::Path2DEllipse(const PathArgs& args)
         matrix.Rotate(rotation, args.para1, args.para2);
         rsPath2d_.Transform(matrix);
     }
-    isPath2dChanged_ = true;
 }
 
 void CustomPaintPaintMethod::Path2DBezierCurveTo(const PathArgs& args)
 {
-    if (!isPath2dChanged_) {
-        rsPath2d_.MoveTo(static_cast<RSScalar>(args.para1), static_cast<RSScalar>(args.para2));
-    }
     rsPath2d_.CubicTo(args.para1, args.para2, args.para3, args.para4, args.para5, args.para6);
-    isPath2dChanged_ = true;
 }
 
 void CustomPaintPaintMethod::Path2DQuadraticCurveTo(const PathArgs& args)
 {
-    if (!isPath2dChanged_) {
-        rsPath2d_.MoveTo(static_cast<RSScalar>(args.para1), static_cast<RSScalar>(args.para2));
-    }
     rsPath2d_.QuadTo(args.para1, args.para2, args.para3, args.para4);
-    isPath2dChanged_ = true;
 }
 
 void CustomPaintPaintMethod::Path2DSetTransform(const PathArgs& args)
@@ -1250,7 +1170,7 @@ void CustomPaintPaintMethod::Scale(double x, double y)
 void CustomPaintPaintMethod::Rotate(double angle)
 {
     CHECK_NULL_VOID(rsCanvas_);
-    rsCanvas_->Rotate(angle * 180 / ACE_PI);
+    rsCanvas_->Rotate(angle * 180 / M_PI);
 }
 
 void CustomPaintPaintMethod::ResetTransform()
@@ -1595,7 +1515,7 @@ void CustomPaintPaintMethod::SetGrayFilter(const std::string& percent)
     matrix[18] = 1.0f;
     RSColorMatrix colorMatrix;
     colorMatrix.SetArray(matrix);
-    colorMatrix_.PostConcat(colorMatrix);
+    colorMatrix_.PreConcat(colorMatrix);
 }
 
 // https://drafts.fxtf.org/filter-effects/#sepiaEquivalent
@@ -1621,7 +1541,7 @@ void CustomPaintPaintMethod::SetSepiaFilter(const std::string& percent)
     matrix[18] = 1.0f;
     RSColorMatrix colorMatrix;
     colorMatrix.SetArray(matrix);
-    colorMatrix_.PostConcat(colorMatrix);
+    colorMatrix_.PreConcat(colorMatrix);
 }
 
 // https://drafts.fxtf.org/filter-effects/#saturateEquivalent
@@ -1648,7 +1568,7 @@ void CustomPaintPaintMethod::SetSaturateFilter(const std::string& percent)
     matrix[18] = 1.0f;
     RSColorMatrix colorMatrix;
     colorMatrix.SetArray(matrix);
-    colorMatrix_.PostConcat(colorMatrix);
+    colorMatrix_.PreConcat(colorMatrix);
 }
 
 // https://drafts.fxtf.org/filter-effects/#huerotateEquivalent
@@ -1660,11 +1580,11 @@ void CustomPaintPaintMethod::SetHueRotateFilter(const std::string& filterParam)
     if (index != std::string::npos) {
         percent.resize(index);
         rad = StringUtils::StringToFloat(percent);
-        rad = rad / HALF_CIRCLE_ANGLE * ACE_PI;
+        rad = rad / HALF_CIRCLE_ANGLE * M_PI;
     } else if ((index = percent.find("turn")) != std::string::npos) {
         percent.resize(index);
         rad = StringUtils::StringToFloat(percent);
-        rad = rad * 2 * ACE_PI;
+        rad = rad * 2 * M_PI;
     } else if ((index = percent.find("rad")) != std::string::npos) {
         percent.resize(index);
         rad = StringUtils::StringToFloat(percent);
@@ -1689,7 +1609,7 @@ void CustomPaintPaintMethod::SetHueRotateFilter(const std::string& filterParam)
     matrix[18] = 1.0f;
     RSColorMatrix colorMatrix;
     colorMatrix.SetArray(matrix);
-    colorMatrix_.PostConcat(colorMatrix);
+    colorMatrix_.PreConcat(colorMatrix);
 }
 
 /*
@@ -1714,7 +1634,7 @@ void CustomPaintPaintMethod::SetInvertFilter(const std::string& percent)
     matrix[18] = 1.0f;
     RSColorMatrix colorMatrix;
     colorMatrix.SetArray(matrix);
-    colorMatrix_.PostConcat(colorMatrix);
+    colorMatrix_.PreConcat(colorMatrix);
 }
 
 /*
@@ -1737,7 +1657,7 @@ void CustomPaintPaintMethod::SetOpacityFilter(const std::string& percent)
     matrix[18] = percentNum;
     RSColorMatrix colorMatrix;
     colorMatrix.SetArray(matrix);
-    colorMatrix_.PostConcat(colorMatrix);
+    colorMatrix_.PreConcat(colorMatrix);
 }
 
 /*
@@ -1757,7 +1677,7 @@ void CustomPaintPaintMethod::SetBrightnessFilter(const std::string& percent)
     matrix[18] = 1.0f;
     RSColorMatrix colorMatrix;
     colorMatrix.SetArray(matrix);
-    colorMatrix_.PostConcat(colorMatrix);
+    colorMatrix_.PreConcat(colorMatrix);
 }
 
 /*
@@ -1778,7 +1698,7 @@ void CustomPaintPaintMethod::SetContrastFilter(const std::string& percent)
     matrix[18] = 1;
     RSColorMatrix colorMatrix;
     colorMatrix.SetArray(matrix);
-    colorMatrix_.PostConcat(colorMatrix);
+    colorMatrix_.PreConcat(colorMatrix);
 }
 
 // https://drafts.fxtf.org/filter-effects/#blurEquivalent
@@ -1847,7 +1767,7 @@ double CustomPaintPaintMethod::PxStrToDouble(const std::string& str)
 double CustomPaintPaintMethod::BlurStrToDouble(const std::string& str)
 {
     double ret = 0;
-
+    
     // check px case
     size_t index = str.find("px");
     if (index != std::string::npos) {
@@ -1864,7 +1784,7 @@ double CustomPaintPaintMethod::BlurStrToDouble(const std::string& str)
         ret = ret * density_;
         return ret;
     }
-
+    
     // check rem case
     index = str.find("rem");
     if (index != std::string::npos) {
@@ -1991,7 +1911,7 @@ void CustomPaintPaintMethod::ResetLineDash()
 void CustomPaintPaintMethod::RotateMatrix(double angle)
 {
     RSMatrix matrix;
-    matrix.Rotate(angle * HALF_CIRCLE_ANGLE / ACE_PI, 0, 0);
+    matrix.Rotate(angle * HALF_CIRCLE_ANGLE / M_PI, 0, 0);
     matrix_.PreConcat(matrix);
 }
 
@@ -2044,9 +1964,7 @@ void CustomPaintPaintMethod::ResetStates()
     state_.fillState = PaintState();
     state_.strokeState = StrokePaintState();
     state_.globalState = GlobalPaintState();
-    // Reset Text Direction
-    state_.fillState.SetOffTextDirection(GetSystemDirection());
-    // The default value of the font size in canvas is 14px.
+    // The initial value of the font size in canvas is 14px.
     SetFontSize(DEFAULT_FONT_SIZE);
     state_.shadow = Shadow();
     imageBrush_ = RSBrush();
@@ -2060,10 +1978,6 @@ void CustomPaintPaintMethod::ResetStates()
     colorMatrix_ = RSColorMatrix();
     colorFilter_ = RSColorFilter::CreateMatrixColorFilter(colorMatrix_);
     blurFilter_ = RSImageFilter::CreateBlurImageFilter(0, 0, RSTileMode::DECAL, nullptr);
-    if (apiVersion_ >= static_cast<int32_t>(PlatformVersion::VERSION_EIGHTEEN)) {
-        isPathChanged_ = false;
-        isPath2dChanged_ = false;
-    }
 }
 
 void CustomPaintPaintMethod::PaintShadow(
@@ -2097,18 +2011,6 @@ void CustomPaintPaintMethod::PaintImageShadow(
 void CustomPaintPaintMethod::Path2DRect(const PathArgs& args)
 {
     rsPath2d_.AddRect(RSRect(args.para1, args.para2, args.para3 + args.para1, args.para4 + args.para2));
-}
-
-void CustomPaintPaintMethod::Path2DRoundRect(const PathArgs& args)
-{
-    RSRect rsRect(args.para1, args.para2, args.para3 + args.para1, args.para4 + args.para2);
-    std::vector<RSPoint> radiusXY = {
-        RSPoint(args.para5, args.para5), RSPoint(args.para6, args.para6),
-        RSPoint(args.para7, args.para7), RSPoint(args.para8, args.para8)
-    };
-    RSRoundRect rsRoundRect(rsRect, radiusXY);
-    rsPath2d_.AddRoundRect(rsRoundRect, RSPathDirection::CCW_DIRECTION);
-    isPath2dChanged_ = true;
 }
 
 void CustomPaintPaintMethod::SetTransform(const TransformParam& param)
@@ -2310,15 +2212,5 @@ void CustomPaintPaintMethod::UpdateStrokeShadowParagraph(
     shadowBuilder->AppendText(StringUtils::Str8ToStr16(text));
     shadowParagraph_ = shadowBuilder->CreateTypography();
 #endif
-}
-
-void CustomPaintPaintMethod::SetTransform(std::shared_ptr<Ace::Pattern> pattern, const TransformParam& transform)
-{
-    pattern->SetScaleX(transform.scaleX);
-    pattern->SetScaleY(transform.scaleY);
-    pattern->SetSkewX(transform.skewX);
-    pattern->SetSkewY(transform.skewY);
-    pattern->SetTranslateX(transform.translateX);
-    pattern->SetTranslateY(transform.translateY);
 }
 } // namespace OHOS::Ace::NG

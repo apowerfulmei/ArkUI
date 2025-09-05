@@ -20,7 +20,6 @@
 #include "core/components_ng/pattern/app_bar/app_bar_theme.h"
 #include "core/components_ng/pattern/app_bar/atomic_service_layout_algorithm.h"
 #include "core/components_ng/pattern/linear_layout/linear_layout_pattern.h"
-#include "core/components_ng/pattern/custom/custom_app_bar_node.h"
 
 namespace OHOS::Ace::NG {
 class AtomicServicePattern : public LinearLayoutPattern {
@@ -33,16 +32,12 @@ public:
 
     void OnAttachToFrameNode() override;
     void BeforeCreateLayoutWrapper() override;
-    void OnColorConfigurationUpdate() override;
     void OnLanguageConfigurationUpdate() override;
+    void OnColorConfigurationUpdate() override;
     RefPtr<LayoutAlgorithm> CreateLayoutAlgorithm() override
     {
         return MakeRefPtr<AtomicServiceLayoutAlgorithm>();
     }
-    bool OnDirtyLayoutWrapperSwap(const RefPtr<LayoutWrapper>&, const DirtySwapConfig&) override;
-    RefPtr<CustomAppBarNode> GetJSAppBarContainer();
-    RefPtr<FrameNode> GetStageNodeWrapper();
-    RefPtr<FrameNode> GetContent();
     RefPtr<FrameNode> GetMenuBarRow();
     RefPtr<FrameNode> GetMenuBar();
     RefPtr<FrameNode> GetMenuButton();
@@ -59,28 +54,14 @@ public:
     void UpdateMenuBarLayout(RefPtr<AppBarTheme>& theme, RefPtr<FrameNode>& menuBar, bool isRtl);
     void UpdateButtonLayout(RefPtr<AppBarTheme>& theme, RefPtr<FrameNode>& button, bool isLeft);
     void UpdateIconLayout(RefPtr<AppBarTheme>& theme, RefPtr<FrameNode>& icon, bool isLeft);
-    void ColorConfigurationCallBack();
-    void AppInfoCallBack();
-    void AppScreenCallBack();
-    void AppBgColorCallBack();
+
     std::optional<bool> settedColorMode = std::nullopt;
-    ACE_FORCE_EXPORT static void RegisterBeforeCreateLayoutBuilder(
-        std::function<void(RefPtr<FrameNode> host, std::optional<bool> settedColorMode)> beforeCreateLayoutBuilder);
-    bool OnBackPressedCallback() override;
-    void SetOnBackPressedConsumed();
-    int32_t AddRectChangeListener(std::function<void(const RectF& rect)>&& listener);
-    void RemoveRectChangeListener(int32_t id);
-    void NotifyRectChange(const RectF& rect);
-    void CallRectChange();
+
 private:
     void UpdateLayoutMargin();
     void UpdateOverlayLayout();
-    void MenuBarSafeAreaCallBack();
-    void ContentSafeAreaCallBack();
-    static std::function<void(RefPtr<FrameNode> host, std::optional<bool> settedColorMode)> beforeCreateLayoutBuilder_;
-    std::optional<bool> onBackPressedConsumed_;
-    std::optional<RectF> appBarRect_;
-    std::unordered_map<int32_t, std::function<void(const RectF& rect)>> rectChangeListeners_;
+    double safeAreaLeft_ = 0;
+    double safeAreaRight_ = 0;
 };
 } // namespace OHOS::Ace::NG
 #endif // FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_PATTERNS_ATOMIC_SERVICE_PATTERN_H

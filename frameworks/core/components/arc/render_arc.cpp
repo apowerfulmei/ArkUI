@@ -14,7 +14,6 @@
  */
 
 #include "core/components/arc/render_arc.h"
-#include "core/pipeline/base/constants.h"
 
 namespace OHOS::Ace {
 
@@ -155,7 +154,7 @@ double RenderArc::GetPositionAngle(const Offset& position, double correctOffset)
 {
     double angle = atan2(position.GetY() - arcRadiusY_, position.GetX() - arcRadiusX_);
     if (angle < startAngle_ - correctOffset) {
-        angle += ACE_PI * ARC_RADIUS_TO_DIAMETER;
+        angle += M_PI * ARC_RADIUS_TO_DIAMETER;
     }
     return angle;
 }

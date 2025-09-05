@@ -13,9 +13,10 @@
  * limitations under the License.
  */
 
-#include "base/utils/utf_helper.h"
 #include "core/components_ng/pattern/security_component/security_component_accessibility_property.h"
 
+#include "base/utils/utils.h"
+#include "core/components_ng/base/frame_node.h"
 #include "core/components_ng/pattern/security_component/security_component_log.h"
 #include "core/components_ng/pattern/text/text_pattern.h"
 #include "location_button/location_button_common.h"
@@ -37,7 +38,7 @@ std::string SecurityComponentAccessibilityProperty::GetText() const
             if (textLayoutProperty == nullptr) {
                 break;
             }
-            value = UtfUtils::Str16ToStr8(textLayoutProperty->GetContentValue(std::u16string(u"")));
+            value = textLayoutProperty->GetContentValue(value);
             break;
         }
     }

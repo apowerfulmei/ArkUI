@@ -15,7 +15,14 @@
 
 #include "bridge/declarative_frontend/jsview/models/toggle_model_impl.h"
 
+#include "base/geometry/dimension.h"
+#include "base/memory/ace_type.h"
+#include "bridge/declarative_frontend/jsview/js_view_abstract.h"
 #include "bridge/declarative_frontend/jsview/js_view_common_def.h"
+#include "bridge/declarative_frontend/view_stack_processor.h"
+#include "core/components/checkable/checkable_theme.h"
+#include "core/components/split_container/column_split_component.h"
+#include "core/components/split_container/row_split_component.h"
 #include "core/components/toggle/toggle_component.h"
 #include "core/components/toggle/toggle_theme.h"
 
@@ -107,12 +114,8 @@ void ToggleModelImpl::SetSelectedColor(const std::optional<Color>& selectedColor
         return;
     }
 }
-void ToggleModelImpl::SetSwitchPointColor(const std::optional<Color>& switchPointColor)
+void ToggleModelImpl::SetSwitchPointColor(const Color& switchPointColor)
 {
-    if (!switchPointColor.has_value()) {
-        return;
-    }
-    Color color = switchPointColor.value();
     auto mainComponent = ViewStackProcessor::GetInstance()->GetMainComponent();
     auto switchComponent = AceType::DynamicCast<SwitchComponent>(mainComponent);
     if (!switchComponent) {
@@ -120,7 +123,7 @@ void ToggleModelImpl::SetSwitchPointColor(const std::optional<Color>& switchPoin
         return;
     }
 
-    switchComponent->SetPointColor(color);
+    switchComponent->SetPointColor(switchPointColor);
 }
 void ToggleModelImpl::OnChange(NG::ChangeEvent&& onChange)
 {

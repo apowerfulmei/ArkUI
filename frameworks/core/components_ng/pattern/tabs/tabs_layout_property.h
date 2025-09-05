@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2022-2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -18,7 +18,6 @@
 
 #include "base/geometry/axis.h"
 #include "base/geometry/dimension.h"
-#include "ui/properties/tabs_effect_node_option.h"
 #include "base/utils/macros.h"
 #include "core/components/common/layout/constants.h"
 #include "core/components/common/properties/decoration.h"
@@ -44,7 +43,6 @@ public:
         value->propAxis_ = CloneAxis();
         value->propTabBarMode_ = CloneTabBarMode();
         value->propDivider_ = CloneDivider();
-        value->propEffectNodeOption_ = CloneEffectNodeOption();
         value->propBarWidth_ = CloneBarWidth();
         value->propBarHeight_ = CloneBarHeight();
         value->propIndex_ = CloneIndex();
@@ -52,8 +50,6 @@ public:
         value->propBarOverlap_ = CloneBarOverlap();
         value->propWidthAuto_ = CloneWidthAuto();
         value->propHeightAuto_ = CloneHeightAuto();
-        value->propCachedMaxCount_ = CloneCachedMaxCount();
-        value->propCacheMode_ = CloneCacheMode();
         return value;
     }
 
@@ -64,14 +60,11 @@ public:
         ResetAxis();
         ResetTabBarMode();
         ResetDivider();
-        ResetEffectNodeOption();
         ResetBarWidth();
         ResetBarHeight();
         ResetIndex();
         ResetIndexSetByUser();
         ResetBarOverlap();
-        ResetCachedMaxCount();
-        ResetCacheMode();
     }
 
     void ToJsonValue(std::unique_ptr<JsonValue>& json, const InspectorFilter& filter) const override
@@ -109,15 +102,6 @@ public:
             json->PutExtAttr("divider", divider, filter);
         }
         json->PutExtAttr("barOverlap", propBarOverlap_.value_or(false) ? "true" : "false", filter);
-        if (propCachedMaxCount_.has_value()) {
-            auto cacheInfo = JsonUtil::Create(true);
-            cacheInfo->Put("count", propCachedMaxCount_.value());
-            cacheInfo->Put(
-                "mode", propCacheMode_.value_or(TabsCacheMode::CACHE_BOTH_SIDE) == TabsCacheMode::CACHE_BOTH_SIDE
-                            ? "TabsCacheMode.CACHE_BOTH_SIDE"
-                            : "TabsCacheMode.CACHE_LATEST_SWITCHED");
-            json->PutExtAttr("cachedMaxCount", cacheInfo, filter);
-        }
     }
 
     void FromJson(const std::unique_ptr<JsonValue>& json) override
@@ -147,7 +131,6 @@ public:
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(Axis, Axis, PROPERTY_UPDATE_MEASURE);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(TabBarMode, TabBarMode, PROPERTY_UPDATE_MEASURE);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(Divider, TabsItemDivider, PROPERTY_UPDATE_MEASURE);
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(EffectNodeOption, TabsEffectNodeOption, PROPERTY_UPDATE_MEASURE);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(BarWidth, Dimension, PROPERTY_UPDATE_MEASURE);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(BarHeight, Dimension, PROPERTY_UPDATE_MEASURE);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(Index, int32_t, PROPERTY_UPDATE_NORMAL);
@@ -155,10 +138,6 @@ public:
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(BarOverlap, bool, PROPERTY_UPDATE_MEASURE);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(WidthAuto, bool, PROPERTY_UPDATE_MEASURE);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(HeightAuto, bool, PROPERTY_UPDATE_MEASURE);
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(CachedMaxCount, int32_t, PROPERTY_UPDATE_MEASURE_SELF);
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(CacheMode, TabsCacheMode, PROPERTY_UPDATE_NORMAL);
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(DividerColorSetByUser, bool, PROPERTY_UPDATE_RENDER);
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(BarBackgroundColorSetByUser, bool, PROPERTY_UPDATE_RENDER);
 };
 
 } // namespace OHOS::Ace::NG

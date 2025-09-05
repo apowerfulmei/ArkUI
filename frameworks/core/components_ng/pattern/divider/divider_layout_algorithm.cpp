@@ -15,7 +15,9 @@
 
 #include "core/components_ng/pattern/divider/divider_layout_algorithm.h"
 
+#include "base/utils/utils.h"
 #include "core/components/divider/divider_theme.h"
+#include "core/components_ng/base/frame_node.h"
 #include "core/components_ng/pattern/divider/divider_layout_property.h"
 
 namespace OHOS::Ace::NG {
@@ -65,29 +67,7 @@ std::optional<SizeF> DividerLayoutAlgorithm::MeasureContent(
         constrainSize.Constrain(contentConstraint.minSize, contentConstraint.maxSize);
         dividerLength_ = constrainSize.Height();
     }
-    auto layoutPolicy = dividerLayoutProperty->GetLayoutPolicyProperty();
-    if (layoutPolicy.has_value()) {
-        UpdateConstraintSizeByLayoutPolicy(layoutPolicy.value(), constrainSize, strokeWidth);
-    }
     return constrainSize;
-}
-void DividerLayoutAlgorithm::UpdateConstraintSizeByLayoutPolicy(
-    NG::LayoutPolicyProperty& layoutPolicy, SizeF& constrainSize, Dimension& strokeWidth)
-{
-    if ((layoutPolicy.IsWidthWrap() || layoutPolicy.IsWidthFix()) && !vertical_) {
-        constrainSize.SetWidth(0.0f);
-    }
-    if ((layoutPolicy.IsHeightWrap() || layoutPolicy.IsHeightFix()) && vertical_) {
-        constrainSize.SetHeight(0.0f);
-    }
-    if (layoutPolicy.IsHeightFix() && !vertical_) {
-        constrainSize.SetHeight(strokeWidth.ConvertToPx());
-        dividerLength_ = constrainSize.Width();
-    }
-    if (layoutPolicy.IsWidthFix() && vertical_) {
-        constrainSize.SetWidth(strokeWidth.ConvertToPx());
-        dividerLength_ = constrainSize.Height();
-    }
 }
 float DividerLayoutAlgorithm::GetConstrainStrokeWidth() const
 {

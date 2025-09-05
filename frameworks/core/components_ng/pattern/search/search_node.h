@@ -19,7 +19,6 @@
 #include <optional>
 
 #include "core/components_ng/base/group_node.h"
-#include "core/pipeline/base/element_register.h"
 
 namespace OHOS::Ace::NG {
 class IconOptions {

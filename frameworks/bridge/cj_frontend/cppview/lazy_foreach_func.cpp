@@ -69,10 +69,6 @@ void LazyForEachFuncs::RegisterListenerFunc(const sptr<CJDataChangeListener>& li
         LOGE("Failed to invoke cj function: LazyForEachFuncs DataChangeListenerRegister!");
         return;
     }
-    if (!listener) {
-        LOGE("Failed to invoke cj function: LazyForEachFuncs DataChangeListenerRegister!");
-        return;
-    }
     cjFunc(GetID(), listener->GetID());
 }
 
@@ -81,10 +77,6 @@ void LazyForEachFuncs::UnRegisterListenerFunc(const sptr<CJDataChangeListener>& 
     auto funcs = CJRuntimeDelegate::GetInstance()->GetCJFuncs();
     auto cjFunc = funcs.atCOHOSAceFrameworkLazyForEachFuncsDataChangeListenerUnregister;
     if (!cjFunc) {
-        LOGE("Failed to invoke cj function: LazyForEachFuncs DataChangeListenerUnregister!");
-        return;
-    }
-    if (!listener) {
         LOGE("Failed to invoke cj function: LazyForEachFuncs DataChangeListenerUnregister!");
         return;
     }

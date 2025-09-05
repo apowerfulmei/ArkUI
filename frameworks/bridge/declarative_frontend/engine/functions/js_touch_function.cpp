@@ -17,12 +17,10 @@
 #include "frameworks/bridge/declarative_frontend/engine/jsi/nativeModule/arkts_utils.h"
 
 #include "base/log/log.h"
-#include "bridge/declarative_frontend/engine/functions/js_common_utils.h"
 #include "bridge/declarative_frontend/engine/functions/js_function.h"
 #include "frameworks/bridge/declarative_frontend/jsview/js_view_register.h"
 
 namespace OHOS::Ace::Framework {
-using namespace OHOS::Ace::Framework::CommonUtils;
 
 JSRef<JSObject> JsTouchFunction::CreateTouchInfo(const TouchLocationInfo& touchInfo, TouchEventInfo& info)
 {
@@ -32,7 +30,6 @@ JSRef<JSObject> JsTouchFunction::CreateTouchInfo(const TouchLocationInfo& touchI
     const OHOS::Ace::Offset& globalLocation = touchInfo.GetGlobalLocation();
     const OHOS::Ace::Offset& localLocation = touchInfo.GetLocalLocation();
     const OHOS::Ace::Offset& screenLocation = touchInfo.GetScreenLocation();
-    const OHOS::Ace::Offset& globalDisplayLocation = touchInfo.GetGlobalDisplayLocation();
     touchInfoObj->SetProperty<int32_t>("type", static_cast<int32_t>(touchInfo.GetTouchType()));
     touchInfoObj->SetProperty<int32_t>("id", touchInfo.GetFingerId());
     touchInfoObj->SetProperty<double>("displayX", PipelineBase::Px2VpWithCurrentDensity(screenLocation.GetX()));
@@ -44,15 +41,10 @@ JSRef<JSObject> JsTouchFunction::CreateTouchInfo(const TouchLocationInfo& touchI
     touchInfoObj->SetProperty<double>("x", PipelineBase::Px2VpWithCurrentDensity(localLocation.GetX()));
     touchInfoObj->SetProperty<double>("y", PipelineBase::Px2VpWithCurrentDensity(localLocation.GetY()));
     touchInfoObj->SetProperty<double>(
-        "globalDisplayX", PipelineBase::Px2VpWithCurrentDensity(globalDisplayLocation.GetX()));
-    touchInfoObj->SetProperty<double>(
-        "globalDisplayY", PipelineBase::Px2VpWithCurrentDensity(globalDisplayLocation.GetY()));
-    touchInfoObj->SetProperty<double>(
         "pressedTime", static_cast<double>(touchInfo.GetPressedTime().time_since_epoch().count()));
     touchInfoObj->SetProperty<double>("pressure", PipelineBase::Px2VpWithCurrentDensity(touchInfo.GetForce()));
     touchInfoObj->SetProperty<double>("width", PipelineBase::Px2VpWithCurrentDensity(touchInfo.GetWidth()));
     touchInfoObj->SetProperty<double>("height", PipelineBase::Px2VpWithCurrentDensity(touchInfo.GetHeight()));
-    touchInfoObj->SetProperty<int32_t>("hand", touchInfo.GetOperatingHand());
     touchInfoObj->Wrap<TouchEventInfo>(&info);
     return touchInfoObj;
 }
@@ -73,7 +65,6 @@ JSRef<JSObject> JsTouchFunction::CreateJSEventInfo(TouchEventInfo& info)
     eventObj->SetPropertyObject("preventDefault", JSRef<JSFunc>::New<FunctionCallback>(JsTouchPreventDefault));
     eventObj->SetProperty<double>("tiltX", info.GetTiltX().value_or(0.0f));
     eventObj->SetProperty<double>("tiltY", info.GetTiltY().value_or(0.0f));
-    eventObj->SetProperty<double>("rollAngle", info.GetRollAngle().value_or(0.0f));
     eventObj->SetProperty<double>("sourceTool", static_cast<int32_t>(info.GetSourceTool()));
     eventObj->SetProperty<int32_t>("targetDisplayId", info.GetTargetDisplayId());
 

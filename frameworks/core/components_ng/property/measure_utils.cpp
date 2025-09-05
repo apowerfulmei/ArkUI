@@ -15,7 +15,14 @@
 
 #include "core/components_ng/property/measure_utils.h"
 
-#include "core/common/ace_application_info.h"
+#include <memory>
+#include <optional>
+
+#include "base/geometry/ng/size_t.h"
+#include "base/geometry/size.h"
+#include "base/log/log.h"
+#include "base/utils/utils.h"
+#include "core/components_ng/property/measure_property.h"
 #include "core/pipeline/pipeline_base.h"
 
 namespace OHOS::Ace::NG {
@@ -23,42 +30,40 @@ namespace {
 const static int32_t PLATFORM_VERSION_TEN = 10;
 }
 
-SizeF ConvertToSize(const CalcSize& size, const ScaleProperty& scaleProperty, const SizeF& percentReference,
-    const std::pair<std::vector<std::string>, std::vector<std::string>>& calcRpnexp)
+SizeF ConvertToSize(const CalcSize& size, const ScaleProperty& scaleProperty, const SizeF& percentReference)
 {
-    auto width = ConvertToPx(size.Width(), scaleProperty, percentReference.Width(), calcRpnexp.first);
-    auto height = ConvertToPx(size.Height(), scaleProperty, percentReference.Height(), calcRpnexp.second);
+    auto width = ConvertToPx(size.Width(), scaleProperty, percentReference.Width());
+    auto height = ConvertToPx(size.Height(), scaleProperty, percentReference.Height());
     return { width.value_or(-1.0f), height.value_or(-1.0f) };
 }
 
-OptionalSizeF ConvertToOptionalSize(const CalcSize& size, const ScaleProperty& scaleProperty,
-    const SizeF& percentReference, const std::pair<std::vector<std::string>, std::vector<std::string>>& calcRpnexp)
+OptionalSizeF ConvertToOptionalSize(
+    const CalcSize& size, const ScaleProperty& scaleProperty, const SizeF& percentReference)
 {
-    auto width = ConvertToPx(size.Width(), scaleProperty, percentReference.Width(), calcRpnexp.first);
-    auto height = ConvertToPx(size.Height(), scaleProperty, percentReference.Height(), calcRpnexp.second);
+    auto width = ConvertToPx(size.Width(), scaleProperty, percentReference.Width());
+    auto height = ConvertToPx(size.Height(), scaleProperty, percentReference.Height());
     return { width, height };
 }
 
-std::optional<float> ConvertToPx(const CalcLength& value, const ScaleProperty& scaleProperty, float percentReference,
-    const std::vector<std::string>& rpnexp)
+std::optional<float> ConvertToPx(const CalcLength& value, const ScaleProperty& scaleProperty, float percentReference)
 {
     double result = -1.0;
     if (!value.NormalizeToPx(
-        scaleProperty.vpScale, scaleProperty.fpScale, scaleProperty.lpxScale, percentReference, result, rpnexp)) {
+            scaleProperty.vpScale, scaleProperty.fpScale, scaleProperty.lpxScale, percentReference, result)) {
         return std::nullopt;
     }
     return static_cast<float>(result);
 }
 
-std::optional<float> ConvertToPx(const std::optional<CalcLength>& value, const ScaleProperty& scaleProperty,
-    float percentReference, const std::vector<std::string>& rpnexp)
+std::optional<float> ConvertToPx(
+    const std::optional<CalcLength>& value, const ScaleProperty& scaleProperty, float percentReference)
 {
     if (!value) {
         return std::nullopt;
     }
     double result = -1.0;
     if (!value.value().NormalizeToPx(
-            scaleProperty.vpScale, scaleProperty.fpScale, scaleProperty.lpxScale, percentReference, result, rpnexp)) {
+            scaleProperty.vpScale, scaleProperty.fpScale, scaleProperty.lpxScale, percentReference, result)) {
         return std::nullopt;
     }
     return static_cast<float>(result);
@@ -150,51 +155,6 @@ PaddingPropertyF ConvertToPaddingPropertyF(const PaddingProperty& padding, const
     return PaddingPropertyF { left, right, top, bottom };
 }
 
-PaddingPropertyF ConvertWithResidueToPaddingPropertyF(const std::unique_ptr<PaddingProperty>& padding,
-    const ScaleProperty& scaleProperty, const PaddingPropertyF& fract, float percentReference, bool nonNegative)
-{
-    if (!padding) {
-        return {};
-    }
-    return ConvertWithResidueToPaddingPropertyF(*padding, scaleProperty, fract, percentReference, nonNegative);
-}
-
-PaddingPropertyF ConvertWithResidueToPaddingPropertyF(const PaddingProperty& padding,
-    const ScaleProperty& scaleProperty, const PaddingPropertyF& fract, float percentReference, bool nonNegative)
-{
-    auto left = ConvertToPx(padding.left, scaleProperty, percentReference);
-    auto right = ConvertToPx(padding.right, scaleProperty, percentReference);
-    auto top = ConvertToPx(padding.top, scaleProperty, percentReference);
-    auto bottom = ConvertToPx(padding.bottom, scaleProperty, percentReference);
-    if (left.has_value()) {
-        left = floor(left.value() + fract.left.value_or(0.0f));
-    }
-    if (right.has_value()) {
-        right = floor(right.value() + fract.right.value_or(0.0f));
-    }
-    if (top.has_value()) {
-        top = floor(top.value() + fract.top.value_or(0.0f));
-    }
-    if (bottom.has_value()) {
-        bottom = floor(bottom.value() + fract.bottom.value_or(0.0f));
-    }
-    if (nonNegative) {
-        if (left.has_value()) {
-            left = std::max(left.value(), 0.0f);
-        }
-        if (right.has_value()) {
-            right = std::max(right.value(), 0.0f);
-        }
-        if (top.has_value()) {
-            top = std::max(top.value(), 0.0f);
-        }
-        if (bottom.has_value()) {
-            bottom = std::max(bottom.value(), 0.0f);
-        }
-    }
-    return PaddingPropertyF { left, right, top, bottom };
-}
-
 MarginPropertyF ConvertToMarginPropertyF(const std::unique_ptr<MarginProperty>& margin,
     const ScaleProperty& scaleProperty, float percentReference, bool roundPixel)
 {
@@ -225,23 +185,17 @@ BorderWidthPropertyF ConvertToBorderWidthPropertyF(
     auto bottom = ConvertToPx(borderWidth.bottomDimen, scaleProperty, percentReference);
     if (roundPixel && AceApplicationInfo::GetInstance().GreatOrEqualTargetAPIVersion(PlatformVersion::VERSION_TWELVE)) {
         if (left.has_value()) {
-            left = (GreatNotEqualCustomPrecision(left.value(), 1.0f) || NearEqual(left.value(), 0.0f))
-                       ? floor(left.value())
-                       : 1.0f;
+            left = (GreatOrEqual(left.value(), 1.0f) || NearEqual(left.value(), 0.0f)) ? floor(left.value()) : 1.0f;
         }
         if (right.has_value()) {
-            right = (GreatNotEqualCustomPrecision(right.value(), 1.0f) || NearEqual(right.value(), 0.0f))
-                        ? floor(right.value())
-                        : 1.0f;
+            right = (GreatOrEqual(right.value(), 1.0f) || NearEqual(right.value(), 0.0f)) ? floor(right.value()) : 1.0f;
         }
         if (top.has_value()) {
-            top = (GreatNotEqualCustomPrecision(top.value(), 1.0f) || NearEqual(top.value(), 0.0f)) ? floor(top.value())
-                                                                                                    : 1.0f;
+            top = (GreatOrEqual(top.value(), 1.0f) || NearEqual(top.value(), 0.0f)) ? floor(top.value()) : 1.0f;
         }
         if (bottom.has_value()) {
-            bottom = (GreatNotEqualCustomPrecision(bottom.value(), 1.0f) || NearEqual(bottom.value(), 0.0f))
-                         ? floor(bottom.value())
-                         : 1.0f;
+            bottom =
+                (GreatOrEqual(bottom.value(), 1.0f) || NearEqual(bottom.value(), 0.0f)) ? floor(bottom.value()) : 1.0f;
         }
     }
     return BorderWidthPropertyF { left, top, right, bottom };
@@ -291,24 +245,6 @@ void AddPaddingToSize(const PaddingPropertyF& padding, OptionalSizeF& size)
 void MinusPaddingToSize(const PaddingPropertyF& padding, OptionalSizeF& size)
 {
     size.MinusPadding(padding.left, padding.right, padding.top, padding.bottom);
-}
-
-PaddingPropertyF AdjacentExpandToRect(RectF& adjustingRect, PaddingPropertyF& frameExpand, RectF& frameRect)
-{
-    PaddingPropertyF filtered;
-    if (NearEqual(adjustingRect.Left(), frameRect.Left())) {
-        filtered.left = frameExpand.left;
-    }
-    if (NearEqual(adjustingRect.Top(), frameRect.Top())) {
-        filtered.top = frameExpand.top;
-    }
-    if (NearEqual(adjustingRect.Right(), frameRect.Right())) {
-        filtered.right = frameExpand.right;
-    }
-    if (NearEqual(adjustingRect.Bottom(), frameRect.Bottom())) {
-        filtered.bottom = frameExpand.bottom;
-    }
-    return filtered;
 }
 
 float GetMainAxisOffset(const OffsetF& offset, Axis axis)
@@ -558,12 +494,13 @@ OptionalSizeF CreateIdealSizeByPercentRef(
 }
 
 OptionalSizeF ConstrainIdealSizeByLayoutPolicy(const LayoutConstraintF& layoutConstraint,
-    LayoutCalPolicy widthLayoutPolicy, LayoutCalPolicy heightLayoutPolicy, Axis axis)
+    uint8_t widthLayoutPolicy, uint8_t heightLayoutPolicy, Axis axis)
 {
     bool isHorizontal = axis == Axis::HORIZONTAL;
-    bool mainAxisMatchParent = (isHorizontal ? widthLayoutPolicy : heightLayoutPolicy) == LayoutCalPolicy::MATCH_PARENT;
-    bool crossAxisMatchParent =
-        (isHorizontal ? heightLayoutPolicy : widthLayoutPolicy) == LayoutCalPolicy::MATCH_PARENT;
+    bool mainAxisMatchParent = (isHorizontal ? widthLayoutPolicy : heightLayoutPolicy) ==
+                               static_cast<uint8_t>(LayoutCalPolicy::MATCH_PARENT);
+    bool crossAxisMatchParent = (isHorizontal ? heightLayoutPolicy : widthLayoutPolicy) ==
+                                static_cast<uint8_t>(LayoutCalPolicy::MATCH_PARENT);
     OptionalSizeF idealSize;
     if (mainAxisMatchParent) {
         auto parentMainSize = GetMainAxisSize(layoutConstraint.parentIdealSize, axis);
@@ -578,87 +515,6 @@ OptionalSizeF ConstrainIdealSizeByLayoutPolicy(const LayoutConstraintF& layoutCo
         }
     }
     return idealSize;
-}
-
-OptionalSizeF CalcLayoutPolicySingleSide(const std::optional<NG::LayoutPolicyProperty>& childLayoutPolicy,
-    const std::unique_ptr<MeasureProperty>& childCalcLayoutConstraint,
-    const std::optional<LayoutConstraintF>& parentConstraint, const MagicItemProperty& magicItemProperty)
-{
-    OptionalSizeF result;
-    if (!parentConstraint.has_value()) {
-        return result;
-    }
-    if (!childLayoutPolicy.has_value() || !childLayoutPolicy->IsMatch()) {
-        return result;
-    }
-    if (!childCalcLayoutConstraint ||
-        (!childCalcLayoutConstraint->selfIdealSize.has_value() && !childCalcLayoutConstraint->minSize.has_value())) {
-        return result;
-    }
-    auto isWidthPolicy = childLayoutPolicy->IsWidthMatch();
-    auto isHeightPolicy = childLayoutPolicy->IsHeightMatch();
-
-    if (childCalcLayoutConstraint->selfIdealSize.has_value()) {
-        auto selfSize = ConvertToOptionalSize(childCalcLayoutConstraint->selfIdealSize.value(),
-            parentConstraint->scaleProperty, parentConstraint->percentReference);
-        if (isHeightPolicy && selfSize.Width().has_value()) {
-            result.SetWidth(selfSize.Width().value());
-        }
-        if (isWidthPolicy && selfSize.Height().has_value()) {
-            result.SetHeight(selfSize.Height().value());
-        }
-        if (magicItemProperty.HasAspectRatio()) {
-            auto aspectRatio = magicItemProperty.GetAspectRatioValue();
-            if (result.Width().has_value() && GreatNotEqual(aspectRatio, 0.0f)) {
-                result.SetHeight(result.Width().value() / aspectRatio);
-            }
-        }
-        UpdateSingleSideByMaxOrMinCalcLayoutConstraint(
-            result, childCalcLayoutConstraint->maxSize, parentConstraint, true);
-        UpdateSingleSideByMaxOrMinCalcLayoutConstraint(
-            result, childCalcLayoutConstraint->minSize, parentConstraint, false);
-    } else if (childCalcLayoutConstraint->minSize.has_value()) {
-        auto minsize = ConvertToOptionalSize(childCalcLayoutConstraint->minSize.value(),
-            parentConstraint->scaleProperty, parentConstraint->percentReference);
-        if (isHeightPolicy && minsize.Width().has_value()) {
-            result.SetWidth(minsize.Width().value());
-        }
-        if (isWidthPolicy && minsize.Height().has_value()) {
-            result.SetHeight(minsize.Height().value());
-        }
-    }
-    return result;
-}
-
-void UpdateSingleSideByMaxOrMinCalcLayoutConstraint(OptionalSizeF& frameSize,
-    const std::optional<CalcSize>& calcLayoutConstraintMaxMinSize,
-    const std::optional<LayoutConstraintF>& parentConstraint, bool isMaxSize)
-{
-    if (!calcLayoutConstraintMaxMinSize.has_value() || frameSize.IsNull()) {
-        return;
-    }
-    if (calcLayoutConstraintMaxMinSize->Width().has_value() && frameSize.Width().has_value()) {
-        auto maxWidthPx = ConvertToPx(calcLayoutConstraintMaxMinSize->Width(), parentConstraint->scaleProperty,
-            parentConstraint->percentReference.Width());
-        if (maxWidthPx.has_value()) {
-            if (isMaxSize) {
-                frameSize.SetWidth(std::min(maxWidthPx.value(), frameSize.Width().value()));
-            } else {
-                frameSize.SetWidth(std::max(maxWidthPx.value(), frameSize.Width().value()));
-            }
-        }
-    }
-    if (calcLayoutConstraintMaxMinSize->Height().has_value() && frameSize.Height().has_value()) {
-        auto maxHeightPx = ConvertToPx(calcLayoutConstraintMaxMinSize->Height(), parentConstraint->scaleProperty,
-            parentConstraint->percentReference.Height());
-        if (maxHeightPx.has_value()) {
-            if (isMaxSize) {
-                frameSize.SetHeight(std::min(maxHeightPx.value(), frameSize.Height().value()));
-            } else {
-                frameSize.SetHeight(std::max(maxHeightPx.value(), frameSize.Height().value()));
-            }
-        }
-    }
 }
 
 void CreateChildrenConstraint(SizeF& size, const PaddingPropertyF& padding)

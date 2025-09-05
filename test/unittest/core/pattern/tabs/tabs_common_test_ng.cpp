@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2023-2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -20,6 +20,9 @@
 #include "core/components_ng/pattern/text/text_model_ng.h"
 
 namespace OHOS::Ace::NG {
+
+namespace {} // namespace
+
 class TabsCommonTestNg : public TabsTestNg {
 public:
     AssertionResult IsEqualNextFocusNode(
@@ -377,13 +380,6 @@ HWTEST_F(TabsCommonTestNg, TabBarAccessibilityProperty002, TestSize.Level1)
     model.SetTabBarMode(TabBarMode::SCROLLABLE);
     CreateTabContents(TABCONTENT_NUMBER);
     CreateTabsDone(model);
-    auto itemWidth = 200.0f;
-    for (int32_t index = 0; index < TABCONTENT_NUMBER; index++) {
-        auto child = AceType::DynamicCast<FrameNode>(tabBarNode_->GetChildAtIndex(index));
-        ViewAbstract::SetWidth(AceType::RawPtr(child), CalcLength(itemWidth));
-    }
-    tabBarNode_->MarkDirtyNode(PROPERTY_UPDATE_MEASURE);
-    FlushUITasks();
     EXPECT_TRUE(tabBarAccessibilityProperty_->IsScrollable());
 }
 
@@ -446,7 +442,7 @@ HWTEST_F(TabsCommonTestNg, TabBarAccessibilityProperty005, TestSize.Level1)
      * @tc.steps: step2. swipe to item(index:1)
      * @tc.expected: CurrentIndex is 1
      */
-    ChangeIndex(1);
+    SwipeToWithoutAnimation(1);
     EXPECT_EQ(tabBarAccessibilityProperty_->GetCurrentIndex(), 1);
 }
 
@@ -465,11 +461,6 @@ HWTEST_F(TabsCommonTestNg, TabBarAccessibilityProperty006, TestSize.Level1)
     model.SetTabBarMode(TabBarMode::SCROLLABLE);
     CreateTabContents(TABCONTENT_NUMBER);
     CreateTabsDone(model);
-    auto itemWidth = 200.0f;
-    for (int32_t index = 0; index < TABCONTENT_NUMBER; index++) {
-        auto child = AceType::DynamicCast<FrameNode>(tabBarNode_->GetChildAtIndex(index));
-        ViewAbstract::SetWidth(AceType::RawPtr(child), CalcLength(itemWidth));
-    }
     tabBarPattern_->visibleItemPosition_.clear();
     EXPECT_FALSE(tabBarPattern_->IsAtTop());
     EXPECT_FALSE(tabBarPattern_->IsAtBottom());
@@ -478,12 +469,11 @@ HWTEST_F(TabsCommonTestNg, TabBarAccessibilityProperty006, TestSize.Level1)
      * @tc.steps: step2. Call SetSpecificSupportAction
      * @tc.expected: Check actions value
      */
-    tabBarNode_->MarkDirtyNode(PROPERTY_UPDATE_MEASURE);
-    FlushUITasks();
-    EXPECT_TRUE(tabBarPattern_->CanScroll());
     tabBarAccessibilityProperty_->ResetSupportAction();
-    std::unordered_set<AceAction> expectedActions = { AceAction::ACTION_SCROLL_FORWARD };
-    EXPECT_EQ(tabBarAccessibilityProperty_->GetSupportAction(), expectedActions);
+    uint64_t exptectActions = 0;
+    exptectActions |= 1UL << static_cast<uint32_t>(AceAction::ACTION_SCROLL_FORWARD);
+    exptectActions |= 1UL << static_cast<uint32_t>(AceAction::ACTION_SCROLL_BACKWARD);
+    EXPECT_EQ(GetActions(tabBarAccessibilityProperty_), exptectActions);
 }
 
 /**
@@ -510,8 +500,9 @@ HWTEST_F(TabsCommonTestNg, TabBarAccessibilityProperty007, TestSize.Level1)
      * @tc.expected: Check actions value
      */
     tabBarAccessibilityProperty_->ResetSupportAction();
-    std::unordered_set<AceAction> expectedActions = { AceAction::ACTION_SCROLL_FORWARD };
-    EXPECT_EQ(tabBarAccessibilityProperty_->GetSupportAction(), expectedActions);
+    uint64_t exptectActions = 0;
+    exptectActions |= 1UL << static_cast<uint32_t>(AceAction::ACTION_SCROLL_FORWARD);
+    EXPECT_EQ(GetActions(tabBarAccessibilityProperty_), exptectActions);
 }
 
 /**
@@ -538,8 +529,9 @@ HWTEST_F(TabsCommonTestNg, TabBarAccessibilityProperty008, TestSize.Level1)
      * @tc.expected: Check actions value
      */
     tabBarAccessibilityProperty_->ResetSupportAction();
-    std::unordered_set<AceAction> expectedActions = { AceAction::ACTION_SCROLL_BACKWARD };
-    EXPECT_EQ(tabBarAccessibilityProperty_->GetSupportAction(), expectedActions);
+    uint64_t exptectActions = 0;
+    exptectActions |= 1UL << static_cast<uint32_t>(AceAction::ACTION_SCROLL_BACKWARD);
+    EXPECT_EQ(GetActions(tabBarAccessibilityProperty_), exptectActions);
 }
 
 /**
@@ -565,8 +557,8 @@ HWTEST_F(TabsCommonTestNg, TabBarAccessibilityProperty009, TestSize.Level1)
      * @tc.expected: Check actions value
      */
     tabBarAccessibilityProperty_->ResetSupportAction();
-    std::unordered_set<AceAction> expectedActions = {};
-    EXPECT_EQ(tabBarAccessibilityProperty_->GetSupportAction(), expectedActions);
+    uint64_t exptectActions = 0;
+    EXPECT_EQ(GetActions(tabBarAccessibilityProperty_), exptectActions);
 }
 
 /**
@@ -590,8 +582,8 @@ HWTEST_F(TabsCommonTestNg, TabBarAccessibilityProperty010, TestSize.Level1)
      * @tc.expected: Check actions value
      */
     tabBarAccessibilityProperty_->ResetSupportAction();
-    std::unordered_set<AceAction> expectedActions = {};
-    EXPECT_EQ(tabBarAccessibilityProperty_->GetSupportAction(), expectedActions);
+    uint64_t exptectActions = 0;
+    EXPECT_EQ(GetActions(tabBarAccessibilityProperty_), exptectActions);
 }
 
 /**
@@ -664,7 +656,7 @@ HWTEST_F(TabsCommonTestNg, TabBarItemAccessibilityProperty001, TestSize.Level1)
     auto json = JsonUtil::Create(true);
     InspectorFilter filter;
     accessibilityProperty->ToJsonValue(json, filter);
-    auto pipeline = frameNode_->GetContext();
+    auto pipeline = PipelineContext::GetCurrentContextSafely();
     auto tabTheme = pipeline->GetTheme<TabTheme>();
     auto defaultTabBarName = tabTheme->GetDefaultTabBarName();
     EXPECT_EQ(json->GetString("label"), defaultTabBarName);
@@ -682,11 +674,10 @@ HWTEST_F(TabsCommonTestNg, TabBarItemAccessibilityProperty002, TestSize.Level1)
      */
     TabsModelNG model = CreateTabs();
     const std::string textTest = "text_test";
-    const std::u16string textU16Test = u"text_test";
     TabContentModelNG tabContentModel = CreateTabContent();
-    auto tabBarItemFunc = [textU16Test]() {
+    auto tabBarItemFunc = [textTest]() {
         TextModelNG model;
-        model.Create(textU16Test);
+        model.Create(textTest);
     };
     tabContentModel.SetTabBar(textTest, "", std::nullopt, std::move(tabBarItemFunc), true);
     ViewStackProcessor::GetInstance()->Pop();

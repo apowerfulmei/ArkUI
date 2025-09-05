@@ -16,6 +16,7 @@
 #include "bridge/cj_frontend/interfaces/cj_ffi/cj_row_ffi.h"
 
 #include "bridge/cj_frontend/interfaces/cj_ffi/cj_view_abstract_ffi.h"
+#include "bridge/cj_frontend/interfaces/cj_ffi/utils.h"
 #include "core/components_ng/pattern/flex/flex_model.h"
 #include "core/components_ng/pattern/linear_layout/row_model_ng.h"
 
@@ -80,10 +81,5 @@ void FfiOHOSAceFrameworkRowSetWidth(double width, int32_t unit)
     FfiOHOSAceFrameworkViewAbstractSetWidth(width, unit);
     FlexModel::GetInstance()->SetHasWidth();
     return;
-}
-
-void FfiOHOSAceFrameworkRowSetReverse(bool value)
-{
-    RowModel::GetInstance()->SetIsReverse(value);
 }
 }

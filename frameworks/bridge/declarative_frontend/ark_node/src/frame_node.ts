@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2023-2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-/// <reference path="./disposable.ts" />
+
 interface LayoutConstraint {
   maxSize: Size;
   minSize: Size;
@@ -23,51 +23,27 @@ interface CrossLanguageOptions {
   attributeSetting?: boolean;
 }
 
-interface InteractionEventBindingInfo  {
-  baseEventRegistered?: boolean;
-  nodeEventRegistered?: boolean;
-  nativeEventRegistered?: boolean;
-  builtInEventRegistered?: boolean;
-}
-
 enum ExpandMode {
   NOT_EXPAND = 0,
   EXPAND = 1,
   LAZY_EXPAND = 2,
 }
 
-enum UIState {
-  NORMAL = 0 ,
-  PRESSED = 1 << 0 ,
-  FOCUSED = 1 << 1 ,
-  DISABLED = 1 << 2 ,
-  SELECTED = 1 << 3 ,
-}
-
-declare enum EventQueryType {
-  ON_CLICK = 0,
-}
-
-declare type UIStatesChangeHandler = (node: FrameNode, currentUIStates: number) => void;
-
-class FrameNode extends Disposable {
+class FrameNode {
   public _nodeId: number;
   protected _commonAttribute: ArkComponent;
   protected _commonEvent: UICommonEvent;
   public _componentAttribute: ArkComponent;
-  public _scrollableEvent: UIScrollableCommonEvent;
   protected _gestureEvent: UIGestureEvent;
   protected _childList: Map<number, FrameNode>;
   protected _nativeRef: NativeStrongRef | NativeWeakRef;
   protected renderNode_: RenderNode;
   protected baseNode_: BaseNode;
-  protected builderNode_: JSBuilderNode;
   protected uiContext_: UIContext | undefined | null;
   protected nodePtr_: NodePtr;
   protected instanceId_?: number;
   private nodeAdapterRef_?: NodeAdapter;
   constructor(uiContext: UIContext, type: string, options?: object) {
-    super();
     if (uiContext === undefined) {
       throw Error('Node constructor error, param uiContext error');
     } else {
@@ -156,12 +132,6 @@ class FrameNode extends Disposable {
     this.baseNode_ = baseNode;
     this.renderNode_?.setBaseNode(baseNode);
   }
-  setBuilderNode(builderNode: JSBuilderNode | null): void {
-    this.builderNode_ = builderNode;
-  }
-  getBuilderNode(): JSBuilderNode | null {
-    return this.builderNode_ || null;
-  }
   setAdapterRef(adapter: NodeAdapter | undefined): void {
     this.nodeAdapterRef_ = adapter;
   }
@@ -177,21 +147,11 @@ class FrameNode extends Disposable {
     }
   }
   dispose(): void {
-    super.dispose();
-    if (this.nodePtr_) {
-      getUINativeModule().frameNode.fireArkUIObjectLifecycleCallback(new WeakRef(this),
-          'FrameNode', this.getNodeType() || 'FrameNode', this.nodePtr_);
-    }
     this.renderNode_?.dispose();
     FrameNodeFinalizationRegisterProxy.ElementIdToOwningFrameNode_.delete(this._nodeId);
     this._nodeId = -1;
     this._nativeRef = null;
     this.nodePtr_ = null;
-  }
-  
-  isDisposed(): boolean {
-    return super.isDisposed() && (this._nativeRef === undefined ||
-     this._nativeRef === null || this._nativeRef instanceof NativeWeakRef && this._nativeRef.invalid());
   }
 
   static disposeTreeRecursively(node: FrameNode | null): void {
@@ -230,12 +190,6 @@ class FrameNode extends Disposable {
       nodeId = getUINativeModule().frameNode.getIdByNodePtr(nodePtr);
       __JSScopeUtil__.restoreInstanceId();
     }
-    if (FrameNodeFinalizationRegisterProxy.ElementIdToOwningFrameNode_.has(nodeId)) {
-      let frameNode = FrameNodeFinalizationRegisterProxy.ElementIdToOwningFrameNode_.get(nodeId).deref();
-      if (frameNode) {
-        return frameNode;
-      }
-    }
     if (nodeId !== -1 && !getUINativeModule().frameNode.isModifiable(nodePtr)) {
       __JSScopeUtil__.syncInstanceId(this.instanceId_);
       let frameNode = new ProxyFrameNode(this.uiContext_);
@@ -263,7 +217,6 @@ class FrameNode extends Disposable {
     }
     __JSScopeUtil__.syncInstanceId(this.instanceId_);
     let flag = getUINativeModule().frameNode.appendChild(this.nodePtr_, node.nodePtr_);
-    getUINativeModule().frameNode.addBuilderNode(this.nodePtr_, node.nodePtr_);
     __JSScopeUtil__.restoreInstanceId();
     if (!flag) {
       throw { message: 'The FrameNode is not modifiable.', code: 100021 };
@@ -280,7 +233,6 @@ class FrameNode extends Disposable {
     }
     __JSScopeUtil__.syncInstanceId(this.instanceId_);
     let flag = getUINativeModule().frameNode.appendChild(this.nodePtr_, content.getNodeWithoutProxy());
-    getUINativeModule().frameNode.addBuilderNode(this.nodePtr_, content.getNodePtr());
     __JSScopeUtil__.restoreInstanceId();
     if (!flag) {
       throw { message: 'The FrameNode is not modifiable.', code: 100021 };
@@ -294,7 +246,6 @@ class FrameNode extends Disposable {
       return;
     }
     __JSScopeUtil__.syncInstanceId(this.instanceId_);
-    getUINativeModule().frameNode.removeBuilderNode(this.nodePtr_, content.getNodePtr());
     getUINativeModule().frameNode.removeChild(this.nodePtr_, content.getNodePtr());
     content.setAttachedParent(undefined);
     __JSScopeUtil__.restoreInstanceId();
@@ -314,7 +265,6 @@ class FrameNode extends Disposable {
     } else {
       flag = getUINativeModule().frameNode.insertChildAfter(this.nodePtr_, child.nodePtr_, sibling.getNodePtr());
     }
-    getUINativeModule().frameNode.addBuilderNode(this.nodePtr_, child.nodePtr_);
     __JSScopeUtil__.restoreInstanceId();
     if (!flag) {
       throw { message: 'The FrameNode is not modifiable.', code: 100021 };
@@ -327,7 +277,6 @@ class FrameNode extends Disposable {
       return;
     }
     __JSScopeUtil__.syncInstanceId(this.instanceId_);
-    getUINativeModule().frameNode.removeBuilderNode(this.nodePtr_, node.nodePtr_);
     getUINativeModule().frameNode.removeChild(this.nodePtr_, node.nodePtr_);
     __JSScopeUtil__.restoreInstanceId();
     this._childList.delete(node._nodeId);
@@ -335,37 +284,19 @@ class FrameNode extends Disposable {
 
   clearChildren(): void {
     __JSScopeUtil__.syncInstanceId(this.instanceId_);
-    getUINativeModule().frameNode.clearBuilderNode(this.nodePtr_);
     getUINativeModule().frameNode.clearChildren(this.nodePtr_);
     __JSScopeUtil__.restoreInstanceId();
     this._childList.clear();
   }
-
-  moveTo(targetParent: FrameNode, index?: number): void {
-    if (targetParent === undefined || targetParent === null) {
-      return;
-    }
-    if (index === undefined || index === null) {
-      index = -1;
-    }
-    const oldParent = this.getParent();
-    if (oldParent && !oldParent.isModifiable() || !targetParent.isModifiable() || !targetParent.checkValid(this)) {
-      throw { message: 'The FrameNode is not modifiable.', code: 100021 };
-    }
-    __JSScopeUtil__.syncInstanceId(this.instanceId_);
-    getUINativeModule().frameNode.moveTo(this.nodePtr_, targetParent.nodePtr_, index);
-    __JSScopeUtil__.restoreInstanceId();
-    if (oldParent) {
-      oldParent._childList.delete(this._nodeId);
-    }
-    targetParent._childList.set(this._nodeId, this);
-  }
-
   getChild(index: number, expandMode?: ExpandMode): FrameNode | null {
     const result = getUINativeModule().frameNode.getChild(this.getNodePtr(), index, expandMode);
     const nodeId = result?.nodeId;
     if (nodeId === undefined || nodeId === -1) {
       return null;
+    }
+    if (FrameNodeFinalizationRegisterProxy.ElementIdToOwningFrameNode_.has(nodeId)) {
+      let frameNode = FrameNodeFinalizationRegisterProxy.ElementIdToOwningFrameNode_.get(nodeId).deref();
+      return frameNode === undefined ? null : frameNode;
     }
     return this.convertToFrameNode(result.nodePtr, result.nodeId);
   }
@@ -384,6 +315,10 @@ class FrameNode extends Disposable {
     if (nodeId === undefined || nodeId === -1) {
       return null;
     }
+    if (FrameNodeFinalizationRegisterProxy.ElementIdToOwningFrameNode_.has(nodeId)) {
+      let frameNode = FrameNodeFinalizationRegisterProxy.ElementIdToOwningFrameNode_.get(nodeId).deref();
+      return frameNode === undefined ? null : frameNode;
+    }
     return this.convertToFrameNode(result.nodePtr, result.nodeId);
   }
 
@@ -392,6 +327,10 @@ class FrameNode extends Disposable {
     const nodeId = result?.nodeId;
     if (nodeId === undefined || nodeId === -1) {
       return null;
+    }
+    if (FrameNodeFinalizationRegisterProxy.ElementIdToOwningFrameNode_.has(nodeId)) {
+      let frameNode = FrameNodeFinalizationRegisterProxy.ElementIdToOwningFrameNode_.get(nodeId).deref();
+      return frameNode === undefined ? null : frameNode;
     }
     return this.convertToFrameNode(result.nodePtr, result.nodeId);
   }
@@ -402,6 +341,10 @@ class FrameNode extends Disposable {
     if (nodeId === undefined || nodeId === -1) {
       return null;
     }
+    if (FrameNodeFinalizationRegisterProxy.ElementIdToOwningFrameNode_.has(nodeId)) {
+      let frameNode = FrameNodeFinalizationRegisterProxy.ElementIdToOwningFrameNode_.get(nodeId).deref();
+      return frameNode === undefined ? null : frameNode;
+    }
     return this.convertToFrameNode(result.nodePtr, result.nodeId);
   }
 
@@ -410,6 +353,10 @@ class FrameNode extends Disposable {
     const nodeId = result?.nodeId;
     if (nodeId === undefined || nodeId === -1) {
       return null;
+    }
+    if (FrameNodeFinalizationRegisterProxy.ElementIdToOwningFrameNode_.has(nodeId)) {
+      let frameNode = FrameNodeFinalizationRegisterProxy.ElementIdToOwningFrameNode_.get(nodeId).deref();
+      return frameNode === undefined ? null : frameNode;
     }
     return this.convertToFrameNode(result.nodePtr, result.nodeId);
   }
@@ -420,16 +367,22 @@ class FrameNode extends Disposable {
     if (nodeId === undefined || nodeId === -1) {
       return null;
     }
+    if (FrameNodeFinalizationRegisterProxy.ElementIdToOwningFrameNode_.has(nodeId)) {
+      let frameNode = FrameNodeFinalizationRegisterProxy.ElementIdToOwningFrameNode_.get(nodeId).deref();
+      return frameNode === undefined ? null : frameNode;
+    }
     return this.convertToFrameNode(result.nodePtr, result.nodeId);
   }
 
   getParent(): FrameNode | null {
-    __JSScopeUtil__.syncInstanceId(this.instanceId_);
     const result = getUINativeModule().frameNode.getParent(this.getNodePtr());
     const nodeId = result?.nodeId;
-    __JSScopeUtil__.restoreInstanceId();
     if (nodeId === undefined || nodeId === -1) {
       return null;
+    }
+    if (FrameNodeFinalizationRegisterProxy.ElementIdToOwningFrameNode_.has(nodeId)) {
+      let frameNode = FrameNodeFinalizationRegisterProxy.ElementIdToOwningFrameNode_.get(nodeId).deref();
+      return frameNode === undefined ? null : frameNode;
     }
     return this.convertToFrameNode(result.nodePtr, result.nodeId);
   }
@@ -453,11 +406,6 @@ class FrameNode extends Disposable {
 
   getPositionToWindow(): Position {
     const position = getUINativeModule().frameNode.getPositionToWindow(this.getNodePtr());
-    return { x: position[0], y: position[1] };
-  }
-
-  getGlobalPositionOnDisplay(): Position {
-    const position = getUINativeModule().frameNode.getGlobalPositionOnDisplay(this.getNodePtr());
     return { x: position[0], y: position[1] };
   }
 
@@ -553,9 +501,7 @@ class FrameNode extends Disposable {
   }
 
   getInspectorInfo(): Object {
-    __JSScopeUtil__.syncInstanceId(this.instanceId_);
     const inspectorInfoStr = getUINativeModule().frameNode.getInspectorInfo(this.getNodePtr());
-    __JSScopeUtil__.restoreInstanceId();
     const inspectorInfo = JSON.parse(inspectorInfoStr);
     return inspectorInfo;
   }
@@ -624,31 +570,12 @@ class FrameNode extends Disposable {
     return this.isModifiable() || getUINativeModule().frameNode.checkIfCanCrossLanguageAttributeSetting(this.getNodePtr());
   }
 
-  getInteractionEventBindingInfo(eventType: EventQueryType): InteractionEventBindingInfo {
-    if (eventType === undefined || eventType === null) {
-      return undefined;
-    }
-    __JSScopeUtil__.syncInstanceId(this.instanceId_);
-    const eventBindingInfo = getUINativeModule().frameNode.getInteractionEventBindingInfo(this.getNodePtr(), eventType);
-    __JSScopeUtil__.restoreInstanceId();
-    if (!eventBindingInfo || (!eventBindingInfo.baseEventRegistered && !eventBindingInfo.nodeEventRegistered &&
-      !eventBindingInfo.nativeEventRegistered && !eventBindingInfo.builtInEventRegistered)) {
-      return undefined;
-    }
-    return {
-      baseEventRegistered: eventBindingInfo.baseEventRegistered,
-      nodeEventRegistered: eventBindingInfo.nodeEventRegistered,
-      nativeEventRegistered: eventBindingInfo.nativeEventRegistered,
-      builtInEventRegistered: eventBindingInfo.builtInEventRegistered,
-    };
-  }
-
   get commonAttribute(): ArkComponent {
     if (this._commonAttribute === undefined) {
       this._commonAttribute = new ArkComponent(this.nodePtr_, ModifierType.FRAME_NODE);
+      this._commonAttribute.setInstanceId((this.uiContext_ === undefined || this.uiContext_ === null) ? -1 : this.uiContext_.instanceId_);
     }
     this._commonAttribute.setNodePtr(this.nodePtr_);
-    this._commonAttribute.setInstanceId((this.uiContext_ === undefined || this.uiContext_ === null) ? -1 : this.uiContext_.instanceId_);
     return this._commonAttribute;
   }
 
@@ -678,45 +605,6 @@ class FrameNode extends Disposable {
     this.uiContext_ = uiContext;
     this.instanceId_ = uiContext.instanceId_;
   }
-  createAnimation(property: AnimationPropertyType, startValue: number[] | undefined, endValue: number[], param: AnimateParam): boolean {
-    __JSScopeUtil__.syncInstanceId(this.instanceId_);
-    let result = getUINativeModule().frameNode.createAnimation(this.getNodePtr(), property, startValue, endValue, param);
-    __JSScopeUtil__.restoreInstanceId();
-    return result;
-  }
-  cancelAnimations(properties: AnimationPropertyType[]): boolean {
-    __JSScopeUtil__.syncInstanceId(this.instanceId_);
-    let result = getUINativeModule().frameNode.cancelAnimations(this.getNodePtr(), properties);
-    __JSScopeUtil__.restoreInstanceId();
-    return result;
-  }
-  getNodePropertyValue(property: AnimationPropertyType): number[] {
-    return getUINativeModule().frameNode.getNodePropertyValue(this.getNodePtr(), property);
-  }
-  triggerOnReuse(): void {
-    getUINativeModule().frameNode.triggerOnReuse(this.getNodePtr());
-  }
-  triggerOnRecycle(): void {
-    getUINativeModule().frameNode.triggerOnRecycle(this.getNodePtr());
-  }
-  reuse(): void {
-    this.triggerOnReuse();
-  }
-  recycle(): void {
-    this.triggerOnRecycle();
-  }
-  addSupportedUIStates(uistates: number, statesChangeHandler: UIStatesChangeHandler, excludeInner?: boolean): void {
-    __JSScopeUtil__.syncInstanceId(this.instanceId_);
-    getUINativeModule().frameNode.addSupportedStates(this.getNodePtr(), uistates, (currentUIStates: number)=>{
-      statesChangeHandler(this, currentUIStates);
-    }, excludeInner);
-    __JSScopeUtil__.restoreInstanceId();
-  }
-  removeSupportedUIStates(uiStates: number): void {
-    __JSScopeUtil__.syncInstanceId(this.instanceId_);
-    getUINativeModule().frameNode.removeSupportedStates(this.getNodePtr(), uiStates);
-    __JSScopeUtil__.restoreInstanceId();
-  }
 }
 
 class ImmutableFrameNode extends FrameNode {
@@ -744,14 +632,6 @@ class ImmutableFrameNode extends FrameNode {
     }
     this._commonAttribute.setNodePtr(undefined);
     return this._commonAttribute;
-  }
-  createAnimation(property: AnimationPropertyType, startValue: number[] | undefined, endValue: number[], param: AnimateParam): boolean {
-    JSXNodeLogConsole.warn("can't create animation on unmodifiable frameNode");
-    return false;
-  }
-  cancelAnimations(properties: AnimationPropertyType[]): boolean {
-    JSXNodeLogConsole.warn("can't cancel animation on unmodifiable frameNode");
-    return false;
   }
 }
 
@@ -788,15 +668,11 @@ class ProxyFrameNode extends ImmutableFrameNode {
     return this.nodePtr_;
   }
   dispose(): void {
-    this.isDisposed_ = true;
     this.renderNode_?.dispose();
     FrameNodeFinalizationRegisterProxy.ElementIdToOwningFrameNode_.delete(this._nodeId);
     this._nodeId = -1;
     this._nativeRef = undefined;
     this.nodePtr_ = undefined;
-  }
-  moveTo(targetParent: FrameNode, index?: number): void {
-    throw { message: 'The FrameNode is not modifiable.', code: 100021 };
   }
 }
 
@@ -835,18 +711,6 @@ class TypedFrameNode<T extends ArkComponent> extends FrameNode {
   constructor(uiContext: UIContext, type: string, attrCreator: (node: NodePtr, type: ModifierType) => T, options?: object) {
     super(uiContext, type, options);
     this.attrCreator_ = attrCreator;
-  }
-
-  dispose() {
-    this.isDisposed_ = true;
-    if (this.nodePtr_) {
-      getUINativeModule().frameNode.fireArkUIObjectLifecycleCallback(new WeakRef(this), 'FrameNode', this.getNodeType() || 'FrameNode', this.nodePtr_);
-    }
-    FrameNodeFinalizationRegisterProxy.ElementIdToOwningFrameNode_.delete(this._nodeId);
-    this._nodeId = -1;
-    this._nativeRef?.dispose();
-    this._nativeRef = null;
-    this.nodePtr_ = null;
   }
 
   initialize(...args: Object[]): T {
@@ -914,7 +778,7 @@ const __creatorMap__ = new Map<string, (context: UIContext, options?: object) =>
     ['GridRow', (context: UIContext): FrameNode=> {
       let node = new TypedFrameNode(context, 'GridRow', (node: NodePtr, type: ModifierType): ArkGridRowComponent => {
         return new ArkGridRowComponent(node, type);
-      });
+      })
       node.initialize();
       return node;
     }],
@@ -926,7 +790,7 @@ const __creatorMap__ = new Map<string, (context: UIContext, options?: object) =>
     ['GridCol', (context: UIContext): FrameNode=> {
       let node = new TypedFrameNode(context, 'GridCol', (node: NodePtr, type: ModifierType): ArkGridColComponent => {
         return new ArkGridColComponent(node, type);
-      });
+      })
       node.initialize();
       return node;
     }],
@@ -1020,6 +884,16 @@ const __creatorMap__ = new Map<string, (context: UIContext, options?: object) =>
         return new ArkFlowItemComponent(node, type);
       })
     }],
+    ['Marquee', (context: UIContext): FrameNode=> {
+      return new TypedFrameNode(context, 'Marquee', (node: NodePtr, type: ModifierType): ArkMarqueeComponent => {
+        return new ArkMarqueeComponent(node, type);
+      })
+    }],
+    ['TextArea', (context: UIContext): FrameNode=> {
+      return new TypedFrameNode(context, 'TextArea', (node: NodePtr, type: ModifierType): ArkTextAreaComponent => {
+        return new ArkTextAreaComponent(node, type);
+      })
+    }],
     ['QRCode', (context: UIContext): FrameNode=> {
       return new TypedFrameNode(context, 'QRCode', (node: NodePtr, type: ModifierType): ArkQRCodeComponent => {
         return new ArkQRCodeComponent(node, type);
@@ -1050,66 +924,11 @@ const __creatorMap__ = new Map<string, (context: UIContext, options?: object) =>
         return new ArkTextTimerComponent(node, type);
       })
     }],
-    ['Marquee', (context: UIContext): FrameNode=> {
-      return new TypedFrameNode(context, 'Marquee', (node: NodePtr, type: ModifierType): ArkMarqueeComponent => {
-        return new ArkMarqueeComponent(node, type);
-      })
-    }],
-    ['TextArea', (context: UIContext): FrameNode=> {
-      return new TypedFrameNode(context, 'TextArea', (node: NodePtr, type: ModifierType): ArkTextAreaComponent => {
-        return new ArkTextAreaComponent(node, type);
-      })
-    }],
-    ['Checkbox', (context: UIContext): FrameNode=> {
-      return new TypedFrameNode(context, 'Checkbox', (node: NodePtr, type: ModifierType): ArkCheckboxComponent => {
-        return new ArkCheckboxComponent(node, type);
-      });
-    }],
-    ['CheckboxGroup', (context: UIContext): FrameNode=> {
-      return new TypedFrameNode(context, 'CheckboxGroup', (node: NodePtr, type: ModifierType): ArkCheckboxGroupComponent => {
-        return new ArkCheckboxGroupComponent(node, type);
-      });
-    }],
-    ['Radio', (context: UIContext): FrameNode=> {
-      return new TypedFrameNode(context, 'Radio', (node: NodePtr, type: ModifierType): ArkRadioComponent => {
-        return new ArkRadioComponent(node, type);
-      });
-    }],
-    ['Rating', (context: UIContext): FrameNode=> {
-      return new TypedFrameNode(context, 'Rating', (node: NodePtr, type: ModifierType): ArkRatingComponent => {
-        return new ArkRatingComponent(node, type);
-      });
-    }],
-    ['Slider', (context: UIContext): FrameNode=> {
-      return new TypedFrameNode(context, 'Slider', (node: NodePtr, type: ModifierType): ArkSliderComponent => {
-        return new ArkSliderComponent(node, type);
-      });
-    }],
-    ['Select', (context: UIContext): FrameNode=> {
-      return new TypedFrameNode(context, 'Select', (node: NodePtr, type: ModifierType): ArkSelectComponent => {
-        return new ArkSelectComponent(node, type);
-      });
-    }],
-    ['Toggle', (context: UIContext, options?: object): FrameNode=> {
-      return new TypedFrameNode(context, 'Toggle', (node: NodePtr, type: ModifierType): ArkToggleComponent => {
-        return new ArkToggleComponent(node, type);
-      }, options);
-    }],
   ]
 )
 
 const __attributeMap__ = new Map<string, (node: FrameNode) => ArkComponent>(
   [
-    ['Swiper', (node: FrameNode): ArkSwiperComponent => {
-      if (node._componentAttribute) {
-        return node._componentAttribute;
-      }
-      if (!node.getNodePtr()) {
-         return undefined;
-      }
-      node._componentAttribute = new ArkSwiperComponent(node.getNodePtr(), ModifierType.FRAME_NODE);
-      return node._componentAttribute;
-    }],
     ['Scroll', (node: FrameNode): ArkScrollComponent => {
       if (node._componentAttribute) {
         return node._componentAttribute;
@@ -1120,330 +939,6 @@ const __attributeMap__ = new Map<string, (node: FrameNode) => ArkComponent>(
       node._componentAttribute = new ArkScrollComponent(node.getNodePtr(), ModifierType.FRAME_NODE);
       return node._componentAttribute;
     }],
-    ['List', (node: FrameNode): ArkListComponent => {
-      if (node._componentAttribute) {
-        return node._componentAttribute;
-      }
-      if (!node.getNodePtr()) {
-         return undefined;
-      }
-      node._componentAttribute = new ArkListComponent(node.getNodePtr(), ModifierType.FRAME_NODE);
-      return node._componentAttribute;
-    }],
-    ['ListItem', (node: FrameNode): ArkListItemComponent => {
-      if (node._componentAttribute) {
-        return node._componentAttribute;
-      }
-      if (!node.getNodePtr()) {
-         return undefined;
-      }
-      node._componentAttribute = new ArkListItemComponent(node.getNodePtr(), ModifierType.FRAME_NODE);
-      return node._componentAttribute;
-    }],
-    ['ListItemGroup', (node: FrameNode): ArkListItemGroupComponent => {
-      if (node._componentAttribute) {
-        return node._componentAttribute;
-      }
-      if (!node.getNodePtr()) {
-         return undefined;
-      }
-      node._componentAttribute = new ArkListItemGroupComponent(node.getNodePtr(), ModifierType.FRAME_NODE);
-      return node._componentAttribute;
-    }],
-    ['WaterFlow', (node: FrameNode): ArkWaterFlowComponent => {
-      if (node._componentAttribute) {
-        return node._componentAttribute;
-      }
-      if (!node.getNodePtr()) {
-         return undefined;
-      }
-      node._componentAttribute = new ArkWaterFlowComponent(node.getNodePtr(), ModifierType.FRAME_NODE);
-      return node._componentAttribute;
-    }],
-    ['FlowItem', (node: FrameNode): ArkFlowItemComponent => {
-      if (node._componentAttribute) {
-        return node._componentAttribute;
-      }
-      if (!node.getNodePtr()) {
-         return undefined;
-      }
-      node._componentAttribute = new ArkFlowItemComponent(node.getNodePtr(), ModifierType.FRAME_NODE);
-      return node._componentAttribute;
-    }],
-    ['Grid', (node: FrameNode): ArkGridComponent => {
-      if (node._componentAttribute) {
-        return node._componentAttribute;
-      }
-      if (!node.getNodePtr()) {
-         return undefined;
-      }
-      node._componentAttribute = new ArkGridComponent(node.getNodePtr(), ModifierType.FRAME_NODE);
-      return node._componentAttribute;
-    }],
-    ['GridItem', (node: FrameNode): ArkGridItemComponent => {
-      if (node._componentAttribute) {
-        return node._componentAttribute;
-      }
-      if (!node.getNodePtr()) {
-         return undefined;
-      }
-      node._componentAttribute = new ArkGridItemComponent(node.getNodePtr(), ModifierType.FRAME_NODE);
-      return node._componentAttribute;
-    }],
-    ['Text', (node: FrameNode): ArkTextComponent => {
-      if (node._componentAttribute) {
-        return node._componentAttribute;
-      }
-      if (!node.getNodePtr()) {
-        return undefined;
-      }
-      node._componentAttribute = new ArkTextComponent(node.getNodePtr(), ModifierType.FRAME_NODE);
-      return node._componentAttribute;
-    }],
-    ['TextInput', (node: FrameNode): ArkTextInputComponent => {
-      if (node._componentAttribute) {
-        return node._componentAttribute;
-      }
-      if (!node.getNodePtr()) {
-        return undefined;
-      }
-      node._componentAttribute = new ArkTextInputComponent(node.getNodePtr(), ModifierType.FRAME_NODE);
-      return node._componentAttribute;
-    }],
-    ['TextArea', (node: FrameNode): ArkTextAreaComponent => {
-        if (node._componentAttribute) {
-          return node._componentAttribute;
-        }
-        if (!node.getNodePtr()) {
-          return undefined;
-        }
-        node._componentAttribute = new ArkTextAreaComponent(node.getNodePtr(), ModifierType.FRAME_NODE);
-        return node._componentAttribute;
-    }],
-    ['Button', (node: FrameNode): ArkButtonComponent => {
-      if (node._componentAttribute) {
-        return node._componentAttribute;
-      }
-      if (!node.getNodePtr()) {
-         return undefined;
-      }
-      node._componentAttribute = new ArkButtonComponent(node.getNodePtr(), ModifierType.FRAME_NODE);
-      return node._componentAttribute;
-    }],
-    ['Checkbox', (node: FrameNode): ArkCheckboxComponent => {
-      if (node._componentAttribute) {
-        return node._componentAttribute;
-      }
-      if (!node.getNodePtr()) {
-         return undefined;
-      }
-      node._componentAttribute = new ArkCheckboxComponent(node.getNodePtr(), ModifierType.FRAME_NODE);
-      return node._componentAttribute;
-    }],
-    ['Radio', (node: FrameNode): ArkRadioComponent => {
-      if (node._componentAttribute) {
-        return node._componentAttribute;
-      }
-      if (!node.getNodePtr()) {
-         return undefined;
-      }
-      node._componentAttribute = new ArkRadioComponent(node.getNodePtr(), ModifierType.FRAME_NODE);
-      return node._componentAttribute;
-    }],
-    ['Slider', (node: FrameNode): ArkSliderComponent => {
-      if (node._componentAttribute) {
-        return node._componentAttribute;
-      }
-      if (!node.getNodePtr()) {
-         return undefined;
-      }
-      node._componentAttribute = new ArkSliderComponent(node.getNodePtr(), ModifierType.FRAME_NODE);
-      return node._componentAttribute;
-    }],
-    ['Toggle', (node: FrameNode): ArkToggleComponent => {
-      if (node._componentAttribute) {
-        return node._componentAttribute;
-      }
-      if (!node.getNodePtr()) {
-         return undefined;
-      }
-      node._componentAttribute = new ArkToggleComponent(node.getNodePtr(), ModifierType.FRAME_NODE);
-      return node._componentAttribute;
-    }],
-    ['Column', (node: FrameNode): ArkColumnComponent => {
-      if (node._componentAttribute) {
-        return node._componentAttribute;
-      }
-      if (!node.getNodePtr()) {
-        return undefined;
-      }
-      node._componentAttribute = new ArkColumnComponent(node.getNodePtr(), ModifierType.FRAME_NODE);
-      return node._componentAttribute;
-    }],
-    ['Row', (node: FrameNode): ArkRowComponent => {
-      if (node._componentAttribute) {
-        return node._componentAttribute;
-      }
-      if (!node.getNodePtr()) {
-        return undefined;
-      }
-      node._componentAttribute = new ArkRowComponent(node.getNodePtr(), ModifierType.FRAME_NODE);
-      return node._componentAttribute;
-    }],
-    ['Stack', (node: FrameNode): ArkStackComponent => {
-      if (node._componentAttribute) {
-        return node._componentAttribute;
-      }
-      if (!node.getNodePtr()) {
-        return undefined;
-      }
-      node._componentAttribute = new ArkStackComponent(node.getNodePtr(), ModifierType.FRAME_NODE);
-      return node._componentAttribute;
-    }],
-    ['Flex', (node: FrameNode): ArkFlexComponent => {
-      if (node._componentAttribute) {
-        return node._componentAttribute;
-      }
-      if (!node.getNodePtr()) {
-        return undefined;
-      }
-      node._componentAttribute = new ArkFlexComponent(node.getNodePtr(), ModifierType.FRAME_NODE);
-      return node._componentAttribute;
-    }],
-    ['RelativeContainer', (node: FrameNode): ArkRelativeContainerComponent => {
-      if (node._componentAttribute) {
-        return node._componentAttribute;
-      }
-      if (!node.getNodePtr()) {
-        return undefined;
-      }
-      node._componentAttribute = new ArkRelativeContainerComponent(node.getNodePtr(), ModifierType.FRAME_NODE);
-      return node._componentAttribute;
-    }],
-    ['XComponent', (node: FrameNode): ArkXComponentComponent => {
-      if (node._componentAttribute) {
-        return node._componentAttribute;
-      }
-      if (!node.getNodePtr()) {
-        return undefined;
-      }
-      node._componentAttribute = new ArkXComponentComponent(node.getNodePtr(), ModifierType.FRAME_NODE);
-      return node._componentAttribute;
-    }],
-    ['Progress', (node: FrameNode): ArkProgressComponent => {
-      if (node._componentAttribute) {
-        return node._componentAttribute;
-      }
-      if (!node.getNodePtr()) {
-         return undefined;
-      }
-      node._componentAttribute = new ArkProgressComponent(node.getNodePtr(), ModifierType.FRAME_NODE);
-      return node._componentAttribute;
-    }],
-    ['LoadingProgress', (node: FrameNode): ArkLoadingProgressComponent => {
-      if (node._componentAttribute) {
-        return node._componentAttribute;
-      }
-      if (!node.getNodePtr()) {
-         return undefined;
-      }
-      node._componentAttribute = new ArkLoadingProgressComponent(node.getNodePtr(), ModifierType.FRAME_NODE);
-      return node._componentAttribute;
-    }],
-    ['Image', (node: FrameNode): ArkImageComponent => {
-      if (node._componentAttribute) {
-        return node._componentAttribute;
-      }
-      if (!node.getNodePtr()) {
-         return undefined;
-      }
-      node._componentAttribute = new ArkImageComponent(node.getNodePtr(), ModifierType.FRAME_NODE);
-      return node._componentAttribute;
-    }]
-  ]
-)
-
-const __eventMap__ = new Map<string, (node: FrameNode) => UICommonEvent>(
-  [
-    ['List', (node: FrameNode): UIListEvent => {
-      if (node._scrollableEvent) {
-        return node._scrollableEvent;
-      }
-      if (!node.getNodePtr()) {
-         return undefined;
-      }
-      node._scrollableEvent = new UIListEvent(node.getNodePtr());
-      node._scrollableEvent.setNodePtr(node);
-      node._scrollableEvent.setInstanceId((this.uiContext_ === undefined || this.uiContext_ === null) ? -1 : this.uiContext_.instanceId_);
-      return node._scrollableEvent;
-    }],
-    ['Scroll', (node: FrameNode): UIScrollEvent => {
-      if (node._scrollableEvent) {
-        return node._scrollableEvent;
-      }
-      if (!node.getNodePtr()) {
-         return undefined;
-      }
-      node._scrollableEvent = new UIScrollEvent(node.getNodePtr());
-      node._scrollableEvent.setNodePtr(node);
-      node._scrollableEvent.setInstanceId((this.uiContext_ === undefined || this.uiContext_ === null) ? -1 : this.uiContext_.instanceId_);
-      return node._scrollableEvent;
-    }],
-    ['Grid', (node: FrameNode): UIGridEvent => {
-      if (node._scrollableEvent) {
-        return node._scrollableEvent;
-      }
-      if (!node.getNodePtr()) {
-         return undefined;
-      }
-      node._scrollableEvent = new UIGridEvent(node.getNodePtr());
-      node._scrollableEvent.setNodePtr(node);
-      node._scrollableEvent.setInstanceId((this.uiContext_ === undefined || this.uiContext_ === null) ? -1 : this.uiContext_.instanceId_);
-      return node._scrollableEvent;
-    }],
-    ['WaterFlow', (node: FrameNode): UIWaterFlowEvent => {
-      if (node._scrollableEvent) {
-        return node._scrollableEvent;
-      }
-      if (!node.getNodePtr()) {
-         return undefined;
-      }
-      node._scrollableEvent = new UIWaterFlowEvent(node.getNodePtr());
-      node._scrollableEvent.setNodePtr(node);
-      node._scrollableEvent.setInstanceId((this.uiContext_ === undefined || this.uiContext_ === null) ? -1 : this.uiContext_.instanceId_);
-      return node._scrollableEvent;
-    }]
-  ]
-)
-
-type Controller = Scroller | SwiperController | TextController | TextInputController | TextAreaController
-
-const __bindControllerCallbackMap__ = new Map<string, (node: FrameNode, controller: Controller) => void>(
-  [
-    ['Swiper', (node: FrameNode, controller: SwiperController) => {
-      getUINativeModule().swiper.setSwiperInitialize(node.getNodePtr(), controller);
-    }],
-    ['Scroll', (node: FrameNode, controller: Scroller) => {
-      getUINativeModule().scroll.setScrollInitialize(node.getNodePtr(), controller);
-    }],
-    ['List', (node: FrameNode, controller: Scroller) => {
-      getUINativeModule().list.setInitialScroller(node.getNodePtr(), controller);
-    }],
-    ['WaterFlow', (node: FrameNode, controller: Scroller) => {
-      getUINativeModule().waterFlow.setWaterFlowScroller(node.getNodePtr(), controller);
-    }],
-    ['Grid', (node: FrameNode, controller: Scroller) => {
-      getUINativeModule().grid.setGridScroller(node.getNodePtr(), controller);
-    }],
-    ['Text', (node: FrameNode, controller: TextController) => {
-        getUINativeModule().text.setTextController(node.getNodePtr(), { controller: controller });
-    }],
-    ['TextInput', (node: FrameNode, controller: TextInputController) => {
-        getUINativeModule().textInput.setController(node.getNodePtr(), controller);
-    }],
-    ['TextArea', (node: FrameNode, controller: TextAreaController) => {
-        getUINativeModule().textArea.setController(node.getNodePtr(), controller);
-    }]
   ]
 )
 
@@ -1470,33 +965,14 @@ class typeNode {
     return attribute(node);
   }
 
-  static getEvent(node: FrameNode, nodeType: string): UICommonEvent {
-    if (node === undefined || node === null || node.getNodeType() !== nodeType) {
-      return undefined;
-    }
-    let event = __eventMap__.get(nodeType);
-    if (event === undefined || event === null) {
-      return undefined;
-    }
-    return event(node);
-  } 
-
-  static bindController(node: FrameNode, controller: Controller, nodeType: string): void {
+  static bindController(node: FrameNode, controller: Scroller, nodeType: string): void {
     if (node === undefined || node === null || controller === undefined || controller === null ||
       node.getNodeType() !== nodeType || node.getNodePtr() === null || node.getNodePtr() === undefined) {
-      if (nodeType === undefined || nodeType === null || nodeType === 'Scroll') {
-        throw { message: 'Parameter error. Possible causes: 1. The type of the node is error; 2. The node is null or undefined.', code: 401 };
-      } else {
-        throw { message: 'Parameter error. Possible causes: 1. The component type of the node is incorrect. 2. The node is null or undefined. 3. The controller is null or undefined.', code: 100023 };
-      }
+      throw { message: 'Parameter error. Possible causes: 1. The type of the node is error; 2. The node is null or undefined.', code: 401 };
     }
     if (!node.checkIfCanCrossLanguageAttributeSetting()) {
       throw { message: 'The FrameNode is not modifiable.', code: 100021 };
     }
-    let callback = __bindControllerCallbackMap__.get(nodeType);
-    if (callback === undefined || callback === null) {
-      return;
-    }
-    callback(node, controller);
+    getUINativeModule().scroll.setScrollInitialize(node.getNodePtr(), controller);
   }
 }

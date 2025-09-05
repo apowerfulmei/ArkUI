@@ -29,10 +29,6 @@ class ObservedPropertyPU<T> extends ObservedPropertyAbstractPU<T>
 
   private wrappedValue_: T;
 
-  public staticWatchId?: number;
-
-  public _setInteropValueForStaticState?: setValue<T>;
-
   constructor(localInitValue: T, owningView: IPropertySubscriber, propertyName: PropertyInfo) {
     super(owningView, propertyName);
    
@@ -50,15 +46,14 @@ class ObservedPropertyPU<T> extends ObservedPropertyAbstractPU<T>
    * Called by a SynchedPropertyObjectTwoWayPU (@Link, @Consume) that uses this as sync peer when it has changed
    * @param eventSource 
    */
-  public syncPeerHasChanged(eventSource : ObservedPropertyAbstractPU<T>, isSync: boolean = false) : void {
+  public syncPeerHasChanged(eventSource : ObservedPropertyAbstractPU<T>) : void {
     stateMgmtConsole.debug(`${this.debugInfo()}: syncPeerHasChanged: from peer ${eventSource && eventSource.debugInfo && eventSource.debugInfo()}'.`);
-    this.notifyPropertyHasChangedPU(isSync);
+    this.notifyPropertyHasChangedPU();
   }
 
-  public syncPeerTrackedPropertyHasChanged(eventSource: ObservedPropertyAbstractPU<T>,
-    changedTrackedObjectPropertyName: string, isSync: boolean = false): void {
+  public syncPeerTrackedPropertyHasChanged(eventSource: ObservedPropertyAbstractPU<T>, changedTrackedObjectPropertyName: string): void {
     stateMgmtConsole.debug(`${this.debugInfo()}: syncPeerTrackedPropertyHasChanged: from peer ${eventSource && eventSource.debugInfo && eventSource.debugInfo()}', changed property '${changedTrackedObjectPropertyName}'.`);
-    this.notifyTrackedObjectPropertyHasChanged(changedTrackedObjectPropertyName, isSync);
+    this.notifyTrackedObjectPropertyHasChanged(changedTrackedObjectPropertyName);
   }
 
   /**
@@ -76,10 +71,6 @@ class ObservedPropertyPU<T> extends ObservedPropertyAbstractPU<T>
     if (this.wrappedValue_) {
       if (this.wrappedValue_ instanceof SubscribableAbstract) {
         (this.wrappedValue_ as SubscribableAbstract).removeOwningProperty(this);
-      // for interop
-      } else if (InteropConfigureStateMgmt.instance.needsInterop() && this.staticWatchId && typeof this.wrappedValue_ === 'object' &&
-        'removeWatchSubscriber' in this.wrappedValue_ && typeof this.wrappedValue_.removeWatchSubscriber === 'function') {
-          this.wrappedValue_.removeWatchSubscriber(this.staticWatchId);
       } else {
         ObservedObject.removeOwningProperty(this.wrappedValue_, this);
 
@@ -109,14 +100,6 @@ class ObservedPropertyPU<T> extends ObservedPropertyAbstractPU<T>
     }
 
     this.unsubscribeWrappedObject();
-
-    // for interop
-    if (InteropConfigureStateMgmt.instance.needsInterop() && newValue && typeof newValue === 'object' && isStaticProxy(newValue)) {
-      this.wrappedValue_ = InteropExtractorModule.getInteropObservedObject(newValue, this);
-      stateMgmtProfiler.end();
-      return true;
-    }
-
     if (!newValue || typeof newValue !== 'object') {
       // undefined, null, simple type: 
       // nothing to subscribe to in case of new value undefined || null || simple type 
@@ -170,10 +153,6 @@ class ObservedPropertyPU<T> extends ObservedPropertyAbstractPU<T>
       TrackedObject.notifyObjectValueAssignment(/* old value */ oldValue, /* new value */ this.wrappedValue_,
         this.notifyPropertyHasChangedPU,
         this.notifyTrackedObjectPropertyHasChanged, this);
-      // for interop
-      if (InteropConfigureStateMgmt.instance.needsInterop()) {
-        InteropExtractorModule.setStaticValueForInterop(this, newValue);
-      }
     }
   }
 

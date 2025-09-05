@@ -39,8 +39,6 @@ public:
     bool IsNeedProcessAutoFill() override;
     int32_t GetRequestKeyboardId() override;
     float FontSizeConvertToPx(const Dimension& fontSize) override;
-    std::string GetPlaceholderFont() const override;
-    IMEClient GetIMEClientInfo() override;
 
 private:
     bool searchRequestStopTwinkling_ = false;

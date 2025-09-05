@@ -15,10 +15,10 @@
 
 #include "bridge/declarative_frontend/jsview/js_checkboxgroup.h"
 
-#include "bridge/declarative_frontend/engine/functions/js_event_function.h"
 #include "bridge/declarative_frontend/jsview/js_interactable_view.h"
 #include "bridge/declarative_frontend/jsview/js_view_common_def.h"
 #include "bridge/declarative_frontend/jsview/models/checkboxgroup_model_impl.h"
+#include "bridge/declarative_frontend/ark_theme/theme_apply/js_checkboxgroup_theme.h"
 #include "bridge/declarative_frontend/view_stack_processor.h"
 #include "core/components/checkable/checkable_component.h"
 #include "core/components_ng/base/view_abstract.h"
@@ -105,6 +105,8 @@ void JSCheckboxGroup::Create(const JSCallbackInfo& info)
     }
 
     CheckBoxGroupModel::GetInstance()->Create(checkboxGroupName);
+
+    JSCheckBoxGroupTheme::ApplyTheme();
 }
 
 void ParseSelectAllObject(const JSCallbackInfo& info, const JSRef<JSVal>& changeEventVal)
@@ -137,24 +139,13 @@ void JSCheckboxGroup::SetSelectAll(const JSCallbackInfo& info)
         return;
     }
     bool selectAll = false;
-
-    JSRef<JSVal> changeEventVal;
-    auto selectedVal = info[0];
-    if (selectedVal->IsObject()) {
-        JSRef<JSObject> obj = JSRef<JSObject>::Cast(selectedVal);
-        selectedVal = obj->GetProperty("value");
-        changeEventVal = obj->GetProperty("$value");
-    } else if (info.Length() > 1) {
-        changeEventVal = info[1];
+    if (info.Length() > 0 && info[0]->IsBoolean()) {
+        selectAll = info[0]->ToBoolean();
     }
-    if (selectedVal->IsBoolean()) {
-        selectAll = selectedVal->ToBoolean();
-    }
-
     TAG_LOGD(AceLogTag::ACE_SELECT_COMPONENT, "checkboxgroup select all %{public}d", selectAll);
     CheckBoxGroupModel::GetInstance()->SetSelectAll(selectAll);
-    if (changeEventVal->IsFunction()) {
-        ParseSelectAllObject(info, changeEventVal);
+    if (info.Length() > 1 && info[1]->IsFunction()) {
+        ParseSelectAllObject(info, info[1]);
     }
 }
 
@@ -210,15 +201,12 @@ void JSCheckboxGroup::SelectedColor(const JSCallbackInfo& info)
         return;
     }
     Color selectedColor;
-    RefPtr<ResourceObject> resObj;
-    if (!ParseJsColor(info[0], selectedColor, resObj)) {
-        CheckBoxGroupModel::GetInstance()->ResetSelectedColor();
-    } else {
-        CheckBoxGroupModel::GetInstance()->SetSelectedColor(selectedColor);
+    auto theme = GetTheme<CheckboxTheme>();
+    if (!ParseJsColor(info[0], selectedColor)) {
+        selectedColor = theme->GetActiveColor();
     }
-    if (SystemProperties::ConfigChangePerform()) {
-        CheckBoxGroupModel::GetInstance()->CreateWithColorResourceObj(resObj, CheckBoxGroupColorType::SELECTED_COLOR);
-    }
+
+    CheckBoxGroupModel::GetInstance()->SetSelectedColor(selectedColor);
 }
 
 void JSCheckboxGroup::UnSelectedColor(const JSCallbackInfo& info)
@@ -227,16 +215,12 @@ void JSCheckboxGroup::UnSelectedColor(const JSCallbackInfo& info)
         return;
     }
     Color unSelectedColor;
-    RefPtr<ResourceObject> resObj;
-    if (!ParseJsColor(info[0], unSelectedColor, resObj)) {
-        CheckBoxGroupModel::GetInstance()->ResetUnSelectedColor();
-    } else {
-        CheckBoxGroupModel::GetInstance()->SetUnSelectedColor(unSelectedColor);
+    auto theme = GetTheme<CheckboxTheme>();
+    if (!ParseJsColor(info[0], unSelectedColor)) {
+        unSelectedColor = theme->GetInactiveColor();
     }
-    if (SystemProperties::ConfigChangePerform()) {
-        CheckBoxGroupModel::GetInstance()->CreateWithColorResourceObj(
-            resObj, CheckBoxGroupColorType::UN_SELECTED_COLOR);
-    }
+
+    CheckBoxGroupModel::GetInstance()->SetUnSelectedColor(unSelectedColor);
 }
 
 void JSCheckboxGroup::Mark(const JSCallbackInfo& info)
@@ -254,10 +238,9 @@ void JSCheckboxGroup::Mark(const JSCallbackInfo& info)
     auto theme = GetTheme<CheckboxTheme>();
     Color strokeColor = theme->GetPointColor();
     if (!ParseJsColor(strokeColorValue, strokeColor)) {
-        CheckBoxGroupModel::GetInstance()->ResetCheckMarkColor();
-    } else {
-        CheckBoxGroupModel::GetInstance()->SetCheckMarkColor(strokeColor);
+        JSCheckBoxGroupTheme::ObtainCheckMarkColor(strokeColor);
     }
+    CheckBoxGroupModel::GetInstance()->SetCheckMarkColor(strokeColor);
     auto sizeValue = markObj->GetProperty("size");
     CalcDimension size;
     if ((ParseJsDimensionVp(sizeValue, size)) && (size.Unit() != DimensionUnit::PERCENT) &&
@@ -334,16 +317,33 @@ bool JSCheckboxGroup::GetOldPadding(const JSCallbackInfo& info, NG::PaddingPrope
 
 NG::PaddingProperty JSCheckboxGroup::GetNewPadding(const JSCallbackInfo& info)
 {
-    NG::PaddingProperty padding({ NG::CalcLength(0.0_vp), NG::CalcLength(0.0_vp), NG::CalcLength(0.0_vp),
-        NG::CalcLength(0.0_vp), std::nullopt, std::nullopt });
+    NG::PaddingProperty padding({
+        NG::CalcLength(0.0_vp), NG::CalcLength(0.0_vp), NG::CalcLength(0.0_vp), NG::CalcLength(0.0_vp) });
     if (info[0]->IsObject()) {
+        std::optional<CalcDimension> left;
+        std::optional<CalcDimension> right;
+        std::optional<CalcDimension> top;
+        std::optional<CalcDimension> bottom;
         JSRef<JSObject> paddingObj = JSRef<JSObject>::Cast(info[0]);
-        CommonCalcDimension commonCalcDimension;
-        ParseCommonMarginOrPaddingCorner(paddingObj, commonCalcDimension);
-        if (commonCalcDimension.left.has_value() || commonCalcDimension.right.has_value() ||
-            commonCalcDimension.top.has_value() || commonCalcDimension.bottom.has_value()) {
-            padding = GetPadding(commonCalcDimension.top, commonCalcDimension.bottom, commonCalcDimension.left,
-                commonCalcDimension.right);
+
+        CalcDimension leftDimen;
+        if (ParseJsDimensionVp(paddingObj->GetProperty("left"), leftDimen)) {
+            left = leftDimen;
+        }
+        CalcDimension rightDimen;
+        if (ParseJsDimensionVp(paddingObj->GetProperty("right"), rightDimen)) {
+            right = rightDimen;
+        }
+        CalcDimension topDimen;
+        if (ParseJsDimensionVp(paddingObj->GetProperty("top"), topDimen)) {
+            top = topDimen;
+        }
+        CalcDimension bottomDimen;
+        if (ParseJsDimensionVp(paddingObj->GetProperty("bottom"), bottomDimen)) {
+            bottom = bottomDimen;
+        }
+        if (left.has_value() || right.has_value() || top.has_value() || bottom.has_value()) {
+            padding = GetPadding(top, bottom, left, right);
             return padding;
         }
     }
@@ -360,8 +360,8 @@ NG::PaddingProperty JSCheckboxGroup::GetPadding(const std::optional<CalcDimensio
     const std::optional<CalcDimension>& bottom, const std::optional<CalcDimension>& left,
     const std::optional<CalcDimension>& right)
 {
-    NG::PaddingProperty padding({ NG::CalcLength(0.0_vp), NG::CalcLength(0.0_vp), NG::CalcLength(0.0_vp),
-        NG::CalcLength(0.0_vp), std::nullopt, std::nullopt });
+    NG::PaddingProperty padding({
+        NG::CalcLength(0.0_vp), NG::CalcLength(0.0_vp), NG::CalcLength(0.0_vp), NG::CalcLength(0.0_vp) });
     if (left.has_value()) {
         if (left.value().Unit() == DimensionUnit::CALC) {
             padding.left = NG::CalcLength(

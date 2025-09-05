@@ -16,8 +16,6 @@
 #ifndef FOUNDATION_ACE_FRAMEWORKS_BASE_IMAGE_ACE_DRAWING_COLOR_FILTER_H
 #define FOUNDATION_ACE_FRAMEWORKS_BASE_IMAGE_ACE_DRAWING_COLOR_FILTER_H
 
-#include <vector>
-
 #include "base/memory/ace_type.h"
 
 class NativeEngine;
@@ -33,12 +31,9 @@ class ColorFilter;
 
 namespace Ace {
 class ACE_EXPORT DrawingColorFilter : public AceType {
-    DECLARE_ACE_TYPE(DrawingColorFilter, AceType);
+    DECLARE_ACE_TYPE(DrawingColorFilter, AceType)
 
 public:
-#if defined(ACE_STATIC)
-    static RefPtr<DrawingColorFilter> CreateDrawingColorFilterFromAni(void* sptrAddr);
-#endif
     static RefPtr<DrawingColorFilter> CreateDrawingColorFilter(void* sptrAddr);
     static RefPtr<DrawingColorFilter> CreateDrawingColorFilter(const std::vector<float>& matrix);
     static RefPtr<DrawingColorFilter> CreateDrawingColorFilterFromNative(void* sptrAddr);

@@ -14,9 +14,9 @@
  */
 
 interface IStorage {
-  get<T>(key: string, areaMode?: number): T | undefined;
-  set<T>(key: string, val: T, areaMode?: number): void;
-  has<T>(key: string, areaMode?: number): boolean;
+  get<T>(key: string): T | undefined;
+  set<T>(key: string, val: T): void;
+  has<T>(key: string): boolean;
   clear(): void;
-  delete(key: string, areaMode?: number): void;
+  delete(key: string): void;
 }

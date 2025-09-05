@@ -22,7 +22,6 @@
 #include "core/animation/spring_curve.h"
 #include "core/common/container.h"
 #include "core/components_ng/base/modifier.h"
-#include "core/components_ng/pattern/pattern.h"
 #include "core/components_ng/property/property.h"
 #include "core/components_ng/render/animation_utils.h"
 #include "core/components_ng/render/canvas_image.h"
@@ -40,7 +39,6 @@ constexpr float ANIMATION_CURVE_MASS = 1.0f;        // The circle animation spri
 constexpr float ANIMATION_CURVE_STIFFNESS = 110.0f; // The circle animation spring curve stiffness is 110.0
 constexpr float ANIMATION_CURVE_DAMPING = 17.0f;    // The circle animation spring curve damping is 17.0
 constexpr size_t MAX_COUNT = 9;
-constexpr size_t DEFAULT_VALUE_COUNT = 0;
 constexpr float DEFAULT_MAX_VALUE = 100.0f;
 constexpr float START_ANGLE = 0.0f;
 struct ArcData {
@@ -77,7 +75,7 @@ class DataPanelModifier : public ContentModifier {
     DECLARE_ACE_TYPE(DataPanelModifier, ContentModifier);
 
 public:
-    DataPanelModifier(const WeakPtr<Pattern>& pattern);
+    DataPanelModifier();
     ~DataPanelModifier() override = default;
     void onDraw(DrawingContext& context) override;
     void UpdateDate();
@@ -86,13 +84,11 @@ public:
     {
         for (size_t i = 0; i < values.size(); ++i) {
             if (i >= MAX_COUNT) {
-                count_->Set(MAX_COUNT);
                 return;
             }
             values_[i]->Set(values[i]);
         }
         valuesLastLength_ = values.size();
-        count_->Set(values.size());
     };
 
     void SetMax(double max)
@@ -171,7 +167,7 @@ public:
             }
             shadowColors_[i]->Set(GradientArithmetic(valueColors[i]));
         }
-        shadowColorsLastLength_ = std::min(shadowColorsLastLength, valuesLastLength_);
+        shadowColorsLastLength_ = shadowColorsLastLength;
     };
 
     void SetUseContentModifier(bool useContentModifier)
@@ -184,11 +180,6 @@ public:
     void SetIsRtl(bool isRtl)
     {
         isRtl_ = isRtl;
-    };
-
-    float GetValuesCount()
-    {
-        return count_->Get();
     };
 
 private:
@@ -215,12 +206,10 @@ private:
     RefPtr<PropertyBool> useContentModifier_;
     
     RefPtr<AnimatablePropertyFloat> max_;
-    RefPtr<AnimatablePropertyFloat> count_;
     std::vector<RefPtr<AnimatablePropertyFloat>> values_;
     std::vector<RefPtr<AnimatablePropertyVectorColor>> valueColors_;
     RefPtr<AnimatablePropertyColor> trackBackgroundColor_;
     RefPtr<AnimatablePropertyFloat> strokeWidth_;
-    WeakPtr<Pattern> pattern_;
 
     // shadow param
     bool isShadowVisible_ = false;

@@ -15,8 +15,20 @@
 
 #include "core/components_ng/pattern/linear_layout/linear_layout_utils.h"
 
+#include <cstdint>
+#include <optional>
+
+#include "base/geometry/dimension.h"
+#include "base/geometry/ng/offset_t.h"
+#include "base/geometry/ng/size_t.h"
+#include "base/utils/utils.h"
+#include "core/common/ace_application_info.h"
+#include "core/components/common/layout/constants.h"
+#include "core/components/common/properties/alignment.h"
 #include "core/components_ng/pattern/linear_layout/linear_layout_property.h"
 #include "core/components_ng/property/measure_utils.h"
+#include "core/pipeline_ng/ui_task_scheduler.h"
+
 namespace OHOS::Ace::NG {
 namespace {
 float GetChildMainAxisSize(LayoutWrapper* layoutWrapper, bool isVertical)
@@ -70,9 +82,7 @@ SizeF CreateSize(float mainSize, float crossSize, bool isVertical)
 void TravelChildrenFlexProps(LayoutWrapper* layoutWrapper, LinearMeasureProperty& linearMeasureProperty)
 {
     for (const auto& child : layoutWrapper->GetAllChildrenWithBuild()) {
-        const auto& childLayoutProperty = child->GetLayoutProperty();
-        CHECK_NULL_CONTINUE(childLayoutProperty);
-        const auto& magicItemProperty = childLayoutProperty->GetMagicItemProperty();
+        const auto& magicItemProperty = child->GetLayoutProperty()->GetMagicItemProperty();
         if (magicItemProperty.GetLayoutWeight().value_or(-1) > 0) {
             linearMeasureProperty.totalFlexWeight += magicItemProperty.GetLayoutWeight().value();
             linearMeasureProperty.weightNodes.emplace_back(child);
@@ -105,14 +115,12 @@ float CalculateCrossOffset(float parent, float child, FlexAlign flexAlign)
 
 void LinearLayoutUtils::Measure(LayoutWrapper* layoutWrapper, bool isVertical)
 {
-    const auto& layoutProperty = layoutWrapper->GetLayoutProperty();
-    CHECK_NULL_VOID(layoutProperty);
-    const auto& layoutConstraint = layoutProperty->GetLayoutConstraint();
+    const auto& layoutConstraint = layoutWrapper->GetLayoutProperty()->GetLayoutConstraint();
     const auto& minSize = layoutConstraint->minSize;
     const auto& maxSize = layoutConstraint->maxSize;
     const auto& parentIdeaSize = layoutConstraint->parentIdealSize;
-    auto padding = layoutProperty->CreatePaddingAndBorder();
-    auto measureType = layoutProperty->GetMeasureType();
+    auto padding = layoutWrapper->GetLayoutProperty()->CreatePaddingAndBorder();
+    auto measureType = layoutWrapper->GetLayoutProperty()->GetMeasureType();
     OptionalSizeF realSize;
     LinearMeasureProperty linearMeasureProperty;
     do {
@@ -133,13 +141,13 @@ void LinearLayoutUtils::Measure(LayoutWrapper* layoutWrapper, bool isVertical)
     auto idealSize = realSize.ConvertToSizeT();
     MinusPaddingToSize(padding, idealSize);
 
-    auto linearLayoutProperty = AceType::DynamicCast<LinearLayoutProperty>(layoutProperty);
+    auto linearLayoutProperty = AceType::DynamicCast<LinearLayoutProperty>(layoutWrapper->GetLayoutProperty());
     auto spaceDimension = linearLayoutProperty ? linearLayoutProperty->GetSpaceValue(Dimension(0)) : Dimension(0);
     linearMeasureProperty.space = ConvertToPx(spaceDimension, layoutConstraint->scaleProperty).value_or(0);
 
     // measure child.
     TravelChildrenFlexProps(layoutWrapper, linearMeasureProperty);
-    auto childConstraint = layoutProperty->CreateChildConstraint();
+    auto childConstraint = layoutWrapper->GetLayoutProperty()->CreateChildConstraint();
 
     // measure normal node.
     for (auto& child : linearMeasureProperty.relativeNodes) {
@@ -163,10 +171,8 @@ void LinearLayoutUtils::Measure(LayoutWrapper* layoutWrapper, bool isVertical)
             remainSize = GetMainAxisSize(idealSize, isVertical);
         }
         for (auto& child : linearMeasureProperty.weightNodes) {
-            const auto& childlayoutProperty = child->GetLayoutProperty();
-            CHECK_NULL_CONTINUE(childlayoutProperty);
             auto childMainSize = remainSize *
-                                 childlayoutProperty->GetMagicItemProperty().GetLayoutWeight().value() /
+                                 child->GetLayoutProperty()->GetMagicItemProperty().GetLayoutWeight().value() /
                                  linearMeasureProperty.totalFlexWeight;
             SetIdealMainSize(childConstraint, childMainSize, isVertical);
             child->Measure(childConstraint);
@@ -196,15 +202,13 @@ OffsetF LinearLayoutUtils::AdjustChildOnDirection(
 
 void LinearLayoutUtils::Layout(LayoutWrapper* layoutWrapper, bool isVertical, FlexAlign crossAlign, FlexAlign mainAlign)
 {
-    const auto& layoutProperty = layoutWrapper->GetLayoutProperty();
-    CHECK_NULL_VOID(layoutProperty);
-    const auto& layoutConstraint = layoutProperty->GetLayoutConstraint();
-    auto linearLayoutProperty = AceType::DynamicCast<LinearLayoutProperty>(layoutProperty);
+    const auto& layoutConstraint = layoutWrapper->GetLayoutProperty()->GetLayoutConstraint();
+    auto linearLayoutProperty = AceType::DynamicCast<LinearLayoutProperty>(layoutWrapper->GetLayoutProperty());
     auto spaceDimension = linearLayoutProperty ? linearLayoutProperty->GetSpaceValue(Dimension(0)) : Dimension(0);
     auto space = ConvertToPx(spaceDimension, layoutConstraint->scaleProperty).value_or(0);
     // update child position.
     auto size = layoutWrapper->GetGeometryNode()->GetFrameSize();
-    auto padding = layoutProperty->CreatePaddingAndBorder();
+    auto padding = layoutWrapper->GetLayoutProperty()->CreatePaddingAndBorder();
     MinusPaddingToSize(padding, size);
     auto left = padding.left.value_or(0);
     auto top = padding.top.value_or(0);

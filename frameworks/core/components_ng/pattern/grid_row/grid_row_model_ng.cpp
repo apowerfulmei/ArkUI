@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -17,15 +17,15 @@
 
 #include "grid_row_layout_pattern.h"
 
+#include "base/memory/referenced.h"
+#include "core/components_ng/base/frame_node.h"
+#include "core/components_ng/base/view_stack_processor.h"
+#include "core/components_v2/inspector/inspector_constants.h"
+
 namespace OHOS::Ace::NG {
 void GridRowModelNG::Create()
 {
-    RefPtr<V2::GridContainerSize> col;
-    if (Container::LessThanAPITargetVersion(PlatformVersion::VERSION_TWENTY)) {
-        col = Referenced::MakeRefPtr<V2::GridContainerSize>(NG::DEFAULT_COLUMN_NUMBER);
-    } else {
-        col = Referenced::MakeRefPtr<V2::GridContainerSize>();
-    }
+    auto col = Referenced::MakeRefPtr<V2::GridContainerSize>();
     auto gutter = Referenced::MakeRefPtr<V2::Gutter>();
     auto breakpoints = Referenced::MakeRefPtr<V2::BreakPoints>();
     auto direction = V2::GridRowDirection::Row;
@@ -42,19 +42,6 @@ void GridRowModelNG::Create(const RefPtr<V2::GridContainerSize>& col, const RefP
         V2::GRID_ROW_ETS_TAG, nodeId, []() { return AceType::MakeRefPtr<GridRowLayoutPattern>(); });
     stack->Push(frameNode);
     ACE_UPDATE_LAYOUT_PROPERTY(GridRowLayoutProperty, Columns, *col);
-    auto gridRowpattern = frameNode->GetPattern<GridRowLayoutPattern>();
-    CHECK_NULL_VOID(gridRowpattern);
-    RefPtr<ResourceObject> resObj = AceType::MakeRefPtr<ResourceObject>("", "", -1);
-    auto&& updateFunc = [gutter, weak = AceType::WeakClaim(
-        AceType::RawPtr(frameNode))](const RefPtr<ResourceObject>& resObj) {
-        auto frameNode = weak.Upgrade();
-        CHECK_NULL_VOID(frameNode);
-        RefPtr<V2::Gutter> &value = const_cast<RefPtr<V2::Gutter> &>(gutter);
-        value->ReloadResources(value);
-        ACE_UPDATE_NODE_LAYOUT_PROPERTY(GridRowLayoutProperty, Gutter, *value, frameNode);
-        frameNode->MarkDirtyNode(PROPERTY_UPDATE_MEASURE);
-    };
-    gridRowpattern->AddResObj("gridrow.gutter", resObj, std::move(updateFunc));
     ACE_UPDATE_LAYOUT_PROPERTY(GridRowLayoutProperty, Gutter, *gutter);
     ACE_UPDATE_LAYOUT_PROPERTY(GridRowLayoutProperty, BreakPoints, *breakpoints);
     ACE_UPDATE_LAYOUT_PROPERTY(GridRowLayoutProperty, Direction, direction);

@@ -18,7 +18,7 @@
 
 namespace OHOS::Ace::NG {
 class WebPattern {
-bool IsNWebEx();
+void Backward();
 };
 } // namespace OHOS::Ace::NG
 #endif

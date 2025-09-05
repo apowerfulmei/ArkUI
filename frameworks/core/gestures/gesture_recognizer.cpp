@@ -70,7 +70,6 @@ bool GestureRecognizer::HandleEvent(const AxisEvent& event)
             deviceId_ = event.deviceId;
             deviceType_ = event.sourceType;
             HandleTouchDownEvent(event);
-            break;
         case AxisAction::UPDATE:
             HandleTouchMoveEvent(event);
             break;

@@ -19,9 +19,7 @@
 #include <optional>
 
 #include "base/memory/ace_type.h"
-#include "core/components/common/properties/marquee_option.h"
 #include "core/components/common/properties/text_style.h"
-#include "core/components_ng/base/linear_vector.h"
 #include "core/components_ng/base/modifier.h"
 #include "core/components_ng/pattern/pattern.h"
 #include "core/components_ng/pattern/rich_editor/paragraph_manager.h"
@@ -35,23 +33,8 @@ enum class MarqueeState {
     IDLE, RUNNING, PAUSED, STOPPED
 };
 
-struct FadeoutInfo {
-    bool isLeftFadeout = false;
-    bool isRightFadeout = false;
-    double fadeoutPercent = 0.0;
-    float paragraph1StartPosition = 0.0f;
-    float paragraph1EndPosition = 0.0f;
-    float paragraph2StartPosition = 0.0f;
-    float paragraph2EndPosition = 0.0f;
-
-    bool IsFadeout() const
-    {
-        return isLeftFadeout || isRightFadeout;
-    }
-};
-
 class TextContentModifier : public ContentModifier {
-    DECLARE_ACE_TYPE(TextContentModifier, ContentModifier);
+    DECLARE_ACE_TYPE(TextContentModifier, ContentModifier)
 
 public:
     explicit TextContentModifier(const std::optional<TextStyle>& textStyle, const WeakPtr<Pattern>& pattern = nullptr);
@@ -64,7 +47,6 @@ public:
     void SetAdaptMaxFontSize(const Dimension& value, const TextStyle& textStyle, bool isReset = false);
     void SetFontWeight(const FontWeight& value, bool isReset = false);
     void SetTextColor(const Color& value, bool isReset = false);
-    void SetSymbolColor(const std::vector<Color>& value, bool isReset = false);
     void SetTextShadow(const std::vector<Shadow>& value);
     void SetTextDecoration(const TextDecoration& value, bool isReset = false);
     void SetTextDecorationColor(const Color& value, bool isReset = false);
@@ -75,14 +57,12 @@ public:
 
     void ContentChange();
 
-    void ModifyTextStyle(TextStyle& textStyle, Color& textColor);
+    void ModifyTextStyle(TextStyle& textStyle);
 
-    void StartTextRace(const MarqueeOption& option);
+    void StartTextRace();
     void StopTextRace();
     void ResumeAnimation();
     void PauseAnimation();
-    void SetIsFocused(const bool isFocused);
-    void SetIsHovered(const bool isHovered);
 
     void SetPrintOffset(const OffsetF& paintOffset)
     {
@@ -110,27 +90,19 @@ public:
     {
         imageNodeList_ = imageNodeList;
     }
-    void TextColorModifier(const Color& value);
-    void ContentModifierDump();
-    void SetHybridRenderTypeIfNeeded(DrawingContext& drawingContext, const RefPtr<TextPattern>& textPattern,
-        const RefPtr<ParagraphManager>& pManager, RefPtr<FrameNode>& host);
-
 protected:
     OffsetF GetPaintOffset() const
     {
         return paintOffset_;
     }
-
 private:
     double NormalizeToPx(const Dimension& dimension);
-    void SetDefaultAnimatablePropertyValue(const TextStyle& textStyle, const RefPtr<FrameNode>& frameNode);
+    void SetDefaultAnimatablePropertyValue(const TextStyle& textStyle);
     void SetDefaultFontSize(const TextStyle& textStyle);
     void SetDefaultAdaptMinFontSize(const TextStyle& textStyle);
     void SetDefaultAdaptMaxFontSize(const TextStyle& textStyle);
     void SetDefaultFontWeight(const TextStyle& textStyle);
     void SetDefaultTextColor(const TextStyle& textStyle);
-    void SetDefaultSymbolColor(const TextStyle& textStyle);
-    LinearVector<LinearColor> Convert2VectorLinearColor(const std::vector<Color>& colorList);
     void SetDefaultTextShadow(const TextStyle& textStyle);
     void AddShadow(const Shadow& shadow);
     void AddDefaultShadow();
@@ -139,22 +111,12 @@ private:
     void SetDefaultLineHeight(const TextStyle& textStyle);
     float GetTextRacePercent();
     TextDirection GetTextRaceDirection() const;
-    TextDirection GetTextRaceDirectionByContent() const;
-    void ResetTextRacePercent();
-    bool SetTextRace(const MarqueeOption& option);
-    void ResumeTextRace(bool bounce);
-    void SetTextRaceAnimation(const AnimationOption& option);
-    void PauseTextRace();
-    bool AllowTextRace();
-    void DetermineTextRace();
 
     void ModifyFontSizeInTextStyle(TextStyle& textStyle);
     void ModifyAdaptMinFontSizeInTextStyle(TextStyle& textStyle);
     void ModifyAdaptMaxFontSizeInTextStyle(TextStyle& textStyle);
     void ModifyFontWeightInTextStyle(TextStyle& textStyle);
-    void ModifyTextColorInTextStyle(Color& textColor);
-    void ModifySymbolColorInTextStyle(TextStyle& textStyle);
-    std::vector<Color> Convert2VectorColor(const LinearVector<LinearColor>& colorList);
+    void ModifyTextColorInTextStyle(TextStyle& textStyle);
     void ModifyTextShadowsInTextStyle(TextStyle& textStyle);
     void ModifyDecorationInTextStyle(TextStyle& textStyle);
     void ModifyBaselineOffsetInTextStyle(TextStyle& textStyle);
@@ -165,34 +127,24 @@ private:
     void UpdateAdaptMaxFontSizeMeasureFlag(PropertyChangeFlag& flag);
     void UpdateFontWeightMeasureFlag(PropertyChangeFlag& flag);
     void UpdateTextColorMeasureFlag(PropertyChangeFlag& flag);
-    void UpdateSymbolColorMeasureFlag(PropertyChangeFlag& flag);
     void UpdateTextShadowMeasureFlag(PropertyChangeFlag& flag);
     void UpdateTextDecorationMeasureFlag(PropertyChangeFlag& flag);
     void UpdateBaselineOffsetMeasureFlag(PropertyChangeFlag& flag);
     void UpdateLineHeightMeasureFlag(PropertyChangeFlag& flag);
     bool CheckNeedMeasure(float finalValue, float lastValue, float currentValue);
 
-    void ChangeParagraphColor(const RefPtr<Paragraph>& paragraph);
     void DrawObscuration(DrawingContext& drawingContext);
     void UpdateImageNodeVisible(const VisibleType visible);
     void PaintImage(RSCanvas& canvas, float x, float y);
     bool DrawImage(const RefPtr<FrameNode>& imageNode, RSCanvas& canvas, float x, float y, const RectF& rect);
     void PaintCustomSpan(DrawingContext& drawingContext);
-    void DrawTextRacing(DrawingContext& drawingContext, const FadeoutInfo& info, RefPtr<ParagraphManager> pManager);
-    void DrawText(RSCanvas& canvas, const RefPtr<ParagraphManager>& pManager, const RefPtr<TextPattern>& textPattern);
-    void DrawContent(DrawingContext& drawingContext, const FadeoutInfo& info);
-    void DrawActualText(DrawingContext& drawingContext, const RefPtr<TextPattern>& textPattern,
-        const RefPtr<ParagraphManager>& pManager, const FadeoutInfo& fadeoutInfo);
-    void DrawFadeout(DrawingContext& drawingContext, const FadeoutInfo& info);
-    FadeoutInfo GetFadeoutInfo(DrawingContext& drawingContext);
-    float GetFadeoutPercent();
+    void DrawTextRacing(DrawingContext& drawingContext);
     void SetMarqueeState(MarqueeState state);
     bool CheckMarqueeState(MarqueeState state)
     {
         return marqueeState_ == state;
     }
-    bool IsMarqueeVisible() const;
-    void UpdateTextDecorationColorAlpha();
+    int32_t GetDuration() const;
 
     std::optional<Dimension> fontSize_;
     float lastFontSize_ = 0.0f;
@@ -213,11 +165,6 @@ private:
     std::optional<Color> textColor_;
     RefPtr<AnimatablePropertyColor> animatableTextColor_;
     Color lastTextColor_;
-    bool onlyTextColorAnimation_ = false;
-
-    std::optional<LinearVector<LinearColor>> symbolColors_;
-    RefPtr<AnimatablePropertyVectorLinearVector> animatableSymbolColor_;
-    LinearVector<LinearColor> lastSymbolColors_;
 
     struct ShadowProp {
         Shadow shadow; // final shadow configuration of the animation
@@ -245,7 +192,6 @@ private:
     float lastLineHeight_ = 0.0f;
 
     WeakPtr<Pattern> pattern_;
-
     RefPtr<AnimatablePropertyFloat> racePercentFloat_;
     std::shared_ptr<AnimationUtils::Animation> raceAnimation_;
 
@@ -262,18 +208,6 @@ private:
     std::vector<RectF> drawObscuredRects_;
     std::vector<WeakPtr<FrameNode>> imageNodeList_;
     MarqueeState marqueeState_ = MarqueeState::IDLE;
-
-    bool textRacing_ = false;
-    bool marqueeSet_ = false;
-    MarqueeOption marqueeOption_;
-    int32_t marqueeCount_ = 0;
-    int32_t marqueeAnimationId_ = 0;
-    bool marqueeFocused_ = false;
-    bool marqueeHovered_ = false;
-    int32_t marqueeDuration_ = 0;
-    float marqueeGradientPercent_ = 0.0f;
-    float marqueeRaceMaxPercent_ = 0.0f;
-
     ACE_DISALLOW_COPY_AND_MOVE(TextContentModifier);
 };
 } // namespace OHOS::Ace::NG

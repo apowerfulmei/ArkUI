@@ -15,10 +15,13 @@
 
 #include "core/components_ng/base/distributed_ui.h"
 
+#include <chrono>
 #include <unordered_map>
 
 #include "base/ressched/ressched_report.h"
+#include "core/components_ng/base/inspector_filter.h"
 #include "core/components_ng/pattern/common_view/common_view_pattern.h"
+#include "core/components_ng/pattern/custom/custom_node.h"
 #include "core/components_ng/pattern/divider/divider_pattern.h"
 #include "core/components_ng/pattern/flex/flex_layout_pattern.h"
 #include "core/components_ng/pattern/image/image_pattern.h"
@@ -39,8 +42,11 @@
 #include "core/components_ng/pattern/text_field/text_field_pattern.h"
 #include "core/components_ng/syntax/for_each_node.h"
 #include "core/components_ng/syntax/if_else_node.h"
+#include "core/components_ng/syntax/lazy_for_each_node.h"
 #include "core/components_ng/syntax/syntax_item.h"
-#include "core/components_ng/syntax/with_theme_node.h"
+#include "core/components_v2/inspector/inspector_constants.h"
+#include "core/pipeline/base/element_register.h"
+#include "core/pipeline_ng/pipeline_context.h"
 
 namespace OHOS::Ace::NG {
 namespace {
@@ -500,7 +506,7 @@ RefPtr<UINode> DistributedUI::RestoreNode(const std::unique_ptr<NodeObject>& nod
             { V2::TAB_BAR_ETS_TAG,
                 [](const std::string& type, int32_t nodeId) {
                     return FrameNode::GetOrCreateFrameNode(
-                        type, nodeId, []() { return AceType::MakeRefPtr<TabBarPattern>(); });
+                        type, nodeId, []() { return AceType::MakeRefPtr<TabBarPattern>(nullptr); });
                 } },
             { V2::SWIPER_ETS_TAG,
                 [](const std::string& type, int32_t nodeId) {
@@ -527,10 +533,6 @@ RefPtr<UINode> DistributedUI::RestoreNode(const std::unique_ptr<NodeObject>& nod
                 } },
             { V2::JS_IF_ELSE_ETS_TAG,
                 [](const std::string& type, int32_t nodeId) { return IfElseNode::GetOrCreateIfElseNode(nodeId); } },
-            { V2::JS_WITH_THEME_ETS_TAG,
-                [](const std::string& type, int32_t nodeId) {
-                    return WithThemeNode::GetOrCreateWithThemeNode(nodeId);
-                } },
             { V2::TEXTINPUT_ETS_TAG,
                 [](const std::string& type, int32_t nodeId) {
                     return FrameNode::GetOrCreateFrameNode(
@@ -601,7 +603,6 @@ void DistributedUI::AttachToTree(
             return;
         }
         parent->AddChild(uiNode);
-        parent->MarkDirtyNode(PROPERTY_UPDATE_BY_CHILD_REQUEST);
     }
 }
 
@@ -638,7 +639,6 @@ void DistributedUI::DelNode(const std::unique_ptr<NodeObject>& nodeObject)
         return;
     }
     parent->RemoveChild(sinkNode);
-    parent->MarkDirtyNode(PROPERTY_UPDATE_BY_CHILD_REQUEST);
 }
 
 void DistributedUI::UpdateUITreeInner(SerializeableObjectArray& nodeArray)

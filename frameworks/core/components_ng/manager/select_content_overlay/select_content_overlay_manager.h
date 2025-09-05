@@ -27,7 +27,6 @@
 #include "core/event/touch_event.h"
 
 namespace OHOS::Ace::NG {
-class SelectContentOverlayPattern;
 
 struct LegacyManagerCallbacks {
     std::function<void(bool, bool)> closeCallback;
@@ -87,27 +86,20 @@ public:
     RefPtr<Pattern> GetMenuPattern();
     RefPtr<Pattern> GetHandlePattern();
     RefPtr<FrameNode> GetHandleOverlayNode();
-    void NotifyUpdateToolBar(bool itemChanged, bool withoutAnimation = false);
+    void NotifyUpdateToolBar(bool itemChanged);
     void SwitchToHandleMode(HandleLevelMode mode, bool forceChange = true);
     float GetHandleDiameter();
-    void ConvertPointRelativeToNode(const RefPtr<FrameNode>& node, PointF& point, bool passThrough = false);
+    void ConvertPointRelativeToNode(const RefPtr<FrameNode>& node, PointF& point);
     bool IsTouchAtHandle(const PointF& localPoint, const PointF& globalPoint);
     void UpdateViewPort();
     void SetHandleCircleIsShow(bool isFirst, bool isShow);
     void SetIsHandleLineShow(bool isShow);
     void MarkHandleDirtyNode(PropertyChangeFlag flag);
-    bool IsHiddenHandle();
     void ConvertHandleRelativeToParent(SelectHandleInfo& info);
     void ConvertRectRelativeToParent(RectF& rect);
     void RevertRectRelativeToRoot(RectF& rect);
     OffsetF GetContainerModalOffset();
     bool IsStopBackPress() const;
-    bool IsRightClickSubWindowMenu();
-    bool IsSelectOverlaySubWindowMenu();
-    void FocusFirstFocusableChildInMenu();
-    void NotifyAccessibilityOwner();
-    void UpdateIsSingleHandle(bool isSingleHandle);
-    static bool IsPasteOption(const RefPtr<UINode>& node);
 
 private:
     void SetHolder(const RefPtr<SelectOverlayHolder>& holder);
@@ -141,13 +133,6 @@ private:
         const RefPtr<FrameNode>& root, const std::list<RefPtr<UINode>>& children);
     RefPtr<FrameNode> GetContainerModalRoot();
     void UpdateSelectOverlayInfoInternal(SelectOverlayInfo& overlayInfo);
-    std::string GetOwnerDebugInfo();
-    void MountMenuNodeToSubWindow(const RefPtr<FrameNode>& overlayNode, bool animation, NodeType nodeType);
-    bool IsEnableSubWindowMenu();
-    void UpdateRightClickSubWindowMenuProps(const RefPtr<FrameNode>& overlayNode);
-    std::function<void(std::string)> MakeMenuCallbackWithInfo
-        (OptionMenuActionId actionId, const SelectOverlayInfo& info);
-    void HandleDirtyViewPort(RefPtr<SelectContentOverlayPattern>& menuPattern);
 
     RefPtr<SelectOverlayHolder> selectOverlayHolder_;
     WeakPtr<FrameNode> selectOverlayNode_;
@@ -159,7 +144,6 @@ private:
     std::optional<HoldSelectionInfo> holdSelectionInfo_;
     LegacyManagerCallbacks legacyManagerCallbacks_;
     bool isIntercept_ = false;
-    int32_t containerId_ = -1;
 
     ACE_DISALLOW_COPY_AND_MOVE(SelectContentOverlayManager);
 };

@@ -22,7 +22,7 @@
 namespace OHOS::Ace::NG {
 class XComponentPattern;
 
-class ACE_FORCE_EXPORT XComponentControllerNG : public OHOS::Ace::InnerXComponentController {
+class XComponentControllerNG : public OHOS::Ace::InnerXComponentController {
 public:
     XComponentControllerNG() = default;
     ~XComponentControllerNG() override = default;
@@ -63,10 +63,6 @@ public:
     void SetSurfaceRotation(bool isLock) override;
 
     bool GetSurfaceRotation() override;
-
-    RSCanvas* LockCanvas() override;
-
-    void UnlockCanvasAndPost(RSCanvas* canvas) override;
 
 private:
     WeakPtr<XComponentPattern> pattern_;

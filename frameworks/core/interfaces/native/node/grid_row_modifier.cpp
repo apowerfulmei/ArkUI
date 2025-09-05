@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -14,9 +14,12 @@
  */
 #include "core/interfaces/native/node/grid_row_modifier.h"
 
+#include "core/pipeline/base/element_register.h"
+#include "core/components_ng/base/frame_node.h"
+#include "core/components_ng/base/view_abstract.h"
+#include "core/components/common/layout/constants.h"
+#include "core/components/common/properties/alignment.h"
 #include "core/components_ng/pattern/grid_row/grid_row_model_ng.h"
-#include "core/common/container.h"
-#include "core/components_v2/grid_layout/grid_container_utils.h"
 
 namespace OHOS::Ace::NG {
 constexpr int XS = 0;
@@ -141,14 +144,8 @@ void SetColumns(ArkUINodeHandle node, int32_t *containerSizeArray, int32_t size)
 {
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
-    if (frameNode->LessThanAPITargetVersion(PlatformVersion::VERSION_TWENTY)) {
-        auto parsedColumns = Referenced::MakeRefPtr<V2::GridContainerSize>(12);
-        InheritGridRowOption(parsedColumns, containerSizeArray, size, 0);
-        GridRowModelNG::SetColumns(frameNode, parsedColumns);
-        return;
-    }
-    auto parsedColumns = Referenced::MakeRefPtr<V2::GridContainerSize>();
-    V2::GridContainerUtils::InheritGridRowColumns(parsedColumns, containerSizeArray, size);
+    auto parsedColumns = Referenced::MakeRefPtr<V2::GridContainerSize>(12);
+    InheritGridRowOption(parsedColumns, containerSizeArray, size, 0);
     GridRowModelNG::SetColumns(frameNode, parsedColumns);
 }
 
@@ -156,12 +153,7 @@ void ResetColumns(ArkUINodeHandle node)
 {
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
-    if (frameNode->LessThanAPITargetVersion(PlatformVersion::VERSION_TWENTY)) {
-        auto parsedColumns = Referenced::MakeRefPtr<V2::GridContainerSize>(12);
-        GridRowModelNG::SetColumns(frameNode, parsedColumns);
-        return;
-    }
-    auto parsedColumns = Referenced::MakeRefPtr<V2::GridContainerSize>();
+    auto parsedColumns = Referenced::MakeRefPtr<V2::GridContainerSize>(12);
     GridRowModelNG::SetColumns(frameNode, parsedColumns);
 }
 
@@ -205,41 +197,16 @@ void ResetOnBreakpointChange(ArkUINodeHandle node)
 namespace NodeModifier {
 const ArkUIGridRowModifier* GetGridRowModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
-    static const ArkUIGridRowModifier modifier = {
-        .setAlignItems = SetAlignItems,
-        .resetAlignItems = ResetAlignItems,
-        .setDirection = SetDirection,
-        .resetDirection = ResetDirection,
-        .setBreakpoints = SetBreakpoints,
-        .resetBreakpoints = ResetBreakpoints,
-        .setColumns = SetColumns,
-        .resetColumns = ResetColumns,
-        .setGutter = SetGutter,
-        .resetGutter = ResetGutter,
-        .setOnBreakpointChange = SetOnBreakpointChange,
-        .resetOnBreakpointChange = ResetOnBreakpointChange,
-    };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
+    static const ArkUIGridRowModifier modifier = { SetAlignItems, ResetAlignItems, SetDirection, ResetDirection,
+        SetBreakpoints, ResetBreakpoints, SetColumns, ResetColumns, SetGutter, ResetGutter,
+        SetOnBreakpointChange, ResetOnBreakpointChange };
     return &modifier;
 }
 
 const CJUIGridRowModifier* GetCJUIGridRowModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
-    static const CJUIGridRowModifier modifier = {
-        .setAlignItems = SetAlignItems,
-        .resetAlignItems = ResetAlignItems,
-        .setDirection = SetDirection,
-        .resetDirection = ResetDirection,
-        .setBreakpoints = SetBreakpoints,
-        .resetBreakpoints = ResetBreakpoints,
-        .setColumns = SetColumns,
-        .resetColumns = ResetColumns,
-        .setGutter = SetGutter,
-        .resetGutter = ResetGutter,
-    };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
+    static const CJUIGridRowModifier modifier = { SetAlignItems, ResetAlignItems, SetDirection, ResetDirection,
+        SetBreakpoints, ResetBreakpoints, SetColumns, ResetColumns, SetGutter, ResetGutter };
     return &modifier;
 }
 }

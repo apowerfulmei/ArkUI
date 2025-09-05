@@ -44,13 +44,6 @@ public:
         return { FocusType::NODE, true, FocusStyleType::OUTER_BORDER };
     }
 
-    bool IsEnabledObscured() const override
-    {
-        return false;
-    }
-
-    void UpdatePropertyImpl(const std::string& key, RefPtr<PropertyValueBase> value) override;
-
 private:
     void LinkToAddress();
     void OnAttachToFrameNode() override;
@@ -68,7 +61,6 @@ private:
     bool OnKeyEvent(const KeyEvent& event);
 
     bool isLinked_ = false;
-    bool isTouchPreventDefault_ = false;
     RefPtr<TouchEventImpl> onTouchEvent_;
     RefPtr<InputEvent> onHoverEvent_;
     RefPtr<InputEvent> onMouseEvent_;

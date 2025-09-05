@@ -21,7 +21,6 @@
 
 #include "core/common/container.h"
 #include "core/components_ng/manager/focus/focus_view.h"
-#include "core/components_ng/pattern/overlay/overlay_manager.h"
 #include "core/components_ng/pattern/stack/stack_pattern.h"
 
 namespace OHOS::Ace::NG {
@@ -34,9 +33,7 @@ public:
 
     std::optional<RenderContext::ContextParam> GetContextParam() const override
     {
-        return RenderContext::ContextParam {
-            .type = RenderContext::ContextType::EXTERNAL,
-            .surfaceName = std::nullopt};
+        return RenderContext::ContextParam { RenderContext::ContextType::EXTERNAL };
     }
 
     sptr<Rosen::Session> GetSession();
@@ -50,7 +47,7 @@ public:
 
     void LostViewFocus() override;
 
-    void RegisterVisibleChangeCallback(int32_t nodeId, const std::function<void(bool)>& callback);
+    void RegisterVisibleChangeCallback(int32_t nodeId, std::function<void(bool)> callback);
     void UnRegisterVisibleChangeCallback(int32_t nodeId);
     void HandleVisibleChangeCallback(bool visible);
 
@@ -90,8 +87,6 @@ private:
     void PostCheckContextTransparentTask();
     void PostFaultInjectTask();
     void SetWindowScenePosition();
-    void InsertSurfaceNodeId(uint64_t nodeId);
-    void ClearSurfaceNodeId(uint64_t nodeId);
 
     int32_t instanceId_ = Container::CurrentId();
 

@@ -14,6 +14,8 @@
  */
 
 #include "bridge/declarative_frontend/jsview/models/circle_model_impl.h"
+#include "base/memory/referenced.h"
+#include "bridge/declarative_frontend/jsview/js_shape_abstract.h"
 #include "bridge/declarative_frontend/view_stack_processor.h"
 #include "core/components/shape/shape_component.h"
 

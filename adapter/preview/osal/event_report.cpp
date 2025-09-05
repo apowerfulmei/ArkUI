@@ -16,9 +16,6 @@
 #include "base/log/event_report.h"
 
 namespace OHOS::Ace {
-FRCSceneFpsInfo EventReport::curFRCSceneFpsInfo_;
-int64_t EventReport::calTime_ = 0;
-int32_t EventReport::calFrameRate_ = 0;
 
 void EventReport::SendEvent(const EventInfo& eventInfo) {}
 
@@ -42,14 +39,12 @@ void EventReport::SendInternalException(InternalExcepType type) {}
 
 void EventReport::SendAccessibilityException(AccessibilityExcepType type) {}
 
-void EventReport::ReportAccessibilityFailEvent(const std::string& actionName) {}
-
 void EventReport::SendFormException(FormExcepType type) {}
 
 void EventReport::JsEventReport(int32_t eventType, const std::string& jsonStr) {}
 
 void EventReport::JsErrReport(const std::string& packageName,
-    const std::string& reason, const std::string& summary) {}
+    const std::string& reason, const std::string& summary, const std::string& uniqueId) {}
 
 void EventReport::ANRRawReport(RawEventType type, int32_t uid, const std::string& packageName,
                                const std::string& processName, const std::string& msg) {}
@@ -61,6 +56,16 @@ void EventReport::JankFrameReport(int64_t startTime, int64_t duration, const std
                                   const std::string& pageUrl, uint32_t jankStatusVersion) {}
 
 void EventReport::SendEventInner(const EventInfo& eventInfo) {}
+
+void EventReport::ReportEventComplete(DataBase& data) {}
+
+void EventReport::ReportEventJankFrame(DataBase& data) {}
+
+void EventReport::ReportJankFrameApp(JankInfo& info) {}
+
+void EventReport::ReportJankFrameFiltered(JankInfo& info) {}
+
+void EventReport::ReportJankFrameUnFiltered(JankInfo& info) {}
 
 void EventReport::ReportDoubleClickTitle(int32_t stateChange) {}
 
@@ -75,19 +80,10 @@ void EventReport::ReportFunctionTimeout(const std::string& functionName, int64_t
 void EventReport::ReportHoverStatusChange(int32_t foldStatus, int32_t time, bool isHoverMode,
                                           int32_t appRotation, int32_t windowMode) {}
 
-void EventReport::ReportNonManualPostCardActionInfo(const std::string& formName, const std::string& bundleName,
-    const std::string& abilityName, const std::string& moduleName, int32_t dimension)
-{}
-
-void EventReport::ReportUiExtensionTransparentEvent(const std::string& pageUrl, const std::string& bundleName,
-    const std::string& moduleName)
-{}
+void EventReport::ReportPageShowMsg(const std::string& pageUrl, const std::string& bundleName,
+                                    const std::string& pageName) {}
 
 void EventReport::ReportDragInfo(const DragInfo& dragInfo) {}
-
-void EventReport::ReportScrollableErrorEvent(
-    const std::string& nodeType, ScrollableErrorType errorType, const std::string& subErrorType)
-{}
 
 void EventReport::ReportRichEditorInfo(const RichEditorInfo& richEditorInfo) {}
 
@@ -97,22 +93,4 @@ void EventReport::ReportTextFieldErrorEvent(int32_t frameNodeId, int32_t depth, 
 void EventReport::ReportClipboardFailEvent(const std::string& errorType)
 {}
 
-void EventReport::ReportPageSlidInfo(NG::SlidInfo &slidInfo)
-{}
-
-void EventReport::SendDiffFrameRatesDuring(const std::string& scene, const FRCSceneFpsInfo& curFRCSceneFpsInfo_)
-{}
-
-void EventReport::FrameRateDurationsStatistics(int32_t expectedRate, const std::string& scene, NG::SceneStatus status)
-{}
-
-void EventReport::AddFrameRateDuration(int32_t frameRate, int64_t duration)
-{}
-
-void EventReport::StopFormModifyTimeoutReportTimer(int64_t formId)
-{}
-
-void EventReport::StartFormModifyTimeoutReportTimer(int64_t formId, const std::string &bundleName,
-    const std::string &formName)
-{}
 } // namespace OHOS::Ace

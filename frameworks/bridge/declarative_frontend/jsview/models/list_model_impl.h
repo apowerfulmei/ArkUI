@@ -25,7 +25,7 @@ public:
     ListModelImpl() = default;
     ~ListModelImpl() override = default;
 
-    void Create(bool isCreateArc = false) override;
+    void Create() override;
     void SetSpace(const Dimension& space) override;
     void SetInitialIndex(int32_t initialIndex) override;
     RefPtr<ScrollControllerBase> CreateScrollController() override;
@@ -34,7 +34,7 @@ public:
     void SetScrollBar(DisplayMode scrollBar) override;
     void SetScrollBarColor(const std::string& /* value */) override {};
     void SetScrollBarWidth(const std::string& /* value */) override {};
-    void SetEdgeEffect(EdgeEffect edgeEffect, bool alwaysEnabled, EffectEdge effectEdge) override;
+    void SetEdgeEffect(EdgeEffect edgeEffect, bool alwaysEnabled) override;
     void SetEditMode(bool editMode) override;
     void SetDivider(const V2::ItemDivider& divider) override;
     void SetChainAnimation(bool enableChainAnimation) override;
@@ -55,10 +55,7 @@ public:
     void SetNestedScroll(const NestedScrollOptions& nestedOpt) override {};
     void SetScrollEnabled(bool scrollEnabled) override {};
     void SetFriction(double friction) override {};
-    void SetFocusWrapMode(FocusWrapMode focusWrapMode) override {};
     void SetMaintainVisibleContentPosition(bool enabled) override {};
-    void SetStackFromEnd(bool enabled) override {};
-    void SetSyncLoad(bool enabled) override {};
     void SetOnScroll(OnScrollEvent&& onScroll) override;
     void SetOnScrollBegin(OnScrollBeginEvent&& onScrollBegin) override;
     void SetOnScrollFrameBegin(OnScrollFrameBeginEvent&& onScrollFrameBegin) override;
@@ -75,7 +72,6 @@ public:
     void SetOnItemDragLeave(OnItemDragLeaveFunc&& onItemDragLeave) override;
     void SetOnItemDragMove(OnItemDragMoveFunc&& onItemDragMove) override;
     void SetOnItemDrop(OnItemDropFunc&& onItemDrop) override;
-    void SetDividerColorByUser(bool isByUser) override {};
 
     DisplayMode GetDisplayMode() const override
     {

@@ -31,7 +31,7 @@ using ChangeEvent = std::function<void(const BaseEventInfo*)>;
 using HeightChangeEvent = std::function<void(const float)>;
 
 class SlidingPanelEventHub : public EventHub {
-    DECLARE_ACE_TYPE(SlidingPanelEventHub, EventHub);
+    DECLARE_ACE_TYPE(SlidingPanelEventHub, EventHub)
 
 public:
     SlidingPanelEventHub() = default;
@@ -63,10 +63,8 @@ public:
         Recorder::EventParamsBuilder builder;
         auto host = GetFrameNode();
         if (host) {
-            builder.SetId(host->GetInspectorIdValue(""))
-                .SetType(host->GetHostTag())
-                .SetHost(host)
-                .SetDescription(host->GetAutoEventParamValue(""));
+            auto id = host->GetInspectorIdValue("");
+            builder.SetId(id).SetType(host->GetHostTag()).SetDescription(host->GetAutoEventParamValue(""));
         }
         std::string modeDesc;
         if (mode == PanelMode::MINI) {

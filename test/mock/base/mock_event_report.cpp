@@ -13,16 +13,9 @@
  * limitations under the License.
  */
 
-#include "mock_event_report.h"
-
 #include "base/log/event_report.h"
 
 namespace OHOS::Ace {
-DragInfo MockEventReport::dragInfo_;
-FRCSceneFpsInfo EventReport::curFRCSceneFpsInfo_;
-int64_t EventReport::calTime_ = 0;
-int32_t EventReport::calFrameRate_ = 0;
-
 void EventReport::SendEvent(const EventInfo& eventInfo) {}
 
 void EventReport::SendJsCardRenderTimeEvent(
@@ -49,13 +42,13 @@ void EventReport::SendInternalException(InternalExcepType type) {}
 
 void EventReport::SendAccessibilityException(AccessibilityExcepType type) {}
 
-void EventReport::ReportAccessibilityFailEvent(const std::string& actionName) {}
-
 void EventReport::SendFormException(FormExcepType type) {}
 
 void EventReport::JsEventReport(int32_t eventType, const std::string& jsonStr) {}
 
-void EventReport::JsErrReport(const std::string& packageName, const std::string& reason, const std::string& summary) {}
+void EventReport::JsErrReport(
+    const std::string& packageName, const std::string& reason, const std::string& summary, const std::string& uniqueId)
+{}
 
 void EventReport::ANRRawReport(RawEventType type, int32_t uid, const std::string& packageName,
     const std::string& processName, const std::string& msg)
@@ -78,22 +71,9 @@ void EventReport::ReportPageDepthOverflow(const std::string& pageUrl, int32_t de
 void EventReport::ReportFunctionTimeout(const std::string& functionName, int64_t time, int32_t threshold) {}
 
 void EventReport::ReportHoverStatusChange(
-    int32_t foldStatus, int32_t time, bool isHoverMode, int32_t appRotation, int32_t windowMode)
-{}
+    int32_t foldStatus, int32_t time, bool isHoverMode, int32_t appRotation, int32_t windowMode) {}
 
-void EventReport::ReportNonManualPostCardActionInfo(const std::string& formName, const std::string& bundleName,
-    const std::string& abilityName, const std::string& moduleName, int32_t dimension)
-{}
-
-void EventReport::ReportDragInfo(const DragInfo& dragInfo)
-{
-    MockEventReport::dragInfo_ = dragInfo;
-    return;
-}
-
-void EventReport::ReportScrollableErrorEvent(
-    const std::string& nodeType, ScrollableErrorType errorType, const std::string& subErrorType)
-{}
+void EventReport::ReportDragInfo(const DragInfo& dragInfo) {}
 
 void EventReport::ReportRichEditorInfo(const RichEditorInfo& richEditorInfo) {}
 
@@ -101,24 +81,5 @@ void EventReport::ReportTextFieldErrorEvent(int32_t frameNodeId, int32_t depth, 
 {}
 
 void EventReport::ReportClipboardFailEvent(const std::string& errorType)
-{}
-
-void EventReport::ReportPageSlidInfo(NG::SlidInfo &slidinfo)
-{}
-
-void EventReport::SendDiffFrameRatesDuring(const std::string& scene, const FRCSceneFpsInfo& curFRCSceneFpsInfo_)
-{}
-
-void EventReport::FrameRateDurationsStatistics(int32_t expectedRate, const std::string& scene, NG::SceneStatus status)
-{}
-
-void EventReport::AddFrameRateDuration(int32_t frameRate, int64_t duration)
-{}
-
-void EventReport::StopFormModifyTimeoutReportTimer(int64_t formId)
-{}
-
-void EventReport::StartFormModifyTimeoutReportTimer(int64_t formId, const std::string &bundleName,
-    const std::string &formName)
 {}
 } // namespace OHOS::Ace

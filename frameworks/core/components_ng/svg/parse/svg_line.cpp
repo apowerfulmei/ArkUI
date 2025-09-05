@@ -15,7 +15,8 @@
 
 #include "frameworks/core/components_ng/svg/parse/svg_line.h"
 
-#include "frameworks/core/components_ng/svg/parse/svg_constants.h"
+#include "base/utils/utils.h"
+#include "frameworks/core/components/declaration/svg/svg_line_declaration.h"
 
 namespace OHOS::Ace::NG {
 
@@ -29,6 +30,19 @@ RefPtr<SvgNode> SvgLine::Create()
     return AceType::MakeRefPtr<SvgLine>();
 }
 
+#ifndef USE_ROSEN_DRAWING
+SkPath SvgLine::AsPath(const Size& viewPort) const
+{
+    SkPath path;
+    auto declaration = AceType::DynamicCast<SvgLineDeclaration>(declaration_);
+    CHECK_NULL_RETURN(declaration, path);
+    path.moveTo(ConvertDimensionToPx(declaration->GetX1(), viewPort, SvgLengthType::HORIZONTAL),
+        ConvertDimensionToPx(declaration->GetY1(), viewPort, SvgLengthType::VERTICAL));
+    path.lineTo(ConvertDimensionToPx(declaration->GetX2(), viewPort, SvgLengthType::HORIZONTAL),
+        ConvertDimensionToPx(declaration->GetY2(), viewPort, SvgLengthType::VERTICAL));
+    return path;
+}
+#else
 RSRecordingPath SvgLine::AsPath(const Size& viewPort) const
 {
     RSRecordingPath path;
@@ -38,44 +52,24 @@ RSRecordingPath SvgLine::AsPath(const Size& viewPort) const
         ConvertDimensionToPx(lineAttr_.y2, viewPort, SvgLengthType::VERTICAL));
     return path;
 }
-
-RSRecordingPath SvgLine::AsPath(const SvgLengthScaleRule& lengthRule)
-{
-    /* re-generate the Path for pathTransform(true). AsPath come from clip-path */
-    if (path_.has_value() && lengthRule_ == lengthRule && !lengthRule.GetPathTransform()) {
-        return path_.value();
-    }
-    RSRecordingPath path;
-    auto x1 = GetMeasuredPosition(lineAttr_.x1, lengthRule, SvgLengthType::HORIZONTAL);
-    auto y1 = GetMeasuredPosition(lineAttr_.y1, lengthRule, SvgLengthType::VERTICAL);
-    auto x2 = GetMeasuredPosition(lineAttr_.x2, lengthRule, SvgLengthType::HORIZONTAL);
-    auto y2 = GetMeasuredPosition(lineAttr_.y2, lengthRule, SvgLengthType::VERTICAL);
-
-    path.MoveTo(x1, y1);
-    path.LineTo(x2, y2);
-    /* Apply path transform for clip-path only */
-    if (lengthRule.GetPathTransform()) {
-        ApplyTransform(path);
-    }
-    return path;
-}
+#endif
 
 bool SvgLine::ParseAndSetSpecializedAttr(const std::string& name, const std::string& value)
 {
     static const LinearMapNode<void (*)(const std::string&, SvgLineAttribute&)> attrs[] = {
-        { SVG_X1,
+        { DOM_SVG_X1,
             [](const std::string& val, SvgLineAttribute& attr) {
                 attr.x1 = SvgAttributesParser::ParseDimension(val);
             } },
-        { SVG_X2,
+        { DOM_SVG_X2,
             [](const std::string& val, SvgLineAttribute& attr) {
                 attr.x2 = SvgAttributesParser::ParseDimension(val);
             } },
-        { SVG_Y1,
+        { DOM_SVG_Y1,
             [](const std::string& val, SvgLineAttribute& attr) {
                 attr.y1 = SvgAttributesParser::ParseDimension(val);
             } },
-        { SVG_Y2,
+        { DOM_SVG_Y2,
             [](const std::string& val, SvgLineAttribute& attr) {
                 attr.y2 = SvgAttributesParser::ParseDimension(val);
             } },

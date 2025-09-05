@@ -18,6 +18,7 @@
 #include "core/components_ng/gestures/recognizers/click_recognizer.h"
 
 namespace OHOS::Ace::NG {
+
 RefPtr<NGGestureRecognizer> TapGesture::CreateRecognizer()
 {
     auto clickRecognizer = AceType::MakeRefPtr<ClickRecognizer>(
@@ -31,9 +32,6 @@ RefPtr<NGGestureRecognizer> TapGesture::CreateRecognizer()
     clickRecognizer->SetPriority(priority_);
     clickRecognizer->SetPriorityMask(gestureMask_);
     clickRecognizer->SetGestureInfo(gestureInfo_);
-    if (gestureInfo_) {
-        gestureInfo_->SetDisposeTag(false);
-    }
     clickRecognizer->SetUserData(userData_);
     return clickRecognizer;
 }

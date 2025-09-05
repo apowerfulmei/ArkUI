@@ -15,9 +15,15 @@
 
 #include "core/components_ng/pattern/menu/wrapper/menu_wrapper_layout_algorithm.h"
 
+#include "base/geometry/axis.h"
+#include "base/utils/utils.h"
+#include "core/components/declaration/common/declaration_constants.h"
 #include "core/components_ng/pattern/menu/menu_layout_property.h"
+#include "core/components_ng/pattern/menu/menu_theme.h"
 #include "core/components_ng/pattern/menu/wrapper/menu_wrapper_pattern.h"
+#include "core/components_ng/property/measure_property.h"
 #include "core/components_ng/property/measure_utils.h"
+#include "core/pipeline/pipeline_base.h"
 
 namespace OHOS::Ace::NG {
 void CheckLayoutConstraint(LayoutConstraintF& constraint, const RefPtr<FrameNode>& menuWrapper)
@@ -28,9 +34,10 @@ void CheckLayoutConstraint(LayoutConstraintF& constraint, const RefPtr<FrameNode
     menuWrapperPattern->SetChildLayoutConstraint(constraint);
 
     CHECK_NULL_VOID(menuWrapperPattern->GetIsFirstShow());
-    auto pipeline = menuWrapper->GetContextRefPtr();
-    auto currentId = pipeline ? pipeline->GetInstanceId() : Container::CurrentId();
-    auto subWindow = SubwindowManager::GetInstance()->GetSubwindowByType(currentId, SubwindowType::TYPE_MENU);
+    auto currentId = Container::CurrentId();
+    auto parentContainerId =
+        currentId >= MIN_SUBCONTAINER_ID ? SubwindowManager::GetInstance()->GetParentContainerId(currentId) : currentId;
+    auto subWindow = SubwindowManager::GetInstance()->GetSubwindow(parentContainerId);
     CHECK_NULL_VOID(subWindow);
     auto subwindowRect = subWindow->GetRect();
     // after the size of subwindow is changed, flush layout before updating windowSize to root node will result in an
@@ -55,11 +62,9 @@ void MenuWrapperLayoutAlgorithm::Measure(LayoutWrapper* layoutWrapper)
     auto constraint = layoutProperty->GetLayoutConstraint();
     auto idealSize = CreateIdealSize(
         constraint.value(), Axis::FREE, layoutProperty->GetMeasureType(MeasureType::MATCH_PARENT), true);
-    auto layoutWrapperGeometryNode = layoutWrapper->GetGeometryNode();
-    CHECK_NULL_VOID(layoutWrapperGeometryNode);
-    layoutWrapperGeometryNode->SetFrameSize(idealSize);
+    layoutWrapper->GetGeometryNode()->SetFrameSize(idealSize);
 
-    auto layoutConstraint = layoutProperty->CreateChildConstraint();
+    auto layoutConstraint = layoutWrapper->GetLayoutProperty()->CreateChildConstraint();
     // first layout after created subwindow, constraint is zero
     CheckLayoutConstraint(layoutConstraint, layoutWrapper->GetHostNode());
     for (const auto& child : layoutWrapper->GetAllChildrenWithBuild()) {

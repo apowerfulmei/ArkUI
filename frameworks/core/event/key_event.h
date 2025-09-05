@@ -27,18 +27,6 @@ class KeyEvent;
 }
 
 namespace OHOS::Ace {
-enum class ModifierKeyName {
-    /** Ctrl. */
-    ModifierKeyCtrl = 1 << 0,
-    /** Shift. */
-    ModifierKeyShift = 1 << 1,
-    /** Alt. */
-    ModifierKeyAlt = 1 << 2,
-    /** Fn. */
-    ModifierKeyFn = 1 << 3,
-};
-
-uint64_t CalculateModifierKeyState(const std::vector<OHOS::Ace::KeyCode>& status);
 
 enum class KeyCode : int32_t {
     KEY_UNKNOWN = -1,
@@ -533,7 +521,7 @@ struct KeyEvent final : public NonPointerEvent {
     }
     bool IsShiftWith(KeyCode expectCodes) const
     {
-        return (HasKey(KeyCode::KEY_SHIFT_LEFT) || HasKey(KeyCode::KEY_SHIFT_RIGHT)) && HasKey(expectCodes);
+        return IsKey({ KeyCode::KEY_SHIFT_LEFT, expectCodes }) || IsKey({ KeyCode::KEY_SHIFT_RIGHT, expectCodes });
     }
     bool IsExactlyShiftWith(KeyCode expectCodes) const
     {
@@ -566,10 +554,6 @@ struct KeyEvent final : public NonPointerEvent {
     {
         return KeyCode::KEY_ESCAPE == code;
     }
-    bool IsPreIme() const
-    {
-        return isPreIme;
-    }
 
     std::string ConvertInputCodeToString() const;
     std::string ConvertCodeToString() const;
@@ -588,7 +572,6 @@ struct KeyEvent final : public NonPointerEvent {
     bool isPreIme = false;
     bool isRedispatch = false;
     bool numLock = false;
-    bool scrollLock = false;
     uint32_t unicode = 0;
     std::vector<uint8_t> enhanceData;
     std::shared_ptr<MMI::KeyEvent> rawKeyEvent;
@@ -601,13 +584,10 @@ struct KeyEvent final : public NonPointerEvent {
         ss << "pressedCodes=[";
         std::for_each(pressedCodes.begin(), pressedCodes.end(),
             [&ss](const KeyCode& code) { ss << static_cast<int32_t>(code) << ", "; });
-        ss << "]" << ", ";
-        ss << "isPreIme = " << isPreIme;
+        ss << "]";
         return ss.str();
     }
     std::string msg = "";
-    std::optional<bool> activeMark;
-    int32_t targetDisplayId = 0;
 };
 
 class ACE_EXPORT KeyEventInfo : public BaseEventInfo {
@@ -617,7 +597,7 @@ public:
     explicit KeyEventInfo(const KeyEvent& event) : BaseEventInfo("keyEvent")
     {
         keyCode_ = event.code;
-        keyText_ = event.key;
+        keyText_ = event.key.c_str();
         keyType_ = event.action;
         keySource_ = event.sourceType;
         keyIntention_ = event.keyIntention;
@@ -627,10 +607,6 @@ public:
         SetPressedKeyCodes(event.pressedCodes);
         keyMsg_ = event.msg;
         unicode_ = event.unicode;
-        numLock_ = event.numLock;
-        capsLock_ = event.enableCapsLock;
-        scrollLock_ = event.scrollLock;
-        targetDisplayId_ = event.targetDisplayId;
     };
     ~KeyEventInfo() override = default;
 
@@ -642,7 +618,7 @@ public:
     {
         return keyCode_;
     }
-    const std::string& GetKeyText() const
+    const char* GetKeyText() const
     {
         return keyText_;
     }
@@ -669,35 +645,17 @@ public:
         return unicode_;
     }
 
-    bool GetNumLock() const
-    {
-        return numLock_;
-    }
-
-    bool GetCapsLock() const
-    {
-        return capsLock_;
-    }
-
-    bool GetScrollLock() const
-    {
-        return scrollLock_;
-    }
-
     void ParseKeyEvent(KeyEvent& keyEvent);
 
 private:
     KeyCode keyCode_ = KeyCode::KEY_UNKNOWN;
-    std::string keyText_ = "";
+    const char* keyText_ = "";
     KeyAction keyType_ = KeyAction::UNKNOWN;
     int32_t metaKey_ = 0;
     SourceType keySource_ = SourceType::NONE;
     KeyIntention keyIntention_ = KeyIntention::INTENTION_UNKNOWN;
     std::string keyMsg_ = "";
     uint32_t unicode_ = 0;
-    bool numLock_= false;
-    bool capsLock_ = false;
-    bool scrollLock_ = false;
 };
 
 enum class BlurReason : int32_t {

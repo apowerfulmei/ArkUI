@@ -19,7 +19,6 @@ class stateMgmtDFX {
   private static readonly DUMP_MAX_PROPERTY_COUNT: number = 50;
   private static readonly DUMP_MAX_LENGTH: number = 10;
   private static readonly DUMP_LAST_LENGTH: number = 3;
-  public static enableDebug: boolean = false;
 
   public static getObservedPropertyInfo<T>(observedProp: ObservedPropertyAbstractPU<T>, isProfiler: boolean,
     changedTrackPropertyName?: string): ObservedPropertyInfo<T> {
@@ -35,141 +34,6 @@ class stateMgmtDFX {
       length: stateMgmtDFX.getRawValueLength(observedProp),
       syncPeers: observedProp.dumpSyncPeers(isProfiler, changedTrackPropertyName)
     };
-  }
-
-  public static reportStateInfoToProfilerV2(target: object, attrName: string, changeIdSet: Set<number>): void {
-    const stateInfo: DumpInfo = new DumpInfo();
-    try {
-      stateMgmtDFX.HandlerStateInfoToProfilerV2(target, attrName, changeIdSet, stateInfo);
-      ViewStackProcessor.sendStateInfo(JSON.stringify(stateInfo));
-    } catch (error) {
-      stateMgmtConsole.applicationError(`An ${error.message} occurred when reporting ${target.constructor.name} information`);
-    }
-  }
-
-  private static HandlerStateInfoToProfilerV2(target: object, attrName: string, changeIdSet: Set<number>, stateInfo: DumpInfo): void {
-    const decoratorInfo: string = ObserveV2.getObserve().getDecoratorInfo(target, attrName);
-    let val;
-    let id;
-    // get state value and id
-    if (Array.isArray(target) || target instanceof Set || target instanceof Map || target instanceof Date) {
-      val = target;
-      id = Utils.getArkTsUtil().getHash(target)?.toString();
-    }
-    if ((target instanceof ViewV2) || ObserveV2.IsObservedObjectV2(target)) {
-      val = Reflect.get(target, attrName);
-      id = Utils.getArkTsUtil().getHash(target)?.toString() + attrName;
-    }
-    // handle MakeObserved
-    if (target[RefInfo.MAKE_OBSERVED_PROXY]) {
-      let raw = UIUtilsImpl.instance().getTarget(target[RefInfo.MAKE_OBSERVED_PROXY]);
-      if (Array.isArray(raw) || raw instanceof Set || raw instanceof Map || raw instanceof Date ||
-        SendableType.isArray(raw) || SendableType.isMap(raw) || SendableType.isSet(raw)) {
-        val = raw;
-        id = Utils.getArkTsUtil().getHash(target)?.toString();
-      } else {
-        val = Reflect.get(raw, attrName);
-        id = Utils.getArkTsUtil().getHash(raw)?.toString() + attrName;
-      }
-    }
-
-    // dump dependent element id
-    const dependentElementIds: Array<ElementType | string> = Array<ElementType | string>();
-    changeIdSet.forEach((id: number) => {
-      if (id < ComputedV2.MIN_COMPUTED_ID) {
-        dependentElementIds.push(ObserveV2.getObserve().getElementInfoById(id, true));
-      }
-    });
-
-    // dump owned view or class
-    let ownedTarget: TargetInfo;
-    if (target instanceof ViewV2) {
-      ownedTarget = { componentName: target.constructor.name, id: target.id__() };
-    } else if (target[RefInfo.MAKE_OBSERVED_PROXY]) {
-      let raw = UIUtilsImpl.instance().getTarget(target[RefInfo.MAKE_OBSERVED_PROXY]);
-      ownedTarget = { className: raw.constructor.name, id: Utils.getArkTsUtil().getHash(raw) };
-    } else {
-      ownedTarget = { className: target.constructor.name, id: Utils.getArkTsUtil().getHash(target) };
-    }
-
-    stateInfo.observedPropertiesInfo.push({
-      decorator: decoratorInfo, propertyName: attrName, idV2: id,
-      value: stateMgmtDFX.getRawValue(val), inRenderingElementId: ObserveV2.getCurrentRecordedId(),
-      dependentElementIds: { mode: 'v2', propertyDependencies: dependentElementIds }, owningView: ownedTarget
-    });
-  }
-
-  /**
-   * Dump decorated variable for v1 and v2
-   *
-   * @param view viewPU or ViewV2
-   * @param dumpInfo contains state variable decorator, propertyName, etc.
-   */
-  public static getDecoratedVariableInfo(view: PUV2ViewBase, dumpInfo: DumpInfo): void {
-    if (view instanceof ViewV2) {
-      stateMgmtDFX.dumpV2VariableInfo(view, dumpInfo);
-    } else if (view instanceof ViewPU) {
-      stateMgmtDFX.dumpV1VariableInfo(view, dumpInfo);
-    }
-  }
-
-  private static dumpV1VariableInfo(view: ViewPU, dumpInfo: DumpInfo): void {
-    Object.getOwnPropertyNames(view)
-      .filter((varName: string) => varName.startsWith('__') && !varName.startsWith(ObserveV2.OB_PREFIX))
-      .forEach((varName) => {
-        const prop: any = Reflect.get(view, varName);
-        if (prop && typeof prop === 'object' && 'debugInfoDecorator' in prop) {
-          const observedProp: ObservedPropertyAbstractPU<any> = prop as ObservedPropertyAbstractPU<any>;
-          dumpInfo.observedPropertiesInfo.push(stateMgmtDFX.getObservedPropertyInfo(observedProp, false));
-        }
-      });
-  }
-
-  private static dumpV2VariableInfo(view: ViewV2, dumpInfo: DumpInfo): void {
-    const propertyVariableNames: [string, any][] = view.__getDecoratorPropertyName__V2View__Internal();
-    // no decorated variables, return view info directly
-    if (propertyVariableNames.length === 0) {
-      return;
-    }
-    propertyVariableNames
-      .filter((entry) => !entry[0].startsWith(ProviderConsumerUtilV2.ALIAS_PREFIX))
-      .forEach((entry) => {
-        dumpInfo.observedPropertiesInfo.push(stateMgmtDFX.dumpSingleV2VariableInfo(view, entry));
-      });
-  }
-
-  private static dumpSingleV2VariableInfo<T>(view: ViewV2, entry: [string, any]): ObservedPropertyInfo<T> {
-    const varName = entry[0];
-    const deco: any = entry[1];
-    const decorators: string = ObserveV2.getObserve().parseDecorator(deco);
-    const prop: any = Reflect.get(view, varName);
-    let dependentElmIds: Set<number> | undefined = undefined;
-    if (view[ObserveV2.SYMBOL_REFS]) {
-      dependentElmIds = view[ObserveV2.SYMBOL_REFS][varName];
-    }
-
-    return {
-      decorator: decorators, propertyName: varName, id: -1, value: stateMgmtDFX.getRawValue(prop),
-      dependentElementIds:
-        { mode: 'V2', trackPropertiesDependencies: [], propertyDependencies: stateMgmtDFX.dumpDepenetElementV2(dependentElmIds) }
-      , syncPeers: []
-    };
-  }
-
-  private static dumpDepenetElementV2(dependentElmIds: Set<number> | undefined): Array<ElementType | string> {
-    const dumpElementIds: Array<ElementType | string> = [];
-    dependentElmIds?.forEach((elmtId: number) => {
-      if (elmtId < ComputedV2.MIN_COMPUTED_ID) {
-        dumpElementIds.push(ObserveV2.getObserve().getElementInfoById(elmtId));
-      } else if (elmtId < MonitorV2.MIN_WATCH_ID) {
-        dumpElementIds.push(`@Computed ${ObserveV2.getObserve().getComputedInfoById(elmtId)}`);
-      } else if (elmtId < PersistenceV2Impl.MIN_PERSISTENCE_ID) {
-        dumpElementIds.push(`@Monitor ${ObserveV2.getObserve().getMonitorInfoById(elmtId)}`);
-      } else {
-        dumpElementIds.push(`PersistenceV2[${elmtId}]`);
-      }
-    });
-    return dumpElementIds;
   }
 
   private static getType(item: RawValue): string {
@@ -196,7 +60,7 @@ class stateMgmtDFX {
     return dumpArr.map(item => (item && typeof item === 'object') ? this.getType(item) : item);
   }
 
-  private static dumpMap(map: Map<RawValue, RawValue> | SendableMap<RawValue, RawValue>): Array<DumpBuildInType> {
+  private static dumpMap(map: Map<RawValue, RawValue>): Array<DumpBuildInType> {
     let dumpKey = this.dumpItems(Array.from(map.keys()));
     let dumpValue = this.dumpItems(Array.from(map.values()));
     return dumpKey.map((item: any, index: number) => [item, dumpValue[index]]);
@@ -222,38 +86,33 @@ class stateMgmtDFX {
     return tempObj;
   }
 
-  private static getRawValue<T>(prop: T | ObservedPropertyAbstractPU<T>): DumpObjectType | Array<DumpBuildInType> | T | string {
-    let rawValue: T;
-    if (prop instanceof ObservedPropertyAbstract) {
-      let wrappedValue: T = prop.getUnmonitored();
-      rawValue = ObservedObject.GetRawObject(wrappedValue);
-    } else {
-      rawValue = ObserveV2.IsProxiedObservedV2(prop) ? prop[ObserveV2.SYMBOL_PROXY_GET_TARGET] : prop;
+  private static getRawValue<T>(observedProp: ObservedPropertyAbstractPU<T>): DumpObjectType | Array<DumpBuildInType> | T | string {
+    let wrappedValue: T = observedProp.getUnmonitored();
+    if (!wrappedValue || typeof wrappedValue !== 'object') {
+      return wrappedValue;
     }
-    if (!rawValue || typeof rawValue !== 'object') {
-      return rawValue;
-    }
-    if (rawValue instanceof Map || SendableType.isMap(rawValue as unknown as object)) {
-      return stateMgmtDFX.dumpMap(rawValue as unknown as Map<RawValue, RawValue> | SendableMap<RawValue, RawValue>);
-    } else if (rawValue instanceof Set || SendableType.isSet(rawValue as unknown as object)) {
-      return stateMgmtDFX.dumpItems(Array.from((rawValue as unknown as Set<RawValue> | SendableSet<RawValue>).values()));
-    } else if (rawValue instanceof Array || SendableType.isArray(rawValue as unknown as object)) {
-      return stateMgmtDFX.dumpItems(Array.from(rawValue as unknown as Array<RawValue>));
-    } else if (rawValue instanceof Date) {
-      return rawValue;
+    let rawObject: T = ObservedObject.GetRawObject(wrappedValue);
+    if (rawObject instanceof Map) {
+      return stateMgmtDFX.dumpMap(rawObject);
+    } else if (rawObject instanceof Set) {
+      return stateMgmtDFX.dumpItems(Array.from(rawObject.values()));
+    } else if (rawObject instanceof Array) {
+      return stateMgmtDFX.dumpItems(Array.from(rawObject));
+    } else if (rawObject instanceof Date) {
+      return rawObject;
     } else {
-      return stateMgmtDFX.dumpObjectProperty(rawValue);
+      return stateMgmtDFX.dumpObjectProperty(rawObject);
     }
   }
 
   private static getRawValueLength<T>(observedProp: ObservedPropertyAbstractPU<T>): number {
     let wrappedValue: T = observedProp.getUnmonitored();
-    if (!wrappedValue || typeof wrappedValue !== 'object') {
+    if (typeof wrappedValue !== 'object') {
       return -1;
     }
     let rawObject: T = ObservedObject.GetRawObject(wrappedValue);
     if (rawObject instanceof Map || rawObject instanceof Set) {
-      return rawObject.size;
+     return rawObject.size;
     } else if (rawObject instanceof Array) {
       return rawObject.length;
     }
@@ -271,8 +130,8 @@ function setProfilerStatus(profilerStatus: boolean): void {
 }
 type PropertyDependenciesInfo = {
   mode: string,
-  trackPropertiesDependencies?: MapItem<string, Array<ElementType | number | string>>[],
-  propertyDependencies?: Array<ElementType | string>
+  trackPropertiesDependencies: MapItem<string, Array<ElementType | number | string>>[],
+  propertyDependencies: Array<ElementType>
 }
 
 type ElementType = {
@@ -282,16 +141,13 @@ type ElementType = {
 }
 
 // Data struct send to profiler or Inspector
-type TargetInfo = {
-  id: number, componentName?: string, className?: string, isV2?: boolean,
-  isCompFreezeAllowed_?: boolean, isViewActive_?: boolean
-};
+type ViewPUInfo = { componentName: string, id: number };
 type ObservedPropertyInfo<T> = {
-  decorator: string, propertyName: string, value: any, id?: number, idV2?: string, inRenderingElementId?: number,
+  decorator: string, propertyName: string, value: any, id: number, changeId?: number, inRenderingElementId?: number,
   changedTrackPropertyName?: string | undefined,
   dependentElementIds: PropertyDependenciesInfo,
   length?: number
-  owningView?: TargetInfo, syncPeers?: ObservedPropertyInfo<T>[]
+  owningView?: ViewPUInfo, syncPeers?: ObservedPropertyInfo<T>[]
 };
 
 type SimpleType = string | number | boolean;
@@ -300,26 +156,9 @@ type DumpBuildInType = Array<SimpleType> | Array<[SimpleType, SimpleType]>;
 type RawValue = any;
 
 class DumpInfo {
-  public viewInfo?: TargetInfo;
+  public viewInfo?: ViewPUInfo;
   public observedPropertiesInfo: ObservedPropertyInfo<any>[] = []
 }
 
 // global function used to throw error in Promise
 declare function _arkUIUncaughtPromiseError(error: any);
-
-function setAceDebugMode(): void {
-  stateMgmtDFX.enableDebug = true;
-}
-
-class aceDebugTrace {
-  public static begin(...args: any): void {
-    if (stateMgmtDFX.enableDebug) {
-      aceTrace.begin(...args);
-    }
-  }
-  public static end(): void {
-    if (stateMgmtDFX.enableDebug) {
-      aceTrace.end();
-    }
-  }
-}

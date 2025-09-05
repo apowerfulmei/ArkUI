@@ -48,18 +48,17 @@ void EventManager::UpdatePenHoverNode(const TouchEvent& event, const TouchTestRe
         }
     }
 
-    int32_t eventIdentity = event.GetEventIdentity();
     if (event.type == TouchType::PROXIMITY_IN) {
         TAG_LOGI(AceLogTag::ACE_INPUTTRACKING, "pen proximity in hover event.");
-        lastPenHoverResultsMap_[eventIdentity].clear();
-        curPenHoverResultsMap_[eventIdentity] = std::move(penHoverTestResult);
+        lastPenHoverResults_.clear();
+        curPenHoverResults_ = std::move(penHoverTestResult);
     } else if (event.type == TouchType::PROXIMITY_OUT) {
         TAG_LOGI(AceLogTag::ACE_INPUTTRACKING, "pen proximity out hover event.");
-        lastPenHoverResultsMap_[eventIdentity] = std::move(curPenHoverResultsMap_[eventIdentity]);
-        curPenHoverResultsMap_[eventIdentity].clear();
+        lastPenHoverResults_ = std::move(curPenHoverResults_);
+        curPenHoverResults_.clear();
     } else {
-        lastPenHoverResultsMap_[eventIdentity] = std::move(curPenHoverResultsMap_[eventIdentity]);
-        curPenHoverResultsMap_[eventIdentity] = std::move(penHoverTestResult);
+        lastPenHoverResults_ = std::move(curPenHoverResults_);
+        curPenHoverResults_ = std::move(penHoverTestResult);
     }
 }
 
@@ -72,34 +71,25 @@ void EventManager::UpdatePenHoverMoveNode(const TouchEvent& event, const TouchTe
             penHoverTestResult.emplace_back(penHoverResult);
         }
     }
-    curPenHoverMoveResultsMap_[event.id] = std::move(penHoverTestResult);
+    curPenHoverMoveResults_ = std::move(penHoverTestResult);
 }
 
 void EventManager::DispatchPenHoverEventNG(const TouchEvent& event)
 {
-    HoverTestResult lastPenHoverResults;
-    if (auto it = lastPenHoverResultsMap_.find(event.GetEventIdentity()); it != lastPenHoverResultsMap_.end()) {
-        lastPenHoverResults = it->second;
-    }
-
-    HoverTestResult curPenHoverResults;
-    if (auto it = curPenHoverResultsMap_.find(event.GetEventIdentity()); it != curPenHoverResultsMap_.end()) {
-        curPenHoverResults = it->second;
-    }
-    auto lastHoverEndNode = lastPenHoverResults.begin();
-    auto currHoverEndNode = curPenHoverResults.begin();
+    auto lastHoverEndNode = lastPenHoverResults_.begin();
+    auto currHoverEndNode = curPenHoverResults_.begin();
     RefPtr<HoverEventTarget> lastHoverEndNodeTarget;
     uint32_t iterCountLast = 0;
     uint32_t iterCountCurr = 0;
-    for (const auto& hoverResult : lastPenHoverResults) {
+    for (const auto& hoverResult : lastPenHoverResults_) {
         // get valid part of previous hover nodes while it's not in current hover nodes. Those nodes exit hover
-        // there may have some nodes in curPenHoverResults but intercepted
+        // there may have some nodes in curPenHoverResults_ but intercepted
         iterCountLast++;
-        if (lastHoverEndNode != curPenHoverResults.end()) {
+        if (lastHoverEndNode != curPenHoverResults_.end()) {
             lastHoverEndNode++;
         }
-        if (std::find(curPenHoverResults.begin(), curPenHoverResults.end(), hoverResult) ==
-            curPenHoverResults.end()) {
+        if (std::find(curPenHoverResults_.begin(), curPenHoverResults_.end(), hoverResult) ==
+            curPenHoverResults_.end()) {
             hoverResult->HandlePenHoverEvent(false, event);
         }
         if ((iterCountLast >= lastPenHoverDispatchLength_) && (lastPenHoverDispatchLength_ != 0)) {
@@ -108,14 +98,14 @@ void EventManager::DispatchPenHoverEventNG(const TouchEvent& event)
         }
     }
     lastPenHoverDispatchLength_ = 0;
-    for (const auto& hoverResult : curPenHoverResults) {
+    for (const auto& hoverResult : curPenHoverResults_) {
         // get valid part of current hover nodes while it's not in previous hover nodes. Those nodes are new hover
         // the valid part stops at first interception
         iterCountCurr++;
-        if (currHoverEndNode != curPenHoverResults.end()) {
+        if (currHoverEndNode != curPenHoverResults_.end()) {
             currHoverEndNode++;
         }
-        if (std::find(lastPenHoverResults.begin(), lastHoverEndNode, hoverResult) == lastHoverEndNode) {
+        if (std::find(lastPenHoverResults_.begin(), lastHoverEndNode, hoverResult) == lastHoverEndNode) {
             if (!hoverResult->HandlePenHoverEvent(true, event)) {
                 lastPenHoverDispatchLength_ = iterCountCurr;
                 break;
@@ -126,9 +116,9 @@ void EventManager::DispatchPenHoverEventNG(const TouchEvent& event)
             break;
         }
     }
-    for (auto hoverResultIt = lastPenHoverResults.begin(); hoverResultIt != lastHoverEndNode; ++hoverResultIt) {
+    for (auto hoverResultIt = lastPenHoverResults_.begin(); hoverResultIt != lastHoverEndNode; ++hoverResultIt) {
         // there may have previous hover nodes in the invalid part of current hover nodes. Those nodes exit hover also
-        if (std::find(currHoverEndNode, curPenHoverResults.end(), *hoverResultIt) != curPenHoverResults.end()) {
+        if (std::find(currHoverEndNode, curPenHoverResults_.end(), *hoverResultIt) != curPenHoverResults_.end()) {
             (*hoverResultIt)->HandlePenHoverEvent(false, event);
         }
     }
@@ -136,12 +126,7 @@ void EventManager::DispatchPenHoverEventNG(const TouchEvent& event)
 
 void EventManager::DispatchPenHoverMoveEventNG(const TouchEvent& event)
 {
-    auto item = curPenHoverMoveResultsMap_.find(event.id);
-    if (item == curPenHoverMoveResultsMap_.end()) {
-        return;
-    }
-
-    for (const auto& hoverMoveResult : item->second) {
+    for (const auto& hoverMoveResult : curPenHoverMoveResults_) {
         if (!hoverMoveResult->HandlePenHoverMoveEvent(event)) {
             break;
         }

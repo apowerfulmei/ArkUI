@@ -25,7 +25,7 @@ public:
     void Create(int32_t priorityNum, int32_t gestureMaskNum) override;
     void Finish() override;
     void Pop() override;
-    void SetOnGestureEvent(const GestureEventFunc& gestureEventFunc) override;
+    void SetOnGestureEvent(const GestureEventNoParameter& gestureEventNoParameter) override;
     void SetOnActionFunc(const GestureEventFunc& gestureEventFunc, const Ace::GestureEventAction& action) override;
     void SetTag(const std::string& tag) override {}
     void SetAllowedTypes(const std::set<SourceTool>& allowedTypes) override {}
@@ -45,8 +45,6 @@ class PanGestureModelImpl : public OHOS::Ace::PanGestureModel {
 public:
     void Create(
         int32_t fingersNum, const PanDirection& panDirection, double distanceNum, bool isLimitFingerCount) override;
-    void Create(int32_t fingersNum, const PanDirection& panDirection, const PanDistanceMapDimension& distanceMap,
-        bool isLimitFingerCount) override;
     void SetPanGestureOption(const RefPtr<PanGestureOption>& panGestureOption) override;
 };
 

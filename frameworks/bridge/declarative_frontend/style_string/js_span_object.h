@@ -28,8 +28,9 @@
 #include "core/components_ng/pattern/text/text_model.h"
 
 namespace OHOS::Ace::Framework {
+
 class JSFontSpan : public virtual AceType {
-    DECLARE_ACE_TYPE(JSFontSpan, AceType);
+    DECLARE_ACE_TYPE(JSFontSpan, AceType)
 
 public:
     JSFontSpan() = default;
@@ -43,11 +44,6 @@ public:
     static void ParseJsFontWeight(const JSRef<JSObject>& obj, Font& font);
     static void ParseJsFontFamily(const JSRef<JSObject>& obj, Font& font);
     static void ParseJsFontStyle(const JSRef<JSObject>& obj, Font& font);
-    static void ParseJsStrokeWidth(const JSRef<JSObject>& obj, Font& font);
-    static void ParseJsStrokeColor(const JSRef<JSObject>& obj, Font& font);
-    static void ParseJsSuperscript(const JSRef<JSObject>& obj, Font& font);
-    static void GetStrokeColorFallback(const JSRef<JSObject>& obj,
-        const RefPtr<TextTheme>& theme, Color& color);
     void GetFontColor(const JSCallbackInfo& info);
     void SetFontColor(const JSCallbackInfo& info);
     void GetFontFamily(const JSCallbackInfo& info);
@@ -58,12 +54,6 @@ public:
     void SetFontWeight(const JSCallbackInfo& info);
     void GetFontStyle(const JSCallbackInfo& info);
     void SetFontStyle(const JSCallbackInfo& info);
-    void GetStrokeWidth(const JSCallbackInfo& info);
-    void SetStrokeWidth(const JSCallbackInfo& info);
-    void GetStrokeColor(const JSCallbackInfo& info);
-    void SetStrokeColor(const JSCallbackInfo& info);
-    void GetSuperscript(const JSCallbackInfo& info);
-    void SetSuperscript(const JSCallbackInfo& info);
 
     const RefPtr<FontSpan>& GetFontSpan();
     void SetFontSpan(const RefPtr<FontSpan>& fontSpan);
@@ -74,7 +64,7 @@ private:
 };
 
 class JSParagraphStyleSpan : public virtual AceType {
-    DECLARE_ACE_TYPE(JSParagraphStyleSpan, AceType);
+    DECLARE_ACE_TYPE(JSParagraphStyleSpan, AceType)
 
 public:
     JSParagraphStyleSpan() = default;
@@ -84,19 +74,15 @@ public:
     static void JSBind(BindingTarget globalObj);
     static RefPtr<ParagraphStyleSpan> ParseJsParagraphStyleSpan(const JSRef<JSObject>& obj);
     static void ParseJsTextAlign(const JSRef<JSObject>& obj, SpanParagraphStyle& paragraphStyle);
-    static void ParseJsTextVerticalAlign(const JSRef<JSObject>& obj, SpanParagraphStyle& paragraphStyle);
     static void ParseJsTextIndent(const JSRef<JSObject>& obj, SpanParagraphStyle& paragraphStyle);
     static void ParseJsMaxLines(const JSRef<JSObject>& obj, SpanParagraphStyle& paragraphStyle);
     static void ParseJsTextOverflow(const JSRef<JSObject>& obj, SpanParagraphStyle& paragraphStyle);
     static void ParseJsWordBreak(const JSRef<JSObject>& obj, SpanParagraphStyle& paragraphStyle);
     static void ParseJsLeadingMargin(const JSRef<JSObject>& obj, SpanParagraphStyle& paragraphStyle);
-    static void ParseParagraphSpacing(const JSRef<JSObject>& obj, SpanParagraphStyle& paragraphStyle);
     static void ParseLeadingMarginPixelMap(const JSRef<JSObject>& leadingMarginObject,
         std::optional<NG::LeadingMargin>& margin, const JsiRef<JsiValue>& leadingMargin);
     void GetTextAlign(const JSCallbackInfo& info);
     void SetTextAlign(const JSCallbackInfo& info);
-    void GetTextVerticalAlign(const JSCallbackInfo& info);
-    void SetTextVerticalAlign(const JSCallbackInfo& info);
     void SetTextIndent(const JSCallbackInfo& info);
     void GetTextIndent(const JSCallbackInfo& info);
     void SetMaxLines(const JSCallbackInfo& info);
@@ -107,8 +93,6 @@ public:
     void GetWordBreak(const JSCallbackInfo& info);
     void SetLeadingMargin(const JSCallbackInfo& info);
     void GetLeadingMargin(const JSCallbackInfo& info);
-    void GetParagraphSpacing(const JSCallbackInfo& info);
-    void SetParagraphSpacing(const JSCallbackInfo& info);
 
     static bool IsPixelMap(const JSRef<JSVal>& jsValue);
 
@@ -121,7 +105,7 @@ private:
 };
 
 class JSDecorationSpan : public virtual AceType {
-    DECLARE_ACE_TYPE(JSDecorationSpan, AceType);
+    DECLARE_ACE_TYPE(JSDecorationSpan, AceType)
 
 public:
     JSDecorationSpan() = default;
@@ -129,18 +113,13 @@ public:
     static void Constructor(const JSCallbackInfo& args);
     static void Destructor(JSDecorationSpan* decorationSpan);
     static void JSBind(BindingTarget globalObj);
-    static RefPtr<DecorationSpan> ParseJsDecorationSpan(const JSCallbackInfo& args);
-    static TextDecorationOptions ParseJsDecorationOptions(const JSRef<JSObject>& obj);
+    static RefPtr<DecorationSpan> ParseJsDecorationSpan(const JSRef<JSObject>& obj);
     void GetTextDecorationType(const JSCallbackInfo& info);
     void SetTextDecorationType(const JSCallbackInfo& info);
     void GetTextDecorationColor(const JSCallbackInfo& info);
     void SetTextDecorationColor(const JSCallbackInfo& info);
     void GetTextDecorationStyle(const JSCallbackInfo& info);
     void SetTextDecorationStyle(const JSCallbackInfo& info);
-    void GetLineThicknessScale(const JSCallbackInfo& info);
-    void SetLineThicknessScale(const JSCallbackInfo& info);
-    void GetTextDecorationOptions(const JSCallbackInfo& info);
-    void SetTextDecorationOptions(const JSCallbackInfo& info);
 
     RefPtr<DecorationSpan>& GetDecorationSpan();
     void SetDecorationSpan(const RefPtr<DecorationSpan>& decorationSpan);
@@ -151,7 +130,7 @@ private:
 };
 
 class JSBaselineOffsetSpan : public virtual AceType {
-    DECLARE_ACE_TYPE(JSBaselineOffsetSpan, AceType);
+    DECLARE_ACE_TYPE(JSBaselineOffsetSpan, AceType)
 
 public:
     JSBaselineOffsetSpan() = default;
@@ -172,7 +151,7 @@ private:
 };
 
 class JSLetterSpacingSpan : public virtual AceType {
-    DECLARE_ACE_TYPE(JSLetterSpacingSpan, AceType);
+    DECLARE_ACE_TYPE(JSLetterSpacingSpan, AceType)
 
 public:
     JSLetterSpacingSpan() = default;
@@ -193,7 +172,7 @@ private:
 };
 
 class JSGestureSpan : public virtual AceType {
-    DECLARE_ACE_TYPE(JSGestureSpan, AceType);
+    DECLARE_ACE_TYPE(JSGestureSpan, AceType)
 
 public:
     JSGestureSpan() = default;
@@ -212,7 +191,7 @@ private:
 };
 
 class JSTextShadowSpan : public virtual AceType {
-    DECLARE_ACE_TYPE(JSTextShadowSpan, AceType);
+    DECLARE_ACE_TYPE(JSTextShadowSpan, AceType)
 
 public:
     JSTextShadowSpan() = default;
@@ -232,7 +211,7 @@ private:
     RefPtr<TextShadowSpan> textShadowSpan_;
 };
 class JSBackgroundColorSpan : public virtual AceType {
-    DECLARE_ACE_TYPE(JSBackgroundColorSpan, AceType);
+    DECLARE_ACE_TYPE(JSBackgroundColorSpan, AceType)
 
 public:
     JSBackgroundColorSpan() = default;
@@ -252,7 +231,7 @@ private:
     RefPtr<BackgroundColorSpan> backgroundColorSpan_;
 };
 class JSLineHeightSpan : public virtual AceType {
-    DECLARE_ACE_TYPE(JSLineHeightSpan, AceType);
+    DECLARE_ACE_TYPE(JSLineHeightSpan, AceType)
 
 public:
     JSLineHeightSpan() = default;
@@ -273,7 +252,7 @@ private:
 };
 
 class JSImageAttachment : public virtual AceType {
-    DECLARE_ACE_TYPE(JSImageAttachment, AceType);
+    DECLARE_ACE_TYPE(JSImageAttachment, AceType)
 
 public:
     JSImageAttachment() = default;
@@ -286,8 +265,6 @@ public:
     void SetImageSrc(const JSCallbackInfo& info) {}
     void GetImageSize(const JSCallbackInfo& info);
     void SetImageSize(const JSCallbackInfo& info) {}
-    void GetImageSizeInVp(const JSCallbackInfo& info);
-    void SetImageSizeInVp(const JSCallbackInfo& info) {}
     void GetImageVerticalAlign(const JSCallbackInfo& info);
     void SetImageVerticalAlign(const JSCallbackInfo& info) {}
     void GetImageObjectFit(const JSCallbackInfo& info);
@@ -315,7 +292,7 @@ private:
 };
 
 class JSNativeCustomSpan : public virtual AceType {
-    DECLARE_ACE_TYPE(JSNativeCustomSpan, AceType);
+    DECLARE_ACE_TYPE(JSNativeCustomSpan, AceType)
 
 public:
     JSNativeCustomSpan() = default;
@@ -332,7 +309,7 @@ private:
 };
 
 class JSCustomSpan : public CustomSpan {
-    DECLARE_ACE_TYPE(JSCustomSpan, CustomSpan);
+    DECLARE_ACE_TYPE(JSCustomSpan, CustomSpan)
 
 public:
     JSCustomSpan() = default;
@@ -359,7 +336,7 @@ private:
 };
 
 class JSExtSpan : public ExtSpan {
-    DECLARE_ACE_TYPE(JSExtSpan, ExtSpan);
+    DECLARE_ACE_TYPE(JSExtSpan, ExtSpan)
 
 public:
     JSExtSpan() = default;
@@ -378,7 +355,7 @@ private:
 };
 
 class JSUrlSpan : public virtual AceType {
-    DECLARE_ACE_TYPE(JSUrlSpan, AceType);
+    DECLARE_ACE_TYPE(JSUrlSpan, AceType)
 
 public:
     JSUrlSpan() = default;

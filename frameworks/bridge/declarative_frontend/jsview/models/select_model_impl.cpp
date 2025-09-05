@@ -30,7 +30,7 @@ void SelectModelImpl::Create(const std::vector<SelectParam>& params)
 
     auto tipText = AceType::MakeRefPtr<TextComponent>("");
     selectComponent->SetTipText(tipText);
-
+            
     for (size_t i = 0; i < params.size(); i++) {
         auto optionTheme = JSViewAbstract::GetTheme<SelectTheme>();
             if (!optionTheme) {
@@ -71,7 +71,7 @@ void SelectModelImpl::SetSelected(int32_t idx)
     auto optionComponent = selectComponent->GetSelectOption(idx);
     CHECK_NULL_VOID(optionComponent);
     optionComponent->SetSelected(true);
-
+   
     auto optionText = optionComponent->GetText();
     CHECK_NULL_VOID(optionText);
     if (!selectComponent->HasSetTipText()) {
@@ -432,8 +432,6 @@ void SelectModelImpl::SetArrowPosition(const ArrowPosition value) {}
 
 void SelectModelImpl::SetMenuAlign(const MenuAlign& menuAlign) {}
 
-void SelectModelImpl::SetAvoidance(AvoidanceMode mode) {}
-
 void SelectModelImpl::SetSelectChangeEvent(NG::SelectChangeEvent&& selectChangeEvent) {}
 
 void SelectModelImpl::SetValueChangeEvent(NG::ValueChangeEvent&& valueChangeEvent) {}
@@ -457,6 +455,4 @@ void SelectModelImpl::SetLayoutDirection(TextDirection value)
     CHECK_NULL_VOID(selectComponent);
     selectComponent->SetTextDirection(value);
 }
-
-void SelectModelImpl::SetMenuOutline(const NG::MenuParam& menuParam) {}
 } // namespace OHOS::Ace::Framework

@@ -27,9 +27,7 @@ namespace OHOS::Ace {
 using RegisterUIEventObserverFunc = void (*)(const std::string&, const std::shared_ptr<UIEventObserver>&);
 using UnregisterUIEventObserverFunc = void (*)(const std::shared_ptr<UIEventObserver>&);
 using GetNodePropertyFunc = void (*)(const std::string&, std::unordered_map<std::string, std::string>&);
-using GetSimplifiedInspectorTreeFunc = void (*)(const TreeParams&, std::string&);
-using GetSimplifiedInspectorTreeAsyncFunc = void (*)(const TreeParams&, OnInspectorTreeResult&&);
-using ExecuteCommandAsyncFunc = void (*)(const UICommandParams&, UICommandResult&&);
+using GetSimplifiedInspectorTreeFunc = void (*)(std::string&);
 
 class UIEventFunc final {
 public:
@@ -40,11 +38,7 @@ public:
     static void GetNodeProperty(
         const std::string& pageUrl, std::unordered_map<std::string, std::string>& nodeProperties);
 
-    static void GetSimplifiedInspectorTree(const TreeParams& params, std::string& tree);
-
-    static void GetSimplifiedInspectorTreeAsync(const TreeParams& params, OnInspectorTreeResult&& callback);
-
-    static void ExecuteCommandAsync(const UICommandParams& params, UICommandResult&& callback);
+    static void GetSimplifiedInspectorTree(std::string& tree);
 
     bool IsAvailable() const;
 
@@ -59,8 +53,6 @@ private:
     UnregisterUIEventObserverFunc unregisterFunc_;
     GetNodePropertyFunc getPropFunc_;
     GetSimplifiedInspectorTreeFunc getTreeFunc_;
-    GetSimplifiedInspectorTreeAsyncFunc getTreeAsyncFunc_;
-    ExecuteCommandAsyncFunc executeCommandAsyncFunc_;
     LIBHANDLE handle_;
 };
 } // namespace OHOS::Ace

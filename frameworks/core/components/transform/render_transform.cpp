@@ -15,6 +15,7 @@
 
 #include "core/components/transform/render_transform.h"
 
+#include "base/utils/utils.h"
 #include "core/components/box/render_box_base.h"
 #include "core/components/transform/transform_component.h"
 

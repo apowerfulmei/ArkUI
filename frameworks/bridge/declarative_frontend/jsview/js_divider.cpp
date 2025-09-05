@@ -17,32 +17,42 @@
 
 #include "base/geometry/dimension.h"
 #include "bridge/declarative_frontend/jsview/models/divider_model_impl.h"
+#include "bridge/declarative_frontend/ark_theme/theme_apply/js_divider_theme.h"
 #include "core/components/divider/divider_theme.h"
 #include "core/components_ng/pattern/divider/divider_model_ng.h"
 #include "core/pipeline/pipeline_base.h"
 
 namespace OHOS::Ace {
+
+std::unique_ptr<DividerModel> DividerModel::instance_ = nullptr;
+std::mutex DividerModel::mutex_;
+
 DividerModel* DividerModel::GetInstance()
 {
+    if (!instance_) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (!instance_) {
 #ifdef NG_BUILD
-    static NG::DividerModelNG instance;
-    return &instance;
+            instance_.reset(new NG::DividerModelNG());
 #else
-    if (Container::IsCurrentUseNewPipeline()) {
-        static NG::DividerModelNG instance;
-        return &instance;
-    } else {
-        static Framework::DividerModelImpl instance;
-        return &instance;
-    }
+            if (Container::IsCurrentUseNewPipeline()) {
+                instance_.reset(new NG::DividerModelNG());
+            } else {
+                instance_.reset(new Framework::DividerModelImpl());
+            }
 #endif
+        }
+    }
+    return instance_.get();
 }
+
 } // namespace OHOS::Ace
 
 namespace OHOS::Ace::Framework {
 void JSDivider::Create()
 {
     DividerModel::GetInstance()->Create();
+    JSDividerTheme::ApplyTheme();
 }
 
 void JSDivider::SetVertical(bool isVertical)
@@ -70,20 +80,11 @@ void JSDivider::SetDividerColor(const JSCallbackInfo& info)
     if (info.Length() < 1) {
         return;
     }
-    DividerModel::GetInstance()->ResetResObj("divider.color");
     auto theme = GetTheme<DividerTheme>();
     CHECK_NULL_VOID(theme);
     Color dividerColor = theme->GetColor();
-    RefPtr<ResourceObject> dividerResObj;
-    if (!ParseJsColor(info[0], dividerColor, dividerResObj)) {
-        DividerModel::GetInstance()->ResetDividerColor();
-        return;
-    }
-    if (SystemProperties::ConfigChangePerform() && dividerResObj) {
-        DividerModel::GetInstance()->DividerColor(dividerResObj);
-    } else {
-        DividerModel::GetInstance()->DividerColor(dividerColor);
-    }
+    ParseJsColor(info[0], dividerColor);
+    DividerModel::GetInstance()->DividerColor(dividerColor);
 }
 
 void JSDivider::SetStrokeWidth(const JSCallbackInfo& info)

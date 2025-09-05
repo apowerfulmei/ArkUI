@@ -15,6 +15,7 @@
 
 #include "core/components_ng/pattern/badge/badge_accessibility_property.h"
 
+#include "base/utils/utils.h"
 #include "core/components_ng/base/frame_node.h"
 #include "core/components_ng/pattern/badge/badge_layout_property.h"
 

@@ -26,7 +26,6 @@
 #include "base/log/frame_info.h"
 #include "base/memory/referenced.h"
 #include "base/utils/macros.h"
-#include "core/common/ace_application_info.h"
 
 namespace OHOS::Ace::NG {
 
@@ -38,8 +37,6 @@ constexpr TaskThread PLATFORM_TASK = 0;
 constexpr TaskThread MAIN_TASK = 1;
 constexpr TaskThread BACKGROUND_TASK = 1 << 1;
 constexpr TaskThread UNDEFINED_TASK = 1 << 2;
-
-using IgnoreLayoutSafeAreaBundle = std::pair<std::vector<RefPtr<FrameNode>>, RefPtr<FrameNode>>;
 
 class UITask {
 public:
@@ -79,14 +76,12 @@ public:
 
     // Called on Main Thread.
     void AddDirtyLayoutNode(const RefPtr<FrameNode>& dirty);
-    void AddIgnoreLayoutSafeAreaBundle(IgnoreLayoutSafeAreaBundle&& bundle);
     void AddLayoutNode(const RefPtr<FrameNode>& layoutNode);
     void AddDirtyRenderNode(const RefPtr<FrameNode>& dirty);
     void AddPredictTask(PredictTask&& task);
     void AddAfterLayoutTask(std::function<void()>&& task, bool isFlushInImplicitAnimationTask = false);
     void AddAfterRenderTask(std::function<void()>&& task);
     void AddPersistAfterLayoutTask(std::function<void()>&& task);
-    void AddAfterModifierTask(std::function<void()>&& task);
 
     void FlushLayoutTask(bool forceUseMainThread = false);
     void FlushRenderTask(bool forceUseMainThread = false);
@@ -97,7 +92,6 @@ public:
     void FlushAfterLayoutCallbackInImplicitAnimationTask();
     void FlushAfterRenderTask();
     void FlushPersistAfterLayoutTask();
-    void FlushAfterModifierTask();
     void ExpandSafeArea();
 
     void FlushDelayJsActive();
@@ -128,8 +122,7 @@ public:
         return frameId_;
     }
 
-    bool IsLayouting() const
-    {
+    bool IsLayouting() const {
         return isLayouting_;
     }
 
@@ -159,7 +152,6 @@ public:
     }
 
     void FlushSyncGeometryNodeTasks();
-    void FlushPostponedLayoutTask(bool forceUseMainThread);
 
 private:
     bool NeedAdditionalLayout();
@@ -190,7 +182,6 @@ private:
     using LayoutNodesSet = std::set<RefPtr<FrameNode>, NodeCompare<RefPtr<FrameNode>>>;
     using RootDirtyMap = std::map<uint32_t, PageDirtySet>;
 
-    std::vector<IgnoreLayoutSafeAreaBundle> ignoreLayoutSafeAreaBundles_;
     std::list<RefPtr<FrameNode>> dirtyLayoutNodes_;
     std::list<RefPtr<FrameNode>> layoutNodes_;
     RootDirtyMap dirtyRenderNodes_;
@@ -200,14 +191,14 @@ private:
     std::list<std::function<void()>> afterRenderTasks_;
     std::list<std::function<void()>> persistAfterLayoutTasks_;
     std::list<std::function<void()>> syncGeometryNodeTasks_;
-    std::list<std::function<void()>> afterModifierTasks_;
-    std::set<FrameNode*, NodeCompare<FrameNode*>> safeAreaPaddingProcessTasks_;
-    std::set<RefPtr<FrameNode>> singleDirtyNodesToFlush_;
+    std::list<RefPtr<FrameNode>> singleDirtyNodesToFlush_;
     std::queue<bool> layoutWithImplicitAnimation_;
+    std::set<FrameNode*, NodeCompare<FrameNode*>> safeAreaPaddingProcessTasks_;
 
     uint32_t currentPageId_ = 0;
     bool is64BitSystem_ = false;
     bool isLayouting_ = false;
+    int32_t layoutedCount_ = 0;
     int32_t multiLayoutCount_ = 0;
 
     FrameInfo* frameInfo_ = nullptr;

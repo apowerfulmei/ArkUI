@@ -14,6 +14,8 @@
  */
 
 
+#include <cstdint>
+#include <string>
 #include "cj_transitioneffect_ffi.h"
 
 using namespace OHOS::FFI;

@@ -17,7 +17,6 @@
 #define FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_MANAGER_SELECT_OVERLAY_SELECT_OVERLAY_PROXY_H
 
 #include <cstdint>
-#include <optional>
 
 #include "base/geometry/ng/rect_t.h"
 #include "base/memory/ace_type.h"
@@ -44,8 +43,6 @@ public:
     void UpdateSelectMenuInfo(const SelectMenuInfo& info) const;
 
     void UpdateSelectMenuInfo(std::function<void(SelectMenuInfo& menuInfo)> updateAction) const;
-
-    void UpdateAncestorViewPort(const std::optional<RectF>& ancestorViewPort) const;
 
     void UpdateShowArea(const RectF& area) const;
 

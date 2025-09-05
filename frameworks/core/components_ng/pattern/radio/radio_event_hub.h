@@ -27,7 +27,7 @@ namespace OHOS::Ace::NG {
 using ChangeEvent = std::function<void(const bool)>;
 
 class RadioEventHub : public EventHub {
-    DECLARE_ACE_TYPE(RadioEventHub, EventHub);
+    DECLARE_ACE_TYPE(RadioEventHub, EventHub)
 
 public:
     RadioEventHub() = default;
@@ -51,10 +51,7 @@ public:
             auto host = GetFrameNode();
             if (host) {
                 auto id = host->GetInspectorIdValue("");
-                builder.SetId(id)
-                    .SetType(host->GetHostTag())
-                    .SetDescription(host->GetAutoEventParamValue(""))
-                    .SetHost(host);
+                builder.SetId(id).SetType(host->GetHostTag()).SetDescription(host->GetAutoEventParamValue(""));
                 if (!id.empty()) {
                     Recorder::NodeDataCache::Get().PutMultiple(host, id, value_, check);
                 }

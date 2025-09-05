@@ -30,7 +30,6 @@
 namespace OHOS::Ace::NG {
 struct FrameNodeSnapshot {
     void Dump(std::list<std::pair<int32_t, std::string>>& dumpList, int32_t depth) const;
-    void Dump(std::unique_ptr<JsonValue>& json) const;
 
     int32_t nodeId = -1;
     int32_t parentNodeId = -1;
@@ -40,7 +39,6 @@ struct FrameNodeSnapshot {
     bool isHit = false;
     int32_t hitTestMode = 0;
     std::vector<RectF> responseRegionList;
-    bool active = false;
 };
 
 struct TouchPointSnapshot {
@@ -48,7 +46,7 @@ struct TouchPointSnapshot {
     TouchPointSnapshot(const TouchEvent& event);
 
     void Dump(std::list<std::pair<int32_t, std::string>>& dumpList, int32_t depth) const;
-    void Dump(std::unique_ptr<JsonValue>& json) const;
+
     int32_t id = -1;
     OffsetF point;
     OffsetF screenPoint;
@@ -101,21 +99,10 @@ struct EventTreeRecord {
     void AddGestureProcedure(uint64_t id, const TouchEvent& point, const std::string& extraInfo,
         const std::string& state, const std::string& disposal, int64_t timestamp = 0);
 
-    void AddGestureProcedure(uint64_t id, const AxisEvent& event, const std::string& extraInfo,
-        const std::string& state, const std::string& disposal, int64_t timestamp = 0);
-
     void Dump(std::list<std::pair<int32_t, std::string>>& dumpList, int32_t depth, int32_t startNumber = 0) const;
 
-    void Dump(std::unique_ptr<JsonValue>& json, int32_t depth, int32_t startNumber = 0) const;
-    void BuildTouchPoints(std::list<TouchPointSnapshot> touchPoints, std::unique_ptr<JsonValue>& json) const;
     void BuildAxis(std::list<AxisSnapshot> axis, std::unique_ptr<JsonValue>& json) const;
 
-    void BuildGestureTree(
-        std::map<int32_t, std::list<RefPtr<GestureSnapshot>>> gestureTreeMap, std::unique_ptr<JsonValue>& json) const;
-    void BuildHitTestTree(std::list<FrameNodeSnapshot> hitTestTree, std::unique_ptr<JsonValue>& json) const;
-    void MountToParent(
-        std::vector<std::pair<std::string, std::pair<std::string, std::unique_ptr<JsonValue>>>> stateInfoList,
-        std::unique_ptr<JsonValue>& json) const;
     std::list<EventTree> eventTreeList;
 };
 }

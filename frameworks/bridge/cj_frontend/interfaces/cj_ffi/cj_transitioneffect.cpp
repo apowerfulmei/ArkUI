@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+#include <cstdint>
+#include <string>
 #include "cj_transitioneffect.h"
 
 namespace OHOS::Ace::Framework {

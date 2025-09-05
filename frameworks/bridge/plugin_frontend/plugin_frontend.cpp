@@ -15,8 +15,13 @@
 
 #include "frameworks/bridge/plugin_frontend/plugin_frontend.h"
 
+#include <memory>
+
 #include "base/log/dump_log.h"
 #include "base/log/event_report.h"
+#include "base/utils/utils.h"
+#include "core/common/thread_checker.h"
+#include "core/components/navigator/navigator_component.h"
 
 namespace OHOS::Ace {
 namespace {
@@ -154,7 +159,7 @@ void SwipeInfoToString(const BaseEventInfo& info, std::string& eventParam)
 PluginFrontend::~PluginFrontend() noexcept
 {
     Destroy();
-    TAG_LOGI(AceLogTag::ACE_PLUGIN_COMPONENT, "Plugin frontend destroyed");
+    LOG_DESTROY();
 }
 
 void PluginFrontend::Destroy()
@@ -654,16 +659,6 @@ void PluginFrontend::OnLayoutCompleted(const std::string& componentId)
 void PluginFrontend::OnDrawCompleted(const std::string& componentId)
 {
     CHECK_NULL_VOID(delegate_);
-}
-
-void PluginFrontend::OnDrawChildrenCompleted(const std::string& componentId)
-{
-    CHECK_NULL_VOID(delegate_);
-}
-
-bool PluginFrontend::IsDrawChildrenCallbackFuncExist(const std::string& componentId)
-{
-    return false;
 }
 
 void PluginFrontend::DumpFrontend() const

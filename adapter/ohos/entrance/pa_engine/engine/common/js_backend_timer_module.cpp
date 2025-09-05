@@ -15,7 +15,12 @@
 
 #include "js_backend_timer_module.h"
 
+#include <atomic>
+#include <string>
+#include <vector>
+
 #include "base/log/log.h"
+#include "js_runtime.h"
 #include "js_runtime_utils.h"
 
 #ifdef SUPPORT_GRAPHICS
@@ -134,19 +139,22 @@ napi_value StartTimeoutOrInterval(napi_env env, napi_callback_info info, bool is
     napi_value thisVar = nullptr;
     void* data = nullptr;
     napi_get_cb_info(env, info, &argc, nullptr, nullptr, nullptr);
-    if (argc < ARGC_MIN) {
-        LOGE("Additional or equal to 2 are required for participation");
+    if (argc >= ARGC_MIN) {
+        argv = new napi_value[argc];
+    } else {
         return result;
     }
-    argv = new napi_value[argc];
     napi_get_cb_info(env, info, &argc, argv, &thisVar, &data);
 
-    if (!AbilityRuntime::CheckTypeForNapiValue(env, argv[0], napi_function)) {
+    napi_valuetype valueType = napi_undefined;
+    napi_typeof(env, argv[0], &valueType);
+    if (valueType != napi_function) {
         LOGE("first param is not napi_function");
         delete[] argv;
         return result;
     }
-    if (!AbilityRuntime::CheckTypeForNapiValue(env, argv[1], napi_number)) {
+    napi_typeof(env, argv[1], &valueType);
+    if (valueType != napi_number) {
         LOGE("second param is not napi_number");
         delete[] argv;
         return result;
@@ -163,6 +171,7 @@ napi_value StartTimeoutOrInterval(napi_env env, napi_callback_info info, bool is
     std::string name = "JsRuntimeTimer_";
     name.append(std::to_string(callbackId));
 
+    // create timer task
     AbilityRuntime::JsRuntime& jsRuntime =
         *reinterpret_cast<AbilityRuntime::JsRuntime*>(reinterpret_cast<NativeEngine*>(env)->GetJsEngine());
     JsTimer task(jsRuntime, jsFunction, name, delayTime, isInterval);
@@ -170,7 +179,7 @@ napi_value StartTimeoutOrInterval(napi_env env, napi_callback_info info, bool is
         napi_ref value = nullptr;
         std::shared_ptr<NativeReference> valueRef;
         napi_create_reference(env, argv[index], 1, &value);
-        valueRef.reset(reinterpret_cast<NativeReference*>(value));
+        valueRef.reset(reinterpret_cast<NativeReference*>(ref));
         task.PushArgs(valueRef);
     }
 

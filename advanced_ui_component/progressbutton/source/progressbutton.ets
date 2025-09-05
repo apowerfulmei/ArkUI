@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2023-2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -14,14 +14,6 @@
  */
 
 import { Theme } from '@ohos.arkui.theme';
-import { LengthMetrics, LengthUnit } from '@kit.ArkUI';
-
-export interface ProgressButtonColorOptions {
-  progressColor?: ResourceColor;
-  borderColor?: ResourceColor;
-  textColor?: ResourceColor;
-  backgroundColor?: ResourceColor;
-}
 
 const EMPTY_STRING: string = '';
 const MAX_PROGRESS: number = 100;
@@ -43,13 +35,11 @@ const PROGRESS_BUTTON_EMPHASIZE_SECONDARY_BUTTON_KEY = 'progress_button_emphasiz
 export struct ProgressButton {
   @Prop @Watch('getProgressContext') progress: number;
   @State textProgress: string = EMPTY_STRING;
-  @Prop content: ResourceStr = EMPTY_STRING;
+  @Prop content: string = EMPTY_STRING;
   @State @Watch('getLoadingProgress')isLoading: boolean = false;
   progressButtonWidth?: Length = BUTTON_NORMARL_WIDTH;
   clickCallback: () => void = () => {};
   @Prop enable: boolean = true;
-  @Prop colorOptions: ProgressButtonColorOptions | undefined = undefined;
-  @Prop progressButtonRadius?: LengthMetrics | undefined = undefined;
 
   @State progressColor: ResourceColor = '#330A59F7'
   @State containerBorderColor: ResourceColor = '#330A59F7'
@@ -85,19 +75,9 @@ export struct ProgressButton {
     }
   }
 
-  private getProgressButtonRadius(): LengthMetrics {
-    if (!this.progressButtonRadius || this.progressButtonRadius.unit === LengthUnit.PERCENT) {
-      return LengthMetrics.vp(this.buttonBorderRadius);
-    } else if (this.progressButtonRadius.value < 0) {
-      return LengthMetrics.vp(0);
-    } else {
-      return this.progressButtonRadius;
-    }
-  }
-
   private getLoadingProgress() {
     if (this.isLoading) {
-      if(this.progress < 0) {
+      if (this.progress < 0) {
         this.textProgress = MIN_PERCENTAGE
       } else if (this.progress >= MAX_PROGRESS) {
         this.textProgress = MAX_PERCENTAGE
@@ -105,35 +85,6 @@ export struct ProgressButton {
         this.textProgress = Math.floor(this.progress / MAX_PROGRESS * MAX_PROGRESS).toString() + '%'
       }
     }
-  }
-
-  private toLengthString(value: LengthMetrics | undefined): string {
-    if (value === void (0)) {
-      return '';
-    }
-    const length: number = value.value;
-    let lengthString: string = '';
-    switch (value.unit) {
-      case LengthUnit.PX:
-        lengthString = `${length}px`;
-        break;
-      case LengthUnit.FP:
-        lengthString = `${length}fp`;
-        break;
-      case LengthUnit.LPX:
-        lengthString = `${length}lpx`;
-        break;
-      case LengthUnit.PERCENT:
-        lengthString = `${length * 100}%`;
-        break;
-      case LengthUnit.VP:
-        lengthString = `${length}vp`;
-        break;
-      default:
-        lengthString = `${length}vp`;
-        break;
-    }
-    return lengthString;
   }
 
   build() {
@@ -146,19 +97,15 @@ export struct ProgressButton {
           .borderRadius(this.buttonBorderRadius)
           .width('100%')
           .hoverEffect(HoverEffect.None)
-          .style({
-            borderColor: this.colorOptions?.borderColor ? this.colorOptions?.borderColor : this.containerBorderColor,
-            borderRadius: this.getProgressButtonRadius()
-          })
           .clip(false)
+          .enabled(this.enable)
           .key(PROGRESS_BUTTON_PROGRESS_KEY)
-          .color(this.colorOptions?.progressColor ? this.colorOptions?.progressColor : this.progressColor)
+          .color(this.progressColor)
         Row() {
           Text(this.isLoading ? this.textProgress: this.content)
             .fontSize($r('sys.float.ohos_id_text_size_button3'))
             .fontWeight(FontWeight.Medium)
             .key(PROGRESS_BUTTON_PRIMARY_FONT_KEY)
-            .fontColor(this.colorOptions?.textColor)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
             .padding({ top: 4, left: 8, right: 8, bottom: 4})
@@ -175,26 +122,18 @@ export struct ProgressButton {
         Row()
           .key(PROGRESS_BUTTON_CONTAINER_BACKGROUND_COLOR_KEY)
           .backgroundColor(Color.Transparent)
-          .border({
-            width: 1,
-            color: this.colorOptions?.borderColor ? this.colorOptions?.borderColor : this.containerBorderColor
-          })
+          .border({ width: 1, color: this.containerBorderColor})
           .height(this.textHeight)
           .constraintSize({ minHeight: BUTTON_NORMARL_HEIGHT })
-          .borderRadius(this.progressButtonRadius ? this.toLengthString(this.getProgressButtonRadius()) :
-          this.buttonBorderRadius)
+          .borderRadius(this.buttonBorderRadius)
           .width('100%')
       }
     }
-    .borderRadius(this.progressButtonRadius ? this.toLengthString(this.getProgressButtonRadius()) :
-    this.buttonBorderRadius)
+    .borderRadius(this.buttonBorderRadius)
     .clip(false)
     .hoverEffect(HoverEffect.None)
     .key(PROGRESS_BUTTON_EMPHASIZE_SECONDARY_BUTTON_KEY)
-    .backgroundColor(
-      this.colorOptions?.backgroundColor
-        ? this.colorOptions?.backgroundColor
-        : this.containerBackgroundColor)
+    .backgroundColor(this.containerBackgroundColor)
     .constraintSize({minWidth: 44})
     .padding({ top: 0, bottom: 0})
     .width((!this.progressButtonWidth || this.progressButtonWidth < BUTTON_NORMARL_WIDTH) ?

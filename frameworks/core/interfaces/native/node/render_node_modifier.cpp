@@ -14,8 +14,24 @@
  */
 #include "core/interfaces/native/node/render_node_modifier.h"
 
-#include "core/common/builder_util.h"
+#include <cstdint>
+#include <optional>
+
+#include "base/geometry/dimension.h"
+#include "base/geometry/ng/rect_t.h"
+#include "base/geometry/shape.h"
+#include "base/memory/ace_type.h"
+#include "base/utils/utils.h"
+#include "core/components/common/layout/constants.h"
+#include "core/components/common/properties/color.h"
+#include "core/components_ng/base/frame_node.h"
+#include "core/components_ng/base/ui_node.h"
+#include "core/components_ng/layout/layout_property.h"
 #include "core/components_ng/pattern/render_node/render_node_pattern.h"
+#include "core/components_ng/pattern/render_node/render_node_properties.h"
+#include "core/components_ng/property/border_property.h"
+#include "core/components_ng/render/render_context.h"
+#include "core/interfaces/arkoala/arkoala_api.h"
 
 namespace OHOS::Ace::NG {
 namespace {
@@ -55,21 +71,6 @@ RefPtr<RenderContext> GetRenderContext(UINode* node)
     return context;
 }
 
-void AddBuilderNode(ArkUINodeHandle node, ArkUINodeHandle child)
-{
-    auto* currentNode = reinterpret_cast<UINode*>(node);
-    CHECK_NULL_VOID(currentNode);
-    auto* childNode = reinterpret_cast<UINode*>(child);
-    CHECK_NULL_VOID(childNode);
-    auto childRef = Referenced::Claim<UINode>(childNode);
-    CHECK_NULL_VOID(childRef);
-    auto parentNode = childRef->GetParent();
-    CHECK_NULL_VOID(parentNode && parentNode == currentNode);
-    std::list<RefPtr<UINode>> nodes;
-    BuilderUtils::GetBuilderNodes(childRef, nodes);
-    BuilderUtils::AddBuilderToParent(parentNode, nodes);
-}
-
 void AppendChild(ArkUINodeHandle node, ArkUINodeHandle child)
 {
     auto* currentNode = reinterpret_cast<UINode*>(node);
@@ -90,40 +91,12 @@ void InsertChildAfter(ArkUINodeHandle node, ArkUINodeHandle child, ArkUINodeHand
     currentNode->MarkNeedFrameFlushDirty(NG::PROPERTY_UPDATE_MEASURE);
 }
 
-void RemoveBuilderNode(ArkUINodeHandle node, ArkUINodeHandle child)
-{
-    auto* currentNode = reinterpret_cast<UINode*>(node);
-    CHECK_NULL_VOID(currentNode);
-    auto* childNode = reinterpret_cast<UINode*>(child);
-    CHECK_NULL_VOID(childNode);
-    auto childRef = Referenced::Claim<UINode>(childNode);
-    CHECK_NULL_VOID(childRef);
-    auto parentNode = childRef->GetParent();
-    CHECK_NULL_VOID(parentNode && parentNode == currentNode);
-    std::list<RefPtr<UINode>> nodes;
-    BuilderUtils::GetBuilderNodes(childRef, nodes);
-    BuilderUtils::RemoveBuilderFromParent(parentNode, nodes);
-}
-
 void RemoveChild(ArkUINodeHandle node, ArkUINodeHandle child)
 {
     auto* currentNode = reinterpret_cast<UINode*>(node);
     auto* childNode = reinterpret_cast<UINode*>(child);
     currentNode->RemoveChild(Referenced::Claim<UINode>(childNode));
     currentNode->MarkNeedFrameFlushDirty(NG::PROPERTY_UPDATE_MEASURE);
-}
-
-void ClearBuilderNode(ArkUINodeHandle node)
-{
-    auto* currentNode = reinterpret_cast<UINode*>(node);
-    CHECK_NULL_VOID(currentNode);
-    auto currentRef = Referenced::Claim<UINode>(currentNode);
-    std::list<RefPtr<NG::UINode>> nodes;
-    CHECK_NULL_VOID(currentRef);
-    for (const auto& child : currentRef->GetChildren()) {
-        BuilderUtils::GetBuilderNodes(child, nodes);
-    }
-    BuilderUtils::RemoveBuilderFromParent(currentRef, nodes);
 }
 
 void ClearChildren(ArkUINodeHandle node)
@@ -564,121 +537,29 @@ void SetMarkNodeGroup(ArkUINodeHandle node, ArkUI_Bool isNodeGroup)
     CHECK_NULL_VOID(renderContext);
 
     renderContext->SetMarkNodeGroup(isNodeGroup);
-    auto* frameNode = AceType::DynamicCast<FrameNode>(currentNode);
-    if (frameNode) {
-        frameNode->SetApplicationRenderGroupMarked(true);
-    }
     renderContext->RequestNextFrame();
-}
-
-void SetTransformScale(ArkUINodeHandle node, ArkUI_Float32 xF, ArkUI_Float32 yF)
-{
-    auto* currentNode = reinterpret_cast<UINode*>(node);
-    CHECK_NULL_VOID(currentNode);
-    auto renderContext = GetRenderContext(currentNode);
-    CHECK_NULL_VOID(renderContext);
-
-    VectorF scaleValue = VectorF(xF, yF);
-    renderContext->UpdateTransformScale(scaleValue);
-    renderContext->RequestNextFrame();
-}
-
-ArkUI_CharPtr GetNodeTypeInRenderNode(ArkUINodeHandle node)
-{
-    auto* currentNode = reinterpret_cast<UINode*>(node);
-    CHECK_NULL_RETURN(currentNode, "");
-    static std::string nodeType = currentNode->GetTag();
-    return nodeType.c_str();
 }
 
 namespace NodeModifier {
 const ArkUIRenderNodeModifier* GetRenderNodeModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
-    static const ArkUIRenderNodeModifier modifier = {
-        .addBuilderNode = AddBuilderNode,
-        .appendChild = AppendChild,
-        .insertChildAfter = InsertChildAfter,
-        .removeBuilderNode = RemoveBuilderNode,
-        .removeChild = RemoveChild,
-        .clearBuilderNode = ClearBuilderNode,
-        .clearChildren = ClearChildren,
-        .setClipToFrame = SetClipToFrame,
-        .setRotation = SetRotation,
-        .setShadowColor = SetShadowColor,
-        .setShadowOffset = SetShadowOffset,
-        .setLabel = SetLabel,
-        .setShadowAlpha = SetShadowAlpha,
-        .setShadowElevation = SetShadowElevation,
-        .setShadowRadius = SetShadowRadius,
-        .invalidate = Invalidate,
-        .setScale = SetScale,
-        .setRenderNodeBackgroundColor = SetRenderNodeBackgroundColor,
-        .setPivot = SetPivot,
-        .setFrame = SetFrame,
-        .setSize = SetSize,
-        .setOpacity = SetOpacity,
-        .setTranslate = SetTranslate,
-        .setBorderStyle = SetBorderStyle,
-        .setBorderWidth = SetBorderWidth,
-        .setBorderColor = SetBorderColor,
-        .setBorderRadius = SetBorderRadius,
-        .setRectMask = SetRectMask,
-        .setCircleMask = SetCircleMask,
-        .setRoundRectMask = SetRoundRectMask,
-        .setOvalMask = SetOvalMask,
-        .setCommandPathMask = SetCommandPathMask,
-        .setRectClip = SetRectClip,
-        .setCircleClip = SetCircleClip,
-        .setRoundRectClip = SetRoundRectClip,
-        .setOvalClip = SetOvalClip,
-        .setCommandPathClip = SetCommandPathClip,
-        .setPosition = SetPosition,
-        .setMarkNodeGroup = SetMarkNodeGroup,
-        .setTransformScale = SetTransformScale,
-        .getNodeType = GetNodeTypeInRenderNode,
-    };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
+    static const ArkUIRenderNodeModifier modifier = { AppendChild, InsertChildAfter, RemoveChild, ClearChildren,
+        SetClipToFrame, SetRotation, SetShadowColor, SetShadowOffset, SetLabel, SetShadowAlpha, SetShadowElevation,
+        SetShadowRadius, Invalidate, SetScale, SetRenderNodeBackgroundColor, SetPivot, SetFrame, SetSize, SetOpacity,
+        SetTranslate, SetBorderStyle, SetBorderWidth, SetBorderColor, SetBorderRadius, SetRectMask, SetCircleMask,
+        SetRoundRectMask, SetOvalMask, SetCommandPathMask, SetRectClip, SetCircleClip, SetRoundRectClip, SetOvalClip,
+        SetCommandPathClip, SetPosition, SetMarkNodeGroup };
 
     return &modifier;
 }
 
 const CJUIRenderNodeModifier* GetCJUIRenderNodeModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
-    static const CJUIRenderNodeModifier modifier = {
-        .appendChild = AppendChild,
-        .insertChildAfter = InsertChildAfter,
-        .removeChild = RemoveChild,
-        .clearChildren = ClearChildren,
-        .setClipToFrame = SetClipToFrame,
-        .setRotation = SetRotation,
-        .setShadowColor = SetShadowColor,
-        .setShadowOffset = SetShadowOffset,
-        .setShadowAlpha = SetShadowAlpha,
-        .setShadowElevation = SetShadowElevation,
-        .setShadowRadius = SetShadowRadius,
-        .invalidate = Invalidate,
-        .setScale = SetScale,
-        .setRenderNodeBackgroundColor = SetRenderNodeBackgroundColor,
-        .setPivot = SetPivot,
-        .setFrame = SetFrame,
-        .setSize = SetSize,
-        .setOpacity = SetOpacity,
-        .setTranslate = SetTranslate,
-        .setBorderStyle = SetBorderStyle,
-        .setBorderWidth = SetBorderWidth,
-        .setBorderColor = SetBorderColor,
-        .setBorderRadius = SetBorderRadius,
-        .setRectMask = SetRectMask,
-        .setCircleMask = SetCircleMask,
-        .setRoundRectMask = SetRoundRectMask,
-        .setOvalMask = SetOvalMask,
-        .setCommandPathMask = SetCommandPathMask,
-        .setPosition = SetPosition,
-        .setMarkNodeGroup = SetMarkNodeGroup,
-    };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
+    static const CJUIRenderNodeModifier modifier = { AppendChild, InsertChildAfter, RemoveChild, ClearChildren,
+        SetClipToFrame, SetRotation, SetShadowColor, SetShadowOffset, SetShadowAlpha, SetShadowElevation,
+        SetShadowRadius, Invalidate, SetScale, SetRenderNodeBackgroundColor, SetPivot, SetFrame, SetSize, SetOpacity,
+        SetTranslate, SetBorderStyle, SetBorderWidth, SetBorderColor, SetBorderRadius, SetRectMask, SetCircleMask,
+        SetRoundRectMask, SetOvalMask, SetCommandPathMask, SetPosition, SetMarkNodeGroup };
 
     return &modifier;
 }

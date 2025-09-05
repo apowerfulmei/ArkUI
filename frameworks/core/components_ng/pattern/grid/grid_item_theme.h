@@ -41,7 +41,7 @@ public:
 
         RefPtr<GridItemTheme> Build(const RefPtr<ThemeConstants>& themeConstants) const
         {
-            RefPtr<GridItemTheme> theme = AceType::MakeRefPtr<GridItemTheme>();
+            RefPtr<GridItemTheme> theme = AceType::Claim(new GridItemTheme());
             if (!themeConstants) {
                 return theme;
             }

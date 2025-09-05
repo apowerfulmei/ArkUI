@@ -13,10 +13,24 @@
  * limitations under the License.
  */
 
+#include <map>
+#include <optional>
+#include <string>
 
 #include "interfaces/napi/kits/utils/napi_utils.h"
+#include "js_native_api.h"
+#include "js_native_api_types.h"
+#include "napi/native_api.h"
+#include "napi/native_engine/native_value.h"
+#include "napi/native_node_api.h"
 
+#include "base/geometry/dimension.h"
+#include "base/geometry/size.h"
 #include "bridge/common/utils/engine_helper.h"
+#include "bridge/js_frontend/engine/common/js_engine.h"
+#include "core/components/common/layout/constants.h"
+#include "core/components/common/properties/text_style.h"
+#include "frameworks/base/utils/measure_util.h"
 
 extern const char _binary_measure_js_start[];
 extern const char _binary_measure_abc_start[];
@@ -373,7 +387,8 @@ static napi_value JSMeasureTextSize(napi_env env, napi_callback_info info)
     napi_set_named_property(env, result, "width", resultArray[0]);
     napi_set_named_property(env, result, "height", resultArray[1]);
 
-    napi_escape_handle(env, scope, result, &result);
+    napi_value newResult = nullptr;
+    napi_escape_handle(env, scope, result, &newResult);
     napi_close_escapable_handle_scope(env, scope);
     return result;
 }

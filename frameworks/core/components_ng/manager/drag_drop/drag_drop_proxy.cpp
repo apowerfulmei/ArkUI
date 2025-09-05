@@ -15,14 +15,17 @@
 
 #include "core/components_ng/manager/drag_drop/drag_drop_proxy.h"
 
+#include "base/utils/utils.h"
 #include "core/common/ace_engine.h"
+#include "core/components_ng/event/focus_hub.h"
+#include "core/components_ng/property/measure_utils.h"
 #include "core/pipeline_ng/pipeline_context.h"
 
 namespace OHOS::Ace::NG {
 
 void DragDropProxy::OnTextDragStart(const std::string& extraInfo)
 {
-    auto pipeline = PipelineContext::GetCurrentContextSafelyWithCheck();
+    auto pipeline = PipelineContext::GetCurrentContext();
     CHECK_NULL_VOID(pipeline);
     auto manager = pipeline->GetDragDropManager();
     CHECK_NULL_VOID(manager);
@@ -36,7 +39,7 @@ void HandleExtraDragMoveReporting(const RefPtr<FrameNode>& frameNode, const std:
     CHECK_NULL_VOID(pipeline);
     auto container = AceEngine::Get().GetContainer(pipeline->GetInstanceId());
     CHECK_NULL_VOID(container);
-    if (!container->IsSceneBoardWindow()) {
+    if (!container->IsScenceBoardWindow()) {
         return;
     }
     auto gestureHub = frameNode->GetOrCreateGestureEventHub();
@@ -47,44 +50,32 @@ void HandleExtraDragMoveReporting(const RefPtr<FrameNode>& frameNode, const std:
     CHECK_NULL_VOID(dragDropManager);
     auto touchDownPoint = actuator->GetTouchDownPoint();
     auto pointerEvent = DragPointerEvent(touchDownPoint.x, touchDownPoint.y,
-        touchDownPoint.screenX, touchDownPoint.screenY, touchDownPoint.globalDisplayX, touchDownPoint.globalDisplayY);
-    pointerEvent.displayId = touchDownPoint.targetDisplayId;
-    pointerEvent.sourceTool = touchDownPoint.sourceTool;
-    pointerEvent.UpdatePressedKeyCodes(touchDownPoint.pressedKeyCodes_);
-    dragDropManager->OnDragMove(pointerEvent, extraInfo);
+        touchDownPoint.screenX, touchDownPoint.screenY);
+    dragDropManager->OnDragMove(pointerEvent, extraInfo, pipeline->GetRootElement());
 }
 
 void DragDropProxy::OnDragStart(
     const GestureEvent& info, const std::string& extraInfo, const RefPtr<FrameNode>& frameNode)
 {
-    auto pipeline = PipelineContext::GetCurrentContextSafelyWithCheck();
+    auto pipeline = PipelineContext::GetCurrentContext();
     CHECK_NULL_VOID(pipeline);
     auto manager = pipeline->GetDragDropManager();
     CHECK_NULL_VOID(manager);
     CHECK_NULL_VOID(manager->CheckDragDropProxy(id_));
 
     auto point = Point(info.GetGlobalPoint().GetX(), info.GetGlobalPoint().GetY(), info.GetScreenLocation().GetX(),
-        info.GetScreenLocation().GetY(), info.GetGlobalDisplayLocation().GetX(),
-        info.GetGlobalDisplayLocation().GetY());
+        info.GetScreenLocation().GetY());
     auto pointerEvent = DragPointerEvent(info.GetGlobalPoint().GetX(), info.GetGlobalPoint().GetY(),
-        info.GetScreenLocation().GetX(), info.GetScreenLocation().GetY(), info.GetGlobalDisplayLocation().GetX(),
-        info.GetGlobalDisplayLocation().GetY());
-    pointerEvent.displayId = info.GetTargetDisplayId();
-    pointerEvent.sourceTool = info.GetSourceTool();
-    pointerEvent.UpdatePressedKeyCodes(info.GetPressedKeyCodes());
-    manager->RequireBundleInfo();
+        info.GetScreenLocation().GetX(), info.GetScreenLocation().GetY());
     manager->OnDragStart(point, frameNode);
-    manager->SetExtraInfo(extraInfo);
     HandleExtraDragMoveReporting(frameNode, extraInfo);
-    auto container = Container::Current();
-    if (!(container && container->IsUIExtensionWindow())) {
-        manager->OnDragMove(pointerEvent, extraInfo);
-    }
+    manager->OnDragMove(pointerEvent, extraInfo);
+    manager->SetExtraInfo(extraInfo);
 }
 
 void DragDropProxy::OnDragMove(const GestureEvent& info)
 {
-    auto pipeline = PipelineContext::GetCurrentContextSafelyWithCheck();
+    auto pipeline = PipelineContext::GetCurrentContext();
     CHECK_NULL_VOID(pipeline);
     auto manager = pipeline->GetDragDropManager();
     CHECK_NULL_VOID(manager);
@@ -92,13 +83,12 @@ void DragDropProxy::OnDragMove(const GestureEvent& info)
 
     std::string extraInfo = manager->GetExtraInfo();
     manager->OnDragMove(DragPointerEvent(info.GetGlobalPoint().GetX(), info.GetGlobalPoint().GetY(),
-        info.GetScreenLocation().GetX(), info.GetScreenLocation().GetY(),
-        info.GetGlobalDisplayLocation().GetX(), info.GetGlobalDisplayLocation().GetY()), extraInfo);
+        info.GetScreenLocation().GetX(), info.GetScreenLocation().GetY()), extraInfo);
 }
 
 void DragDropProxy::OnDragEnd(const GestureEvent& info, bool isTextDragEnd)
 {
-    auto pipeline = PipelineContext::GetCurrentContextSafelyWithCheck();
+    auto pipeline = PipelineContext::GetCurrentContext();
     CHECK_NULL_VOID(pipeline);
     auto manager = pipeline->GetDragDropManager();
     CHECK_NULL_VOID(manager);
@@ -109,14 +99,13 @@ void DragDropProxy::OnDragEnd(const GestureEvent& info, bool isTextDragEnd)
             static_cast<float>(info.GetGlobalPoint().GetY()), extraInfo);
     } else {
         manager->OnDragEnd(DragPointerEvent(info.GetGlobalPoint().GetX(), info.GetGlobalPoint().GetY(),
-            info.GetScreenLocation().GetX(), info.GetScreenLocation().GetY(),
-            info.GetGlobalDisplayLocation().GetX(), info.GetGlobalDisplayLocation().GetY()), extraInfo);
+            info.GetScreenLocation().GetX(), info.GetScreenLocation().GetY()), extraInfo);
     }
 }
 
 void DragDropProxy::onDragCancel()
 {
-    auto pipeline = PipelineContext::GetCurrentContextSafelyWithCheck();
+    auto pipeline = PipelineContext::GetCurrentContext();
     CHECK_NULL_VOID(pipeline);
     auto manager = pipeline->GetDragDropManager();
     CHECK_NULL_VOID(manager);
@@ -126,7 +115,7 @@ void DragDropProxy::onDragCancel()
 
 void DragDropProxy::OnItemDragStart(const GestureEvent& info, const RefPtr<FrameNode>& frameNode)
 {
-    auto pipeline = PipelineContext::GetCurrentContextSafelyWithCheck();
+    auto pipeline = PipelineContext::GetCurrentContext();
     CHECK_NULL_VOID(pipeline);
     auto manager = pipeline->GetDragDropManager();
     CHECK_NULL_VOID(manager);
@@ -138,7 +127,7 @@ void DragDropProxy::OnItemDragStart(const GestureEvent& info, const RefPtr<Frame
 
 void DragDropProxy::OnItemDragMove(const GestureEvent& info, int32_t draggedIndex, DragType dragType)
 {
-    auto pipeline = PipelineContext::GetCurrentContextSafelyWithCheck();
+    auto pipeline = PipelineContext::GetCurrentContext();
     CHECK_NULL_VOID(pipeline);
     auto manager = pipeline->GetDragDropManager();
     CHECK_NULL_VOID(manager);
@@ -150,7 +139,7 @@ void DragDropProxy::OnItemDragMove(const GestureEvent& info, int32_t draggedInde
 
 void DragDropProxy::OnItemDragEnd(const GestureEvent& info, int32_t draggedIndex, DragType dragType)
 {
-    auto pipeline = PipelineContext::GetCurrentContextSafelyWithCheck();
+    auto pipeline = PipelineContext::GetCurrentContext();
     CHECK_NULL_VOID(pipeline);
     auto manager = pipeline->GetDragDropManager();
     CHECK_NULL_VOID(manager);
@@ -162,7 +151,7 @@ void DragDropProxy::OnItemDragEnd(const GestureEvent& info, int32_t draggedIndex
 
 void DragDropProxy::onItemDragCancel()
 {
-    auto pipeline = PipelineContext::GetCurrentContextSafelyWithCheck();
+    auto pipeline = PipelineContext::GetCurrentContext();
     CHECK_NULL_VOID(pipeline);
     auto manager = pipeline->GetDragDropManager();
     CHECK_NULL_VOID(manager);
@@ -173,7 +162,7 @@ void DragDropProxy::onItemDragCancel()
 
 void DragDropProxy::DestroyDragWindow()
 {
-    auto pipeline = PipelineContext::GetCurrentContextSafelyWithCheck();
+    auto pipeline = PipelineContext::GetCurrentContext();
     CHECK_NULL_VOID(pipeline);
     auto manager = pipeline->GetDragDropManager();
     CHECK_NULL_VOID(manager);

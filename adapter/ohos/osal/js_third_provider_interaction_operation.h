@@ -48,17 +48,13 @@ public:
     ~JsThirdProviderInteractionOperation() override;
     void Initialize();
     // Accessibility override.
-    RetError SearchElementInfoByAccessibilityId(
+    void SearchElementInfoByAccessibilityId(
         const int64_t elementId, const int32_t requestId,
         Accessibility::AccessibilityElementOperatorCallback& callback,
         const int32_t mode) override;
-    void SearchElementInfoBySpecificProperty(const int64_t elementId, const SpecificPropertyParam &param,
-        const int32_t requestId, AccessibilityElementOperatorCallback &callback) override;
     void SearchElementInfosByText(
         const int64_t elementId, const std::string& text, const int32_t requestId,
         Accessibility::AccessibilityElementOperatorCallback& callback) override;
-    void SearchDefaultFocusByWindowId(const int32_t windowId, const int32_t requestId,
-        AccessibilityElementOperatorCallback& callback, const int32_t pageId) override;
     void FindFocusedElementInfo(
         const int64_t elementId, const int32_t focusType, const int32_t requestId,
         Accessibility::AccessibilityElementOperatorCallback& callback) override;
@@ -92,11 +88,6 @@ public:
     const RefPtr<NG::FrameNode> GetHost() const
     {
         return host_.Upgrade();
-    }
-
-    int32_t GetBelongTreeId() const
-    {
-        return belongTreeId_;
     }
 
 private:

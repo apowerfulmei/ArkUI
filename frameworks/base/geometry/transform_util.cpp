@@ -480,8 +480,19 @@ DecomposedTransform TransformUtil::BlendDecomposedTransforms(
     return ret;
 }
 
-void TransformUtil::ProcessMatrix(const Matrix4& matrix, const Matrix4& perspectiveMatrix, DecomposedTransform& out)
+bool TransformUtil::DecomposeTransform(DecomposedTransform& out, const Matrix4& transform)
 {
+    Matrix4 matrix = transform;
+
+    if (!Normalize(matrix)) {
+        return false;
+    }
+
+    Matrix4 perspectiveMatrix = matrix;
+    for (int i = 0; i < 3; i++) {
+        perspectiveMatrix.Set(3, i, 0.0);
+    }
+    perspectiveMatrix.Set(3, 3, 1.0);
     if (!NearZero(matrix.Get(3, 0), epsilon) || !NearZero(matrix.Get(3, 1), epsilon) ||
         !NearZero(matrix.Get(3, 2), epsilon)) {
         double rhs[4] = { matrix.Get(3, 0), matrix.Get(3, 1), matrix.Get(3, 2), matrix.Get(3, 3) };
@@ -501,22 +512,6 @@ void TransformUtil::ProcessMatrix(const Matrix4& matrix, const Matrix4& perspect
             out.perspective[i] = 0.0;
         out.perspective[3] = 1.0;
     }
-}
-
-bool TransformUtil::DecomposeTransform(DecomposedTransform& out, const Matrix4& transform)
-{
-    Matrix4 matrix = transform;
-
-    if (!Normalize(matrix)) {
-        return false;
-    }
-
-    Matrix4 perspectiveMatrix = matrix;
-    for (int i = 0; i < 3; i++) {
-        perspectiveMatrix.Set(3, i, 0.0);
-    }
-    perspectiveMatrix.Set(3, 3, 1.0);
-    ProcessMatrix(matrix, perspectiveMatrix, out);
 
     for (int32_t i = 0; i < 3; i++) {
         out.translate[i] = matrix.Get(i, 3);
@@ -601,7 +596,7 @@ bool TransformUtil::DecomposeTransform(DecomposedTransform& out, const Matrix4& 
 
     double r, s, t, x, y, z, w;
     t = q_xx + q_yy + q_zz;
-    if (t > (epsilon - 1.0)) {
+    if (t > 0) {
         r = std::sqrt(1.0 + t);
         s = 0.5 / r;
         w = 0.5 * r;

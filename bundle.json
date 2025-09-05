@@ -2,7 +2,7 @@
     "name": "@ohos/ace_engine",
     "description": "ArkUI Cross-Platform Engine for UI layout measure and paint",
     "version": "3.1",
-    "license": "Apache-2.0",
+    "license": "Apache 2.0",
     "publishAs": "code-segment",
     "segment": {
         "destPath": "foundation/arkui/ace_engine"
@@ -14,16 +14,13 @@
         "subsystem": "arkui",
         "syscap": [
             "SystemCapability.ArkUI.ArkUI.Full",
-            "SystemCapability.ArkUI.ArkUI.Lite",
-            "SystemCapability.ArkUI.ArkUI.Circle"
+            "SystemCapability.ArkUI.ArkUI.Lite"
         ],
         "features": [
             "ace_engine_feature_enable_accessibility",
             "ace_engine_feature_enable_aps",
             "ace_engine_feature_enable_web",
             "ace_engine_feature_enable_pgo",
-            "ace_engine_feature_enable_codemerge",
-            "ace_engine_feature_enable_inst_prefetch",
             "ace_engine_feature_pgo_path",
             "ace_engine_feature_enable_atomic",
             "ace_engine_feature_enable_coverage",
@@ -31,15 +28,7 @@
             "ace_engine_feature_enable_split_mode",
             "ace_engine_feature_enable_nav_split_mode",
             "ace_engine_feature_asbng_path",
-            "ace_engine_feature_sched_model",
-            "ace_engine_feature_wearable",
-            "ace_engine_feature_enable_gpu",
-            "ace_engine_feature_enable_form_size_change_animation",
-            "ace_engine_feature_form_menu_enable",
-            "ace_engine_feature_enable_event_extra_handling",
-            "ace_engine_enable_circle_feature",
-            "ace_engine_feature_enable_long_press_gesture_extra_handling",
-            "ace_engine_feature_enable_upgrade_skia"
+            "ace_engine_feature_sched_model"
         ],
         "adapted_system_type": [
             "standard"
@@ -82,7 +71,6 @@
                 "common_event_service",
                 "data_share",
                 "resource_management",
-                "runtime_core",
                 "i18n",
                 "hicollie",
                 "netmanager_base",
@@ -117,11 +105,7 @@
                 "skia",
                 "libuv",
                 "resource_schedule_service",
-                "background_task_mgr",
-                "egl",
-                "request",
-                "qrcodegen",
-                "sdk"
+                "background_task_mgr"
             ],
             "third_party": []
         },
@@ -129,9 +113,7 @@
             "group_type": {
                 "base_group": [],
                 "fwk_group": [
-                    "//foundation/arkui/ace_engine/adapter/ohos/build:ace_packages",
-                    "//foundation/arkui/ace_engine/frameworks/bridge/cj_frontend:cj_frontend_ohos",
-                    "//foundation/arkui/ace_engine/interfaces/ets:ace_ani_package"
+                    "//foundation/arkui/ace_engine/adapter/ohos/build:ace_packages"
                 ],
                 "service_group": [
                     "//foundation/arkui/ace_engine/adapter/ohos/services:services_target",
@@ -163,11 +145,7 @@
                         "header_base": "//foundation/arkui/ace_engine/interfaces/inner_api/ace/",
                         "header_files": [
                             "ace_forward_compatibility.h",
-                            "ai/data_detector_interface.h",
-                            "ai/data_url_analyzer.h",
-                            "share/text_share_interface.h",
-                            "ai/image_analyzer.h",
-                            "ai/image_analyzer_interface.h"
+                            "ai/data_detector_interface.h"
                         ]
                     },
                     "name": "//foundation/arkui/ace_engine/interfaces/inner_api/ace:ace_forward_compatibility"
@@ -211,14 +189,10 @@
                 },
                 {
                     "header": {
-                        "header_base": "//foundation/arkui/ace_engine/interfaces/native",
+                        "header_base": "//foundation/arkui/ace_engine/",
                         "header_files": [
-                            "node/native_drawable_descriptor.h",
-                            "native_interface_xcomponent.h",
-                            "native_node.h",
-                            "native_interface.h",
-                            "native_type.h",
-                            "native_node_napi.h"
+                            "interfaces/native/node/native_drawable_descriptor.h",
+                            "interfaces/native/native_interface_xcomponent.h"
                         ]
                     },
                     "name": "//foundation/arkui/ace_engine/interfaces/native:ace_ndk"
@@ -235,15 +209,6 @@
                 },
                 {
                     "header": {
-                        "header_base": "//foundation/arkui/ace_engine/frameworks/core/common/",
-                        "header_files": [
-                            "container_scope.h"
-                        ]
-                    },
-                    "name": "//foundation/arkui/ace_engine/frameworks/core:ace_container_scope"
-                },
-                {
-                    "header": {
                         "header_base": "//foundation/arkui/ace_engine/interfaces/inner_api/ui_session/",
                         "header_files": [
                             "ui_content_service_interface.h",
@@ -251,15 +216,6 @@
                         ]
                     },
                     "name": "//foundation/arkui/ace_engine/interfaces/inner_api/ui_session:ui_session"
-                },
-                {
-                    "header": {
-                        "header_base": "//foundation/arkui/ace_engine/frameworks/bridge/cj_frontend",
-                        "header_files": [
-                            "runtime/cj_runtime_delegate.h"
-                        ]
-                    },
-                    "name": "//foundation/arkui/ace_engine/frameworks/bridge/cj_frontend:cj_frontend_ohos"
                 }
             ],
             "test": [

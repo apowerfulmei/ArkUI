@@ -17,25 +17,6 @@
 
 namespace OHOS::Ace {
 
-bool g_isSupportImageAnalyzerFeature = false;
-bool g_isOverlayCreated = false;
-
-void MockImageAnalyzerManager::SetSupportImageAnalyzerFeature(bool isSupportImageAnalyzerFeature)
-{
-    g_isSupportImageAnalyzerFeature = isSupportImageAnalyzerFeature;
-}
-
-void MockImageAnalyzerManager::SetOverlayCreated(bool isOverlayCreated)
-{
-    g_isOverlayCreated = isOverlayCreated;
-}
-
-void MockImageAnalyzerManager::SetUp()
-{
-    g_isSupportImageAnalyzerFeature = false;
-    g_isOverlayCreated = false;
-}
-
 ImageAnalyzerManager::ImageAnalyzerManager(const RefPtr<NG::FrameNode>& frameNode, ImageAnalyzerHolder holder)
 {
     holder_ = holder;
@@ -47,17 +28,7 @@ void ImageAnalyzerManager::CreateAnalyzerOverlay(const RefPtr<OHOS::Ace::PixelMa
 {
 }
 
-void ImageAnalyzerManager::CreateMovingPhotoAnalyzerOverlay(const RefPtr<OHOS::Ace::PixelMap>& pixelMap,
-    MovingPhotoAnalyzerInfo info)
-{
-}
-
 void ImageAnalyzerManager::UpdateAnalyzerOverlay(const RefPtr<OHOS::Ace::PixelMap>& pixelMap, const NG::OffsetF& offset)
-{
-}
-
-void ImageAnalyzerManager::UpdateMovingPhotoAnalyzerOverlay(const RefPtr<OHOS::Ace::PixelMap>& pixelMap,
-    MovingPhotoAnalyzerInfo info)
 {
 }
 
@@ -67,12 +38,12 @@ void ImageAnalyzerManager::DestroyAnalyzerOverlay()
 
 bool ImageAnalyzerManager::IsSupportImageAnalyzerFeature()
 {
-    return g_isSupportImageAnalyzerFeature;
+    return false;
 }
 
 bool ImageAnalyzerManager::IsOverlayCreated()
 {
-    return g_isOverlayCreated;
+    return false;
 }
 
 void ImageAnalyzerManager::UpdateAnalyzerOverlayLayout()
@@ -81,10 +52,6 @@ void ImageAnalyzerManager::UpdateAnalyzerOverlayLayout()
 
 void ImageAnalyzerManager::UpdateAnalyzerUIConfig(const RefPtr<NG::GeometryNode>& geometryNode,
     const PixelMapInfo& info)
-{
-}
-
-void ImageAnalyzerManager::UpdateKeyEvent(KeyEvent keyEvent)
 {
 }
 
@@ -104,27 +71,7 @@ void ImageAnalyzerManager::ReleaseImageAnalyzer()
 {
 }
 
-void ImageAnalyzerManager::UpdateOverlayTouchInfo(int touchPointX, int touchPointY, TouchType touchType)
-{
-}
-
-void ImageAnalyzerManager::UpdatePressOverlay(const RefPtr<OHOS::Ace::PixelMap>& pixelMap, int offsetX, int offsetY,
-    int rectWidth, int rectHeight, int pointX, int pointY, OnTextSelectedCallback callback)
-{
-}
-
-void ImageAnalyzerManager::UpdateOverlayStatus(bool status, int offsetX, int offsetY, int rectWidth, int rectHeight)
-{
-}
-
 void ImageAnalyzerManager::SetNotifySelectedCallback(OnNotifySelectedStatusCallback&& callback)
 {
-    analyzerUIConfig_.onNotifySelectedStatus = std::move(callback);
-}
-
-void ImageAnalyzerManager::SetOnCanPlayCallback(
-    OnCanPlayCallback&& onCanPlay)
-{
-    analyzerUIConfig_.onCanPlay = std::move(onCanPlay);
 }
 } // namespace OHOS::Ace

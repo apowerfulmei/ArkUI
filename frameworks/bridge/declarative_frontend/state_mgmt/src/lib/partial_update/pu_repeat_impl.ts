@@ -19,11 +19,10 @@ class __RepeatImpl<T> {
     private arr_: Array<T>;
     private itemGenFuncs_: { [type: string]: RepeatItemGenFunc<T> };
     private keyGenFunction_?: RepeatKeyGenFunc<T>;
-    private ttypeGenFunc_: RepeatTTypeGenFunc<T>;
+    private typeGenFunc_: RepeatTypeGenFunc<T>;
     //
     private mkRepeatItem_: (item: T, index?: number) =>__RepeatItemFactoryReturn<T>;
     private onMoveHandler_?: OnMoveHandler;
-    private itemDragEventHandler?: ItemDragEventHandler;
 
     private key2Item_ = new Map<string, __RepeatItemInfo<T>>();
 
@@ -35,11 +34,10 @@ class __RepeatImpl<T> {
     public render(config: __RepeatConfig<T>, isInitialRender: boolean): void {
         this.arr_ = config.arr;
         this.itemGenFuncs_ = config.itemGenFuncs;
-        this.ttypeGenFunc_ = config.ttypeGenFunc;
+        this.typeGenFunc_ = config.typeGenFunc;
         this.keyGenFunction_ = config.keyGenFunc;
         this.mkRepeatItem_ = config.mkRepeatItem;
         this.onMoveHandler_ = config.onMoveHandler;
-        this.itemDragEventHandler = config.itemDragEventHandler;
 
         isInitialRender ? this.initialRender() : this.reRender();
     }
@@ -77,7 +75,7 @@ class __RepeatImpl<T> {
         });
         let removedChildElmtIds = new Array<number>();
         // Fetch the removedChildElmtIds from C++ to unregister those elmtIds with UINodeRegisterProxy
-        RepeatNative.onMove(this.onMoveHandler_, this.itemDragEventHandler);
+        RepeatNative.onMove(this.onMoveHandler_);
         RepeatNative.finishRender(removedChildElmtIds);
         UINodeRegisterProxy.unregisterRemovedElmtsFromViewPUs(removedChildElmtIds);
         stateMgmtConsole.debug(`__RepeatImpl: initialRender elmtIds need unregister after repeat render: ${JSON.stringify(removedChildElmtIds)}`);
@@ -141,7 +139,6 @@ class __RepeatImpl<T> {
                 // render new UINode children
                 itemInfo.repeatItem = this.mkRepeatItem_(item, index);
                 this.initialRenderItem(key, itemInfo.repeatItem);
-                this.afterAddChild();
             }
 
             index++;
@@ -161,17 +158,10 @@ class __RepeatImpl<T> {
         // C++  tempChildren.clear() , trigger re-layout
         let removedChildElmtIds = new Array<number>();
         // Fetch the removedChildElmtIds from C++ to unregister those elmtIds with UINodeRegisterProxy
-        RepeatNative.onMove(this.onMoveHandler_, this.itemDragEventHandler);
+        RepeatNative.onMove(this.onMoveHandler_);
         RepeatNative.finishRender(removedChildElmtIds);
         UINodeRegisterProxy.unregisterRemovedElmtsFromViewPUs(removedChildElmtIds);
         stateMgmtConsole.debug(`__RepeatImpl: reRender elmtIds need unregister after repeat render: ${JSON.stringify(removedChildElmtIds)}`);
-    }
-
-    private afterAddChild(): void {
-        if (this.onMoveHandler_ === undefined || this.onMoveHandler_ === null) {
-            return;
-        }
-        RepeatNative.afterAddChild();
     }
 
     private initialRenderItem(key: string, repeatItem: __RepeatItemFactoryReturn<T>): void {
@@ -183,8 +173,8 @@ class __RepeatImpl<T> {
         RepeatNative.createNewChildStart(key);
 
         // execute the itemGen function
-        const itemType = this.ttypeGenFunc_?.(repeatItem.item, repeatItem.index) ?? RepeatEachFuncTtype;
-        const itemFunc = this.itemGenFuncs_[itemType] ?? this.itemGenFuncs_[RepeatEachFuncTtype];
+        const itemType = this.typeGenFunc_(repeatItem.item, repeatItem.index) ?? '';
+        const itemFunc = this.itemGenFuncs_[itemType] ?? this.itemGenFuncs_[''];
         itemFunc(repeatItem);
 
         RepeatNative.createNewChildFinish(key);

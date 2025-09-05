@@ -88,26 +88,6 @@ public:
         calendarDay_ = calendarDay;
     }
 
-    void SetStartDate(const PickerDate& startDate)
-    {
-        startDate_ = startDate;
-    }
-
-    void SetEndDate(const PickerDate& endDate)
-    {
-        endDate_ = endDate;
-    }
-
-    void SetMarkToday(bool markToday)
-    {
-        markToday_ = markToday;
-    }
-
-    void SetDisabledDateRange(const std::vector<std::pair<PickerDate, PickerDate>>& disabledDateRange)
-    {
-        disabledDateRange_ = disabledDateRange;
-    }
-
     void SetMoveDirection(NG::Direction moveDirection)
     {
         moveDirection_ = moveDirection;
@@ -197,11 +177,6 @@ private:
     RefPtr<CalendarControllerNg> calendarControllerNg_;
     CalendarDay calendarDay_;
     PickerDate selectedDay_;
-    uint8_t curMonthIndex_ = 1;
-    PickerDate startDate_;
-    PickerDate endDate_;
-    bool markToday_ = false;
-    std::vector<std::pair<PickerDate, PickerDate>> disabledDateRange_;
 
     // Used to mark the jump action destination.
     // eg. 2023-1-1

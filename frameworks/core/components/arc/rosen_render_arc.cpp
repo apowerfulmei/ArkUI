@@ -14,7 +14,6 @@
  */
 
 #include "core/components/arc/rosen_render_arc.h"
-#include "frameworks/core/pipeline/base/constants.h"
 
 #ifndef USE_ROSEN_DRAWING
 #include "include/core/SkMaskFilter.h"
@@ -67,7 +66,7 @@ void RosenRenderArc::Paint(RenderContext& context, const Offset& offset)
                 offset.GetY() + widthHalf,
                 offset.GetX() + arcRadiusX_ * ARC_RADIUS_TO_DIAMETER - widthHalf,
                 offset.GetY() + arcRadiusY_ * ARC_RADIUS_TO_DIAMETER - widthHalf),
-            startAngle_ * 180.0 / ACE_PI, sweepAngle_ * 180.0 / ACE_PI, false, paint);
+            startAngle_ * 180.0 / M_PI, sweepAngle_ * 180.0 / M_PI, false, paint);
     } else {
         paint.setStyle(SkPaint::Style::kFill_Style);
         canvas->drawArc(
@@ -75,7 +74,7 @@ void RosenRenderArc::Paint(RenderContext& context, const Offset& offset)
                 offset.GetX(), offset.GetY(),
                 offset.GetX() + arcRadiusX_ * ARC_RADIUS_TO_DIAMETER,
                 offset.GetY() + arcRadiusY_ * ARC_RADIUS_TO_DIAMETER),
-            startAngle_ * 180.0 / ACE_PI, sweepAngle_ * 180.0 / ACE_PI, true, paint);
+            startAngle_ * 180.0 / M_PI, sweepAngle_ * 180.0 / M_PI, true, paint);
     }
 #else
     if (!NearZero(width_)) {
@@ -97,7 +96,7 @@ void RosenRenderArc::Paint(RenderContext& context, const Offset& offset)
                 offset.GetX() + widthHalf, offset.GetY() + widthHalf,
                 offset.GetX() + arcRadiusX_ * ARC_RADIUS_TO_DIAMETER - widthHalf,
                 offset.GetY() + arcRadiusY_ * ARC_RADIUS_TO_DIAMETER - widthHalf),
-            startAngle_ * 180.0 / ACE_PI, sweepAngle_ * 180.0 / ACE_PI);
+            startAngle_ * 180.0 / M_PI, sweepAngle_ * 180.0 / M_PI);
         canvas->DetachPen();
     } else {
         RSBrush brush;
@@ -109,7 +108,7 @@ void RosenRenderArc::Paint(RenderContext& context, const Offset& offset)
             RSRect(offset.GetX(), offset.GetY(),
                 offset.GetX() + arcRadiusX_ * ARC_RADIUS_TO_DIAMETER,
                 offset.GetY() + arcRadiusY_ * ARC_RADIUS_TO_DIAMETER),
-            startAngle_ * 180.0 / ACE_PI, sweepAngle_ * 180.0 / ACE_PI);
+            startAngle_ * 180.0 / M_PI, sweepAngle_ * 180.0 / M_PI);
         canvas->DetachBrush();
     }
 #endif

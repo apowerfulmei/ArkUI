@@ -20,7 +20,10 @@
 
 #include "base/memory/referenced.h"
 #include "base/utils/utils.h"
+#include "core/common/container.h"
 #include "core/components/button/button_theme.h"
+#include "core/components/common/layout/constants.h"
+#include "core/components_ng/base/inspector_filter.h"
 #include "core/components_ng/event/event_hub.h"
 #include "core/components_ng/event/focus_hub.h"
 #include "core/components_ng/pattern/button/button_event_hub.h"
@@ -30,8 +33,6 @@
 #include "core/components_ng/pattern/pattern.h"
 #include "core/components_ng/pattern/text/text_layout_property.h"
 namespace OHOS::Ace::NG {
-struct InspectorConfig;
-class InspectorFilter;
 enum class ComponentButtonType { POPUP, BUTTON, STEPPER, NAVIGATION };
 class ButtonPattern : public Pattern {
     DECLARE_ACE_TYPE(ButtonPattern, Pattern);
@@ -40,11 +41,6 @@ public:
     ButtonPattern() = default;
 
     ~ButtonPattern() override = default;
-
-    void SetApplyShadow(bool shadow)
-    {
-        isApplyShadow_ = shadow;
-    }
 
     bool IsAtomicNode() const override
     {
@@ -66,9 +62,38 @@ public:
         return MakeRefPtr<ButtonLayoutProperty>();
     }
 
+    FocusPattern GetFocusPattern() const override
+    {
+        if (buttonType_ == ComponentButtonType::POPUP || buttonType_ == ComponentButtonType::STEPPER) {
+            FocusPaintParam focusPaintParam;
+            focusPaintParam.SetPaintColor(focusBorderColor_);
+            return { FocusType::NODE, true, FocusStyleType::INNER_BORDER, focusPaintParam };
+        }
+        if (buttonType_ == ComponentButtonType::NAVIGATION) {
+            FocusPaintParam focusPaintParam;
+            focusPaintParam.SetPaintColor(focusBorderColor_);
+            focusPaintParam.SetPaintWidth(focusBorderWidth_);
+            return { FocusType::NODE, true, FocusStyleType::INNER_BORDER, focusPaintParam };
+        }
+        return { FocusType::NODE, true, FocusStyleType::OUTER_BORDER };
+    }
+
+    bool IsNeedAdjustByAspectRatio() override
+    {
+        auto host = GetHost();
+        CHECK_NULL_RETURN(host, false);
+        auto layoutProperty = host->GetLayoutProperty<ButtonLayoutProperty>();
+        CHECK_NULL_RETURN(host, false);
+        auto isNeedAdjust = layoutProperty->HasAspectRatio() &&
+               layoutProperty->GetType().value_or(ButtonType::CAPSULE) != ButtonType::CIRCLE;
+
+        return isNeedAdjust;
+    }
+
     void SetClickedColor(const Color& color)
     {
         clickedColor_ = color;
+        isSetClickedColor_ = true;
     }
 
     void SetBlendColor(const std::optional<Color>& blendClickColor, const std::optional<Color>& blendHoverColor)
@@ -92,7 +117,173 @@ public:
         buttonType_ = buttonType;
     }
 
-    void ToTreeJson(std::unique_ptr<JsonValue>& json, const InspectorConfig& config) const override;
+    void ToJsonValue(std::unique_ptr<JsonValue>& json, const InspectorFilter& filter) const override
+    {
+        Pattern::ToJsonValue(json, filter);
+        /* no fixed attr below, just return */
+        if (filter.IsFastFilter()) {
+            return;
+        }
+        auto host = GetHost();
+        CHECK_NULL_VOID(host);
+        auto layoutProperty = host->GetLayoutProperty<ButtonLayoutProperty>();
+        CHECK_NULL_VOID(layoutProperty);
+        auto context = PipelineBase::GetCurrentContext();
+        CHECK_NULL_VOID(context);
+        auto buttonTheme = context->GetTheme<ButtonTheme>();
+        CHECK_NULL_VOID(buttonTheme);
+        auto textStyle = buttonTheme->GetTextStyle();
+        auto buttonType = layoutProperty->GetType().value_or(ButtonType::CAPSULE);
+        json->PutExtAttr("type", host->GetTag() == "Toggle" ? "ToggleType.Button" :
+            ConvertButtonTypeToString(buttonType).c_str(), filter);
+        json->PutExtAttr("fontSize",
+            layoutProperty->GetFontSizeValue(layoutProperty->HasLabel() ? textStyle.GetFontSize() : Dimension(0))
+                .ToString()
+                .c_str(), filter);
+        json->PutExtAttr("fontWeight",
+        V2::ConvertWrapFontWeightToStirng(layoutProperty->GetFontWeight().value_or(FontWeight::MEDIUM)).c_str(), filter);
+        json->PutExtAttr("fontColor", layoutProperty->GetFontColor()
+                                   .value_or(layoutProperty->HasLabel() ? textStyle.GetTextColor() : Color::BLACK)
+                                   .ColorToString()
+                                   .c_str(), filter);
+        json->PutExtAttr("fontStyle", layoutProperty->GetFontStyle().value_or(Ace::FontStyle::NORMAL) == Ace::FontStyle::NORMAL
+                ? "FontStyle.Normal"
+                : "FontStyle.Italic", filter);
+        json->PutExtAttr("label", layoutProperty->GetLabelValue("").c_str(), filter);
+        auto eventHub = host->GetEventHub<ButtonEventHub>();
+        CHECK_NULL_VOID(eventHub);
+        json->PutExtAttr("stateEffect", eventHub->GetStateEffect() ? "true" : "false", filter);
+
+        auto optionJson = JsonUtil::Create(true);
+        optionJson->Put(
+            "type", ConvertButtonTypeToString(layoutProperty->GetType().value_or(ButtonType::CAPSULE)).c_str());
+        optionJson->Put("stateEffect", eventHub->GetStateEffect() ? "true" : "false");
+        json->PutExtAttr("options", optionJson->ToString().c_str(), filter);
+        ToJsonValueAttribute(json, filter);
+    }
+
+    void ToJsonValueAttribute(std::unique_ptr<JsonValue>& json, const InspectorFilter& filter) const
+    {
+        auto host = GetHost();
+        CHECK_NULL_VOID(host);
+        auto layoutProperty = host->GetLayoutProperty<ButtonLayoutProperty>();
+        CHECK_NULL_VOID(layoutProperty);
+        auto fontFamilyVector =
+            layoutProperty->GetFontFamily().value_or<std::vector<std::string>>({ "HarmonyOS Sans" });
+        std::string fontFamily;
+        if (!fontFamilyVector.empty()) {
+            fontFamily = fontFamilyVector.at(0);
+            for (uint32_t i = 1; i < fontFamilyVector.size(); ++i) {
+                fontFamily += ',' + fontFamilyVector.at(i);
+            }
+        }
+        json->PutExtAttr("fontFamily", fontFamily.c_str(), filter);
+        auto fontJsValue = JsonUtil::Create(true);
+        fontJsValue->Put("size", layoutProperty->GetFontSizeValue(Dimension(0)).ToString().c_str());
+        fontJsValue->Put("weight",
+            V2::ConvertWrapFontWeightToStirng(layoutProperty->GetFontWeight().value_or(FontWeight::MEDIUM)).c_str());
+        fontJsValue->Put("family", fontFamily.c_str());
+        fontJsValue->Put(
+            "style", layoutProperty->GetFontStyle().value_or(Ace::FontStyle::NORMAL) == Ace::FontStyle::NORMAL
+                         ? "FontStyle.Normal"
+                         : "FontStyle.Italic");
+        auto labelJsValue = JsonUtil::Create(true);
+        labelJsValue->Put("overflow",
+            V2::ConvertWrapTextOverflowToString(layoutProperty->GetTextOverflow().value_or(TextOverflow::CLIP))
+                .c_str());
+        labelJsValue->Put("maxLines", std::to_string(layoutProperty->GetMaxLines().value_or(DEFAULT_MAXLINES)).c_str());
+        labelJsValue->Put("minFontSize", layoutProperty->GetMinFontSizeValue(Dimension(0)).ToString().c_str());
+        labelJsValue->Put("maxFontSize", layoutProperty->GetMaxFontSizeValue(Dimension(0)).ToString().c_str());
+        labelJsValue->Put("heightAdaptivePolicy",
+            V2::ConvertWrapTextHeightAdaptivePolicyToString(
+                layoutProperty->GetHeightAdaptivePolicy().value_or(TextHeightAdaptivePolicy::MAX_LINES_FIRST))
+                .c_str());
+        labelJsValue->Put("font", fontJsValue->ToString().c_str());
+        json->PutExtAttr("labelStyle", labelJsValue->ToString().c_str(), filter);
+
+        json->PutExtAttr("buttonStyle",
+            ConvertButtonStyleToString(layoutProperty->GetButtonStyle().value_or(ButtonStyleMode::EMPHASIZE))
+            .c_str(), filter);
+        json->PutExtAttr("controlSize",
+            ConvertControlSizeToString(layoutProperty->GetControlSize().value_or(ControlSize::NORMAL))
+            .c_str(), filter);
+        json->PutExtAttr(
+            "role", ConvertButtonRoleToString(layoutProperty->GetButtonRole().value_or(ButtonRole::NORMAL))
+            .c_str(), filter);
+    }
+
+    static std::string ConvertButtonRoleToString(ButtonRole buttonRole)
+    {
+        std::string result;
+        switch (buttonRole) {
+            case ButtonRole::NORMAL:
+                result = "ButtonRole.NORMAL";
+                break;
+            case ButtonRole::ERROR:
+                result = "ButtonRole.ERROR";
+                break;
+            default:
+                break;
+        }
+        return result;
+    }
+
+    static std::string ConvertButtonTypeToString(ButtonType buttonType)
+    {
+        std::string result;
+        switch (buttonType) {
+            case ButtonType::NORMAL:
+                result = "ButtonType.Normal";
+                break;
+            case ButtonType::CAPSULE:
+                result = "ButtonType.Capsule";
+                break;
+            case ButtonType::CIRCLE:
+                result = "ButtonType.Circle";
+                break;
+            case ButtonType::ROUNDED_RECTANGLE:
+                result = "ButtonType.ROUNDED_RECTANGLE";
+                break;
+            default:
+                break;
+        }
+        return result;
+    }
+
+    static std::string ConvertButtonStyleToString(ButtonStyleMode buttonStyle)
+    {
+        std::string result;
+        switch (buttonStyle) {
+            case ButtonStyleMode::NORMAL:
+                result = "ButtonStyleMode.NORMAL";
+                break;
+            case ButtonStyleMode::EMPHASIZE:
+                result = "ButtonStyleMode.EMPHASIZED";
+                break;
+            case ButtonStyleMode::TEXT:
+                result = "ButtonStyleMode.TEXTUAL";
+                break;
+            default:
+                break;
+        }
+        return result;
+    }
+
+    static std::string ConvertControlSizeToString(ControlSize controlSize)
+    {
+        std::string result;
+        switch (controlSize) {
+            case ControlSize::SMALL:
+                result = "ControlSize.SMALL";
+                break;
+            case ControlSize::NORMAL:
+                result = "ControlSize.NORMAL";
+                break;
+            default:
+                break;
+        }
+        return result;
+    }
 
     void SetLocalLocation(const Offset& localLocation)
     {
@@ -114,27 +305,12 @@ public:
         return isInHover_;
     }
 
-    bool IsEnableMatchParent() override
-    {
-        return true;
-    }
-
-    bool IsEnableFix() override
-    {
-        return true;
-    }
-
-    bool IsEnableChildrenMatchParent() override
-    {
-        return true;
-    }
-
     RefPtr<InputEvent>& GetHoverListener()
     {
         return hoverListener_;
     }
 
-    std::function<void(UIState)>& GetTouchListener()
+    RefPtr<TouchEventImpl>& GetTouchListener()
     {
         return touchListener_;
     }
@@ -180,67 +356,28 @@ public:
         return hasCustomPadding_;
     }
 
-    void SetIsFocus(bool isFocus)
+protected:
+    bool IsNeedInitClickEventRecorder() const override
     {
-        isFocus_ = isFocus;
+        return true;
     }
 
-    FocusPattern GetFocusPattern() const override;
-
-    bool IsNeedAdjustByAspectRatio() override;
-
-    void ToJsonValue(std::unique_ptr<JsonValue>& json, const InspectorFilter& filter) const override;
-
-    void ToJsonValueAttribute(std::unique_ptr<JsonValue>& json, const InspectorFilter& filter) const;
-
-    static std::string ConvertButtonRoleToString(ButtonRole buttonRole);
-
-    static std::string ConvertButtonTypeToString(ButtonType buttonType);
-
-    static std::string ConvertButtonStyleToString(ButtonStyleMode buttonStyle);
-
-    static std::string ConvertControlSizeToString(ControlSize controlSize);
-
-    bool IsDynamicSwitchButtonStyle(const BorderColorProperty& color, RefPtr<ButtonTheme>& buttonTheme);
-
-    bool IsDynamicSwitchButtonStyle(const BorderWidthProperty& width, RefPtr<ButtonTheme>& buttonTheme);
-
-    void DumpInfo() override;
-
-    void DumpSubInfo(RefPtr<ButtonLayoutProperty> layoutProperty);
-
-    void HandleBackgroundColor();
-
-    void UpdateComponentColor(const Color& color, const ButtonColorType buttonColorType);
-
-    void UpdateComponentString(const std::string& value, const ButtonStringType buttonStringType);
-
-    void UpdateComponentDimension(const CalcDimension value, const ButtonDimensionType buttonDimensionType);
-
-    void UpdateComponentDouble(const double value, const ButtonDoubleType buttonDoubleType);
-
-    void UpdateComponentFamilies(const std::vector<std::string>& value, const ButtonStringType buttonStringType);
-
-    std::string VectorToString(const std::vector<std::string>& vec, const std::string& delimiter = " ");
-
-    std::vector<std::string> StringToVector(const std::string& str, char delimiter = ' ');
-
-protected:
     void OnModifyDone() override;
     void OnAfterModifyDone() override;
+    void OnAttachToFrameNode() override;
     void InitTouchEvent();
     void InitHoverEvent();
-    void HandlePressedStyle();
-    void HandleNormalStyle();
+    void OnTouchDown();
+    void OnTouchUp();
     void HandleHoverEvent(bool isHover);
-    void UpdateTexOverflow(bool isMarqueeStart);
+    void HandleBackgroundColor();
     void HandleEnabled();
     void InitButtonLabel();
     void CheckLocalizedBorderRadiuses();
     Color GetColorFromType(const RefPtr<ButtonTheme>& theme, const int32_t& type);
     void AnimateTouchAndHover(RefPtr<RenderContext>& renderContext, int32_t typeFrom, int32_t typeTo, int32_t duration,
         const RefPtr<Curve>& curve);
-    std::optional<Color> clickedColor_ = std::nullopt;
+    Color clickedColor_;
 
 private:
     static void UpdateTextLayoutProperty(
@@ -251,12 +388,11 @@ private:
     bool IsNeedToHandleHoverOpacity();
     static void UpdateTextFontScale(
         RefPtr<ButtonLayoutProperty>& layoutProperty, RefPtr<TextLayoutProperty>& textLayoutProperty);
-    void OnFontScaleConfigurationUpdate() override;
-    void InitButtonAlphaOffscreen();
     Color backgroundColor_;
     Color focusBorderColor_;
     Color themeBgColor_;
     Color themeTextColor_;
+    bool isSetClickedColor_ = false;
     ComponentButtonType buttonType_ = ComponentButtonType::BUTTON;
     void FireBuilder();
     RefPtr<FrameNode> BuildContentModifierNode();
@@ -265,14 +401,10 @@ private:
     RefPtr<FrameNode> contentModifierNode_;
     std::optional<GestureEventFunc> clickEventFunc_;
     int32_t nodeId_ = -1;
-    std::function<void(UIState)> touchListener_;
+    RefPtr<TouchEventImpl> touchListener_;
     RefPtr<InputEvent> hoverListener_;
     bool isHover_ = false;
-    bool isFocus_ = false;
     bool isPress_ = false;
-    bool isApplyShadow_ = true;
-    bool isLayoutUpdate_ = false;
-    bool isInitButtonAlphaOffscreen_ = false;
 
     bool isInHover_ = false;
     Offset localLocation_;
@@ -281,33 +413,10 @@ private:
     std::optional<Color> blendClickColor_ = std::nullopt;
     std::optional<Color> blendHoverColor_ = std::nullopt;
 
-    bool isTextFadeOut_ = false;
     bool isColorUpdateFlag_ = false;
     SizeF preFrameSize_;
     bool hasCustomPadding_ = false;
     ACE_DISALLOW_COPY_AND_MOVE(ButtonPattern);
-    bool focusTextColorModify_ = false;
-    bool bgColorModify_ = false;
-    bool scaleModify_ = false;
-    bool shadowModify_ = false;
-    std::function<void(bool)> isFocusActiveUpdateEvent_;
-
-    void HandleBorderAndShadow();
-    void HandleFocusStatusStyle();
-    void HandleFocusStyleTask();
-    void HandleBlurStyleTask();
-    void UpdateButtonStyle();
-    void SetFocusButtonStyle(RefPtr<RenderContext>& renderContext, RefPtr<ButtonTheme>& buttonTheme,
-        RefPtr<ButtonLayoutProperty>& layoutProperty, RefPtr<FrameNode>& textNode);
-    void SetBlurButtonStyle(RefPtr<RenderContext>& renderContext, RefPtr<ButtonTheme>& buttonTheme,
-        RefPtr<ButtonLayoutProperty>& layoutProperty, RefPtr<FrameNode>& textNode);
-    void AddIsFocusActiveUpdateEvent();
-    void RemoveIsFocusActiveUpdateEvent();
-    void HandleShadowStyle(ButtonStyleMode buttonStyle, ShadowStyle shadowStyle,
-        RefPtr<RenderContext>& renderContext, RefPtr<ButtonTheme>& buttonTheme);
-    Shadow GetShadowFromTheme(ShadowStyle shadowStyle);
-    void HandleFocusActiveStyle();
-    void SetButtonScale(RefPtr<RenderContext>& renderContext, RefPtr<ButtonTheme>& buttonTheme);
 };
 } // namespace OHOS::Ace::NG
 

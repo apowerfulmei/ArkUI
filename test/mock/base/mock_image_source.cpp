@@ -21,7 +21,7 @@ RefPtr<ImageSource> ImageSource::Create(int32_t fd)
     return MockImageSource::mockImageSource_;
 }
 
-RefPtr<ImageSource> ImageSource::Create(const uint8_t* data, uint32_t size, uint32_t& errorCode)
+RefPtr<ImageSource> ImageSource::Create(const uint8_t* data, uint32_t size)
 {
     return MockImageSource::mockImageSource_;
 }

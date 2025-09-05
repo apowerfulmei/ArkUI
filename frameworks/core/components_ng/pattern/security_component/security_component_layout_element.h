@@ -49,7 +49,6 @@ public:
 
     double width_ = 0.0;
     double height_ = 0.0;
-    double alpha_ = 1.0;
     double defaultWidth_ = 0.0;
     double defaultHeight_ = 0.0;
     bool isSetSize_ = false;
@@ -58,7 +57,7 @@ public:
 class IconLayoutElement : public SecurityComponentLayoutElement {
 public:
     IconLayoutElement() {};
-    void Init(const RefPtr<SecurityComponentLayoutProperty>& property, RefPtr<LayoutWrapper>& textWrap);
+    void Init(RefPtr<SecurityComponentLayoutProperty>& property, RefPtr<LayoutWrapper>& textWrap);
     ~IconLayoutElement() = default;
 
     double ShrinkWidth(double reduceSize) override;
@@ -66,7 +65,6 @@ public:
     void DoMeasure();
 
 private:
-    void UpdateUserSetSize(const RefPtr<SecurityComponentLayoutProperty>& property);
     bool isExist_ = false;
     double minIconSize_;
     RefPtr<SecurityComponentLayoutProperty> secCompProperty_;
@@ -146,15 +144,13 @@ private:
 class TextLayoutElement : public SecurityComponentLayoutElement {
 public:
     TextLayoutElement() {};
-    void Init(const RefPtr<SecurityComponentLayoutProperty>& property,
+    void Init(RefPtr<SecurityComponentLayoutProperty>& property,
         RefPtr<LayoutWrapper>& textWrap);
     ~TextLayoutElement() = default;
 
     double ShrinkWidth(double reduceSize) override;
 
     double ShrinkHeight(double reduceSize) override;
-
-    bool DidExceedMaxLines(std::optional<SizeF>& currentTextSize);
 
     bool GetCurrentTextSize(std::optional<SizeF>& currentTextSize, Dimension& currentFontSize);
 
@@ -175,11 +171,8 @@ private:
     std::optional<SizeF> GetMeasureTextSize(const std::string& data,
         const Dimension& fontSize, FontWeight fontWeight, float constraintWidth);
     void MeasureForWidth(float width);
-    float GetHeightConstraint(const RefPtr<SecurityComponentLayoutProperty>& property, float height);
-    void UpdateFontSize();
 
     bool isExist_ = false;
-    bool isAdaptive_ = false;
     Dimension minFontSize_;
     Dimension defaultFontSize_;
     RefPtr<SecurityComponentLayoutProperty> secCompProperty_;

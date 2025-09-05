@@ -23,13 +23,4 @@ void VibratorUtils::StartVibraFeedback()
 void VibratorUtils::StartVibraFeedback(const std::string& vibratorType)
 {
 }
-
-bool VibratorUtils::StartExclusiveVibraFeedback(const char* effectId)
-{
-    return false;
-}
-
-void VibratorUtils::StartViratorDirectly(const std::string& vibratorType)
-{
-}
 } // namespace OHOS::Ace::NG

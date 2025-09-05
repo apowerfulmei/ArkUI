@@ -20,8 +20,8 @@
 #include <string>
 
 #include "modifier/rs_animatable_arithmetic.h"
+#include "render_service_client/core/modifier/rs_extended_modifier.h"
 #include "render_service_client/core/modifier/rs_property.h"
-#include "render_service_client/core/modifier_ng/overlay/rs_overlay_style_modifier.h"
 
 #include "base/geometry/ng/offset_t.h"
 #include "base/i18n/localization.h"
@@ -56,23 +56,25 @@ private:
     OverlayOptions overlay_;
 };
 
-using RSOverlayStyleModifier = Rosen::ModifierNG::RSOverlayStyleModifier;
-using RSDrawingContext = Rosen::ModifierNG::RSDrawingContext;
-
-class OverlayTextModifier : public RSOverlayStyleModifier {
+class OverlayTextModifier : public Rosen::RSOverlayStyleModifier {
 public:
     OverlayTextModifier() = default;
     ~OverlayTextModifier() override = default;
 
-    void Draw(RSDrawingContext& context) const override
+    void Draw(Rosen::RSDrawingContext& context) const override
     {
         CHECK_NULL_VOID(property_);
         auto overlayOptions = property_->Get().GetOverlayOptions();
         auto paragraph = GetParagraph(context.width);
         CHECK_NULL_VOID(paragraph);
+#ifndef USE_GRAPHIC_TEXT_GINE
+        OffsetF offset = OverlayTextModifier::GetTextPosition(SizeF(context.width, context.height),
+            SizeF(paragraph->GetLongestLine(), paragraph->GetHeight()), overlayOptions);
+#else
         OffsetF offset = OverlayTextModifier::GetTextPosition(SizeF(context.width, context.height),
             SizeF(static_cast<float>(paragraph->GetActualWidth()), static_cast<float>(paragraph->GetHeight())),
             overlayOptions);
+#endif
 #ifndef USE_ROSEN_DRAWING
         std::shared_ptr<SkCanvas> skCanvas { context.canvas, [](SkCanvas*) {} };
         RSCanvas canvas(&skCanvas);
@@ -93,19 +95,34 @@ public:
         TextStyle textStyle;
         textStyle.SetFontSize(fontSize);
         RSParagraphStyle paraStyle;
+#ifndef USE_GRAPHIC_TEXT_GINE
+        paraStyle.textAlign_ = ToRSTextAlign(textStyle.GetTextAlign());
+        paraStyle.maxLines_ = textStyle.GetMaxLines();
+        paraStyle.locale_ = Localization::GetInstance()->GetFontLocale();
+        paraStyle.wordBreakType_ = ToRSWordBreakType(textStyle.GetWordBreak());
+        paraStyle.fontSize_ = fontSize.Value();
+        auto builder = RSParagraphBuilder::CreateRosenBuilder(paraStyle, RSFontCollection::GetInstance(false));
+#else
         paraStyle.textAlign = ToRSTextAlign(textStyle.GetTextAlign());
         paraStyle.maxLines = textStyle.GetMaxLines();
         paraStyle.locale = Localization::GetInstance()->GetFontLocale();
         paraStyle.wordBreakType = ToRSWordBreakType(textStyle.GetWordBreak());
         paraStyle.fontSize = fontSize.Value();
         auto builder = RSParagraphBuilder::Create(paraStyle, RSFontCollection::Create());
+#endif
         CHECK_NULL_RETURN(builder, nullptr);
         auto pipelineContext = PipelineBase::GetCurrentContext();
         CHECK_NULL_RETURN(pipelineContext, nullptr);
         builder->PushStyle(ToRSTextStyle(pipelineContext, textStyle));
+#ifndef USE_GRAPHIC_TEXT_GINE
+        builder->AddText(StringUtils::Str8ToStr16(overlayOptions.content));
+        builder->Pop();
+        auto paragraph = builder->Build();
+#else
         builder->AppendText(StringUtils::Str8ToStr16(overlayOptions.content));
         builder->PopStyle();
         auto paragraph = builder->CreateTypography();
+#endif
         CHECK_NULL_RETURN(paragraph, nullptr);
         paragraph->Layout(contextWidth);
         return paragraph;
@@ -149,24 +166,13 @@ public:
         return fontManager->IsDefaultFontChanged();
     }
 
-    void UpdateText()
-    {
-        UpdateToRender();
-    }
-
 private:
     static OffsetF GetTextPosition(const SizeF& parentSize, const SizeF& childSize, OverlayOptions& overlay)
     {
-        double dx = overlay.x.ConvertToPx();
-        double dy = overlay.y.ConvertToPx();
+        const double dx = overlay.x.ConvertToPx();
+        const double dy = overlay.y.ConvertToPx();
         const Alignment align = overlay.align;
-        auto direction = overlay.direction;
-        direction = direction != TextDirection::AUTO ? direction : (AceApplicationInfo::GetInstance().IsRightToLeft() ?
-            TextDirection::RTL : TextDirection::LTR);
-        if (direction == TextDirection::RTL) {
-            dx = -dx;
-        }
-        OffsetF const offset = Alignment::GetAlignPositionWithDirection(parentSize, childSize, align, direction);
+        OffsetF const offset = Alignment::GetAlignPosition(parentSize, childSize, align);
         const float fx = static_cast<float>(dx) + offset.GetX();
         const float fy = static_cast<float>(dy) + offset.GetY();
         return { fx, fy };
@@ -174,5 +180,7 @@ private:
 
     std::shared_ptr<Rosen::RSProperty<OverlayTextData>> property_;
 };
+
 } // namespace OHOS::Ace::NG
+
 #endif // FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_RENDER_OVERLAY_MODIFIER_H

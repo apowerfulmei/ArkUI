@@ -16,10 +16,17 @@
 #include "core/components_ng/pattern/text/image_span_view.h"
 #include <cstdint>
 
+#include "base/memory/referenced.h"
+#include "base/utils/utils.h"
+#include "core/components/common/layout/constants.h"
+#include "core/components/common/properties/text_style.h"
+#include "core/components_ng/base/frame_node.h"
+#include "core/components_ng/base/view_stack_processor.h"
+#include "core/components_ng/pattern/image/image_pattern.h"
 #include "core/components_ng/pattern/text/span_node.h"
 #include "core/components_ng/pattern/image/image_model_ng.h"
+#include "core/image/image_source_info.h"
 #include "core/components_ng/base/view_abstract.h"
-
 namespace OHOS::Ace::NG {
 void ImageSpanView::SetObjectFit(ImageFit value)
 {
@@ -69,55 +76,17 @@ void ImageSpanView::SetPlaceHolderStyle(TextBackgroundStyle& style)
     ACE_UPDATE_LAYOUT_PROPERTY(ImageLayoutProperty, HasPlaceHolderStyle,
         style.backgroundColor.has_value() || style.backgroundRadius.has_value());
     auto frameNodeRef = AceType::Claim<FrameNode>(frameNode);
-    SpanNode::RequestTextFlushDirty(AceType::Claim<FrameNode>(frameNode), true);
-
-    RefPtr<ResourceObject> resObj = AceType::MakeRefPtr<ResourceObject>("", "", -1);
-    auto key = "textbackgroundStyle";
-    auto&& updateFunc = [style, weak = AceType::WeakClaim(frameNode)](const RefPtr<ResourceObject>& resObj) {
-        auto frameNode = weak.Upgrade();
-        CHECK_NULL_VOID(frameNode);
-        auto pattern = frameNode->GetPattern<ImagePattern>();
-        CHECK_NULL_VOID(pattern);
-        TextBackgroundStyle& styleValue = const_cast<TextBackgroundStyle&>(style);
-        styleValue.ReloadResources();
-        styleValue.groupId = frameNode->GetId();
-        ACE_UPDATE_NODE_LAYOUT_PROPERTY(ImageLayoutProperty, PlaceHolderStyle, styleValue, frameNode);
-        ACE_UPDATE_NODE_LAYOUT_PROPERTY(ImageLayoutProperty, HasPlaceHolderStyle,
-            styleValue.backgroundColor.has_value() || styleValue.backgroundRadius.has_value(), frameNode);
-        SpanNode::RequestTextFlushDirty(frameNode, true);
-    };
-    auto pattern = frameNode->GetPattern<ImagePattern>();
-    CHECK_NULL_VOID(pattern);
-    pattern->AddResObj(key, resObj, std::move(updateFunc));
+    SpanNode::RequestTextFlushDirty(AceType::Claim<FrameNode>(frameNode));
 }
 
 void ImageSpanView::SetPlaceHolderStyle(FrameNode* frameNode, TextBackgroundStyle& style)
 {
     style.groupId = frameNode->GetId();
-    ACE_UPDATE_NODE_LAYOUT_PROPERTY(ImageLayoutProperty, PlaceHolderStyle, style, frameNode);
-    ACE_UPDATE_NODE_LAYOUT_PROPERTY(ImageLayoutProperty, HasPlaceHolderStyle,
-        style.backgroundColor.has_value() || style.backgroundRadius.has_value(), frameNode);
+    ACE_UPDATE_LAYOUT_PROPERTY(ImageLayoutProperty, PlaceHolderStyle, style);
+    ACE_UPDATE_LAYOUT_PROPERTY(ImageLayoutProperty, HasPlaceHolderStyle,
+        style.backgroundColor.has_value() || style.backgroundRadius.has_value());
     auto frameNodeRef = AceType::Claim<FrameNode>(frameNode);
-    SpanNode::RequestTextFlushDirty(AceType::Claim<FrameNode>(frameNode), true);
-
-    RefPtr<ResourceObject> resObj = AceType::MakeRefPtr<ResourceObject>("", "", -1);
-    auto key = "textbackgroundStyle";
-    auto&& updateFunc = [style, weak = AceType::WeakClaim(frameNode)](const RefPtr<ResourceObject>& resObj) {
-        auto frameNode = weak.Upgrade();
-        CHECK_NULL_VOID(frameNode);
-        auto pattern = frameNode->GetPattern<ImagePattern>();
-        CHECK_NULL_VOID(pattern);
-        TextBackgroundStyle& styleValue = const_cast<TextBackgroundStyle&>(style);
-        styleValue.ReloadResources();
-        styleValue.groupId = frameNode->GetId();
-        ACE_UPDATE_NODE_LAYOUT_PROPERTY(ImageLayoutProperty, PlaceHolderStyle, styleValue, frameNode);
-        ACE_UPDATE_NODE_LAYOUT_PROPERTY(ImageLayoutProperty, HasPlaceHolderStyle,
-            styleValue.backgroundColor.has_value() || styleValue.backgroundRadius.has_value(), frameNode);
-        SpanNode::RequestTextFlushDirty(frameNode, true);
-    };
-    auto pattern = frameNode->GetPattern<ImagePattern>();
-    CHECK_NULL_VOID(pattern);
-    pattern->AddResObj(key, resObj, std::move(updateFunc));
+    SpanNode::RequestTextFlushDirty(AceType::Claim<FrameNode>(frameNode));
 }
 
 void ImageSpanView::Create()
@@ -208,19 +177,5 @@ void ImageSpanView::ResetBorderRadius(FrameNode* frameNode)
     borderRadius.SetRadius(Dimension(0));
     ViewAbstract::SetBorderRadius(frameNode, borderRadius);
     ImageModelNG::ResetBackBorder(frameNode);
-}
-
-void ImageSpanView::SetPixelMap(FrameNode* frameNode, RefPtr<PixelMap>& pixMap)
-{
-    auto srcInfo = ImageSourceInfo(pixMap);
-    ACE_UPDATE_NODE_LAYOUT_PROPERTY(ImageLayoutProperty, ImageSourceInfo, srcInfo, frameNode);
-}
-
-void ImageSpanView::SetSrc(FrameNode* frameNode, const std::string& src, const std::string& bundleName,
-    const std::string& moduleName, bool isUriPureNumber)
-{
-    auto srcInfo = ImageSourceInfo { src, bundleName, moduleName };
-    srcInfo.SetIsUriPureNumber(isUriPureNumber);
-    ACE_UPDATE_NODE_LAYOUT_PROPERTY(ImageLayoutProperty, ImageSourceInfo, srcInfo, frameNode);
 }
 } // namespace OHOS::Ace::NG

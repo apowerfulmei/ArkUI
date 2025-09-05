@@ -111,7 +111,6 @@ private:
     bool isViewRootScopeFocused_ = true;
     bool isViewHasFocused_ = false;
     bool isViewHasShow_ = false;
-    bool firstFlush_ = true;
 
     WeakPtr<FocusHub> rootScopeSpecified_;
     bool GetFocusViewFocusable();

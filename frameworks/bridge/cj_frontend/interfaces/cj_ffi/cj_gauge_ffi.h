@@ -49,6 +49,5 @@ CJ_EXPORT void FfiOHOSAceFrameworkGaugeSetStrokeWidth(double strokeWidth, int32_
 CJ_EXPORT void FfiOHOSAceFrameworkGaugeSetShadowOptions(double radius, double offsetX, double offsetY);
 CJ_EXPORT void FfiOHOSAceFrameworkGaugeSetIndicator(const char* icon, double size);
 CJ_EXPORT void FfiOHOSAceFrameworkGaugeSetDescription(void (*builder)());
-CJ_EXPORT void FfiOHOSAceFrameworkSetPrivacySensitive(bool isprivacySensitiveMode);
 }
 #endif

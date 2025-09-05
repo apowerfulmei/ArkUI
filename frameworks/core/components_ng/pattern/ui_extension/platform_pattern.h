@@ -83,7 +83,6 @@ public:
 
     int32_t GetInstanceId();
     int32_t GetNodeId();
-    virtual bool HandleTouchEvent(const std::shared_ptr<MMI::PointerEvent>& pointerEvent);
 
 protected:
     virtual void DispatchPointerEvent(const std::shared_ptr<MMI::PointerEvent>& pointerEvent) {}
@@ -110,7 +109,7 @@ protected:
     void InitMouseEvent(const RefPtr<InputEventHub>& inputHub);
     void InitHoverEvent(const RefPtr<InputEventHub>& inputHub);
     virtual void HandleTouchEvent(const TouchEventInfo& info);
-    virtual void HandleMouseEvent(const MouseInfo& info);
+    void HandleMouseEvent(const MouseInfo& info);
     void HandleHoverEvent(bool isHover);
 
     RefPtr<TouchEventImpl> touchEvent_;

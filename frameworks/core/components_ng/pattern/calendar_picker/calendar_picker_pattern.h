@@ -33,21 +33,6 @@ public:
     CalendarPickerPattern() : LinearLayoutPattern(false) {};
     ~CalendarPickerPattern() override = default;
 
-    void BeforeCreateLayoutWrapper() override;
-
-    bool IsEnableMatchParent() override
-    {
-        return true;
-    }
-
-    void OnColorModeChange(uint32_t colorMode) override
-    {
-        LinearLayoutPattern::OnColorModeChange(colorMode);
-        auto host = GetHost();
-        CHECK_NULL_VOID(host);
-        host->MarkModifyDone();
-    }
-
     bool IsAtomicNode() const override
     {
         return true;
@@ -95,9 +80,7 @@ public:
 
     void SetCalendarData(const CalendarSettingData& data)
     {
-        CalendarSettingData settingData = data;
-        settingData.selectedDate = PickerDate::AdjustDateToRange(data.selectedDate, data.startDate, data.endDate);
-        calendarData_ = settingData;
+        calendarData_ = data;
     }
 
     CalendarSettingData GetCalendarData() const
@@ -190,17 +173,9 @@ public:
     bool IsContainerModal();
 
     void SetDate(const std::string& info);
-    void ToJsonValue(std::unique_ptr<JsonValue>& json, const InspectorFilter& filter) const override;
-    void SetMarkToday(bool isMarkToday);
-    bool GetMarkToday();
-    void SetDisabledDateRange(const std::vector<std::pair<PickerDate, PickerDate>>& disabledDateRange);
-    std::string GetDisabledDateRange();
-    void UpdateTextStyle(const PickerTextStyle& textStyle);
-
 private:
     void OnModifyDone() override;
     void OnWindowSizeChanged(int32_t width, int32_t height, WindowSizeChangeReason type) override;
-    void OnColorConfigurationUpdate() override;
     void InitDateIndex();
     void InitClickEvent();
     void InitOnKeyEvent();
@@ -214,7 +189,6 @@ private:
     void HandleBlurEvent();
     void HandleButtonHoverEvent(bool state, int32_t index);
     void HandleButtonTouchEvent(bool isPressed, int32_t index);
-    void HandleEnable();
     void ResetTextState();
     void ResetTextStateByNode(const RefPtr<FrameNode>& textFrameNode);
     void FlushTextStyle();
@@ -229,20 +203,14 @@ private:
     void UpdateEntryButtonBorderWidth();
     void UpdateEdgeAlign();
     void UpdateAccessibilityText();
-    void FlushAddAndSubButton();
-    bool IsAddOrSubButtonEnable(int32_t buttonIndex);
-    void PrevDateBySelectedType(PickerDate& date);
-    void NextDateBySelectedType(PickerDate& date);
 
     std::string GetEntryDateInfo();
-    bool ReportChangeEvent(const std::string& compName,
-        const std::string& eventName, const std::string& eventData);
 
     uint32_t yearEnterCount_ = 0;
     uint32_t yearPrefixZeroCount_ = 0;
     uint32_t monthPrefixZeroCount_ = 0;
     uint32_t dayPrefixZeroCount_ = 0;
-
+	
     int32_t yearIndex_ = 0;
     int32_t monthIndex_ = 2;
     int32_t dayIndex_ = 4;
@@ -261,9 +229,7 @@ private:
     RefPtr<ClickEvent> clickListener_;
     RefPtr<InputEvent> hoverListener_;
     CalendarPickerSelectedType selected_ = CalendarPickerSelectedType::OTHER;
-    PickerDate reportedPickerDate_;
     ACE_DISALLOW_COPY_AND_MOVE(CalendarPickerPattern);
-    bool isMarkToday_ = false;
 };
 } // namespace OHOS::Ace::NG
 #endif // FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_PATTERNS_CALENDAR_PICKER_CALENDAR_PICKER_PATTERN_H

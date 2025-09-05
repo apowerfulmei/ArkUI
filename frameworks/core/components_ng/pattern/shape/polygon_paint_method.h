@@ -28,7 +28,7 @@
 namespace OHOS::Ace::NG {
 
 class ACE_EXPORT PolygonPaintMethod : public ShapePaintMethod {
-    DECLARE_ACE_TYPE(PolygonPaintMethod, ShapePaintMethod);
+    DECLARE_ACE_TYPE(PolygonPaintMethod, ShapePaintMethod)
 public:
     PolygonPaintMethod() = default;
     PolygonPaintMethod(
@@ -61,7 +61,9 @@ public:
         }
         const auto& geometryNode = paintWrapper->GetGeometryNode();
         const auto& contentSize = geometryNode->GetContentSize();
-        CHECK_EQUAL_RETURN(contentSize.IsPositive(), false, nullptr);
+        if (!contentSize.IsPositive()) {
+            return nullptr;
+        }
         return [shapePaintProperty, isClose = isClose_, paintWrapper](RSCanvas& canvas) {
                     PolygonPainter::DrawPolygon(canvas, *shapePaintProperty, isClose);
                     if (paintWrapper) {

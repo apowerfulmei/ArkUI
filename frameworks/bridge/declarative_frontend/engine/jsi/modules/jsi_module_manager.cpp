@@ -15,6 +15,7 @@
 
 #include "frameworks/bridge/declarative_frontend/engine/jsi/modules/jsi_module_manager.h"
 
+#include "base/log/log.h"
 #include "frameworks/bridge/declarative_frontend/engine/jsi/modules/jsi_app_module.h"
 #include "frameworks/bridge/declarative_frontend/engine/jsi/modules/jsi_curves_module.h"
 #include "frameworks/bridge/declarative_frontend/engine/jsi/modules/jsi_matrix4_module.h"
@@ -48,26 +49,6 @@ bool ModuleManager::InitModule(
                                  shared_ptr<JsValue>& thisObj) { InitCurvesModule(runtime, thisObj); } },
             { "system.matrix4", [](const shared_ptr<JsRuntime>& runtime,
                                     shared_ptr<JsValue>& thisObj) { InitMatrix4Module(runtime, thisObj); } },
-            { "ohos.matrix4", [](const shared_ptr<JsRuntime>& runtime,
-                                  shared_ptr<JsValue>& thisObj) { InitMatrix4Module(runtime, thisObj); } },
-        };
-    auto iter = MODULE_LIST.find(moduleName);
-    if (iter != MODULE_LIST.end()) {
-        iter->second(runtime, thisObj);
-        return true;
-    } else {
-        return false;
-    }
-}
-
-bool ModuleManager::InitModuleForCustomRuntime(
-    const shared_ptr<JsRuntime>& runtime, shared_ptr<JsValue>& thisObj, const std::string& moduleName)
-{
-    static const std::unordered_map<std::string,
-        void (*)(const shared_ptr<JsRuntime>& runtime, shared_ptr<JsValue>& thisObj)>
-        MODULE_LIST = {
-            { "ohos.curves", [](const shared_ptr<JsRuntime>& runtime,
-                                 shared_ptr<JsValue>& thisObj) { InitCurvesModule(runtime, thisObj); } },
             { "ohos.matrix4", [](const shared_ptr<JsRuntime>& runtime,
                                   shared_ptr<JsValue>& thisObj) { InitMatrix4Module(runtime, thisObj); } },
         };

@@ -13,7 +13,6 @@
  * limitations under the License.
  */
 #include "bridge/declarative_frontend/engine/jsi/nativeModule/arkts_native_divider_bridge.h"
-#include "ui/base/referenced.h"
 
 #include "base/geometry/dimension.h"
 #include "bridge/declarative_frontend/jsview/js_view_abstract.h"
@@ -83,11 +82,8 @@ ArkUINativeModuleValue DividerBridge::SetColor(ArkUIRuntimeCallInfo* runtimeCall
     Local<JSValueRef> colorArg = runtimeCallInfo->GetCallArgRef(1);
     auto nativeNode = nodePtr(nativeNodeArg->ToNativePointer(vm)->Value());
     Color color;
-    RefPtr<ResourceObject> dividerResObj;
-    auto nodeInfo = ArkTSUtils::MakeNativeNodeInfo(nativeNode);
-    if (ArkTSUtils::ParseJsColorAlpha(vm, colorArg, color, dividerResObj, nodeInfo)) {
-        auto colorRawPtr = AceType::RawPtr(dividerResObj);
-        GetArkUINodeModifiers()->getDividerModifier()->setDividerColor(nativeNode, color.GetValue(), colorRawPtr);
+    if (ArkTSUtils::ParseJsColorAlpha(vm, colorArg, color)) {
+        GetArkUINodeModifiers()->getDividerModifier()->setDividerColor(nativeNode, color.GetValue());
     } else {
         GetArkUINodeModifiers()->getDividerModifier()->resetDividerColor(nativeNode);
     }

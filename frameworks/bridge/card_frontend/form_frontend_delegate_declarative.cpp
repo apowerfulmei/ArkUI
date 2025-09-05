@@ -15,6 +15,11 @@
 
 #include "frameworks/bridge/card_frontend/form_frontend_delegate_declarative.h"
 
+#include "base/log/event_report.h"
+#include "base/utils/utils.h"
+#include "base/utils/measure_util.h"
+#include "core/common/thread_checker.h"
+
 #ifndef PREVIEW
 #include "form_mgr.h"
 #endif
@@ -23,7 +28,7 @@ namespace OHOS::Ace::Framework {
 FormFrontendDelegateDeclarative::~FormFrontendDelegateDeclarative()
 {
     CHECK_RUN_ON(JS);
-    TAG_LOGI(AceLogTag::ACE_FORM, "FormDelegateDeclarative Destroyed");
+    LOG_DESTROY();
 }
 
 UIContentErrorCode FormFrontendDelegateDeclarative::RunCard(const std::string& url, const std::string& params,

@@ -159,20 +159,15 @@ void JSListItemGroup::SetChildrenMainSize(const JSRef<JSObject>& childrenSizeObj
 
 void JSListItemGroup::Create(const JSCallbackInfo& args)
 {
-    V2::ListItemGroupStyle listItemGroupStyle = V2::ListItemGroupStyle::NONE;
+    auto listItemGroupStyle = GetListItemGroupStyle(args);
+    ListItemGroupModel::GetInstance()->Create(listItemGroupStyle);
     if (args.Length() < 1 || !args[0]->IsObject()) {
-        ListItemGroupModel::GetInstance()->Create(listItemGroupStyle);
         NG::ListItemGroupModelNG::GetInstance()->RemoveHeader();
         NG::ListItemGroupModelNG::GetInstance()->RemoveFooter();
         args.ReturnSelf();
         return;
     }
     JSRef<JSObject> obj = JSRef<JSObject>::Cast(args[0]);
-    auto styleObject = obj->GetProperty("style");
-    if (styleObject->IsNumber()) {
-        listItemGroupStyle = static_cast<V2::ListItemGroupStyle>(styleObject->ToNumber<int32_t>());
-    }
-    ListItemGroupModel::GetInstance()->Create(listItemGroupStyle);
 
     Dimension space;
     if (ConvertFromJSValue(obj->GetProperty("space"), space) && space.IsNonNegative()) {
@@ -209,39 +204,19 @@ void JSListItemGroup::SetDivider(const JSCallbackInfo& args)
     V2::ItemDivider divider;
     if (args.Length() >= 1 && args[0]->IsObject()) {
         JSRef<JSObject> obj = JSRef<JSObject>::Cast(args[0]);
-        RefPtr<ResourceObject> resObjStrokeWidth;
-        RefPtr<ResourceObject> resObjColor;
-        RefPtr<ResourceObject> resObjStartMargin;
-        RefPtr<ResourceObject> resObjEndMargin;
-
-        if (!ConvertFromJSValue(obj->GetProperty("strokeWidth"), divider.strokeWidth, resObjStrokeWidth)) {
+        if (!ConvertFromJSValue(obj->GetProperty("strokeWidth"), divider.strokeWidth)) {
             LOGW("Invalid strokeWidth of divider");
             divider.strokeWidth.Reset();
         }
-
-        bool setByUser = false;
-        if (!ConvertFromJSValue(obj->GetProperty("color"), divider.color, resObjColor)) {
+        if (!ConvertFromJSValue(obj->GetProperty("color"), divider.color)) {
             // Failed to get color from param, using default color defined in theme
             RefPtr<ListTheme> listTheme = GetTheme<ListTheme>();
             if (listTheme) {
                 divider.color = listTheme->GetDividerColor();
-                setByUser = false;
             }
-        } else {
-            setByUser = true;
         }
-
-        ConvertFromJSValue(obj->GetProperty("startMargin"), divider.startMargin, resObjStartMargin);
-
-        ConvertFromJSValue(obj->GetProperty("endMargin"), divider.endMargin, resObjEndMargin);
-
-        if (SystemProperties::ConfigChangePerform()) {
-            NG::ListItemGroupModelNG::GetInstance()->SetDividerColorByUser(setByUser);
-            NG::ListItemGroupModelNG::GetInstance()->ParseResObjDividerStrokeWidth(resObjStrokeWidth);
-            NG::ListItemGroupModelNG::GetInstance()->ParseResObjDividerColor(resObjColor);
-            NG::ListItemGroupModelNG::GetInstance()->ParseResObjDividerStartMargin(resObjStartMargin);
-            NG::ListItemGroupModelNG::GetInstance()->ParseResObjDividerEndMargin(resObjEndMargin);
-        }
+        ConvertFromJSValue(obj->GetProperty("startMargin"), divider.startMargin);
+        ConvertFromJSValue(obj->GetProperty("endMargin"), divider.endMargin);
     }
     ListItemGroupModel::GetInstance()->SetDivider(divider);
     args.ReturnSelf();
@@ -265,7 +240,6 @@ bool JSListItemGroup::ParseHeaderAndFooterContent(const JSRef<JSVal>& contentPar
         return false;
     }
     const auto* vm = nodeptr->GetEcmaVM();
-    CHECK_NULL_RETURN(nodeptr->GetLocalHandle()->IsNativePointer(vm), false);
     auto* node = nodeptr->GetLocalHandle()->ToNativePointer(vm)->Value();
     auto* frameNode = reinterpret_cast<NG::FrameNode*>(node);
     CHECK_NULL_RETURN(frameNode, false);
@@ -300,6 +274,19 @@ bool JSListItemGroup::SetFooterBuilder(const JSRef<JSObject>& obj)
         return true;
     }
     return false;
+}
+
+V2::ListItemGroupStyle JSListItemGroup::GetListItemGroupStyle(const JSCallbackInfo& args)
+{
+    V2::ListItemGroupStyle listItemGroupStyle = V2::ListItemGroupStyle::NONE;
+    if (args.Length() >= 1 && args[0]->IsObject()) {
+        JSRef<JSObject> obj = JSRef<JSObject>::Cast(args[0]);
+        auto styleObject = obj->GetProperty("style");
+        listItemGroupStyle = styleObject->IsNumber()
+                                 ? static_cast<V2::ListItemGroupStyle>(styleObject->ToNumber<int32_t>())
+                                 : V2::ListItemGroupStyle::NONE;
+    }
+    return listItemGroupStyle;
 }
 
 void JSListItemGroup::JSBind(BindingTarget globalObj)

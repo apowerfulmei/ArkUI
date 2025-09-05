@@ -15,16 +15,16 @@
 
 #include "core/components_ng/image_provider/pixel_map_image_object.h"
 
+#include "base/thread/task_executor.h"
 #include "core/components_ng/image_provider/image_loading_context.h"
 #include "core/components_ng/image_provider/image_utils.h"
+#include "core/components_ng/render/canvas_image.h"
 
 namespace OHOS::Ace::NG {
 
-void PixelMapImageObject::MakeCanvasImage(
-    const WeakPtr<ImageLoadingContext>& ctxWp, const SizeF& /*resizeTarget*/, bool /*forceResize*/, bool syncLoad)
+void PixelMapImageObject::MakeCanvasImage(const RefPtr<ImageLoadingContext>& ctx, const SizeF& /*resizeTarget*/,
+    bool /*forceResize*/, bool syncLoad, bool loadInVipChannel)
 {
-    auto ctx = ctxWp.Upgrade();
-    CHECK_NULL_VOID(ctx);
     if (!pixmap_) {
         ctx->FailCallback("pixmap is null when PixelMapImageObject try MakeCanvasImage");
         return;
@@ -41,7 +41,7 @@ void PixelMapImageObject::MakeCanvasImage(
             CHECK_NULL_VOID(pixelmapObject);
             ctx->SuccessCallback(CanvasImage::Create(pixelmapObject->pixmap_));
         };
-        NG::ImageUtils::PostToUI(task, "ArkUIImageCreateCanvasSuccess", ctx->GetContainerId());
+        NG::ImageUtils::PostToUI(task, "ArkUIImageCreateCanvasSuccess");
     }
 }
 
@@ -51,7 +51,9 @@ RefPtr<PixelMapImageObject> PixelMapImageObject::Create(const ImageSourceInfo& s
     CHECK_NULL_RETURN(pixmapData, nullptr);
     auto&& pixelMap = pixmapData->GetPixmap();
     if (!pixelMap) {
-        TAG_LOGW(AceLogTag::ACE_IMAGE, "ImageData has no pixel map data : %{private}s", src.ToString().c_str());
+        TAG_LOGW(AceLogTag::ACE_IMAGE,
+            "ImageData has no pixel map data when try CreateImageEncodedInfoForDecodedPixelMap, src: %{private}s",
+            src.ToString().c_str());
         return nullptr;
     }
     return AceType::MakeRefPtr<NG::PixelMapImageObject>(

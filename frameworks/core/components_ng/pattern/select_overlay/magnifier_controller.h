@@ -37,10 +37,10 @@ public:
     void OpenMagnifier();
     void CloseMagnifier();
 
-    bool UpdateMagnifierOffsetX(OffsetF& magnifierPaintOffset, VectorF& magnifierOffset,
-        const OffsetF& basePaintOffset);
-    bool UpdateMagnifierOffsetY(OffsetF& magnifierPaintOffset, VectorF& magnifierOffset,
-        const OffsetF& basePaintOffset);
+    bool UpdateMagnifierOffsetX(OffsetF& magnifierPaintOffset, VectorF& magnifierOffset, const OffsetF& basePaintOffset,
+        const RefPtr<FrameNode>& host);
+    bool UpdateMagnifierOffsetY(OffsetF& magnifierPaintOffset, VectorF& magnifierOffset, const OffsetF& basePaintOffset,
+        const RefPtr<FrameNode>& host);
     bool UpdateMagnifierOffset();
 
     void UpdateShowMagnifier(bool isShowMagnifier = false);
@@ -50,11 +50,10 @@ public:
         return isShowMagnifier_;
     }
 
-    void SetLocalOffset(OffsetF localOffset, std::optional<OffsetF> localOffsetWithoutTrans = std::nullopt)
+    void SetLocalOffset(OffsetF localOffset)
     {
         localOffset_.SetX(localOffset.GetX());
         localOffset_.SetY(localOffset.GetY());
-        localOffsetWithoutTrans_ = localOffsetWithoutTrans;
         magnifierNodeExist_ = true;
         UpdateShowMagnifier(true);
     }
@@ -62,11 +61,6 @@ public:
     OffsetF GetLocalOffset() const
     {
         return localOffset_;
-    }
-
-    std::optional<OffsetF> GetLocalOffsetWithoutTrans() const
-    {
-        return localOffsetWithoutTrans_;
     }
 
     RefPtr<FrameNode> GetMagnifierNode() const
@@ -101,15 +95,13 @@ public:
 
     RectF GetViewPort(const RefPtr<FrameNode>& host);
 private:
-    bool IsLocalOffsetInHostRange(const RefPtr<FrameNode>& host);
-
     MagnifierParams params_;
     bool visible_ = false;
     void CreateMagnifierChildNode();
+
     RefPtr<FrameNode> magnifierFrameNode_ = nullptr;
     bool isShowMagnifier_ = false;
     OffsetF localOffset_;
-    std::optional<OffsetF> localOffsetWithoutTrans_;
     WeakPtr<Pattern> pattern_;
     bool removeFrameNode_ = false;
     bool colorModeChange_ = false;

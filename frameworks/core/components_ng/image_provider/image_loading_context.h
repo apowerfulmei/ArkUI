@@ -17,15 +17,12 @@
 #define FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_IMAGE_PROVIDER_IMAGE_LOADING_CONTEXT_H
 
 #include <cstdint>
-
 #include "base/geometry/ng/size_t.h"
-#include "base/image/pixel_map.h"
 #include "base/thread/task_executor.h"
 #include "core/components/common/layout/constants.h"
 #include "core/components_ng/image_provider/image_object.h"
 #include "core/components_ng/image_provider/image_provider.h"
 #include "core/components_ng/image_provider/image_state_manager.h"
-#include "core/components_ng/pattern/image/image_dfx.h"
 
 namespace OHOS::Ace::NG {
 
@@ -38,8 +35,7 @@ class ACE_FORCE_EXPORT ImageLoadingContext : public AceType {
 
 public:
     // Create an empty ImageObject and initialize state machine when the constructor is called
-    ImageLoadingContext(const ImageSourceInfo& src, LoadNotifier&& loadNotifier, bool syncLoad = false,
-        bool isSceneBoardWindow = false, const ImageDfxConfig& imageDfxConfig = {});
+    ImageLoadingContext(const ImageSourceInfo& src, LoadNotifier&& loadNotifier, bool syncLoad = false);
     ~ImageLoadingContext() override;
 
     // return true if calling MakeCanvasImage is necessary
@@ -56,7 +52,6 @@ public:
     /* interfaces to get properties */
     SizeF GetImageSize() const;
     SizeF GetOriginImageSize() const;
-    std::string GetImageSizeInfo() const;
     const RectF& GetDstRect() const;
     const RectF& GetSrcRect() const;
     ImageFit GetImageFit() const;
@@ -74,6 +69,7 @@ public:
     bool GetAutoResize() const;
     std::optional<SizeF> GetSourceSize() const;
     bool NeedAlt() const;
+    const std::optional<Color>& GetSvgFillColor() const;
 
     /* interfaces to set properties */
     void SetImageFit(ImageFit imageFit);
@@ -92,16 +88,34 @@ public:
     // callbacks that will be called by ImageProvider when load process finishes
     void DataReadyCallback(const RefPtr<ImageObject>& imageObj);
     void SuccessCallback(const RefPtr<CanvasImage>& canvasImage);
-    void FailCallback(const std::string& errorMsg, const ImageErrorInfo& errorInfo = {});
+    void FailCallback(const std::string& errorMsg);
     const std::string GetCurrentLoadingState();
     void ResizableCalcDstSize();
-    bool Downloadable();
-    void OnDataReady();
-
     // Needed to restore the relevant containerId from the originating thread
-    int32_t GetContainerId() const
+    int32_t GetContainerId()
     {
         return containerId_;
+    }
+    void DownloadImage();
+    void PerformDownload();
+    void CacheDownloadedImage();
+    bool Downloadable();
+    void OnDataReady();
+    bool RemoveDownloadTask(const std::string& src);
+
+    void FinishMearuse()
+    {
+        measureFinish_ = true;
+    }
+
+    void CallbackAfterMeasureIfNeed();
+
+    void OnDataReadyOnCompleteCallBack();
+    void SetOnProgressCallback(std::function<void(const uint32_t& dlNow, const uint32_t& dlTotal)>&& onProgress);
+
+    void SetDynamicRangeMode(DynamicRangeMode dynamicMode)
+    {
+        dynamicMode_ = dynamicMode;
     }
 
     void SetIsHdrDecoderNeed(bool isHdrDecoderNeed)
@@ -114,6 +128,11 @@ public:
         return isHdrDecoderNeed_;
     }
 
+    DynamicRangeMode GetDynamicRangeMode()
+    {
+        return dynamicMode_;
+    }
+
     void SetImageQuality(AIImageQuality imageQuality)
     {
         imageQuality_ = imageQuality;
@@ -124,46 +143,24 @@ public:
         return imageQuality_;
     }
 
-    void SetPhotoDecodeFormat(PixelFormat photoDecodeFormat)
+    bool GetLoadInVipChannel()
     {
-        photoDecodeFormat_ = photoDecodeFormat;
+        return loadInVipChannel_;
     }
 
-    PixelFormat GetPhotoDecodeFormat()
+    void SetLoadInVipChannel(bool loadInVipChannel)
     {
-        return photoDecodeFormat_;
+        loadInVipChannel_ = loadInVipChannel;
     }
 
-    void FinishMeasure()
-    {
-        measureFinish_ = true;
-    }
-
-    void CallbackAfterMeasureIfNeed();
-
-    void OnDataReadyOnCompleteCallBack();
-    void SetOnProgressCallback(std::function<void(const uint32_t& dlNow, const uint32_t& dlTotal)>&& onProgress);
     const std::string& GetErrorMsg()
     {
         return errorMsg_;
     }
 
-    void SetImageDfxConfig(const ImageDfxConfig& imageDfxConfig)
+    void SetNodeId(int32_t nodeId)
     {
-        imageDfxConfig_ = imageDfxConfig;
-    }
-
-
-    const ImageDfxConfig& GetImageDfxConfig()
-    {
-        return imageDfxConfig_;
-    }
-
-    void DownloadOnProgress(const uint32_t& dlNow, const uint32_t& dlTotal);
-
-    std::function<void(const uint32_t& dlNow, const uint32_t& dlTotal)> GetOnProgressCallback()
-    {
-        return onProgressCallback_;
+        nodeId_ = nodeId;
     }
 
 private:
@@ -184,6 +181,10 @@ private:
     void OnMakeCanvasImage();
     void OnLoadSuccess();
     void OnLoadFail();
+    bool NotifyReadyIfCacheHit();
+    void DownloadImageSuccess(const std::string& imageData);
+    void DownloadImageFailed(const std::string& errorMessage);
+    void DownloadOnProgress(const uint32_t& dlNow, const uint32_t& dlTotal);
     // round up int to the nearest 2-fold proportion of image width
     // REQUIRE: value > 0, image width > 0
     int32_t RoundUp(int32_t value);
@@ -193,11 +194,12 @@ private:
     {
         return dstSize_.IsPositive() && dstSize != dstSize_;
     }
-
+    
     ImageSourceInfo src_;
     RefPtr<ImageStateManager> stateManager_;
     RefPtr<ImageObject> imageObj_;
     RefPtr<CanvasImage> canvasImage_;
+    std::string downloadedUrlData_;
 
     // [LoadNotifier] contains 3 tasks to notify whom uses [ImageLoadingContext] of loading results
     LoadNotifier notifiers_;
@@ -205,12 +207,12 @@ private:
     // the container of the creator thread of this image loading context
     const int32_t containerId_ {0};
 
-    bool isHdrDecoderNeed_ = false;
-    PixelFormat photoDecodeFormat_ = PixelFormat::UNKNOWN;
     bool autoResize_ = true;
     bool syncLoad_ = false;
-    bool isSceneBoardWindow_ = false;
+    bool isHdrDecoderNeed_ = false;
+    bool loadInVipChannel_ = false;
 
+    DynamicRangeMode dynamicMode_ = DynamicRangeMode::STANDARD;
     AIImageQuality imageQuality_ = AIImageQuality::NONE;
 
     RectF srcRect_;
@@ -221,14 +223,13 @@ private:
     std::atomic<bool> needDataReadyCallBack_ = false;
     // to determine whether the image needs to be reloaded
     int32_t sizeLevel_ = -1;
-    ImageDfxConfig imageDfxConfig_;
+    int32_t nodeId_ = -1;
 
     ImageFit imageFit_ = ImageFit::COVER;
     std::unique_ptr<SizeF> sourceSizePtr_ = nullptr;
     std::function<void()> updateParamsCallback_ = nullptr;
 
     std::string errorMsg_;
-    ImageErrorInfo errorInfo_;
     // to cancel MakeCanvasImage task
     std::string canvasKey_;
 

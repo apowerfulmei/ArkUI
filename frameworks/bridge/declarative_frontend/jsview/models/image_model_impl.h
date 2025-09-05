@@ -51,7 +51,7 @@ public:
     void SetImageRenderMode(ImageRenderMode imageRenderMode) override;
     bool IsSrcSvgImage() override;
     void SetAutoResize(bool autoResize) override;
-    void SetResizableSlice(ImageResizableSlice& slice) override {};
+    void SetResizableSlice(const ImageResizableSlice& slice) override {};
     void SetResizableLattice(const RefPtr<DrawingLattice>& lattice) override {};
     void ResetResizableLattice() override {};
     void SetSyncMode(bool syncMode) override;
@@ -65,20 +65,17 @@ public:
     void SetOnDrop(NG::OnDragDropFunc&& onDrop) override;
     void SetCopyOption(const CopyOptions& copyOption) override;
     bool UpdateDragItemInfo(DragItemInfo& itemInfo) override;
+    void SetSmoothEdge(float value)  override {}
     void EnableAnalyzer(bool isEnableAnalyzer) override {}
     void SetImageAnalyzerConfig(const ImageAnalyzerConfig& config) override {}
     void SetImageAnalyzerConfig(void* config) override {}
     void SetImageAIOptions(void* config) override {}
-    void SetSmoothEdge(float value)  override {}
     void ResetImage() override {}
     void SetDynamicRangeMode(DynamicRangeMode dynamicRangeMode) override {}
-    void SetHdrBrightness(float hdrBrightness) override {}
     void SetEnhancedImageQuality(AIImageQuality imageQuality) override {}
     void SetOrientation(ImageRotateOrientation orientation) override {}
     void CreateAnimation(const std::vector<ImageProperties>& imageList, int32_t duration, int32_t iteration) override {}
     bool GetIsAnimation() override;
-    void CreateWithResourceObj(ImageResourceType resourceType, const RefPtr<ResourceObject>& resObject) override {};
-    void SetImageFillSetByUser(bool value) override {};
 };
 
 } // namespace OHOS::Ace::Framework

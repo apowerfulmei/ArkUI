@@ -20,6 +20,8 @@
 #include "core/components_ng/pattern/text/text_select_overlay.h"
 
 namespace OHOS::Ace::NG {
+
+enum class DragHandleIndex { NONE, FIRST, SECOND };
 class RichEditorSelectOverlay : public TextSelectOverlay {
     DECLARE_ACE_TYPE(RichEditorSelectOverlay, TextSelectOverlay);
 
@@ -40,13 +42,12 @@ public:
     void OnUpdateMenuInfo(SelectMenuInfo& menuInfo, SelectOverlayDirtyFlag dirtyFlag) override;
     void OnUpdateSelectOverlayInfo(SelectOverlayInfo& overlayInfo, int32_t requestCode) override;
     std::string GetSelectedText() override;
-    bool IsStopBackPress() const override;
 
     // override SelectOverlayCallback
     void OnMenuItemAction(OptionMenuActionId id, OptionMenuType type) override;
-    void OnMenuItemAction(OptionMenuActionId id, OptionMenuType type, const std::string& labelInfo) override;
     void OnOverlayTouchDown(const TouchEventInfo& event) override;
     void OnHandleMove(const RectF& rect, bool isFirst) override;
+    void GetLocalPointWithTransform(OffsetF& localPoint);
     void OnHandleMoveDone(const RectF& rect, bool isFirst) override;
     void OnCloseOverlay(OptionMenuType menuType, CloseReason reason, RefPtr<OverlayInfo> info = nullptr) override;
     void OnHandleGlobalTouchEvent(SourceType sourceType, TouchType touchType, bool touchInside = true) override;
@@ -59,39 +60,23 @@ public:
     bool IsBothHandlesShow();
     bool IsHandleShow();
     void OnHandleMoveStart(const GestureEvent& event, bool isFirst) override;
-    void UpdateHandleOffset();
-    void UpdateFirstHandleOffset() override;
-    void UpdateSecondHandleOffset() override;
     void UpdateSelectOverlayOnAreaChanged();
+    void UpdateHandleOffset();
     void ToggleMenu();
-    bool GetIsHandleMoving()
-    {
-        return isHandleMoving_;
-    }
-    bool GetIsHandleHidden()
-    {
-        return handleIsHidden_;
-    }
-    bool IsSingleHandleMoving()
-    {
-        return isHandleMoving_ && IsSingleHandle();
-    }
-    bool NeedRefreshMenu()
-    {
-        return needRefreshMenu_;
-    }
     void OnHandleIsHidden() override;
     void OnOverlayClick(const GestureEvent& event, bool isFirst) override;
     void OnHandleMouseEvent(const MouseInfo& event) override;
     void OnAfterSelectOverlayShow(bool isCreate) override;
-    bool IsRightButtonCustomMenuShow();
     bool IsRegisterTouchCallback() override
     {
         return true;
     }
-    RectF GetVisibleRect();
+    bool GetIsHandleMoving()
+    {
+        return isHandleMoving_;
+    }
     float GetHandleHotZoneRadius();
-    bool IsMenuShow();
+    RectF GetVisibleRect();
 
 protected:
     RectF GetSelectAreaFromRects(SelectRectsType pos) override;
@@ -101,16 +86,15 @@ private:
     void CloseMagnifier();
     void UpdateSelectorOnHandleMove(const OffsetF& handleOffset, bool isFirstHandle) override;
     void CheckMenuParamChange(SelectOverlayInfo& selectInfo, TextSpanType selectType, TextResponseType responseType);
-    void SwitchCaretState(std::shared_ptr<SelectOverlayInfo> info);
-    void SetMagnifierOffset(const OffsetF& localOffset, const RectF& handleRect);
+    void SwitchCaretState();
     void OnUpdateOnCreateMenuCallback(SelectOverlayInfo& selectInfo);
     void ResumeTwinkling();
     std::shared_ptr<SelectionMenuParams> lastMenuParams_ = nullptr;
     std::pair<TextSpanType, TextResponseType> lastSelectResponseComb_;
     bool needRefreshMenu_ = false;
-    bool recreateAfterMoveDone_ = false;
     bool handleIsHidden_ = true;
     std::pair<int32_t, int32_t> initSelector_ = { 0, 0 };
+    DragHandleIndex dragHandleIndex_ = DragHandleIndex::NONE;
 
     ACE_DISALLOW_COPY_AND_MOVE(RichEditorSelectOverlay);
 };

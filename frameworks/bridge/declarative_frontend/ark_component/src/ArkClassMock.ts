@@ -39,7 +39,6 @@ declare class ModifierJS {
   DataPanelModifier(nativePtr: KNode, classType: ModifierType): void;
   DatePickerModifier(nativePtr: KNode, classType: ModifierType): void;
   DividerModifier(nativePtr: KNode, classType: ModifierType): void;
-  EmbeddedComponentModifier(nativePtr: KNode, classType: ModifierType): void;
   FormComponentModifier(nativePtr: KNode, classType: ModifierType): void;
   GaugeModifier(nativePtr: KNode, classType: ModifierType): void;
   GridModifier(nativePtr: KNode, classType: ModifierType): void;
@@ -104,8 +103,6 @@ declare class ModifierJS {
   Component3DModifier(nativePtr: KNode, classType: ModifierType): void;
   ContainerSpanModifier(nativePtr: KNode, classType: ModifierType): void;
   IndicatorComponentModifier(nativePtr: KNode, classType: ModifierType): void;
-  LazyVGridLayoutModifier(nativePtr: KNode, classType: ModifierType): void;
-  StepperModifier(nativePtr: KNode, classType: ModifierType): void;
 }
 
 declare class aceConsole {

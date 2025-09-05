@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2022-2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -14,24 +14,21 @@
  */
 #include "core/components_ng/pattern/checkboxgroup/checkboxgroup_pattern.h"
 
-#include "base/log/dump_log.h"
+#include "core/common/recorder/node_data_cache.h"
+#include "core/components/checkable/checkable_component.h"
+#include "core/components_ng/pattern/checkbox/checkbox_paint_property.h"
 #include "core/components_ng/pattern/checkbox/checkbox_pattern.h"
+#include "core/components_ng/pattern/checkboxgroup/checkboxgroup_paint_property.h"
+#include "core/components_ng/pattern/stage/page_event_hub.h"
+#include "core/components_ng/property/calc_length.h"
+#include "core/components_ng/property/property.h"
+#include "core/components_v2/inspector/inspector_constants.h"
+#include "core/event/touch_event.h"
 #include "core/pipeline_ng/pipeline_context.h"
 
 namespace OHOS::Ace::NG {
 namespace {
 const Color ITEM_FILL_COLOR = Color::TRANSPARENT;
-
-inline std::string ToString(const CheckBoxGroupPaintProperty::SelectStatus& status)
-{
-    const LinearEnumMapNode<CheckBoxGroupPaintProperty::SelectStatus, std::string> table[] = {
-        { CheckBoxGroupPaintProperty::SelectStatus::ALL, "ALL" },
-        { CheckBoxGroupPaintProperty::SelectStatus::PART, "PART" },
-        { CheckBoxGroupPaintProperty::SelectStatus::NONE, "NONE" },
-    };
-    auto iter = BinarySearchFindIndex(table, ArraySize(table), status);
-    return iter != -1 ? table[iter].value : "";
-}
 }
 
 void CheckBoxGroupPattern::OnAttachToFrameNode()
@@ -46,25 +43,18 @@ void CheckBoxGroupPattern::OnDetachFromFrameNode(FrameNode* frameNode)
     CHECK_NULL_VOID(frameNode);
     auto groupManager = GetGroupManager();
     CHECK_NULL_VOID(groupManager);
-    std::string group = "";
-    auto eventHub = frameNode->GetEventHub<CheckBoxGroupEventHub>();
-    if (eventHub) {
-        group = currentNavId_.has_value() ? (eventHub->GetGroupName() + currentNavId_.value())
-                                          : (eventHub->GetGroupName() + groupManager->GetLastNavId());
-    }
-    groupManager->RemoveCheckBoxGroup(group, frameNode->GetId());
+    groupManager->RemoveCheckBoxGroup(GetGroupNameWithNavId(), frameNode->GetId());
 }
 
 void CheckBoxGroupPattern::OnModifyDone()
 {
     Pattern::OnModifyDone();
-    FireBuilder();
     UpdateState();
     auto host = GetHost();
     CHECK_NULL_VOID(host);
     auto pipeline = PipelineBase::GetCurrentContext();
     CHECK_NULL_VOID(pipeline);
-    auto checkBoxTheme = pipeline->GetTheme<CheckboxTheme>(host->GetThemeScopeId());
+    auto checkBoxTheme = pipeline->GetTheme<CheckboxTheme>();
     CHECK_NULL_VOID(checkBoxTheme);
     auto layoutProperty = host->GetLayoutProperty();
     CHECK_NULL_VOID(layoutProperty);
@@ -85,18 +75,6 @@ void CheckBoxGroupPattern::OnModifyDone()
     CHECK_NULL_VOID(focusHub);
     InitOnKeyEvent(focusHub);
     SetAccessibilityAction();
-
-    auto checkBoxGroupPaintProperty = host->GetPaintProperty<CheckBoxGroupPaintProperty>();
-    CHECK_NULL_VOID(checkBoxGroupPaintProperty);
-    if (!checkBoxGroupPaintProperty->HasCheckBoxGroupSelectedColorFlagByUser()) {
-        checkBoxGroupPaintProperty->UpdateCheckBoxGroupSelectedColor(checkBoxTheme->GetActiveColor());
-    }
-    if (!checkBoxGroupPaintProperty->HasCheckBoxGroupUnSelectedColorFlagByUser()) {
-        checkBoxGroupPaintProperty->UpdateCheckBoxGroupUnSelectedColor(checkBoxTheme->GetInactiveColor());
-    }
-    if (!checkBoxGroupPaintProperty->HasCheckBoxGroupCheckMarkColorFlagByUser()) {
-        checkBoxGroupPaintProperty->UpdateCheckBoxGroupCheckMarkColor(checkBoxTheme->GetPointColor());
-    }
 }
 
 void CheckBoxGroupPattern::SetAccessibilityAction()
@@ -159,6 +137,7 @@ void CheckBoxGroupPattern::InitClickEvent()
     auto gesture = host->GetOrCreateGestureEventHub();
     CHECK_NULL_VOID(gesture);
     auto clickCallback = [weak = WeakClaim(this)](GestureEvent& info) {
+        TAG_LOGD(AceLogTag::ACE_SELECT_COMPONENT, "checkboxgroup onclick");
         auto checkboxPattern = weak.Upgrade();
         CHECK_NULL_VOID(checkboxPattern);
         checkboxPattern->OnClick();
@@ -179,9 +158,6 @@ void CheckBoxGroupPattern::InitTouchEvent()
     auto touchCallback = [weak = WeakClaim(this)](const TouchEventInfo& info) {
         auto checkboxPattern = weak.Upgrade();
         CHECK_NULL_VOID(checkboxPattern);
-        if (info.GetTouches().empty()) {
-            return;
-        }
         if (info.GetTouches().front().GetTouchType() == TouchType::DOWN) {
             checkboxPattern->OnTouchDown();
         }
@@ -231,9 +207,6 @@ void CheckBoxGroupPattern::HandleMouseEvent(bool isHover)
 
 void CheckBoxGroupPattern::OnClick()
 {
-    if (UseContentModifier()) {
-        return;
-    }
     auto host = GetHost();
     CHECK_NULL_VOID(host);
     auto paintProperty = host->GetPaintProperty<CheckBoxGroupPaintProperty>();
@@ -249,9 +222,6 @@ void CheckBoxGroupPattern::OnClick()
 void CheckBoxGroupPattern::OnTouchDown()
 {
     TAG_LOGD(AceLogTag::ACE_SELECT_COMPONENT, "checkboxgroup touch down %{public}d", isHover_);
-    if (UseContentModifier()) {
-        return;
-    }
     if (isHover_) {
         touchHoverType_ = TouchHoverAnimationType::HOVER_TO_PRESS;
     } else {
@@ -265,9 +235,6 @@ void CheckBoxGroupPattern::OnTouchDown()
 void CheckBoxGroupPattern::OnTouchUp()
 {
     TAG_LOGD(AceLogTag::ACE_SELECT_COMPONENT, "checkboxgroup touch up %{public}d", isHover_);
-    if (UseContentModifier()) {
-        return;
-    }
     if (isHover_) {
         touchHoverType_ = TouchHoverAnimationType::PRESS_TO_HOVER;
     } else {
@@ -302,9 +269,6 @@ void CheckBoxGroupPattern::UpdateUIStatus(bool check)
         uiStatus_ = check ? UIStatus::PART_TO_ON : UIStatus::PART_TO_OFF;
     } else {
         uiStatus_ = check ? UIStatus::OFF_TO_ON : UIStatus::ON_TO_OFF;
-    }
-    if (UseContentModifier()) {
-        FireBuilder();
     }
     host->MarkDirtyNode(PROPERTY_UPDATE_RENDER);
 }
@@ -477,7 +441,6 @@ void CheckBoxGroupPattern::UpdateRepeatedGroupStatus(const RefPtr<FrameNode>& fr
 
 void CheckBoxGroupPattern::InitOnKeyEvent(const RefPtr<FocusHub>& focusHub)
 {
-    CHECK_NULL_VOID(focusHub);
     auto getInnerPaintRectCallback = [wp = WeakClaim(this)](RoundRect& paintRect) {
         auto pattern = wp.Upgrade();
         if (pattern) {
@@ -485,24 +448,6 @@ void CheckBoxGroupPattern::InitOnKeyEvent(const RefPtr<FocusHub>& focusHub)
         }
     };
     focusHub->SetInnerFocusPaintRectCallback(getInnerPaintRectCallback);
-
-    auto onKeyEvent = [wp = WeakClaim(this)](const KeyEvent& event) -> bool {
-        auto pattern = wp.Upgrade();
-        if (pattern) {
-            return pattern->OnKeyEvent(event);
-        }
-        return false;
-    };
-    focusHub->SetOnKeyEventInternal(std::move(onKeyEvent));
-}
-
-bool CheckBoxGroupPattern::OnKeyEvent(const KeyEvent& event)
-{
-    if (event.action == KeyAction::DOWN && event.code == KeyCode::KEY_FUNCTION) {
-        OnClick();
-        return true;
-    }
-    return false;
 }
 
 void CheckBoxGroupPattern::GetInnerFocusPaintRect(RoundRect& paintRect)
@@ -556,9 +501,7 @@ FocusPattern CheckBoxGroupPattern::GetFocusPattern() const
 {
     auto pipeline = PipelineBase::GetCurrentContext();
     CHECK_NULL_RETURN(pipeline, FocusPattern());
-    auto host = GetHost();
-    CHECK_NULL_RETURN(host, FocusPattern());
-    auto checkBoxTheme = pipeline->GetTheme<CheckboxTheme>(host->GetThemeScopeId());
+    auto checkBoxTheme = pipeline->GetTheme<CheckboxTheme>();
     CHECK_NULL_RETURN(checkBoxTheme, FocusPattern());
     auto activeColor = checkBoxTheme->GetActiveColor();
     FocusPaintParam focusPaintParam;
@@ -596,9 +539,7 @@ void CheckBoxGroupPattern::InitializeModifierParam(CheckBoxGroupModifier::Parame
 {
     auto pipeline = PipelineBase::GetCurrentContext();
     CHECK_NULL_VOID(pipeline);
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    auto checkBoxTheme = pipeline->GetTheme<CheckboxTheme>(host->GetThemeScopeId());
+    auto checkBoxTheme = pipeline->GetTheme<CheckboxTheme>();
     CHECK_NULL_VOID(checkBoxTheme);
     paintParameters.borderWidth = checkBoxTheme->GetBorderWidth().ConvertToPx();
     paintParameters.borderRadius = checkBoxTheme->GetBorderRadius().ConvertToPx();
@@ -654,132 +595,22 @@ void CheckBoxGroupPattern::UpdateModifierParam(CheckBoxGroupModifier::Parameters
     }
 }
 
-void CheckBoxGroupPattern::SetCheckBoxGroupSelect(bool select)
-{
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    auto eventHub = host->GetEventHub<EventHub>();
-    CHECK_NULL_VOID(eventHub);
-    if (!eventHub->IsEnabled()) {
-        return;
-    }
-    auto paintProperty = host->GetPaintProperty<CheckBoxGroupPaintProperty>();
-    CHECK_NULL_VOID(paintProperty);
-    paintProperty->UpdateCheckBoxGroupSelect(select);
-    updateFlag_ = true;
-    UpdateState();
-    OnModifyDone();
-}
-
-void CheckBoxGroupPattern::FireBuilder()
-{
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    if (!makeFunc_.has_value()) {
-        host->RemoveChildAndReturnIndex(contentModifierNode_);
-        if (contentModifierNode_) {
-            contentModifierNode_ = nullptr;
-            host->MarkNeedFrameFlushDirty(PROPERTY_UPDATE_MEASURE);
-        }
-        return;
-    }
-    auto node = BuildContentModifierNode();
-    if (contentModifierNode_ == node) {
-        return;
-    }
-    auto renderContext = host->GetRenderContext();
-    CHECK_NULL_VOID(renderContext);
-    renderContext->UpdateBackgroundColor(Color::TRANSPARENT);
-    host->RemoveChildAndReturnIndex(contentModifierNode_);
-    contentModifierNode_ = node;
-    CHECK_NULL_VOID(contentModifierNode_);
-    host->AddChild(contentModifierNode_, 0);
-    host->MarkNeedFrameFlushDirty(PROPERTY_UPDATE_MEASURE);
-}
-
-RefPtr<FrameNode> CheckBoxGroupPattern::BuildContentModifierNode()
-{
-    if (!makeFunc_.has_value()) {
-        return nullptr;
-    }
-    auto host = GetHost();
-    CHECK_NULL_RETURN(host, nullptr);
-    auto eventHub = host->GetEventHub<CheckBoxGroupEventHub>();
-    CHECK_NULL_RETURN(eventHub, nullptr);
-    auto name = eventHub->GetGroupName();
-    auto enabled = eventHub->IsEnabled();
-    auto paintProperty = host->GetPaintProperty<CheckBoxGroupPaintProperty>();
-    CHECK_NULL_RETURN(paintProperty, nullptr);
-    auto selectStatus = paintProperty->GetSelectStatus();
-    CheckBoxGroupConfiguration checkBoxGroupConfiguration(name, selectStatus, enabled);
-    return (makeFunc_.value())(checkBoxGroupConfiguration);
-}
-
 void CheckBoxGroupPattern::OnColorConfigurationUpdate()
 {
     auto host = GetHost();
     CHECK_NULL_VOID(host);
-    OnThemeScopeUpdate(host->GetThemeScopeId());
+    auto pipeline = PipelineBase::GetCurrentContext();
+    CHECK_NULL_VOID(pipeline);
+    auto checkBoxTheme = pipeline->GetTheme<CheckboxTheme>();
+    CHECK_NULL_VOID(checkBoxTheme);
+    auto renderContext = host->GetRenderContext();
+    auto checkBoxGroupPaintProperty = host->GetPaintProperty<CheckBoxGroupPaintProperty>();
+    CHECK_NULL_VOID(checkBoxGroupPaintProperty);
+    checkBoxGroupPaintProperty->UpdateCheckBoxGroupSelectedColor(checkBoxTheme->GetActiveColor());
+    checkBoxGroupPaintProperty->UpdateCheckBoxGroupUnSelectedColor(checkBoxTheme->GetInactiveColor());
+    checkBoxGroupPaintProperty->UpdateCheckBoxGroupCheckMarkColor(checkBoxTheme->GetPointColor());
     host->MarkModifyDone();
     host->MarkDirtyNode();
-}
-
-bool CheckBoxGroupPattern::OnThemeScopeUpdate(int32_t themeScopeId)
-{
-    auto result = false;
-    auto host = GetHost();
-    CHECK_NULL_RETURN(host, result);
-    auto pipeline = host->GetContext();
-    CHECK_NULL_RETURN(pipeline, result);
-    auto checkBoxTheme = pipeline->GetTheme<CheckboxTheme>(themeScopeId);
-    CHECK_NULL_RETURN(checkBoxTheme, result);
-    auto checkBoxGroupPaintProperty = host->GetPaintProperty<CheckBoxGroupPaintProperty>();
-    CHECK_NULL_RETURN(checkBoxGroupPaintProperty, result);
-    if (!checkBoxGroupPaintProperty->GetCheckBoxGroupSelectedColorFlagByUserValue(false)) {
-        checkBoxGroupPaintProperty->UpdateCheckBoxGroupSelectedColor(checkBoxTheme->GetActiveColor());
-        result = true;
-    }
-    if (!checkBoxGroupPaintProperty->GetCheckBoxGroupUnSelectedColorFlagByUserValue(false)) {
-        checkBoxGroupPaintProperty->UpdateCheckBoxGroupUnSelectedColor(checkBoxTheme->GetInactiveColor());
-        result = true;
-    }
-    if (!checkBoxGroupPaintProperty->GetCheckBoxGroupCheckMarkColorFlagByUserValue(false)) {
-        checkBoxGroupPaintProperty->UpdateCheckBoxGroupCheckMarkColor(checkBoxTheme->GetPointColor());
-        result = true;
-    }
-    return result;
-}
-
-void CheckBoxGroupPattern::DumpInfo()
-{
-    auto eventHub = GetEventHub<CheckBoxGroupEventHub>();
-    CHECK_NULL_VOID(eventHub);
-    DumpLog::GetInstance().AddDesc("GroupName: " + eventHub->GetGroupName());
-
-    auto paintProperty = GetPaintProperty<CheckBoxGroupPaintProperty>();
-    CHECK_NULL_VOID(paintProperty);
-    if (paintProperty->HasCheckBoxGroupSelectedStyle()) {
-        DumpLog::GetInstance().AddDesc(
-            "Shape: " + CheckBoxModel::ToString(paintProperty->GetCheckBoxGroupSelectedStyleValue()));
-    }
-    DumpLog::GetInstance().AddDesc("SelectStatus: " + ToString(paintProperty->GetSelectStatus()));
-    if (paintProperty->HasCheckBoxGroupSelectedColor()) {
-        DumpLog::GetInstance().AddDesc(
-            "SelectedColor: " + paintProperty->GetCheckBoxGroupSelectedColorValue().ToString());
-    }
-    if (paintProperty->HasCheckBoxGroupUnSelectedColor()) {
-        DumpLog::GetInstance().AddDesc(
-            "UnSelectedColor: " + paintProperty->GetCheckBoxGroupUnSelectedColorValue().ToString());
-    }
-    if (paintProperty->HasCheckBoxGroupCheckMarkSize()) {
-        DumpLog::GetInstance().AddDesc("MarkSize: " + paintProperty->GetCheckBoxGroupCheckMarkSizeValue().ToString());
-    }
-    if (paintProperty->HasCheckBoxGroupCheckMarkWidth()) {
-        DumpLog::GetInstance().AddDesc("MarkWidth: " + paintProperty->GetCheckBoxGroupCheckMarkWidthValue().ToString());
-    }
-    if (paintProperty->HasCheckBoxGroupCheckMarkColor()) {
-        DumpLog::GetInstance().AddDesc("MarkColor: " + paintProperty->GetCheckBoxGroupCheckMarkColorValue().ToString());
-    }
 }
 
 void CheckBoxGroupPattern::OnAttachToMainTree()

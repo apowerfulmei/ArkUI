@@ -17,13 +17,15 @@
 
 #include "base/log/dump_log.h"
 #include "core/common/recorder/node_data_cache.h"
+#include "core/common/thread_checker.h"
+#include "frameworks/bridge/common/utils/utils.h"
 #include "frameworks/bridge/declarative_frontend/ng/page_router_manager_factory.h"
 
 namespace OHOS::Ace {
 
 DeclarativeFrontendNG::~DeclarativeFrontendNG() noexcept
 {
-    LOGI("DeclarativeFrontend destroyed");
+    LOG_DESTROY();
 }
 
 void DeclarativeFrontendNG::Destroy()
@@ -136,24 +138,6 @@ void DeclarativeFrontendNG::InitializeDelegate(const RefPtr<TaskExecutor>& taskE
         jsEngine->DrawInspectorCallback(componentId);
     };
 
-    auto drawChildrenInspectorCallback = [weakEngine = WeakPtr<Framework::JsEngine>(jsEngine_)](
-        const std::string& componentId) {
-            auto jsEngine = weakEngine.Upgrade();
-            if (!jsEngine) {
-                return;
-            }
-            jsEngine->DrawChildrenInspectorCallback(componentId);
-    };
-
-    auto isDrawChildrenCallBackFuncExist = [weakEngine = WeakPtr<Framework::JsEngine>(jsEngine_)](
-        const std::string& componentId) {
-            auto jsEngine = weakEngine.Upgrade();
-            if (!jsEngine) {
-                return false;
-            }
-            return jsEngine->IsDrawChildrenCallbackFuncExist(componentId);
-    };
-
     auto onStartContinuationCallBack = [weakEngine = WeakPtr<Framework::JsEngine>(jsEngine_)]() -> bool {
         auto jsEngine = weakEngine.Upgrade();
         if (!jsEngine) {
@@ -258,27 +242,15 @@ void DeclarativeFrontendNG::InitializeDelegate(const RefPtr<TaskExecutor>& taskE
         return jsEngine->UpdateRootComponent();
     };
 
-    auto generateIntentPageCallback = [weakEngine = WeakPtr<Framework::JsEngine>(jsEngine_)](
-        const std::string& bundleName, const std::string& moduleName, const std::string& pagePath) {
-            auto jsEngine = weakEngine.Upgrade();
-            if (!jsEngine) {
-                return false;
-            }
-            return jsEngine->GeneratePageByIntent(bundleName, moduleName, pagePath);
-    };
-
     pageRouterManager->SetLoadJsCallback(std::move(loadPageCallback));
     pageRouterManager->SetLoadJsByBufferCallback(std::move(loadPageByBufferCallback));
     pageRouterManager->SetLoadNamedRouterCallback(std::move(loadNamedRouterCallback));
     pageRouterManager->SetUpdateRootComponentCallback(std::move(updateRootComponentCallback));
-    pageRouterManager->SetGenerateIntentPageCallback(std::move(generateIntentPageCallback));
 
     delegate_ = AceType::MakeRefPtr<Framework::FrontendDelegateDeclarativeNG>(taskExecutor);
     delegate_->SetMediaQueryCallback(std::move(mediaQueryCallback));
     delegate_->SetLayoutInspectorCallback(std::move(layoutInspectorCallback));
     delegate_->SetDrawInspectorCallback(std::move(drawInspectorCallback));
-    delegate_->SetDrawChildrenInspectorCallback(std::move(drawChildrenInspectorCallback));
-    delegate_->SetIsDrawChildrenCallbackFuncExistCallback(std::move(isDrawChildrenCallBackFuncExist));
     delegate_->SetOnStartContinuationCallBack(std::move(onStartContinuationCallBack));
     delegate_->SetOnCompleteContinuationCallBack(std::move(onCompleteContinuationCallBack));
     delegate_->SetOnSaveDataCallBack(std::move(onSaveDataCallBack));
@@ -293,35 +265,6 @@ void DeclarativeFrontendNG::InitializeDelegate(const RefPtr<TaskExecutor>& taskE
     delegate_->SetPageRouterManager(pageRouterManager);
     if (jsEngine_) {
         delegate_->SetGroupJsBridge(jsEngine_->GetGroupJsBridge());
-    }
-    auto moduleNamecallback = [weakEngine = WeakPtr<Framework::JsEngine>(jsEngine_)](const std::string& pageName)->
-    std::string {
-        auto jsEngine = weakEngine.Upgrade();
-        if (!jsEngine) {
-            return "";
-        }
-        return jsEngine->SearchRouterRegisterMap(pageName);
-    };
-    auto navigationLoadCallback = [weakEngine = WeakPtr<Framework::JsEngine>(jsEngine_)](
-        const std::string bundleName, const std::string& moduleName, const std::string& pageSourceFile,
-        bool isSingleton) -> int32_t {
-        auto jsEngine = weakEngine.Upgrade();
-        if (!jsEngine) {
-            return -1;
-        }
-        return jsEngine->LoadNavDestinationSource(bundleName, moduleName, pageSourceFile, isSingleton);
-    };
-    auto container = Container::Current();
-    if (container) {
-        auto pageUrlChecker = container->GetPageUrlChecker();
-        // ArkTSCard container no SetPageUrlChecker
-        if (pageUrlChecker != nullptr) {
-            pageUrlChecker->SetModuleNameCallback(std::move(moduleNamecallback));
-        }
-        auto navigationRoute = container->GetNavigationRoute();
-        if (navigationRoute) {
-            navigationRoute->SetLoadPageCallback(std::move(navigationLoadCallback));
-        }
     }
 }
 
@@ -471,33 +414,6 @@ UIContentErrorCode DeclarativeFrontendNG::RunPageByNamedRouter(const std::string
     return UIContentErrorCode::NULL_POINTER;
 }
 
-UIContentErrorCode DeclarativeFrontendNG::RunIntentPage()
-{
-    if (delegate_) {
-        delegate_->RunIntentPage();
-        return UIContentErrorCode::NO_ERRORS;
-    }
-    return UIContentErrorCode::NULL_POINTER;
-}
-
-UIContentErrorCode DeclarativeFrontendNG::SetRouterIntentInfo(const std::string& intentInfoSerialized,
-    bool isColdStart, const std::function<void()>&& loadPageCallback)
-{
-    if (delegate_) {
-        delegate_->SetRouterIntentInfo(intentInfoSerialized, isColdStart, std::move(loadPageCallback));
-        return UIContentErrorCode::NO_ERRORS;
-    }
-    return UIContentErrorCode::NULL_POINTER;
-}
-
-std::string DeclarativeFrontendNG::GetTopNavDestinationInfo(bool onlyFullScreen, bool needParam)
-{
-    if (delegate_) {
-        return delegate_->GetTopNavDestinationInfo(onlyFullScreen, needParam);
-    }
-    return "{}";
-}
-
 void DeclarativeFrontendNG::ReplacePage(const std::string& url, const std::string& params)
 {
     if (delegate_) {
@@ -516,12 +432,6 @@ void DeclarativeFrontendNG::PushPage(const std::string& url, const std::string& 
 napi_value DeclarativeFrontendNG::GetContextValue()
 {
     return jsEngine_->GetContextValue();
-}
-
-bool DeclarativeFrontendNG::BuilderNodeFunc(std::string functionName, const std::vector<int32_t>& nodeIds)
-{
-    CHECK_NULL_RETURN(jsEngine_, false);
-    return jsEngine_->BuilderNodeFunc(functionName, nodeIds);
 }
 
 napi_value DeclarativeFrontendNG::GetFrameNodeValueByNodeId(int32_t nodeId)
@@ -609,21 +519,6 @@ void DeclarativeFrontendNG::OnDrawCompleted(const std::string& componentId)
     if (delegate_) {
         delegate_->OnDrawCompleted(componentId);
     }
-}
-
-void DeclarativeFrontendNG::OnDrawChildrenCompleted(const std::string& componentId)
-{
-    if (delegate_) {
-        delegate_->OnDrawChildrenCompleted(componentId);
-    }
-}
-
-bool DeclarativeFrontendNG::IsDrawChildrenCallbackFuncExist(const std::string& componentId)
-{
-    if (delegate_) {
-        return delegate_->IsDrawChildrenCallbackFuncExist(componentId);
-    }
-    return false;
 }
 
 void DeclarativeFrontendNG::DumpFrontend() const

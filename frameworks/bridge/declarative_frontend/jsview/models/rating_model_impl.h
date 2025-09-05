@@ -16,7 +16,6 @@
 #ifndef FRAMEWORKS_BRIDGE_DECLARATIVE_FRONTEND_JS_VIEW_MODELS_RATING_MODEL_IMPL_H
 #define FRAMEWORKS_BRIDGE_DECLARATIVE_FRONTEND_JS_VIEW_MODELS_RATING_MODEL_IMPL_H
 
-#include "core/common/resource/resource_object.h"
 #include "core/components_ng/pattern/rating/rating_model.h"
 
 namespace OHOS::Ace::Framework {
@@ -34,10 +33,8 @@ public:
     void SetForegroundSrc(const std::string& value, bool flag = false) override;
     void SetSecondarySrc(const std::string& value, bool flag = false) override;
     void SetBackgroundSrc(const std::string& value, bool flag = false) override;
-    void SetOnChange(RatingChangeEvent&& onChange) override;
-    void SetOnChangeEvent(RatingChangeEvent&& onChangeEvent) override {};
-    void CreateWithMediaResourceObj(const RefPtr<ResourceObject>& resObj,
-        const RatingUriType ratingUriType) override {};
+    void SetOnChange(ChangeEvent&& onChange) override;
+    void SetOnChangeEvent(ChangeEvent&& onChangeEvent) override {};
 };
 } // namespace OHOS::Ace::Framework
 

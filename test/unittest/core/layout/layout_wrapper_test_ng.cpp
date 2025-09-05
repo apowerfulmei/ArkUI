@@ -22,6 +22,7 @@
 
 #include "test/mock/core/pipeline/mock_pipeline_context.h"
 
+#include "base/hiviewdfx/hichecker/interfaces/native/innerkits/include/hichecker.h"
 #include "base/log/ace_trace.h"
 #include "base/memory/ace_type.h"
 #include "base/utils/utils.h"
@@ -155,7 +156,7 @@ void LayoutWrapperTestNg::TearDownTestSuite()
  * @tc.desc: Test GetOrCreateChildByIndex.
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest001, TestSize.Level0)
+HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest001, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. call CreateLayoutWrapper create a layoutwrapper pointer.
@@ -203,7 +204,7 @@ HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest001, TestSize.Level0)
  * @tc.desc: Test GetOrCreateChildByIndex.
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest002, TestSize.Level0)
+HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest002, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. call CreateLayoutWrapper create a layoutwrapper pointer.
@@ -254,7 +255,7 @@ HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest002, TestSize.Level0)
  * @tc.desc: Test SetCacheCount.
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest003, TestSize.Level0)
+HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest003, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. call CreateLayoutWrapper create a layoutwrapper pointer.
@@ -287,7 +288,7 @@ HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest003, TestSize.Level0)
  * @tc.desc: Test GetAllChildrenWithBuild.
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest004, TestSize.Level0)
+HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest004, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. call CreateLayoutWrapper create a layoutwrapper pointer.
@@ -328,7 +329,7 @@ HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest004, TestSize.Level0)
  * @tc.desc: Test GetAllChildrenWithBuild TEST_TRUE.
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest005, TestSize.Level0)
+HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest005, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. call CreateLayoutWrapper create a layoutwrapper pointer.
@@ -356,7 +357,7 @@ HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest005, TestSize.Level0)
  * @tc.desc: Test the operation of layout_wrapper.
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest006, TestSize.Level0)
+HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest006, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. call CreateLayoutWrapper create a layoutwrapper pointer.
@@ -382,7 +383,7 @@ HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest006, TestSize.Level0)
  * @tc.desc: Test GetAllChildrenWithBuild TEST_FALSE.
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest007, TestSize.Level0)
+HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest007, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. call CreateLayoutWrapper create a layoutwrapper pointer.
@@ -415,7 +416,7 @@ HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest007, TestSize.Level0)
  * @tc.desc: Test RemoveChildInRenderTree.
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest008, TestSize.Level0)
+HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest008, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. call CreateLayoutWrapper create a layoutwrapper pointer.
@@ -442,7 +443,7 @@ HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest008, TestSize.Level0)
  * @tc.desc: Test RemoveChildInRenderTree.
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest009, TestSize.Level0)
+HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest009, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. call CreateLayoutWrapper create a layoutwrapper pointer.
@@ -476,7 +477,7 @@ HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest009, TestSize.Level0)
  * @tc.desc: Test RemoveAllChildInRenderTree.
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest010, TestSize.Level0)
+HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest010, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. call CreateLayoutWrapper create a layoutwrapper pointer.
@@ -536,7 +537,7 @@ HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest010, TestSize.Level0)
  * @tc.desc: Test ResetHostNode.
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest011, TestSize.Level0)
+HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest011, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. call CreateLayoutWrapper create a layoutwrapper pointer.
@@ -556,7 +557,7 @@ HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest011, TestSize.Level0)
  * @tc.desc: Test GetHostNode.
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest012, TestSize.Level0)
+HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest012, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. create layoutwrapper.
@@ -580,7 +581,7 @@ HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest012, TestSize.Level0)
  * @tc.desc: Test GetHostTag.
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest013, TestSize.Level0)
+HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest013, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. create layoutwrapper.
@@ -612,7 +613,7 @@ HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest013, TestSize.Level0)
  * @tc.desc: Test GetHostDepth.
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest014, TestSize.Level0)
+HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest014, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. create layoutwrapper.
@@ -628,7 +629,7 @@ HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest014, TestSize.Level0)
      * @tc.expected: the return value is equal to HOST_DEPTH.
      */
     int32_t hostDepth = layoutWrapper->GetHostDepth();
-    EXPECT_EQ(hostDepth, Infinity<int32_t>());
+    EXPECT_EQ(hostDepth, INT32_MAX);
 
     /**
      * @tc.steps: step3. call GetHostDepth and set hostNode_ is null.
@@ -644,7 +645,7 @@ HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest014, TestSize.Level0)
  * @tc.desc: Test Measure.
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest015, TestSize.Level0)
+HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest015, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. call CreateLayoutWrapper create a layoutwrapper pointer.
@@ -676,7 +677,7 @@ HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest015, TestSize.Level0)
  * @tc.desc: Test Measure.
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest016, TestSize.Level0)
+HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest016, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. call CreateLayoutWrapper create a layoutwrapper pointer.
@@ -703,7 +704,7 @@ HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest016, TestSize.Level0)
  * @tc.desc: Test Measure.
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest017, TestSize.Level0)
+HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest017, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. call CreateLayoutWrapper create a layoutwrapper pointer.
@@ -731,7 +732,7 @@ HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest017, TestSize.Level0)
  * @tc.desc: Test Measure.
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest018, TestSize.Level0)
+HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest018, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. create layoutwrapper.
@@ -762,7 +763,7 @@ HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest018, TestSize.Level0)
  * @tc.desc: Test Measure.
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest019, TestSize.Level0)
+HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest019, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. create layoutwrapper.
@@ -803,7 +804,7 @@ HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest019, TestSize.Level0)
  * @tc.desc: Test Measure.
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest020, TestSize.Level0)
+HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest020, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. create layoutwrapper.
@@ -842,7 +843,7 @@ HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest020, TestSize.Level0)
  * @tc.desc: Test Measure.
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest021, TestSize.Level0)
+HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest021, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. create a layoutwrapper pointer.
@@ -907,7 +908,7 @@ HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest021, TestSize.Level0)
  * @tc.desc: Test Measure.
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest022, TestSize.Level0)
+HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest022, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. create a layoutwrapper pointer.
@@ -945,7 +946,7 @@ HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest022, TestSize.Level0)
  * @tc.desc: Test the operation of layout_wrapper.
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest023, TestSize.Level0)
+HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest023, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. call CreateLayoutWrapper create a layoutwrapper pointer.
@@ -973,7 +974,7 @@ HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest023, TestSize.Level0)
  * @tc.desc: Test Layout.
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest024, TestSize.Level0)
+HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest024, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. call CreateLayoutWrapper create a layoutwrapper pointer.
@@ -1000,7 +1001,7 @@ HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest024, TestSize.Level0)
  * @tc.desc: Test Layout.
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest025, TestSize.Level0)
+HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest025, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. call CreateLayoutWrapper create a layoutwrapper pointer.
@@ -1028,7 +1029,7 @@ HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest025, TestSize.Level0)
  * @tc.desc: Test Layout.
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest026, TestSize.Level0)
+HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest026, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. create a layoutwrapper pointer.
@@ -1059,7 +1060,7 @@ HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest026, TestSize.Level0)
  * @tc.desc: Test Layout.
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest027, TestSize.Level0)
+HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest027, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. create a layoutwrapper pointer.
@@ -1098,7 +1099,7 @@ HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest027, TestSize.Level0)
  * @tc.desc: Test Layout.
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest028, TestSize.Level0)
+HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest028, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. create a layoutwrapper pointer.
@@ -1145,7 +1146,7 @@ HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest028, TestSize.Level0)
  * @tc.desc: Test Layout.
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest029, TestSize.Level0)
+HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest029, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. create a layoutwrapper pointer.
@@ -1183,7 +1184,7 @@ HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest029, TestSize.Level0)
  * @tc.desc: Test SkipMeasureContent.
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest030, TestSize.Level0)
+HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest030, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. create a layoutwrapper pointer.
@@ -1222,7 +1223,7 @@ HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest030, TestSize.Level0)
  * @tc.desc: Test CheckNeedForceMeasureAndLayout.
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest031, TestSize.Level0)
+HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest031, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. call CreateLayoutWrapper create a layoutwrapper pointer.
@@ -1249,7 +1250,7 @@ HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest031, TestSize.Level0)
  * @tc.desc: Test CheckNeedForceMeasureAndLayout.
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest032, TestSize.Level0)
+HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest032, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. call CreateLayoutWrapper create a layoutwrapper pointer.
@@ -1270,7 +1271,7 @@ HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest032, TestSize.Level0)
  * @tc.desc: Test CheckNeedForceMeasureAndLayout.
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest033, TestSize.Level0)
+HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest033, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. call CreateLayoutWrapper create a layoutwrapper pointer.
@@ -1293,10 +1294,136 @@ HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest033, TestSize.Level0)
 
 /**
  * @tc.name: LayoutWrapperTest034
+ * @tc.desc: Test MountToHostOnMainThread.
+ * @tc.type: FUNC
+ */
+HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest034, TestSize.Level1)
+{
+    /**
+     * @tc.steps: step1. call CreateLayoutWrapper create a layoutwrapper pointer.
+     */
+    RefPtr<LayoutWrapperNode> layoutWrapper = CreateLayoutWrapper(ROW_FRAME_NODE, NODE_ID_0);
+
+    /**
+     * @tc.steps: step2. call MountToHostOnMainThread.
+     * @tc.expected: layoutWrapper->layoutWrapperBuilder_ is null.
+     */
+    layoutWrapper->MountToHostOnMainThread();
+    EXPECT_EQ(layoutWrapper->layoutWrapperBuilder_, nullptr);
+
+    /**
+     * @tc.steps: step3. call MountToHostOnMainThread and set layoutWrapper->isActive_ is TEST_TRUE.
+     * @tc.expected: layoutWrapper->layoutWrapperBuilder_ is null.
+     */
+    layoutWrapper->isActive_ = TEST_TRUE;
+    layoutWrapper->MountToHostOnMainThread();
+    EXPECT_EQ(layoutWrapper->layoutWrapperBuilder_, nullptr);
+
+    /**
+     * @tc.steps: step4. create a testLayoutWrapper pointer and set tag is FIRST_CHILD_FRAME_NODE.
+     */
+    auto frameNode = FrameNode::CreateFrameNode(FIRST_CHILD_FRAME_NODE, NODE_ID_1, AceType::MakeRefPtr<Pattern>());
+    RefPtr<GeometryNode> geometryNode = AceType::MakeRefPtr<GeometryNode>();
+    RefPtr<LayoutWrapperNode> testLayoutWrapper =
+        AceType::MakeRefPtr<LayoutWrapperNode>(frameNode, geometryNode, frameNode->GetLayoutProperty());
+
+    /**
+     * @tc.steps: step5. call MountToHostOnMainThread.
+     * @tc.expected: testLayoutWrapper->layoutWrapperBuilder is null.
+     */
+    testLayoutWrapper->MountToHostOnMainThread();
+    EXPECT_EQ(testLayoutWrapper->layoutWrapperBuilder_, nullptr);
+}
+
+/**
+ * @tc.name: LayoutWrapperTest035
+ * @tc.desc: Test MountToHostOnMainThread.
+ * @tc.type: FUNC
+ */
+HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest035, TestSize.Level1)
+{
+    /**
+     * @tc.steps: step1. create a layoutwrapper pointer.
+     */
+    auto rowFrameNode =
+        FrameNode::CreateFrameNode(ROW_FRAME_NODE, NODE_ID_0, AceType::MakeRefPtr<LinearLayoutPattern>(false));
+    RefPtr<GeometryNode> geometryNode = AceType::MakeRefPtr<GeometryNode>();
+    RefPtr<LayoutWrapperNode> layoutWrapper =
+        AceType::MakeRefPtr<LayoutWrapperNode>(rowFrameNode, geometryNode, rowFrameNode->GetLayoutProperty());
+
+    /**
+     * @tc.steps: step2. create firstChildLayoutWrapper and append it to layoutWrapper.
+     */
+    auto frameNode = FrameNode::CreateFrameNode(FIRST_CHILD_FRAME_NODE, NODE_ID_1, AceType::MakeRefPtr<Pattern>());
+    RefPtr<LayoutWrapperNode> firstChildLayoutWrapper =
+        AceType::MakeRefPtr<LayoutWrapperNode>(frameNode, geometryNode, frameNode->GetLayoutProperty());
+
+    layoutWrapper->AppendChild(firstChildLayoutWrapper);
+
+    /**
+     * @tc.steps: step3. call MountToHostOnMainThread.
+     * @tc.expected: layoutWrapper->layoutWrapperBuilder_ is null.
+     */
+    layoutWrapper->isActive_ = TEST_TRUE;
+    layoutWrapper->MountToHostOnMainThread();
+    EXPECT_EQ(layoutWrapper->layoutWrapperBuilder_, nullptr);
+}
+
+/**
+ * @tc.name: LayoutWrapperTest036
+ * @tc.desc: Test MountToHostOnMainThread.
+ * @tc.type: FUNC
+ */
+HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest036, TestSize.Level1)
+{
+    /**
+     * @tc.steps: step1. create a layoutwrapper pointer.
+     */
+    auto rowFrameNode =
+        FrameNode::CreateFrameNode(ROW_FRAME_NODE, NODE_ID_0, AceType::MakeRefPtr<LinearLayoutPattern>(false));
+    RefPtr<GeometryNode> geometryNode = AceType::MakeRefPtr<GeometryNode>();
+    RefPtr<LayoutWrapperNode> layoutWrapper =
+        AceType::MakeRefPtr<LayoutWrapperNode>(rowFrameNode, geometryNode, rowFrameNode->GetLayoutProperty());
+
+    /**
+     * @tc.steps: step2. create firstChildLayoutWrapper and append it to layoutWrapper.
+     */
+    auto frameNode = FrameNode::CreateFrameNode(FIRST_CHILD_FRAME_NODE, NODE_ID_1, AceType::MakeRefPtr<Pattern>());
+    RefPtr<LayoutWrapperNode> firstChildLayoutWrapper =
+        AceType::MakeRefPtr<LayoutWrapperNode>(frameNode, geometryNode, frameNode->GetLayoutProperty());
+
+    firstChildLayoutWrapper->hostNode_ = nullptr;
+    layoutWrapper->AppendChild(firstChildLayoutWrapper);
+
+    /**
+     * @tc.steps: step3. call MountToHostOnMainThread.
+     * @tc.expected: layoutWrapper->layoutWrapperBuilder_ is null.
+     */
+    layoutWrapper->MountToHostOnMainThread();
+    EXPECT_EQ(layoutWrapper->layoutWrapperBuilder_, nullptr);
+
+    /**
+     * @tc.steps: step4. create wrapperBuilder and set it to layoutWrapper->layoutWrapperBuilder_.
+     */
+    RefPtr<LazyLayoutWrapperBuilder> wrapperBuilder = CreateLayoutWrapperBuilder();
+    layoutWrapper->layoutWrapperBuilder_ = wrapperBuilder;
+
+    /**
+     * @tc.steps: step5. call MountToHostOnMainThread.
+     * @tc.expected: layoutWrapper->layoutWrapperBuilder_ is not null.
+     */
+    layoutWrapper->isActive_ = TEST_TRUE;
+
+    layoutWrapper->MountToHostOnMainThread();
+    ASSERT_NE(layoutWrapper->layoutWrapperBuilder_, nullptr);
+}
+
+/**
+ * @tc.name: LayoutWrapperTest037
  * @tc.desc: Test BuildLazyItem.
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest034, TestSize.Level0)
+HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest037, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. call CreateLayoutWrapper create a layoutwrapper pointer.
@@ -1318,11 +1445,11 @@ HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest034, TestSize.Level0)
 }
 
 /**
- * @tc.name: LayoutWrapperTest035
+ * @tc.name: LayoutWrapperTest038
  * @tc.desc: Test GetLazyBuildRange.
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest035, TestSize.Level0)
+HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest038, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. call CreateLayoutWrapper create a layoutwrapper pointer.
@@ -1351,11 +1478,11 @@ HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest035, TestSize.Level0)
 }
 
 /**
- * @tc.name: LayoutWrapperTest036
+ * @tc.name: LayoutWrapperTest039
  * @tc.desc: Test Apply SafeArea constraint for Popup nodes.
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest036, TestSize.Level0)
+HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest039, TestSize.Level1)
 {
     auto [parentHost, parent] = CreateNodeAndWrapper(V2::ROOT_ETS_TAG, 0);
     auto [stageHost, stage] = CreateNodeAndWrapper(V2::STAGE_ETS_TAG, 1);
@@ -1377,11 +1504,11 @@ HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest036, TestSize.Level0)
 }
 
 /**
- * @tc.name: LayoutWrapperTest037
+ * @tc.name: LayoutWrapperTest042
  * @tc.desc: Test OffsetNodeToSafeArea.
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest037, TestSize.Level0)
+HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest042, TestSize.Level1)
 {
     auto layoutWrapper = CreateLayoutWrapper(ROW_FRAME_NODE, NODE_ID_0);
     layoutWrapper->layoutProperty_->UpdateSafeAreaInsets(
@@ -1416,11 +1543,11 @@ HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest037, TestSize.Level0)
 }
 
 /**
- * @tc.name: LayoutWrapperTest038
+ * @tc.name: LayoutWrapperTest043
  * @tc.desc: Test ExpandIntoKeyboard.
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest038, TestSize.Level0)
+HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest043, TestSize.Level1)
 {
     auto [parent, layoutWrapper] = CreateNodeAndWrapper(ROW_FRAME_NODE, NODE_ID_0);
     layoutWrapper->layoutProperty_->UpdateSafeAreaExpandOpts({ SAFE_AREA_TYPE_ALL, SAFE_AREA_EDGE_ALL });
@@ -1446,11 +1573,24 @@ HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest038, TestSize.Level0)
 }
 
 /**
- * @tc.name: LayoutWrapperTest039
+ * @tc.name: LayoutWrapperTest044
+ * @tc.desc: Test AvoidKeyboard.
+ * @tc.type: FUNC
+ */
+HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest044, TestSize.Level1)
+{
+    auto [parent, layoutWrapper] = CreateNodeAndWrapper(OHOS::Ace::V2::PAGE_ETS_TAG, NODE_ID_0);
+    layoutWrapper->AvoidKeyboard();
+    string ret = "";
+    EXPECT_EQ(ret, "");
+}
+
+/**
+ * @tc.name: LayoutWrapperTest045
  * @tc.desc: Test CreateRootConstraint.
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest039, TestSize.Level0)
+HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest045, TestSize.Level1)
 {
     auto context = PipelineContext::GetCurrentContext();
     context->rootHeight_ = RK356_HEIGHT;
@@ -1464,11 +1604,11 @@ HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest039, TestSize.Level0)
 }
 
 /**
- * @tc.name: LayoutWrapperTest040
+ * @tc.name: LayoutWrapperTest046
  * @tc.desc: Test AvoidKeyboard.
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest040, TestSize.Level0)
+HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest046, TestSize.Level1)
 {
     auto [parent, layoutWrapper] = CreateNodeAndWrapper(OHOS::Ace::V2::FLEX_ETS_TAG, NODE_ID_0);
 
@@ -1504,44 +1644,11 @@ HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest040, TestSize.Level0)
 }
 
 /**
- * @tc.name: LayoutWrapperTest041
- * @tc.desc: Test AdjustChildren.
- * @tc.type: FUNC
- */
-HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest041, TestSize.Level0)
-{
-    /**
-     * @tc.steps: step1. rowFrameNode addChildren .
-     */
-    auto rowFrameNode = FrameNode::CreateFrameNode(
-        OHOS::Ace::V2::FLEX_ETS_TAG, NODE_ID_0, AceType::MakeRefPtr<LinearLayoutPattern>(false));
-
-    auto rowFrameNode1 = FrameNode::CreateFrameNode(
-        OHOS::Ace::V2::FLEX_ETS_TAG, NODE_ID_1, AceType::MakeRefPtr<LinearLayoutPattern>(false));
-    RefPtr<CustomNode> cusNodeTemp = AceType::MakeRefPtr<CustomNode>(NODE_ID_2, OHOS::Ace::V2::FLEX_ETS_TAG);
-    rowFrameNode->AddChild(cusNodeTemp);
-    rowFrameNode->AddChild(rowFrameNode1);
-
-    /**
-     * @tc.steps: step2. create LayoutWrapper.
-     */
-    RefPtr<GeometryNode> geometryNode = AceType::MakeRefPtr<GeometryNode>();
-    RefPtr<LayoutWrapperNode> layoutWrapper =
-        AceType::MakeRefPtr<LayoutWrapperNode>(rowFrameNode, geometryNode, rowFrameNode->GetLayoutProperty());
-
-    /**
-     * @tc.steps: step3. Call AdjustChildren().
-     */
-    layoutWrapper->AdjustChildren(OffsetF(0, 10), false);
-    EXPECT_FALSE(rowFrameNode1->GetLayoutProperty()->GetSafeAreaExpandOpts());
-}
-
-/**
- * @tc.name: LayoutWrapperTest042
+ * @tc.name: LayoutWrapperTest049
  * @tc.desc: Test AvoidKeyboard.
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest042, TestSize.Level0)
+HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest049, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. create LayoutWrapper.
@@ -1560,20 +1667,20 @@ HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest042, TestSize.Level0)
 }
 
 /**
- * @tc.name: LayoutWrapperTest043
+ * @tc.name: LayoutWrapperTest050
  * @tc.desc: Test AvoidKeyboard.
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest043, TestSize.Level0)
+HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest050, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. create LayoutWrapper.
      */
     auto node = FrameNode::CreateFrameNode(V2::PAGE_ETS_TAG, NODE_ID_0, AceType::MakeRefPtr<Pattern>());
     RefPtr<EventHub> eventHub = AceType::MakeRefPtr<EventHub>();
-    RefPtr<FocusHub> focusHub = AceType::MakeRefPtr<FocusHub>(AceType::WeakClaim(AceType::RawPtr(eventHub)));
+    RefPtr<FocusHub> focusHub = AceType::MakeRefPtr<FocusHub>(eventHub);
     focusHub->currentFocus_ = false;
-    node->focusHub_ = focusHub;
+    eventHub->focusHub_ = focusHub;
     node->eventHub_ = eventHub;
 
     RefPtr<GeometryNode> geometryNode = AceType::MakeRefPtr<GeometryNode>();
@@ -1600,11 +1707,11 @@ HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest043, TestSize.Level0)
 }
 
 /**
- * @tc.name: LayoutWrapperTest044
+ * @tc.name: LayoutWrapperTest051
  * @tc.desc: Test AddNodeFlexLayouts.
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest044, TestSize.Level0)
+HWTEST_F(LayoutWrapperTestNg, LayoutWrapperTest051, TestSize.Level1)
 {
     auto [parent, layoutWrapper] = CreateNodeAndWrapper(OHOS::Ace::V2::FLEX_ETS_TAG, NODE_ID_0);
 

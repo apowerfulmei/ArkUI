@@ -47,11 +47,6 @@ public:
         return false;
     }
 
-    bool IsSyntaxNode() const override
-    {
-        return true;
-    }
-
     const std::string& GetKey() const
     {
         return key_;

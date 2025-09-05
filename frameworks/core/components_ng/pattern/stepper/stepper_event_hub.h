@@ -27,7 +27,7 @@ using IndexCallbackEvent = std::function<void(int32_t, int32_t)>;
 using IndexChangeEvent = std::function<void(int32_t)>;
 
 class StepperEventHub : public EventHub {
-    DECLARE_ACE_TYPE(StepperEventHub, EventHub);
+    DECLARE_ACE_TYPE(StepperEventHub, EventHub)
 
 public:
     StepperEventHub() = default;
@@ -105,10 +105,8 @@ private:
         Recorder::EventParamsBuilder builder;
         auto host = GetFrameNode();
         if (host) {
-            builder.SetId(host->GetInspectorIdValue(""))
-                .SetType(host->GetHostTag())
-                .SetHost(host)
-                .SetDescription(host->GetAutoEventParamValue(""));
+            auto id = host->GetInspectorIdValue("");
+            builder.SetId(id).SetType(host->GetHostTag()).SetDescription(host->GetAutoEventParamValue(""));
         }
         builder.SetEventType(eventType).SetIndex(index);
         Recorder::EventRecorder::Get().OnEvent(std::move(builder));

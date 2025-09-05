@@ -19,21 +19,24 @@ namespace OHOS::Ace::NG {
 void XComponentExtSurfaceCallbackClient::ProcessSurfaceCreate()
 {
     auto xcPattern = weakXComponentPattern_.Upgrade();
-    CHECK_NULL_VOID(xcPattern);
-    xcPattern->XComponentSizeInit();
+    if (xcPattern) {
+        xcPattern->XComponentSizeInit();
+    }
 }
 
 void XComponentExtSurfaceCallbackClient::ProcessSurfaceChange(int32_t width, int32_t height)
 {
     auto xcPattern = weakXComponentPattern_.Upgrade();
-    CHECK_NULL_VOID(xcPattern);
-    xcPattern->XComponentSizeChange({ 0, 0, width, height }, true);
+    if (xcPattern) {
+        xcPattern->XComponentSizeChange({ 0, 0, width, height }, true);
+    }
 }
 
 void XComponentExtSurfaceCallbackClient::ProcessSurfaceDestroy()
 {
     auto xcPattern = weakXComponentPattern_.Upgrade();
-    CHECK_NULL_VOID(xcPattern);
-    xcPattern->OnSurfaceDestroyed();
+    if (xcPattern) {
+        xcPattern->OnSurfaceDestroyed();
+    }
 }
 } // namespace OHOS::Ace::NG

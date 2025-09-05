@@ -31,7 +31,6 @@ enum class WidthType : uint32_t {
     MAX_SIDEBAR_WIDTH,
 };
 
-using OnSideBarWidthChangeEvent = std::function<void(const Dimension&)>;
 class ACE_FORCE_EXPORT SideBarContainerModel {
 public:
     static SideBarContainerModel* GetInstance();
@@ -41,10 +40,8 @@ public:
     virtual void SetSideBarContainerType(SideBarContainerType type);
     virtual void SetShowSideBar(bool isShow);
     virtual void SetShowControlButton(bool showControlButton);
-    virtual void ParseAndSetWidth(WidthType widthType, Dimension& width, bool isDoubleBind = false);
-    virtual void ParseAndSetWidth(WidthType widthType, const RefPtr<ResourceObject>& resObj) {};
-    virtual void ResetResObj(const std::string& key) {}
-    virtual void SetSideBarWidth(const Dimension& sideBarWidth, bool isDoubleBind = false);
+    virtual void ParseAndSetWidth(WidthType widthType, Dimension& width);
+    virtual void SetSideBarWidth(const Dimension& sideBarWidth);
     virtual void SetMinSideBarWidth(const Dimension& minSideBarWidth);
     virtual void SetMaxSideBarWidth(const Dimension& maxSideBarWidth);
     virtual void SetAutoHide(bool autoHide);
@@ -60,27 +57,14 @@ public:
         const std::string& hiddenIconStr, bool isPixelMap, RefPtr<PixelMap> pixMap);
     virtual void SetControlButtonSwitchingIconInfo(
         const std::string& switchingIconStr, bool isPixelMap, RefPtr<PixelMap> pixMap);
-    virtual void SetControlButtonShowIconInfo(
-        const RefPtr<ResourceObject>& showIconResObj, bool isPixelMap, RefPtr<PixelMap> pixMap) {};
-    virtual void SetControlButtonHiddenIconInfo(
-        const RefPtr<ResourceObject>& reshiddenIconResObjObj, bool isPixelMap, RefPtr<PixelMap> pixMap) {};
-    virtual void SetControlButtonSwitchingIconInfo(
-        const RefPtr<ResourceObject>& showIconResObj, bool isPixelMap, RefPtr<PixelMap> pixMap) {};
     virtual void ResetControlButtonIconInfo();
     virtual void SetOnChange(std::function<void(const bool)>&& onChange);
     virtual void SetDividerStrokeWidth(const Dimension& strokeWidth);
     virtual void SetDividerColor(const Color& color);
     virtual void SetDividerStartMargin(const Dimension& startMargin);
     virtual void SetDividerEndMargin(const Dimension& endMargin);
-    virtual void SetDividerStrokeWidth(const RefPtr<ResourceObject>& strokeWidthResObj) {};
-    virtual void SetDividerColor(const RefPtr<ResourceObject>& colorResObj) {};
-    virtual void SetDividerStartMargin(const RefPtr<ResourceObject>& startMarginResObj) {};
-    virtual void SetDividerEndMargin(const RefPtr<ResourceObject>& endMarginResObj) {};
     virtual void SetOnChangeEvent(std::function<void(const bool)>&& onChangeEvent);
-    virtual void SetOnSideBarWidthChangeEvent(OnSideBarWidthChangeEvent&& event);
     virtual void SetMinContentWidth(const Dimension& minContentWidth);
-    virtual void SetMinContentWidth(const RefPtr<ResourceObject>& resObj) {};
-    virtual void ResetControlButton();
 
 private:
     static std::unique_ptr<SideBarContainerModel> instance_;

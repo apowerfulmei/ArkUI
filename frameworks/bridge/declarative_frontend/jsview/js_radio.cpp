@@ -14,7 +14,9 @@
  */
 
 #include "bridge/declarative_frontend/jsview/js_radio.h"
+#if !defined(PREVIEW) && defined(OHOS_PLATFORM)
 #include "interfaces/inner_api/ui_session/ui_session_manager.h"
+#endif
 
 #include "base/log/ace_scoring_log.h"
 #include "bridge/declarative_frontend/jsview/js_interactable_view.h"
@@ -27,9 +29,11 @@
 #include "core/components_ng/base/view_stack_processor.h"
 #include "core/components_ng/pattern/radio/radio_model_ng.h"
 #include "bridge/declarative_frontend/ark_theme/theme_apply/js_radio_theme.h"
-#include "core/components_ng/pattern/radio/radio_pattern.h"
 
 namespace OHOS::Ace {
+
+std::unique_ptr<RadioModel> RadioModel::instance_ = nullptr;
+std::mutex RadioModel::mutex_;
 
 enum class RadioIndicatorType {
     TICK = 0,
@@ -39,18 +43,21 @@ enum class RadioIndicatorType {
 
 RadioModel* RadioModel::GetInstance()
 {
+    if (!instance_) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (!instance_) {
 #ifdef NG_BUILD
-    static NG::RadioModelNG instance;
-    return &instance;
+            instance_.reset(new NG::RadioModelNG());
 #else
-    if (Container::IsCurrentUseNewPipeline()) {
-        static NG::RadioModelNG instance;
-        return &instance;
-    } else {
-        static Framework::RadioModelImpl instance;
-        return &instance;
-    }
+            if (Container::IsCurrentUseNewPipeline()) {
+                instance_.reset(new NG::RadioModelNG());
+            } else {
+                instance_.reset(new Framework::RadioModelImpl());
+            }
 #endif
+        }
+    }
+    return instance_.get();
 }
 
 } // namespace OHOS::Ace
@@ -85,15 +92,16 @@ void JSRadio::Create(const JSCallbackInfo& info)
         ParseIndicator(info, indicator, customBuilderFunc, builderObject);
     }
     RadioModel::GetInstance()->Create(value, group, indicator);
-    RadioModel::GetInstance()->SetBuilder(std::move(customBuilderFunc));
+    if (Container::GreatOrEqualAPITargetVersion(PlatformVersion::VERSION_TWELVE)) {
+        RadioModel::GetInstance()->SetBuilder(std::move(customBuilderFunc));
+    }
     JSRadioTheme::ApplyTheme();
 }
 
 void JSRadio::ParseIndicator(const JSCallbackInfo& info, std::optional<int32_t>& indicator,
     std::function<void()>& customBuilderFunc, JSRef<JSVal>& builderObject)
 {
-    if (indicator.value_or(static_cast<int32_t>(RadioIndicatorType::TICK)) ==
-        static_cast<int32_t>(RadioIndicatorType::CUSTOM)) {
+    if (indicator.value() == static_cast<int32_t>(RadioIndicatorType::CUSTOM)) {
         if (builderObject->IsFunction()) {
             auto builderFunc = AceType::MakeRefPtr<JsFunction>(info.This(), JSRef<JSFunc>::Cast(builderObject));
             CHECK_NULL_VOID(builderFunc);
@@ -119,7 +127,6 @@ void JSRadio::JSBind(BindingTarget globalObj)
     JSClass<JSRadio>::StaticMethod("checked", &JSRadio::Checked);
     JSClass<JSRadio>::StaticMethod("size", &JSRadio::JsSize);
     JSClass<JSRadio>::StaticMethod("padding", &JSRadio::JsPadding);
-    JSClass<JSRadio>::StaticMethod("margin", &JSRadio::JsMargin);
     JSClass<JSRadio>::StaticMethod("radioStyle", &JSRadio::JsRadioStyle);
     JSClass<JSRadio>::StaticMethod("responseRegion", &JSRadio::JsResponseRegion);
     JSClass<JSRadio>::StaticMethod("hoverEffect", &JSRadio::JsHoverEffect);
@@ -156,26 +163,15 @@ void JSRadio::Checked(const JSCallbackInfo& info)
     if (info.Length() < 1 || info.Length() > 2) {
         return;
     }
-    bool checked = false;
 
-    JSRef<JSVal> changeEventVal;
-    auto checkedVal = info[0];
-    if (checkedVal->IsObject()) {
-        JSRef<JSObject> obj = JSRef<JSObject>::Cast(checkedVal);
-        checkedVal = obj->GetProperty("value");
-        changeEventVal = obj->GetProperty("$value");
-    } else if (info.Length() > 1) {
-        changeEventVal = info[1];
+    if (info.Length() > 0 && info[0]->IsBoolean()) {
+        RadioModel::GetInstance()->SetChecked(info[0]->ToBoolean());
+    } else {
+        RadioModel::GetInstance()->SetChecked(false);
     }
 
-    if (checkedVal->IsBoolean()) {
-        checked = checkedVal->ToBoolean();
-    }
-
-    RadioModel::GetInstance()->SetChecked(checked);
-
-    if (changeEventVal->IsFunction()) {
-        ParseCheckedObject(info, changeEventVal);
+    if (info.Length() > 1 && info[1]->IsFunction()) {
+        ParseCheckedObject(info, info[1]);
     }
 }
 
@@ -199,12 +195,6 @@ void JSRadio::JsPadding(const JSCallbackInfo& info)
     NG::PaddingPropertyF oldPadding = GetOldPadding(info);
     NG::PaddingProperty newPadding = GetNewPadding(info);
     RadioModel::GetInstance()->SetPadding(oldPadding, newPadding);
-}
-
-void JSRadio::JsMargin(const JSCallbackInfo& info)
-{
-    RadioModel::GetInstance()->SetIsUserSetMargin(true);
-    JSViewAbstract::JsMargin(info);
 }
 
 NG::PaddingPropertyF JSRadio::GetOldPadding(const JSCallbackInfo& info)
@@ -256,16 +246,35 @@ NG::PaddingPropertyF JSRadio::GetOldPadding(const JSCallbackInfo& info)
 
 NG::PaddingProperty JSRadio::GetNewPadding(const JSCallbackInfo& info)
 {
-    NG::PaddingProperty padding({ NG::CalcLength(0.0_vp), NG::CalcLength(0.0_vp), NG::CalcLength(0.0_vp),
-        NG::CalcLength(0.0_vp), std::nullopt, std::nullopt });
+    NG::PaddingProperty padding({
+        NG::CalcLength(0.0_vp), NG::CalcLength(0.0_vp), NG::CalcLength(0.0_vp), NG::CalcLength(0.0_vp)
+    });
     if (info[0]->IsObject()) {
+        std::optional<CalcDimension> left;
+        std::optional<CalcDimension> right;
+        std::optional<CalcDimension> top;
+        std::optional<CalcDimension> bottom;
         JSRef<JSObject> paddingObj = JSRef<JSObject>::Cast(info[0]);
-        CommonCalcDimension commonCalcDimension;
-        JSViewAbstract::ParseCommonMarginOrPaddingCorner(paddingObj, commonCalcDimension);
-        if (commonCalcDimension.left.has_value() || commonCalcDimension.right.has_value() ||
-            commonCalcDimension.top.has_value() || commonCalcDimension.bottom.has_value()) {
-            return GetPadding(commonCalcDimension.top, commonCalcDimension.bottom, commonCalcDimension.left,
-                commonCalcDimension.right);
+
+        CalcDimension leftDimen;
+        if (ParseJsDimensionVp(paddingObj->GetProperty(static_cast<int32_t>(ArkUIIndex::LEFT)), leftDimen)) {
+            left = leftDimen;
+        }
+        CalcDimension rightDimen;
+        if (ParseJsDimensionVp(paddingObj->GetProperty(static_cast<int32_t>(ArkUIIndex::RIGHT)), rightDimen)) {
+            right = rightDimen;
+        }
+        CalcDimension topDimen;
+        if (ParseJsDimensionVp(paddingObj->GetProperty(static_cast<int32_t>(ArkUIIndex::TOP)), topDimen)) {
+            top = topDimen;
+        }
+        CalcDimension bottomDimen;
+        if (ParseJsDimensionVp(paddingObj->GetProperty(static_cast<int32_t>(ArkUIIndex::BOTTOM)), bottomDimen)) {
+            bottom = bottomDimen;
+        }
+        if (left.has_value() || right.has_value() || top.has_value() || bottom.has_value()) {
+            padding = GetPadding(top, bottom, left, right);
+            return padding;
         }
     }
     CalcDimension length;
@@ -281,8 +290,9 @@ NG::PaddingProperty JSRadio::GetPadding(const std::optional<CalcDimension>& top,
     const std::optional<CalcDimension>& bottom, const std::optional<CalcDimension>& left,
     const std::optional<CalcDimension>& right)
 {
-    NG::PaddingProperty padding({ NG::CalcLength(0.0_vp), NG::CalcLength(0.0_vp), NG::CalcLength(0.0_vp),
-        NG::CalcLength(0.0_vp), std::nullopt, std::nullopt });
+    NG::PaddingProperty padding({
+        NG::CalcLength(0.0_vp), NG::CalcLength(0.0_vp), NG::CalcLength(0.0_vp), NG::CalcLength(0.0_vp)
+    });
     if (left.has_value() && left.value().IsNonNegative()) {
         padding.left = NG::CalcLength(left.value());
     }
@@ -307,91 +317,31 @@ void JSRadio::JsRadioStyle(const JSCallbackInfo& info)
         RadioModel::GetInstance()->SetIndicatorColor(theme->GetPointColor());
         return;
     }
-    SetCheckedBackgroundColor(info, theme);
-    SetUncheckedBorderColor(info, theme);
-    SetIndicatorColor(info, theme);
-}
-
-void JSRadio::SetCheckedBackgroundColor(const JSCallbackInfo& info, const RefPtr<RadioTheme>& theme)
-{
-    if (info.Length() < 1 || !info[0]->IsObject()) {
-        return;
-    }
     JSRef<JSObject> obj = JSRef<JSObject>::Cast(info[0]);
     JSRef<JSVal> checkedBackgroundColor = obj->GetProperty("checkedBackgroundColor");
+    JSRef<JSVal> uncheckedBorderColor = obj->GetProperty("uncheckedBorderColor");
+    JSRef<JSVal> indicatorColor = obj->GetProperty("indicatorColor");
     Color checkedBackgroundColorVal;
-    RefPtr<ResourceObject> backgroundResObj;
-    bool isUserSetBgColor = true;
-    if (!ParseJsColor(checkedBackgroundColor, checkedBackgroundColorVal, backgroundResObj)) {
-        isUserSetBgColor = false;
+    if (!ParseJsColor(checkedBackgroundColor, checkedBackgroundColorVal)) {
         if (!JSRadioTheme::ObtainCheckedBackgroundColor(checkedBackgroundColorVal)) {
             checkedBackgroundColorVal = theme->GetActiveColor();
         }
     }
-    CreateWithResourceObj(backgroundResObj, static_cast<int32_t>(RadioColorType::CHECKED_BACKGROUND_COLOR));
     RadioModel::GetInstance()->SetCheckedBackgroundColor(checkedBackgroundColorVal);
-    RadioModel::GetInstance()->SetCheckedBackgroundColorSetByUser(isUserSetBgColor);
-}
-
-void JSRadio::SetUncheckedBorderColor(const JSCallbackInfo& info, const RefPtr<RadioTheme>& theme)
-{
-    if (info.Length() < 1 || !info[0]->IsObject()) {
-        return;
-    }
-    JSRef<JSObject> obj = JSRef<JSObject>::Cast(info[0]);
-    JSRef<JSVal> uncheckedBorderColor = obj->GetProperty("uncheckedBorderColor");
     Color uncheckedBorderColorVal;
-    RefPtr<ResourceObject> borderResObj;
-    bool isUserSetUnBorderColor = true;
-    bool isByTheme = false;
-    if (!ParseJsColor(uncheckedBorderColor, uncheckedBorderColorVal, borderResObj)) {
-        isUserSetUnBorderColor = false;
+    if (!ParseJsColor(uncheckedBorderColor, uncheckedBorderColorVal)) {
         if (!JSRadioTheme::ObtainUncheckedBorderColor(uncheckedBorderColorVal)) {
-            isByTheme = true;
             uncheckedBorderColorVal = theme->GetInactiveColor();
         }
-    } else {
-        auto frameNode = NG::ViewStackProcessor::GetInstance()->GetMainFrameNode();
-        CHECK_NULL_VOID(frameNode);
-        auto pattern = frameNode->GetPattern<NG::RadioPattern>();
-        CHECK_NULL_VOID(pattern);
-        pattern->SetIsUserSetUncheckBorderColor(true);
     }
-    CreateWithResourceObj(borderResObj, static_cast<int32_t>(RadioColorType::UNCHECKED_BORDER_COLOR));
     RadioModel::GetInstance()->SetUncheckedBorderColor(uncheckedBorderColorVal);
-    RadioModel::GetInstance()->SetUncheckedBorderColorSetByUser(isUserSetUnBorderColor);
-    RadioModel::GetInstance()->SetUncheckedBorderColorByJSRadioTheme(isByTheme);
-}
-
-void JSRadio::SetIndicatorColor(const JSCallbackInfo& info, const RefPtr<RadioTheme>& theme)
-{
-    if (info.Length() < 1 || !info[0]->IsObject()) {
-        return;
-    }
-    JSRef<JSObject> obj = JSRef<JSObject>::Cast(info[0]);
-    JSRef<JSVal> indicatorColor = obj->GetProperty("indicatorColor");
     Color indicatorColorVal;
-    RefPtr<ResourceObject> indicatorResObj;
-    bool isUserSetIndicatorColor = true;
-    bool isByTheme = false;
-    if (!ParseJsColor(indicatorColor, indicatorColorVal, indicatorResObj)) {
-        isUserSetIndicatorColor = false;
+    if (!ParseJsColor(indicatorColor, indicatorColorVal)) {
         if (!JSRadioTheme::ObtainIndicatorColor(indicatorColorVal)) {
-            isByTheme = true;
             indicatorColorVal = theme->GetPointColor();
         }
     }
-    CreateWithResourceObj(indicatorResObj, static_cast<int32_t>(RadioColorType::INDICATOR_COLOR));
     RadioModel::GetInstance()->SetIndicatorColor(indicatorColorVal);
-    RadioModel::GetInstance()->SetIndicatorColorSetByUser(isUserSetIndicatorColor);
-    RadioModel::GetInstance()->SetIndicatorColorByJSRadioTheme(isByTheme);
-}
-
-void JSRadio::CreateWithResourceObj(const RefPtr<ResourceObject>& resObj, const int32_t colorType)
-{
-    if (SystemProperties::ConfigChangePerform()) {
-        RadioModel::GetInstance()->CreateWithColorResourceObj(resObj, static_cast<RadioColorType>(colorType));
-    }
 }
 
 void JSRadio::JsResponseRegion(const JSCallbackInfo& info)
@@ -421,7 +371,9 @@ void JSRadio::OnChange(const JSCallbackInfo& args)
         PipelineContext::SetCallBackNode(node);
         auto newJSVal = JSRef<JSVal>::Make(ToJSValue(check));
         func->ExecuteJS(1, &newJSVal);
-        UiSessionManager::GetInstance()->ReportComponentChangeEvent("event", "Radio.onChange");
+#if !defined(PREVIEW) && defined(OHOS_PLATFORM)
+        UiSessionManager::GetInstance().ReportComponentChangeEvent("event", "Radio.onChange");
+#endif
     };
     RadioModel::GetInstance()->SetOnChange(std::move(onChange));
     args.ReturnSelf();

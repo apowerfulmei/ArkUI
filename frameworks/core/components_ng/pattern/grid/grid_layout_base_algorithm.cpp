@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024-2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -15,29 +15,27 @@
 
 #include "core/components_ng/pattern/grid/grid_layout_base_algorithm.h"
 
-#include "core/components_ng/pattern/grid/grid_pattern.h"
-
 namespace OHOS::Ace::NG {
 
 void GridLayoutBaseAlgorithm::AdjustChildrenHeight(LayoutWrapper* layoutWrapper)
 {
-    info_.clearStretch_ = false;
+    gridLayoutInfo_.clearStretch_ = false;
     auto gridLayoutProperty = AceType::DynamicCast<GridLayoutProperty>(layoutWrapper->GetLayoutProperty());
     CHECK_NULL_VOID(gridLayoutProperty);
-    const int32_t cacheCount = gridLayoutProperty->GetCachedCountValue(info_.defCachedCount_);
-    const int32_t startLine = std::max(info_.startMainLineIndex_ - cacheCount, 0);
-    const int32_t endLine = info_.endMainLineIndex_ + cacheCount;
+    const int32_t cacheCount = gridLayoutProperty->GetCachedCountValue(gridLayoutInfo_.defCachedCount_);
+    const int32_t startLine = std::max(gridLayoutInfo_.startMainLineIndex_ - cacheCount, 0);
+    const int32_t endLine = gridLayoutInfo_.endMainLineIndex_ + cacheCount;
     for (int i = startLine; i <= endLine; i++) {
         if (IsIrregularLine(i)) {
             continue;
         }
-        const auto& line = info_.gridMatrix_.find(i);
-        if (line == info_.gridMatrix_.end() || line->second.empty()) {
+        const auto& line = gridLayoutInfo_.gridMatrix_.find(i);
+        if (line == gridLayoutInfo_.gridMatrix_.end() || line->second.empty()) {
             continue;
         }
 
-        auto lineHeightIter = info_.lineHeightMap_.find(i);
-        if (lineHeightIter == info_.lineHeightMap_.end()) {
+        auto lineHeightIter = gridLayoutInfo_.lineHeightMap_.find(i);
+        if (lineHeightIter == gridLayoutInfo_.lineHeightMap_.end()) {
             continue;
         }
         const float lineHeight = lineHeightIter->second;
@@ -54,58 +52,19 @@ void GridLayoutBaseAlgorithm::AdjustChildrenHeight(LayoutWrapper* layoutWrapper)
             }
             auto childConstraint = childLayoutProperty->GetLayoutConstraint();
             if (!childLayoutProperty->GetNeedStretch() &&
-                childConstraint->selfIdealSize.MainSize(info_.axis_).has_value()) {
+                childConstraint->selfIdealSize.MainSize(gridLayoutInfo_.axis_).has_value()) {
                 continue;
             }
 
             auto childFrameSize = child->GetGeometryNode()->GetFrameSize();
-            if (GreatOrEqual(childFrameSize.MainSize(info_.axis_), lineHeight)) {
+            if (GreatOrEqual(childFrameSize.MainSize(gridLayoutInfo_.axis_), lineHeight)) {
                 continue;
             }
-            childConstraint->selfIdealSize.SetMainSize(lineHeight, info_.axis_);
+            childConstraint->selfIdealSize.SetMainSize(lineHeight, gridLayoutInfo_.axis_);
             childLayoutProperty->SetNeedStretch(true);
-            childLayoutProperty->SetAxis(info_.axis_);
+            childLayoutProperty->SetAxis(gridLayoutInfo_.axis_);
             child->Measure(childConstraint);
         }
-    }
-}
-
-void GridLayoutBaseAlgorithm::UpdateOverlay(LayoutWrapper* layoutWrapper)
-{
-    auto frameNode = layoutWrapper->GetHostNode();
-    CHECK_NULL_VOID(frameNode);
-    auto paintProperty = frameNode->GetPaintProperty<ScrollablePaintProperty>();
-    CHECK_NULL_VOID(paintProperty);
-    if (!paintProperty->GetFadingEdge().value_or(false)) {
-        return;
-    }
-    auto overlayNode = frameNode->GetOverlayNode();
-    CHECK_NULL_VOID(overlayNode);
-    auto geometryNode = frameNode->GetGeometryNode();
-    CHECK_NULL_VOID(geometryNode);
-    auto overlayGeometryNode = overlayNode->GetGeometryNode();
-    CHECK_NULL_VOID(overlayGeometryNode);
-    overlayGeometryNode->SetFrameSize(geometryNode->GetFrameSize(true));
-}
-
-
-void GridLayoutBaseAlgorithm::LostChildFocusToSelf(LayoutWrapper* layoutWrapper, int32_t start, int32_t end)
-{
-    CHECK_NULL_VOID(layoutWrapper);
-    auto host = layoutWrapper->GetHostNode();
-    CHECK_NULL_VOID(host);
-    auto focusHub = host->GetFocusHub();
-    CHECK_NULL_VOID(focusHub);
-    CHECK_NULL_VOID(focusHub->IsCurrentFocus());
-    auto focusIndex = host->GetPattern<GridPattern>()->GetFocusedIndex();
-    CHECK_NULL_VOID(focusIndex.has_value());
-    if (focusIndex.value() >= start && focusIndex.value() <= end) {
-        return;
-    }
-    auto childFocusHub = focusHub->GetLastWeakFocusNode().Upgrade();
-    CHECK_NULL_VOID(childFocusHub);
-    if (childFocusHub->IsCurrentFocus()) {
-        focusHub->LostChildFocusToSelf();
     }
 }
 } // namespace OHOS::Ace::NG

@@ -23,7 +23,6 @@
 #include "core/animation/animator_info.h"
 #include "core/animation/page_transition_common.h"
 #include "core/common/autofill/auto_fill_trigger_state_holder.h"
-#include "core/components/theme/app_theme.h"
 #include "core/components_ng/pattern/stage/content_root_pattern.h"
 #include "core/components_ng/pattern/stage/page_event_hub.h"
 #include "core/components_ng/pattern/stage/page_info.h"
@@ -41,7 +40,7 @@ using DynamicPageSizeCallback = std::function<void(const SizeF& size)>;
  * and the input parameter is 'true' for onHide and false for onShow.
  */
 using PageVisibilityChangeCallback = std::function<void(bool)>;
-using OnNewParamCallback = std::function<void(const std::string&)>;
+
 
 enum class RouterPageState {
     ABOUT_TO_APPEAR = 0,
@@ -64,26 +63,9 @@ public:
         return true;
     }
 
-    // For ArkTS1.2
-    void SetOnNodeDisposeCallback(std::function<void()>&& disposeCallback)
-    {
-        disposeCallback_ = std::move(disposeCallback);
-    }
-
-    void FireOnNodeDisposeCallback()
-    {
-        CHECK_NULL_VOID(disposeCallback_);
-        disposeCallback_();
-    }
-
     bool IsAtomicNode() const override
     {
         return false;
-    }
-    
-    bool IsEnableChildrenMatchParent() override
-    {
-        return true;
     }
 
     const RefPtr<PageInfo>& GetPageInfo() const
@@ -96,9 +78,9 @@ public:
         return pageInfo_ ? pageInfo_->GetPageUrl() : "";
     }
 
-    virtual void OnShow(bool isFromWindow = false);
+    virtual void OnShow();
 
-    virtual void OnHide(bool isFromWindow = false);
+    virtual void OnHide();
 
     bool OnBackPressed();
 
@@ -117,14 +99,9 @@ public:
         onPageHide_ = std::move(onPageHide);
     }
 
-    void SetOnBackPressed(std::function<bool()>&& OnBackPressed)
+    void SetOnBackPressed(std::function<bool()>&& onBackPressed)
     {
-        onBackPressed_ = std::move(OnBackPressed);
-    }
-
-    void SetOnNewParam(OnNewParamCallback&& onNewParam)
-    {
-        onNewParam_ = std::move(onNewParam);
+        onBackPressed_ = std::move(onBackPressed);
     }
 
     void SetPageTransitionFunc(std::function<void()>&& pageTransitionFunc)
@@ -158,6 +135,8 @@ public:
         return MakeRefPtr<PageEventHub>();
     }
 
+    bool TriggerPageTransition(PageTransitionType type, const std::function<void()>& onFinish);
+
     FocusPattern GetFocusPattern() const override
     {
         return { FocusType::SCOPE, true };
@@ -167,9 +146,6 @@ public:
     {
         return { 0 };
     }
-
-    ScopeFocusAlgorithm GetScopeFocusAlgorithm() override;
-    WeakPtr<FocusHub> GetNextFocusNode(FocusStep step, const WeakPtr<FocusHub>& currentFocusNode);
 
     const SharedTransitionMap& GetSharedTransitionMap() const
     {
@@ -203,12 +179,12 @@ public:
     bool ProcessAutoSave(const std::function<void()>& onFinish = nullptr,
         const std::function<void()>& onUIExtNodeBindingCompleted = nullptr);
 
+    void StopPageTransition();
+
     void MarkRenderDone()
     {
         isRenderDone_ = true;
     }
-
-    void StopPageTransition();
 
     void SetDynamicPageSizeCallback(DynamicPageSizeCallback&& dynamicPageSizeCallback)
     {
@@ -286,56 +262,7 @@ public:
         visibilityChangeCallback_ = std::move(callback);
     }
 
-    void SetAnimationId(int32_t animationId)
-    {
-        animationId_ = animationId;
-    }
-
-    int32_t GetAnimationId() const
-    {
-        return animationId_;
-    }
-
-    void InitTransitionIn(const RefPtr<PageTransitionEffect>& effect, PageTransitionType type);
-
-    void InitTransitionOut(const RefPtr<PageTransitionEffect>& effect, PageTransitionType type);
-
-    void TransitionInFinish(const RefPtr<PageTransitionEffect>& effect, PageTransitionType type);
-
-    void TransitionOutFinish(const RefPtr<PageTransitionEffect>& effect, PageTransitionType type);
-
-    void FinishOutPage(const int32_t animationId, PageTransitionType type);
-
-    void FinishInPage(const int32_t animationId, PageTransitionType type);
-
-    RefPtr<PageTransitionEffect> GetDefaultPageTransition(PageTransitionType type);
-
-    void ResetPageTransitionEffect();
-
-    void TriggerPageTransition(const std::function<void()>& onFinish, PageTransitionType type);
-
-    void OnDetachFromFrameNode(FrameNode* frameNode) override;
-
-    void OnWindowSizeChanged(int32_t width, int32_t height, WindowSizeChangeReason type) override;
-
-    void SetIsNeedRemove(bool isNeedRemove)
-    {
-        isNeedRemove_ = isNeedRemove;
-    }
-    void CheckIsNeedForceExitWindow(bool result);
-    void RemoveJsChildImmediately(const RefPtr<FrameNode>& page, PageTransitionType transactionType);
-    bool CheckEnableCustomNodeDel() const {
-        return false;
-    }
-
     bool IsNeedCallbackBackPressed();
-
-    void FireOnNewParam(const std::string& param)
-    {
-        if (onNewParam_) {
-            onNewParam_(param);
-        }
-    }
 
 protected:
     void OnAttachToFrameNode() override;
@@ -364,32 +291,9 @@ protected:
 
     void NotifyPerfMonitorPageMsg(const std::string& pageUrl, const std::string& bundleName);
 
-    RefPtr<PageTransitionEffect> GetPageTransitionEffect(const RefPtr<PageTransitionEffect>& transition);
-
-    void SlideTransitionEffect(const SlideEffect& effect, const RectF& rect, TranslateOptions& translate);
-
-    void UpdateDefaultEnterPopEffect(RefPtr<PageTransitionEffect>& effect, float statusHeight);
-
-    void UpdateEnterPushEffect(RefPtr<PageTransitionEffect>& effect, float statusHeight);
-
-    void UpdateExitPushEffect(RefPtr<PageTransitionEffect>& effect, float statusHeight);
-
-    void UpdateAnimationOption(const RefPtr<PageTransitionEffect>& transition,
-        RefPtr<PageTransitionEffect>& effect, AnimationOption& option, PageTransitionType type);
-
-    virtual void TriggerDefaultTransition(const std::function<void()>& onFinish, PageTransitionType type);
-
-    void MaskAnimation(const Color& initialBackgroundColor, const Color& backgroundColor);
-
-    void NotifyNavigationLifecycle(bool isShow, bool isFromWindow);
-
-    void RecordPageEvent(bool isShow);
-
     RefPtr<PageInfo> pageInfo_;
     RefPtr<OverlayManager> overlayManager_;
 
-    OnNewParamCallback onNewParam_;
-    std::function<void()> disposeCallback_;
     std::function<void()> onPageShow_;
     std::function<void()> onPageHide_;
     std::function<bool()> onBackPressed_;
@@ -402,13 +306,11 @@ protected:
     std::list<RefPtr<PageTransitionEffect>> pageTransitionEffects_;
     std::function<void(const std::vector<std::string>&)> dumpListener_;
 
-    int32_t animationId_ = -1;
     bool isOnShow_ = false;
     bool isFirstLoad_ = true;
     bool isPageInTransition_ = false;
     bool isRenderDone_ = false;
     bool isModalCovered_ = false;
-    bool isNeedRemove_ = false;
 
 #if defined(ENABLE_SPLIT_MODE)
     bool needFireObserver_ = true;
@@ -417,7 +319,6 @@ protected:
     SharedTransitionMap sharedTransitionMap_;
     JSAnimatorMap jsAnimatorMap_;
     RouterPageState state_ = RouterPageState::ABOUT_TO_APPEAR;
-    std::shared_ptr<AnimationUtils::Animation> currCustomAnimation_;
 
     ACE_DISALLOW_COPY_AND_MOVE(PagePattern);
 };

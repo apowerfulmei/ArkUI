@@ -64,8 +64,7 @@ public:
         TestingPathDirection dir = TestingPathDirection::CW_DIRECTION)
     {}
 
-    virtual void AddRoundRect(const TestingRoundRect& roundRect,
-        TestingPathDirection dir = TestingPathDirection::CW_DIRECTION) {}
+    virtual void AddRoundRect(const TestingRoundRect& roundRect, PathDirection dir = PathDirection::CW_DIRECTION) {}
 
     virtual void AddPath(const TestingPath& src) {}
 
@@ -83,7 +82,6 @@ public:
     virtual void ArcTo(const TestingPoint& pt1, const TestingPoint& pt2, float startAngle, float sweepAngle) {}
 
     virtual void CubicTo(float ctrlPt1X, float ctrlPt1Y, float ctrlPt2X, float ctrlPt2Y, float endPtX, float endPtY) {}
-
     virtual void Offset(float dx, float dy) {}
     virtual void AddPoly(const std::vector<TestingPoint>& points, int count, bool close) {}
     virtual bool Op(const TestingPath& path1, TestingPath& path2, TestingPathOp op)
@@ -124,14 +122,6 @@ public:
     virtual std::string ConvertToSVGString()
     {
         return "";
-    }
-
-    virtual void TransformWithPerspectiveClip(const TestingMatrix& matrix, TestingPath* dst,
-        bool applyPerspectiveClip) {}
-
-    void Dump(std::string& out) const
-    {
-        return;
     }
 };
 } // namespace OHOS::Ace::Testing

@@ -28,10 +28,10 @@
 namespace OHOS::Ace::NG {
 
 class ACE_EXPORT DatePickerPaintMethod : public NodePaintMethod {
-    DECLARE_ACE_TYPE(DatePickerPaintMethod, NodePaintMethod);
+    DECLARE_ACE_TYPE(DatePickerPaintMethod, NodePaintMethod)
 public:
     DatePickerPaintMethod() = default;
-    ~DatePickerPaintMethod() override {}
+    ~DatePickerPaintMethod() override = default;
 
     DatePickerPaintMethod(const WeakPtr<Pattern>& pattern)
     {
@@ -53,7 +53,7 @@ public:
 private:
     bool enabled_ = true;
     Color backgroundColor_ = Color::WHITE;
-
+    
     WeakPtr<Pattern> pattern_;
 };
 } // namespace OHOS::Ace::NG

@@ -14,9 +14,13 @@
  */
 #include "core/interfaces/native/node/common_shape_modifier.h"
 
+#include "core/components/common/layout/constants.h"
+#include "core/components_ng/base/frame_node.h"
 #include "core/components_ng/base/view_abstract.h"
 #include "core/components_ng/pattern/shape/shape_abstract_model_ng.h"
 #include "core/components_ng/pattern/shape/shape_model_ng.h"
+#include "core/pipeline/base/element_register.h"
+#include "core/components/common/properties/color.h"
 
 namespace OHOS::Ace::NG {
 constexpr double DEFAULT_MITER_LIMIT = 4.0f;
@@ -28,18 +32,11 @@ constexpr int DEFAULT_STROKE_DASH_OFFSET = 0;
 constexpr int DEFAULT_STROKE_LINE_CAPS = 0;
 constexpr int DEFAULT_STROKE_LINE_JOIN = 0;
 
-void SetStrokeMiterLimit(ArkUINodeHandle node, ArkUI_Float32 miterLimit, void* resObjPtr)
+void SetStrokeMiterLimit(ArkUINodeHandle node, ArkUI_Float32 miterLimit)
 {
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
     ShapeModelNG::SetStrokeMiterLimit(frameNode, miterLimit);
-    auto pattern = frameNode->GetPattern();
-    CHECK_NULL_VOID(pattern);
-    pattern->UnRegisterResource("ShapeMiterLimit");
-    if (SystemProperties::ConfigChangePerform() && resObjPtr) {
-        auto resObj = AceType::Claim(reinterpret_cast<ResourceObject*>(resObjPtr));
-        pattern->RegisterResource<double>("ShapeMiterLimit", resObj, miterLimit);
-    }
 }
 
 void ResetStrokeMiterLimit(ArkUINodeHandle node)
@@ -47,28 +44,13 @@ void ResetStrokeMiterLimit(ArkUINodeHandle node)
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
     ShapeModelNG::SetStrokeMiterLimit(frameNode, DEFAULT_MITER_LIMIT);
-    auto pattern = frameNode->GetPattern();
-    CHECK_NULL_VOID(pattern);
-    if (SystemProperties::ConfigChangePerform()) {
-        pattern->UnRegisterResource("ShapeMiterLimit");
-    }
 }
 
-void SetFillOpacity(ArkUINodeHandle node, ArkUI_Float32 fillOpacity, void* resObjPtr)
+void SetFillOpacity(ArkUINodeHandle node, ArkUI_Float32 fillOpacity)
 {
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
     ShapeModelNG::SetFillOpacity(frameNode, fillOpacity);
-    auto pattern = frameNode->GetPattern();
-    CHECK_NULL_VOID(pattern);
-    pattern->IsEnableChildrenMatchParent() ? pattern->UnRegisterResource("ShapeFillOpacity")
-                                           : pattern->UnRegisterResource("ShapeAbstractFillOpacity");
-    if (SystemProperties::ConfigChangePerform() && resObjPtr) {
-        auto resObj = AceType::Claim(reinterpret_cast<ResourceObject*>(resObjPtr));
-        pattern->IsEnableChildrenMatchParent()
-            ? pattern->RegisterResource<double>("ShapeFillOpacity", resObj, fillOpacity)
-            : pattern->RegisterResource<double>("ShapeAbstractFillOpacity", resObj, fillOpacity);
-    }
 }
 
 void ResetFillOpacity(ArkUINodeHandle node)
@@ -76,29 +58,13 @@ void ResetFillOpacity(ArkUINodeHandle node)
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
     ShapeModelNG::SetFillOpacity(frameNode, DEFAULT_FILL_OPACITY);
-    auto pattern = frameNode->GetPattern();
-    CHECK_NULL_VOID(pattern);
-    if (SystemProperties::ConfigChangePerform()) {
-        pattern->IsEnableChildrenMatchParent() ? pattern->UnRegisterResource("ShapeFillOpacity")
-                                               : pattern->UnRegisterResource("ShapeAbstractFillOpacity");
-    }
 }
 
-void SetStrokeOpacity(ArkUINodeHandle node, ArkUI_Float32 strokeOpacity, void* resObjPtr)
+void SetStrokeOpacity(ArkUINodeHandle node, ArkUI_Float32 strokeOpacity)
 {
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
     ShapeModelNG::SetStrokeOpacity(frameNode, strokeOpacity);
-    auto pattern = frameNode->GetPattern();
-    CHECK_NULL_VOID(pattern);
-    pattern->IsEnableChildrenMatchParent() ? pattern->UnRegisterResource("ShapeStrokeOpacity")
-                                           : pattern->UnRegisterResource("ShapeAbstractStrokeOpacity");
-    if (SystemProperties::ConfigChangePerform() && resObjPtr) {
-        auto resObj = AceType::Claim(reinterpret_cast<ResourceObject*>(resObjPtr));
-        pattern->IsEnableChildrenMatchParent()
-            ? pattern->RegisterResource<double>("ShapeStrokeOpacity", resObj, strokeOpacity)
-            : pattern->RegisterResource<double>("ShapeAbstractStrokeOpacity", resObj, strokeOpacity);
-    }
 }
 
 void ResetStrokeOpacity(ArkUINodeHandle node)
@@ -106,31 +72,14 @@ void ResetStrokeOpacity(ArkUINodeHandle node)
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
     ShapeModelNG::SetStrokeOpacity(frameNode, DEFAULT_STROKE_OPACITY);
-    auto pattern = frameNode->GetPattern();
-    CHECK_NULL_VOID(pattern);
-    if (SystemProperties::ConfigChangePerform()) {
-        pattern->IsEnableChildrenMatchParent() ? pattern->UnRegisterResource("ShapeStrokeOpacity")
-                                               : pattern->UnRegisterResource("ShapeAbstractStrokeOpacity");
-    }
 }
 
-void SetStrokeWidth(ArkUINodeHandle node, ArkUI_Float32 value, int unit, void* resObjPtr)
+void SetStrokeWidth(ArkUINodeHandle node, ArkUI_Float32 value, int unit)
 {
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
     auto unitEnum = static_cast<OHOS::Ace::DimensionUnit>(unit);
-    auto lineWidth = Dimension(value, unitEnum);
-    ShapeModelNG::SetStrokeWidth(frameNode, lineWidth);
-    auto pattern = frameNode->GetPattern();
-    CHECK_NULL_VOID(pattern);
-    pattern->IsEnableChildrenMatchParent() ? pattern->UnRegisterResource("ShapeStrokeWidth")
-                                           : pattern->UnRegisterResource("ShapeAbstractStrokeWidth");
-    if (SystemProperties::ConfigChangePerform() && resObjPtr) {
-        auto resObj = AceType::Claim(reinterpret_cast<ResourceObject*>(resObjPtr));
-        pattern->IsEnableChildrenMatchParent()
-            ? pattern->RegisterResource<CalcDimension>("ShapeStrokeWidth", resObj, lineWidth)
-            : pattern->RegisterResource<CalcDimension>("ShapeAbstractStrokeWidth", resObj, lineWidth);
-    }
+    ShapeModelNG::SetStrokeWidth(frameNode, Dimension(value, unitEnum));
 }
 
 void ResetStrokeWidth(ArkUINodeHandle node)
@@ -138,12 +87,6 @@ void ResetStrokeWidth(ArkUINodeHandle node)
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
     ShapeModelNG::SetStrokeWidth(frameNode, Dimension(DEFAULT_STROKE_WIDTH, DimensionUnit::VP));
-    auto pattern = frameNode->GetPattern();
-    CHECK_NULL_VOID(pattern);
-    if (SystemProperties::ConfigChangePerform()) {
-        pattern->IsEnableChildrenMatchParent() ? pattern->UnRegisterResource("ShapeStrokeWidth")
-                                               : pattern->UnRegisterResource("ShapeAbstractStrokeWidth");
-    }
 }
 
 void SetAntiAlias(ArkUINodeHandle node, ArkUI_Bool antiAlias)
@@ -160,22 +103,11 @@ void ResetAntiAlias(ArkUINodeHandle node)
     ShapeModelNG::SetAntiAlias(frameNode, true);
 }
 
-void SetStroke(ArkUINodeHandle node, uint32_t stroke, void* resObjPtr)
+void SetStroke(ArkUINodeHandle node, uint32_t stroke)
 {
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
-    auto strokeColor = Color(stroke);
-    ShapeModelNG::SetStroke(frameNode, strokeColor);
-    auto pattern = frameNode->GetPattern();
-    CHECK_NULL_VOID(pattern);
-    pattern->IsEnableChildrenMatchParent() ? pattern->UnRegisterResource("ShapeStroke")
-                                           : pattern->UnRegisterResource("ShapeAbstractStroke");
-    if (SystemProperties::ConfigChangePerform() && resObjPtr) {
-        auto resObj = AceType::Claim(reinterpret_cast<ResourceObject*>(resObjPtr));
-        pattern->IsEnableChildrenMatchParent()
-            ? pattern->RegisterResource<Color>("ShapeStroke", resObj, strokeColor)
-            : pattern->RegisterResource<Color>("ShapeAbstractStroke", resObj, strokeColor);
-    }
+    ShapeModelNG::SetStroke(frameNode, Color(stroke));
 }
 
 void ResetStroke(ArkUINodeHandle node)
@@ -183,30 +115,13 @@ void ResetStroke(ArkUINodeHandle node)
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
     ShapeModelNG::SetStroke(frameNode, Color::TRANSPARENT);
-    auto pattern = frameNode->GetPattern();
-    CHECK_NULL_VOID(pattern);
-    if (SystemProperties::ConfigChangePerform()) {
-        pattern->IsEnableChildrenMatchParent() ? pattern->UnRegisterResource("ShapeStroke")
-                                               : pattern->UnRegisterResource("ShapeAbstractStroke");
-    }
 }
 
-void SetFill(ArkUINodeHandle node, uint32_t fill, void* resObjPtr)
+void SetFill(ArkUINodeHandle node, uint32_t fill)
 {
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
-    auto fillColor = Color(fill);
-    ShapeModelNG::SetFill(frameNode, fillColor);
-    auto pattern = frameNode->GetPattern();
-    CHECK_NULL_VOID(pattern);
-    pattern->IsEnableChildrenMatchParent() ? pattern->UnRegisterResource("ShapeFill")
-                                           : pattern->UnRegisterResource("ShapeAbstractFill");
-    if (SystemProperties::ConfigChangePerform() && resObjPtr) {
-        auto resObj = AceType::Claim(reinterpret_cast<ResourceObject*>(resObjPtr));
-        pattern->IsEnableChildrenMatchParent()
-            ? pattern->RegisterResource<Color>("ShapeFill", resObj, fillColor)
-            : pattern->RegisterResource<Color>("ShapeAbstractFill", resObj, fillColor);
-    }
+    ShapeModelNG::SetFill(frameNode, Color(fill));
 }
 
 void ResetFill(ArkUINodeHandle node)
@@ -214,27 +129,14 @@ void ResetFill(ArkUINodeHandle node)
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
     ShapeModelNG::SetFill(frameNode, Color::BLACK);
-    auto pattern = frameNode->GetPattern();
-    CHECK_NULL_VOID(pattern);
-    if (SystemProperties::ConfigChangePerform()) {
-        pattern->IsEnableChildrenMatchParent() ? pattern->UnRegisterResource("ShapeFill")
-                                               : pattern->UnRegisterResource("ShapeAbstractFill");
-    }
 }
 
-void SetStrokeDashOffset(ArkUINodeHandle node, ArkUI_Float32 value, int unit, void* resObjPtr)
+void SetStrokeDashOffset(ArkUINodeHandle node, ArkUI_Float32 value, int unit)
 {
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
     auto unitEnum = static_cast<OHOS::Ace::DimensionUnit>(unit);
     ShapeModelNG::SetStrokeDashOffset(frameNode, Dimension(value, unitEnum));
-    auto pattern = frameNode->GetPattern();
-    CHECK_NULL_VOID(pattern);
-    pattern->UnRegisterResource("ShapeDashOffset");
-    if (SystemProperties::ConfigChangePerform() && resObjPtr) {
-        auto resObj = AceType::Claim(reinterpret_cast<ResourceObject*>(resObjPtr));
-        pattern->RegisterResource<CalcDimension>("ShapeDashOffset", resObj, Dimension(value, unitEnum));
-    }
 }
 
 void ResetStrokeDashOffset(ArkUINodeHandle node)
@@ -242,11 +144,6 @@ void ResetStrokeDashOffset(ArkUINodeHandle node)
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
     ShapeModelNG::SetStrokeDashOffset(frameNode, Dimension(DEFAULT_STROKE_DASH_OFFSET));
-    auto pattern = frameNode->GetPattern();
-    CHECK_NULL_VOID(pattern);
-    if (SystemProperties::ConfigChangePerform()) {
-        pattern->UnRegisterResource("ShapeDashOffset");
-    }
 }
 
 void SetStrokeLineCap(ArkUINodeHandle node, int strokeLineCap)
@@ -277,30 +174,13 @@ void ResetStrokeLineJoin(ArkUINodeHandle node)
     ShapeModelNG::SetStrokeLineJoin(frameNode, DEFAULT_STROKE_LINE_JOIN);
 }
 
-void SetStrokeDashArray(
-    ArkUINodeHandle node, const ArkUI_Float32* dashArrayArray, int32_t* dimUnits, int32_t size, void* resObjArray)
+void SetStrokeDashArray(ArkUINodeHandle node, const ArkUI_Float32* dashArrayArray, int32_t* dimUnits, int32_t size)
 {
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
-    auto pattern = frameNode->GetPattern();
-    CHECK_NULL_VOID(pattern);
-    pattern->IsEnableChildrenMatchParent() ? pattern->UnRegisterResource("ShapeStrokeDashArray")
-                                           : pattern->UnRegisterResource("ShapeAbstractStrokeDashArray");
     std::vector<Dimension> dashArray;
-    std::vector<RefPtr<ResourceObject>> resObjArrayResult;
-    RefPtr<ResourceObject>* resObjPtr = static_cast<RefPtr<ResourceObject>*>(resObjArray);
-    bool hasResObj = false;
     for (int32_t i = 0; i < size; i++) {
         dashArray.emplace_back(CalcDimension(dashArrayArray[i], (DimensionUnit)dimUnits[i]));
-        if (resObjPtr[i]) {
-            hasResObj = true;
-        }
-        resObjArrayResult.emplace_back(resObjPtr[i]);
-    }
-    if (SystemProperties::ConfigChangePerform() && hasResObj) {
-        pattern->IsEnableChildrenMatchParent()
-            ? ShapeModelNG::SetStrokeDashArray(frameNode, dashArray, resObjArrayResult)
-            : ShapeAbstractModelNG::SetStrokeDashArray(frameNode, dashArray, resObjArrayResult);
     }
     ShapeModelNG::SetStrokeDashArray(frameNode, dashArray);
 }
@@ -311,26 +191,15 @@ void ResetStrokeDashArray(ArkUINodeHandle node)
     CHECK_NULL_VOID(frameNode);
     std::vector<Dimension> dashArray;
     ShapeModelNG::SetStrokeDashArray(frameNode, dashArray);
-    auto pattern = frameNode->GetPattern();
-    CHECK_NULL_VOID(pattern);
-    pattern->IsEnableChildrenMatchParent() ? pattern->UnRegisterResource("ShapeStrokeDashArray")
-                                           : pattern->UnRegisterResource("ShapeAbstractStrokeDashArray");
 }
 
-void SetShapeWidth(ArkUINodeHandle node, ArkUI_Float32 value, int32_t unit, void* resObjPtr)
+void SetShapeWidth(ArkUINodeHandle node, ArkUI_Float32 value, int32_t unit)
 {
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
     DimensionUnit unitEnum = static_cast<OHOS::Ace::DimensionUnit>(unit);
     Dimension width = Dimension(value, unitEnum);
     ShapeAbstractModelNG::SetWidth(frameNode, width);
-    auto pattern = frameNode->GetPattern();
-    CHECK_NULL_VOID(pattern);
-    pattern->UnRegisterResource("ShapeAbstractWidth");
-    if (SystemProperties::ConfigChangePerform() && resObjPtr) {
-        auto resObj = AceType::Claim(reinterpret_cast<ResourceObject*>(resObjPtr));
-        pattern->RegisterResource<CalcDimension>("ShapeAbstractWidth", resObj, width);
-    }
 }
 
 void ResetShapeWidth(ArkUINodeHandle node)
@@ -338,27 +207,15 @@ void ResetShapeWidth(ArkUINodeHandle node)
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
     ShapeAbstractModelNG::ResetWidth(frameNode);
-    auto pattern = frameNode->GetPattern();
-    CHECK_NULL_VOID(pattern);
-    if (SystemProperties::ConfigChangePerform()) {
-        pattern->UnRegisterResource("ShapeAbstractWidth");
-    }
 }
 
-void SetShapeHeight(ArkUINodeHandle node, ArkUI_Float32 value, int32_t unit, void* resObjPtr)
+void SetShapeHeight(ArkUINodeHandle node, ArkUI_Float32 value, int32_t unit)
 {
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
     DimensionUnit unitEnum = static_cast<OHOS::Ace::DimensionUnit>(unit);
     Dimension height = Dimension(value, unitEnum);
     ShapeAbstractModelNG::SetHeight(frameNode, height);
-    auto pattern = frameNode->GetPattern();
-    CHECK_NULL_VOID(pattern);
-    pattern->UnRegisterResource("ShapeAbstractHeight");
-    if (SystemProperties::ConfigChangePerform() && resObjPtr) {
-        auto resObj = AceType::Claim(reinterpret_cast<ResourceObject*>(resObjPtr));
-        pattern->RegisterResource<CalcDimension>("ShapeAbstractHeight", resObj, height);
-    }
 }
 
 void ResetShapeHeight(ArkUINodeHandle node)
@@ -366,28 +223,15 @@ void ResetShapeHeight(ArkUINodeHandle node)
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
     ShapeAbstractModelNG::ResetHeight(frameNode);
-    auto pattern = frameNode->GetPattern();
-    CHECK_NULL_VOID(pattern);
-    if (SystemProperties::ConfigChangePerform()) {
-        pattern->UnRegisterResource("ShapeAbstractHeight");
-    }
 }
 
-void SetShapeForegroundColor(ArkUINodeHandle node, ArkUI_Bool isColor, uint32_t color, void* resObjPtr)
+void SetShapeForegroundColor(ArkUINodeHandle node, ArkUI_Bool isColor, uint32_t color)
 {
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
     if (isColor) {
-        auto foregroundColor = Color(color);
-        ShapeModelNG::SetFill(frameNode, foregroundColor);
-        ViewAbstract::SetForegroundColor(frameNode, foregroundColor);
-        auto pattern = frameNode->GetPattern();
-        CHECK_NULL_VOID(pattern);
-        pattern->UnRegisterResource("ShapeAbstractForegroundColor");
-        if (SystemProperties::ConfigChangePerform() && resObjPtr) {
-            auto resObj = AceType::Claim(reinterpret_cast<ResourceObject*>(resObjPtr));
-            pattern->RegisterResource<Color>("ShapeAbstractForegroundColor", resObj, foregroundColor);
-        }
+        ShapeModelNG::SetFill(frameNode, Color(color));
+        ViewAbstract::SetForegroundColor(frameNode, Color(color));
     } else {
         ShapeModelNG::SetFill(frameNode, Color::FOREGROUND);
         auto strategy = static_cast<ForegroundColorStrategy>(color);
@@ -399,85 +243,28 @@ void ResetShapeForegroundColor(ArkUINodeHandle node)
 {
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
-    auto pattern = frameNode->GetPattern();
-    CHECK_NULL_VOID(pattern);
-    if (SystemProperties::ConfigChangePerform()) {
-        pattern->UnRegisterResource("ShapeAbstractForegroundColor");
-    }
 }
 
 namespace NodeModifier {
 const ArkUICommonShapeModifier* GetCommonShapeModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
-    static const ArkUICommonShapeModifier modifier = {
-        .setStrokeDashArray = SetStrokeDashArray,
-        .resetStrokeDashArray = ResetStrokeDashArray,
-        .setStrokeMiterLimit = SetStrokeMiterLimit,
-        .resetStrokeMiterLimit = ResetStrokeMiterLimit,
-        .setFillOpacity = SetFillOpacity,
-        .resetFillOpacity = ResetFillOpacity,
-        .setStrokeOpacity = SetStrokeOpacity,
-        .resetStrokeOpacity = ResetStrokeOpacity,
-        .setStrokeWidth = SetStrokeWidth,
-        .resetStrokeWidth = ResetStrokeWidth,
-        .setAntiAlias = SetAntiAlias,
-        .resetAntiAlias = ResetAntiAlias,
-        .setStroke = SetStroke,
-        .resetStroke = ResetStroke,
-        .setFill = SetFill,
-        .resetFill = ResetFill,
-        .setStrokeDashOffset = SetStrokeDashOffset,
-        .resetStrokeDashOffset = ResetStrokeDashOffset,
-        .setStrokeLineCap = SetStrokeLineCap,
-        .resetStrokeLineCap = ResetStrokeLineCap,
-        .setStrokeLineJoin = SetStrokeLineJoin,
-        .resetStrokeLineJoin = ResetStrokeLineJoin,
-        .setShapeWidth = SetShapeWidth,
-        .resetShapeWidth = ResetShapeWidth,
-        .setShapeHeight = SetShapeHeight,
-        .resetShapeHeight = ResetShapeHeight,
-        .setShapeForegroundColor = SetShapeForegroundColor,
-        .resetShapeForegroundColor = ResetShapeForegroundColor,
-    };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
+    static const ArkUICommonShapeModifier modifier = { SetStrokeDashArray, ResetStrokeDashArray, SetStrokeMiterLimit,
+        ResetStrokeMiterLimit, SetFillOpacity, ResetFillOpacity, SetStrokeOpacity, ResetStrokeOpacity, SetStrokeWidth,
+        ResetStrokeWidth, SetAntiAlias, ResetAntiAlias, SetStroke, ResetStroke, SetFill, ResetFill, SetStrokeDashOffset,
+        ResetStrokeDashOffset, SetStrokeLineCap, ResetStrokeLineCap, SetStrokeLineJoin, ResetStrokeLineJoin,
+        SetShapeWidth, ResetShapeWidth, SetShapeHeight, ResetShapeHeight, SetShapeForegroundColor,
+        ResetShapeForegroundColor };
     return &modifier;
 }
 
 const CJUICommonShapeModifier* GetCJUICommonShapeModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
-    static const CJUICommonShapeModifier modifier = {
-        .setStrokeDashArray = SetStrokeDashArray,
-        .resetStrokeDashArray = ResetStrokeDashArray,
-        .setStrokeMiterLimit = SetStrokeMiterLimit,
-        .resetStrokeMiterLimit = ResetStrokeMiterLimit,
-        .setFillOpacity = SetFillOpacity,
-        .resetFillOpacity = ResetFillOpacity,
-        .setStrokeOpacity = SetStrokeOpacity,
-        .resetStrokeOpacity = ResetStrokeOpacity,
-        .setStrokeWidth = SetStrokeWidth,
-        .resetStrokeWidth = ResetStrokeWidth,
-        .setAntiAlias = SetAntiAlias,
-        .resetAntiAlias = ResetAntiAlias,
-        .setStroke = SetStroke,
-        .resetStroke = ResetStroke,
-        .setFill = SetFill,
-        .resetFill = ResetFill,
-        .setStrokeDashOffset = SetStrokeDashOffset,
-        .resetStrokeDashOffset = ResetStrokeDashOffset,
-        .setStrokeLineCap = SetStrokeLineCap,
-        .resetStrokeLineCap = ResetStrokeLineCap,
-        .setStrokeLineJoin = SetStrokeLineJoin,
-        .resetStrokeLineJoin = ResetStrokeLineJoin,
-        .setShapeWidth = SetShapeWidth,
-        .resetShapeWidth = ResetShapeWidth,
-        .setShapeHeight = SetShapeHeight,
-        .resetShapeHeight = ResetShapeHeight,
-        .setShapeForegroundColor = SetShapeForegroundColor,
-        .resetShapeForegroundColor = ResetShapeForegroundColor,
-    };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
+    static const CJUICommonShapeModifier modifier = { SetStrokeDashArray, ResetStrokeDashArray, SetStrokeMiterLimit,
+        ResetStrokeMiterLimit, SetFillOpacity, ResetFillOpacity, SetStrokeOpacity, ResetStrokeOpacity, SetStrokeWidth,
+        ResetStrokeWidth, SetAntiAlias, ResetAntiAlias, SetStroke, ResetStroke, SetFill, ResetFill, SetStrokeDashOffset,
+        ResetStrokeDashOffset, SetStrokeLineCap, ResetStrokeLineCap, SetStrokeLineJoin, ResetStrokeLineJoin,
+        SetShapeWidth, ResetShapeWidth, SetShapeHeight, ResetShapeHeight, SetShapeForegroundColor,
+        ResetShapeForegroundColor };
     return &modifier;
 }
 }

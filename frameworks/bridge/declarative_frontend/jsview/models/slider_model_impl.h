@@ -30,11 +30,9 @@ public:
     void SetTrackBackgroundColor(const Color& value) override;
     void SetTrackBackgroundColor(const NG::Gradient& value, bool isResourceColor = false) override {};
     void SetSelectColor(const Color& value) override;
-    void SetSelectColor(const NG::Gradient& value, bool isResourceColor = false) override {};
     void SetMinLabel(float value) override;
     void SetMaxLabel(float value) override;
-    void SetShowSteps(
-        bool value, const std::optional<SliderModel::SliderShowStepOptions>& options = std::nullopt) override;
+    void SetShowSteps(bool value) override;
     void SetShowTips(bool value, const std::optional<std::string>& content) override;
     void SetThickness(const Dimension& value) override;
     void SetBlockBorderColor(const Color& value) override;
@@ -49,13 +47,6 @@ public:
     void SetStepSize(const Dimension& value) override;
     void SetOnChange(std::function<void(float, int32_t)>&& eventOnChange) override;
     void SetOnChangeEvent(std::function<void(float)>&& onChangeEvent) override {};
-    void SetPrefix(const RefPtr<NG::UINode>& content, const NG::SliderPrefixOptions& options) override;
-    void SetSuffix(const RefPtr<NG::UINode>& content, const NG::SliderSuffixOptions& options) override;
-    void CreateWithColorResourceObj(const RefPtr<ResourceObject>& resObj,
-        const SliderColorType sliderColorType) override {};
-    void CreateWithMediaResourceObj(const RefPtr<ResourceObject>& resObj, const std::string& bundleName,
-        const std::string& moduleName) override {};
-    void CreateWithStringResourceObj(const RefPtr<ResourceObject>& resObj, const bool isShowTips) override {};
 
     void ResetBlockBorderColor() override {};
     void ResetBlockBorderWidth() override {};
@@ -70,13 +61,6 @@ public:
     void ResetSliderInteractionMode() override {};
     void ResetMinResponsiveDistance() override {};
     void ResetValidSlideRange() override {};
-    void SetEnableHapticFeedback(bool isEnableHapticFeedback) override {};
-    void ResetBlockColor() override {};
-    void ResetTrackColor() override {};
-    void ResetSelectColor() override {};
-#ifdef SUPPORT_DIGITAL_CROWN
-    void ResetDigitalCrownSensitivity() override {};
-#endif
 };
 
 } // namespace OHOS::Ace::Framework

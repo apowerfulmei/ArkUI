@@ -15,6 +15,10 @@
 
 #include "frameworks/core/components_part_upd/foreach/foreach_element.h"
 
+#include <cstdint>
+#include <list>
+#include <set>
+
 #include "frameworks/core/components_part_upd/foreach/foreach_component.h"
 
 namespace OHOS::Ace::PartUpd {

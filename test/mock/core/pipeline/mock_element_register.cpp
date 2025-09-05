@@ -17,12 +17,10 @@
 #include "base/utils/utils.h"
 #include "core/components_ng/base/frame_node.h"
 #include "core/components_ng/base/ui_node.h"
-#include "core/pipeline/base/element.h"
 #include "core/pipeline/base/element_register.h"
 
 namespace OHOS::Ace {
 thread_local ElementRegister* ElementRegister::instance_ = nullptr;
-std::atomic<ElementIdType> ElementRegister::nextUniqueElementId_ = 0;
 std::mutex ElementRegister::mutex_;
 
 ElementRegister* ElementRegister::GetInstance()
@@ -34,11 +32,6 @@ ElementRegister* ElementRegister::GetInstance()
         }
     }
     return (ElementRegister::instance_);
-}
-
-ElementIdType ElementRegister::MakeUniqueId()
-{
-    return ElementRegister::nextUniqueElementId_++;
 }
 
 RefPtr<Element> ElementRegister::GetElementById(ElementIdType elementId)
@@ -111,11 +104,7 @@ NG::FrameNode* ElementRegister::GetFrameNodePtrById(ElementIdType elementId)
         return nullptr;
     }
     auto iter = itemMap_.find(elementId);
-    if (iter == itemMap_.end()) {
-        return nullptr;
-    }
-    auto node = AceType::DynamicCast<NG::FrameNode>(iter->second.Upgrade());
-    return AceType::RawPtr(node); // warning: returning an unsafe rawptr !!!
+    return iter == itemMap_.end() ? nullptr : AceType::DynamicCast<NG::FrameNode>(iter->second.GetRawPtr());
 }
 
 bool ElementRegister::AddUINode(const RefPtr<NG::UINode>& node)
@@ -209,7 +198,7 @@ void ElementRegister::ClearPendingRemoveNodes()
     pendingRemoveNodes_.clear();
 }
 
-RefPtr<NG::FrameNode> ElementRegister::GetAttachedFrameNodeById(const std::string& key, bool willGetAll)
+RefPtr<NG::FrameNode> ElementRegister::GetAttachedFrameNodeById(const std::string& key)
 {
     auto it = inspectorIdMap_.find(key);
     CHECK_NULL_RETURN(it != inspectorIdMap_.end(), nullptr);
@@ -222,8 +211,7 @@ RefPtr<NG::FrameNode> ElementRegister::GetAttachedFrameNodeById(const std::strin
             continue;
         }
         auto depOfNode = uiNode->GetDepth();
-        bool withInScope = willGetAll || (!willGetAll && uiNode->IsOnMainTree());
-        if (withInScope && uiNode->GetInspectorId().value_or("") == key && depth > depOfNode) {
+        if (uiNode->IsOnMainTree() && uiNode->GetInspectorId().value_or("") == key && depth > depOfNode) {
             depth = depOfNode;
             frameNode = uiNode;
         }
@@ -253,39 +241,5 @@ void ElementRegister::RemoveFrameNodeByInspectorId(const std::string& key, int32
     if (it->second.empty()) {
         inspectorIdMap_.erase(it);
     }
-}
-
-void ElementRegister::RegisterEmbedNode(const uint64_t surfaceId, const WeakPtr<NG::FrameNode>& node)
-{
-    surfaceIdEmbedNodeMap_[surfaceId] = node;
-    auto nodeRef = node.Upgrade();
-    CHECK_NULL_VOID(nodeRef);
-    embedNodeSurfaceIdMap_[AceType::RawPtr(nodeRef)] = surfaceId;
-}
-
-void ElementRegister::UnregisterEmbedNode(const uint64_t surfaceId, const WeakPtr<NG::FrameNode>& node)
-{
-    surfaceIdEmbedNodeMap_.erase(surfaceId);
-    auto nodeRef = node.Upgrade();
-    CHECK_NULL_VOID(nodeRef);
-    NG::FrameNode* nodePtr = AceType::RawPtr(nodeRef);
-    embedNodeSurfaceIdMap_.erase(nodePtr);
-}
-
-WeakPtr<NG::FrameNode> ElementRegister::GetEmbedNodeBySurfaceId(const uint64_t surfaceId)
-{
-    auto it = surfaceIdEmbedNodeMap_.find(surfaceId);
-    return (it == surfaceIdEmbedNodeMap_.end()) ? nullptr : it->second;
-}
-
-bool ElementRegister::IsEmbedNode(NG::FrameNode* node)
-{
-    return (embedNodeSurfaceIdMap_.find(node) != embedNodeSurfaceIdMap_.end());
-}
-
-uint64_t ElementRegister::GetSurfaceIdByEmbedNode(NG::FrameNode* node)
-{
-    auto it = embedNodeSurfaceIdMap_.find(node);
-    return (it == embedNodeSurfaceIdMap_.end()) ? 0U : it->second;
 }
 } // namespace OHOS::Ace

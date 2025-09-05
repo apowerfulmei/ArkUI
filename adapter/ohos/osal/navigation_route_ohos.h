@@ -43,16 +43,14 @@ public:
     int32_t LoadPage(const std::string& name) override;
 
     bool IsNavigationItemExits(const std::string& name) override;
-
+ 
     void InitRouteMap() override;
 
 private:
     bool GetRouteItemFromBundle(const std::string& name, AppExecFwk::RouterItem& routeItem);
-    int32_t LoadPageFromHapModule(const std::string& name);
     sptr<AppExecFwk::IBundleMgr> GetBundleManager();
     AppExecFwk::RouterItem GetRouteItem(const std::string name);
     std::vector<AppExecFwk::RouterItem> allRouteItems_;
-    std::vector<AppExecFwk::HapModuleInfo> moduleInfos_;
     std::vector<std::string> names_;
 };
 } // namespace OHOS::Ace

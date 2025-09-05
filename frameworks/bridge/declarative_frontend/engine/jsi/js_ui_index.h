@@ -33,9 +33,6 @@ namespace OHOS::Ace::Framework {
     FUNCTION("centerX", CENTER_X)       \
     FUNCTION("centerY", CENTER_Y)       \
     FUNCTION("centerZ", CENTER_Z)       \
-    FUNCTION("angleX", ANGLE_X)       \
-    FUNCTION("angleY", ANGLE_Y)       \
-    FUNCTION("angleZ", ANGLE_Z)       \
     FUNCTION("color", COLOR)       \
     FUNCTION("colors", COLORS)       \
     FUNCTION("colorValue", COLOR_VALUE)       \
@@ -50,7 +47,6 @@ namespace OHOS::Ace::Framework {
     FUNCTION("id", ID)       \
     FUNCTION("itemHeightValue", ITEM_HEIGHT_VALUE)       \
     FUNCTION("itemWidthValue", ITEM_WIDTH_VALUE)       \
-    FUNCTION("ignoresLayoutSafeAreaEdges", IGNORES_LAYOUT_SAFE_AREA_EDGES)  \
     FUNCTION("left", LEFT)       \
     FUNCTION("leftValue", LEFT_VALUE)       \
     FUNCTION("length", LENGTH)       \
@@ -91,22 +87,7 @@ namespace OHOS::Ace::Framework {
     FUNCTION("width", WIDTH)       \
     FUNCTION("x", X)       \
     FUNCTION("y", Y)       \
-    FUNCTION("z", Z)       \
-    FUNCTION("spaceValue", SPACE_VALUE)       \
-    FUNCTION("ignoreSizeValue", IGNORE_SIZE_VALUE)       \
-    FUNCTION("setIgnoreSizeValue", SET_IGNORE_SIZE_VALUE)       \
-    FUNCTION("metricsColors", METRICS_COLORS)       \
-    FUNCTION("scroller", SCROLLER)       \
-    FUNCTION("state", STATE)       \
-    FUNCTION("refreshing", REFRESHING)       \
-    FUNCTION("offset", OFFSET)       \
-    FUNCTION("friction", FRICTION)       \
-    FUNCTION("promptText", PROMPT_TEXT)       \
-    FUNCTION("$refreshing", $REFRESHING)       \
-    FUNCTION("changeEvent", CHANGE_EVENT)       \
-    FUNCTION("refreshingContent", REFRESHING_CONTENT)       \
-    FUNCTION("builderNode_", BUILDER_NODE)       \
-    FUNCTION("nodePtr_", NODEPTR)
+    FUNCTION("z", Z)
 
 #define PROPERTY_NAME_INDEX(propertyName, index) index,
 enum class ArkUIIndex : uint32_t {

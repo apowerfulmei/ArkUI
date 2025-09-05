@@ -11,7 +11,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import("//build/config/components/ets_frontend/es2abc_config.gni")
+import("//arkcompiler/ets_frontend/es2panda/es2abc_config.gni")
 import("//build/ohos.gni")
 import("//foundation/arkui/ace_engine/ace_config.gni")
 import("//foundation/arkui/ace_engine/build/ace_gen_obj.gni")
@@ -49,13 +49,12 @@ template("js_pa_engine_ark") {
     configs = [ "$ace_root:ace_config" ]
 
     include_dirs = [ "$ace_root/adapter/ohos/entrance/pa_engine/engine/common" ]
-    deps = [ "$ace_root/frameworks/core/components/theme:build_theme_code" ]
+    deps = []
     external_deps = [
       "ability_base:want",
       "ability_base:zuri",
       "ability_runtime:abilitykit_native",
       "ability_runtime:appkit_native",
-      "ability_runtime:extensionkit_native",
       "ability_runtime:js_environment",
       "ability_runtime:napi_ability_common",
       "ability_runtime:napi_common",

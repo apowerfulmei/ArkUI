@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -17,19 +17,18 @@
 #include <chrono>
 
 #include "core/image/image_loader.h"
-
 namespace OHOS::Ace {
 RefPtr<MockImageLoader> g_loader;
 
 RefPtr<NG::ImageData> ImageLoader::GetImageData(
-    const ImageSourceInfo& imageSourceInfo, NG::ImageLoadResultInfo& errorInfo, const WeakPtr<PipelineBase>& context)
+    const ImageSourceInfo& imageSourceInfo, const WeakPtr<PipelineBase>& context)
 {
     using namespace std::chrono_literals;
     std::this_thread::sleep_for(100ms);
     if (imageSourceInfo.IsPixmap()) {
-        return LoadDecodedImageData(imageSourceInfo, errorInfo, context);
+        return LoadDecodedImageData(imageSourceInfo, context);
     }
-    this->LoadImageData(imageSourceInfo, errorInfo, context);
+    this->LoadImageData(imageSourceInfo, context);
     return nullptr;
 }
 
@@ -43,7 +42,11 @@ std::string ImageLoader::RemovePathHead(const std::string& uri)
     return uri.substr(0);
 }
 
+#ifndef USE_ROSEN_DRAWING
+sk_sp<SkData> ImageLoader::LoadDataFromCachedFile(const std::string& /*uri*/)
+#else
 std::shared_ptr<RSData> ImageLoader::LoadDataFromCachedFile(const std::string& /* uri */)
+#endif
 {
     return nullptr;
 }
@@ -60,7 +63,8 @@ RefPtr<NG::ImageData> ImageLoader::LoadImageDataFromFileCache(const std::string&
     return nullptr;
 }
 
-bool NetworkImageLoader::DownloadImage(DownloadCallback&& downloadCallback, const std::string& src, bool sync)
+bool NetworkImageLoader::DownloadImage(
+    DownloadCallback&& downloadCallback, const std::string& src, bool sync, int32_t nodeId)
 {
     return false;
 }

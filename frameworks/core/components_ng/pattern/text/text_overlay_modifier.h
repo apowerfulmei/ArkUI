@@ -26,7 +26,7 @@ namespace OHOS::Ace::NG {
 class Pattern;
 
 class TextOverlayModifier : public OverlayModifier {
-    DECLARE_ACE_TYPE(TextOverlayModifier, OverlayModifier);
+    DECLARE_ACE_TYPE(TextOverlayModifier, OverlayModifier)
 
 public:
     TextOverlayModifier();
@@ -45,7 +45,8 @@ public:
     {
         contentRect_ = contentRect;
     }
-    void SetSelectedForegroundColorAndRects(const std::vector<RectF>& selectedUrlRects, uint32_t selectedUrlColor);
+    void SetSelectedForegroundColorAndRects(const std::vector<RectF>& selectedUrlRects,
+        uint32_t selectedUrlColor);
     void ClearSelectedForegroundColorAndRects();
     void SetIsClip(bool isClip)
     {

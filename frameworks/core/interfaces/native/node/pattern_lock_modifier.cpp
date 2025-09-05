@@ -15,25 +15,18 @@
 
 #include "core/interfaces/native/node/pattern_lock_modifier.h"
 #include "core/components_v2/pattern_lock/pattern_lock_theme.h"
+#include "core/components/common/layout/constants.h"
+#include "core/components/common/properties/alignment.h"
+#include "core/components_ng/base/frame_node.h"
+#include "core/components_ng/base/view_abstract.h"
 #include "core/components_ng/pattern/patternlock/patternlock_model_ng.h"
+#include "core/pipeline/base/element_register.h"
 namespace OHOS::Ace::NG {
 void SetPatternLockActiveColor(ArkUINodeHandle node, uint32_t value)
 {
     auto *frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
     PatternLockModelNG::SetActiveColor(frameNode, Color(value));
-}
-
-void SetPatternLockActiveColorRes(ArkUINodeHandle node, uint32_t value, void* activeColorRawPtr)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    PatternLockModelNG::SetActiveColor(frameNode, Color(value));
-    if (SystemProperties::ConfigChangePerform()) {
-        auto* activeColor = reinterpret_cast<ResourceObject*>(activeColorRawPtr);
-        auto activeColorResObj = AceType::Claim(activeColor);
-        PatternLockModelNG::CreateWithResourceObj(frameNode, PatternLockResourceType::ACTIVECOLOR, activeColorResObj);
-    }
 }
 
 void ResetPatternLockActiveColor(ArkUINodeHandle node)
@@ -44,10 +37,6 @@ void ResetPatternLockActiveColor(ArkUINodeHandle node)
     CHECK_NULL_VOID(patternLockTheme);
     Color activeColor = patternLockTheme->GetActiveColor();
     PatternLockModelNG::SetActiveColor(frameNode, activeColor);
-    if (SystemProperties::ConfigChangePerform()) {
-        PatternLockModelNG::SetActiveColorByUser(frameNode, false);
-        PatternLockModelNG::CreateWithResourceObj(frameNode, PatternLockResourceType::ACTIVECOLOR, nullptr);
-    }
 }
 
 void ResetPatternLockCircleRadius(ArkUINodeHandle node)
@@ -58,9 +47,6 @@ void ResetPatternLockCircleRadius(ArkUINodeHandle node)
     CHECK_NULL_VOID(patternLockTheme);
     CalcDimension radius = patternLockTheme->GetCircleRadius();
     PatternLockModelNG::SetCircleRadius(frameNode, Dimension(radius.Value(), radius.Unit()));
-    if (SystemProperties::ConfigChangePerform()) {
-        PatternLockModelNG::CreateWithResourceObj(frameNode, PatternLockResourceType::CIRCLERADIUS, nullptr);
-    }
 }
 
 void SetPatternLockCircleRadius(ArkUINodeHandle node, ArkUI_Float32 number, ArkUI_Int32 unit)
@@ -70,37 +56,11 @@ void SetPatternLockCircleRadius(ArkUINodeHandle node, ArkUI_Float32 number, ArkU
     PatternLockModelNG::SetCircleRadius(frameNode, Dimension(number, static_cast<DimensionUnit>(unit)));
 }
 
-void SetPatternLockCircleRadiusRes(
-    ArkUINodeHandle node, ArkUI_Float32 number, ArkUI_Int32 unit, void* circleRadiusRawPtr)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    PatternLockModelNG::SetCircleRadius(frameNode, Dimension(number, static_cast<DimensionUnit>(unit)));
-    if (SystemProperties::ConfigChangePerform()) {
-        auto* circleRadius = reinterpret_cast<ResourceObject*>(circleRadiusRawPtr);
-        auto circleRadiusResObj = AceType::Claim(circleRadius);
-        PatternLockModelNG::CreateWithResourceObj(frameNode, PatternLockResourceType::CIRCLERADIUS, circleRadiusResObj);
-    }
-}
-
 void SetPatternLockSelectedColor(ArkUINodeHandle node, uint32_t value)
 {
     auto *frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
     PatternLockModelNG::SetSelectedColor(frameNode, Color(value));
-}
-
-void SetPatternLockSelectedColorRes(ArkUINodeHandle node, uint32_t value, void* selectedColorRawPtr)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    PatternLockModelNG::SetSelectedColor(frameNode, Color(value));
-    if (SystemProperties::ConfigChangePerform()) {
-        auto* selectedColor = reinterpret_cast<ResourceObject*>(selectedColorRawPtr);
-        auto selectedColorResObj = AceType::Claim(selectedColor);
-        PatternLockModelNG::CreateWithResourceObj(
-            frameNode, PatternLockResourceType::SELECTEDCOLOR, selectedColorResObj);
-    }
 }
 
 void ResetPatternLockSelectedColor(ArkUINodeHandle node)
@@ -111,10 +71,6 @@ void ResetPatternLockSelectedColor(ArkUINodeHandle node)
     CHECK_NULL_VOID(patternLockTheme);
     Color selectedColor = patternLockTheme->GetSelectedColor();
     PatternLockModelNG::SetSelectedColor(frameNode, selectedColor);
-    if (SystemProperties::ConfigChangePerform()) {
-        PatternLockModelNG::SetSelectedColorByUser(frameNode, false);
-        PatternLockModelNG::CreateWithResourceObj(frameNode, PatternLockResourceType::SELECTEDCOLOR, nullptr);
-    }
 }
 
 void SetPatternLockSideLength(ArkUINodeHandle node, ArkUI_Float32 number, ArkUI_Int32 unit)
@@ -122,18 +78,6 @@ void SetPatternLockSideLength(ArkUINodeHandle node, ArkUI_Float32 number, ArkUI_
     auto *frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
     PatternLockModelNG::SetSideLength(frameNode, Dimension(number, static_cast<DimensionUnit>(unit)));
-}
-
-void SetPatternLockSideLengthRes(ArkUINodeHandle node, ArkUI_Float32 number, ArkUI_Int32 unit, void* sideLengthRawPtr)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    PatternLockModelNG::SetSideLength(frameNode, Dimension(number, static_cast<DimensionUnit>(unit)));
-    if (SystemProperties::ConfigChangePerform()) {
-        auto* sideLength = reinterpret_cast<ResourceObject*>(sideLengthRawPtr);
-        auto sideLengthResObj = AceType::Claim(sideLength);
-        PatternLockModelNG::CreateWithResourceObj(frameNode, PatternLockResourceType::SIDELENGTH, sideLengthResObj);
-    }
 }
 
 void ResetPatternLockSideLength(ArkUINodeHandle node)
@@ -144,9 +88,6 @@ void ResetPatternLockSideLength(ArkUINodeHandle node)
     CHECK_NULL_VOID(patternLockTheme);
     CalcDimension sideLength = patternLockTheme->GetSideLength();
     PatternLockModelNG::SetSideLength(frameNode, Dimension(sideLength.Value(), sideLength.Unit()));
-    if (SystemProperties::ConfigChangePerform()) {
-        PatternLockModelNG::CreateWithResourceObj(frameNode, PatternLockResourceType::SIDELENGTH, nullptr);
-    }
 }
 
 void SetPatternLockAutoReset(ArkUINodeHandle node, uint32_t value)
@@ -187,18 +128,6 @@ void SetPatternLockRegularColor(ArkUINodeHandle node, uint32_t color)
     PatternLockModelNG::SetRegularColor(frameNode, Color(color));
 }
 
-void SetPatternLockRegularColorRes(ArkUINodeHandle node, uint32_t color, void* regularColorRawPtr)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    PatternLockModelNG::SetRegularColor(frameNode, Color(color));
-    if (SystemProperties::ConfigChangePerform()) {
-        auto* regularColor = reinterpret_cast<ResourceObject*>(regularColorRawPtr);
-        auto regularColorResObj = AceType::Claim(regularColor);
-        PatternLockModelNG::CreateWithResourceObj(frameNode, PatternLockResourceType::REGULARCOLOR, regularColorResObj);
-    }
-}
-
 void ResetPatternLockRegularColor(ArkUINodeHandle node)
 {
     auto *frameNode = reinterpret_cast<FrameNode*>(node);
@@ -207,10 +136,6 @@ void ResetPatternLockRegularColor(ArkUINodeHandle node)
     CHECK_NULL_VOID(patternLockTheme);
     Color regularColor = patternLockTheme->GetRegularColor();
     PatternLockModelNG::SetRegularColor(frameNode, regularColor);
-    if (SystemProperties::ConfigChangePerform()) {
-        PatternLockModelNG::SetRegularColorByUser(frameNode, false);
-        PatternLockModelNG::CreateWithResourceObj(frameNode, PatternLockResourceType::REGULARCOLOR, nullptr);
-    }
 }
 
 void SetPatternLockPathColor(ArkUINodeHandle node, uint32_t color)
@@ -218,18 +143,6 @@ void SetPatternLockPathColor(ArkUINodeHandle node, uint32_t color)
     auto *frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
     PatternLockModelNG::SetPathColor(frameNode, Color(color));
-}
-
-void SetPatternLockPathColorRes(ArkUINodeHandle node, uint32_t color, void* pathColorRawPtr)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    PatternLockModelNG::SetPathColor(frameNode, Color(color));
-    if (SystemProperties::ConfigChangePerform()) {
-        auto* pathColor = reinterpret_cast<ResourceObject*>(pathColorRawPtr);
-        auto pathColorResObj = AceType::Claim(pathColor);
-        PatternLockModelNG::CreateWithResourceObj(frameNode, PatternLockResourceType::PATHCOLOR, pathColorResObj);
-    }
 }
 
 void ResetPatternLockPathColor(ArkUINodeHandle node)
@@ -240,10 +153,6 @@ void ResetPatternLockPathColor(ArkUINodeHandle node)
     CHECK_NULL_VOID(patternLockTheme);
     Color pathColor = patternLockTheme->GetPathColor();
     PatternLockModelNG::SetPathColor(frameNode, pathColor);
-    if (SystemProperties::ConfigChangePerform()) {
-        PatternLockModelNG::SetPathColorByUser(frameNode, false);
-        PatternLockModelNG::CreateWithResourceObj(frameNode, PatternLockResourceType::PATHCOLOR, nullptr);
-    }
 }
 
 void SetPatternLockActiveCircleColor(ArkUINodeHandle node, uint32_t value)
@@ -253,28 +162,11 @@ void SetPatternLockActiveCircleColor(ArkUINodeHandle node, uint32_t value)
     PatternLockModelNG::SetActiveCircleColor(frameNode, Color(value));
 }
 
-void SetPatternLockActiveCircleColorRes(ArkUINodeHandle node, uint32_t value, void* activeCircleColorRawPtr)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    PatternLockModelNG::SetActiveCircleColor(frameNode, Color(value));
-    if (SystemProperties::ConfigChangePerform()) {
-        auto* activeCircleColor = reinterpret_cast<ResourceObject*>(activeCircleColorRawPtr);
-        auto activeCircleColorResObj = AceType::Claim(activeCircleColor);
-        PatternLockModelNG::CreateWithResourceObj(
-            frameNode, PatternLockResourceType::ACTIVECIRCLECOLOR, activeCircleColorResObj);
-    }
-}
-
 void ResetPatternLockActiveCircleColor(ArkUINodeHandle node)
 {
     auto *frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
     PatternLockModelNG::SetActiveCircleColor(frameNode, Color::TRANSPARENT);
-    if (SystemProperties::ConfigChangePerform()) {
-        PatternLockModelNG::SetActiveCircleColorByUser(frameNode, false);
-        PatternLockModelNG::CreateWithResourceObj(frameNode, PatternLockResourceType::ACTIVECIRCLECOLOR, nullptr);
-    }
 }
 
 void SetPatternLockActiveCircleRadius(ArkUINodeHandle node, ArkUI_Float32 number, ArkUI_Int32 unit)
@@ -336,130 +228,36 @@ void ResetPatternLockSkipUnselectedPoint(ArkUINodeHandle node)
     PatternLockModelNG::SetSkipUnselectedPoint(frameNode, false);
 }
 
-void SetPatternLockOnPatternComplete(ArkUINodeHandle node, void* callback)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    if (callback) {
-        auto onPatternComplete = reinterpret_cast<NG::PatternLockCompleteEvent*>(callback);
-        PatternLockModelNG::SetPatternComplete(frameNode, std::move(*onPatternComplete));
-    } else {
-        PatternLockModelNG::SetPatternComplete(frameNode, nullptr);
-    }
-}
-
-void ResetPatternLockOnPatternComplete(ArkUINodeHandle node)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    PatternLockModelNG::SetPatternComplete(frameNode, nullptr);
-}
-
-void SetPatternLockOnDotConnect(ArkUINodeHandle node, void* callback)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    if (callback) {
-        auto onDotConnect = reinterpret_cast<std::function<void(int32_t)>*>(callback);
-        PatternLockModelNG::SetDotConnect(frameNode, std::move(*onDotConnect));
-    } else {
-        PatternLockModelNG::SetDotConnect(frameNode, nullptr);
-    }
-}
-
-void ResetPatternLockOnDotConnect(ArkUINodeHandle node)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    PatternLockModelNG::SetDotConnect(frameNode, nullptr);
-}
-
 namespace NodeModifier {
 const ArkUIPatternLockModifier* GetPatternLockModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
     static const ArkUIPatternLockModifier modifier = {
-        .setPatternLockActiveColor = SetPatternLockActiveColor,
-        .setPatternLockActiveColorRes = SetPatternLockActiveColorRes,
-        .resetPatternLockActiveColor = ResetPatternLockActiveColor,
-        .setPatternLockCircleRadius = SetPatternLockCircleRadius,
-        .setPatternLockCircleRadiusRes = SetPatternLockCircleRadiusRes,
-        .resetPatternLockCircleRadius = ResetPatternLockCircleRadius,
-        .setPatternLockSelectedColor = SetPatternLockSelectedColor,
-        .setPatternLockSelectedColorRes = SetPatternLockSelectedColorRes,
-        .resetPatternLockSelectedColor = ResetPatternLockSelectedColor,
-        .setPatternLockSideLength = SetPatternLockSideLength,
-        .setPatternLockSideLengthRes = SetPatternLockSideLengthRes,
-        .resetPatternLockSideLength = ResetPatternLockSideLength,
-        .setPatternLockAutoReset = SetPatternLockAutoReset,
-        .resetPatternLockAutoReset = ResetPatternLockAutoReset,
-        .setPatternLockPathStrokeWidth = SetPatternLockPathStrokeWidth,
-        .resetPatternLockPathStrokeWidth = ResetPatternLockPathStrokeWidth,
-        .setPatternLockRegularColor = SetPatternLockRegularColor,
-        .setPatternLockRegularColorRes = SetPatternLockRegularColorRes,
-        .resetPatternLockRegularColor = ResetPatternLockRegularColor,
-        .setPatternLockPathColor = SetPatternLockPathColor,
-        .setPatternLockPathColorRes = SetPatternLockPathColorRes,
-        .resetPatternLockPathColor = ResetPatternLockPathColor,
-        .setPatternLockActiveCircleColor = SetPatternLockActiveCircleColor,
-        .setPatternLockActiveCircleColorRes = SetPatternLockActiveCircleColorRes,
-        .resetPatternLockActiveCircleColor = ResetPatternLockActiveCircleColor,
-        .setPatternLockActiveCircleRadius = SetPatternLockActiveCircleRadius,
-        .resetPatternLockActiveCircleRadius = ResetPatternLockActiveCircleRadius,
-        .setPatternLockEnableWaveEffect = SetPatternLockEnableWaveEffect,
-        .resetPatternLockEnableWaveEffect = ResetPatternLockEnableWaveEffect,
-        .setPatternLockEnableForeground = SetPatternLockEnableForeground,
-        .resetPatternLockEnableForeground = ResetPatternLockEnableForeground,
-        .setPatternLockSkipUnselectedPoint = SetPatternLockSkipUnselectedPoint,
-        .resetPatternLockSkipUnselectedPoint = ResetPatternLockSkipUnselectedPoint,
-        .setPatternLockOnPatternComplete = SetPatternLockOnPatternComplete,
-        .resetPatternLockOnPatternComplete = ResetPatternLockOnPatternComplete,
-        .setPatternLockOnDotConnect = SetPatternLockOnDotConnect,
-        .resetPatternLockOnDotConnect = ResetPatternLockOnDotConnect,
+        SetPatternLockActiveColor, ResetPatternLockActiveColor, SetPatternLockCircleRadius,
+        ResetPatternLockCircleRadius, SetPatternLockSelectedColor, ResetPatternLockSelectedColor,
+        SetPatternLockSideLength, ResetPatternLockSideLength, SetPatternLockAutoReset,
+        ResetPatternLockAutoReset, SetPatternLockPathStrokeWidth, ResetPatternLockPathStrokeWidth,
+        SetPatternLockRegularColor, ResetPatternLockRegularColor, SetPatternLockPathColor,
+        ResetPatternLockPathColor, SetPatternLockActiveCircleColor, ResetPatternLockActiveCircleColor,
+        SetPatternLockActiveCircleRadius, ResetPatternLockActiveCircleRadius, SetPatternLockEnableWaveEffect,
+        ResetPatternLockEnableWaveEffect, SetPatternLockEnableForeground, ResetPatternLockEnableForeground,
+        SetPatternLockSkipUnselectedPoint, ResetPatternLockSkipUnselectedPoint
     };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
     return &modifier;
 }
 
 const CJUIPatternLockModifier* GetCJUIPatternLockModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
     static const CJUIPatternLockModifier modifier = {
-        .setPatternLockActiveColor = SetPatternLockActiveColor,
-        .setPatternLockActiveColorRes = SetPatternLockActiveColorRes,
-        .resetPatternLockActiveColor = ResetPatternLockActiveColor,
-        .setPatternLockCircleRadius = SetPatternLockCircleRadius,
-        .setPatternLockCircleRadiusRes = SetPatternLockCircleRadiusRes,
-        .resetPatternLockCircleRadius = ResetPatternLockCircleRadius,
-        .setPatternLockSelectedColor = SetPatternLockSelectedColor,
-        .setPatternLockSelectedColorRes = SetPatternLockSelectedColorRes,
-        .resetPatternLockSelectedColor = ResetPatternLockSelectedColor,
-        .setPatternLockSideLength = SetPatternLockSideLength,
-        .setPatternLockSideLengthRes = SetPatternLockSideLengthRes,
-        .resetPatternLockSideLength = ResetPatternLockSideLength,
-        .setPatternLockAutoReset = SetPatternLockAutoReset,
-        .resetPatternLockAutoReset = ResetPatternLockAutoReset,
-        .setPatternLockPathStrokeWidth = SetPatternLockPathStrokeWidth,
-        .resetPatternLockPathStrokeWidth = ResetPatternLockPathStrokeWidth,
-        .setPatternLockRegularColor = SetPatternLockRegularColor,
-        .setPatternLockRegularColorRes = SetPatternLockRegularColorRes,
-        .resetPatternLockRegularColor = ResetPatternLockRegularColor,
-        .setPatternLockPathColor = SetPatternLockPathColor,
-        .setPatternLockPathColorRes = SetPatternLockPathColorRes,
-        .resetPatternLockPathColor = ResetPatternLockPathColor,
-        .setPatternLockActiveCircleColor = SetPatternLockActiveCircleColor,
-        .setPatternLockActiveCircleColorRes = SetPatternLockActiveCircleColorRes,
-        .resetPatternLockActiveCircleColor = ResetPatternLockActiveCircleColor,
-        .setPatternLockActiveCircleRadius = SetPatternLockActiveCircleRadius,
-        .resetPatternLockActiveCircleRadius = ResetPatternLockActiveCircleRadius,
-        .setPatternLockEnableWaveEffect = SetPatternLockEnableWaveEffect,
-        .resetPatternLockEnableWaveEffect = ResetPatternLockEnableWaveEffect,
-        .setPatternLockEnableForeground = SetPatternLockEnableForeground,
-        .resetPatternLockEnableForeground = ResetPatternLockEnableForeground,
-        .setPatternLockSkipUnselectedPoint = SetPatternLockSkipUnselectedPoint,
-        .resetPatternLockSkipUnselectedPoint = ResetPatternLockSkipUnselectedPoint,
+        SetPatternLockActiveColor, ResetPatternLockActiveColor, SetPatternLockCircleRadius,
+        ResetPatternLockCircleRadius, SetPatternLockSelectedColor, ResetPatternLockSelectedColor,
+        SetPatternLockSideLength, ResetPatternLockSideLength, SetPatternLockAutoReset,
+        ResetPatternLockAutoReset, SetPatternLockPathStrokeWidth, ResetPatternLockPathStrokeWidth,
+        SetPatternLockRegularColor, ResetPatternLockRegularColor, SetPatternLockPathColor,
+        ResetPatternLockPathColor, SetPatternLockActiveCircleColor, ResetPatternLockActiveCircleColor,
+        SetPatternLockActiveCircleRadius, ResetPatternLockActiveCircleRadius, SetPatternLockEnableWaveEffect,
+        ResetPatternLockEnableWaveEffect, SetPatternLockEnableForeground, ResetPatternLockEnableForeground,
+        SetPatternLockSkipUnselectedPoint, ResetPatternLockSkipUnselectedPoint
     };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
     return &modifier;
 }
 }

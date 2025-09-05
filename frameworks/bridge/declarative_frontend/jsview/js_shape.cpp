@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2021-2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -28,21 +28,28 @@ namespace {
 constexpr double DEFAULT_OPACITY = 1.0;
 constexpr double STROKE_MITERLIMIT_DEFAULT = 4.0f;
 } // namespace
+std::unique_ptr<ShapeModel> ShapeModel::instance_;
+std::mutex ShapeModel::mutex_;
+
 ShapeModel* ShapeModel::GetInstance()
 {
+    if (!instance_) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (!instance_) {
 #ifdef NG_BUILD
-    static NG::ShapeModelNG instance;
-    return &instance;
+            instance_.reset(new NG::ShapeModelNG());
 #else
-    if (Container::IsCurrentUseNewPipeline()) {
-        static NG::ShapeModelNG instance;
-        return &instance;
-    } else {
-        static Framework::ShapeModelImpl instance;
-        return &instance;
-    }
+            if (Container::IsCurrentUseNewPipeline()) {
+                instance_.reset(new NG::ShapeModelNG());
+            } else {
+                instance_.reset(new Framework::ShapeModelImpl());
+            }
 #endif
+        }
+    }
+    return instance_.get();
 }
+
 } // namespace OHOS::Ace
 
 namespace OHOS::Ace::Framework {
@@ -58,7 +65,7 @@ void JSShape::InitBox(const JSCallbackInfo& info)
 {
     RefPtr<PixelMap> pixMap = nullptr;
     if (info.Length() == 1 && info[0]->IsObject()) {
-#if !defined(PREVIEW) && defined(PIXEL_MAP_SUPPORTED)
+#if !defined(PREVIEW)
         pixMap = CreatePixelMapFromNapiValue(info[0]);
 #endif
     }
@@ -70,7 +77,6 @@ void JSShape::SetViewPort(const JSCallbackInfo& info)
     if (info.Length() < 1) {
         return;
     }
-    UnRegisterResource("ShapeViewPort");
     if (info[0]->IsObject()) {
         JSRef<JSObject> obj = JSRef<JSObject>::Cast(info[0]);
         JSRef<JSVal> leftValue = obj->GetProperty("x");
@@ -79,24 +85,13 @@ void JSShape::SetViewPort(const JSCallbackInfo& info)
         JSRef<JSVal> heightValue = obj->GetProperty("height");
         ShapeViewBox viewBox;
         CalcDimension dimLeft;
-        RefPtr<ResourceObject> dimLeftResObj;
-        ParseJsDimensionVp(leftValue, dimLeft, dimLeftResObj);
+        ParseJsDimensionVp(leftValue, dimLeft);
         CalcDimension dimTop;
-        RefPtr<ResourceObject> dimTopResObj;
-        ParseJsDimensionVp(topValue, dimTop, dimTopResObj);
+        ParseJsDimensionVp(topValue, dimTop);
         CalcDimension dimWidth;
-        RefPtr<ResourceObject> dimWidthResObj;
-        ParseJsDimensionVp(widthValue, dimWidth, dimWidthResObj);
+        ParseJsDimensionVp(widthValue, dimWidth);
         CalcDimension dimHeight;
-        RefPtr<ResourceObject> dimHeightResObj;
-        ParseJsDimensionVp(heightValue, dimHeight, dimHeightResObj);
-        if (SystemProperties::ConfigChangePerform() &&
-            (dimLeftResObj || dimTopResObj || dimWidthResObj || dimHeightResObj)) {
-            std::vector<RefPtr<ResourceObject>> resObjArray = { dimLeftResObj, dimTopResObj, dimWidthResObj,
-                dimHeightResObj };
-            std::vector<Dimension> dimArray = { dimLeft, dimTop, dimWidth, dimHeight };
-            ShapeModel::GetInstance()->SetViewPort(dimArray, resObjArray);
-        }
+        ParseJsDimensionVp(heightValue, dimHeight);
         ShapeModel::GetInstance()->SetViewPort(dimLeft, dimTop, dimWidth, dimHeight);
     }
     info.SetReturnValue(info.This());
@@ -150,9 +145,6 @@ void JSShape::JsSize(const JSCallbackInfo& info)
 void JSShape::SetStrokeDashArray(const JSCallbackInfo& info)
 {
     std::vector<Dimension> dashArray;
-    std::vector<RefPtr<ResourceObject>> resObjArray;
-    bool hasResObj = false;
-    UnRegisterResource("ShapeStrokeDashArray");
     if (info.Length() < 1 || !info[0]->IsArray()) {
         ShapeModel::GetInstance()->SetStrokeDashArray(dashArray);
         return;
@@ -166,22 +158,16 @@ void JSShape::SetStrokeDashArray(const JSCallbackInfo& info)
     for (int32_t i = 0; i < length; i++) {
         JSRef<JSVal> value = array->GetValueAt(i);
         CalcDimension dim;
-        RefPtr<ResourceObject> resObj;
         bool paramIsValid = false;
         if (Container::LessThanAPIVersion(PlatformVersion::VERSION_TEN)) {
-            paramIsValid = ParseJsDimensionVp(value, dim, resObj);
+            paramIsValid = ParseJsDimensionVp(value, dim);
         } else {
-            paramIsValid = ParseJsDimensionVpNG(value, dim, resObj);
-        }
-        if (resObj) {
-            hasResObj = true;
+            paramIsValid = ParseJsDimensionVpNG(value, dim);
         }
         if (paramIsValid) {
             dashArray.emplace_back(dim);
-            resObjArray.emplace_back(resObj);
         } else {
             dashArray.clear();
-            resObjArray.clear();
             break;
         }
     }
@@ -189,11 +175,7 @@ void JSShape::SetStrokeDashArray(const JSCallbackInfo& info)
     if (static_cast<uint32_t>(length) == dashArray.size() && (static_cast<uint32_t>(length) & 1)) {
         for (int32_t i = 0; i < length; i++) {
             dashArray.emplace_back(dashArray[i]);
-            resObjArray.emplace_back(resObjArray[i]);
         }
-    }
-    if (SystemProperties::ConfigChangePerform() &&  hasResObj) {
-        ShapeModel::GetInstance()->SetStrokeDashArray(dashArray, resObjArray);
     }
     ShapeModel::GetInstance()->SetStrokeDashArray(dashArray);
     info.SetReturnValue(info.This());
@@ -205,12 +187,7 @@ void JSShape::SetStroke(const JSCallbackInfo& info)
         return;
     }
     Color strokeColor = Color::TRANSPARENT;
-    RefPtr<ResourceObject> strokeResObj;
-    ParseJsColor(info[0], strokeColor, strokeResObj);
-    UnRegisterResource("ShapeStroke");
-    if (SystemProperties::ConfigChangePerform() && strokeResObj) {
-        RegisterResource<Color>("ShapeStroke", strokeResObj, strokeColor);
-    }
+    ParseJsColor(info[0], strokeColor);
     ShapeModel::GetInstance()->SetStroke(strokeColor);
 }
 
@@ -221,19 +198,14 @@ void JSShape::SetFill(const JSCallbackInfo& info)
     }
     if (info[0]->IsString() && info[0]->ToString() == "none") {
         ShapeModel::GetInstance()->SetFill(Color::TRANSPARENT);
-        return;
+    } else {
+        Color fillColor;
+        if (ParseJsColor(info[0], fillColor)) {
+            ShapeModel::GetInstance()->SetFill(fillColor);
+        } else {
+            ShapeModel::GetInstance()->SetFill(Color::BLACK);
+        }
     }
-    Color fillColor;
-    RefPtr<ResourceObject> fillResObj;
-    UnRegisterResource("ShapeFill");
-    if (!ParseJsColor(info[0], fillColor, fillResObj)) {
-        ShapeModel::GetInstance()->SetFill(Color::BLACK);
-        return;
-    }
-    if (SystemProperties::ConfigChangePerform() && fillResObj) {
-        RegisterResource<Color>("ShapeFill", fillResObj, fillColor);
-    }
-    ShapeModel::GetInstance()->SetFill(fillColor);
 }
 
 void JSShape::SetStrokeDashOffset(const JSCallbackInfo& info)
@@ -242,20 +214,15 @@ void JSShape::SetStrokeDashOffset(const JSCallbackInfo& info)
         return;
     }
     CalcDimension offset(0.0f);
-    RefPtr<ResourceObject> dashOffsetResObj;
-    UnRegisterResource("ShapeDashOffset");
     if (Container::LessThanAPIVersion(PlatformVersion::VERSION_TEN)) {
-        if (!ParseJsDimensionVp(info[0], offset, dashOffsetResObj)) {
+        if (!ParseJsDimensionVp(info[0], offset)) {
             return;
         }
     } else {
-        if (!ParseJsDimensionVpNG(info[0], offset, dashOffsetResObj)) {
+        if (!ParseJsDimensionVpNG(info[0], offset)) {
             // set to default value(0.0f)
             offset.SetValue(0.0f);
         }
-    }
-    if (SystemProperties::ConfigChangePerform() && dashOffsetResObj) {
-        RegisterResource<CalcDimension>("ShapeDashOffset", dashOffsetResObj, offset);
     }
     ShapeModel::GetInstance()->SetStrokeDashOffset(offset);
 }
@@ -276,12 +243,7 @@ void JSShape::SetStrokeMiterLimit(const JSCallbackInfo& info)
         return;
     }
     double miterLimit = STROKE_MITERLIMIT_DEFAULT;
-    RefPtr<ResourceObject> miterLimitResObj;
-    ParseJsDouble(info[0], miterLimit, miterLimitResObj);
-    UnRegisterResource("ShapeMiterLimit");
-    if (SystemProperties::ConfigChangePerform() && miterLimitResObj) {
-        RegisterResource<double>("ShapeMiterLimit", miterLimitResObj, miterLimit);
-    }
+    ParseJsDouble(info[0], miterLimit);
     ShapeModel::GetInstance()->SetStrokeMiterLimit(miterLimit);
 }
 
@@ -291,12 +253,7 @@ void JSShape::SetStrokeOpacity(const JSCallbackInfo& info)
         return;
     }
     double strokeOpacity = DEFAULT_OPACITY;
-    RefPtr<ResourceObject> strokeOpacityResObj;
-    ParseJsDouble(info[0], strokeOpacity, strokeOpacityResObj);
-    UnRegisterResource("ShapeStrokeOpacity");
-    if (SystemProperties::ConfigChangePerform() && strokeOpacityResObj) {
-        RegisterResource<double>("ShapeStrokeOpacity", strokeOpacityResObj, strokeOpacity);
-    }
+    ParseJsDouble(info[0], strokeOpacity);
     ShapeModel::GetInstance()->SetStrokeOpacity(strokeOpacity);
 }
 
@@ -306,12 +263,7 @@ void JSShape::SetFillOpacity(const JSCallbackInfo& info)
         return;
     }
     double fillOpacity = DEFAULT_OPACITY;
-    RefPtr<ResourceObject> fillOpacityResObj;
-    ParseJsDouble(info[0], fillOpacity, fillOpacityResObj);
-    UnRegisterResource("ShapeFillOpacity");
-    if (SystemProperties::ConfigChangePerform() && fillOpacityResObj) {
-        RegisterResource<double>("ShapeFillOpacity", fillOpacityResObj, fillOpacity);
-    }
+    ParseJsDouble(info[0], fillOpacity);
     ShapeModel::GetInstance()->SetFillOpacity(fillOpacity);
 }
 
@@ -322,7 +274,6 @@ void JSShape::SetStrokeWidth(const JSCallbackInfo& info)
     }
     // the default value is 1.0_vp
     CalcDimension lineWidth = 1.0_vp;
-    UnRegisterResource("ShapeStrokeWidth");
     if (info[0]->IsString()) {
         const std::string& value = info[0]->ToString();
         if (Container::LessThanAPIVersion(PlatformVersion::VERSION_TEN)) {
@@ -334,11 +285,7 @@ void JSShape::SetStrokeWidth(const JSCallbackInfo& info)
             }
         }
     } else {
-        RefPtr<ResourceObject> strokeWidthResObj;
-        ParseJsDimensionVp(info[0], lineWidth, strokeWidthResObj);
-        if (SystemProperties::ConfigChangePerform() && strokeWidthResObj) {
-            RegisterResource<CalcDimension>("ShapeStrokeWidth", strokeWidthResObj, lineWidth);
-        }
+        ParseJsDimensionVp(info[0], lineWidth);
     }
     if (lineWidth.IsNegative()) {
         lineWidth = 1.0_vp;
@@ -356,38 +303,34 @@ void JSShape::SetBitmapMesh(const JSCallbackInfo& info)
     if (info.Length() != 3) {
         return;
     }
-    std::vector<float> mesh;
+    std::vector<double> mesh;
+    JSRef<JSVal> meshValue = info[0];
+
+    if (meshValue->IsObject()) {
+        JSRef<JSObject> meshObj = JSRef<JSObject>::Cast(meshValue);
+        JSRef<JSArray> array = meshObj->GetPropertyNames();
+        for (size_t i = 0; i < array->Length(); i++) {
+            JSRef<JSVal> value = array->GetValueAt(i);
+            if (value->IsString()) {
+                std::string valueStr;
+                if (ParseJsString(value, valueStr)) {
+                    double vert;
+                    if (ParseJsDouble(meshObj->GetProperty(valueStr.c_str()), vert)) {
+                        mesh.push_back(vert);
+                    }
+                }
+            }
+        }
+    }
     uint32_t column = 0;
     uint32_t row = 0;
     JSRef<JSVal> columnValue = info[1];
     JSRef<JSVal> rowValue = info[2];
     if (!ParseJsInteger(columnValue, column)) {
-        ShapeModel::GetInstance()->SetBitmapMesh(mesh, 0, 0);
         return;
     }
     if (!ParseJsInteger(rowValue, row)) {
-        ShapeModel::GetInstance()->SetBitmapMesh(mesh, 0, 0);
         return;
-    }
-    if (info[0]->IsArray()) {
-        auto meshValue = JSRef<JSArray>::Cast(info[0]);
-        auto meshSize = meshValue->Length();
-        auto tempMeshSize = static_cast<uint64_t>(column + 1) * (row + 1) * 2;
-        if (tempMeshSize != meshSize) {
-            ShapeModel::GetInstance()->SetBitmapMesh(mesh, 0, 0);
-            return;
-        }
-        for (size_t i = 0; i < meshSize; i++) {
-            JSRef<JSVal> value = meshValue->GetValueAt(i);
-            // only support number
-            if (value->IsNumber()) {
-                auto vert = value->ToNumber<float>();
-                mesh.emplace_back(vert);
-            } else {
-                ShapeModel::GetInstance()->SetBitmapMesh(std::vector<float>(), 0, 0);
-                return;
-            }
-        }
     }
     ShapeModel::GetInstance()->SetBitmapMesh(mesh, static_cast<int32_t>(column), static_cast<int32_t>(row));
 }
@@ -398,21 +341,16 @@ void JSShape::SetForegroundColor(const JSCallbackInfo& info)
         return;
     }
     Color foregroundColor;
-    RefPtr<ResourceObject> foregroundColorResObj;
     ForegroundColorStrategy strategy;
-    UnRegisterResource("ShapeForegroundColor");
     if (ParseJsColorStrategy(info[0], strategy)) {
         ShapeModel::GetInstance()->SetFill(Color::FOREGROUND);
         ViewAbstractModel::GetInstance()->SetForegroundColorStrategy(strategy);
         return;
     }
-    if (!ParseJsColor(info[0], foregroundColor, foregroundColorResObj)) {
+    if (!ParseJsColor(info[0], foregroundColor)) {
         return;
     }
-    if (SystemProperties::ConfigChangePerform() && foregroundColorResObj) {
-        RegisterResource<Color>("ShapeForegroundColor", foregroundColorResObj, foregroundColor);
-    }
-    ShapeModel::GetInstance()->SetForegroundColor(foregroundColor);
+    ShapeModel::GetInstance()->SetFill(foregroundColor);
     ViewAbstractModel::GetInstance()->SetForegroundColor(foregroundColor);
 }
 

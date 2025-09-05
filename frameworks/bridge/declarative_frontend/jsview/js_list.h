@@ -62,7 +62,7 @@ public:
     static void SetEdgeEffect(const JSCallbackInfo& info);
     static void SetEditMode(bool editMode);
     static void SetCachedCount(const JSCallbackInfo& info);
-    static void SetChainAnimation(const JSCallbackInfo& args);
+    static void SetChainAnimation(bool enableChainAnimation);
     static void SetChainAnimationOptions(const JSCallbackInfo& info);
     static void SetChildrenMainSize(const JSCallbackInfo& args);
     static void SetChildrenMainSize(const JSRef<JSObject>& childrenSizeObj);
@@ -76,10 +76,7 @@ public:
     static void SetScrollEnabled(const JSCallbackInfo& args);
     static void SetScrollSnapAlign(int32_t scrollSnapAlign);
     static void SetFriction(const JSCallbackInfo& info);
-    static void SetFocusWrapMode(const JSCallbackInfo& args);
     static void MaintainVisibleContentPosition(const JSCallbackInfo& args);
-    static void SetStackFromEnd(const JSCallbackInfo& args);
-    static void SetSyncLoad(const JSCallbackInfo& args);
 
     static void ItemDragStartCallback(const JSCallbackInfo& info);
     static void ItemDragEnterCallback(const JSCallbackInfo& info);

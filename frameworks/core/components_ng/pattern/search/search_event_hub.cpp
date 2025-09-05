@@ -14,14 +14,13 @@
  */
 
 #include "base/memory/ace_type.h"
-#include "base/utils/utf_helper.h"
 #include "core/common/recorder/node_data_cache.h"
 #include "core/components_ng/event/event_hub.h"
 #include "core/components_ng/pattern/search/search_pattern.h"
 #include "core/components_ng/pattern/search/search_event_hub.h"
 
 namespace OHOS::Ace::NG {
-void SearchEventHub::UpdateChangeEvent(const std::u16string& value) const
+void SearchEventHub::UpdateChangeEvent(const std::string& value) const
 {
     if (onValueChangeEvent_) {
         onValueChangeEvent_(value);
@@ -37,7 +36,7 @@ void SearchEventHub::UpdateChangeEvent(const std::u16string& value) const
     pattern->UpdateChangeEvent(value);
     auto id = host->GetInspectorIdValue("");
     if (!id.empty()) {
-        Recorder::NodeDataCache::Get().PutString(host, id, UtfUtils::Str16DebugToStr8(value));
+        Recorder::NodeDataCache::Get().PutString(host, id, value);
     }
 }
 } // namespace OHOS::Ace::NG

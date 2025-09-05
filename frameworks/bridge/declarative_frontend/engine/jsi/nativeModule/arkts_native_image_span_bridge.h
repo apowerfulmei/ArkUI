@@ -39,7 +39,6 @@ public:
     static ArkUINativeModuleValue ResetBorderRadius(ArkUIRuntimeCallInfo *runtimeCallInfo);
     static ArkUINativeModuleValue SetColorFilter(ArkUIRuntimeCallInfo *runtimeCallInfo);
     static ArkUINativeModuleValue ResetColorFilter(ArkUIRuntimeCallInfo *runtimeCallInfo);
-    static ArkUINativeModuleValue SetImageSpanSrc(ArkUIRuntimeCallInfo *runtimeCallInfo);
 };
 } // namespace OHOS::Ace::NG
 

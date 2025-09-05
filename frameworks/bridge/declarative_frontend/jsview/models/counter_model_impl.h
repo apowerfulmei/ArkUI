@@ -32,7 +32,6 @@ public:
     void SetBackgroundColor(const Color& value) override;
     void SetEnableDec(bool enableDec) override;
     void SetEnableInc(bool enableInc) override;
-    void CreateWithResourceObj(JsCounterResourceType resourceType, const RefPtr<ResourceObject>& resObj) override {};
 };
 
 } // namespace OHOS::Ace::Framework

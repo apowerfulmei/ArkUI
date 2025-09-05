@@ -29,8 +29,6 @@
 #include "core/components_ng/render/canvas_image.h"
 #include "core/components_ng/render/drawing_forward.h"
 #include "core/components_ng/render/paint_wrapper.h"
-#include "core/components_ng/token_theme/token_theme.h"
-#include "core/pipeline_ng/pipeline_context.h"
 
 namespace OHOS::Ace::NG {
 
@@ -51,37 +49,26 @@ public:
         PaintCheckBox(canvas, offset_->Get(), size_->Get());
     }
 
-    void UpdateAnimatableProperty(bool needAnimation, const RefPtr<PipelineContext>& context = nullptr)
+    void UpdateAnimatableProperty()
     {
         switch (touchHoverType_) {
             case TouchHoverAnimationType::HOVER:
-                SetBoardColor(LinearColor(hoverColor_), hoverDuration_, Curves::FRICTION, context);
+                SetBoardColor(LinearColor(hoverColor_), hoverDuration_, Curves::FRICTION);
                 break;
             case TouchHoverAnimationType::PRESS_TO_HOVER:
-                SetBoardColor(LinearColor(hoverColor_), hoverToTouchDuration_, Curves::SHARP, context);
+                SetBoardColor(LinearColor(hoverColor_), hoverToTouchDuration_, Curves::SHARP);
                 break;
             case TouchHoverAnimationType::NONE:
-                SetBoardColor(LinearColor(hoverColor_.BlendOpacity(0)), hoverDuration_, Curves::FRICTION, context);
+                SetBoardColor(LinearColor(hoverColor_.BlendOpacity(0)), hoverDuration_, Curves::FRICTION);
                 break;
             case TouchHoverAnimationType::HOVER_TO_PRESS:
-                SetBoardColor(LinearColor(clickEffectColor_), hoverToTouchDuration_, Curves::SHARP, context);
+                SetBoardColor(LinearColor(clickEffectColor_), hoverToTouchDuration_, Curves::SHARP);
                 break;
             case TouchHoverAnimationType::PRESS:
-                SetBoardColor(LinearColor(clickEffectColor_), hoverDuration_, Curves::FRICTION, context);
+                SetBoardColor(LinearColor(clickEffectColor_), hoverDuration_, Curves::FRICTION);
                 break;
             default:
                 break;
-        }
-        if (!needAnimation) {
-            animatableBoardColor_->Set(
-                isSelect_->Get() ? LinearColor(userActiveColor_) : LinearColor(inactivePointColor_));
-            animatableCheckColor_->Set(
-                isSelect_->Get() ? LinearColor(pointColor_) : LinearColor(pointColor_.BlendOpacity(0)));
-            animatableBorderColor_->Set(
-                isSelect_->Get() ? LinearColor(Color::TRANSPARENT) : LinearColor(inactiveColor_));
-            animatableShadowColor_->Set(
-                isSelect_->Get() ? LinearColor(shadowColor_) : LinearColor(shadowColor_.BlendOpacity(0)));
-            return;
         }
         AnimationOption option = AnimationOption();
         option.SetDuration(colorAnimationDuration_);
@@ -95,23 +82,21 @@ public:
                 isSelect_->Get() ? LinearColor(Color::TRANSPARENT) : LinearColor(inactiveColor_));
             animatableShadowColor_->Set(
                 isSelect_->Get() ? LinearColor(shadowColor_) : LinearColor(shadowColor_.BlendOpacity(0)));
-        }, nullptr, nullptr, context);
+        });
     }
 
-    void SetBoardColor(
-        LinearColor color, int32_t duration, const RefPtr<CubicCurve>& curve, const RefPtr<PipelineContext>& context)
+    void SetBoardColor(LinearColor color, int32_t duratuion, const RefPtr<CubicCurve>& curve)
     {
         if (animateTouchHoverColor_) {
             AnimationOption option = AnimationOption();
-            option.SetDuration(duration);
+            option.SetDuration(duratuion);
             option.SetCurve(curve);
-            AnimationUtils::Animate(option, [&]() { animateTouchHoverColor_->Set(color); }, nullptr, nullptr, context);
+            AnimationUtils::Animate(option, [&]() { animateTouchHoverColor_->Set(color); });
         }
     }
 
-    void InitializeParam(TokenThemeScopeId themeScopeId);
+    void InitializeParam();
     void PaintCheckBox(RSCanvas& canvas, const OffsetF& paintOffset, const SizeF& paintSize) const;
-    void DrawFocusBoard(RSCanvas& canvas, const SizeF& contentSize, const OffsetF& offset) const;
     void DrawTouchAndHoverBoard(RSCanvas& canvas, const SizeF& contentSize, const OffsetF& offset) const;
 
     void DrawBorder(RSCanvas& canvas, const OffsetF& origin, RSPen& pen, const SizeF& paintSize) const;
@@ -144,13 +129,6 @@ public:
     {
         if (isSelect_) {
             isSelect_->Set(isSelect);
-        }
-    }
-
-    void SetIsFocused(bool isFocused)
-    {
-        if (isFocused_) {
-            isFocused_->Set(isFocused);
         }
     }
 
@@ -223,17 +201,9 @@ public:
         }
     }
 
-    void SetHasUnselectedColor(bool hasUnselectedColor)
-    {
-        hasUnselectedColor_ = hasUnselectedColor;
-    }
-
 private:
-    void DrawRectOrCircle(RSCanvas& canvas, const RSRoundRect& rrect) const;
-
     float borderWidth_ = 0.0f;
     float borderRadius_ = 0.0f;
-    float whiteBorderRadius_ = 0.0f;
     Color pointColor_;
     Color activeColor_;
     Color inactiveColor_;
@@ -242,24 +212,15 @@ private:
     Color hoverColor_;
     Color inactivePointColor_;
     Color userActiveColor_;
-    Color focusBoardColor_;
-    Color borderFocusedColor_;
-    Color focusedBGColorUnselected_;
     Dimension hoverRadius_;
     Dimension hotZoneHorizontalPadding_;
     Dimension hotZoneVerticalPadding_;
     Dimension defaultPaddingSize_;
-    Dimension defaultRoundPaddingSize_;
-    Dimension hoverPaddingSize_;
     Dimension shadowWidth_;
-    Dimension focusBoardSize_;
-    Dimension roundFocusBoardSize_;
     float hoverDuration_ = 0.0f;
     float hoverToTouchDuration_ = 0.0f;
     float touchDuration_ = 0.0f;
     float colorAnimationDuration_ = 0.0f;
-    bool hasUnselectedColor_ = false;
-    bool showCircleDial_ = false;
     OffsetF hotZoneOffset_;
     SizeF hotZoneSize_;
     TouchHoverAnimationType touchHoverType_ = TouchHoverAnimationType::NONE;
@@ -270,7 +231,6 @@ private:
     RefPtr<PropertyBool> enabled_;
     RefPtr<PropertyBool> useContentModifier_;
     RefPtr<PropertyBool> hasBuilder_;
-    RefPtr<PropertyBool> isFocused_;
     RefPtr<AnimatablePropertyColor> animatableBoardColor_;
     RefPtr<AnimatablePropertyColor> animatableCheckColor_;
     RefPtr<AnimatablePropertyColor> animatableBorderColor_;

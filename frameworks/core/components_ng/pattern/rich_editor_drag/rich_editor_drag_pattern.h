@@ -34,14 +34,14 @@ class RichEditorDragPattern : public TextDragPattern {
 
 public:
     explicit RichEditorDragPattern(const RefPtr<TextPattern>& hostPattern,
-        const std::shared_ptr<TextDragInfo>& info) : info_(info), hostPattern_(hostPattern) {};
+        const std::shared_ptr<RichEditorDragInfo> info) : info_(info), hostPattern_(hostPattern) {};
     ~RichEditorDragPattern() override = default;
 
     static RefPtr<FrameNode> CreateDragNode(
         const RefPtr<FrameNode>& hostNode, std::list<RefPtr<FrameNode>>& imageChildren);
 
     static RefPtr<FrameNode> CreateDragNode(
-        const RefPtr<FrameNode>& hostNode, std::list<RefPtr<FrameNode>>& imageChildren, const TextDragInfo& info);
+        const RefPtr<FrameNode>& hostNode, std::list<RefPtr<FrameNode>>& imageChildren, const RichEditorDragInfo& info);
 
     RefPtr<NodePaintMethod> CreateNodePaintMethod() override
     {
@@ -67,9 +67,7 @@ public:
 
     Dimension GetDragCornerRadius() override
     {
-        auto deviceType = SystemProperties::GetDeviceType();
-        CHECK_NULL_RETURN(deviceType != DeviceType::TWO_IN_ONE, TEXT_DRAG_RADIUS_2IN1);
-        auto pipeline = PipelineContext::GetCurrentContextSafelyWithCheck();
+        auto pipeline = PipelineContext::GetCurrentContext();
         CHECK_NULL_RETURN(pipeline, TEXT_DRAG_RADIUS);
         auto richEditorTheme = pipeline->GetTheme<RichEditorTheme>();
         CHECK_NULL_RETURN(richEditorTheme, TEXT_DRAG_RADIUS);
@@ -77,11 +75,10 @@ public:
     }
 
 protected:
-    void AdjustMaxWidth(float& width, const RectF& contentRect, const std::vector<RectF>& boxes) override;
-    std::shared_ptr<TextDragInfo> info_;
+    std::shared_ptr<RichEditorDragInfo> info_;
 
 private:
-    static RefPtr<FrameNode> CreateDragNode(const RefPtr<FrameNode>& hostNode, const TextDragInfo& info);
+    static RefPtr<FrameNode> CreateDragNode(const RefPtr<FrameNode>& hostNode, const RichEditorDragInfo& info);
 
     WeakPtr<TextPattern> hostPattern_;
     RefPtr<RichEditorDragContentModifier> contentModifier_;

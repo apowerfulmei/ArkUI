@@ -16,6 +16,9 @@
 
 #include "base/geometry/axis.h"
 #include "bridge/declarative_frontend/view_stack_processor.h"
+#include "core/components/common/layout/constants.h"
+#include "core/components/proxy/proxy_component.h"
+#include "core/components/scroll_bar/scroll_bar_component.h"
 
 namespace OHOS::Ace::Framework {
 namespace {
@@ -34,7 +37,7 @@ RefPtr<ScrollProxy> ScrollBarModelImpl::GetScrollBarProxy(const RefPtr<ScrollPro
 }
 
 void ScrollBarModelImpl::Create(const RefPtr<ScrollProxy>& proxy, bool infoflag, bool proxyFlag,
-    int directionValue, int stateValue, bool isCreateArc)
+    int directionValue, int stateValue)
 {
     RefPtr<Component> child;
     auto scrollBarComponent = AceType::MakeRefPtr<OHOS::Ace::ScrollBarComponent>(child);

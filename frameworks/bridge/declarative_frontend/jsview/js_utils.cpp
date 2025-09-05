@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2021-2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,7 +16,6 @@
 #include "bridge/declarative_frontend/jsview/js_utils.h"
 
 #include "scope_manager/native_scope_manager.h"
-
 #include "base/image/drawing_lattice.h"
 
 #if !defined(PREVIEW)
@@ -48,6 +47,41 @@ namespace {
 #if defined(WINDOWS_PLATFORM)
 constexpr char CHECK_REGEX_VALID[] = "__checkRegexValid__";
 #endif
+} // namespace
+
+namespace {
+void* UnwrapNapiValue(const JSRef<JSVal>& obj)
+{
+#ifdef ENABLE_ROSEN_BACKEND
+    if (!obj->IsObject()) {
+        LOGE("info[0] is not an object when try CreateFromNapiValue");
+        return nullptr;
+    }
+    auto engine = EngineHelper::GetCurrentEngine();
+    CHECK_NULL_RETURN(engine, nullptr);
+    auto nativeEngine = engine->GetNativeEngine();
+    CHECK_NULL_RETURN(nativeEngine, nullptr);
+#ifdef USE_ARK_ENGINE
+    panda::Local<JsiValue> value = obj.Get().GetLocalHandle();
+#endif
+    JSValueWrapper valueWrapper = value;
+
+    ScopeRAII scope(reinterpret_cast<napi_env>(nativeEngine));
+    napi_value napiValue = nativeEngine->ValueToNapiValue(valueWrapper);
+    auto env = reinterpret_cast<napi_env>(nativeEngine);
+    napi_valuetype valueType = napi_undefined;
+    napi_typeof(env, napiValue, &valueType);
+    if (valueType != napi_object) {
+        LOGE("napiValue is not napi_object");
+        return nullptr;
+    }
+    void* objectNapi = nullptr;
+    napi_unwrap(env, napiValue, &objectNapi);
+    return objectNapi;
+#else
+    return nullptr;
+#endif
+}
 } // namespace
 
 #if !defined(PREVIEW)
@@ -89,8 +123,8 @@ RefPtr<PixelMap> CreatePixelMapFromNapiValue(const JSRef<JSVal>& obj, NativeEngi
     return PixelMap::CreatePixelMap(pixmapPtrAddr);
 }
 
-bool GetPixelMapListFromAnimatedDrawable(
-    JSRef<JSVal> obj, std::vector<RefPtr<PixelMap>>& pixelMaps, int32_t& duration, int32_t& iterations)
+bool GetPixelMapListFromAnimatedDrawable(JSRef<JSVal> obj, std::vector<RefPtr<PixelMap>>& pixelMaps,
+    int32_t& duration, int32_t& iterations)
 {
     return PixelMap::GetPxielMapListFromAnimatedDrawable(UnwrapNapiValue(obj), pixelMaps, duration, iterations);
 }
@@ -143,9 +177,9 @@ const Rosen::Filter* CreateRSFilterFromNapiValue(JSRef<JSVal> obj)
     return filterPtr;
 }
 
-const Rosen::Blender* CreateRSBlenderFromNapiValue(JSRef<JSVal> obj)
+const Rosen::BrightnessBlender* CreateRSBrightnessBlenderFromNapiValue(JSRef<JSVal> obj)
 {
-    auto blenderPtr = static_cast<Rosen::Blender*>(UnwrapNapiValue(obj));
+    auto blenderPtr = static_cast<Rosen::BrightnessBlender*>(UnwrapNapiValue(obj));
     return blenderPtr;
 }
 
@@ -350,38 +384,5 @@ napi_env GetCurrentEnv()
         return nullptr;
     }
     return reinterpret_cast<napi_env>(nativeEngine);
-}
-
-void* UnwrapNapiValue(const JSRef<JSVal>& obj)
-{
-#ifdef ENABLE_ROSEN_BACKEND
-    if (!obj->IsObject()) {
-        LOGE("info[0] is not an object when try CreateFromNapiValue");
-        return nullptr;
-    }
-    auto engine = EngineHelper::GetCurrentEngine();
-    CHECK_NULL_RETURN(engine, nullptr);
-    auto nativeEngine = engine->GetNativeEngine();
-    CHECK_NULL_RETURN(nativeEngine, nullptr);
-#ifdef USE_ARK_ENGINE
-    panda::Local<JsiValue> value = obj.Get().GetLocalHandle();
-#endif
-    JSValueWrapper valueWrapper = value;
-
-    ScopeRAII scope(reinterpret_cast<napi_env>(nativeEngine));
-    napi_value napiValue = nativeEngine->ValueToNapiValue(valueWrapper);
-    auto env = reinterpret_cast<napi_env>(nativeEngine);
-    napi_valuetype valueType = napi_undefined;
-    napi_typeof(env, napiValue, &valueType);
-    if (valueType != napi_object) {
-        LOGE("napiValue is not napi_object");
-        return nullptr;
-    }
-    void* objectNapi = nullptr;
-    napi_unwrap(env, napiValue, &objectNapi);
-    return objectNapi;
-#else
-    return nullptr;
-#endif
 }
 } // namespace OHOS::Ace::Framework

@@ -23,7 +23,6 @@
 
 #include "base/geometry/dimension.h"
 #include "base/utils/macros.h"
-#include "core/common/resource/resource_object.h"
 #include "core/components/common/layout/align_declaration.h"
 #include "core/components/common/layout/constants.h"
 
@@ -36,12 +35,15 @@ public:
 
     virtual void Create(
         const std::optional<Dimension>& space, AlignDeclaration* declaration, const std::string& tag) = 0;
-    virtual void Create(
-        const RefPtr<ResourceObject>& spaceResObj, AlignDeclaration* declaration, const std::string& tag) {}
     virtual void CreateWithWrap() = 0;
     virtual void SetAlignItems(FlexAlign flexAlign) = 0;
     virtual void SetJustifyContent(FlexAlign flexAlign) = 0;
     virtual void SetIsReverse(bool isReverse) = 0;
+
+private:
+    static std::unique_ptr<ColumnModel> instance_;
+    static std::mutex mutex_;
 };
+
 } // namespace OHOS::Ace
 #endif // FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_PATTERNS_LINEAR_LAYOUT_COLUMN_MODEL_H

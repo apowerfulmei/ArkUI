@@ -15,24 +15,21 @@
 
 #include "core/components_ng/manager/drag_drop/drag_drop_manager.h"
 
+#include "base/geometry/ng/offset_t.h"
 #include "base/geometry/point.h"
+#include "base/subwindow/subwindow_manager.h"
 #include "base/geometry/rect.h"
 #include "base/log/ace_trace.h"
-#include "base/subwindow/subwindow_manager.h"
 #include "base/utils/system_properties.h"
 #include "base/utils/time_util.h"
 #include "base/utils/utils.h"
-#include "core/common/container_scope.h"
 #include "core/common/interaction/interaction_data.h"
 #include "core/common/interaction/interaction_interface.h"
+#include "core/common/udmf/udmf_client.h"
 #include "core/components/common/layout/grid_column_info.h"
+#include "core/components_ng/manager/drag_drop/drag_drop_behavior_reporter/drag_drop_behavior_reporter.h"
 #include "core/components/common/layout/grid_system_manager.h"
 #include "core/components_ng/base/frame_node.h"
-#include "core/components_ng/manager/drag_drop/drag_drop_behavior_reporter/drag_drop_behavior_reporter.h"
-#include "core/components_ng/manager/drag_drop/drag_drop_func_wrapper.h"
-#include "core/components_ng/manager/drag_drop/drag_drop_global_controller.h"
-#include "core/components_ng/manager/drag_drop/drag_drop_spring_loading/drag_drop_spring_loading_detector.h"
-#include "core/components_ng/manager/drag_drop/utils/drag_animation_helper.h"
 #include "core/components_ng/pattern/grid/grid_event_hub.h"
 #include "core/components_ng/pattern/list/list_event_hub.h"
 #include "core/components_ng/pattern/menu/wrapper/menu_wrapper_pattern.h"
@@ -40,14 +37,6 @@
 #include "core/components_ng/pattern/text_field/text_field_pattern.h"
 #include "core/components_v2/inspector/inspector_constants.h"
 #include "core/pipeline_ng/pipeline_context.h"
-
-#ifdef ENABLE_ROSEN_BACKEND
-#include "render_service_client/core/transaction/rs_transaction.h"
-#include "render_service_client/core/transaction/rs_sync_transaction_controller.h"
-#include "render_service_client/core/transaction/rs_sync_transaction_handler.h"
-#include "render_service_client/core/ui/rs_ui_director.h"
-#endif
-
 
 namespace OHOS::Ace::NG {
 namespace {
@@ -69,20 +58,8 @@ constexpr float MAX_DISTANCE_TO_PRE_POINTER = 3.0f;
 constexpr float DEFAULT_SPRING_RESPONSE = 0.347f;
 constexpr float MIN_SPRING_RESPONSE = 0.05f;
 constexpr float DEL_SPRING_RESPONSE = 0.005f;
-constexpr float MIN_UI_EXTENSION_BOUNDARY_DISTANCE = 5.0f;
-constexpr float MIN_FOLDER_SUBWINDOW_BOUNDARY_DISTANCE = 5.0f;
-constexpr uint32_t TASK_DELAY_TIME = 5 * 1000;
-constexpr uint32_t DROP_DELAY_TIME = 2 * 1000;
 constexpr int32_t RESERVED_DEVICEID_1 = 0xAAAAAAFF;
 constexpr int32_t RESERVED_DEVICEID_2 = 0xAAAAAAFE;
-constexpr double DEVICE_TYPE_UNKOWN = 0.0;
-constexpr double DEVICE_TYPE_SMALL = 600.0;
-constexpr double DEVICE_TYPE_MEDIUM = 840.0;
-constexpr int32_t SCALE_TYPE_FIRST = 2;
-constexpr int32_t SCALE_TYPE_SECOND = 3;
-constexpr int32_t SCALE_TYPE_THIRD = 4;
-const RefPtr<InterpolatingSpring> DRAG_TRANSITION_ANIMATION_CURVE =
-    AceType::MakeRefPtr<InterpolatingSpring>(0.0f, 1.0f, 380.0f, 34.0f);
 } // namespace
 
 RefPtr<RenderContext> GetMenuRenderContextFromMenuWrapper(const RefPtr<FrameNode>& menuWrapperNode)
@@ -102,87 +79,6 @@ RefPtr<FrameNode> GetMenuWrapperNodeFromDrag()
     auto dragDropManager = pipeline->GetDragDropManager();
     CHECK_NULL_RETURN(dragDropManager, nullptr);
     return dragDropManager->GetMenuWrapperNode();
-}
-
-DragDropManager::DragDropManager()
-{
-    if (DragDropGlobalController::GetInstance().IsAlreadyGetAppGlobalDrag()) {
-        return;
-    }
-    bool state = false;
-    auto result = InteractionInterface::GetInstance()->GetAppDragSwitchState(state);
-    if (result != 0) {
-        TAG_LOGI(AceLogTag::ACE_DRAG, "get app drag switch state failed!");
-        return;
-    }
-    DragDropGlobalController::GetInstance().SetIsAppGlobalDragEnabled(state);
-}
-
-const Point DragDropManager::GetDragMoveLastPointByCurrentPointer(int32_t pointerId)
-{
-    auto it = fingerPointInfo_.find(pointerId);
-    if (it != fingerPointInfo_.end()) {
-        return it->second;
-    }
-    return Point(0, 0);
-}
-
-void DragDropManager::UpdatePointInfoForFinger(int32_t pointerId, Point point)
-{
-    fingerPointInfo_[pointerId] = point;
-}
-
-void DragDropManager::SetDelayDragCallBack(const std::function<void()>& cb) noexcept
-{
-    DragDropGlobalController::GetInstance().SetAsyncDragCallback(cb);
-}
-
-void DragDropManager::SetCallAnsyncDragEnd(const std::function<void(DragStartRequestStatus)>& cb)
-{
-    DragDropGlobalController::GetInstance().SetCallAnsyncDragEnd(cb);
-}
-
-void DragDropManager::ExecuteDeadlineTimer()
-{
-    auto pipeline = PipelineContext::GetCurrentContextSafelyWithCheck();
-    CHECK_NULL_VOID(pipeline);
-    auto taskScheduler = pipeline->GetTaskExecutor();
-    CHECK_NULL_VOID(taskScheduler);
-    taskScheduler->PostDelayedTask(
-        [weakManager = WeakClaim(this)]() {
-            auto dragDropManager = weakManager.Upgrade();
-            CHECK_NULL_VOID(dragDropManager);
-            if (DragDropGlobalController::GetInstance().GetAsyncDragCallback()) {
-                DragDropGlobalController::GetInstance().GetAsyncDragCallback()();
-            }
-            dragDropManager->RemoveDeadlineTimer();
-        },
-        TaskExecutor::TaskType::UI, TASK_DELAY_TIME, "ArkUIDragDeadlineTimer");
-}
-
-void DragDropManager::RemoveDeadlineTimer()
-{
-    DragDropGlobalController::GetInstance().SetAsyncDragCallback(nullptr);
-    DragDropGlobalController::GetInstance().SetDragStartRequestStatus(DragStartRequestStatus::READY);
-    auto pipeline = PipelineContext::GetCurrentContextSafelyWithCheck();
-    CHECK_NULL_VOID(pipeline);
-    auto taskScheduler = pipeline->GetTaskExecutor();
-    CHECK_NULL_VOID(taskScheduler);
-    taskScheduler->RemoveTask(TaskExecutor::TaskType::UI, "ArkUIDragDeadlineTimer");
-}
-
-void DragDropManager::HandleSyncOnDragStart(DragStartRequestStatus dragStartRequestStatus)
-{
-    if (dragStartRequestStatus == DragStartRequestStatus::WAITING) {
-        ExecuteDeadlineTimer();
-        DragDropGlobalController::GetInstance().SetDragStartRequestStatus(dragStartRequestStatus);
-    }
-    if (dragStartRequestStatus == DragStartRequestStatus::READY &&
-        DragDropGlobalController::GetInstance().GetAsyncDragCallback()) {
-        DragDropGlobalController::GetInstance().SetDragStartRequestStatus(dragStartRequestStatus);
-        DragDropGlobalController::GetInstance().GetAsyncDragCallback()();
-        RemoveDeadlineTimer();
-    }
 }
 
 RefPtr<DragDropProxy> DragDropManager::CreateAndShowItemDragOverlay(
@@ -208,10 +104,7 @@ RefPtr<DragDropProxy> DragDropManager::CreateAndShowItemDragOverlay(
     imageNode->MarkModifyDone();
     imageNode->SetLayoutDirtyMarked(true);
     imageNode->SetActive(true);
-    auto context = imageNode->GetContext();
-    if (context) {
-        context->FlushUITaskWithSingleDirtyNode(imageNode);
-    }
+    imageNode->CreateLayoutTask();
     auto imageContext = imageNode->GetRenderContext();
     CHECK_NULL_RETURN(imageContext, nullptr);
     imageContext->UpdatePosition(
@@ -288,7 +181,7 @@ int32_t DragDropManager::GetWindowId()
 
 RefPtr<FrameNode> DragDropManager::CreateDragRootNode(const RefPtr<UINode>& customNode)
 {
-    auto pipeline = PipelineContext::GetCurrentContextSafelyWithCheck();
+    auto pipeline = PipelineContext::GetCurrentContext();
     CHECK_NULL_RETURN(pipeline, nullptr);
 
     auto rootNode = FrameNode::CreateFrameNodeWithTree(
@@ -309,7 +202,7 @@ void DragDropManager::AddItemDrag(const RefPtr<FrameNode>& frameNode, const RefP
     CHECK_NULL_VOID(pipeline);
     auto rootNode = pipeline->GetRootElement();
     auto container = Container::Current();
-    if (container && container->IsSceneBoardWindow()) {
+    if (container && container->IsScenceBoardWindow()) {
         auto host = eventHub->GetFrameNode();
         CHECK_NULL_VOID(host);
         auto overlayManager = pipeline->GetOverlayManager();
@@ -351,7 +244,7 @@ void DragDropManager::UpdateItemDragPosition(int32_t globalX, int32_t globalY)
 
 void DragDropManager::HideDragPreviewOverlay()
 {
-    auto pipeline = NG::PipelineContext::GetCurrentContextSafelyWithCheck();
+    auto pipeline = NG::PipelineContext::GetCurrentContext();
     CHECK_NULL_VOID(pipeline);
     auto manager = pipeline->GetOverlayManager();
     CHECK_NULL_VOID(manager);
@@ -369,16 +262,6 @@ void DragDropManager::HideDragPreviewWindow(int32_t containerId)
     overlayManager->RemoveGatherNode();
     overlayManager->RemoveDragPixelMap();
     SubwindowManager::GetInstance()->HidePreviewNG();
-}
-
-void DragDropManager::HideSubwindowDragNode()
-{
-    auto subwindowOverlayManager = subwindowOverlayManager_.Upgrade();
-    CHECK_NULL_VOID(subwindowOverlayManager);
-    subwindowOverlayManager->RemovePixelMap();
-    subwindowOverlayManager->RemoveGatherNode();
-    subwindowOverlayManager->RemoveDragPixelMap();
-    subwindowOverlayManager_ = nullptr;
 }
 
 RefPtr<FrameNode> DragDropManager::FindTargetInChildNodes(
@@ -413,13 +296,6 @@ RefPtr<FrameNode> DragDropManager::FindTargetInChildNodes(
             if ((eventHub->HasOnDrop()) || (eventHub->HasOnItemDrop()) || (eventHub->HasCustomerOnDrop())) {
                 return parentFrameNode;
             }
-            if (V2::ISOLATED_COMPONENT_ETS_TAG == parentFrameNode->GetTag() ||
-                V2::DYNAMIC_COMPONENT_ETS_TAG == parentFrameNode->GetTag()) {
-                // Extension and Embedded component can potentially show placeholder nodes when not active. Isolated
-                // and Dynamic component appear not to have this capability. So we dont need to check if its showing
-                // the placeholder or not...
-                return parentFrameNode;
-            }
             if ((V2::UI_EXTENSION_COMPONENT_ETS_TAG == parentFrameNode->GetTag() ||
                 V2::EMBEDDED_COMPONENT_ETS_TAG == parentFrameNode->GetTag()) &&
                 (!IsUIExtensionShowPlaceholder(parentFrameNode))) {
@@ -435,11 +311,7 @@ bool DragDropManager::CheckFrameNodeCanDrop(const RefPtr<FrameNode>& node)
     CHECK_NULL_RETURN(node, false);
     auto eventHub = node->GetEventHub<EventHub>();
     CHECK_NULL_RETURN(eventHub, false);
-    if ((eventHub->HasOnDrop()) || (eventHub->HasOnItemDrop()) || (eventHub->HasCustomerOnDrop()) ||
-        (eventHub->HasCustomerOnDragSpringLoading())) {
-        return true;
-    }
-    if (V2::ISOLATED_COMPONENT_ETS_TAG == node->GetTag() || V2::DYNAMIC_COMPONENT_ETS_TAG == node->GetTag()) {
+    if ((eventHub->HasOnDrop()) || (eventHub->HasOnItemDrop()) || (eventHub->HasCustomerOnDrop())) {
         return true;
     }
     if ((V2::UI_EXTENSION_COMPONENT_ETS_TAG == node->GetTag() ||
@@ -462,7 +334,7 @@ RefPtr<FrameNode> DragDropManager::FindTargetDropNode(const RefPtr<UINode> paren
     auto renderContext = parentFrameNode->GetRenderContext();
     CHECK_NULL_RETURN(renderContext, nullptr);
     auto paintRect = renderContext->GetPaintRectWithoutTransform();
-    FrameNode::MapPointTo(localPoint, parentFrameNode->GetOrRefreshMatrixFromCache().revertMatrix);
+    FrameNode::MapPointTo(localPoint, parentFrameNode->GetOrRefreshRevertMatrixFromCache());
     auto subLocalPoint = localPoint - paintRect.GetOffset();
 
     auto children = parentFrameNode->GetFrameChildren();
@@ -489,37 +361,14 @@ RefPtr<FrameNode> DragDropManager::FindTargetDropNode(const RefPtr<UINode> paren
     return nullptr;
 }
 
-RefPtr<FrameNode> DragDropManager::FilterSubwindowDragRootNode(const RefPtr<FrameNode>& node)
-{
-    auto rootNode = node;
-    auto container = Container::Current();
-    CHECK_NULL_RETURN(container, rootNode);
-    auto containerId = container->GetInstanceId();
-    auto pipeline = PipelineContext::GetMainPipelineContext();
-    CHECK_NULL_RETURN(pipeline, rootNode);
-    if (isReDragStart_ && !DragDropFuncWrapper::IsExpandDisplay(pipeline) && containerId >= MIN_SUBCONTAINER_ID) {
-        rootNode = pipeline->GetRootElement();
-    }
-    return rootNode;
-}
-
 RefPtr<FrameNode> DragDropManager::FindDragFrameNodeByPosition(float globalX, float globalY,
     const RefPtr<FrameNode>& node)
 {
     auto rootNode = node;
     if (!rootNode) {
-        auto container = Container::Current();
-        CHECK_NULL_RETURN(container, nullptr);
-        auto pipeline = AceType::DynamicCast<NG::PipelineContext>(container->GetPipelineContext());
+        auto pipeline = NG::PipelineContext::GetCurrentContext();
         CHECK_NULL_RETURN(pipeline, nullptr);
-        if (container->IsSceneBoardWindow() && draggedFrameNode_) {
-            auto overlayManager = pipeline->GetOverlayManager();
-            CHECK_NULL_RETURN(overlayManager, nullptr);
-            rootNode = AceType::DynamicCast<FrameNode>(overlayManager->FindWindowScene(draggedFrameNode_));
-        }
-        if (!rootNode) {
-            rootNode = pipeline->GetRootElement();
-        }
+        rootNode = pipeline->GetRootElement();
     }
 
     auto result = FindTargetDropNode(rootNode, {globalX, globalY});
@@ -541,9 +390,7 @@ void DragDropManager::UpdateDragAllowDrop(
 {
     if (!IsDropAllowed(dragFrameNode)) {
         // simplified specifications for drag cursor style, no longer showing forbidden drag cursor
-        DragDropGlobalController::GetInstance().GetEnableDropDisallowedBadge()
-            ? UpdateDragStyle(DragCursorStyleCore::FORBIDDEN, eventId)
-            : UpdateDragStyle(DragCursorStyleCore::MOVE, eventId);
+        UpdateDragStyle(DragCursorStyleCore::MOVE, eventId);
         return;
     }
 
@@ -603,7 +450,6 @@ bool DragDropManager::CheckInRichEditor(const RefPtr<FrameNode>& dragFrameNode) 
 void DragDropManager::UpdateDragStyle(const DragCursorStyleCore& dragStyle, int32_t eventId)
 {
     if (dragStyle != dragCursorStyleCore_) {
-        ACE_SCOPED_TRACE("drag: update drag style %d", dragStyle);
         TAG_LOGI(
             AceLogTag::ACE_DRAG, "Update DragStyle to %{public}d, pointerEventId: %{public}d.", dragStyle, eventId);
         auto ret = InteractionInterface::GetInstance()->UpdateDragStyle(dragStyle, eventId);
@@ -619,7 +465,6 @@ void DragDropManager::UpdateDragStyle(const DragCursorStyleCore& dragStyle, int3
 
 bool CheckParentVisible(const RefPtr<FrameNode>& frameNode)
 {
-    CHECK_NULL_RETURN(frameNode, false);
     bool isVisible = frameNode->IsVisible();
     if (!isVisible) {
         return false;
@@ -641,7 +486,7 @@ std::unordered_set<int32_t> DragDropManager::FindHitFrameNodes(const Point& poin
     std::unordered_set<int32_t> frameNodeList;
     for (auto iter = nodesForDragNotify_.begin(); iter != nodesForDragNotify_.end(); iter++) {
         auto frameNode = iter->second.Upgrade();
-        if (!frameNode || !frameNode->IsActive() || !frameNode->IsVisible() || !frameNode->IsOnMainTree()) {
+        if (!frameNode || !frameNode->IsActive() || !frameNode->IsVisible() || frameNode->GetDepth() < 0) {
             continue;
         }
         auto geometryNode = frameNode->GetGeometryNode();
@@ -677,7 +522,6 @@ void DragDropManager::UpdateDragListener(const Point& point)
         }
     }
     RefPtr<NotifyDragEvent> notifyEvent = AceType::MakeRefPtr<NotifyDragEvent>();
-    CHECK_NULL_VOID(notifyEvent);
     UpdateNotifyDragEvent(notifyEvent, point, DragEventType::MOVE);
 
     NotifyDragRegisterFrameNode(dragMoveNodes, DragEventType::MOVE, notifyEvent);
@@ -710,17 +554,9 @@ void DragDropManager::NotifyDragFrameNode(
     const Point& point, const DragEventType& dragEventType, const DragRet& dragRet)
 {
     RefPtr<NotifyDragEvent> notifyEvent = AceType::MakeRefPtr<NotifyDragEvent>();
-    CHECK_NULL_VOID(notifyEvent);
     UpdateNotifyDragEvent(notifyEvent, point, dragEventType);
     notifyEvent->SetResult(dragRet);
     NotifyDragRegisterFrameNode(nodesForDragNotify_, dragEventType, notifyEvent);
-}
-
-RefPtr<FrameNode> DragDropManager::GetRootNode()
-{
-    auto pipeline = NG::PipelineContext::GetCurrentContextSafelyWithCheck();
-    CHECK_NULL_RETURN(pipeline, nullptr);
-    return pipeline->GetRootElement();
 }
 
 void DragDropManager::OnDragStart(const Point& point, const RefPtr<FrameNode>& frameNode)
@@ -732,41 +568,12 @@ void DragDropManager::OnDragStart(const Point& point, const RefPtr<FrameNode>& f
     draggedFrameNode_ = preTargetFrameNode_;
     preMovePoint_ = point;
     parentHitNodes_.emplace(frameNode->GetId());
-    DragDropBehaviorReporter::GetInstance().UpdateFrameNodeStartId(frameNode->GetId());
-    DragDropBehaviorReporter::GetInstance().UpdateStartPoint(point);
-    DragDropBehaviorReporter::GetInstance().UpdateLongPressDurationEnd(GetSysTimestamp());
-    DragDropBehaviorReporter::GetInstance().UpdateDropResult(DropResult::DROP_FAIL);
-
-    // Reset hover status when drag start.
-    auto pipeline = frameNode->GetContextRefPtr();
-    CHECK_NULL_VOID(pipeline);
-    auto eventManager = pipeline->GetEventManager();
-    CHECK_NULL_VOID(eventManager);
-    eventManager->CleanHoverStatusForDragBegin();
-
-    auto container = Container::GetContainer(pipeline->GetInstanceId());
-    CHECK_NULL_VOID(container);
-    if (container->IsSceneBoardWindow()) {
-        auto overlayManager = pipeline->GetOverlayManager();
-        CHECK_NULL_VOID(overlayManager);
-        rootNode_ = AceType::DynamicCast<FrameNode>(DragDropFuncWrapper::FindWindowScene(draggedFrameNode_));
-        auto dragDropManager = pipeline->GetDragDropManager();
-        CHECK_NULL_VOID(dragDropManager);
-        dragDropManager->SetRootNode(rootNode_);
-    }
 }
 
 void DragDropManager::OnDragStart(const Point& point)
 {
     dragDropState_ = DragDropMgrState::DRAGGING;
     NotifyDragFrameNode(point, DragEventType::START);
-
-    // Reset hover status when drag start.
-    auto pipeline = PipelineContext::GetCurrentContext();
-    CHECK_NULL_VOID(pipeline);
-    auto eventManager = pipeline->GetEventManager();
-    CHECK_NULL_VOID(eventManager);
-    eventManager->CleanHoverStatusForDragBegin();
 }
 
 void DragDropManager::PrintDragFrameNode(
@@ -784,8 +591,8 @@ void DragDropManager::PrintDragFrameNode(
             preTargetFrameNode_->GetDepth(), dragFrameNode->GetTag().c_str(), dragFrameNode->GetDepth());
     } else {
         TAG_LOGI(AceLogTag::ACE_DRAG,
-            "Current windowId is %{public}d, pointerEventId is %{public}d, "
-            "PreTargetFrameNode is nullptr, New find targetNode is %{public}s, depth is %{public}d",
+            "Current windowId is %{public}d, pointerEventId is %{public}d "
+            "PreTargetFrameNode is nullptr, New find targetNode is %{public}s, depth is %{public}d.",
             container->GetWindowId(), pointerEvent.pointerEventId, dragFrameNode->GetTag().c_str(),
             dragFrameNode->GetDepth());
     }
@@ -799,7 +606,7 @@ void DragDropManager::PrintGridDragFrameNode(
     CHECK_NULL_VOID(container);
     if (preGridTargetFrameNode_) {
         TAG_LOGI(AceLogTag::ACE_DRAG,
-            "Current windowId is %{public}d"
+            "Current windowId is %{public}d,"
             "PreTargetFrameNode is %{public}s, depth is %{public}d,"
             "New find targetNode is %{public}s, depth is %{public}d.",
             container->GetWindowId(), preGridTargetFrameNode_->GetTag().c_str(),
@@ -818,18 +625,9 @@ void DragDropManager::TransDragWindowToDragFwk(int32_t windowContainerId)
         return;
     }
     TAG_LOGI(AceLogTag::ACE_DRAG, "TransDragWindowToDragFwk is %{public}d", isDragFwkShow_);
-    ACE_SCOPED_TRACE("drag: set drag window visible by transfer");
-    if (draggedFrameNode_) {
-        auto gestureHub = draggedFrameNode_->GetOrCreateGestureEventHub();
-        CHECK_NULL_VOID(gestureHub);
-        auto dragEventActuator = gestureHub->GetDragEventActuator();
-        CHECK_NULL_VOID(dragEventActuator);
-        dragEventActuator->NotifyTransDragWindowToFwk();
-    }
     InteractionInterface::GetInstance()->SetDragWindowVisible(true);
-    DragDropGlobalController::GetInstance().ResetDragDropInitiatingStatus();
     isDragFwkShow_ = true;
-    HideSubwindowDragNode();
+    menuWrapperNode_ = nullptr;
     auto overlayManager = GetDragAnimationOverlayManager(windowContainerId);
     CHECK_NULL_VOID(overlayManager);
     overlayManager->RemoveDragPixelMap();
@@ -843,148 +641,24 @@ void DragDropManager::OnDragMoveOut(const DragPointerEvent& pointerEvent)
 {
     Point point = pointerEvent.GetPoint();
     auto container = Container::Current();
-    if (container && container->IsSceneBoardWindow()) {
+    if (container && container->IsScenceBoardWindow()) {
         if (IsDragged() && IsWindowConsumed()) {
             SetIsWindowConsumed(false);
             return;
         }
     }
-    isReDragStart_ = false;
     SetIsWindowConsumed(false);
     UpdateVelocityTrackerPoint(point, false);
     UpdateDragListener(Point(-1, -1));
-    NotifyPullEventListener(pointerEvent);
     if (preTargetFrameNode_) {
         TAG_LOGI(AceLogTag::ACE_DRAG, "Leave the current window, windowId is %{public}d,"
-            " pointerEventId is %{public}d. PreTargetFrameNode is %{public}s, depth is %{public}d.",
-            container->GetWindowId(), pointerEvent.pointerEventId, preTargetFrameNode_->GetTag().c_str(),
-            preTargetFrameNode_->GetDepth());
+            "PreTargetFrameNode is %{public}s, depth is %{public}d.",
+            container->GetWindowId(), preTargetFrameNode_->GetTag().c_str(), preTargetFrameNode_->GetDepth());
         FireOnDragEvent(preTargetFrameNode_, pointerEvent, DragEventType::LEAVE, extraInfo_);
         preTargetFrameNode_ = nullptr;
     }
     if (IsNeedDisplayInSubwindow() || isDragWithContextMenu_) {
         TransDragWindowToDragFwk(Container::CurrentId());
-    }
-    ResetBundleInfo();
-    ClearSummary();
-    ClearExtraInfo();
-    SetDragCursorStyleCore(DragCursorStyleCore::DEFAULT);
-}
-
-void DragDropManager::OnDragThrow(const DragPointerEvent& pointerEvent)
-{
-    auto container = Container::Current();
-    if (container && container->IsSceneBoardWindow()) {
-        if (IsDragged() && IsWindowConsumed()) {
-            SetIsWindowConsumed(false);
-            return;
-        }
-    }
-    SetIsWindowConsumed(false);
-    Point point = pointerEvent.GetPoint();
-    UpdateVelocityTrackerPoint(point, false);
-    UpdateDragListener(Point(-1, -1));
-    if (preTargetFrameNode_) {
-        TAG_LOGI(AceLogTag::ACE_DRAG, "Throw from the current window, windowId is %{public}d,"
-            " pointerEventId is %{public}d. PreTargetFrameNode is %{public}s, depth is %{public}d.",
-            container->GetWindowId(), pointerEvent.pointerEventId, preTargetFrameNode_->GetTag().c_str(),
-            preTargetFrameNode_->GetDepth());
-        FireOnDragEvent(preTargetFrameNode_, pointerEvent, DragEventType::LEAVE, extraInfo_);
-        preTargetFrameNode_ = nullptr;
-    }
-    TransDragWindowToDragFwk(container->GetInstanceId());
-    ClearSummary();
-    ClearExtraInfo();
-    SetDragCursorStyleCore(DragCursorStyleCore::DEFAULT);
-    isPullThrow_ = true;
-}
-
-void DragDropManager::OnDragPullCancel(const DragPointerEvent& pointerEvent)
-{
-    RemoveDeadlineTimer();
-    auto container = Container::Current();
-    auto containerId = container->GetInstanceId();
-    DragDropBehaviorReporter::GetInstance().UpdateContainerId(containerId);
-    DragDropBehaviorReporter::GetInstance().UpdateDragStopResult(DragStopResult::USER_STOP_DRAG);
-    if (container && container->IsSceneBoardWindow()) {
-        if (IsDragged() && IsWindowConsumed()) {
-            SetIsWindowConsumed(false);
-            return;
-        }
-    }
-    SetIsWindowConsumed(false);
-    Point point = pointerEvent.GetPoint();
-    UpdateVelocityTrackerPoint(point, false);
-    UpdateDragListener(Point(-1, -1));
-    if (preTargetFrameNode_) {
-        TAG_LOGI(AceLogTag::ACE_DRAG, "Cancel from the current window, windowId is %{public}d,"
-            " pointerEventId is %{public}d. PreTargetFrameNode is %{public}s, depth is %{public}d.",
-            container->GetWindowId(), pointerEvent.pointerEventId, preTargetFrameNode_->GetTag().c_str(),
-            preTargetFrameNode_->GetDepth());
-        FireOnDragEvent(preTargetFrameNode_, pointerEvent, DragEventType::LEAVE, extraInfo_);
-        preTargetFrameNode_ = nullptr;
-    }
-    DragDropRet dragDropRet { DragRet::DRAG_CANCEL, false, container->GetWindowId(), DragBehavior::MOVE };
-    ResetDragDropStatus(point, dragDropRet, container->GetWindowId());
-    ClearSummary();
-    ClearExtraInfo();
-    ClearVelocityInfo();
-    DoDragReset();
-}
-
-void DragDropManager::OnDragStartForDragEvent(const DragPointerEvent& pointerEvent,
-    const RefPtr<FrameNode>& frameNode)
-{
-    auto container = Container::Current();
-    CHECK_NULL_VOID(container);
-    ResetPreTargetFrameNode(container->GetInstanceId());
-    RequireSummaryAndDragBundleInfoIfNecessary(pointerEvent);
-    SetDragCursorStyleCore(DragCursorStyleCore::DEFAULT);
-    OnDragMove(pointerEvent, extraInfo_, frameNode);
-    TAG_LOGI(AceLogTag::ACE_DRAG, "start drag, current windowId is %{public}d", container->GetWindowId());
-}
-
-void DragDropManager::HandleDragEvent(const DragPointerEvent& pointerEvent, DragEventAction action,
-    const RefPtr<FrameNode>& node)
-{
-    switch (action) {
-        case DragEventAction::DRAG_EVENT_START_FOR_CONTROLLER: {
-            RequireSummary();
-            OnDragStart(pointerEvent.GetPoint());
-            break;
-        }
-        // PULL_OUT
-        case DragEventAction::DRAG_EVENT_OUT: {
-            OnDragMoveOut(pointerEvent);
-            break;
-        }
-        case DragEventAction::DRAG_EVENT_PULL_THROW: {
-            OnDragThrow(pointerEvent);
-            break;
-        }
-        case DragEventAction::DRAG_EVENT_PULL_CANCEL: {
-            OnDragPullCancel(pointerEvent);
-            break;
-        }
-        case DragEventAction::DRAG_EVENT_END: {
-            OnDragEnd(pointerEvent, extraInfo_, node);
-            break;
-        }
-        case DragEventAction::DRAG_EVENT_START: {
-            OnDragStartForDragEvent(pointerEvent, node);
-            break;
-        }
-        default:
-            break;
-    }
-}
-
-void DragDropManager::OnDragEnd()
-{
-    auto ansyncEndCallback = DragDropGlobalController::GetInstance().GetCallAnsyncEnd();
-    DragStartRequestStatus dragStatus = DragDropGlobalController::GetInstance().GetDragStartRequestStatus();
-    if (ansyncEndCallback && dragStatus == DragStartRequestStatus::WAITING) {
-        ansyncEndCallback(dragStatus);
     }
 }
 
@@ -1039,11 +713,11 @@ void DragDropManager::HandleOnDragMove(const DragPointerEvent& pointerEvent, con
 void DragDropManager::OnDragMove(const DragPointerEvent& pointerEvent, const std::string& extraInfo,
     const RefPtr<FrameNode>& node)
 {
-    RequireSummaryAndDragBundleInfoIfNecessary(pointerEvent);
+    RequireSummaryIfNecessary(pointerEvent);
     Point point = pointerEvent.GetPoint();
     auto container = Container::Current();
     CHECK_NULL_VOID(container);
-    if (container && container->IsSceneBoardWindow()) {
+    if (container && container->IsScenceBoardWindow()) {
         if (IsDragged() && IsWindowConsumed()) {
             SetIsWindowConsumed(false);
             return;
@@ -1052,20 +726,14 @@ void DragDropManager::OnDragMove(const DragPointerEvent& pointerEvent, const std
     if (ReachMoveLimit(pointerEvent, point)) {
         return;
     }
-    NotifyPullEventListener(pointerEvent);
     preMovePoint_ = point;
-    preDragPointerEvent_ = pointerEvent;
     preTimeStamp_ = static_cast<uint64_t>(
         std::chrono::duration_cast<std::chrono::milliseconds>(pointerEvent.time.time_since_epoch()).count());
     SetIsWindowConsumed(false);
     if (isDragFwkShow_) {
         auto menuWrapper = GetMenuWrapperNodeFromDrag();
-        if (menuWrapper) {
-            OffsetF menuPosition(
-                static_cast<float>(pointerEvent.GetDisplayX()), static_cast<float>(pointerEvent.GetDisplayY()));
-            SubwindowManager::GetInstance()->UpdateHideMenuOffsetNG(
-                menuPosition, 1.0, false, menuWrapper ? menuWrapper->GetId() : -1);
-        }
+        SubwindowManager::GetInstance()->UpdateHideMenuOffsetNG(OffsetF(static_cast<float>(point.GetX()),
+            static_cast<float>(point.GetY())), 1.0, false, menuWrapper ? menuWrapper->GetId() : -1);
     }
     UpdateVelocityTrackerPoint(point, false);
     UpdateDragListener(point);
@@ -1074,14 +742,17 @@ void DragDropManager::OnDragMove(const DragPointerEvent& pointerEvent, const std
     if (!dragFrameNode) {
         if (preTargetFrameNode_) {
             TAG_LOGI(AceLogTag::ACE_DRAG,
-                "Not find drag target node, current windowId is %{public}d, pointerEventId is %{public}d, "
-                "PreTargetFrameNode is %{public}s, depth is %{public}d.",
+                "Not find drag target node, current windowId is %{public}d,"
+                "pointerEventId is %{public}d. PreTargetFrameNode is %{public}s, depth is %{public}d.",
                 container->GetWindowId(), pointerEvent.pointerEventId, preTargetFrameNode_->GetTag().c_str(),
                 preTargetFrameNode_->GetDepth());
             FireOnDragEvent(preTargetFrameNode_, pointerEvent, DragEventType::LEAVE, extraInfo);
             preTargetFrameNode_ = nullptr;
         }
-        UpdateDragStyle(DragCursorStyleCore::MOVE, pointerEvent.pointerEventId);
+
+        if (!isMouseDragged_ || isDragWindowShow_) {
+            UpdateDragStyle(DragCursorStyleCore::MOVE, pointerEvent.pointerEventId);
+        }
         return;
     }
     HandleOnDragMove(pointerEvent, extraInfo, dragFrameNode);
@@ -1089,7 +760,6 @@ void DragDropManager::OnDragMove(const DragPointerEvent& pointerEvent, const std
 
 void DragDropManager::ResetDragDropStatus(const Point& point, const DragDropRet& dragDropRet, int32_t windowId)
 {
-    ACE_SCOPED_TRACE("drag: reset drag %d, %d", dragDropRet.result, dragDropRet.hasCustomAnimation);
     if (dragDropRet.result != DragRet::DRAG_FAIL || !isMouseDragged_) {
         InteractionInterface::GetInstance()->SetDragWindowVisible(!dragDropRet.hasCustomAnimation);
     }
@@ -1097,38 +767,15 @@ void DragDropManager::ResetDragDropStatus(const Point& point, const DragDropRet&
     NotifyDragFrameNode(point, DragEventType::DROP, dragDropRet.result);
     ResetPullId();
     dragCursorStyleCore_ = DragCursorStyleCore::DEFAULT;
-    isReDragStart_ = false;
 }
 
 void DragDropManager::ResetPreTargetFrameNode(int32_t instanceId)
 {
     auto container = Container::GetContainer(instanceId);
-    if (container && (container->IsSceneBoardWindow() || container->IsUIExtensionWindow())) {
+    if (container && (container->IsScenceBoardWindow() || container->IsUIExtensionWindow())) {
         return;
     }
-    // pull-in subwindow, need to notify showMenu and update menu offset.
-    if (instanceId > MIN_SUBCONTAINER_ID) {
-        isDragFwkShow_ = true;
-    }
     preTargetFrameNode_ = nullptr;
-}
-
-void DragDropManager::ResetDragEndOption(
-    const DragNotifyMsgCore& notifyMessage, const RefPtr<OHOS::Ace::DragEvent>& dragEvent, int32_t currentId)
-{
-    ResetBundleInfo();
-    SetDragResult(notifyMessage, dragEvent);
-    SetDragBehavior(notifyMessage, dragEvent);
-    DoDragReset();
-    SetIsDragged(false);
-    SetDraggingPointer(-1);
-    SetDraggingPressedState(false);
-    ResetDragPreviewInfo();
-    HideDragPreviewWindow(currentId);
-    CHECK_NULL_VOID(dragEvent);
-    dragEvent->SetDragSource(dragBundleInfo_.bundleName);
-    dragEvent->SetRemoteDev(dragBundleInfo_.isRemoteDev);
-    dragEvent->SetPressedKeyCodes(GetDragDropPointerEvent().pressedKeyCodes);
 }
 
 void DragDropManager::DoDragReset()
@@ -1136,7 +783,6 @@ void DragDropManager::DoDragReset()
     dragDropState_ = DragDropMgrState::IDLE;
     preTargetFrameNode_ = nullptr;
     draggedFrameNode_ = nullptr;
-    rootNode_ = nullptr;
     menuWrapperNode_ = nullptr;
     preMovePoint_ = Point(0, 0);
     hasNotifiedTransformation_ = false;
@@ -1144,11 +790,6 @@ void DragDropManager::DoDragReset()
     isDragWithContextMenu_ = false;
     dampingOverflowCount_ = 0;
     isDragNodeNeedClean_ = false;
-    isAnyDraggableHit_ = false;
-    isPullThrow_ = false;
-    fingerPointInfo_.clear();
-    dragCursorStyleCore_ = DragCursorStyleCore::DEFAULT;
-    DragDropGlobalController::GetInstance().ResetDragDropInitiatingStatus();
 }
 
 void DragDropManager::ResetDraggingStatus(const TouchEvent& touchPoint)
@@ -1156,12 +797,10 @@ void DragDropManager::ResetDraggingStatus(const TouchEvent& touchPoint)
     if (IsDraggingPressed(touchPoint.id)) {
         SetDraggingPressedState(false);
     }
-    if (!IsItemDragging() && IsDragging() && IsSameDraggingPointer(touchPoint.id) && !isPullThrow_) {
-        TAG_LOGI(AceLogTag::ACE_DRAG, "Reset dragging status, stop drag. pointerId: %{public}d", touchPoint.id);
-        DragPointerEvent dragPointerEvent;
-        DragDropFuncWrapper::ConvertPointerEvent(touchPoint, dragPointerEvent);
-        SetIsDisableDefaultDropAnimation(true);
-        OnDragEnd(dragPointerEvent, "");
+    if (!IsItemDragging() && IsDragging() && IsSameDraggingPointer(touchPoint.id)) {
+        OnDragEnd(DragPointerEvent(
+            touchPoint.touchEventId, touchPoint.x, touchPoint.y, touchPoint.screenX, touchPoint.screenY),
+            "");
     }
 }
 
@@ -1178,17 +817,15 @@ void DragDropManager::HandleOnDragEnd(const DragPointerEvent& pointerEvent, cons
             "pointerEventId is %{public}d.",
             container->GetWindowId(), pointerEvent.pointerEventId);
         DragDropBehaviorReporter::GetInstance().UpdateDragStopResult(DragStopResult::APP_REFUSE_DATA);
-        ACE_SCOPED_TRACE("drag: stop drag, not allowed to drop");
         ResetDragDrop(container->GetWindowId(), point);
         return;
     }
-    TAG_LOGI(AceLogTag::ACE_DRAG, "Current windowId is %{public}d, pointerEventId is %{public}d, "
-        "TargetNode is %{public}s.",
+    TAG_LOGI(AceLogTag::ACE_DRAG,
+        "Current windowId is %{public}d, pointerEventId is %{public}d. TargetNode is %{public}s.",
         container->GetWindowId(), pointerEvent.pointerEventId, dragFrameNode->GetTag().c_str());
-    if (IsUIExtensionOrDynamicComponent(dragFrameNode)) {
+    if (IsUIExtensionComponent(dragFrameNode)) {
         auto pattern = dragFrameNode->GetPattern<Pattern>();
         pattern->HandleDragEvent(pointerEvent);
-        NotifyDragFrameNode(point, DragEventType::DROP);
         return;
     }
 
@@ -1208,82 +845,48 @@ void DragDropManager::HandleOnDragEnd(const DragPointerEvent& pointerEvent, cons
 }
 
 void DragDropManager::OnDragEnd(const DragPointerEvent& pointerEvent, const std::string& extraInfo,
-    const RefPtr<FrameNode>& node, const bool keyEscape)
+    const RefPtr<FrameNode>& node)
 {
-    NotifyDragSpringLoadingIntercept(extraInfo);
-    RemoveDeadlineTimer();
     Point point = pointerEvent.GetPoint();
-    DragDropBehaviorReporter::GetInstance().UpdateEndPoint(point);
-    auto preTargetFrameNode = preTargetFrameNode_;
     DoDragReset();
     dragDropPointerEvent_ = pointerEvent;
     auto container = Container::Current();
     auto containerId = container->GetInstanceId();
     DragDropBehaviorReporter::GetInstance().UpdateContainerId(containerId);
-    if (container && container->IsSceneBoardWindow() && (IsDragged() && IsWindowConsumed())) {
-        TAG_LOGD(AceLogTag::ACE_DRAG, "DragDropManager is dragged or window consumed. WindowId is %{public}d",
-            container->GetWindowId());
-        return;
-    }
-    UpdateVelocityTrackerPoint(point, true);
-    auto dragFrameNode = FindDragFrameNodeByPosition(
-        static_cast<float>(point.GetX()), static_cast<float>(point.GetY()), FilterSubwindowDragRootNode(node));
-    if (HandleUIExtensionComponentDragCancel(preTargetFrameNode, dragFrameNode, keyEscape, pointerEvent, point)) {
-        return;
+    if (container && container->IsScenceBoardWindow()) {
+        if (IsDragged() && IsWindowConsumed()) {
+            TAG_LOGD(AceLogTag::ACE_DRAG, "DragDropManager is dragged or window consumed. WindowId is %{public}d",
+                container->GetWindowId());
+            return;
+        }
     }
     if (isDragCancel_) {
         DragDropBehaviorReporter::GetInstance().UpdateDragStopResult(DragStopResult::USER_STOP_DRAG);
         TAG_LOGI(AceLogTag::ACE_DRAG, "DragDropManager is dragCancel, finish drag. WindowId is %{public}d, "
             "pointerEventId is %{public}d.",
             container->GetWindowId(), pointerEvent.pointerEventId);
-        ACE_SCOPED_TRACE("drag: drag cancelled");
         DragDropRet dragDropRet { DragRet::DRAG_CANCEL, false, container->GetWindowId(), DragBehavior::UNKNOWN };
         ResetDragDropStatus(point, dragDropRet, container->GetWindowId());
-        FireOnDragEvent(preTargetFrameNode, pointerEvent, DragEventType::LEAVE, extraInfo);
         ClearVelocityInfo();
         return;
     }
-    if (IsUIExtensionOrDynamicComponent(preTargetFrameNode) && preTargetFrameNode != dragFrameNode) {
-        HandleUIExtensionDragEvent(preTargetFrameNode, pointerEvent, DragEventType::LEAVE);
-    }
+    UpdateVelocityTrackerPoint(point, true);
+    auto dragFrameNode = FindDragFrameNodeByPosition(
+        static_cast<float>(point.GetX()), static_cast<float>(point.GetY()), node);
     if (!dragFrameNode) {
         DragDropBehaviorReporter::GetInstance().UpdateDragStopResult(DragStopResult::APP_DATA_UNSUPPORT);
         TAG_LOGI(AceLogTag::ACE_DRAG,
             "DragDropManager onDragEnd, not find drop target, stop drag. WindowId is %{public}d, "
             "pointerEventId is %{public}d.",
             container->GetWindowId(), pointerEvent.pointerEventId);
-        ACE_SCOPED_TRACE("drag: drag stop, not find drop target");
         ResetDragDrop(container->GetWindowId(), point);
         return;
     }
     HandleOnDragEnd(pointerEvent, extraInfo, dragFrameNode);
 }
 
-bool DragDropManager::HandleUIExtensionComponentDragCancel(const RefPtr<FrameNode>& preTargetFrameNode,
-    const RefPtr<FrameNode>& dragFrameNode, const bool keyEscape, const DragPointerEvent& pointerEvent,
-    const Point& point)
-{
-    if (!isDragCancel_) {
-        return false;
-    }
-    if (keyEscape && IsUIExtensionOrDynamicComponent(preTargetFrameNode)) {
-        HandleUIExtensionDragEvent(preTargetFrameNode, pointerEvent, DragEventType::PULL_CANCEL);
-        NotifyDragFrameNode(point, DragEventType::DROP);
-        return true;
-    }
-    if (IsUIExtensionOrDynamicComponent(dragFrameNode)) {
-        auto pattern = dragFrameNode->GetPattern<Pattern>();
-        CHECK_NULL_RETURN(pattern, true);
-        pattern->HandleDragEvent(pointerEvent);
-        NotifyDragFrameNode(point, DragEventType::DROP);
-        return true;
-    }
-    return false;
-}
-
 bool DragDropManager::IsDropAllowed(const RefPtr<FrameNode>& dragFrameNode)
 {
-    CHECK_NULL_RETURN(dragFrameNode, false);
     // application passed in null to indicate refusing all drag data forcedly
     bool isDisallowDropForcedly = dragFrameNode->GetDisallowDropForcedly();
     if (isDisallowDropForcedly) {
@@ -1295,8 +898,13 @@ bool DragDropManager::IsDropAllowed(const RefPtr<FrameNode>& dragFrameNode)
         return true;
     }
     DragDropBehaviorReporter::GetInstance().UpdateAllowDropType(dragFrameNodeAllowDrop);
-    dragSummaryInfo_.summary = summaryMap_;
-    return UdmfClient::GetInstance()->IsAppropriateType(dragSummaryInfo_, dragFrameNodeAllowDrop);
+    for (const auto& it : summaryMap_) {
+        // if one matched found, allow drop
+        if (dragFrameNodeAllowDrop.find(it.first) != dragFrameNodeAllowDrop.end()) {
+            return true;
+        }
+    }
+    return false;
 }
 
 void DragDropManager::RequestDragSummaryInfoAndPrivilege()
@@ -1320,7 +928,6 @@ void DragDropManager::DoDropAction(const RefPtr<FrameNode>& dragFrameNode, const
     const RefPtr<UnifiedData>& unifiedData, const std::string& udKey)
 {
     RefPtr<OHOS::Ace::DragEvent> event = AceType::MakeRefPtr<OHOS::Ace::DragEvent>();
-    CHECK_NULL_VOID(event);
     if (!udKey.empty()) {
         event->SetUdKey(udKey);
     }
@@ -1331,6 +938,7 @@ void DragDropManager::DoDropAction(const RefPtr<FrameNode>& dragFrameNode, const
         event->SetData(unifiedData);
         event->SetIsGetDataSuccess(true);
     }
+    event->SetPressedKeyCodes(pointerEvent.pressedKeyCodes_);
     OnDragDrop(event, dragFrameNode, pointerEvent);
 }
 
@@ -1340,7 +948,6 @@ RefPtr<UnifiedData> DragDropManager::RequestUDMFDataWithUDKey(const std::string&
         TAG_LOGI(AceLogTag::ACE_DRAG, "udKey is empty");
         return nullptr;
     }
-    ACE_SCOPED_TRACE("drag: get drag data from udmf");
     RefPtr<UnifiedData> udData = UdmfClient::GetInstance()->CreateUnifiedData();
     auto ret = UdmfClient::GetInstance()->GetData(udData, udKey);
     if (ret != 0) {
@@ -1412,35 +1019,15 @@ void DragDropManager::OnDragDrop(RefPtr<OHOS::Ace::DragEvent>& event, const RefP
     const OHOS::Ace::DragPointerEvent& pointerEvent)
 {
     auto point = pointerEvent.GetPoint();
-    CHECK_NULL_VOID(dragFrameNode);
     auto eventHub = dragFrameNode->GetEventHub<EventHub>();
     CHECK_NULL_VOID(eventHub);
     UpdateDragEvent(event, pointerEvent);
     auto extraParams = eventHub->GetDragExtraParams(extraInfo_, point, DragEventType::DROP);
-    DragDropGlobalController::GetInstance().SetIsOnOnDropPhase(true);
-    DragDropBehaviorReporter::GetInstance().UpdateFrameNodeDropId(dragFrameNode->GetId());
-    DragDropBehaviorReporter::GetInstance().UpdateDropResult(DropResult::DROP_SUCCESS);
     eventHub->FireCustomerOnDragFunc(DragFuncType::DRAG_DROP, event, extraParams);
-    if (event->IsDragEndPending() && event->GetRequestIdentify() != -1) {
-        if (PostStopDrag(dragFrameNode, pointerEvent, event, extraParams)) {
-            return;
-        }
-    }
-    HandleStopDrag(dragFrameNode, pointerEvent, event, extraParams);
-    DragDropGlobalController::GetInstance().SetIsOnOnDropPhase(false);
-}
-
-void DragDropManager::HandleStopDrag(const RefPtr<FrameNode>& dragFrameNode, const DragPointerEvent& pointerEvent,
-    const RefPtr<OHOS::Ace::DragEvent>& event, const std::string& extraParams)
-{
-    auto point = pointerEvent.GetPoint();
-    CHECK_NULL_VOID(dragFrameNode);
-    auto eventHub = dragFrameNode->GetEventHub<EventHub>();
-    CHECK_NULL_VOID(eventHub);
     eventHub->HandleInternalOnDrop(event, extraParams);
     ClearVelocityInfo();
     SetIsDragged(false);
-    auto pipeline = PipelineContext::GetCurrentContextSafelyWithCheck();
+    auto pipeline = PipelineContext::GetCurrentContext();
     CHECK_NULL_VOID(pipeline);
     auto dragResult = event->GetResult();
     if (dragResult == DragRet::DRAG_FAIL) {
@@ -1449,15 +1036,24 @@ void DragDropManager::HandleStopDrag(const RefPtr<FrameNode>& dragFrameNode, con
         DragDropBehaviorReporter::GetInstance().UpdateDragStopResult(DragStopResult::USER_STOP_DRAG);
     }
     auto useCustomAnimation = event->IsUseCustomAnimation();
-    if (event->GetNeedDoInternalDropAnimation() && useCustomAnimation) {
-        TAG_LOGI(AceLogTag::ACE_DRAG, "Need do internal drop animation, set useCustomAnimation to false.");
-        useCustomAnimation = false;
-    }
     auto dragBehavior = event->GetDragBehavior();
     auto container = Container::Current();
     CHECK_NULL_VOID(container);
     auto windowId = container->GetWindowId();
-    ExecuteStopDrag(event, dragResult, useCustomAnimation, windowId, dragBehavior, pointerEvent);
+    pipeline->AddAfterRenderTask([dragResult, useCustomAnimation, windowId, dragBehavior,
+                                     pointerEventId = pointerEvent.pointerEventId, weak = WeakClaim(this)]() {
+        TAG_LOGI(AceLogTag::ACE_DRAG,
+            "Stop drag, start do drop animation. UseCustomAnimation is %{public}d,"
+            "WindowId is %{public}d, pointerEventId is %{public}d.",
+            useCustomAnimation, windowId, pointerEventId);
+        auto manager = weak.Upgrade();
+        if (manager) {
+            manager->HideDragPreviewOverlay();
+        }
+        InteractionInterface::GetInstance()->SetDragWindowVisible(!useCustomAnimation);
+        DragDropRet dragDropRet { dragResult, useCustomAnimation, windowId, dragBehavior };
+        InteractionInterface::GetInstance()->StopDrag(dragDropRet);
+    });
     NotifyDragFrameNode(point, DragEventType::DROP, event->GetResult());
     dragFrameNode->MarkDirtyNode();
     ResetPullId();
@@ -1465,173 +1061,19 @@ void DragDropManager::HandleStopDrag(const RefPtr<FrameNode>& dragFrameNode, con
     pipeline->RequestFrame();
 }
 
-bool DragDropManager::PostStopDrag(const RefPtr<FrameNode>& dragFrameNode, const DragPointerEvent& pointerEvent,
-    const RefPtr<OHOS::Ace::DragEvent>& event, const std::string& extraParams)
-{
-    CHECK_NULL_RETURN(dragFrameNode, false);
-    CHECK_NULL_RETURN(event, false);
-    auto pipeline = PipelineContext::GetCurrentContextSafelyWithCheck();
-    CHECK_NULL_RETURN(pipeline, false);
-    auto taskScheduler = pipeline->GetTaskExecutor();
-    CHECK_NULL_RETURN(taskScheduler, false);
-    taskScheduler->PostDelayedTask(
-        [pointerEvent, event, extraParams, nodeWeak = WeakClaim(AceType::RawPtr(dragFrameNode)),
-            weakManager = WeakClaim(this)]() {
-            if (!DragDropGlobalController::GetInstance().IsCurrentDrag(event->GetRequestIdentify())) {
-                return;
-            }
-            if (!DragDropGlobalController::GetInstance().IsOnOnDropPhase() || !event) {
-                return;
-            }
-            auto dragDropManager = weakManager.Upgrade();
-            if (dragDropManager) {
-                auto frameNode = nodeWeak.Upgrade();
-                event->SetResult(DragRet::DRAG_FAIL);
-                dragDropManager->HandleStopDrag(frameNode, pointerEvent, event, extraParams);
-            }
-            DragDropGlobalController::GetInstance().SetIsOnOnDropPhase(false);
-        },
-        TaskExecutor::TaskType::UI, DROP_DELAY_TIME, "ArkUIStopDragDeadlineTimer");
-    return DragDropGlobalController::GetInstance().RequestDragEndCallback(event->GetRequestIdentify(),
-        event->GetResult(), GetStopDragCallBack(dragFrameNode, pointerEvent, event, extraParams));
-}
-
-std::function<void(const DragRet&)> DragDropManager::GetStopDragCallBack(const RefPtr<FrameNode>& dragFrameNode,
-    const DragPointerEvent& pointerEvent, const RefPtr<OHOS::Ace::DragEvent>& event, const std::string& extraParams)
-{
-    auto callback = [id = Container::CurrentId(), pointerEvent, event, extraParams,
-        nodeWeak = WeakClaim(AceType::RawPtr(dragFrameNode)),
-        weakManager = WeakClaim(this)] (const DragRet& dragResult) {
-        ContainerScope scope(id);
-        auto dragDropManager = weakManager.Upgrade();
-        CHECK_NULL_VOID(dragDropManager);
-        CHECK_NULL_VOID(event);
-        event->SetResult(dragResult);
-        auto frameNode = nodeWeak.Upgrade();
-        dragDropManager->HandleStopDrag(frameNode, pointerEvent, event, extraParams);
-    };
-    return callback;
-}
-
-void DragDropManager::ExecuteStopDrag(const RefPtr<OHOS::Ace::DragEvent>& event, DragRet dragResult,
-    bool useCustomAnimation, int32_t windowId, DragBehavior dragBehavior,
-    const OHOS::Ace::DragPointerEvent& pointerEvent)
-{
-    if (useCustomAnimation && event->HasDropAnimation()) {
-        ExecuteCustomDropAnimation(event, DragDropRet { dragResult, useCustomAnimation, windowId, dragBehavior });
-        return;
-    }
-    auto pipeline = PipelineContext::GetCurrentContextSafelyWithCheck();
-    CHECK_NULL_VOID(pipeline);
-    auto overlayManager = GetDragAnimationOverlayManager(pipeline->GetInstanceId());
-    HideSubwindowDragNode();
-    if (overlayManager && !isDragFwkShow_) {
-        overlayManager->RemoveDragPixelMap();
-        overlayManager->RemoveFilter();
-        pipeline->FlushMessages();
-    }
-    pipeline->AddAfterRenderTask([dragResult, useCustomAnimation, windowId, dragBehavior,
-                                     pointerEventId = pointerEvent.pointerEventId, weak = WeakClaim(this)]() mutable {
-        auto manager = weak.Upgrade();
-        if (manager) {
-            manager->HideDragPreviewOverlay();
-            useCustomAnimation = manager->IsDisableDefaultDropAnimation() ? true : useCustomAnimation;
-        }
-        TAG_LOGI(AceLogTag::ACE_DRAG,
-            "Stop drag, start do drop animation. useCustomAnimation is %{public}d,"
-            "WindowId is %{public}d, pointerEventId is %{public}d.",
-            useCustomAnimation, windowId, pointerEventId);
-        InteractionInterface::GetInstance()->SetDragWindowVisible(!useCustomAnimation);
-        DragDropRet dragDropRet { dragResult, useCustomAnimation, windowId, dragBehavior };
-        InteractionInterface::GetInstance()->StopDrag(dragDropRet);
-    });
-}
-
-void DragDropManager::SetRSSyncTransaction(OHOS::Rosen::RSSyncTransactionController** transactionController,
-    std::shared_ptr<Rosen::RSSyncTransactionHandler>& transactionHandler, const RefPtr<NG::PipelineContext>& pipeline)
-{
-#ifdef ENABLE_ROSEN_BACKEND
-    if (SystemProperties::GetMultiInstanceEnabled()) {
-        CHECK_NULL_VOID(pipeline);
-        auto window = pipeline->GetWindow();
-        CHECK_NULL_VOID(window);
-        auto rsUIDirector = window->GetRSUIDirector();
-        CHECK_NULL_VOID(rsUIDirector);
-        auto rsUIContext = rsUIDirector->GetRSUIContext();
-        CHECK_NULL_VOID(rsUIContext);
-        transactionHandler = rsUIContext->GetSyncTransactionHandler();
-    } else {
-        auto rsSyncTransactionController = Rosen::RSSyncTransactionController::GetInstance();
-        *transactionController = rsSyncTransactionController;
-    }
-#endif
-}
-
-void DragDropManager::ExecuteCustomDropAnimation(const RefPtr<OHOS::Ace::DragEvent>& event, DragDropRet dragDropRet)
-{
-    CHECK_NULL_VOID(event);
-    auto pipeline = PipelineContext::GetCurrentContextSafelyWithCheck();
-    CHECK_NULL_VOID(pipeline);
-#ifdef ENABLE_ROSEN_BACKEND
-    OHOS::Rosen::RSSyncTransactionController* transactionController = nullptr;
-    std::shared_ptr<Rosen::RSSyncTransactionHandler> transactionHandler;
-    SetRSSyncTransaction(&transactionController, transactionHandler, pipeline);
-    if (transactionController) {
-        transactionController->OpenSyncTransaction();
-    } else if (transactionHandler) {
-        transactionHandler->OpenSyncTransaction();
-    } else {
-        TAG_LOGE(AceLogTag::ACE_DRAG, "transactionController and handler invalid");
-        return;
-    }
-    event->ExecuteDropAnimation();
-    auto overlayManager = GetDragAnimationOverlayManager(pipeline->GetInstanceId());
-    if (overlayManager) {
-        overlayManager->RemoveDragPixelMap();
-        overlayManager->RemoveFilter();
-    }
-    HideSubwindowDragNode();
-    if (transactionController) {
-        auto transaction = transactionController->GetRSTransaction();
-        InteractionInterface::GetInstance()->SetDragWindowVisible(false, transaction);
-        pipeline->FlushUITasks();
-        transactionController->CloseSyncTransaction();
-    } else if (transactionHandler) {
-        auto transaction = transactionHandler->GetRSTransaction();
-        InteractionInterface::GetInstance()->SetDragWindowVisible(false, transaction);
-        pipeline->FlushUITasks();
-        transactionHandler->CloseSyncTransaction();
-    } else {
-        InteractionInterface::GetInstance()->SetDragWindowVisible(false);
-        pipeline->FlushMessages();
-    }
-#else
-    event->ExecuteDropAnimation();
-    auto overlayManager = GetDragAnimationOverlayManager(pipeline->GetInstanceId());
-    if (overlayManager) {
-        overlayManager->RemoveDragPixelMap();
-        overlayManager->RemoveFilter();
-    }
-    HideSubwindowDragNode();
-    InteractionInterface::GetInstance()->SetDragWindowVisible(false);
-    pipeline->FlushMessages();
-#endif
-    InteractionInterface::GetInstance()->StopDrag(dragDropRet);
-}
-
 void DragDropManager::RequireSummary()
 {
-    DragSummaryInfo dragSummaryInfo;
-    int32_t ret =
-        InteractionInterface::GetInstance()->GetDragSummary(dragSummaryInfo.summary, dragSummaryInfo.detailedSummary,
-            dragSummaryInfo.summaryFormat, dragSummaryInfo.version, dragSummaryInfo.totalSize);
+    std::map<std::string, int64_t> summary;
+    int32_t ret = InteractionInterface::GetInstance()->GetDragSummary(summary);
     if (ret != 0) {
         TAG_LOGI(AceLogTag::ACE_DRAG, "RequireSummary: Interaction GetSummary failed: %{public}d", ret);
     } else {
-        std::string summarys = DragDropFuncWrapper::GetSummaryString(dragSummaryInfo.summary);
-        std::string detailedSummarys = DragDropFuncWrapper::GetSummaryString(dragSummaryInfo.detailedSummary);
-        TAG_LOGI(AceLogTag::ACE_DRAG, "require summary: %{public}s, detailedSummary:%{public}s", summarys.c_str(),
-            detailedSummarys.c_str());
+        std::string summarys;
+        for (const auto& [udkey, recordSize] : summary) {
+            std::string str = udkey + "-" + std::to_string(recordSize) + ";";
+            summarys += str;
+        }
+        TAG_LOGI(AceLogTag::ACE_DRAG, "require summary: %{public}s", summarys.c_str());
         DragDropBehaviorReporter::GetInstance().UpdateSummaryType(summarys);
     }
     std::string extraInfo;
@@ -1641,8 +1083,7 @@ void DragDropManager::RequireSummary()
     }
     previewRect_ = Rect(-1, -1, -1, -1);
     extraInfo_ = extraInfo;
-    summaryMap_ = dragSummaryInfo.summary;
-    dragSummaryInfo_ = dragSummaryInfo;
+    summaryMap_ = summary;
 }
 
 void DragDropManager::ResetRecordSize(uint32_t recordSize)
@@ -1727,71 +1168,60 @@ void DragDropManager::FireOnDragEventWithDragType(const RefPtr<EventHub>& eventH
     }
 }
 
-void DragDropManager::FireOnDragSpringLoadingEventWithDragType(const RefPtr<FrameNode>& frameNode,
-    const RefPtr<EventHub>& eventHub, DragEventType type, const std::string& extraParams)
-{
-    if (!eventHub->HasCustomerOnDragSpringLoading()) {
-        return;
-    }
-    switch (type) {
-        case DragEventType::ENTER:
-        case DragEventType::MOVE: {
-            NotifyDragSpringLoadingMove(frameNode, extraParams);
-            break;
-        }
-        case DragEventType::LEAVE: {
-            NotifyDragSpringLoadingIntercept(extraParams);
-            break;
-        }
-        default:
-            break;
-    }
-}
-
 void DragDropManager::FireOnDragEvent(
     const RefPtr<FrameNode>& frameNode, const DragPointerEvent& pointerEvent,
     DragEventType type, const std::string& extraInfo)
 {
-    CHECK_NULL_VOID(frameNode);
-    if (IsUIExtensionOrDynamicComponent(frameNode)) {
-        HandleUIExtensionDragEvent(frameNode, pointerEvent, type);
+    if (IsUIExtensionComponent(frameNode)) {
+        auto dragEvent = pointerEvent;
+        if (type == DragEventType::ENTER) {
+            dragEvent.action = PointerAction::PULL_IN_WINDOW;
+        } else if (type == DragEventType::LEAVE) {
+            dragEvent.action = PointerAction::PULL_OUT_WINDOW;
+        }
+        auto pattern = frameNode->GetPattern<Pattern>();
+        CHECK_NULL_VOID(pattern);
+        pattern->HandleDragEvent(dragEvent);
         return;
     }
     auto eventHub = frameNode->GetEventHub<EventHub>();
     CHECK_NULL_VOID(eventHub);
-    if (!eventHub->HasOnDrop() && !eventHub->HasOnItemDrop() && !eventHub->HasCustomerOnDrop() &&
-        !eventHub->HasCustomerOnDragSpringLoading()) {
+    auto pipeline = PipelineContext::GetCurrentContext();
+    CHECK_NULL_VOID(pipeline);
+    if (!eventHub->HasOnDrop() && !eventHub->HasOnItemDrop() && !eventHub->HasCustomerOnDrop()) {
         return;
     }
     auto point = pointerEvent.GetPoint();
     auto extraParams = eventHub->GetDragExtraParams(extraInfo_.empty() ? extraInfo : extraInfo_, point, type);
     RefPtr<OHOS::Ace::DragEvent> event = AceType::MakeRefPtr<OHOS::Ace::DragEvent>();
-    CHECK_NULL_VOID(event);
-    UpdateDragEvent(event, pointerEvent);
+    event->SetX((double)point.GetX());
+    event->SetY((double)point.GetY());
+    event->SetScreenX((double)point.GetScreenX());
+    event->SetScreenY((double)point.GetScreenY());
+    event->SetDisplayX((double)pointerEvent.GetDisplayX());
+    event->SetDisplayY((double)pointerEvent.GetDisplayY());
+    event->SetVelocity(velocityTracker_.GetVelocity());
+    event->SetSummary(summaryMap_);
+    event->SetPreviewRect(GetDragWindowRect(point));
+    event->SetPressedKeyCodes(pointerEvent.pressedKeyCodes_);
 
     FireOnEditableTextComponent(frameNode, type);
-    FireOnDragSpringLoadingEventWithDragType(frameNode, eventHub, type, extraParams);
     FireOnDragEventWithDragType(eventHub, type, event, extraParams);
 
-    UpdateDragCursorStyle(frameNode, event, pointerEvent.pointerEventId);
-}
-
-void DragDropManager::UpdateDragCursorStyle(const RefPtr<FrameNode>& frameNode,
-    const RefPtr<OHOS::Ace::DragEvent>& event, const int32_t eventId)
-{
+    if (isMouseDragged_ && !isDragWindowShow_) {
+        return;
+    }
     if (event->GetResult() == DragRet::ENABLE_DROP) {
         if (event->GetDragBehavior() == DragBehavior::MOVE) {
-            UpdateDragStyle(DragCursorStyleCore::MOVE, eventId);
+            UpdateDragStyle(DragCursorStyleCore::MOVE, pointerEvent.pointerEventId);
         } else {
-            UpdateDragStyle(DragCursorStyleCore::COPY, eventId);
+            UpdateDragStyle(DragCursorStyleCore::COPY, pointerEvent.pointerEventId);
         }
     } else if (event->GetResult() == DragRet::DISABLE_DROP) {
         // simplified specifications for drag cursor style, no longer showing forbidden drag cursor
-        DragDropGlobalController::GetInstance().GetEnableDropDisallowedBadge()
-            ? UpdateDragStyle(DragCursorStyleCore::FORBIDDEN, eventId)
-            : UpdateDragStyle(DragCursorStyleCore::MOVE, eventId);
+        UpdateDragStyle(DragCursorStyleCore::MOVE, pointerEvent.pointerEventId);
     } else {
-        UpdateDragAllowDrop(frameNode, event->GetDragBehavior(), eventId, event->IsCapi());
+        UpdateDragAllowDrop(frameNode, event->GetDragBehavior(), pointerEvent.pointerEventId, event->IsCapi());
     }
 }
 
@@ -1912,7 +1342,6 @@ void DragDropManager::onItemDragCancel()
 void DragDropManager::FireOnItemDragEvent(const RefPtr<FrameNode>& frameNode, DragType dragType,
     const OHOS::Ace::ItemDragInfo& itemDragInfo, DragEventType type, int32_t draggedIndex, int32_t insertIndex)
 {
-    CHECK_NULL_VOID(frameNode);
     if (dragType == DragType::GRID) {
         auto eventHub = frameNode->GetEventHub<GridEventHub>();
         CHECK_NULL_VOID(eventHub);
@@ -1951,7 +1380,6 @@ void DragDropManager::FireOnItemDragEvent(const RefPtr<FrameNode>& frameNode, Dr
 bool DragDropManager::FireOnItemDropEvent(const RefPtr<FrameNode>& frameNode, DragType dragType,
     const OHOS::Ace::ItemDragInfo& itemDragInfo, int32_t draggedIndex, int32_t insertIndex, bool isSuccess)
 {
-    CHECK_NULL_RETURN(frameNode, false);
     if (dragType == DragType::GRID) {
         auto eventHub = frameNode->GetEventHub<GridEventHub>();
         CHECK_NULL_RETURN(eventHub, false);
@@ -1992,7 +1420,7 @@ int32_t DragDropManager::GetItemIndex(
 
 void DragDropManager::AddDataToClipboard(const std::string& extraInfo)
 {
-    auto pipeline = PipelineContext::GetCurrentContextSafelyWithCheck();
+    auto pipeline = PipelineContext::GetCurrentContext();
     CHECK_NULL_VOID(pipeline);
     if (!extraInfo.empty()) {
         if (!newData_) {
@@ -2008,11 +1436,10 @@ void DragDropManager::AddDataToClipboard(const std::string& extraInfo)
         clipboard_ = ClipboardProxy::GetInstance()->GetClipboard(pipeline->GetTaskExecutor());
     }
     if (!addDataCallback_) {
-        auto callback = [weakManager = WeakClaim(this), id = Container::CurrentId()](const std::string& data) {
-            ContainerScope scope(id);
+        auto callback = [weakManager = WeakClaim(this)](const std::string& data) {
             auto dragDropManager = weakManager.Upgrade();
-            CHECK_NULL_VOID(dragDropManager);
             auto addData = dragDropManager->newData_->ToString();
+            CHECK_NULL_VOID(dragDropManager);
             auto clipboardAllData = JsonUtil::Create(true);
             clipboardAllData->Put("preData", data.c_str());
             clipboardAllData->Put("newData", addData.c_str());
@@ -2027,7 +1454,7 @@ void DragDropManager::AddDataToClipboard(const std::string& extraInfo)
 
 void DragDropManager::GetExtraInfoFromClipboard(std::string& extraInfo)
 {
-    auto pipeline = PipelineContext::GetCurrentContextSafelyWithCheck();
+    auto pipeline = PipelineContext::GetCurrentContext();
     CHECK_NULL_VOID(pipeline);
 
     if (!clipboard_) {
@@ -2035,8 +1462,7 @@ void DragDropManager::GetExtraInfoFromClipboard(std::string& extraInfo)
     }
 
     if (!getDataCallback_) {
-        auto callback = [weak = WeakClaim(this), id = Container::CurrentId()](const std::string& data) {
-            ContainerScope scope(id);
+        auto callback = [weak = WeakClaim(this)](const std::string& data) {
             auto manager = weak.Upgrade();
             CHECK_NULL_VOID(manager);
             auto json = JsonUtil::ParseJsonString(data);
@@ -2055,7 +1481,7 @@ void DragDropManager::GetExtraInfoFromClipboard(std::string& extraInfo)
 
 void DragDropManager::RestoreClipboardData()
 {
-    auto pipeline = PipelineContext::GetCurrentContextSafelyWithCheck();
+    auto pipeline = PipelineContext::GetCurrentContext();
     CHECK_NULL_VOID(pipeline);
 
     if (!clipboard_) {
@@ -2063,8 +1489,7 @@ void DragDropManager::RestoreClipboardData()
     }
 
     if (!deleteDataCallback_) {
-        auto callback = [weakManager = WeakClaim(this), id = Container::CurrentId()](const std::string& data) {
-            ContainerScope scope(id);
+        auto callback = [weakManager = WeakClaim(this)](const std::string& data) {
             auto dragDropManager = weakManager.Upgrade();
             CHECK_NULL_VOID(dragDropManager);
             auto json = JsonUtil::ParseJsonString(data);
@@ -2120,13 +1545,10 @@ RefPtr<DragDropProxy> DragDropManager::CreateFrameworkDragDropProxy()
 void DragDropManager::UpdateNotifyDragEvent(
     RefPtr<NotifyDragEvent>& notifyEvent, const Point& point, const DragEventType dragEventType)
 {
-    CHECK_NULL_VOID(notifyEvent);
     notifyEvent->SetX((double)point.GetX());
     notifyEvent->SetY((double)point.GetY());
     notifyEvent->SetScreenX((double)point.GetScreenX());
     notifyEvent->SetScreenY((double)point.GetScreenY());
-    notifyEvent->SetGlobalDisplayX(point.GetGlobalDisplayX());
-    notifyEvent->SetGlobalDisplayY(point.GetGlobalDisplayY());
     if (dragEventType != DragEventType::START) {
         if (dragEventType != DragEventType::DROP) {
             notifyEvent->SetVelocity(velocityTracker_.GetVelocity());
@@ -2146,16 +1568,9 @@ void DragDropManager::UpdateDragEvent(
     event->SetScreenY(point.GetScreenY());
     event->SetDisplayX((double)pointerEvent.GetDisplayX());
     event->SetDisplayY((double)pointerEvent.GetDisplayY());
-    event->SetGlobalDisplayX(pointerEvent.GetGlobalDisplayX());
-    event->SetGlobalDisplayY(pointerEvent.GetGlobalDisplayY());
     event->SetVelocity(velocityTracker_.GetVelocity());
     event->SetSummary(summaryMap_);
     event->SetPreviewRect(GetDragWindowRect(point));
-    event->SetPressedKeyCodes(pointerEvent.pressedKeyCodes);
-    event->SetSourceTool(pointerEvent.sourceTool);
-    event->SetDisplayId(pointerEvent.displayId);
-    event->SetDragSource(dragBundleInfo_.bundleName);
-    event->SetRemoteDev(dragBundleInfo_.isRemoteDev);
 }
 
 std::string DragDropManager::GetExtraInfo()
@@ -2175,8 +1590,9 @@ void DragDropManager::ClearExtraInfo()
 
 bool DragDropManager::IsMSDPDragging() const
 {
-    ACE_SCOPED_TRACE("drag: get drag state from msdp");
-    return InteractionInterface::GetInstance()->IsDragStart();
+    DragState dragState;
+    InteractionInterface::GetInstance()->GetDragState(dragState);
+    return dragState == DragState::START;
 }
 
 void DragDropManager::ClearVelocityInfo()
@@ -2237,10 +1653,9 @@ void DragDropManager::FireOnEditableTextComponent(const RefPtr<FrameNode>& frame
     NotifyEnterTextEditorArea();
 }
 
-bool DragDropManager::GetDragPreviewInfo(const RefPtr<OverlayManager>& overlayManager, DragPreviewInfo& dragPreviewInfo,
-    const RefPtr<GestureEventHub>& gestureHub, PreparedInfoForDrag& data)
+bool DragDropManager::GetDragPreviewInfo(const RefPtr<OverlayManager>& overlayManager,
+    DragPreviewInfo& dragPreviewInfo, const RefPtr<GestureEventHub>& gestureHub)
 {
-    CHECK_NULL_RETURN(overlayManager, false);
     if (!overlayManager->GetHasDragPixelMap()) {
         return false;
     }
@@ -2248,27 +1663,24 @@ bool DragDropManager::GetDragPreviewInfo(const RefPtr<OverlayManager>& overlayMa
     CHECK_NULL_RETURN(imageNode, false);
     auto badgeNode = overlayManager->GetDragPixelMapBadgeNode();
     if (badgeNode) {
-        dragPreviewInfo.relativeContainerNode = data.relativeContainerNode;
         dragPreviewInfo.textNode = badgeNode;
     }
     CHECK_NULL_RETURN(gestureHub, false);
     auto frameNode = gestureHub->GetFrameNode();
-    CHECK_NULL_RETURN(frameNode, false);
+    double maxWidth = DragDropManager::GetMaxWidthBaseOnGridSystem(frameNode->GetContextRefPtr());
+    auto width = imageNode->GetGeometryNode()->GetFrameRect().Width();
     auto previewOption = imageNode->GetDragPreviewOption();
-    auto gestureEvent = frameNode->GetOrCreateGestureEventHub();
-    CHECK_NULL_RETURN(gestureEvent, false);
-    auto width = data.dragPreviewRect.Width();
-    auto height = data.dragPreviewRect.Height();
-    auto scaleData = DragDropManager::GetScaleInfo(width, height, gestureEvent->GetTextDraggable());
-    CHECK_NULL_RETURN(scaleData, false);
-    dragPreviewInfo.scale =
-        (imageNode->GetTag() != V2::WEB_ETS_TAG && width > 0 && height > 0 && previewOption.isScaleEnabled)
-            ? scaleData->scale : 1.0f;
+    if (imageNode->GetTag() != V2::WEB_ETS_TAG && width != 0 && width > maxWidth && previewOption.isScaleEnabled) {
+        dragPreviewInfo.scale = maxWidth / width;
+    } else {
+        dragPreviewInfo.scale = 1.0f;
+    }
+
     if (!isMouseDragged_ && dragPreviewInfo.scale == 1.0f) {
         dragPreviewInfo.scale = TOUCH_DRAG_PIXELMAP_SCALE;
     }
     // set menu preview scale only for no scale menu preview.
-    if (isDragWithContextMenu_ && (!previewOption.isScaleEnabled || !scaleData->isNeedScale)) {
+    if (isDragWithContextMenu_ && (!previewOption.isScaleEnabled || width < maxWidth)) {
         auto imageGestureEventHub = imageNode->GetOrCreateGestureEventHub();
         if (imageGestureEventHub) {
             auto menuPreviewScale = imageGestureEventHub->GetMenuPreviewScale();
@@ -2276,32 +1688,18 @@ bool DragDropManager::GetDragPreviewInfo(const RefPtr<OverlayManager>& overlayMa
                 GreatNotEqual(menuPreviewScale, 0.0f) ? menuPreviewScale : TOUCH_DRAG_PIXELMAP_SCALE;
         }
     }
-    dragPreviewInfo.height = static_cast<double>(height);
+    dragPreviewInfo.height = imageNode->GetGeometryNode()->GetFrameRect().Height();
     dragPreviewInfo.width = static_cast<double>(width);
-    dragPreviewInfo.maxWidth = scaleData->shortSide;
+    dragPreviewInfo.maxWidth = maxWidth;
     dragPreviewInfo.imageNode = imageNode;
     dragPreviewInfo.originOffset = imageNode->GetPositionToWindowWithTransform();
     dragPreviewInfo.originScale = imageNode->GetTransformScale();
-    dragPreviewInfo.isDragController = false;
-    CopyPreparedInfoForDrag(dragPreviewInfo, data);
     return true;
-}
-
-void DragDropManager::CopyPreparedInfoForDrag(DragPreviewInfo& dragPreviewInfo, PreparedInfoForDrag& data)
-{
-    dragPreviewInfo.menuPreviewNode = data.menuPreviewNode;
-    dragPreviewInfo.menuPreviewImageNode = data.menuPreviewImageNode;
-    dragPreviewInfo.originPreviewRect = data.originPreviewRect;
-    dragPreviewInfo.dragPreviewRect = data.dragPreviewRect;
-    dragPreviewInfo.relativeContainerNode = data.relativeContainerNode;
-    dragPreviewInfo.stackNode = data.stackNode;
-    dragPreviewInfo.sizeChangeEffect = data.sizeChangeEffect;
-    dragPreviewInfo.menuNode = data.menuNode;
 }
 
 bool DragDropManager::IsNeedDoDragMoveAnimate(const DragPointerEvent& pointerEvent)
 {
-    if (isDragFwkShow_) {
+    if (!(IsNeedDisplayInSubwindow() || isDragWithContextMenu_) || isDragFwkShow_) {
         return false;
     }
     auto x = pointerEvent.GetPoint().GetX();
@@ -2314,25 +1712,28 @@ bool DragDropManager::IsNeedScaleDragPreview()
 {
     return info_.scale > 0 && info_.scale < 1.0f;
 }
-// calculate the touch position relative to the sub-window which will be used to do animation on,
-// the input [x, y] is the position relative to the window which is receiving the touch event,
-// and the position is contain the floatTitle offset.
-OffsetF DragDropManager::GetTouchOffsetRelativeToSubwindow(int32_t containerId, int32_t x, int32_t y)
+
+OffsetF GetTouchOffsetRelativeToSubwindow(int32_t x, int32_t y)
 {
     auto touchOffset = OffsetF(x, y);
-    auto pipeline = PipelineContext::GetContextByContainerId(containerId);
-    CHECK_NULL_RETURN(pipeline, OffsetF(x, y));
-    auto window = pipeline->GetWindow();
-    CHECK_NULL_RETURN(window, OffsetF(x, y));
-    auto windowOffset = window->GetCurrentWindowRect().GetOffset();
-    touchOffset.SetX(touchOffset.GetX() + windowOffset.GetX());
-    touchOffset.SetY(touchOffset.GetY() + windowOffset.GetY());
-    auto subwindow = SubwindowManager::GetInstance()->GetSubwindowByType(containerId >= MIN_SUBCONTAINER_ID ?
-        SubwindowManager::GetInstance()->GetParentContainerId(containerId) : containerId, SubwindowType::TYPE_MENU);
-    CHECK_NULL_RETURN(subwindow, OffsetF(x, y));
-    auto subwindowOffset = subwindow->GetWindowRect().GetOffset();
-    touchOffset.SetX(touchOffset.GetX() - subwindowOffset.GetX());
-    touchOffset.SetY(touchOffset.GetY() - subwindowOffset.GetY());
+    auto pipeline = PipelineContext::GetCurrentContext();
+    if (pipeline) {
+        auto window = pipeline->GetWindow();
+        if (window) {
+            auto windowOffset = window->GetCurrentWindowRect().GetOffset();
+            touchOffset.SetX(touchOffset.GetX() + windowOffset.GetX());
+            touchOffset.SetY(touchOffset.GetY() + windowOffset.GetY());
+        }
+    }
+    auto containerId = Container::CurrentId();
+    auto subwindow = SubwindowManager::GetInstance()->GetSubwindow(
+        containerId >= MIN_SUBCONTAINER_ID ? SubwindowManager::GetInstance()->GetParentContainerId(containerId)
+                                           : containerId);
+    if (subwindow) {
+        auto subwindowOffset = subwindow->GetRect().GetOffset();
+        touchOffset.SetX(touchOffset.GetX() - subwindowOffset.GetX());
+        touchOffset.SetY(touchOffset.GetY() - subwindowOffset.GetY());
+    }
     return touchOffset;
 }
 
@@ -2344,7 +1745,7 @@ double DragDropManager::CalcDragPreviewDistanceWithPoint(
     auto renderContext = info.imageNode->GetRenderContext();
     CHECK_NULL_RETURN(renderContext, 0.0);
     nodeOffset -= pixelMapOffset_;
-    auto touchOffset = DragDropManager::GetTouchOffsetRelativeToSubwindow(Container::CurrentId(), x, y);
+    auto touchOffset = GetTouchOffsetRelativeToSubwindow(x, y);
     // calculate distance, so need to pow 2.
     return sqrt(pow(nodeOffset.GetX() - touchOffset.GetX(), 2) + pow(nodeOffset.GetY() - touchOffset.GetY(), 2));
 }
@@ -2357,45 +1758,8 @@ Offset DragDropManager::CalcDragMoveOffset(
         (info.originScale.x - info.scale) * info.width / 2.0f);
     originPoint.SetY(originPoint.GetY() - pixelMapOffset_.GetY() +
         (info.originScale.y - info.scale) * info.height / 2.0f);
-    auto touchOffset = DragDropManager::GetTouchOffsetRelativeToSubwindow(Container::CurrentId(), x, y);
+    auto touchOffset = GetTouchOffsetRelativeToSubwindow(x, y);
     Offset newOffset { touchOffset.GetX() - originPoint.GetX(), touchOffset.GetY() - originPoint.GetY() };
-    return newOffset;
-}
-
-Offset DragDropManager::CalcContentTrationOffset(
-    const OHOS::Ace::Dimension& preserverHeight, int32_t x, int32_t y, const DragPreviewInfo& info)
-{
-    auto originPoint = info.originOffset;
-    auto scalX = info.dragPreviewRect.Width() / info.originPreviewRect.Width() * info.scale;
-    originPoint.SetX(originPoint.GetX() - pixelMapOffset_.GetX() + info.originPreviewRect.Width() * (1 - scalX));
-    originPoint.SetY(originPoint.GetY() - pixelMapOffset_.GetY());
-    auto touchOffset = DragDropManager::GetTouchOffsetRelativeToSubwindow(Container::CurrentId(), x, y);
-    Offset newOffset { touchOffset.GetX() - originPoint.GetX(), touchOffset.GetY() - originPoint.GetY() };
-    return newOffset;
-}
-
-Offset DragDropManager::CalculateNewOffset(
-    const RefPtr<FrameNode>& frameNode, const GestureEvent& event, bool isDragStartPending)
-{
-    Offset newOffset = { 0, 0 };
-    CHECK_NULL_RETURN(frameNode, newOffset);
-    auto dragMoveLastPoint = GetDragMoveLastPointByCurrentPointer(event.GetPointerId());
-    if (info_.sizeChangeEffect == DraggingSizeChangeEffect::DEFAULT && !info_.textNode) {
-        newOffset =
-            isDragStartPending
-                ? CalcDragMoveOffset(PRESERVE_HEIGHT, static_cast<int32_t>(dragMoveLastPoint.GetX()),
-                    static_cast<int32_t>(dragMoveLastPoint.GetY()), info_)
-                : CalcDragMoveOffset(PRESERVE_HEIGHT, static_cast<int32_t>(event.GetGlobalLocation().GetX()),
-                    static_cast<int32_t>(event.GetGlobalLocation().GetY()), info_);
-    } else if (info_.sizeChangeEffect == DraggingSizeChangeEffect::SIZE_TRANSITION ||
-               info_.sizeChangeEffect == DraggingSizeChangeEffect::SIZE_CONTENT_TRANSITION || info_.textNode) {
-        newOffset =
-            isDragStartPending
-                ? CalcContentTrationOffset(PRESERVE_HEIGHT, static_cast<int32_t>(dragMoveLastPoint.GetX()),
-                    static_cast<int32_t>(dragMoveLastPoint.GetY()), info_)
-                : CalcContentTrationOffset(PRESERVE_HEIGHT, static_cast<int32_t>(event.GetGlobalLocation().GetX()),
-                    static_cast<int32_t>(event.GetGlobalLocation().GetY()), info_);
-    }
     return newOffset;
 }
 
@@ -2426,10 +1790,10 @@ float DragDropManager::GetCurrentDistance(float x, float y)
     auto distance = sqrt(pow(curPointerOffset_.GetX() - x, 2) + pow(curPointerOffset_.GetY() - y, 2));
     CHECK_NULL_RETURN(info_.imageNode, distance);
     auto containerId = Container::CurrentId();
-    auto subwindow = SubwindowManager::GetInstance()->GetSubwindowByType(containerId, SubwindowType::TYPE_MENU);
+    auto subwindow = SubwindowManager::GetInstance()->GetSubwindow(containerId);
     CHECK_NULL_RETURN(subwindow, distance);
     auto overlayManager = subwindow->GetOverlayManager();
-    auto gatherNodeCenter = DragDropFuncWrapper::GetPaintRectCenter(info_.imageNode);
+    auto gatherNodeCenter = info_.imageNode->GetPaintRectCenter();
     auto gatherDistance = CalcGatherNodeMaxDistanceWithPoint(overlayManager,
         gatherNodeCenter.GetX(), gatherNodeCenter.GetY());
     return std::max(distance, gatherDistance);
@@ -2444,23 +1808,10 @@ void DragDropManager::DoDragMoveAnimate(const DragPointerEvent& pointerEvent)
     isPullMoveReceivedForCurrentDrag_ = true;
     CHECK_NULL_VOID(info_.imageNode);
     auto containerId = Container::CurrentId();
-    auto x = pointerEvent.GetDisplayX();
-    auto y = pointerEvent.GetDisplayY();
-    if (CheckIsUIExtensionBoundary(x, y, containerId) || CheckIsFolderSubwindowBoundary(x, y, containerId)) {
-        SetStartAnimation(false);
-        TransDragWindowToDragFwk(containerId);
-        return;
-    }
     auto overlayManager = GetDragAnimationOverlayManager(containerId);
     CHECK_NULL_VOID(overlayManager);
     auto point = pointerEvent.GetPoint();
-    Offset newOffset = { 0, 0 };
-    if ((info_.sizeChangeEffect == DraggingSizeChangeEffect::DEFAULT && !info_.textNode) || info_.isDragController) {
-        newOffset = CalcDragMoveOffset(PRESERVE_HEIGHT, point.GetX(), point.GetY(), info_);
-    } else if (info_.sizeChangeEffect == DraggingSizeChangeEffect::SIZE_TRANSITION ||
-               info_.sizeChangeEffect == DraggingSizeChangeEffect::SIZE_CONTENT_TRANSITION || info_.textNode) {
-        newOffset = CalcContentTrationOffset(PRESERVE_HEIGHT, point.GetX(), point.GetY(), info_);
-    }
+    Offset newOffset = CalcDragMoveOffset(PRESERVE_HEIGHT, point.GetX(), point.GetY(), info_);
     bool isMenuShow = overlayManager->IsMenuShow();
     if (UpdateDragMovePositionFinished(needDoDragMoveAnimate, isMenuShow, newOffset, containerId) ||
         !needDoDragMoveAnimate) {
@@ -2489,29 +1840,12 @@ void DragDropManager::DragMoveAnimation(
         CHECK_NULL_VOID(dragDropManager);
         if ((dragDropManager->IsAllAnimationFinished() ||
                 dragDropManager->GetCurrentDistance(x, y) < MAX_DISTANCE_TO_PRE_POINTER) &&
-            (!dragWithContextMenu || !isMenuShow) && dragDropManager->IsStartAnimationFInished()) {
-            dragDropManager->SetStartAnimation(false);
+            (!dragWithContextMenu || !isMenuShow)) {
             dragDropManager->TransDragWindowToDragFwk(containerId);
         }
     });
-
-    if (info_.sizeChangeEffect == DraggingSizeChangeEffect::DEFAULT) {
-        DragDropManager::DragMoveDefaultAnimation(overlayManager, info_, option, newOffset, point);
-    } else if ((info_.sizeChangeEffect == DraggingSizeChangeEffect::SIZE_TRANSITION ||
-                   info_.sizeChangeEffect == DraggingSizeChangeEffect::SIZE_CONTENT_TRANSITION)) {
-        DragDropManager::DragMoveTransitionAnimation(overlayManager, info_, option, newOffset, point);
-    }
-}
-
-void DragDropManager::DragMoveDefaultAnimation(const RefPtr<OverlayManager>& overlayManager,
-    const DragPreviewInfo& info, AnimationOption option, const Offset& newOffset, Point point)
-{
-    auto targetNode = info_.textNode && info_.relativeContainerNode ? info_.relativeContainerNode : info_.imageNode;
-    CHECK_NULL_VOID(targetNode);
-    auto renderContext = targetNode->GetRenderContext();
+    auto renderContext = info_.imageNode->GetRenderContext();
     CHECK_NULL_VOID(renderContext);
-    auto context = targetNode->GetContextRefPtr();
-    CHECK_NULL_VOID(context);
     auto offset = OffsetF(point.GetX(), point.GetY());
     auto menuWrapperNode = GetMenuWrapperNodeFromDrag();
     auto menuPosition = overlayManager->CalculateMenuPosition(menuWrapperNode, offset);
@@ -2524,41 +1858,10 @@ void DragDropManager::DragMoveDefaultAnimation(const RefPtr<OverlayManager>& ove
                     OffsetT<Dimension>(Dimension(menuPosition.GetX()), Dimension(menuPosition.GetY())));
             }
             renderContext->UpdateTransformTranslate({ localPoint.GetX(), localPoint.GetY(), 0.0f });
-            if (info.isDragController) {
-                UpdateTextNodePosition(info.textNode, localPoint);
-            }
             UpdateGatherNodePosition(overlayManager, info.imageNode);
+            UpdateTextNodePosition(info.textNode, localPoint);
         },
-        option.GetOnFinishEvent(), nullptr, context);
-}
-
-void DragDropManager::DragMoveTransitionAnimation(const RefPtr<OverlayManager>& overlayManager,
-    const DragPreviewInfo& info, AnimationOption option, const Offset& newOffset, Point point)
-{
-    option.SetCurve(DRAG_TRANSITION_ANIMATION_CURVE);
-    auto renderContext = info_.imageNode->GetRenderContext();
-    CHECK_NULL_VOID(renderContext);
-    auto offset = OffsetF(point.GetX(), point.GetY());
-    auto menuWrapperNode = GetMenuWrapperNodeFromDrag();
-    CHECK_NULL_VOID(overlayManager);
-    auto context = info_.imageNode->GetContextRefPtr();
-    CHECK_NULL_VOID(context);
-    auto menuPosition = overlayManager->CalculateMenuPosition(menuWrapperNode, offset);
-    auto menuRenderContext = GetMenuRenderContextFromMenuWrapper(menuWrapperNode);
-    AnimationUtils::Animate(
-        option,
-        [overlayManager, info, newOffset, menuRenderContext, menuPosition]() {
-            if (menuRenderContext && !menuPosition.NonOffset() && !info.menuNode) {
-                menuRenderContext->UpdatePosition(
-                    OffsetT<Dimension>(Dimension(menuPosition.GetX()), Dimension(menuPosition.GetY())));
-            }
-            CHECK_NULL_VOID(overlayManager);
-            auto relativeContainerNodeRenderContext = info.relativeContainerNode->GetRenderContext();
-            CHECK_NULL_VOID(relativeContainerNodeRenderContext);
-            relativeContainerNodeRenderContext->UpdateTransformTranslate({ newOffset.GetX(), newOffset.GetY(), 0.0f });
-            UpdateGatherNodePosition(overlayManager, info.imageNode);
-        },
-        option.GetOnFinishEvent(), nullptr, context);
+        option.GetOnFinishEvent());
 }
 
 void DragDropManager::UpdateDragPreviewScale()
@@ -2572,22 +1875,8 @@ void DragDropManager::UpdateDragPreviewScale()
     renderContext->UpdateTransformScale({ info_.scale, info_.scale });
 }
 
-void DragDropManager::InitDragAnimationPointerEvent(const GestureEvent& event, bool isDragStartPending)
-{
-    if (isDragStartPending) {
-        auto dragMoveLastPoint = GetDragMoveLastPointByCurrentPointer(event.GetPointerId());
-        dragAnimationPointerEvent_ = DragPointerEvent(dragMoveLastPoint.GetX(),
-            dragMoveLastPoint.GetY(), dragMoveLastPoint.GetScreenX(), dragMoveLastPoint.GetScreenY(),
-            dragMoveLastPoint.GetGlobalDisplayX(), dragMoveLastPoint.GetGlobalDisplayY());
-        return;
-    }
-    dragAnimationPointerEvent_ = DragPointerEvent(event.GetGlobalLocation().GetX(),
-        event.GetGlobalLocation().GetY(), event.GetScreenLocation().GetX(), event.GetScreenLocation().GetY(),
-        event.GetGlobalDisplayLocation().GetX(), event.GetGlobalDisplayLocation().GetY());
-}
-
-void DragDropManager::DoDragStartAnimation(const RefPtr<OverlayManager>& overlayManager, const GestureEvent& event,
-    const RefPtr<GestureEventHub>& gestureHub, PreparedInfoForDrag& data)
+void DragDropManager::DoDragStartAnimation(const RefPtr<OverlayManager>& overlayManager,
+    const GestureEvent& event, const RefPtr<GestureEventHub>& gestureHub, bool isSubwindowOverlay)
 {
     auto containerId = Container::CurrentId();
     auto deviceId = static_cast<int32_t>(event.GetDeviceId());
@@ -2599,9 +1888,8 @@ void DragDropManager::DoDragStartAnimation(const RefPtr<OverlayManager>& overlay
     }
     CHECK_NULL_VOID(overlayManager);
     CHECK_NULL_VOID(gestureHub);
-    bool isDragStartPending = DragDropGlobalController::GetInstance().GetAsyncDragCallback() != nullptr;
-    if (!(GetDragPreviewInfo(overlayManager, info_, gestureHub, data)) ||
-        (!IsNeedDisplayInSubwindow() && !data.isMenuShow && !isDragWithContextMenu_ && !isDragStartPending)) {
+    if (!(GetDragPreviewInfo(overlayManager, info_, gestureHub))
+        || (!IsNeedDisplayInSubwindow() && !isSubwindowOverlay && !isDragWithContextMenu_)) {
         if (isDragWithContextMenu_) {
             UpdateDragPreviewScale();
             isDragFwkShow_ = false;
@@ -2610,140 +1898,55 @@ void DragDropManager::DoDragStartAnimation(const RefPtr<OverlayManager>& overlay
     }
     CHECK_NULL_VOID(info_.imageNode);
     isDragFwkShow_ = false;
-    subwindowOverlayManager_ = overlayManager;
-    InitDragAnimationPointerEvent(event, isDragStartPending);
     ResetPullMoveReceivedForCurrentDrag();
+    auto gatherNodeCenter = info_.imageNode->GetPaintRectCenter();
     Point point = { static_cast<int32_t>(event.GetGlobalLocation().GetX()),
         static_cast<int32_t>(event.GetGlobalLocation().GetY()) };
-    auto frameNode = gestureHub->GetFrameNode();
-    Offset newOffset = CalculateNewOffset(frameNode, event, isDragStartPending);
+    Offset newOffset = CalcDragMoveOffset(PRESERVE_HEIGHT, static_cast<int32_t>(event.GetGlobalLocation().GetX()),
+        static_cast<int32_t>(event.GetGlobalLocation().GetY()), info_);
     curPointerOffset_ = { newOffset.GetX(), newOffset.GetY() };
     currentAnimationCnt_ = 0;
     allAnimationCnt_ = 0;
-    isStartAnimationFinished_ = false;
-    DragStartAnimation(newOffset, overlayManager, data, point);
+    DragStartAnimation(newOffset, overlayManager, gatherNodeCenter, point);
 }
 
 void DragDropManager::DragStartAnimation(
-    const Offset& newOffset, const RefPtr<OverlayManager>& overlayManager, PreparedInfoForDrag& data, Point point)
+    const Offset& newOffset, const RefPtr<OverlayManager>& overlayManager, const OffsetF& gatherNodeCenter, Point point)
 {
-    CHECK_NULL_VOID(info_.imageNode);
     auto containerId = Container::CurrentId();
     AnimationOption option;
-    SetDragStartAnimationOption(option, containerId);
-    AddNewDragStartAnimation();
-    auto renderContext = info_.imageNode->GetRenderContext();
-    CHECK_NULL_VOID(renderContext);
-    auto callback = [weakManager = WeakClaim(this)](float rate) {
-        auto dragDropManager = weakManager.Upgrade();
-        CHECK_NULL_VOID(dragDropManager);
-        dragDropManager->SetDragStartAnimationRate(rate);
-    };
-    auto animateProperty = AceType::MakeRefPtr<NodeAnimatablePropertyFloat>(-1.0, std::move(callback));
-    CHECK_NULL_VOID(animateProperty);
-    renderContext->AttachNodeAnimatableProperty(animateProperty);
-    animateProperty->Set(0.0f);
-    dragStartAnimationRate_ = 0.0f;
-    if (info_.sizeChangeEffect == DraggingSizeChangeEffect::DEFAULT) {
-        //Default transition
-        StartDragDefaultAnimation(option, newOffset, overlayManager, animateProperty, point);
-    } else if (info_.sizeChangeEffect == DraggingSizeChangeEffect::SIZE_TRANSITION ||
-               info_.sizeChangeEffect == DraggingSizeChangeEffect::SIZE_CONTENT_TRANSITION) {
-        StartDragTransitionAnimation(newOffset, option, overlayManager, animateProperty, point);
-    }
-}
-
-void DragDropManager::StartDragDefaultAnimation(AnimationOption option, const Offset& newOffset,
-    const RefPtr<OverlayManager>& overlayManager, const RefPtr<NodeAnimatablePropertyFloat>& animateProperty,
-    Point point)
-{
-    auto renderContext = info_.imageNode->GetRenderContext();
-    CHECK_NULL_VOID(renderContext);
-    auto context = info_.imageNode->GetContextRefPtr();
-    CHECK_NULL_VOID(context);
-    auto animateCallback = [renderContext, info = info_, newOffset, overlayManager, animateProperty, point]() {
-        CHECK_NULL_VOID(renderContext);
-        DragAnimationHelper::UpdateStartAnimation(overlayManager, animateProperty, point, info, newOffset);
-        if (!info.textNode) {
-            CHECK_NULL_VOID(renderContext);
-            renderContext->UpdateTransformScale({ info.scale, info.scale });
-            renderContext->UpdateTransformTranslate({ newOffset.GetX(), newOffset.GetY(), 0.0f });
-            return;
-        }
-        CHECK_NULL_VOID(info.imageNode);
-        auto imageLayoutProperty = info.imageNode->GetLayoutProperty();
-        CHECK_NULL_VOID(imageLayoutProperty);
-        imageLayoutProperty->UpdateUserDefinedIdealSize({ CalcLength(info.width * info.scale, DimensionUnit::PX),
-            CalcLength(info.height * info.scale, DimensionUnit::PX) });
-        info.relativeContainerNode->MarkDirtyNode(NG::PROPERTY_UPDATE_MEASURE);
-    };
-    if (info_.textNode) {
-        option.SetCurve(DRAG_TRANSITION_ANIMATION_CURVE);
-        auto pipeline = info_.relativeContainerNode->GetContext();
-        CHECK_NULL_VOID(pipeline);
-        pipeline->Animate(option, option.GetCurve(), animateCallback, option.GetOnFinishEvent());
-    } else {
-        AnimationUtils::Animate(option, animateCallback, option.GetOnFinishEvent(), nullptr, context);
-    }
-}
-
-void DragDropManager::StartDragTransitionAnimation(const Offset& newOffset, AnimationOption option,
-    const RefPtr<OverlayManager>& overlayManager, const RefPtr<NodeAnimatablePropertyFloat>& animateProperty,
-    Point point)
-{
-    CHECK_NULL_VOID(info_.imageNode);
-    option.SetCurve(DRAG_TRANSITION_ANIMATION_CURVE);
-    auto callback = [relativeContainerNode = info_.relativeContainerNode, newOffset, info = info_, overlayManager,
-                        animateProperty, point]() {
-        DragAnimationHelper::UpdateStartAnimation(overlayManager, animateProperty, point, info, newOffset);
-        CHECK_NULL_VOID(info.stackNode);
-        auto stackLayoutProperty = info.stackNode->GetLayoutProperty();
-        CHECK_NULL_VOID(stackLayoutProperty);
-        stackLayoutProperty->UpdateUserDefinedIdealSize({ CalcLength(info.width * info.scale, DimensionUnit::PX),
-            CalcLength(info.height * info.scale, DimensionUnit::PX) });
-        auto stackContext = info.stackNode->GetContext();
-        CHECK_NULL_VOID(stackContext);
-        info.stackNode->MarkDirtyNode(NG::PROPERTY_UPDATE_MEASURE);
-    };
-    auto pipeline = info_.relativeContainerNode->GetContext();
-    CHECK_NULL_VOID(pipeline);
-    pipeline->Animate(option, option.GetCurve(), callback, option.GetOnFinishEvent());
-}
-
-void DragDropManager::HandleStartDragAnimationFinish(int32_t containerId)
-{
-    if (IsAllStartAnimationFinished()) {
-        SetStartAnimation(true);
-    }
-    if (IsPullMoveReceivedForCurrentDrag()) {
-        TransDragWindowToDragFwk(containerId);
-    }
-    auto overlayManager = GetDragAnimationOverlayManager(containerId);
-    CHECK_NULL_VOID(overlayManager);
-    auto gatherNode = overlayManager->GetGatherNode();
-    CHECK_NULL_VOID(gatherNode);
-    auto info = overlayManager->GetGatherNodeChildrenInfo();
-    int cnt = 0;
-    for (auto iter = info.rbegin(); iter != info.rend(); iter++) {
-        auto imageNode = (*iter).imageNode.Upgrade();
-        if (cnt > 1) {
-            gatherNode->RemoveChild(imageNode);
-        }
-        cnt++;
-    }
-}
-
-void DragDropManager::SetDragStartAnimationOption(AnimationOption& option, int32_t containerId)
-{
     const RefPtr<Curve> curve = AceType::MakeRefPtr<ResponsiveSpringMotion>(0.347f, 0.99f, 0.0f);
     constexpr int32_t animateDuration = 300;
     option.SetCurve(curve);
     option.SetDuration(animateDuration);
     option.SetOnFinishEvent([weakManager = WeakClaim(this), containerId]() {
         auto dragDropManager = weakManager.Upgrade();
-        CHECK_NULL_VOID(dragDropManager);
-        dragDropManager->HandleStartDragAnimationFinish(containerId);
+        if (dragDropManager && !dragDropManager->IsPullMoveReceivedForCurrentDrag()) {
+            dragDropManager->TransDragWindowToDragFwk(containerId);
+        }
     });
+    auto renderContext = info_.imageNode->GetRenderContext();
+    CHECK_NULL_VOID(renderContext);
+    auto offset = OffsetF(point.GetX(), point.GetY());
+    auto menuWrapperNode = GetMenuWrapperNodeFromDrag();
+    auto menuPosition = overlayManager->CalculateMenuPosition(menuWrapperNode, offset);
+    auto menuRenderContext = GetMenuRenderContextFromMenuWrapper(menuWrapperNode);
+    AnimationUtils::Animate(
+        option,
+        [renderContext, info = info_, newOffset, overlayManager, gatherNodeCenter, menuRenderContext, menuPosition]() {
+            CHECK_NULL_VOID(renderContext);
+            if (menuRenderContext && !menuPosition.NonOffset()) {
+                menuRenderContext->UpdatePosition(
+                    OffsetT<Dimension>(Dimension(menuPosition.GetX()), Dimension(menuPosition.GetY())));
+            }
+            renderContext->UpdateTransformScale({ info.scale, info.scale });
+            renderContext->UpdateTransformTranslate({ newOffset.GetX(), newOffset.GetY(), 0.0f });
+            GatherAnimationInfo gatherAnimationInfo = { info.scale, info.width, info.height,
+                gatherNodeCenter, renderContext->GetBorderRadius() };
+            UpdateGatherNodeAttr(overlayManager, gatherAnimationInfo);
+            UpdateTextNodePosition(info.textNode, newOffset);
+        },
+        option.GetOnFinishEvent());
 }
 
 void DragDropManager::SetDragResult(
@@ -2810,6 +2013,9 @@ void DragDropManager::UpdateGatherNodeAttr(const RefPtr<OverlayManager>& overlay
         auto imageContext = imageNode->GetRenderContext();
         CHECK_NULL_VOID(imageContext);
         auto& childInfo = gatherNodeChildrenInfo[i];
+        imageContext->UpdatePosition(OffsetT<Dimension>(
+            Dimension(info.gatherNodeCenter.GetX() - childInfo.halfWidth),
+            Dimension(info.gatherNodeCenter.GetY() - childInfo.halfHeight)));
         auto updateScale = scale;
         if (((childInfo.width > info.width) || (childInfo.height > info.height)) &&
             !NearZero(childInfo.width) && !NearZero(childInfo.height)) {
@@ -2827,20 +2033,22 @@ void DragDropManager::UpdateGatherNodePosition(const RefPtr<OverlayManager>& ove
     const RefPtr<FrameNode>& imageNode)
 {
     CHECK_NULL_VOID(imageNode);
+    auto gatherNodeCenter = imageNode->GetPaintRectCenter();
     CHECK_NULL_VOID(overlayManager);
-    auto gatherNode = overlayManager->GetGatherNode();
-    CHECK_NULL_VOID(gatherNode);
-    auto gatherNodeCenter = DragDropFuncWrapper::GetPaintRectCenterToScreen(imageNode);
-    gatherNodeCenter -= DragDropFuncWrapper::GetCurrentWindowOffset(gatherNode->GetContextRefPtr());
-    OffsetF offset;
-    auto info = overlayManager->GetGatherNodeChildrenInfo();
-    for (auto iter = info.rbegin(); iter != info.rend(); iter++) {
-        auto& child = (*iter);
+    Dimension x = Dimension(0.0f);
+    Dimension y = Dimension(0.0f);
+    OffsetT<Dimension> offset(x, y);
+    auto gatherNodeChildrenInfo = overlayManager->GetGatherNodeChildrenInfo();
+    for (const auto& child : gatherNodeChildrenInfo) {
         auto imageNode = child.imageNode.Upgrade();
         CHECK_NULL_VOID(imageNode);
-        offset.SetX(gatherNodeCenter.GetX() - child.halfWidth);
-        offset.SetY(gatherNodeCenter.GetY() - child.halfHeight);
-        DragDropFuncWrapper::UpdateNodePositionToWindow(imageNode, offset);
+        auto imageContext = imageNode->GetRenderContext();
+        CHECK_NULL_VOID(imageContext);
+        x.SetValue(gatherNodeCenter.GetX() - child.halfWidth);
+        y.SetValue(gatherNodeCenter.GetY() - child.halfHeight);
+        offset.SetX(x);
+        offset.SetY(y);
+        imageContext->UpdatePosition(offset);
     }
 }
 
@@ -2887,22 +2095,17 @@ void DragDropManager::PushGatherPixelMap(const RefPtr<PixelMap>& pixelMap)
     gatherPixelMaps_.push_back(pixelMap);
 }
 
-void DragDropManager::GetGatherPixelMap(
-    DragDataCore& dragData, float scale, float previewWidth, float previewHeight)
+void DragDropManager::GetGatherPixelMap(DragDataCore& dragData, float scale, float previewWidth, float previewHeight)
 {
     for (const auto& gatherPixelMap : gatherPixelMaps_) {
         RefPtr<PixelMap> pixelMapDuplicated = gatherPixelMap;
 #if defined(PIXEL_MAP_SUPPORTED)
         pixelMapDuplicated = PixelMap::CopyPixelMap(gatherPixelMap);
         if (!pixelMapDuplicated) {
-            TAG_LOGW(AceLogTag::ACE_DRAG, "copy pixelMap failed!");
+            TAG_LOGW(AceLogTag::ACE_DRAG, "Copy PixelMap is failure!");
             pixelMapDuplicated = gatherPixelMap;
         }
 #endif
-        if (!pixelMapDuplicated) {
-            TAG_LOGW(AceLogTag::ACE_DRAG, "skip null pixelMap.");
-            continue;
-        }
         auto width = pixelMapDuplicated->GetWidth() * scale;
         auto height = pixelMapDuplicated->GetHeight() * scale;
         auto updateScale = scale;
@@ -2950,7 +2153,7 @@ bool DragDropManager::IsUIExtensionShowPlaceholder(const RefPtr<NG::UINode>& nod
 {
 #ifdef WINDOW_SCENE_SUPPORTED
     CHECK_NULL_RETURN(node, true);
-    auto pipeline = PipelineContext::GetCurrentContextSafelyWithCheck();
+    auto pipeline = PipelineContext::GetCurrentContext();
     CHECK_NULL_RETURN(pipeline, true);
     auto manager = pipeline->GetUIExtensionManager();
     CHECK_NULL_RETURN(manager, true);
@@ -2972,38 +2175,15 @@ void DragDropManager::UpdateDragMovePosition(const NG::OffsetF& offset, bool isR
     dragTotalMovePosition_ += (dragMovePosition_ - lastDragMovePosition_);
 }
 
-bool DragDropManager::IsUIExtensionOrDynamicComponent(const RefPtr<NG::UINode>& node)
+bool DragDropManager::IsUIExtensionComponent(const RefPtr<NG::UINode>& node)
 {
-    CHECK_NULL_RETURN(node, false);
-    if (V2::ISOLATED_COMPONENT_ETS_TAG == node->GetTag() || V2::DYNAMIC_COMPONENT_ETS_TAG == node->GetTag()) {
-        // As before, we presume that Isolated and Dynamic component can never show any placeholder component.
-        return true;
-    }
     return (V2::UI_EXTENSION_COMPONENT_ETS_TAG == node->GetTag() || V2::EMBEDDED_COMPONENT_ETS_TAG == node->GetTag()) &&
            (!IsUIExtensionShowPlaceholder(node));
 }
 
-void DragDropManager::HandleUIExtensionDragEvent(
-    const RefPtr<FrameNode>& frameNode, const DragPointerEvent& pointerEvent, DragEventType type)
-{
-    CHECK_NULL_VOID(frameNode);
-    auto pattern = frameNode->GetPattern<Pattern>();
-    CHECK_NULL_VOID(pattern);
-
-    auto dragEvent = pointerEvent;
-    if (type == DragEventType::ENTER) {
-        dragEvent.action = PointerAction::PULL_IN_WINDOW;
-    } else if (type == DragEventType::LEAVE) {
-        dragEvent.action = PointerAction::PULL_OUT_WINDOW;
-    } else if (type == DragEventType::PULL_CANCEL) {
-        dragEvent.action = PointerAction::PULL_CANCEL;
-    }
-    pattern->HandleDragEvent(dragEvent);
-}
-
 RectF DragDropManager::GetMenuPreviewRect()
 {
-    auto pipelineContext = PipelineContext::GetCurrentContextSafelyWithCheck();
+    auto pipelineContext = PipelineContext::GetCurrentContext();
     CHECK_NULL_RETURN(pipelineContext, RectF());
     auto dragDropManager = pipelineContext->GetDragDropManager();
     CHECK_NULL_RETURN(dragDropManager, RectF());
@@ -3013,8 +2193,9 @@ RectF DragDropManager::GetMenuPreviewRect()
     CHECK_NULL_RETURN(menuWrapperPattern, RectF());
     auto menuPreview = menuWrapperPattern->GetPreview();
     CHECK_NULL_RETURN(menuPreview, RectF());
-    auto previewPaintRect = DragDropFuncWrapper::GetPaintRectToScreen(menuPreview);
-    previewPaintRect -= DragDropFuncWrapper::GetCurrentWindowOffset(pipelineContext);
+    auto menuRenderContext = menuPreview->GetRenderContext();
+    CHECK_NULL_RETURN(menuRenderContext, RectF());
+    auto previewPaintRect = menuRenderContext->GetPaintRectWithTransform();
     return previewPaintRect;
 }
 
@@ -3052,53 +2233,17 @@ double DragDropManager::GetMaxWidthBaseOnGridSystem(const RefPtr<PipelineBase>& 
     return maxWidth;
 }
 
-std::shared_ptr<ScaleDataInfo> DragDropManager::GetScaleInfo(float width, float height, bool textDraggable)
-{
-    auto scaleDataInfo = std::make_shared<ScaleDataInfo>();
-    CHECK_NULL_RETURN(scaleDataInfo, nullptr);
-    scaleDataInfo->shortSide = fmin(SystemProperties::GetDeviceHeight(), SystemProperties::GetDeviceWidth());
-    auto shortSide = PipelineBase::Px2VpWithCurrentDensity(scaleDataInfo->shortSide);
-    if (shortSide <= DEVICE_TYPE_UNKOWN) {
-        return scaleDataInfo;
-    } else if (shortSide <= DEVICE_TYPE_SMALL) {
-        scaleDataInfo = DragDropManager::CalculateScale(width, height,
-            textDraggable ? scaleDataInfo->shortSide : scaleDataInfo->shortSide / SCALE_TYPE_FIRST,
-            scaleDataInfo->shortSide / SCALE_TYPE_FIRST);
-    } else if (shortSide <= DEVICE_TYPE_MEDIUM) {
-        scaleDataInfo = CalculateScale(width, height,
-            textDraggable ? scaleDataInfo->shortSide / SCALE_TYPE_FIRST : scaleDataInfo->shortSide / SCALE_TYPE_THIRD,
-            scaleDataInfo->shortSide / SCALE_TYPE_THIRD);
-    } else {
-        scaleDataInfo = CalculateScale(width, height,
-            textDraggable ? scaleDataInfo->shortSide * SCALE_TYPE_FIRST / SCALE_TYPE_SECOND
-                          : scaleDataInfo->shortSide / SCALE_TYPE_SECOND,
-            scaleDataInfo->shortSide / SCALE_TYPE_SECOND);
-    }
-    return scaleDataInfo;
-}
-
-std::shared_ptr<ScaleDataInfo> DragDropManager::CalculateScale(
-    float width, float height, float widthLimit, float heightLimit)
-{
-    auto scaleDataInfo = std::make_shared<ScaleDataInfo>();
-    CHECK_NULL_RETURN(scaleDataInfo, nullptr);
-    if ((width > 0 && height > 0) && (width > widthLimit || height > heightLimit)) {
-        scaleDataInfo->scale = fmin(widthLimit / width, heightLimit / height);
-        scaleDataInfo->isNeedScale = true;
-    }
-    return scaleDataInfo;
-}
-
 const RefPtr<NG::OverlayManager> DragDropManager::GetDragAnimationOverlayManager(int32_t containerId)
 {
-    auto subwindow = SubwindowManager::GetInstance()->GetSubwindowByType(containerId >= MIN_SUBCONTAINER_ID ?
-        SubwindowManager::GetInstance()->GetParentContainerId(containerId) : containerId, SubwindowType::TYPE_MENU);
+    auto subwindow = SubwindowManager::GetInstance()->GetSubwindow(containerId >= MIN_SUBCONTAINER_ID ?
+        SubwindowManager::GetInstance()->GetParentContainerId(containerId) : containerId);
     CHECK_NULL_RETURN(subwindow, nullptr);
     return subwindow->GetOverlayManager();
 }
 
 void DragDropManager::RemoveDragFrameNode(int32_t id)
 {
+    dragFrameNodes_.erase(id);
     gridDragFrameNodes_.erase(id);
     listDragFrameNodes_.erase(id);
     textFieldDragFrameNodes_.erase(id);
@@ -3120,32 +2265,6 @@ void DragDropManager::RegisterDragStatusListener(int32_t nodeId, const WeakPtr<F
     }
 }
 
-void DragDropManager::RegisterPullEventListener(
-    int32_t uniqueIdentify, std::function<void(const DragPointerEvent&)> callback)
-{
-    pullEventListener_[uniqueIdentify] = callback;
-}
-
-void DragDropManager::UnRegisterPullEventListener(int32_t uniqueIdentify)
-{
-    auto it = pullEventListener_.find(uniqueIdentify);
-    if (it != pullEventListener_.end()) {
-        pullEventListener_.erase(it);
-    }
-}
-
-void DragDropManager::NotifyPullEventListener(const DragPointerEvent& pointerEvent)
-{
-    if (pullEventListener_.empty()) {
-        return;
-    }
-    for (const auto& pair : pullEventListener_) {
-        if (pair.second) {
-            pair.second(pointerEvent);
-        }
-    }
-}
-
 bool DragDropManager::IsDraggingPressed(int32_t currentPointerId) const
 {
     if (currentPointerId_ == currentPointerId) {
@@ -3156,15 +2275,15 @@ bool DragDropManager::IsDraggingPressed(int32_t currentPointerId) const
 
 void DragDropManager::ResetContextMenuDragPosition()
 {
-    dragMovePosition_.Reset();
-    lastDragMovePosition_.Reset();
-    dragTotalMovePosition_.Reset();
+    dragMovePosition_ = OffsetF(0.0f, 0.0f);
+    lastDragMovePosition_ = OffsetF(0.0f, 0.0f);
+    dragTotalMovePosition_ = OffsetF(0.0f, 0.0f);
 }
 
 void DragDropManager::ResetContextMenuRedragPosition()
 {
-    dragMovePosition_.Reset();
-    lastDragMovePosition_.Reset();
+    dragMovePosition_ = OffsetF(0.0f, 0.0f);
+    lastDragMovePosition_ = OffsetF(0.0f, 0.0f);
 }
 
 void DragDropManager::AddNewDragAnimation()
@@ -3173,22 +2292,10 @@ void DragDropManager::AddNewDragAnimation()
     allAnimationCnt_++;
 }
 
-void DragDropManager::AddNewDragStartAnimation()
-{
-    currentStartAnimationCnt_++;
-    allStartAnimationCnt_++;
-}
-
 bool DragDropManager::IsAllAnimationFinished()
 {
     currentAnimationCnt_--;
     return currentAnimationCnt_ == 0;
-}
-
-bool DragDropManager::IsAllStartAnimationFinished()
-{
-    currentStartAnimationCnt_--;
-    return currentStartAnimationCnt_ == 0;
 }
 
 bool DragDropManager::CheckIsNewDrag(const DragPointerEvent& pointerEvent) const
@@ -3196,161 +2303,16 @@ bool DragDropManager::CheckIsNewDrag(const DragPointerEvent& pointerEvent) const
     return (pointerEvent.pullId != -1) && (pointerEvent.pullId != currentPullId_);
 }
 
-void DragDropManager::RequireSummaryAndDragBundleInfoIfNecessary(const DragPointerEvent& pointerEvent)
+void DragDropManager::RequireSummaryIfNecessary(const DragPointerEvent& pointerEvent)
 {
     if (CheckIsNewDrag(pointerEvent)) {
         currentPullId_ = pointerEvent.pullId;
         RequireSummary();
-        RequireBundleInfo();
     }
-}
-
-bool DragDropManager::IsAnyDraggableHit(const RefPtr<PipelineBase>& pipeline, int32_t pointId)
-{
-    if (isAnyDraggableHit_) {
-        return true;
-    }
-
-    auto pipelineContext = AceType::DynamicCast<PipelineContext>(pipeline);
-    CHECK_NULL_RETURN(pipelineContext, false);
-    auto eventManager = pipelineContext->GetEventManager();
-    CHECK_NULL_RETURN(eventManager, false);
-    auto touchTestResults = eventManager->touchTestResults_;
-    const auto iter = touchTestResults.find(pointId);
-    if (iter == touchTestResults.end() || iter->second.empty()) {
-        TAG_LOGI(AceLogTag::ACE_DRAG, "touch test result is empty.");
-        return false;
-    }
-    for (const auto& touchTestResult : iter->second) {
-        auto recognizer = AceType::DynamicCast<NG::NGGestureRecognizer>(touchTestResult);
-        if (recognizer) {
-            continue;
-        }
-        auto node = touchTestResult->GetAttachedNode().Upgrade();
-        CHECK_NULL_RETURN(node, false);
-        if (IsUIExtensionOrDynamicComponent(node)) {
-            return true;
-        }
-    }
-    return false;
 }
 
 int32_t DragDropManager::CancelUDMFDataLoading(const std::string& key)
 {
     return UdmfClient::GetInstance()->Cancel(key);
-}
-
-bool DragDropManager::CheckIsFolderSubwindowBoundary(float x, float y, int32_t instanceId)
-{
-    if (!SystemProperties::IsSuperFoldDisplayDevice() || NearZero(info_.scale)) {
-        return false;
-    }
-    auto mainContainerId = instanceId >= MIN_SUBCONTAINER_ID ?
-        SubwindowManager::GetInstance()->GetParentContainerId(instanceId) : instanceId;
-    auto container = Container::GetContainer(mainContainerId);
-    CHECK_NULL_RETURN(container, false);
-    if (container->GetCurrentFoldStatus() == FoldStatus::EXPAND) {
-        return false;
-    }
-    auto isCrossWindow = container->IsCrossAxisWindow();
-    auto isSceneBoard = container->IsSceneBoardWindow();
-    if (isCrossWindow || isSceneBoard) {
-        return false;
-    }
-    auto subwindow =
-        SubwindowManager::GetInstance()->GetSubwindowByType(Container::CurrentId(), SubwindowType::TYPE_MENU);
-    CHECK_NULL_RETURN(subwindow, false);
-    auto rect = subwindow->GetWindowRect();
-    auto scale = dragStartAnimationRate_ * (info_.scale - info_.originScale.y) + info_.originScale.y;
-    OffsetF pixelMapOffset = pixelMapOffset_ / info_.scale * scale;
-    float top = y + pixelMapOffset.GetY();
-    float bottom = y + pixelMapOffset.GetY() + info_.height * scale;
-    float distance = std::min(top - rect.Top(), rect.Bottom() - bottom);
-    return distance < MIN_FOLDER_SUBWINDOW_BOUNDARY_DISTANCE;
-}
-
-bool DragDropManager::CheckIsUIExtensionBoundary(float x, float y, int32_t instanceId)
-{
-    auto container = Container::GetContainer(instanceId);
-    CHECK_NULL_RETURN(container, false);
-    if (!container->IsUIExtensionWindow()) {
-        return false;
-    }
-    auto pipeline = container->GetPipelineContext();
-    CHECK_NULL_RETURN(pipeline, false);
-    auto rect = pipeline->GetCurrentWindowRect();
-    auto distance = std::min(std::min(x - rect.Left(), rect.Right() - x),
-        std::min(y - rect.Top(), rect.Bottom() - y));
-    return distance < MIN_UI_EXTENSION_BOUNDARY_DISTANCE;
-}
-
-void DragDropManager::SetDragAnimationPointerEvent(
-    const DragPointerEvent &pointerEvent, const RefPtr<NG::FrameNode> &node)
-{
-    auto container = Container::Current();
-    CHECK_NULL_VOID(container);
-    if (!container->IsSceneBoardWindow() || node == rootNode_) {
-        dragAnimationPointerEvent_ = pointerEvent;
-    }
-}
-
-void DragDropManager::HandleTouchEvent(const TouchEvent& event, const RefPtr<NG::FrameNode>& node)
-{
-    if (event.type == TouchType::MOVE && event.pullType != TouchType::PULL_MOVE) {
-        if (!IsDragging() || !IsSameDraggingPointer(event.id)) {
-            return;
-        }
-        DragPointerEvent dragPointerEvent;
-        DragDropFuncWrapper::ConvertPointerEvent(event, dragPointerEvent);
-        SetDragAnimationPointerEvent(dragPointerEvent);
-    } else if ((event.type == TouchType::UP) || (event.type == TouchType::CANCEL)) {
-        ResetDraggingStatus(event);
-    }
-}
-
-void DragDropManager::HandleMouseEvent(const MouseEvent& event)
-{
-    bool cancelDrag = (event.button == MouseButton::RIGHT_BUTTON &&
-        (event.action == MouseAction::PRESS || event.action == MouseAction::PULL_UP));
-    SetIsDragCancel(cancelDrag);
-}
-
-void DragDropManager::HandlePipelineOnHide()
-{
-    if (IsItemDragging()) {
-        CancelItemDrag();
-    }
-}
-
-void DragDropManager::ResetBundleInfo()
-{
-    auto container = Container::Current();
-    CHECK_NULL_VOID(container);
-    auto dragBundleName = container->GetBundleName();
-    dragBundleInfo_.bundleName = dragBundleName;
-    dragBundleInfo_.isRemoteDev = false;
-}
-
-void DragDropManager::RequireBundleInfo()
-{
-    DragBundleInfo dragBundleInfo;
-    InteractionInterface::GetInstance()->GetDragBundleInfo(dragBundleInfo);
-    dragBundleInfo_ = dragBundleInfo;
-}
-
-void DragDropManager::NotifyDragSpringLoadingMove(const RefPtr<FrameNode>& dragFrameNode, const std::string& extraInfo)
-{
-    if (!dragDropSpringLoadingDetector_) {
-        dragDropSpringLoadingDetector_ = MakeRefPtr<DragDropSpringLoadingDetector>();
-    }
-    dragDropSpringLoadingDetector_->NotifyMove({ preMovePoint_, dragFrameNode, preTimeStamp_, extraInfo });
-}
-
-void DragDropManager::NotifyDragSpringLoadingIntercept(std::string_view extraParams)
-{
-    if (!dragDropSpringLoadingDetector_) {
-        dragDropSpringLoadingDetector_ = MakeRefPtr<DragDropSpringLoadingDetector>();
-    }
-    dragDropSpringLoadingDetector_->NotifyIntercept(extraParams);
 }
 } // namespace OHOS::Ace::NG

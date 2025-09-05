@@ -31,8 +31,7 @@ struct ExtraInfo {
 enum class ClickEventType : int32_t {
     UNKNOWN_EVENT_TYPE,
     POINT_EVENT_TYPE,
-    KEY_EVENT_TYPE,
-    ACCESSIBILITY_EVENT_TYPE
+    KEY_EVENT_TYPE
 };
 
 struct SecCompPointEvent {
@@ -46,27 +45,14 @@ struct SecCompKeyEvent {
     int32_t keyCode;
 };
 
-struct SecCompAccessibilityEvent {
-    uint64_t timestamp;
-    int32_t componentId;
-};
-
 struct SecCompClickEvent {
     ClickEventType type;
     union {
         SecCompPointEvent point;
         SecCompKeyEvent key;
-        SecCompAccessibilityEvent accessibility;
     };
     ExtraInfo extraInfo;
 };
-
-struct SecCompInfo {
-    int32_t scId;
-    std::string componentInfo;
-    SecCompClickEvent clickInfo;
-};
-
 using OnFirstUseDialogCloseFunc = std::function<void(int32_t)>;
 
 class SecCompUiRegister {
@@ -99,8 +85,9 @@ public:
         return 0;
     };
 
-    static int32_t ReportSecurityComponentClickEvent(SecCompInfo& secCompInfo,
-        sptr<IRemoteObject> callerToken, OnFirstUseDialogCloseFunc&& func, std::string& message)
+    static int32_t ReportSecurityComponentClickEvent(int32_t scId,
+        std::string& componentInfo, const SecCompClickEvent& clickInfo,
+        sptr<IRemoteObject> callerToken, OnFirstUseDialogCloseFunc&& func)
     {
         return 0;
     };
@@ -118,11 +105,6 @@ public:
     static bool IsSystemAppCalling()
     {
         return false;
-    };
-
-    static bool HasCustomPermissionForSecComp()
-    {
-        return true;
     };
 };
 }  // namespace SecurityComponent

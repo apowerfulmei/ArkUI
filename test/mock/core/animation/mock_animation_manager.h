@@ -38,23 +38,6 @@ public:
         return GetInstance().enabled_;
     }
 
-    /**
-     * @brief Controls the animation manager version to maintain backward compatibility in tests when applying bug fixes.
-     *
-     */
-    enum class Version {
-        V0 = 0,
-        V1 = 1, // introduces bugfixes to animation callback triggers
-    };
-    static Version Version()
-    {
-        return GetInstance().runningVersion_;
-    }
-    static void SetVersion(enum Version value)
-    {
-        GetInstance().runningVersion_ = value;
-    }
-
     void OpenAnimation()
     {
         inScope_ = true;
@@ -77,22 +60,16 @@ public:
     struct AnimationParams {
         AnimationCallbacks callbacks;
         AnimationOperation type = AnimationOperation::PLAY;
-
-        void Reset()
-        {
-            callbacks.finishCb = nullptr;
-            callbacks.repeatCb = nullptr;
-            type = AnimationOperation::PLAY;
-        }
     };
-
-    void SetParams(const AnimationOption& option, AnimationCallbacks&& cbs);
+    void SetParams(int32_t duration, AnimationCallbacks&& param)
+    {
+        params_.callbacks = std::move(param);
+        params_.type = (duration <= 0) ? AnimationOperation::CANCEL : AnimationOperation::PLAY;
+    }
 
     void AddActiveProp(const WeakPtr<PropertyBase>& prop)
     {
-        if (inScope_) {
-            activeProps_.insert(prop);
-        }
+        activeProps_.insert(prop);
     }
 
     /**
@@ -101,16 +78,7 @@ public:
      */
     void Tick();
 
-    /**
-     * @brief Force update animations by @c delta to simulate velocity animation
-     *
-     */
-    template<typename T>
-    void TickByVelocity(const T& delta);
-
     void Reset();
-
-    bool AllFinished();
 
 private:
     void CancelAnimations();
@@ -121,7 +89,6 @@ private:
     std::map<WeakPtr<PropertyBase>, WeakPtr<MockImplicitAnimation>> propToAnimation_;
 
     int32_t ticks_ = 1;
-    enum Version runningVersion_ = Version::V0;
     bool inScope_ = false;
     bool enabled_ = false;
 };

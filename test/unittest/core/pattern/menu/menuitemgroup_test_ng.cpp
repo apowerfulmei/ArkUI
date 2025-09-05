@@ -19,7 +19,6 @@
 #define private public
 #define protected public
 
-#include "test/mock/base/mock_system_properties.h"
 #include "test/mock/core/common/mock_container.h"
 #include "test/mock/core/common/mock_theme_manager.h"
 #include "test/mock/core/pipeline/mock_pipeline_context.h"
@@ -68,8 +67,6 @@ namespace OHOS::Ace::NG {
 namespace {
 const InspectorFilter filter;
 constexpr int32_t TARGET_ID = 3;
-constexpr int32_t START_INDEX = 3;
-constexpr int32_t FOOT_INDEX = 3;
 constexpr MenuType TYPE = MenuType::MENU;
 const std::string EMPTY_TEXT = "";
 const std::string TEXT_TAG = "text";
@@ -86,11 +83,6 @@ constexpr float TARGET_SIZE_HEIGHT = 100.0f;
 constexpr float MENU_SIZE_HEIGHT = 150.0f;
 constexpr float MENU_ITEM_SIZE_WIDTH = 100.0f;
 constexpr float MENU_ITEM_SIZE_HEIGHT = 50.0f;
-constexpr float BLUR_STYLE_SCALE = 1.5f;
-constexpr float EFFECT_SATURATION = 1.2f;
-constexpr float BLUR_OPTION = 0.5f;
-constexpr float BRIGHTNESS = 0.8f;
-constexpr float RADIUS = 10.0f;
 const SizeF FULL_SCREEN_SIZE(FULL_SCREEN_WIDTH, FULL_SCREEN_HEIGHT);
 const std::vector<std::string> FONT_FAMILY_VALUE = {"cursive"};
 const std::vector<SelectParam> CREATE_VALUE = { { "content1", "icon1" }, { "content2", "" },
@@ -125,13 +117,7 @@ void MenuItemGroupTestNg::SetUp()
     MockPipelineContext::SetUp();
     auto themeManager = AceType::MakeRefPtr<MockThemeManager>();
     MockPipelineContext::GetCurrent()->SetThemeManager(themeManager);
-    RefPtr<MenuTheme> menuTheme_ = AceType::MakeRefPtr<MenuTheme>();
-    EXPECT_CALL(*themeManager, GetTheme(_)).WillRepeatedly([menuTheme_](ThemeType type) -> RefPtr<Theme> {
-        if (type == MenuTheme::TypeId()) {
-            return menuTheme_;
-        }
-        return AceType::MakeRefPtr<SelectTheme>();
-    });
+    EXPECT_CALL(*themeManager, GetTheme(_)).WillRepeatedly(Return(AceType::MakeRefPtr<SelectTheme>()));
     MockContainer::SetUp();
 }
 
@@ -213,6 +199,35 @@ RefPtr<FrameNode> MenuItemGroupTestNg::GetPreviewMenuWrapper(
     auto menuWrapperNode =
         MenuView::Create(textNode, targetNode->GetId(), V2::TEXT_ETS_TAG, menuParam, true, customNode);
     return menuWrapperNode;
+}
+
+/**
+ * @tc.name: MenuItemGroupAccessibilityPropertyGetText001
+ * @tc.desc: Test GetText of menuItemGroup.
+ * @tc.type: FUNC
+ */
+HWTEST_F(MenuItemGroupTestNg, MenuItemGroupAccessibilityPropertyGetText001, TestSize.Level1)
+{
+    auto frameNode = FrameNode::GetOrCreateFrameNode(V2::MENU_ITEM_GROUP_ETS_TAG,
+        ViewStackProcessor::GetInstance()->ClaimNodeId(), []() { return AceType::MakeRefPtr<MenuItemGroupPattern>(); });
+    ASSERT_NE(frameNode, nullptr);
+
+    auto menuItemGroupPattern = frameNode->GetPattern<MenuItemGroupPattern>();
+    ASSERT_NE(menuItemGroupPattern, nullptr);
+
+    auto menuItemGroupAccessibilityProperty = frameNode->GetAccessibilityProperty<MenuItemGroupAccessibilityProperty>();
+    ASSERT_NE(menuItemGroupAccessibilityProperty, nullptr);
+    EXPECT_EQ(menuItemGroupAccessibilityProperty->GetText(), EMPTY_TEXT);
+
+    auto content = FrameNode::CreateFrameNode(
+        V2::TEXT_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(), AceType::MakeRefPtr<TextPattern>());
+    ASSERT_NE(content, nullptr);
+    menuItemGroupPattern->AddHeaderContent(content);
+
+    auto textLayoutProperty = content->GetLayoutProperty<TextLayoutProperty>();
+    ASSERT_NE(textLayoutProperty, nullptr);
+    textLayoutProperty->UpdateContent(MENU_ITEM_GROUP_TEXT);
+    EXPECT_EQ(menuItemGroupAccessibilityProperty->GetText(), MENU_ITEM_GROUP_TEXT);
 }
 
 /**
@@ -380,7 +395,6 @@ HWTEST_F(MenuItemGroupTestNg, MenuItemGroupLayoutAlgorithmTestNg003, TestSize.Le
         auto childWrapper = AceType::MakeRefPtr<LayoutWrapperNode>(menuItem, itemGeoNode, layoutProp2);
         layoutWrapper->AppendChild(childWrapper);
     }
-    algorithm->itemStartIndex_ = -1;
     algorithm->Measure(AceType::RawPtr(layoutWrapper));
     ASSERT_NE(algorithm->itemPosition_.find(0), algorithm->itemPosition_.end());
     EXPECT_EQ(algorithm->itemPosition_[0].second, 50.0f);
@@ -498,58 +512,6 @@ HWTEST_F(MenuItemGroupTestNg, MenuItemGroupLayoutAlgorithmTestNg006, TestSize.Le
     EXPECT_EQ(needFooterPadding, true);
 }
 /**
- * @tc.name: MenuItemGroupLayoutAlgorithmTestNg007
- * @tc.desc: Test MATCH_PARENT、WRAP_CONTENT and FIX_AT_IDEAL_SIZE.
- * @tc.type: FUNC
- */
-HWTEST_F(MenuItemGroupTestNg, MenuItemGroupLayoutAlgorithmTestNg007, TestSize.Level1)
-{
-    // create menu item group
-    auto menuItemGroupPattern = AceType::MakeRefPtr<MenuItemGroupPattern>();
-    auto menuItemGroup = FrameNode::CreateFrameNode(V2::MENU_ITEM_GROUP_ETS_TAG, -1, menuItemGroupPattern);
-    auto wrapperNode =
-        FrameNode::CreateFrameNode(V2::MENU_WRAPPER_ETS_TAG, 1, AceType::MakeRefPtr<MenuWrapperPattern>(1));
-    menuItemGroup->MountToParent(wrapperNode);
-    auto wrapperPattern = wrapperNode->GetPattern<MenuWrapperPattern>();
-    ASSERT_NE(wrapperPattern, nullptr);
-    wrapperPattern->OnModifyDone();
-    auto algorithm = AceType::MakeRefPtr<MenuItemGroupLayoutAlgorithm>(-1, -1, 0);
-    ASSERT_TRUE(algorithm);
-    auto geometryNode = AceType::MakeRefPtr<GeometryNode>();
-    auto layoutProp = AceType::MakeRefPtr<LayoutProperty>();
-    auto* layoutWrapper = new LayoutWrapperNode(menuItemGroup, geometryNode, layoutProp);
-
-    LayoutConstraintF parentLayoutConstraint;
-    parentLayoutConstraint.maxSize = FULL_SCREEN_SIZE;
-    parentLayoutConstraint.percentReference = FULL_SCREEN_SIZE;
-    auto props = layoutWrapper->GetLayoutProperty();
-    props->UpdateLayoutConstraint(parentLayoutConstraint);
-    props->UpdateContentConstraint();
-    // create menu item
-    for (int32_t i = 0; i < 3; ++i) {
-        auto itemPattern = AceType::MakeRefPtr<MenuItemPattern>();
-        auto menuItem = AceType::MakeRefPtr<FrameNode>("", -1, itemPattern);
-        auto itemGeoNode = AceType::MakeRefPtr<GeometryNode>();
-        SizeF frameSize(MENU_ITEM_SIZE_WIDTH, MENU_ITEM_SIZE_HEIGHT);
-        itemGeoNode->SetFrameSize(frameSize);
-        auto childWrapper = AceType::MakeRefPtr<LayoutWrapperNode>(menuItem, itemGeoNode, layoutProp);
-        layoutWrapper->AppendChild(childWrapper);
-    }
-    props->UpdateLayoutPolicyProperty(LayoutCalPolicy::MATCH_PARENT, true);
-    props->UpdateLayoutPolicyProperty(LayoutCalPolicy::MATCH_PARENT, false);
-    SizeF frameSize(MENU_ITEM_SIZE_WIDTH, MENU_ITEM_SIZE_HEIGHT);
-    auto isUpdate = algorithm->UpdateLayoutSizeBasedOnPolicy(layoutWrapper, frameSize);
-    EXPECT_TRUE(isUpdate);
-    props->UpdateLayoutPolicyProperty(LayoutCalPolicy::WRAP_CONTENT, true);
-    props->UpdateLayoutPolicyProperty(LayoutCalPolicy::WRAP_CONTENT, false);
-    isUpdate = algorithm->UpdateLayoutSizeBasedOnPolicy(layoutWrapper, frameSize);
-    EXPECT_TRUE(isUpdate);
-    props->UpdateLayoutPolicyProperty(LayoutCalPolicy::FIX_AT_IDEAL_SIZE, true);
-    props->UpdateLayoutPolicyProperty(LayoutCalPolicy::FIX_AT_IDEAL_SIZE, false);
-    isUpdate = algorithm->UpdateLayoutSizeBasedOnPolicy(layoutWrapper, frameSize);
-    EXPECT_FALSE(isUpdate);
-}
-/**
  * @tc.name: MenuItemGroupPaintMethod001
  * @tc.desc: Test MenuItemGroup GetOverlayDrawFunction.
  * @tc.type: FUNC
@@ -570,11 +532,8 @@ HWTEST_F(MenuItemGroupTestNg, MenuItemGroupPaintMethod001, TestSize.Level1)
      * @tc.steps: step2. update paint property and execute GetOverlayDrawFunction.
      * @tc.expected:  return value are as expected.
      */
-    RefPtr<RenderContext> renderContext = AceType::MakeRefPtr<RenderContext>();
+    WeakPtr<RenderContext> renderContext;
     RefPtr<GeometryNode> geometryNode = AceType::MakeRefPtr<GeometryNode>();
-    auto wrapperNode =
-        FrameNode::CreateFrameNode(V2::MENU_WRAPPER_ETS_TAG, 1, AceType::MakeRefPtr<MenuWrapperPattern>(1));
-    renderContext->SetHostNode(wrapperNode);
     PaintWrapper* paintWrapper = new PaintWrapper(renderContext, geometryNode, paintProp);
     auto result = paintMethod->GetOverlayDrawFunction(paintWrapper);
     EXPECT_NE(result, nullptr);
@@ -618,11 +577,8 @@ HWTEST_F(MenuItemGroupTestNg, MenuItemGroupPaintMethod002, TestSize.Level1)
      * @tc.steps: step2. update paint property and execute GetOverlayDrawFunction.
      * @tc.expected:  return value are as expected.
      */
-    RefPtr<RenderContext> renderContext = AceType::MakeRefPtr<RenderContext>();
+    WeakPtr<RenderContext> renderContext;
     RefPtr<GeometryNode> geometryNode = AceType::MakeRefPtr<GeometryNode>();
-    auto wrapperNode =
-        FrameNode::CreateFrameNode(V2::MENU_WRAPPER_ETS_TAG, 1, AceType::MakeRefPtr<MenuWrapperPattern>(1));
-    renderContext->SetHostNode(wrapperNode);
     PaintWrapper* paintWrapper = new PaintWrapper(renderContext, geometryNode, paintProp);
     auto result = paintMethod->GetOverlayDrawFunction(paintWrapper);
     EXPECT_NE(result, nullptr);
@@ -660,11 +616,8 @@ HWTEST_F(MenuItemGroupTestNg, MenuItemGroupPaintMethod003, TestSize.Level1)
      * @tc.steps: step2. update paint property and execute GetOverlayDrawFunction.
      * @tc.expected:  return value are as expected.
      */
-    RefPtr<RenderContext> renderContext = AceType::MakeRefPtr<RenderContext>();
+    WeakPtr<RenderContext> renderContext;
     RefPtr<GeometryNode> geometryNode = AceType::MakeRefPtr<GeometryNode>();
-    auto wrapperNode =
-        FrameNode::CreateFrameNode(V2::MENU_WRAPPER_ETS_TAG, 1, AceType::MakeRefPtr<MenuWrapperPattern>(1));
-    renderContext->SetHostNode(wrapperNode);
     PaintWrapper* paintWrapper = new PaintWrapper(renderContext, geometryNode, paintProp);
     auto result = paintMethod->GetOverlayDrawFunction(paintWrapper);
     EXPECT_NE(result, nullptr);
@@ -890,799 +843,5 @@ HWTEST_F(MenuItemGroupTestNg, MenuItemGroupPattern004, TestSize.Level1)
     EXPECT_EQ(layoutProps2->GetFontWeight(), FontWeight::BOLD);
 
     MockContainer::Current()->SetApiTargetVersion(backupApiVersion);
-}
-
-/**
- * @tc.name: AddHeaderNull
- * @tc.desc: Test MenuItemGroup pattern AddHeader with null ptr.
- * @tc.type: FUNC
- */
-HWTEST_F(MenuItemGroupTestNg, AddHeaderNull, TestSize.Level1)
-{
-    auto selectTheme = MockPipelineContext::GetCurrent()->GetTheme<SelectTheme>();
-    MenuItemGroupView menuItemGroupView;
-    menuItemGroupView.Create();
-    auto frameNode = ViewStackProcessor::GetInstance()->GetMainFrameNode();
-    ASSERT_NE(frameNode, nullptr);
-    auto menuItemPattern = frameNode->GetPattern<MenuItemGroupPattern>();
-    ASSERT_NE(menuItemPattern, nullptr);
-
-    RefPtr<NG::UINode> headerNode;
-    headerNode = NG::ViewStackProcessor::GetInstance()->Finish();
-    menuItemPattern->headerContent_ = nullptr;
-    menuItemPattern->headerIndex_ = -1;
-    menuItemPattern->itemStartIndex_ = START_INDEX;
-    menuItemPattern->AddHeader(headerNode);
-    EXPECT_EQ(menuItemPattern->headerIndex_, START_INDEX);
-    EXPECT_EQ(menuItemPattern->itemStartIndex_, START_INDEX + 1);
-}
-
-/**
- * @tc.name: AddFooterNormal
- * @tc.desc: Test MenuItemGroup pattern AddFooter.
- * @tc.type: FUNC
- */
-HWTEST_F(MenuItemGroupTestNg, AddFooterNormal, TestSize.Level1)
-{
-    auto selectTheme = MockPipelineContext::GetCurrent()->GetTheme<SelectTheme>();
-    MenuItemGroupView menuItemGroupView;
-    menuItemGroupView.Create();
-    auto frameNode = ViewStackProcessor::GetInstance()->GetMainFrameNode();
-    ASSERT_NE(frameNode, nullptr);
-    auto menuItemPattern = frameNode->GetPattern<MenuItemGroupPattern>();
-    ASSERT_NE(menuItemPattern, nullptr);
-
-    std::string footerStr = "foot";
-    menuItemGroupView.SetFooter(footerStr);
-    ASSERT_NE(menuItemPattern->footerContent_, nullptr);
-
-    RefPtr<NG::UINode> footerNode;
-    footerNode = NG::ViewStackProcessor::GetInstance()->Finish();
-
-    frameNode->isRestoreInfoUsed_ = false;
-    menuItemPattern->footerIndex_ = FOOT_INDEX;
-    menuItemPattern->itemStartIndex_ = START_INDEX;
-    menuItemPattern->AddFooter(footerNode);
-    EXPECT_NE(menuItemPattern->footerContent_, nullptr);
-    EXPECT_EQ(menuItemPattern->footerIndex_, START_INDEX);
-    EXPECT_EQ(frameNode->isRestoreInfoUsed_, false);
-}
-
-/**
- * @tc.name: AddFooterNull
- * @tc.desc: Test MenuItemGroup pattern AddFooter with null ptr.
- * @tc.type: FUNC
- */
-HWTEST_F(MenuItemGroupTestNg, AddFooterNull, TestSize.Level1)
-{
-    auto selectTheme = MockPipelineContext::GetCurrent()->GetTheme<SelectTheme>();
-    MenuItemGroupView menuItemGroupView;
-    menuItemGroupView.Create();
-    auto frameNode = ViewStackProcessor::GetInstance()->GetMainFrameNode();
-    ASSERT_NE(frameNode, nullptr);
-    auto menuItemPattern = frameNode->GetPattern<MenuItemGroupPattern>();
-    ASSERT_NE(menuItemPattern, nullptr);
-
-    std::string footerStr = "foot";
-    menuItemGroupView.SetFooter(footerStr);
-    ASSERT_NE(menuItemPattern->footerContent_, nullptr);
-    
-    RefPtr<NG::UINode> footerNode;
-    footerNode = NG::ViewStackProcessor::GetInstance()->Finish();
-
-    menuItemPattern->footerContent_ = nullptr;
-    frameNode->isRestoreInfoUsed_ = false;
-    menuItemPattern->footerIndex_ = FOOT_INDEX;
-    menuItemPattern->itemStartIndex_ = START_INDEX;
-    menuItemPattern->AddFooter(footerNode);
-
-    EXPECT_EQ(menuItemPattern->footerContent_, nullptr);
-    EXPECT_EQ(menuItemPattern->footerIndex_, START_INDEX);
-    EXPECT_EQ(frameNode->isRestoreInfoUsed_, false);
-}
-
-/**
- * @tc.name: UpdateMenuBackgroundStyle001
- * @tc.desc: MenuView UpdateMenuBackgroundStyle.
- * @tc.type: FUNC
- */
-HWTEST_F(MenuItemGroupTestNg, UpdateMenuBackgroundStyle001, TestSize.Level1)
-{
-    int32_t backupApiVersion = MockContainer::Current()->GetApiTargetVersion();
-    PipelineBase::GetCurrentContext()->SetMinPlatformVersion(static_cast<int32_t>(PlatformVersion::VERSION_SIXTEEN));
-
-    MenuParam menuParam;
-    BlurStyleOption blurStyleOption;
-    blurStyleOption.colorMode = ThemeColorMode::DARK;
-    menuParam.blurStyleOption = blurStyleOption;
-
-    auto menuWrapperNode = GetPreviewMenuWrapper();
-    ASSERT_NE(menuWrapperNode, nullptr);
-    auto menuNode = AceType::DynamicCast<FrameNode>(menuWrapperNode->GetChildAtIndex(0));
-    ASSERT_NE(menuNode, nullptr);
-
-    MenuView::UpdateMenuBackgroundStyle(menuNode, menuParam);
-    auto renderContext = menuNode->GetRenderContext();
-    ASSERT_NE(renderContext, nullptr);
-    ASSERT_NE(renderContext->GetBackBlurStyle(), std::nullopt);
-    EXPECT_EQ(renderContext->GetBackBlurStyle()->colorMode, ThemeColorMode::DARK);
-
-    MockContainer::Current()->SetApiTargetVersion(backupApiVersion);
-}
-
-/**
- * @tc.name: UpdateMenuBackgroundStyle002
- * @tc.desc: MenuView UpdateMenuBackgroundStyle.
- * @tc.type: FUNC
- */
-HWTEST_F(MenuItemGroupTestNg, UpdateMenuBackgroundStyle002, TestSize.Level1)
-{
-    int32_t backupApiVersion = MockContainer::Current()->GetApiTargetVersion();
-    PipelineBase::GetCurrentContext()->SetMinPlatformVersion(static_cast<int32_t>(PlatformVersion::VERSION_SIXTEEN));
-
-    MenuParam menuParam;
-    EffectOption effectOption;
-    effectOption.saturation = 6.0f;
-    menuParam.effectOption = effectOption;
-
-    auto menuWrapperNode = GetPreviewMenuWrapper();
-    ASSERT_NE(menuWrapperNode, nullptr);
-    auto menuNode = AceType::DynamicCast<FrameNode>(menuWrapperNode->GetChildAtIndex(0));
-    ASSERT_NE(menuNode, nullptr);
-
-    MenuView::UpdateMenuBackgroundStyle(menuNode, menuParam);
-    auto renderContext = menuNode->GetRenderContext();
-    ASSERT_NE(renderContext, nullptr);
-    ASSERT_NE(renderContext->GetBackgroundEffect(), std::nullopt);
-    EXPECT_EQ(renderContext->GetBackgroundEffect()->saturation, effectOption.saturation);
-
-    MockContainer::Current()->SetApiTargetVersion(backupApiVersion);
-}
-
-/**
- * @tc.name: UpdateMenuBackgroundStyle003
- * @tc.desc: MenuView UpdateMenuBackgroundStyle.
- * @tc.type: FUNC
- */
-HWTEST_F(MenuItemGroupTestNg, UpdateMenuBackgroundStyle003, TestSize.Level1)
-{
-    int32_t backupApiVersion = MockContainer::Current()->GetApiTargetVersion();
-    PipelineBase::GetCurrentContext()->SetMinPlatformVersion(static_cast<int32_t>(PlatformVersion::VERSION_SIXTEEN));
-
-    MenuParam menuParam;
-    BlurStyleOption blurStyleOption;
-    EffectOption effectOption;
-    blurStyleOption.colorMode = ThemeColorMode::LIGHT;
-    effectOption.saturation = 6.0f;
-    menuParam.blurStyleOption = blurStyleOption;
-    menuParam.effectOption = effectOption;
-    
-    auto menuWrapperNode = GetPreviewMenuWrapper();
-    ASSERT_NE(menuWrapperNode, nullptr);
-    auto menuNode = AceType::DynamicCast<FrameNode>(menuWrapperNode->GetChildAtIndex(0));
-    ASSERT_NE(menuNode, nullptr);
-
-    MenuView::UpdateMenuBackgroundStyle(menuNode, menuParam);
-    auto renderContext = menuNode->GetRenderContext();
-    ASSERT_NE(renderContext, nullptr);
-    EXPECT_EQ(renderContext->GetBackBlurStyle(), std::nullopt);
-    ASSERT_NE(renderContext->GetBackgroundEffect(), std::nullopt);
-    EXPECT_EQ(renderContext->GetBackgroundEffect()->saturation, effectOption.saturation);
-
-    MockContainer::Current()->SetApiTargetVersion(backupApiVersion);
-}
-
-/**
- * @tc.name: SetBackgroundBlurStyle001
- * @tc.desc: MenuView SetBackgroundBlurStyle.
- * @tc.type: FUNC
- */
-HWTEST_F(MenuItemGroupTestNg, SetBackgroundBlurStyle001, TestSize.Level1)
-{
-    int32_t backupApiVersion = MockContainer::Current()->GetApiTargetVersion();
-    PipelineBase::GetCurrentContext()->SetMinPlatformVersion(static_cast<int32_t>(PlatformVersion::VERSION_SIXTEEN));
-    MenuParam menuParam;
-    BlurStyleOption blurStyleOption;
-    EffectOption effectOption;
-    blurStyleOption.colorMode = ThemeColorMode::LIGHT;
-    menuParam.blurStyleOption = blurStyleOption;
-    menuParam.effectOption = effectOption;
-    auto menuWrapperNode = GetPreviewMenuWrapper();
-    ASSERT_NE(menuWrapperNode, nullptr);
-    auto menuNode = AceType::DynamicCast<FrameNode>(menuWrapperNode->GetChildAtIndex(0));
-    ASSERT_NE(menuNode, nullptr);
-    BlurStyleOption option { .blurStyle = BlurStyle::REGULAR,
-        .colorMode = ThemeColorMode::LIGHT,
-        .adaptiveColor = AdaptiveColor::AVERAGE,
-        .scale = BLUR_STYLE_SCALE,
-        .policy = BlurStyleActivePolicy::ALWAYS_ACTIVE,
-        .blurType = BlurType::WITHIN_WINDOW,
-        .inactiveColor = Color::FromARGB(128, 0, 0, 0),
-        .isValidColor = true,
-        .isWindowFocused = false };
-    menuParam.backgroundBlurStyleOption = option;
-    MenuView::UpdateMenuBackgroundStyle(menuNode, menuParam);
-    auto renderContext = menuNode->GetRenderContext();
-    ASSERT_NE(renderContext, nullptr);
-    ASSERT_NE(renderContext->GetBackBlurStyle(), std::nullopt);
-    EXPECT_EQ(renderContext->GetBackBlurStyle()->colorMode, ThemeColorMode::LIGHT);
-    MockContainer::Current()->SetApiTargetVersion(backupApiVersion);
-}
-
-/**
- * @tc.name: SetBackgroundBlurStyle002
- * @tc.desc: MenuView SetBackgroundBlurStyle.
- * @tc.type: FUNC
- */
-HWTEST_F(MenuItemGroupTestNg, SetBackgroundBlurStyle002, TestSize.Level1)
-{
-    int32_t backupApiVersion = MockContainer::Current()->GetApiTargetVersion();
-    PipelineBase::GetCurrentContext()->SetMinPlatformVersion(static_cast<int32_t>(PlatformVersion::VERSION_SIXTEEN));
-    MenuParam menuParam;
-    BlurStyleOption blurStyleOption;
-    EffectOption effectOption;
-    blurStyleOption.colorMode = ThemeColorMode::LIGHT;
-    menuParam.blurStyleOption = blurStyleOption;
-    menuParam.effectOption = effectOption;
-    auto menuWrapperNode = GetPreviewMenuWrapper();
-    ASSERT_NE(menuWrapperNode, nullptr);
-    auto menuNode = AceType::DynamicCast<FrameNode>(menuWrapperNode->GetChildAtIndex(0));
-    ASSERT_NE(menuNode, nullptr);
-    BlurStyleOption option { .blurStyle = BlurStyle::REGULAR,
-        .colorMode = ThemeColorMode::LIGHT,
-        .adaptiveColor = AdaptiveColor::AVERAGE,
-        .scale = BLUR_STYLE_SCALE,
-        .policy = BlurStyleActivePolicy::FOLLOWS_WINDOW_ACTIVE_STATE,
-        .blurType = BlurType::WITHIN_WINDOW,
-        .inactiveColor = Color::FromARGB(128, 0, 0, 0),
-        .isValidColor = true,
-        .isWindowFocused = false };
-    menuParam.backgroundBlurStyleOption = option;
-    MenuView::UpdateMenuBackgroundStyle(menuNode, menuParam);
-    auto renderContext = menuNode->GetRenderContext();
-    ASSERT_NE(renderContext, nullptr);
-    ASSERT_NE(renderContext->GetBackBlurStyle(), std::nullopt);
-    EXPECT_EQ(renderContext->GetBackBlurStyle()->colorMode, ThemeColorMode::LIGHT);
-    MockContainer::Current()->SetApiTargetVersion(backupApiVersion);
-}
-
-/**
- * @tc.name: SetBackgroundBlurStyle003
- * @tc.desc: MenuView SetBackgroundBlurStyle.
- * @tc.type: FUNC
- */
-HWTEST_F(MenuItemGroupTestNg, SetBackgroundBlurStyle003, TestSize.Level1)
-{
-    int32_t backupApiVersion = MockContainer::Current()->GetApiTargetVersion();
-    PipelineBase::GetCurrentContext()->SetMinPlatformVersion(static_cast<int32_t>(PlatformVersion::VERSION_SIXTEEN));
-    MenuParam menuParam;
-    BlurStyleOption blurStyleOption;
-    EffectOption effectOption;
-    blurStyleOption.colorMode = ThemeColorMode::LIGHT;
-    menuParam.blurStyleOption = blurStyleOption;
-    menuParam.effectOption = effectOption;
-    auto menuWrapperNode = GetPreviewMenuWrapper();
-    ASSERT_NE(menuWrapperNode, nullptr);
-    auto menuNode = AceType::DynamicCast<FrameNode>(menuWrapperNode->GetChildAtIndex(0));
-    ASSERT_NE(menuNode, nullptr);
-    BlurStyleOption option { .blurStyle = BlurStyle::REGULAR,
-        .colorMode = ThemeColorMode::LIGHT,
-        .adaptiveColor = AdaptiveColor::AVERAGE,
-        .scale = BLUR_STYLE_SCALE,
-        .policy = BlurStyleActivePolicy::FOLLOWS_WINDOW_ACTIVE_STATE,
-        .blurType = BlurType::WITHIN_WINDOW,
-        .inactiveColor = Color::FromARGB(128, 0, 0, 0),
-        .isValidColor = true,
-        .isWindowFocused = false };
-    menuParam.backgroundBlurStyleOption = option;
-    auto renderContext = menuNode->GetRenderContext();
-    ASSERT_NE(renderContext, nullptr);
-    const auto& groupProperty = renderContext->GetOrCreateBackground();
-    groupProperty->propBlurRadius = std::make_optional<Dimension>(1.0f);
-    MenuView::UpdateMenuBackgroundStyle(menuNode, menuParam);
-    ASSERT_NE(renderContext->GetBackBlurStyle(), std::nullopt);
-    EXPECT_EQ(renderContext->GetBackBlurStyle()->colorMode, ThemeColorMode::LIGHT);
-    MockContainer::Current()->SetApiTargetVersion(backupApiVersion);
-}
-
-/**
- * @tc.name: SetBackgroundEffect001
- * @tc.desc: MenuView SetBackgroundEffect.
- * @tc.type: FUNC
- */
-HWTEST_F(MenuItemGroupTestNg, SetBackgroundEffect001, TestSize.Level1)
-{
-    int32_t backupApiVersion = MockContainer::Current()->GetApiTargetVersion();
-    PipelineBase::GetCurrentContext()->SetMinPlatformVersion(static_cast<int32_t>(PlatformVersion::VERSION_SIXTEEN));
-    MenuParam menuParam;
-    BlurStyleOption blurStyleOption;
-    EffectOption effectOption;
-    blurStyleOption.colorMode = ThemeColorMode::LIGHT;
-    menuParam.blurStyleOption = blurStyleOption;
-    menuParam.effectOption = effectOption;
-    auto menuWrapperNode = GetPreviewMenuWrapper();
-    ASSERT_NE(menuWrapperNode, nullptr);
-    auto menuNode = AceType::DynamicCast<FrameNode>(menuWrapperNode->GetChildAtIndex(0));
-    ASSERT_NE(menuNode, nullptr);
-    BlurStyleOption option { .blurStyle = BlurStyle::REGULAR,
-        .colorMode = ThemeColorMode::LIGHT,
-        .adaptiveColor = AdaptiveColor::AVERAGE,
-        .scale = BLUR_STYLE_SCALE,
-        .policy = BlurStyleActivePolicy::FOLLOWS_WINDOW_ACTIVE_STATE,
-        .blurType = BlurType::WITHIN_WINDOW,
-        .inactiveColor = Color::FromARGB(128, 0, 0, 0),
-        .isValidColor = true,
-        .isWindowFocused = false };
-    menuParam.backgroundBlurStyleOption = option;
-    EffectOption optionNew { .radius = Dimension(RADIUS, DimensionUnit::PX),
-        .saturation = EFFECT_SATURATION,
-        .brightness = BRIGHTNESS,
-        .color = Color(Color::RED),
-        .adaptiveColor = AdaptiveColor::AVERAGE,
-        .blurOption = BlurOption { std::vector<float> { BLUR_OPTION, BLUR_OPTION } },
-        .blurType = BlurType::BEHIND_WINDOW,
-        .policy = BlurStyleActivePolicy::ALWAYS_ACTIVE,
-        .inactiveColor = Color(Color::BLUE),
-        .isValidColor = true,
-        .isWindowFocused = false };
-    menuParam.backgroundEffectOption = optionNew;
-    MenuView::UpdateMenuBackgroundStyle(menuNode, menuParam);
-    auto renderContext = menuNode->GetRenderContext();
-    ASSERT_NE(renderContext, nullptr);
-    ASSERT_NE(renderContext->GetBackgroundEffect(), std::nullopt);
-    EXPECT_EQ(renderContext->GetBackgroundEffect()->saturation, EFFECT_SATURATION);
-    MockContainer::Current()->SetApiTargetVersion(backupApiVersion);
-}
-
-/**
- * @tc.name: SetBackgroundEffect002
- * @tc.desc: MenuView SetBackgroundEffect.
- * @tc.type: FUNC
- */
-HWTEST_F(MenuItemGroupTestNg, SetBackgroundEffect002, TestSize.Level1)
-{
-    int32_t backupApiVersion = MockContainer::Current()->GetApiTargetVersion();
-    PipelineBase::GetCurrentContext()->SetMinPlatformVersion(static_cast<int32_t>(PlatformVersion::VERSION_SIXTEEN));
-    MenuParam menuParam;
-    BlurStyleOption blurStyleOption;
-    EffectOption effectOption;
-    blurStyleOption.colorMode = ThemeColorMode::LIGHT;
-    menuParam.blurStyleOption = blurStyleOption;
-    menuParam.effectOption = effectOption;
-    auto menuWrapperNode = GetPreviewMenuWrapper();
-    ASSERT_NE(menuWrapperNode, nullptr);
-    auto menuNode = AceType::DynamicCast<FrameNode>(menuWrapperNode->GetChildAtIndex(0));
-    ASSERT_NE(menuNode, nullptr);
-    EffectOption option { .radius = Dimension(RADIUS, DimensionUnit::PX),
-        .saturation = EFFECT_SATURATION,
-        .brightness = BRIGHTNESS,
-        .color = Color(Color::RED),
-        .adaptiveColor = AdaptiveColor::AVERAGE,
-        .blurOption = BlurOption { std::vector<float> { BLUR_OPTION, BLUR_OPTION } },
-        .blurType = BlurType::BEHIND_WINDOW,
-        .policy = BlurStyleActivePolicy::FOLLOWS_WINDOW_ACTIVE_STATE,
-        .inactiveColor = Color(Color::BLUE),
-        .isValidColor = true,
-        .isWindowFocused = false };
-    menuParam.backgroundEffectOption = option;
-    MenuView::UpdateMenuBackgroundStyle(menuNode, menuParam);
-    auto renderContext = menuNode->GetRenderContext();
-    ASSERT_NE(renderContext, nullptr);
-    ASSERT_NE(renderContext->GetBackgroundEffect(), std::nullopt);
-    EXPECT_EQ(renderContext->GetBackgroundEffect()->saturation, EFFECT_SATURATION);
-    MockContainer::Current()->SetApiTargetVersion(backupApiVersion);
-}
-
-/**
- * @tc.name: SetBackgroundEffect003
- * @tc.desc: MenuView SetBackgroundEffect.
- * @tc.type: FUNC
- */
-HWTEST_F(MenuItemGroupTestNg, SetBackgroundEffect003, TestSize.Level1)
-{
-    int32_t backupApiVersion = MockContainer::Current()->GetApiTargetVersion();
-    PipelineBase::GetCurrentContext()->SetMinPlatformVersion(static_cast<int32_t>(PlatformVersion::VERSION_SIXTEEN));
-    MenuParam menuParam;
-    BlurStyleOption blurStyleOption;
-    EffectOption effectOption;
-    blurStyleOption.colorMode = ThemeColorMode::LIGHT;
-    menuParam.blurStyleOption = blurStyleOption;
-    menuParam.effectOption = effectOption;
-    auto menuWrapperNode = GetPreviewMenuWrapper();
-    ASSERT_NE(menuWrapperNode, nullptr);
-    auto menuNode = AceType::DynamicCast<FrameNode>(menuWrapperNode->GetChildAtIndex(0));
-    ASSERT_NE(menuNode, nullptr);
-    EffectOption option { .radius = Dimension(RADIUS, DimensionUnit::PX),
-        .saturation = EFFECT_SATURATION,
-        .brightness = BRIGHTNESS,
-        .color = Color(Color::RED),
-        .adaptiveColor = AdaptiveColor::AVERAGE,
-        .blurOption = BlurOption { std::vector<float> { BLUR_OPTION, BLUR_OPTION } },
-        .blurType = BlurType::BEHIND_WINDOW,
-        .policy = BlurStyleActivePolicy::FOLLOWS_WINDOW_ACTIVE_STATE,
-        .inactiveColor = Color(Color::BLUE),
-        .isValidColor = true,
-        .isWindowFocused = false };
-    menuParam.backgroundEffectOption = option;
-    auto renderContext = menuNode->GetRenderContext();
-    ASSERT_NE(renderContext, nullptr);
-    const auto& groupProperty = renderContext->GetOrCreateBackground();
-    groupProperty->propBlurRadius = std::make_optional<Dimension>(1.0f);
-    MenuView::UpdateMenuBackgroundStyle(menuNode, menuParam);
-    ASSERT_NE(renderContext->GetBackgroundEffect(), std::nullopt);
-    EXPECT_EQ(renderContext->GetBackgroundEffect()->saturation, EFFECT_SATURATION);
-    MockContainer::Current()->SetApiTargetVersion(backupApiVersion);
-}
-
-/**
- * @tc.name: MenuItemGroupSetHeaderContentTest001
- * @tc.desc: Test MenuItemGroupPattern::SetHeaderContent with valid header content
- * @tc.type: FUNC
- */
-HWTEST_F(MenuItemGroupTestNg, MenuItemGroupSetHeaderContentTest001, TestSize.Level1)
-{
-    auto menuItemGroupPattern = AceType::MakeRefPtr<MenuItemGroupPattern>();
-    ASSERT_NE(menuItemGroupPattern, nullptr);
-
-    menuItemGroupPattern->headerContent_ = FrameNode::CreateFrameNode(
-        V2::TEXT_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(), AceType::MakeRefPtr<TextPattern>());
-    ASSERT_NE(menuItemGroupPattern->headerContent_, nullptr);
-
-    std::string testText = "Test Header Content";
-    menuItemGroupPattern->SetHeaderContent(testText);
-
-    auto textLayoutProperty = menuItemGroupPattern->headerContent_->GetLayoutProperty<TextLayoutProperty>();
-    ASSERT_NE(textLayoutProperty, nullptr);
-
-    EXPECT_EQ(textLayoutProperty->GetContentValue(), UtfUtils::Str8DebugToStr16(testText));
-}
-
-/**
- * @tc.name: MenuItemGroupSetFooterContentTest001
- * @tc.desc: Test MenuItemGroupPattern::SetFooterContent with valid footer content
- * @tc.type: FUNC
- */
-HWTEST_F(MenuItemGroupTestNg, MenuItemGroupSetFooterContentTest001, TestSize.Level1)
-{
-    auto menuItemGroupPattern = AceType::MakeRefPtr<MenuItemGroupPattern>();
-    ASSERT_NE(menuItemGroupPattern, nullptr);
-
-    menuItemGroupPattern->footerContent_ = FrameNode::CreateFrameNode(
-        V2::TEXT_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(), AceType::MakeRefPtr<TextPattern>());
-    ASSERT_NE(menuItemGroupPattern->footerContent_, nullptr);
-
-    std::string testText = "Test Footer Content";
-
-    menuItemGroupPattern->SetFooterContent(testText);
-
-    auto textLayoutProperty = menuItemGroupPattern->footerContent_->GetLayoutProperty<TextLayoutProperty>();
-    ASSERT_NE(textLayoutProperty, nullptr);
-
-    EXPECT_EQ(textLayoutProperty->GetContentValue(), UtfUtils::Str8DebugToStr16(testText));
-}
-
-/**
- * @tc.name: RemoveParentRestrictionsForFixIdeal001
- * @tc.desc: Test MenuItemGroup RemoveParentRestrictionsForFixIdeal.
- * @tc.type: FUNC
- */
-HWTEST_F(MenuItemGroupTestNg, RemoveParentRestrictionsForFixIdeal001, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. Create menu item group.
-     */
-    auto menuItemGroupPattern = AceType::MakeRefPtr<MenuItemGroupPattern>();
-    auto menuItemGroup = FrameNode::CreateFrameNode(V2::MENU_ITEM_GROUP_ETS_TAG, -1, menuItemGroupPattern);
-    auto algorithm = AceType::MakeRefPtr<MenuItemGroupLayoutAlgorithm>(-1, -1, 0);
-    ASSERT_TRUE(algorithm);
-    auto geometryNode = AceType::MakeRefPtr<GeometryNode>();
-    auto layoutProp = AceType::MakeRefPtr<LayoutProperty>();
-    auto layoutWrapper = AceType::MakeRefPtr<LayoutWrapperNode>(menuItemGroup, geometryNode, layoutProp);
-    ASSERT_NE(layoutWrapper, nullptr);
-
-    /**
-     * @tc.steps: step2. LayoutCalPolicy is default and set maxSize to FULL_SCREEN_SIZE.
-     * @tc.expected: childConstraint.maxSize is equal to FULL_SCREEN_SIZE.
-     */
-    LayoutConstraintF childConstraint;
-    childConstraint.maxSize = FULL_SCREEN_SIZE;
-    auto props = layoutWrapper->GetLayoutProperty();
-    ASSERT_NE(props, nullptr);
-    props->UpdateLayoutConstraint(childConstraint);
-    props->UpdateContentConstraint();
-    LayoutPolicyProperty layoutPolicyProperty;
-    props->layoutPolicy_ = layoutPolicyProperty;
-    algorithm->RemoveParentRestrictionsForFixIdeal(layoutProp, childConstraint);
-    EXPECT_EQ(childConstraint.maxSize.Width(), FULL_SCREEN_SIZE.Width());
-    EXPECT_EQ(childConstraint.maxSize.Height(), FULL_SCREEN_SIZE.Height());
-
-    /**
-     * @tc.steps: step3. LayoutCalPolicy is FIX_AT_IDEAL_SIZE and set maxSize to FULL_SCREEN_SIZE.
-     * @tc.expected: childConstraint.maxSize is infinity.
-     */
-    layoutPolicyProperty.widthLayoutPolicy_ = LayoutCalPolicy::FIX_AT_IDEAL_SIZE;
-    layoutPolicyProperty.heightLayoutPolicy_ = LayoutCalPolicy::FIX_AT_IDEAL_SIZE;
-    props->layoutPolicy_ = layoutPolicyProperty;
-    algorithm->RemoveParentRestrictionsForFixIdeal(layoutProp, childConstraint);
-    EXPECT_TRUE(std::isinf(childConstraint.maxSize.Width()));
-    EXPECT_TRUE(std::isinf(childConstraint.maxSize.Height()));
-}
-
-/**
- * @tc.name: AttachBottomDivider001
- * @tc.desc: Testing the AttachBottomDivider method without a parent container.
- * @tc.type: FUNC
- */
-HWTEST_F(MenuItemGroupTestNg, AttachBottomDivider001, TestSize.Level1)
-{
-    MenuItemGroupPattern menuItemGroupPattern;
-    menuItemGroupPattern.bottomDivider_ =
-        FrameNode::CreateFrameNode(V2::MENU_ITEM_GROUP_ETS_TAG, 1, AceType::MakeRefPtr<MenuItemGroupPattern>());
-    auto dividerParent =
-        FrameNode::CreateFrameNode(V2::MENU_ITEM_GROUP_ETS_TAG, 4, AceType::MakeRefPtr<MenuItemGroupPattern>());
-    ASSERT_NE(dividerParent, nullptr);
-    menuItemGroupPattern.bottomDivider_->parent_ = std::move(dividerParent);
-    auto node = FrameNode::CreateFrameNode(V2::MENU_ITEM_GROUP_ETS_TAG, 2, AceType::MakeRefPtr<MenuItemGroupPattern>());
-    ASSERT_NE(node, nullptr);
-    auto menuItemNode =
-        FrameNode::CreateFrameNode(V2::MENU_ITEM_GROUP_ETS_TAG, 3, AceType::MakeRefPtr<MenuItemGroupPattern>());
-    ASSERT_NE(menuItemNode, nullptr);
-    node->parent_ = std::move(menuItemNode);
-    menuItemGroupPattern.frameNode_ = std::move(node);
-    auto host = menuItemGroupPattern.GetHost();
-    ASSERT_NE(host, nullptr);
-    auto parent = host->GetParent();
-    ASSERT_NE(parent, nullptr);
-    menuItemGroupPattern.AttachBottomDivider();
-    EXPECT_EQ(parent->GetChildIndex(node), -1);
-}
-
-/**
- * @tc.name: AttachBottomDivider002
- * @tc.desc: Testing the AttachBottomDivider method has a parent container.
- * @tc.type: FUNC
- */
-HWTEST_F(MenuItemGroupTestNg, AttachBottomDivider002, TestSize.Level1)
-{
-    MenuItemGroupPattern menuItemGroupPattern;
-    menuItemGroupPattern.bottomDivider_ =
-        FrameNode::CreateFrameNode(V2::MENU_ITEM_GROUP_ETS_TAG, 1, AceType::MakeRefPtr<MenuItemGroupPattern>());
-    auto node = FrameNode::CreateFrameNode(V2::MENU_ITEM_GROUP_ETS_TAG, 2, AceType::MakeRefPtr<MenuItemGroupPattern>());
-    ASSERT_NE(node, nullptr);
-    auto menuItemNode =
-        FrameNode::CreateFrameNode(V2::MENU_ITEM_GROUP_ETS_TAG, 3, AceType::MakeRefPtr<MenuItemGroupPattern>());
-    ASSERT_NE(menuItemNode, nullptr);
-    menuItemGroupPattern.frameNode_ = std::move(node);
-    auto host = menuItemGroupPattern.GetHost();
-    ASSERT_NE(host, nullptr);
-    host->MountToParent(menuItemNode);
-    auto parent = host->GetParent();
-    ASSERT_NE(parent, nullptr);
-    menuItemGroupPattern.AttachBottomDivider();
-    EXPECT_EQ(parent->GetChildIndex(node), 0);
-}
-
-/**
- * @tc.name: OnColorConfigurationUpdateTest001
- * @tc.desc: Test OnColorConfigurationUpdate.
- * @tc.type: FUNC
- */
-HWTEST_F(MenuItemGroupTestNg, OnColorConfigurationUpdateTest001, TestSize.Level1)
-{
-    /**
-     * @tc.steps1: Create MenuItemGroupView and get frame node
-     * @tc.expected: View and frame node created successfully
-     */
-    MenuItemGroupView menuItemGroupView;
-    menuItemGroupView.Create();
-    auto frameNode = ViewStackProcessor::GetInstance()->GetMainFrameNode();
-    ASSERT_NE(frameNode, nullptr);
-    auto menuItemGroupPattern = frameNode->GetPattern<MenuItemGroupPattern>();
-    ASSERT_NE(menuItemGroupPattern, nullptr);
-
-    /**
-     * @tc.steps2: Set up theme manager mock
-     * @tc.expected: Theme manager returns select theme
-     */
-    auto themeManager = AceType::MakeRefPtr<MockThemeManager>();
-    auto selectTheme = AceType::MakeRefPtr<SelectTheme>();
-    EXPECT_CALL(*themeManager, GetTheme(_)).WillRepeatedly([=](ThemeType type) -> RefPtr<Theme> {
-        return selectTheme;
-    });
-    MockPipelineContext::GetCurrent()->SetThemeManager(themeManager);
-
-    /**
-     * @tc.steps3: Create header and footer content
-     * @tc.expected: Header and footer frame nodes created
-     */
-    menuItemGroupPattern->headerContent_ = FrameNode::CreateFrameNode(
-        V2::TEXT_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(), AceType::MakeRefPtr<TextPattern>());
-    ASSERT_NE(menuItemGroupPattern->headerContent_, nullptr);
-    menuItemGroupPattern->footerContent_ = FrameNode::CreateFrameNode(
-        V2::TEXT_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(), AceType::MakeRefPtr<TextPattern>());
-    ASSERT_NE(menuItemGroupPattern->footerContent_, nullptr);
-
-    /**
-     * @tc.steps4: Get layout properties and themes
-     * @tc.expected: Layout properties and themes obtained
-     */
-    auto headercontent = menuItemGroupPattern->headerContent_->GetLayoutProperty<TextLayoutProperty>();
-    ASSERT_NE(headercontent, nullptr);
-    auto headerpipeline = menuItemGroupPattern->headerContent_->GetContextWithCheck();
-    ASSERT_NE(headerpipeline, nullptr);
-    auto headermenuTheme = headerpipeline->GetTheme<SelectTheme>();
-    ASSERT_NE(headermenuTheme, nullptr);
-
-    auto footercontent = menuItemGroupPattern->footerContent_->GetLayoutProperty<TextLayoutProperty>();
-    ASSERT_NE(footercontent, nullptr);
-    auto footerpipeline = menuItemGroupPattern->footerContent_->GetContextWithCheck();
-    ASSERT_NE(footerpipeline, nullptr);
-    auto footermenuTheme = footerpipeline->GetTheme<SelectTheme>();
-    ASSERT_NE(footermenuTheme, nullptr);
-
-    /**
-     * @tc.steps5: Set theme colors
-     * @tc.expected: Theme colors set to red and blue
-     */
-    Color menuFontColor = Color::RED;
-    Color secondaryFontColor = Color::BLUE;
-    headermenuTheme->menuFontColor_ = menuFontColor;
-    footermenuTheme->secondaryFontColor_ = secondaryFontColor;
-
-    /**
-     * @tc.steps6: Test with config change disabled
-     * @tc.expected: Text colors not updated
-     */
-    g_isConfigChangePerform = false;
-    EXPECT_EQ(SystemProperties::ConfigChangePerform(), false);
-    menuItemGroupPattern->OnColorConfigurationUpdate();
-    EXPECT_NE(headercontent->GetTextColor().value_or(Color::BLACK), headermenuTheme->GetMenuFontColor());
-    EXPECT_NE(footercontent->GetTextColor().value_or(Color::BLACK), footermenuTheme->GetSecondaryFontColor());
-
-    /**
-     * @tc.steps7: Test with config change enabled
-     * @tc.expected: Text colors updated to theme values
-     */
-    g_isConfigChangePerform = true;
-    ASSERT_NE(SystemProperties::ConfigChangePerform(), false);
-    menuItemGroupPattern->OnColorConfigurationUpdate();
-    EXPECT_EQ(headercontent->GetTextColor(), menuFontColor);
-    EXPECT_EQ(footercontent->GetTextColor().value(), secondaryFontColor);
-}
-
-/**
- * @tc.name: MenuItemGroupViewCreateWithStringResourceObj001
- * @tc.desc: Test CreateWithStringResourceObj with HEADER types.
- * @tc.type: FUNC
- */
-HWTEST_F(MenuItemGroupTestNg, CreateWithStringResourceObj001, TestSize.Level1)
-{
-    /**
-     * @tc.steps1: Create MenuItemGroupView and get frame node
-     * @tc.expected: View and frame node created successfully
-     */
-    MenuItemGroupView view;
-    view.Create();
-    auto frameNode = ViewStackProcessor::GetInstance()->GetMainFrameNode();
-    ASSERT_NE(frameNode, nullptr);
-    auto pattern = frameNode->GetPattern<MenuItemGroupPattern>();
-    ASSERT_NE(pattern, nullptr);
-
-    /**
-     * @tc.steps2: Create header content
-     * @tc.expected: Header frame node created
-     */
-    pattern->headerContent_ = FrameNode::CreateFrameNode(
-        V2::TEXT_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(), AceType::MakeRefPtr<TextPattern>());
-    ASSERT_NE(pattern->headerContent_, nullptr);
-    auto textLayoutProperty = pattern->headerContent_->GetLayoutProperty<TextLayoutProperty>();
-    ASSERT_NE(textLayoutProperty, nullptr);
-
-    /**
-     * @tc.steps3: Call CreateWithStringResourceObj for header
-     * @tc.expected: Resource object associated with header
-     */
-    auto resObj = AceType::MakeRefPtr<ResourceObject>("", "", -1);
-    view.CreateWithStringResourceObj(resObj, MenuItemGroupStringType::HEADER);
-
-    /**
-     * @tc.steps4: Test with empty resource cache
-     * @tc.expected: Header content is empty
-     */
-    std::string str = "";
-    std::string key = "MenuItemGroup" + MenuItemGroupView::StringTypeToString(MenuItemGroupStringType::HEADER);
-    pattern->AddResCache(key, str);
-    auto resMgr = pattern->resourceMgr_;
-    ASSERT_NE(resMgr, nullptr);
-    resMgr->ReloadResources();
-    EXPECT_EQ(textLayoutProperty->GetContentValue(u""), u"");
-
-    /**
-     * @tc.steps5: Test with valid resource cache
-     * @tc.expected: Header content updated to "TEST"
-     */
-    str = "TEST";
-    pattern->AddResCache(key, str);
-    resMgr->ReloadResources();
-    ASSERT_NE(textLayoutProperty, nullptr);
-    EXPECT_EQ(textLayoutProperty->GetContentValue(), UtfUtils::Str8DebugToStr16(str));
-}
-
-/**
- * @tc.name: MenuItemGroupViewCreateWithStringResourceObj002
- * @tc.desc: Test CreateWithStringResourceObj with FOOTER types.
- * @tc.type: FUNC
- */
-HWTEST_F(MenuItemGroupTestNg, CreateWithStringResourceObj002, TestSize.Level1)
-{
-    /**
-     * @tc.steps1: Create MenuItemGroupView and get frame node
-     * @tc.expected: View and frame node created successfully
-     */
-    MenuItemGroupView view;
-    view.Create();
-    auto frameNode = ViewStackProcessor::GetInstance()->GetMainFrameNode();
-    ASSERT_NE(frameNode, nullptr);
-    auto pattern = frameNode->GetPattern<MenuItemGroupPattern>();
-    ASSERT_NE(pattern, nullptr);
-
-    /**
-     * @tc.steps2: Create footer content
-     * @tc.expected: Footer frame node created
-     */
-    pattern->footerContent_ = FrameNode::CreateFrameNode(
-        V2::TEXT_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(), AceType::MakeRefPtr<TextPattern>());
-    ASSERT_NE(pattern->footerContent_, nullptr);
-    auto textLayoutProperty = pattern->footerContent_->GetLayoutProperty<TextLayoutProperty>();
-    ASSERT_NE(textLayoutProperty, nullptr);
-
-    /**
-     * @tc.steps3: Call CreateWithStringResourceObj for footer
-     * @tc.expected: Resource object associated with footer
-     */
-    auto resObj = AceType::MakeRefPtr<ResourceObject>("", "", -1);
-    view.CreateWithStringResourceObj(resObj, MenuItemGroupStringType::FOOTER);
-
-    /**
-     * @tc.steps4: Test with valid resource cache
-     * @tc.expected: Footer content updated to "TEST"
-     */
-    std::string str = "TEST";
-    std::string key = "MenuItemGroup" + MenuItemGroupView::StringTypeToString(MenuItemGroupStringType::FOOTER);
-    pattern->AddResCache(key, str);
-    auto resMgr = pattern->resourceMgr_;
-    ASSERT_NE(resMgr, nullptr);
-    resMgr->ReloadResources();
-    EXPECT_EQ(textLayoutProperty->GetContentValue(), UtfUtils::Str8DebugToStr16(str));
-}
-
-/**
- * @tc.name: StringTypeToString
- * @tc.desc: Test StringTypeToString
- * @tc.type: FUNC
- */
-HWTEST_F(MenuItemGroupTestNg, StringTypeToString, TestSize.Level1)
-{
-    /**
-     * @tc.steps1: Test HEADER string conversion
-     * @tc.expected: Returns "Header"
-     */
-    std::string result1 = MenuItemGroupView::StringTypeToString(MenuItemGroupStringType::HEADER);
-    EXPECT_EQ(result1, "Header");
-
-    /**
-     * @tc.steps2: Test FOOTER string conversion
-     * @tc.expected: Returns "Footer"
-     */
-    std::string result2 = MenuItemGroupView::StringTypeToString(MenuItemGroupStringType::FOOTER);
-    EXPECT_EQ(result2, "Footer");
-
-    /**
-     * @tc.steps3: Test unknown type conversion
-     * @tc.expected: Returns "Unknown" for type 100
-     */
-    MenuItemGroupStringType unknownType = static_cast<MenuItemGroupStringType>(100);
-    std::string result3 = MenuItemGroupView::StringTypeToString(unknownType);
-    EXPECT_EQ(result3, "Unknown");
 }
 } // namespace OHOS::Ace::NG

@@ -21,7 +21,5 @@
 namespace OHOS::Ace::NG::NodeModifier {
 const ArkUIImageSpanModifier* GetImageSpanModifier();
 const CJUIImageSpanModifier* GetCJUIImageSpanModifier();
-void SetImageSpanOnCompleteEvent(ArkUINodeHandle node, void* extraParam);
-void SetImageSpanOnErrorEvent(ArkUINodeHandle node, void* extraParam);
 }
 #endif

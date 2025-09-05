@@ -41,12 +41,13 @@ declare interface ViewPuInternal {
     onWillApplyTheme(theme: Theme): void;
 }
 
-declare class ViewBuildNodeBase {
+declare class PUV2ViewBase {
     static setArkThemeScopeManager(mgr: ArkThemeScopeManager): void;
 }
 
 // own public interfaces
 declare type Theme = import('../../../../../../../../../out/sdk/ohos-sdk/windows/ets/api/@ohos.arkui.theme').Theme;
+declare type CustomTheme = import('../../../../../../../../../out/sdk/ohos-sdk/windows/ets/api/@ohos.arkui.theme').CustomTheme;
 declare type Colors = import('../../../../../../../../../out/sdk/ohos-sdk/windows/ets/api/@ohos.arkui.theme').Colors;
 declare type CustomColors = import('../../../../../../../../../out/sdk/ohos-sdk/windows/ets/api/@ohos.arkui.theme').CustomColors;
 

@@ -33,7 +33,6 @@ public:
     virtual ~WebJavaScriptExecuteCallBack() = default;
 
     virtual void OnReceiveValue(std::shared_ptr<NWebMessage> result) override;
-    virtual void OnReceiveValueV2(std::shared_ptr<NWebHapValue> value) override;
     void SetCallBack(const std::function<void(std::string)>&& callback)
     {
         callback_ = callback;
@@ -51,7 +50,6 @@ public:
     virtual ~WebMessageValueCallBackImpl() = default;
 
     virtual void OnReceiveValue(std::shared_ptr<NWebMessage> result) override;
-    virtual void OnReceiveValueV2(std::shared_ptr<NWebHapValue> value) override;
     void SetCallBack(const std::function<void(std::string)>&& callback)
     {
         callback_ = callback;

@@ -13,7 +13,6 @@
  * limitations under the License.
  */
 
-#include <optional>
 #include "gtest/gtest.h"
 #define private public
 #define protected public
@@ -24,18 +23,14 @@
 #include "base/utils/utils.h"
 #include "core/common/recorder/event_config.h"
 #include "core/common/recorder/event_controller.h"
-#include "core/common/recorder/event_definition.h"
 #include "core/common/recorder/event_recorder.h"
 #include "core/common/recorder/exposure_processor.h"
-#include "core/common/recorder/inspector_tree_collector.h"
 #include "core/common/recorder/node_data_cache.h"
-#include "core/components_ng/base/simplified_inspector.h"
 #include "core/components_ng/pattern/stage/page_info.h"
 #include "core/components_ng/pattern/stage/page_pattern.h"
 
 using namespace testing;
 using namespace testing::ext;
-using namespace OHOS::Ace::Recorder;
 
 namespace OHOS::Ace {
 class DemoUIEventObserver : public UIEventObserver {
@@ -49,13 +44,6 @@ public:
     }
 
     virtual void NotifyUIEvent(int32_t eventType, const std::unordered_map<std::string, std::string>& eventParams)
-    {
-        LOGI("NotifyUIEvent eventType %{public}d", eventType);
-        eventType_ = eventType;
-    }
-
-    virtual void NotifyUIEvent(
-        int32_t eventType, const std::shared_ptr<std::unordered_map<std::string, std::string>>& eventParams)
     {
         LOGI("NotifyUIEvent eventType %{public}d", eventType);
         eventType_ = eventType;
@@ -141,13 +129,6 @@ void GetConfigTest4(std::string& config)
         "\"duration\":5000},{\"id\":\"scroll_item_12\",\"ratio\":0.4,\"duration\":3000}]}]}";
 }
 
-void GetConfigTest5(std::string& config)
-{
-    config = "{\"enable\":true,\"switch\":{\"page\":true,\"component\":true,\"exposure\":true,\"pageParam\":true,"
-             "\"scroll\":true,\"animation\":true,\"rect\":true,\"web\":true,\"textInput\":true,\"clickGesture\":true},"
-             "\"webCategory\":\"test\",\"webIdentifier\":\"abc\",\"webActionJs\":\"hello\"}";
-}
-
 RefPtr<NG::FrameNode> CreatePageNode(const std::string pageUrl)
 {
     auto pageNodeId = ElementRegister::GetInstance()->MakeUniqueId();
@@ -205,12 +186,6 @@ HWTEST_F(EventRecorderTest, EventRecorderTest001, TestSize.Level1)
     exposureCfg = { "", 0.0, 0 };
     Recorder::NodeDataCache::Get().GetExposureCfg("pages/ScrollPage", "scroll_item_2", exposureCfg);
     EXPECT_EQ(exposureCfg.id, "");
-    auto eventParams = std::make_shared<std::unordered_map<std::string, std::string>>();
-    eventParams->emplace("id", "abc");
-    observer->NotifyUIEvent(1, eventParams);
-    EXPECT_EQ(observer->GetEventType(), 1);
-    observer->NotifyUIEvent(2, *eventParams);
-    EXPECT_EQ(observer->GetEventType(), 2);
 }
 
 /**
@@ -654,7 +629,7 @@ HWTEST_F(EventRecorderTest, EventRecorderTest011, TestSize.Level1)
     EXPECT_EQ(Recorder::EventRecorder::Get().GetContainerId() == 2, true);
     // windowName = "pages/Index",foreground = false
     Recorder::EventRecorder::Get().SetContainerInfo(windowName, id, false);
-    EXPECT_EQ(Recorder::EventRecorder::Get().GetContainerId() == 2, true);
+    EXPECT_EQ(Recorder::EventRecorder::Get().GetContainerId() == -1, true);
 }
 
 /**
@@ -667,10 +642,10 @@ HWTEST_F(EventRecorderTest, EventRecorderTest012, TestSize.Level1)
     Recorder::EventParamsBuilder eventBuilder;
     std::string desc = "desc";
     std::shared_ptr<std::unordered_map<std::string, std::string>> ret = eventBuilder.SetDescription(desc).build();
-    EXPECT_EQ(ret->size(), 2);
+    EXPECT_EQ(ret->size(), 1);
     std::string dstName = "dstName";
     std::shared_ptr<std::unordered_map<std::string, std::string>> ret2 = eventBuilder.SetNavDst(dstName).build();
-    EXPECT_EQ(ret2->size(), 3);
+    EXPECT_EQ(ret2->size(), 2);
 }
 
 /**
@@ -680,12 +655,9 @@ HWTEST_F(EventRecorderTest, EventRecorderTest012, TestSize.Level1)
  */
 HWTEST_F(EventRecorderTest, SetContainerInfo001, TestSize.Level1)
 {
-    Recorder::EventRecorder::Get().containerId_ = 1;
-    Recorder::EventRecorder::Get().focusContainerId_ = 2;
     std::string windowName = "$HA_FLOAT_WINDOW$";
     Recorder::EventRecorder::Get().SetContainerInfo(windowName, 0, true);
-    EXPECT_EQ(Recorder::EventRecorder::Get().GetContainerId(), 2);
-    EXPECT_EQ(Recorder::EventRecorder::Get().GetContainerId(false), 1);
+    EXPECT_EQ(Recorder::EventRecorder::Get().GetContainerId(), -1);
 }
 
 /**
@@ -707,11 +679,9 @@ HWTEST_F(EventRecorderTest, SetContainerInfo002, TestSize.Level1)
  */
 HWTEST_F(EventRecorderTest, SetContainerInfo003, TestSize.Level1)
 {
-    Recorder::EventRecorder::Get().containerId_ = 1;
-    Recorder::EventRecorder::Get().focusContainerId_ = 2;
     std::string windowName = "";
     Recorder::EventRecorder::Get().SetContainerInfo(windowName, 0, false);
-    EXPECT_EQ(Recorder::EventRecorder::Get().GetContainerId(), 2);
+    EXPECT_EQ(Recorder::EventRecorder::Get().GetContainerId(), -1);
 }
 
 /**
@@ -721,11 +691,9 @@ HWTEST_F(EventRecorderTest, SetContainerInfo003, TestSize.Level1)
  */
 HWTEST_F(EventRecorderTest, SetFocusContainerInfo001, TestSize.Level1)
 {
-    Recorder::EventRecorder::Get().containerId_ = 1;
-    Recorder::EventRecorder::Get().focusContainerId_ = 2;
     std::string windowName = "$HA_FLOAT_WINDOW$";
     Recorder::EventRecorder::Get().SetFocusContainerInfo(windowName, 0);
-    EXPECT_EQ(Recorder::EventRecorder::Get().GetContainerId(), 2);
+    EXPECT_EQ(Recorder::EventRecorder::Get().GetContainerId(), -1);
 }
 
 /**
@@ -735,11 +703,9 @@ HWTEST_F(EventRecorderTest, SetFocusContainerInfo001, TestSize.Level1)
  */
 HWTEST_F(EventRecorderTest, SetFocusContainerInfo002, TestSize.Level1)
 {
-    Recorder::EventRecorder::Get().containerId_ = 1;
-    Recorder::EventRecorder::Get().focusContainerId_ = 2;
     std::string windowName = "";
     Recorder::EventRecorder::Get().SetFocusContainerInfo(windowName, 0);
-    EXPECT_EQ(Recorder::EventRecorder::Get().GetContainerId(), 0);
+    EXPECT_NE(Recorder::EventRecorder::Get().GetContainerId(), 0);
 }
 
 /**
@@ -833,9 +799,8 @@ HWTEST_F(EventRecorderTest, IsPageRecordEnable001, TestSize.Level1)
  */
 HWTEST_F(EventRecorderTest, IsPageRecordEnable002, TestSize.Level1)
 {
-    int32_t index = static_cast<int32_t>(Recorder::EventCategory::CATEGORY_PAGE);
-    Recorder::EventRecorder::Get().globalSwitch_[index] = false;
-    Recorder::EventRecorder::Get().eventSwitch_[index] = true;
+    Recorder::EventRecorder::Get().pageEnable_ = false;
+    Recorder::EventRecorder::Get().eventSwitch_.pageEnable = true;
     EXPECT_FALSE(Recorder::EventRecorder::Get().IsPageRecordEnable());
 }
 
@@ -846,9 +811,8 @@ HWTEST_F(EventRecorderTest, IsPageRecordEnable002, TestSize.Level1)
  */
 HWTEST_F(EventRecorderTest, IsPageRecordEnable003, TestSize.Level1)
 {
-    int32_t index = static_cast<int32_t>(Recorder::EventCategory::CATEGORY_PAGE);
-    Recorder::EventRecorder::Get().globalSwitch_[index] = true;
-    Recorder::EventRecorder::Get().eventSwitch_[index] = false;
+    Recorder::EventRecorder::Get().pageEnable_ = true;
+    Recorder::EventRecorder::Get().eventSwitch_.pageEnable = false;
     EXPECT_FALSE(Recorder::EventRecorder::Get().IsPageRecordEnable());
 }
 
@@ -859,9 +823,8 @@ HWTEST_F(EventRecorderTest, IsPageRecordEnable003, TestSize.Level1)
  */
 HWTEST_F(EventRecorderTest, IsPageRecordEnable004, TestSize.Level1)
 {
-    int32_t index = static_cast<int32_t>(Recorder::EventCategory::CATEGORY_PAGE);
-    Recorder::EventRecorder::Get().globalSwitch_[index] = false;
-    Recorder::EventRecorder::Get().eventSwitch_[index] = false;
+    Recorder::EventRecorder::Get().pageEnable_ = false;
+    Recorder::EventRecorder::Get().eventSwitch_.pageEnable = false;
     EXPECT_FALSE(Recorder::EventRecorder::Get().IsPageRecordEnable());
 }
 
@@ -882,9 +845,8 @@ HWTEST_F(EventRecorderTest, IsComponentRecordEnable001, TestSize.Level1)
  */
 HWTEST_F(EventRecorderTest, IsComponentRecordEnable002, TestSize.Level1)
 {
-    int32_t index = static_cast<int32_t>(Recorder::EventCategory::CATEGORY_COMPONENT);
-    Recorder::EventRecorder::Get().globalSwitch_[index] = true;
-    Recorder::EventRecorder::Get().eventSwitch_[index] = false;
+    Recorder::EventRecorder::Get().componentEnable_ = true;
+    Recorder::EventRecorder::Get().eventSwitch_.componentEnable = false;
     EXPECT_FALSE(Recorder::EventRecorder::Get().IsComponentRecordEnable());
 }
 
@@ -895,9 +857,8 @@ HWTEST_F(EventRecorderTest, IsComponentRecordEnable002, TestSize.Level1)
  */
 HWTEST_F(EventRecorderTest, IsComponentRecordEnable003, TestSize.Level1)
 {
-    int32_t index = static_cast<int32_t>(Recorder::EventCategory::CATEGORY_COMPONENT);
-    Recorder::EventRecorder::Get().globalSwitch_[index] = false;
-    Recorder::EventRecorder::Get().eventSwitch_[index] = true;
+    Recorder::EventRecorder::Get().componentEnable_ = false;
+    Recorder::EventRecorder::Get().eventSwitch_.componentEnable = true;
     EXPECT_FALSE(Recorder::EventRecorder::Get().IsComponentRecordEnable());
 }
 
@@ -908,23 +869,9 @@ HWTEST_F(EventRecorderTest, IsComponentRecordEnable003, TestSize.Level1)
  */
 HWTEST_F(EventRecorderTest, IsComponentRecordEnable004, TestSize.Level1)
 {
-    int32_t index = static_cast<int32_t>(Recorder::EventCategory::CATEGORY_COMPONENT);
-    Recorder::EventRecorder::Get().globalSwitch_[index] = false;
-    Recorder::EventRecorder::Get().eventSwitch_[index] = false;
+    Recorder::EventRecorder::Get().componentEnable_ = false;
+    Recorder::EventRecorder::Get().eventSwitch_.componentEnable = false;
     EXPECT_FALSE(Recorder::EventRecorder::Get().IsComponentRecordEnable());
-}
-
-/**
- * @tc.name: IsRecordEnable001
- * @tc.desc: Test IsRecordEnable.
- * @tc.type: FUNC
- */
-HWTEST_F(EventRecorderTest, IsRecordEnable001, TestSize.Level1)
-{
-    int32_t index = static_cast<int32_t>(Recorder::EventCategory::CATEGORY_WEB);
-    Recorder::EventRecorder::Get().globalSwitch_[index] = false;
-    Recorder::EventRecorder::Get().eventSwitch_[index] = false;
-    EXPECT_FALSE(Recorder::EventRecorder::Get().IsRecordEnable(Recorder::EventCategory::CATEGORY_WEB));
 }
 
 /**
@@ -944,13 +891,12 @@ HWTEST_F(EventRecorderTest, IsCacheAvaliable001, TestSize.Level1)
  */
 HWTEST_F(EventRecorderTest, IsCacheAvaliable002, TestSize.Level1)
 {
-    int32_t index = static_cast<int32_t>(Recorder::EventCategory::CATEGORY_COMPONENT);
-    Recorder::EventRecorder::Get().globalSwitch_[index] = true;
-    Recorder::EventRecorder::Get().eventSwitch_[index] = true;
+    Recorder::EventRecorder::Get().componentEnable_ = true;
+    Recorder::EventRecorder::Get().eventSwitch_.componentEnable = true;
     Recorder::NodeDataCache::Get().mergedConfig_->shareNodes["element"] = { "element1", "element2", "element3" };
     Recorder::IsCacheAvaliable();
-    Recorder::EventRecorder::Get().globalSwitch_[index] = false;
-    Recorder::EventRecorder::Get().eventSwitch_[index] = false;
+    Recorder::EventRecorder::Get().componentEnable_ = false;
+    Recorder::EventRecorder::Get().eventSwitch_.componentEnable = false;
     Recorder::NodeDataCache::Get().mergedConfig_->shareNodes.clear();
     EXPECT_FALSE(Recorder::IsCacheAvaliable());
 }
@@ -1055,7 +1001,7 @@ HWTEST_F(EventRecorderTest, SetExtra001, TestSize.Level1)
     std::string value = "";
     Recorder::EventParamsBuilder builder1;
     builder1.SetExtra(key, value);
-    std::string result = builder1.GetValue("text");
+    std::string result = builder1.GetText();
     EXPECT_EQ(result, "");
 }
 
@@ -1140,8 +1086,7 @@ HWTEST_F(EventRecorderTest, OnNavDstHide001, TestSize.Level1)
     builder1.SetNavDst("1");
     Recorder::EventRecorder::Get().navShowTime_ = 0;
     Recorder::EventRecorder::Get().OnNavDstHide(std::move(builder1));
-    EXPECT_EQ(builder1.GetValue("1"), "1");
-    EXPECT_EQ(Recorder::EventRecorder::Get().GetNavDstName(), "");
+    EXPECT_EQ(Recorder::EventRecorder::Get().GetNavDstName(), builder1.GetText());
 }
 
 /**
@@ -1155,7 +1100,7 @@ HWTEST_F(EventRecorderTest, OnNavDstHide002, TestSize.Level1)
     builder1.SetText("1");
     Recorder::EventRecorder::Get().navDstName_ = "";
     Recorder::EventRecorder::Get().OnNavDstHide(std::move(builder1));
-    EXPECT_NE(Recorder::EventRecorder::Get().GetNavDstName(), builder1.GetValue("text"));
+    EXPECT_NE(Recorder::EventRecorder::Get().GetNavDstName(), builder1.GetText());
 }
 
 /**
@@ -1165,11 +1110,9 @@ HWTEST_F(EventRecorderTest, OnNavDstHide002, TestSize.Level1)
  */
 HWTEST_F(EventRecorderTest, IsCategoryEnable001, TestSize.Level1)
 {
-    int32_t index = static_cast<int32_t>(Recorder::EventCategory::CATEGORY_COMPONENT);
     Recorder::EventConfig* config = new Recorder::EventConfig();
-    config->switches_[index] = false;
-    index = static_cast<int32_t>(Recorder::EventCategory::CATEGORY_PAGE);
-    bool result = config->IsCategoryEnable(index);
+    config->switches_->emplace(Recorder::EventCategory::CATEGORY_COMPONENT, false);
+    bool result = config->IsCategoryEnable(Recorder::EventCategory::CATEGORY_PAGE);
     EXPECT_FALSE(result);
     delete config;
 }
@@ -1200,7 +1143,7 @@ HWTEST_F(EventRecorderTest, ApplyNewestConfig001, TestSize.Level1)
     builder1.SetId("hello").SetPageUrl("pages/Index").SetText("world");
     auto params = builder1.build();
     Recorder::EventController::Get().clientList_.clear();
-    Recorder::EventController::Get().ApplyNewestConfig(false);
+    Recorder::EventController::Get().ApplyNewestConfig();
     Recorder::EventController::Get().NotifyEvent(
         Recorder::EventCategory::CATEGORY_COMPONENT, Recorder::EventType::CHANGE, std::move(params));
     EXPECT_TRUE(Recorder::EventController::Get().clientList_.empty());
@@ -1213,9 +1156,8 @@ HWTEST_F(EventRecorderTest, ApplyNewestConfig001, TestSize.Level1)
  */
 HWTEST_F(EventRecorderTest, IsExposureRecordEnable001, TestSize.Level1)
 {
-    int32_t index = static_cast<int32_t>(Recorder::EventCategory::CATEGORY_EXPOSURE);
-    Recorder::EventRecorder::Get().globalSwitch_[index] = true;
-    Recorder::EventRecorder::Get().eventSwitch_[index] = true;
+    Recorder::EventRecorder::Get().exposureEnable_ = true;
+    Recorder::EventRecorder::Get().eventSwitch_.exposureEnable = true;
     EXPECT_TRUE(Recorder::EventRecorder::Get().IsExposureRecordEnable());
 }
 
@@ -1226,9 +1168,8 @@ HWTEST_F(EventRecorderTest, IsExposureRecordEnable001, TestSize.Level1)
  */
 HWTEST_F(EventRecorderTest, IsExposureRecordEnable002, TestSize.Level1)
 {
-    int32_t index = static_cast<int32_t>(Recorder::EventCategory::CATEGORY_EXPOSURE);
-    Recorder::EventRecorder::Get().globalSwitch_[index] = false;
-    Recorder::EventRecorder::Get().eventSwitch_[index] = true;
+    Recorder::EventRecorder::Get().exposureEnable_ = false;
+    Recorder::EventRecorder::Get().eventSwitch_.exposureEnable = true;
     EXPECT_FALSE(Recorder::EventRecorder::Get().IsExposureRecordEnable());
 }
 
@@ -1239,9 +1180,8 @@ HWTEST_F(EventRecorderTest, IsExposureRecordEnable002, TestSize.Level1)
  */
 HWTEST_F(EventRecorderTest, IsExposureRecordEnable003, TestSize.Level1)
 {
-    int32_t index = static_cast<int32_t>(Recorder::EventCategory::CATEGORY_EXPOSURE);
-    Recorder::EventRecorder::Get().globalSwitch_[index] = true;
-    Recorder::EventRecorder::Get().eventSwitch_[index] = false;
+    Recorder::EventRecorder::Get().exposureEnable_ = true;
+    Recorder::EventRecorder::Get().eventSwitch_.exposureEnable = false;
     EXPECT_FALSE(Recorder::EventRecorder::Get().IsExposureRecordEnable());
 }
 
@@ -1252,9 +1192,8 @@ HWTEST_F(EventRecorderTest, IsExposureRecordEnable003, TestSize.Level1)
  */
 HWTEST_F(EventRecorderTest, IsExposureRecordEnable004, TestSize.Level1)
 {
-    int32_t index = static_cast<int32_t>(Recorder::EventCategory::CATEGORY_EXPOSURE);
-    Recorder::EventRecorder::Get().globalSwitch_[index] = false;
-    Recorder::EventRecorder::Get().eventSwitch_[index] = false;
+    Recorder::EventRecorder::Get().exposureEnable_ = false;
+    Recorder::EventRecorder::Get().eventSwitch_.exposureEnable = false;
     EXPECT_FALSE(Recorder::EventRecorder::Get().IsExposureRecordEnable());
 }
 
@@ -1272,198 +1211,64 @@ HWTEST_F(EventRecorderTest, GetPageUrl001, TestSize.Level1)
 }
 
 /**
- * @tc.name: IsPageParamRecordEnable001
- * @tc.desc: Test IsPageParamRecordEnable.
+ * @tc.name: PutString005
+ * @tc.desc: Test PutString.
  * @tc.type: FUNC
  */
-HWTEST_F(EventRecorderTest, IsPageParamRecordEnable001, TestSize.Level1)
+HWTEST_F(EventRecorderTest, PutString005, TestSize.Level1)
 {
-    int32_t index = static_cast<int32_t>(EventCategory::CATEGORY_PAGE_PARAM);
-    EventRecorder::Get().globalSwitch_[index] = true;
-    EventRecorder::Get().eventSwitch_[index] = false;
-    EXPECT_FALSE(EventRecorder::Get().IsPageParamRecordEnable());
-    index = static_cast<int32_t>(EventCategory::CATEGORY_WEB);
-    EventRecorder::Get().globalSwitch_[index] = true;
-    EventRecorder::Get().eventSwitch_[index] = true;
-    EXPECT_FALSE(EventRecorder::Get().IsComponentRecordEnable());
+    Recorder::ExposureCfg cfg;
+    Recorder::NodeDataCache::Get().Clear("");
+    auto node = CreatePageNode("pages/Index");
+    std::string id = "";
+    std::string value = "";
+    bool result = Recorder::NodeDataCache::Get().PutString(node, id, value);
+    EXPECT_FALSE(result);
 
-    std::string str;
-    GetConfigTest5(str);
-    EventConfig* config = new EventConfig();
-    config->Init(str);
-    EXPECT_FALSE(config->GetWebJsCode().empty());
-    EXPECT_FALSE(config->GetWebCategory().empty());
-    EXPECT_TRUE(config->IsCategoryEnable(index));
-    delete config;
+    id = "";
+    value = "test";
+    result = Recorder::NodeDataCache::Get().PutString(node, id, value);
+    EXPECT_FALSE(result);
+
+    id = "test";
+    value = "";
+    result = Recorder::NodeDataCache::Get().PutString(node, id, value);
+    EXPECT_FALSE(result);
+
+    id = "test";
+    value = "ROMYWBdsOgXB07y1XB1iVzym8n6QR5ZWaTDbjsCDe5PFbZKrPflxEEGpGPNbuNnHM1k1m9uveVLruC2KUkKOKGIxDo91RpTN1e7Etest";
+    result = Recorder::NodeDataCache::Get().PutString(node, id, value);
+    EXPECT_FALSE(result);
+
+    id = "";
+    value = "ROMYWBdsOgXB07y1XB1iVzym8n6QR5ZWaTDbjsCDe5PFbZKrPflxEEGpGPNbuNnHM1k1m9uveVLruC2KUkKOKGIxDo91RpTN1e7Etest";
+    result = Recorder::NodeDataCache::Get().PutString(node, id, value);
+    EXPECT_FALSE(result);
+
+    id = "test";
+    value = "test";
+    Recorder::NodeDataCache::Get().shouldCollectFull_ = false;
+    result = Recorder::NodeDataCache::Get().PutString(node, id, value);
+
+    Recorder::NodeDataCache::Get().shouldCollectFull_ = true;
+    result = Recorder::NodeDataCache::Get().PutString(node, id, value);
+
+    auto pageNode = node->GetPageNode();
+    auto pagePattern = pageNode->GetPattern<NG::PagePattern>();
+    pagePattern->pageInfo_->url_ = "";
+    Recorder::NodeDataCache::Get().shouldCollectFull_ = true;
+    result = Recorder::NodeDataCache::Get().PutString(node, id, value);
+
+    EXPECT_FALSE(result);
 }
 
 /**
- * @tc.name: FillWebJsCode001
- * @tc.desc: Test FillWebJsCode.
+ * @tc.name: OnPageReady001
+ * @tc.desc: Test OnPageReady.
  * @tc.type: FUNC
  */
-HWTEST_F(EventRecorderTest, FillWebJsCode001, TestSize.Level1)
+HWTEST_F(EventRecorderTest, OnPageReady001, TestSize.Level1)
 {
-    int32_t index = static_cast<int32_t>(EventCategory::CATEGORY_WEB);
-    EventRecorder::Get().globalSwitch_[index] = true;
-    EventRecorder::Get().eventSwitch_[index] = true;
-    std::string config;
-    GetConfigTest5(config);
-    auto observer = std::make_shared<DemoUIEventObserver>();
-    EventController::Get().Register(config, observer);
-    std::optional<WebJsItem> scriptItems = std::nullopt;
-    EventRecorder::Get().FillWebJsCode(scriptItems);
-    EXPECT_TRUE(scriptItems.has_value());
-    scriptItems = std::make_optional<WebJsItem>();
-    EventRecorder::Get().FillWebJsCode(scriptItems);
-    EXPECT_TRUE(scriptItems.has_value());
-
-    EXPECT_TRUE(EventRecorder::Get().IsMessageValid("test", "abc"));
-    EXPECT_FALSE(EventRecorder::Get().IsMessageValid("", "abc"));
-    EXPECT_FALSE(EventRecorder::Get().IsMessageValid("ttt", "abc"));
-}
-
-/**
- * @tc.name: InspectorTreeCollectorTest001
- * @tc.desc: Test register.
- * @tc.type: FUNC
- */
-HWTEST_F(EventRecorderTest, InspectorTreeCollectorTest001, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. call the Constructor.
-     * @tc.expected: step1. Constructor success.
-     */
-    InspectorTreeCollector collector([](const std::shared_ptr<std::string> tree) {}, false);
-    EXPECT_TRUE(collector.root_ != nullptr);
-}
-
-/**
- * @tc.name: InspectorTreeCollectorTest002
- * @tc.desc: Test node data cache.
- * @tc.type: FUNC
- */
-HWTEST_F(EventRecorderTest, InspectorTreeCollectorTest002, TestSize.Level1)
-{
-    InspectorTreeCollector collector([](const std::shared_ptr<std::string> tree) {}, false);
-    collector.taskNum_ = 0;
-    /**
-     * @tc.steps: step1. call the IncreaseTaskNum.
-     * @tc.expected: step1. IncreaseTaskNum success.
-     */
-    collector.IncreaseTaskNum();
-    EXPECT_EQ(collector.taskNum_, 1);
-    /**
-     * @tc.steps: step2. call the DecreaseTaskNum.
-     * @tc.expected: step2. DecreaseTaskNum success.
-     */
-    collector.DecreaseTaskNum();
-    EXPECT_EQ(collector.taskNum_, 0);
-    /**
-     * @tc.steps: step3. call the UpdateTaskNum.
-     * @tc.expected: step3. UpdateTaskNum success.
-     */
-    collector.UpdateTaskNum(2);
-    EXPECT_EQ(collector.taskNum_, 2);
-}
-
-/**
- * @tc.name: AddApiTest001
- * @tc.desc: FillExtraTextIfNeed
- * @tc.type: FUNC
- */
-HWTEST_F(EventRecorderTest, AddApiTest001, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. prepare the environment variables for the function.
-     */
-    Recorder::EventParamsBuilder builder;
-    string value = "";
-    builder.params_->emplace(KEY_TEXT, value);
-    auto pageNode = CreatePageNode("pages/Index");
-    builder.eventType_ = Recorder::EventType::CLICK;
-    builder.SetHost(pageNode);
-
-    /**
-     * @tc.steps: step2. set different variables to meet the conditional values and test OnWebEvent.
-     */
-    EventRecorder::Get().globalSwitch_[10] = true;
-    EventRecorder::Get().eventSwitch_[10] = true;
-    builder.SetHost(pageNode);
-
-    /**
-     * @tc.steps: step2. set the different variables to test.
-     */
-    auto pageNode2 = CreatePageNode("pages/Index2");
-    pageNode->AddChild(pageNode2, 1, false);
-    builder.SetHost(pageNode);
-    EXPECT_EQ(builder.params_->empty(), false);
-
-    auto pageNode3 = CreatePageNode("pages/Index3");
-    pageNode3->UpdateInspectorId("abc");
-    builder.SetHost(pageNode3);
-    EXPECT_EQ(builder.params_->empty(), false);
-}
-
-/**
- * @tc.name: AddApiTest002
- * @tc.desc: SetHostOnWebEvent
- * @tc.type: FUNC
- */
-HWTEST_F(EventRecorderTest, AddApiTest002, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. prepare the environment variables for the function.
-     */
-    Recorder::EventParamsBuilder builder;
-    auto pageNode = CreatePageNode("pages/Index");
-    EventRecorder::Get().globalSwitch_[6] = true;
-    EventRecorder::Get().eventSwitch_[6] = true;
-
-    /**
-     * @tc.steps: step2. test SetHost.
-     */
-    builder.SetHost(pageNode);
-
-    /**
-     * @tc.steps: step3. set the variables to meet the conditional values and test OnWebEvent.
-     */
-    auto pageNode2 = CreatePageNode("pages/Index");
-    vector<std::string> params;
-    Recorder::EventRecorder::Get().OnWebEvent(pageNode2, params);
-    vector<std::string> params2 = {"df", "rfds", "fd"};
-    EventRecorder::Get().globalSwitch_[7] = true;
-    Recorder::EventRecorder::Get().OnWebEvent(pageNode2, params2);
-    EXPECT_EQ(builder.params_->empty(), false);
-}
-
-/**
- * @tc.name: EventRecorderTest016
- * @tc.desc: Test builder.
- * @tc.type: FUNC
- */
-HWTEST_F(EventRecorderTest, EventRecorderTest016, TestSize.Level1)
-{
-    Recorder::EventParamsBuilder builder;
-    string value = "";
-    builder.params_->emplace(KEY_TEXT, value);
-    auto pageNode = CreatePageNode("pages/Index");
-    builder.eventType_ = Recorder::EventType::CLICK;
-    builder.SetHost(pageNode);
-    EXPECT_EQ(builder.params_->empty(), false);
-}
-
-/**
- * @tc.name: SimplifiedInspectorTest01
- * @tc.desc: Test GetInspector.
- * @tc.type: FUNC
- */
-HWTEST_F(EventRecorderTest, SimplifiedInspectorTest01, TestSize.Level1)
-{
-    TreeParams params;
-    params.infoType = InspectorInfoType::WEB_LANG;
-    auto inspector = std::make_shared<NG::SimplifiedInspector>(0, params);
-    auto tree = inspector->GetInspector();
-    EXPECT_TRUE(tree.empty());
+    Recorder::NodeDataCache::Get().OnPageReady();
 }
 } // namespace OHOS::Ace

@@ -65,8 +65,7 @@ public:
         CHECK_NULL_RETURN(layoutProps, nullptr);
         bool isReverse = layoutProps->GetNonAutoLayoutDirection() == TextDirection::RTL;
         if (!selectOverlayModifier_ && CheckIfNeedMenu()) {
-            selectOverlayModifier_ =
-                AceType::MakeRefPtr<SelectOverlayModifier>(defaultMenuEndOffset_, isReverse, WeakClaim(this));
+            selectOverlayModifier_ = AceType::MakeRefPtr<SelectOverlayModifier>(defaultMenuEndOffset_, isReverse);
         }
         if (!selectOverlayContentModifier_ && CheckIfNeedHandle()) {
             selectOverlayContentModifier_ = AceType::MakeRefPtr<SelectOverlayContentModifier>(WeakClaim(this));
@@ -77,12 +76,12 @@ public:
         if (paintMethodCreated_) {
             return MakeRefPtr<SelectOverlayPaintMethod>(selectOverlayModifier_, selectOverlayContentModifier_, *info_,
                 defaultMenuEndOffset_, selectMenuHeight_, hasExtensionMenu_, hasShowAnimation_, true, isHiddenHandle_,
-                defaultMenuStartOffset_, isReverse, WeakClaim(this));
+                defaultMenuStartOffset_, isReverse);
         } else {
             paintMethodCreated_ = true;
             return MakeRefPtr<SelectOverlayPaintMethod>(selectOverlayModifier_, selectOverlayContentModifier_, *info_,
                 defaultMenuEndOffset_, selectMenuHeight_, hasExtensionMenu_, hasShowAnimation_, false, isHiddenHandle_,
-                defaultMenuStartOffset_, isReverse, WeakClaim(this));
+                defaultMenuStartOffset_, isReverse);
         }
     }
 
@@ -100,8 +99,6 @@ public:
     void UpdateSelectMenuInfo(const SelectMenuInfo& info);
 
     void UpdateSelectMenuInfo(std::function<void(SelectMenuInfo& menuInfo)> updateAction);
-
-    void UpdateAncestorViewPort(const std::optional<RectF>& ancestorViewPort) const;
 
     void UpdateShowArea(const RectF& area);
 
@@ -180,7 +177,7 @@ public:
     {
         return isHiddenHandle_;
     }
-
+ 
     void StartHiddenHandleTask(bool isDelay = true);
     virtual void UpdateSelectArea(const RectF& selectArea);
     void SetIsNewAvoid(bool isNewAvoid);
@@ -206,24 +203,11 @@ public:
             return secondHandleDrag_;
         }
     }
-    void OnColorConfigurationUpdate() override;
-    void OnLanguageConfigurationUpdate() override;
 
     RefPtr<EventHub> CreateEventHub() override
     {
         return MakeRefPtr<SelectOverlayEventHub>();
     }
-    bool GetIsMenuShowInSubWindow() const
-    {
-        return isMenuShowInSubWindow_;
-    }
-
-    void SetIsMenuShowInSubWindow(bool isMenuShowInSubWindow)
-    {
-        isMenuShowInSubWindow_ = isMenuShowInSubWindow;
-    }
-
-    void DeleteHotAreas();
 
 protected:
     virtual void CheckHandleReverse();
@@ -261,7 +245,6 @@ private:
     void SetSelectMenuHeight();
     void SetContentModifierBounds(const RefPtr<SelectOverlayContentModifier>& modifier);
     void SwitchHandleToOverlayMode(bool afterRender);
-    void SetHotAreas(const RefPtr<LayoutWrapper>& layoutWrapper);
 
     RefPtr<TouchEventImpl> touchEvent_;
 
@@ -291,8 +274,6 @@ private:
 
     bool closedByGlobalTouchEvent_ = false;
     SelectOverlayMode overlayMode_ = SelectOverlayMode::ALL;
-    // Used to identify whether the menu is actually displayed in the subwindow.
-    bool isMenuShowInSubWindow_ = false;
 
     ACE_DISALLOW_COPY_AND_MOVE(SelectOverlayPattern);
 };

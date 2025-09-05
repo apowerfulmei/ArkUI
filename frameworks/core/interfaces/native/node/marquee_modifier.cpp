@@ -15,16 +15,19 @@
 #include "core/interfaces/native/node/marquee_modifier.h"
 
 #include "bridge/common/utils/utils.h"
-#include "core/components/text/text_theme.h"
+#include "core/components/common/layout/constants.h"
+#include "core/components/common/properties/text_style.h"
+#include "core/components_ng/base/frame_node.h"
 #include "core/components_ng/base/view_abstract.h"
 #include "core/components_ng/pattern/marquee/marquee_model_ng.h"
+#include "core/pipeline/base/element_register.h"
 
 namespace OHOS::Ace::NG {
 constexpr bool DEFAULT_ALLOW_SCALE = true;
 constexpr Ace::FontWeight DEFAULT_FONT_WEIGHT = Ace::FontWeight::NORMAL;
 const std::string DEFAULT_FONT_FAMILY = "cursive";
 
-void SetMarqueeFontSize(ArkUINodeHandle node, ArkUI_Float32 fontSize, int unit, void* fontSizeRawPtr)
+void SetMarqueeFontSize(ArkUINodeHandle node, ArkUI_Float32 fontSize, int unit)
 {
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
@@ -41,15 +44,6 @@ void SetMarqueeFontSize(ArkUINodeHandle node, ArkUI_Float32 fontSize, int unit, 
     } else {
         MarqueeModelNG::SetFontSize(frameNode, Dimension(fontSize, static_cast<OHOS::Ace::DimensionUnit>(unit)));
     }
-    auto pattern = frameNode->GetPattern();
-    CHECK_NULL_VOID(pattern);
-    if (SystemProperties::ConfigChangePerform() && fontSizeRawPtr) {
-        auto resObj = AceType::Claim(reinterpret_cast<ResourceObject*>(fontSizeRawPtr));
-        pattern->RegisterResource<CalcDimension>("FontSize", resObj,
-            Dimension(fontSize, static_cast<OHOS::Ace::DimensionUnit>(unit)));
-    } else {
-        pattern->UnRegisterResource("FontSize");
-    }
 }
 
 void ResetMarqueeFontSize(ArkUINodeHandle node)
@@ -62,26 +56,13 @@ void ResetMarqueeFontSize(ArkUINodeHandle node)
     CHECK_NULL_VOID(theme);
     CalcDimension fontSize = theme->GetTextStyle().GetFontSize();
     MarqueeModelNG::SetFontSize(frameNode, fontSize);
-    if (SystemProperties::ConfigChangePerform()) {
-        auto pattern = frameNode->GetPattern();
-        CHECK_NULL_VOID(pattern);
-        pattern->UnRegisterResource("FontSize");
-    }
 }
 
-void SetMarqueeFontColor(ArkUINodeHandle node, uint32_t color, void* resRawPtr)
+void SetMarqueeFontColor(ArkUINodeHandle node, uint32_t color)
 {
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
     MarqueeModelNG::SetTextColor(frameNode, Color(color));
-    auto pattern = frameNode->GetPattern();
-    CHECK_NULL_VOID(pattern);
-    if (SystemProperties::ConfigChangePerform() && resRawPtr) {
-        auto resObj = AceType::Claim(reinterpret_cast<ResourceObject*>(resRawPtr));
-        pattern->RegisterResource<Color>("TextColor", resObj, Color(color));
-    } else {
-        pattern->UnRegisterResource("TextColor");
-    }
 }
 void ResetMarqueeFontColor(ArkUINodeHandle node)
 {
@@ -89,11 +70,6 @@ void ResetMarqueeFontColor(ArkUINodeHandle node)
     CHECK_NULL_VOID(frameNode);
     std::optional<Color> colorOpt;
     MarqueeModelNG::SetTextColor(frameNode, colorOpt);
-    if (SystemProperties::ConfigChangePerform()) {
-        auto pattern = frameNode->GetPattern();
-        CHECK_NULL_VOID(pattern);
-        pattern->UnRegisterResource("TextColor");
-    }
 }
 void SetMarqueeAllowScale(ArkUINodeHandle node, ArkUI_Bool allowScale)
 {
@@ -285,65 +261,25 @@ void ResetMarqueeDirection(ArkUINodeHandle node)
 namespace NodeModifier {
 const ArkUIMarqueeModifier* GetMarqueeModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
     static const ArkUIMarqueeModifier modifier = {
-        .setMarqueeFontSize = SetMarqueeFontSize,
-        .resetMarqueeFontSize = ResetMarqueeFontSize,
-        .setMarqueeFontColor = SetMarqueeFontColor,
-        .resetMarqueeFontColor = ResetMarqueeFontColor,
-        .setMarqueeAllowScale = SetMarqueeAllowScale,
-        .resetMarqueeAllowScale = ResetMarqueeAllowScale,
-        .setMarqueeFontWeight = SetMarqueeFontWeight,
-        .resetMarqueeFontWeight = ResetMarqueeFontWeight,
-        .setMarqueeFontFamily = SetMarqueeFontFamily,
-        .resetMarqueeFontFamily = ResetMarqueeFontFamily,
-        .setMarqueeUpdateStrategy = SetMarqueeUpdateStrategy,
-        .resetMarqueeUpdateStrategy = ResetMarqueeUpdateStrategy,
-        .setMarqueeOnStart = SetMarqueeOnStart,
-        .resetMarqueeOnStart = ResetMarqueeOnStart,
-        .setMarqueeOnBounce = SetMarqueeOnBounce,
-        .resetMarqueeOnBounce = ResetMarqueeOnBounce,
-        .setMarqueeOnFinish = SetMarqueeOnFinish,
-        .resetMarqueeOnFinish = ResetMarqueeOnFinish,
-        .setMarqueeSrcValue = SetMarqueeSrcValue,
-        .resetMarqueeSrcValue = ResetMarqueeSrcValue,
-        .setMarqueePlayerStatus = SetMarqueePlayerStatus,
-        .resetMarqueePlayerStatus = ResetMarqueePlayerStatus,
-        .setMarqueeScrollAmount = SetMarqueeScrollAmount,
-        .resetMarqueeScrollAmount = ResetMarqueeScrollAmount,
-        .setMarqueeLoop = SetMarqueeLoop,
-        .resetMarqueeLoop = ResetMarqueeLoop,
-        .setMarqueeDirection = SetMarqueeDirection,
-        .resetMarqueeDirection = ResetMarqueeDirection,
-    };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
+        SetMarqueeFontSize, ResetMarqueeFontSize, SetMarqueeFontColor,
+        ResetMarqueeFontColor, SetMarqueeAllowScale, ResetMarqueeAllowScale, SetMarqueeFontWeight,
+        ResetMarqueeFontWeight, SetMarqueeFontFamily, ResetMarqueeFontFamily, SetMarqueeUpdateStrategy,
+        ResetMarqueeUpdateStrategy, SetMarqueeOnStart, ResetMarqueeOnStart,
+        SetMarqueeOnBounce, ResetMarqueeOnBounce, SetMarqueeOnFinish, ResetMarqueeOnFinish, SetMarqueeSrcValue,
+        ResetMarqueeSrcValue, SetMarqueePlayerStatus, ResetMarqueePlayerStatus, SetMarqueeScrollAmount,
+        ResetMarqueeScrollAmount, SetMarqueeLoop, ResetMarqueeLoop, SetMarqueeDirection, ResetMarqueeDirection };
     return &modifier;
 }
 
 const CJUIMarqueeModifier* GetCJUIMarqueeModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
     static const CJUIMarqueeModifier modifier = {
-        .setMarqueeFontSize = SetMarqueeFontSize,
-        .resetMarqueeFontSize = ResetMarqueeFontSize,
-        .setMarqueeFontColor = SetMarqueeFontColor,
-        .resetMarqueeFontColor = ResetMarqueeFontColor,
-        .setMarqueeAllowScale = SetMarqueeAllowScale,
-        .resetMarqueeAllowScale = ResetMarqueeAllowScale,
-        .setMarqueeFontWeight = SetMarqueeFontWeight,
-        .resetMarqueeFontWeight = ResetMarqueeFontWeight,
-        .setMarqueeFontFamily = SetMarqueeFontFamily,
-        .resetMarqueeFontFamily = ResetMarqueeFontFamily,
-        .setMarqueeUpdateStrategy = SetMarqueeUpdateStrategy,
-        .resetMarqueeUpdateStrategy = ResetMarqueeUpdateStrategy,
-        .setMarqueeOnStart = SetMarqueeOnStart,
-        .resetMarqueeOnStart = ResetMarqueeOnStart,
-        .setMarqueeOnBounce = SetMarqueeOnBounce,
-        .resetMarqueeOnBounce = ResetMarqueeOnBounce,
-        .setMarqueeOnFinish = SetMarqueeOnFinish,
-        .resetMarqueeOnFinish = ResetMarqueeOnFinish,
-    };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
+        SetMarqueeFontSize, ResetMarqueeFontSize, SetMarqueeFontColor,
+        ResetMarqueeFontColor, SetMarqueeAllowScale, ResetMarqueeAllowScale, SetMarqueeFontWeight,
+        ResetMarqueeFontWeight, SetMarqueeFontFamily, ResetMarqueeFontFamily, SetMarqueeUpdateStrategy,
+        ResetMarqueeUpdateStrategy, SetMarqueeOnStart, ResetMarqueeOnStart,
+        SetMarqueeOnBounce, ResetMarqueeOnBounce, SetMarqueeOnFinish, ResetMarqueeOnFinish };
     return &modifier;
 }
 }

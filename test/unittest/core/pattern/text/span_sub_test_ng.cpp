@@ -13,10 +13,28 @@
  * limitations under the License.
  */
 
+#include <functional>
+#include <memory>
+#include <optional>
+
+#include "gtest/gtest.h"
 #include "test/mock/core/render/mock_paragraph.h"
 
+#include "base/json/json_util.h"
+#include "base/memory/ace_type.h"
+#include "base/memory/referenced.h"
+#include "core/components/common/properties/text_style.h"
+#include "core/components_ng/base/view_stack_processor.h"
+#include "core/components_ng/layout/layout_property.h"
+#include "core/components_ng/pattern/text/image_span_view.h"
 #include "core/components_ng/pattern/text/span_model_ng.h"
+#include "core/components_ng/pattern/text/span_node.h"
+#include "core/components_ng/pattern/text/symbol_span_model_ng.h"
+#include "core/components_ng/pattern/text/text_layout_property.h"
+#include "core/components_ng/pattern/text/text_pattern.h"
 #include "core/components_ng/pattern/image/image_model_ng.h"
+#include "frameworks/core/components_ng/pattern/image/image_layout_property.h"
+#include "frameworks/core/common/ai/data_detector_mgr.h"
 
 using namespace testing;
 using namespace testing::ext;
@@ -24,7 +42,6 @@ namespace OHOS::Ace::NG {
 namespace {
 const InspectorFilter filter;
 const std::string CREATE_VALUE = "Hello World";
-const std::u16string CREATE_VALUE_W = u"Hello World";
 const Dimension FONT_SIZE_VALUE = Dimension(20.1, DimensionUnit::PX);
 const std::vector<std::string> FONT_FAMILY_VALUE = { "cursive" };
 const Dimension LETTER_SPACING = Dimension(10, DimensionUnit::PX);
@@ -55,7 +72,7 @@ public:
 
 /**
  * @tc.name: SpanSetBaselineOffsetTest002
- * @tc.desc: Test baseline offset of span
+ * @tc.desc: Test baseline offset of span.
  * @tc.type: FUNC
  */
 HWTEST_F(SpanTestNg, SpanSetBaselineOffsetTest002, TestSize.Level1)
@@ -64,7 +81,7 @@ HWTEST_F(SpanTestNg, SpanSetBaselineOffsetTest002, TestSize.Level1)
      * @tc.steps: step1. create span node
      */
     SpanModelNG spanModelNG;
-    spanModelNG.Create(CREATE_VALUE_W);
+    spanModelNG.Create(CREATE_VALUE);
 
     /**
      * @tc.steps: step2. get span node
@@ -91,7 +108,7 @@ HWTEST_F(SpanTestNg, SpanSetBaselineOffsetTest003, TestSize.Level1)
      * @tc.steps: step1. create span node
      */
     SpanModelNG spanModelNG;
-    spanModelNG.Create(CREATE_VALUE_W);
+    spanModelNG.Create(CREATE_VALUE);
 
     /**
      * @tc.steps: step2. get span node
@@ -118,7 +135,7 @@ HWTEST_F(SpanTestNg, SpanSetBaselineOffsetTest004, TestSize.Level1)
      * @tc.steps: step1. create span node
      */
     SpanModelNG spanModelNG;
-    spanModelNG.Create(CREATE_VALUE_W);
+    spanModelNG.Create(CREATE_VALUE);
 
     /**
      * @tc.steps: step2. get span node
@@ -145,7 +162,7 @@ HWTEST_F(SpanTestNg, SpanSetBaselineOffsetTest005, TestSize.Level1)
      * @tc.steps: step1. create span node
      */
     SpanModelNG spanModelNG;
-    spanModelNG.Create(CREATE_VALUE_W);
+    spanModelNG.Create(CREATE_VALUE);
 
     /**
      * @tc.steps: step2. get span node
@@ -172,7 +189,7 @@ HWTEST_F(SpanTestNg, SpanSetBaselineOffsetTest006, TestSize.Level1)
      * @tc.steps: step1. create span node
      */
     SpanModelNG spanModelNG;
-    spanModelNG.Create(CREATE_VALUE_W);
+    spanModelNG.Create(CREATE_VALUE);
 
     /**
      * @tc.steps: step2. get span node
@@ -199,7 +216,7 @@ HWTEST_F(SpanTestNg, SpanSetBaselineOffsetTest007, TestSize.Level1)
      * @tc.steps: step1. create span node
      */
     SpanModelNG spanModelNG;
-    spanModelNG.Create(CREATE_VALUE_W);
+    spanModelNG.Create(CREATE_VALUE);
 
     /**
      * @tc.steps: step2. get span node
@@ -226,7 +243,7 @@ HWTEST_F(SpanTestNg, SpanSetBaselineOffsetTest008, TestSize.Level1)
      * @tc.steps: step1. create span node
      */
     SpanModelNG spanModelNG;
-    spanModelNG.Create(CREATE_VALUE_W);
+    spanModelNG.Create(CREATE_VALUE);
 
     /**
      * @tc.steps: step2. get span node
@@ -253,7 +270,7 @@ HWTEST_F(SpanTestNg, SpanSetBaselineOffsetTest009, TestSize.Level1)
      * @tc.steps: step1. create span node
      */
     SpanModelNG spanModelNG;
-    spanModelNG.Create(CREATE_VALUE_W);
+    spanModelNG.Create(CREATE_VALUE);
 
     /**
      * @tc.steps: step2. get span node
@@ -280,7 +297,7 @@ HWTEST_F(SpanTestNg, SpanSetBaselineOffsetTest010, TestSize.Level1)
      * @tc.steps: step1. create span node
      */
     SpanModelNG spanModelNG;
-    spanModelNG.Create(CREATE_VALUE_W);
+    spanModelNG.Create(CREATE_VALUE);
 
     /**
      * @tc.steps: step2. get span node
@@ -307,7 +324,7 @@ HWTEST_F(SpanTestNg, SpanSetBaselineOffsetTest011, TestSize.Level1)
      * @tc.steps: step1. create span node
      */
     SpanModelNG spanModelNG;
-    spanModelNG.Create(CREATE_VALUE_W);
+    spanModelNG.Create(CREATE_VALUE);
 
     /**
      * @tc.steps: step2. get span node
@@ -334,7 +351,7 @@ HWTEST_F(SpanTestNg, SpanSetBaselineOffsetTest012, TestSize.Level1)
      * @tc.steps: step1. create span node
      */
     SpanModelNG spanModelNG;
-    spanModelNG.Create(CREATE_VALUE_W);
+    spanModelNG.Create(CREATE_VALUE);
 
     /**
      * @tc.steps: step2. get span node
@@ -361,7 +378,7 @@ HWTEST_F(SpanTestNg, SpanSetBaselineOffsetTest013, TestSize.Level1)
      * @tc.steps: step1. create span node
      */
     SpanModelNG spanModelNG;
-    spanModelNG.Create(CREATE_VALUE_W);
+    spanModelNG.Create(CREATE_VALUE);
 
     /**
      * @tc.steps: step2. get span node
@@ -388,7 +405,7 @@ HWTEST_F(SpanTestNg, SpanSetBaselineOffsetTest014, TestSize.Level1)
      * @tc.steps: step1. create span node
      */
     SpanModelNG spanModelNG;
-    spanModelNG.Create(CREATE_VALUE_W);
+    spanModelNG.Create(CREATE_VALUE);
 
     /**
      * @tc.steps: step2. get span node
@@ -415,7 +432,7 @@ HWTEST_F(SpanTestNg, SpanSetBaselineOffsetTest015, TestSize.Level1)
      * @tc.steps: step1. create span node
      */
     SpanModelNG spanModelNG;
-    spanModelNG.Create(CREATE_VALUE_W);
+    spanModelNG.Create(CREATE_VALUE);
 
     /**
      * @tc.steps: step2. get span node
@@ -442,7 +459,7 @@ HWTEST_F(SpanTestNg, SpanSetBaselineOffsetTest016, TestSize.Level1)
      * @tc.steps: step1. create span node
      */
     SpanModelNG spanModelNG;
-    spanModelNG.Create(CREATE_VALUE_W);
+    spanModelNG.Create(CREATE_VALUE);
 
     /**
      * @tc.steps: step2. get span node
@@ -469,7 +486,7 @@ HWTEST_F(SpanTestNg, SpanSetBaselineOffsetTest017, TestSize.Level1)
      * @tc.steps: step1. create span node
      */
     SpanModelNG spanModelNG;
-    spanModelNG.Create(CREATE_VALUE_W);
+    spanModelNG.Create(CREATE_VALUE);
 
     /**
      * @tc.steps: step2. get span node
@@ -496,7 +513,7 @@ HWTEST_F(SpanTestNg, SpanSetBaselineOffsetTest018, TestSize.Level1)
      * @tc.steps: step1. create span node
      */
     SpanModelNG spanModelNG;
-    spanModelNG.Create(CREATE_VALUE_W);
+    spanModelNG.Create(CREATE_VALUE);
 
     /**
      * @tc.steps: step2. get span node
@@ -523,7 +540,7 @@ HWTEST_F(SpanTestNg, SpanSetBaselineOffsetTest019, TestSize.Level1)
      * @tc.steps: step1. create span node
      */
     SpanModelNG spanModelNG;
-    spanModelNG.Create(CREATE_VALUE_W);
+    spanModelNG.Create(CREATE_VALUE);
 
     /**
      * @tc.steps: step2. get span node
@@ -550,7 +567,7 @@ HWTEST_F(SpanTestNg, SpanSetBaselineOffsetTest020, TestSize.Level1)
      * @tc.steps: step1. create span node
      */
     SpanModelNG spanModelNG;
-    spanModelNG.Create(CREATE_VALUE_W);
+    spanModelNG.Create(CREATE_VALUE);
 
     /**
      * @tc.steps: step2. get span node
@@ -577,7 +594,7 @@ HWTEST_F(SpanTestNg, SpanSetBaselineOffsetTest021, TestSize.Level1)
      * @tc.steps: step1. create span node
      */
     SpanModelNG spanModelNG;
-    spanModelNG.Create(CREATE_VALUE_W);
+    spanModelNG.Create(CREATE_VALUE);
 
     /**
      * @tc.steps: step2. get span node
@@ -604,7 +621,7 @@ HWTEST_F(SpanTestNg, SpanSetBaselineOffsetTest022, TestSize.Level1)
      * @tc.steps: step1. create span node
      */
     SpanModelNG spanModelNG;
-    spanModelNG.Create(CREATE_VALUE_W);
+    spanModelNG.Create(CREATE_VALUE);
 
     /**
      * @tc.steps: step2. get span node
@@ -659,7 +676,7 @@ HWTEST_F(SpanTestNg, SpanSetBaselineOffsetTest023, TestSize.Level1)
      * @tc.steps: step1. create span node
      */
     SpanModelNG spanModelNG;
-    spanModelNG.Create(CREATE_VALUE_W);
+    spanModelNG.Create(CREATE_VALUE);
 
     /**
      * @tc.steps: step2. get span node
@@ -720,7 +737,7 @@ HWTEST_F(SpanTestNg, SpanSetBaselineOffsetTest024, TestSize.Level1)
      * @tc.steps: step1. create span node
      */
     SpanModelNG spanModelNG;
-    spanModelNG.Create(CREATE_VALUE_W);
+    spanModelNG.Create(CREATE_VALUE);
 
     /**
      * @tc.steps: step2. get span node
@@ -781,7 +798,7 @@ HWTEST_F(SpanTestNg, SpanSetBaselineOffsetTest025, TestSize.Level1)
      * @tc.steps: step1. create span node
      */
     SpanModelNG spanModelNG;
-    spanModelNG.Create(CREATE_VALUE_W);
+    spanModelNG.Create(CREATE_VALUE);
 
     /**
      * @tc.steps: step2. get span node
@@ -842,7 +859,7 @@ HWTEST_F(SpanTestNg, SpanSetBaselineOffsetTest026, TestSize.Level1)
      * @tc.steps: step1. create span node
      */
     SpanModelNG spanModelNG;
-    spanModelNG.Create(CREATE_VALUE_W);
+    spanModelNG.Create(CREATE_VALUE);
 
     /**
      * @tc.steps: step2. get span node

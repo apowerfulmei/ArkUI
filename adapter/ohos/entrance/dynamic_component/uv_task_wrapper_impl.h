@@ -28,12 +28,10 @@ public:
     explicit UVTaskWrapperImpl(napi_env env);
     bool WillRunOnCurrentThread() override;
     void Call(const TaskExecutor::Task& task) override;
-    void Call(const TaskExecutor::Task& task, uint32_t delayTime) override;
-    static void CallInWorker(const TaskExecutor::Task& task, uint32_t delayTime, napi_env env);
 
 private:
+    uv_loop_t* loop_ = nullptr;
     pthread_t threadId_ = 0;
-    napi_env env_;
 };
 
 class UVWorkWrapper : public uv_work_t {
@@ -44,32 +42,13 @@ public:
 
     void operator()() const
     {
-        task_();
+        if (task_) {
+            task_();
+        }
     }
 
 private:
     TaskExecutor::Task task_;
-};
-
-class UVTimerWorkWrapper : public UVWorkWrapper {
-public:
-    explicit UVTimerWorkWrapper(
-        const TaskExecutor::Task& task, uint32_t delayTime, int64_t taskTime)
-        : UVWorkWrapper(task), delayTime_(delayTime), taskTime_(taskTime) {}
-
-    uint32_t GetDelayTime() const
-    {
-        return delayTime_;
-    }
-
-    int64_t GetTaskTime() const
-    {
-        return taskTime_;
-    }
-
-private:
-    uint32_t delayTime_ = 0;
-    int64_t taskTime_ = 0;
 };
 } // namespace OHOS::Ace::NG
 #endif // FOUNDATION_ACE_ADAPTER_OHOS_ENTRANCE_DYNAMIC_COMPONENT_UV_TASK_WRAPPER_H

@@ -15,6 +15,8 @@
 
 #include "core/components_ng/pattern/radio/radio_accessibility_property.h"
 
+#include "base/utils/utils.h"
+#include "core/components_ng/base/frame_node.h"
 #include "core/components_ng/pattern/radio/radio_pattern.h"
 
 namespace OHOS::Ace::NG {
@@ -28,8 +30,8 @@ bool RadioAccessibilityProperty::IsChecked() const
     auto frameNode = host_.Upgrade();
     CHECK_NULL_RETURN(frameNode, false);
     auto radioPaintProperty = frameNode->GetPaintProperty<RadioPaintProperty>();
-    CHECK_NULL_RETURN(radioPaintProperty, false);
-    return radioPaintProperty->GetRadioCheck().value_or(false);
+    CHECK_NULL_RETURN(frameNode, false);
+    return radioPaintProperty->GetRadioCheckValue();
 }
 
 std::string RadioAccessibilityProperty::GetText() const

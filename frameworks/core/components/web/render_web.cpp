@@ -15,6 +15,7 @@
 
 #include "core/components/web/render_web.h"
 
+#include <cinttypes>
 #include <iomanip>
 #include <sstream>
 
@@ -125,7 +126,7 @@ void RenderWeb::RegistVirtualKeyBoardListener()
         return;
     }
     pipelineContext->SetVirtualKeyBoardCallback(
-        [weak = AceType::WeakClaim(this)](int32_t width, int32_t height, double keyboard, bool isCustomKeyboard) {
+        [weak = AceType::WeakClaim(this)](int32_t width, int32_t height, double keyboard) {
             auto renderWeb = weak.Upgrade();
             if (renderWeb) {
                 return renderWeb->ProcessVirtualKeyBoard(width, height, keyboard);
@@ -188,9 +189,7 @@ void RenderWeb::UpdateDelegate()
     delegate_->UpdateFileFromUrlEnabled(web_->GetFileFromUrlAccessEnabled());
     delegate_->UpdateDatabaseEnabled(web_->GetDatabaseAccessEnabled());
     delegate_->UpdateTextZoomRatio(web_->GetTextZoomRatio());
-    delegate_->UpdateWebDebuggingAccessAndPort(
-        std::get<0>(web_->GetWebDebuggingAccessEnabledAndPort()),
-        std::get<1>(web_->GetWebDebuggingAccessEnabledAndPort()));
+    delegate_->UpdateWebDebuggingAccess(web_->GetWebDebuggingAccessEnabled());
     delegate_->UpdateMediaPlayGestureAccess(web_->IsMediaPlayGestureAccess());
     delegate_->UpdatePinchSmoothModeEnabled(web_->GetPinchSmoothModeEnabled());
     delegate_->UpdateMultiWindowAccess(web_->GetMultiWindowAccessEnabled());
@@ -1215,7 +1214,7 @@ void RenderWeb::PanOnActionEnd(const GestureEvent& info)
     SetPreDragDropNode(nullptr);
 }
 
-void RenderWeb::PanOnActionCancel(const GestureEvent& info)
+void RenderWeb::PanOnActionCancel()
 {
     isDragging_ = false;
     auto pipelineContext = context_.Upgrade();

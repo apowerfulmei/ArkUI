@@ -112,8 +112,6 @@ public:
 
     void OnLayoutCompleted(const std::string& componentId) override;
     void OnDrawCompleted(const std::string& componentId) override;
-    void OnDrawChildrenCompleted(const std::string& componentId) override;
-    bool IsDrawChildrenCallbackFuncExist(const std::string& componentId) override;
 
     void DumpFrontend() const override;
     std::string GetPagePath() const override;
@@ -163,14 +161,14 @@ public:
         }
     }
 
-    virtual void SetPluginBundleName(const std::string& pluginBundleName)
+    void SetPluginBundleName(const std::string& pluginBundleName)
     {
         if (jsEngine_) {
             jsEngine_->SetPluginBundleName(pluginBundleName);
         }
     }
 
-    virtual void SetPluginModuleName(const std::string& pluginModuleName)
+    void SetPluginModuleName(const std::string& pluginModuleName)
     {
         if (jsEngine_) {
             jsEngine_->SetPluginModuleName(pluginModuleName);

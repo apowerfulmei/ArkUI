@@ -33,7 +33,6 @@ namespace OHOS::Ace::NG {
 struct MenuItemLabelFontStyle {
     ACE_DEFINE_PROPERTY_GROUP_ITEM(LabelFontSize, Dimension);
     ACE_DEFINE_PROPERTY_GROUP_ITEM(LabelFontColor, Color);
-    ACE_DEFINE_PROPERTY_GROUP_ITEM(LabelFontColorSetByUser, bool);
     ACE_DEFINE_PROPERTY_GROUP_ITEM(LabelFontWeight, FontWeight);
     ACE_DEFINE_PROPERTY_GROUP_ITEM(LabelFontFamily, std::vector<std::string>);
     ACE_DEFINE_PROPERTY_GROUP_ITEM(LabelItalicFontStyle, Ace::FontStyle);
@@ -134,7 +133,6 @@ public:
     ACE_DEFINE_PROPERTY_GROUP(LabelFontStyle, MenuItemLabelFontStyle);
     ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP(LabelFontStyle, LabelFontSize, Dimension, PROPERTY_UPDATE_MEASURE);
     ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP(LabelFontStyle, LabelFontColor, Color, PROPERTY_UPDATE_MEASURE);
-    ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP(LabelFontStyle, LabelFontColorSetByUser, bool, PROPERTY_UPDATE_MEASURE);
     ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP(LabelFontStyle, LabelFontWeight, FontWeight, PROPERTY_UPDATE_MEASURE);
     ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP(LabelFontStyle, LabelFontFamily, std::vector<std::string>,
         PROPERTY_UPDATE_MEASURE);
@@ -162,10 +160,7 @@ public:
         } else {
             json->PutExtAttr("selectIcon", "false", filter);
         }
-        auto host = GetHost();
-        CHECK_NULL_VOID(host);
-        auto context = host->GetContext();
-        CHECK_NULL_VOID(context);
+        auto context = PipelineBase::GetCurrentContext();
         auto theme = context ? context->GetTheme<SelectTheme>() : nullptr;
         auto defaultFontSize = theme ? theme->GetMenuFontSize() : Dimension(0, DimensionUnit::FP);
         auto defaultFontColor = theme ? theme->GetMenuFontColor() : Color::BLACK;
@@ -191,12 +186,6 @@ public:
         json->PutExtAttr("labelFontColor",
             GetLabelFontColor().value_or(defaultLabelFontColor).ColorToString().c_str(), filter);
         json->PutFixedAttr("label", GetContent().value_or("").c_str(), filter, FIXED_ATTR_CONTENT);
-    }
-
-    void ToTreeJson(std::unique_ptr<JsonValue>& json, const InspectorConfig& config) const override
-    {
-        LayoutProperty::ToTreeJson(json, config);
-        json->Put(TreeKey::CONTENT, GetContent().value_or("").c_str());
     }
 
     ACE_DISALLOW_COPY_AND_MOVE(MenuItemLayoutProperty);

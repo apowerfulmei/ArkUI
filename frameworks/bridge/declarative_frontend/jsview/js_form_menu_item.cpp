@@ -14,7 +14,6 @@
  */
 
 #include "bridge/declarative_frontend/jsview/js_form_menu_item.h"
-
 #if !defined(PREVIEW) && defined(OHOS_PLATFORM)
 #include "interfaces/inner_api/ui_session/ui_session_manager.h"
 #endif
@@ -32,6 +31,8 @@
 #include "bridge/declarative_frontend/view_stack_processor.h"
 #include "core/components_ng/base/view_abstract.h"
 #include "core/components_ng/base/view_abstract_model.h"
+#include "core/components_ng/base/view_stack_model.h"
+#include "core/components_ng/base/view_stack_processor.h"
 #include "core/components_ng/pattern/form/form_model_ng.h"
 #include "core/components_ng/pattern/menu/menu_item/menu_item_model.h"
 #include "core/components_ng/pattern/menu/menu_item/menu_item_model_ng.h"
@@ -39,19 +40,19 @@
 namespace OHOS::Ace::Framework {
 namespace {
 constexpr int NUM_WANT_1 = 0;
-constexpr int NUM_DATA_2 = 1;
-constexpr int NUM_FUN_3 = 2;
+constexpr int NUM_ID_2 = 1;
+constexpr int NUM_DATA_3 = 2;
+constexpr int NUM_FUN_4 = 3;
 constexpr int NUM_CALLBACKNUM = 2;
 }
+
 
 void JSFormMenuItem::JSBind(BindingTarget globalObj)
 {
     JSClass<JSFormMenuItem>::Declare("FormMenuItem");
     MethodOptions opt = MethodOptions::NONE;
     JSClass<JSFormMenuItem>::StaticMethod("create", &JSMenuItem::Create, opt);
-    JSClass<JSFormMenuItem>::StaticMethod("onClick", &JSInteractableView::JsOnClick);
-    JSClass<JSFormMenuItem>::StaticMethod("onRequestPublishFormWithSnapshot",
-        &JSFormMenuItem::JsOnRequestPublishFormWithSnapshot);
+    JSClass<JSFormMenuItem>::StaticMethod("onRegClick", &JSFormMenuItem::JsOnRegClick);
     JSClass<JSFormMenuItem>::StaticMethod("onTouch", &JSInteractableView::JsOnTouch);
     JSClass<JSFormMenuItem>::InheritAndBind<JSViewAbstract>(globalObj);
 }
@@ -93,7 +94,7 @@ void JSFormMenuItem::RequestPublishFormWithSnapshot(JSRef<JSVal> wantValue,
     jsCBFunc->ExecuteJS(NUM_CALLBACKNUM, params);
 }
 
-void JSFormMenuItem::JsOnRequestPublishFormWithSnapshot(const JSCallbackInfo& info)
+void JSFormMenuItem::JsOnRegClick(const JSCallbackInfo& info)
 {
     bool retFlag;
     OnClickParameterCheck(info, retFlag);
@@ -101,33 +102,68 @@ void JSFormMenuItem::JsOnRequestPublishFormWithSnapshot(const JSCallbackInfo& in
         return;
     }
 
-    auto want = info[NUM_WANT_1];
-    JSRef<JSVal> wantValue = JSRef<JSVal>::Cast(want);
-    if (wantValue->IsNull()) {
-        TAG_LOGE(AceLogTag::ACE_FORM, "JsOnClick wantValue is null");
+    std::string compId;
+    JSViewAbstract::ParseJsString(info[NUM_ID_2], compId);
+    if (compId.empty()) {
+        TAG_LOGE(AceLogTag::ACE_FORM, "JsOnClick compId is empty.Input parameter componentId check failed.");
         return;
     }
-
+    
     std::string formBindingDataStr;
-    JSViewAbstract::ParseJsString(info[NUM_DATA_2], formBindingDataStr);
+    JSViewAbstract::ParseJsString(info[NUM_DATA_3], formBindingDataStr);
     if (formBindingDataStr.empty()) {
         TAG_LOGW(AceLogTag::ACE_FORM, "JsOnClick formBindingDataStr is empty");
     }
 
     RefPtr<JsFunction> jsCallBackFunc = nullptr;
-    if (!info[NUM_FUN_3]->IsUndefined() && info[NUM_FUN_3]->IsFunction()) {
-        jsCallBackFunc = AceType::MakeRefPtr<JsFunction>(JSRef<JSObject>(), JSRef<JSFunc>::Cast(info[NUM_FUN_3]));
+    if (!info[NUM_FUN_4]->IsUndefined() && info[NUM_FUN_4]->IsFunction()) {
+        jsCallBackFunc = AceType::MakeRefPtr<JsFunction>(JSRef<JSObject>(), JSRef<JSFunc>::Cast(info[NUM_FUN_4]));
     }
 
-    RequestPublishFormWithSnapshot(wantValue, formBindingDataStr, jsCallBackFunc);
+    WeakPtr<NG::FrameNode> targetNode = AceType::WeakClaim(NG::ViewStackProcessor::GetInstance()->GetMainFrameNode());
+
+    auto onTap = [execCtx = info.GetExecutionContext(),  node = targetNode,
+        jsCBFunc = std::move(jsCallBackFunc), want = info[NUM_WANT_1], formBindingDataStr] (GestureEvent& event) {
+        JSRef<JSVal> wantValue = JSRef<JSVal>::Cast(want);
+        if (wantValue->IsNull()) {
+            TAG_LOGE(AceLogTag::ACE_FORM, "JsOnClick wantValue is null");
+            return;
+        }
+        TAG_LOGI(AceLogTag::ACE_FORM, "JsOnClick ontap");
+        JAVASCRIPT_EXECUTION_SCOPE_WITH_CHECK(execCtx);
+        ACE_SCORING_EVENT("onTap");
+        RequestPublishFormWithSnapshot(wantValue, formBindingDataStr, jsCBFunc);
+#if !defined(PREVIEW) && defined(OHOS_PLATFORM)
+        JSInteractableView::ReportClickEvent(node);
+#endif
+    };
+
+    auto onClick = [execCtx = info.GetExecutionContext(), node = targetNode,
+        jsCBFunc = std::move(jsCallBackFunc), want = info[NUM_WANT_1], formBindingDataStr]
+        (const ClickInfo* event) {
+        JSRef<JSVal> wantValue = JSRef<JSVal>::Cast(want);
+        if (wantValue->IsNull()) {
+            TAG_LOGE(AceLogTag::ACE_FORM, "JsOnClick wantValue is null");
+            return;
+        }
+        JAVASCRIPT_EXECUTION_SCOPE_WITH_CHECK(execCtx);
+        ACE_SCORING_EVENT("onClick");
+        PipelineContext::SetCallBackNode(node);
+        RequestPublishFormWithSnapshot(wantValue, formBindingDataStr, jsCBFunc);
+#if !defined(PREVIEW) && defined(OHOS_PLATFORM)
+        JSInteractableView::ReportClickEvent(node);
+#endif
+    };
+    ViewAbstractModel::GetInstance()->SetOnClick(std::move(onTap), std::move(onClick));
 }
 
 void JSFormMenuItem::OnClickParameterCheck(const JSCallbackInfo& info, bool& retFlag)
 {
     retFlag = true;
 
-    if (info[NUM_WANT_1]->IsUndefined() || !info[NUM_WANT_1]->IsObject()) {
-        TAG_LOGE(AceLogTag::ACE_FORM, "OnClickParameterCheck bad parameter info[1]");
+    if (info[NUM_WANT_1]->IsUndefined() || !info[NUM_WANT_1]->IsObject() || info[NUM_ID_2]->IsUndefined() ||
+        !info[NUM_ID_2]->IsString()) {
+        TAG_LOGE(AceLogTag::ACE_FORM, "OnClickParameterCheck bad parameter info[1] and info[2]");
         return;
     }
     retFlag = false;

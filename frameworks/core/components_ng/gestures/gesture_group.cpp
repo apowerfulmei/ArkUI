@@ -52,9 +52,6 @@ RefPtr<NGGestureRecognizer> GestureGroup::CreateRecognizer()
     groupRecognizer->SetPriority(priority_);
     groupRecognizer->SetPriorityMask(gestureMask_);
     groupRecognizer->SetGestureInfo(gestureInfo_);
-    if (gestureInfo_) {
-        gestureInfo_->SetDisposeTag(false);
-    }
     return groupRecognizer;
 }
 

@@ -15,7 +15,6 @@
 
 #include <dlfcn.h>
 #include "aps_monitor_impl.h"
-#include "adapter/ohos/entrance/ace_container.h"
 #include "core/common/ace_application_info.h"
 #include "base/perfmonitor/perf_constants.h"
 
@@ -39,9 +38,7 @@ const set<string> ApsMonitorImpl::apsScenes = {
 
 void ApsMonitorImpl::SetApsScene(const string& sceneName, bool onOff)
 {
-    auto container = Container::GetContainer(instanceId_);
-    CHECK_NULL_VOID(container);
-    string bundleName = container->GetBundleName();
+    string bundleName = AceApplicationInfo::GetInstance().GetPackageName();
     if (apsScenes.find(sceneName) == apsScenes.end()) {
         return;
     }

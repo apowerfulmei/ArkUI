@@ -15,6 +15,9 @@
 
 #include "core/components_ng/pattern/custom/custom_node_pattern.h"
 
+#include "base/utils/utils.h"
+#include "core/components_ng/pattern/custom/custom_measure_layout_node.h"
+
 namespace OHOS::Ace::NG {
 
 bool CustomNodePattern::OnDirtyLayoutWrapperSwap(

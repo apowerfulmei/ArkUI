@@ -15,6 +15,10 @@
 
 #include "core/components_ng/pattern/list/list_event_hub.h"
 
+#include "base/utils/utils.h"
+#include "core/components_ng/base/frame_node.h"
+#include "core/components_ng/pattern/list/list_item_pattern.h"
+#include "core/components_ng/pattern/list/list_layout_property.h"
 #include "core/components_ng/pattern/list/list_pattern.h"
 #include "core/components_ng/render/adapter/component_snapshot.h"
 #include "core/pipeline_ng/pipeline_context.h"
@@ -57,9 +61,7 @@ void ListEventHub::InitItemDragEvent(const RefPtr<GestureEventHub>& gestureHub)
 
 void ListEventHub::OnItemDragStart(const GestureEvent& info, const DragDropInfo& dragDropInfo)
 {
-    auto host = GetFrameNode();
-    CHECK_NULL_VOID(host);
-    auto pipeline = host->GetContext();
+    auto pipeline = PipelineContext::GetCurrentContext();
     CHECK_NULL_VOID(pipeline);
     auto manager = pipeline->GetDragDropManager();
     CHECK_NULL_VOID(manager);
@@ -102,7 +104,7 @@ void ListEventHub::HandleOnItemDragStart(const GestureEvent& info)
 #if defined(PIXEL_MAP_SUPPORTED)
     auto callback = [weakHost = WeakClaim(RawPtr(host)), info, weak = WeakClaim(this)](
                         std::shared_ptr<Media::PixelMap> mediaPixelMap, int32_t /*arg*/,
-                        const std::function<void()>& finishCallback) {
+                        const std::function<void()>& /*unused*/) {
         auto host = weakHost.Upgrade();
         CHECK_NULL_VOID(host);
         ContainerScope scope(host->GetInstanceId());
@@ -110,19 +112,12 @@ void ListEventHub::HandleOnItemDragStart(const GestureEvent& info)
             TAG_LOGE(AceLogTag::ACE_DRAG, "listItem drag start failed, custom component screenshot is empty.");
             return;
         }
-        auto pipeline = host->GetContext();
+        auto pipeline = PipelineContext::GetCurrentContext();
         CHECK_NULL_VOID(pipeline);
-        auto taskScheduler = pipeline->GetTaskExecutor();
-        CHECK_NULL_VOID(taskScheduler);
-        taskScheduler->PostTask(
-            [finishCallback]() {
-                if (finishCallback) {
-                    finishCallback();
-                }
-            },
-            TaskExecutor::TaskType::UI, "ArkUIListItemDragRemoveCustomNode");
         DragDropInfo dragDropInfo;
         dragDropInfo.pixelMap = PixelMap::CreatePixelMap(reinterpret_cast<void*>(&mediaPixelMap));
+        auto taskScheduler = pipeline->GetTaskExecutor();
+        CHECK_NULL_VOID(taskScheduler);
         taskScheduler->PostTask(
             [weak, info, dragDropInfo]() {
                 auto eventHub = weak.Upgrade();
@@ -131,7 +126,8 @@ void ListEventHub::HandleOnItemDragStart(const GestureEvent& info)
             },
             TaskExecutor::TaskType::UI, "ArkUIListItemDragStart");
     };
-    NG::ComponentSnapshot::Create(customNode, std::move(callback), true, SnapshotParam(CREATE_PIXELMAP_TIME));
+    NG::ComponentSnapshot::Create(customNode, std::move(callback), true,
+        SnapshotParam(CREATE_PIXELMAP_TIME));
 #else
     DragDropInfo dragDropInfo;
     dragDropInfo.customNode = customNode;

@@ -15,7 +15,19 @@
 
 #include "core/interfaces/native/node/node_adapter_impl.h"
 
+#include <cstdint>
+#include <string>
+#include <vector>
+
+#include "base/error/error_code.h"
+#include "base/memory/ace_type.h"
+#include "base/memory/referenced.h"
+#include "base/utils/utils.h"
+#include "core/components_ng/base/ui_node.h"
+#include "core/components_ng/syntax/lazy_for_each_builder.h"
 #include "core/components_ng/syntax/lazy_for_each_node.h"
+#include "core/interfaces/arkoala/arkoala_api.h"
+#include "core/pipeline/base/element_register.h"
 
 struct _ArkUINodeAdapter {
     OHOS::Ace::RefPtr<OHOS::Ace::NG::NativeLazyForEachBuilder> builder;
@@ -117,7 +129,7 @@ void NativeLazyForEachBuilder::OnItemDeleted(UINode* node, const std::string& ke
         return;
     }
     ArkUINodeAdapterEvent event {
-        .id = StringUtils::StringToInt(key), .idSet = false, .type = ON_REMOVE_NODE_FROM_ADAPTER, .nodeSet = false
+        .id = std::stoi(key), .idSet = false, .type = ON_REMOVE_NODE_FROM_ADAPTER, .nodeSet = false
     };
     event.extraParam = reinterpret_cast<intptr_t>(userData_);
     event.handle = reinterpret_cast<ArkUINodeHandle>(node);
@@ -382,64 +394,23 @@ ArkUI_Int32 GetAllItem(ArkUINodeAdapterHandle handle, ArkUINodeHandle** items, A
     return handle->builder->GetAllItem(items, size);
 }
 
-int32_t GetLazyForEachChildIndex(const RefPtr<NG::UINode>& node)
+void AttachHostNode(ArkUINodeAdapterHandle handle, ArkUINodeHandle host)
 {
-    int32_t index = 0;
-    for (const auto& iter : node->GetChildren()) {
-        if (AceType::InstanceOf<NG::LazyForEachNode>(iter)) {
-            return index;
-        }
-        index++;
-    }
-    return -1;
-}
-
-ArkUI_Bool AttachHostNode(ArkUINodeAdapterHandle handle, ArkUINodeHandle host)
-{
-    CHECK_NULL_RETURN(handle, true);
-    CHECK_NULL_RETURN(host, true);
-    auto* uiNode = reinterpret_cast<NG::UINode*>(host);
-    // A NodeAdapter only allows binding to one LazyForEach
-    if (GetLazyForEachChildIndex(Referenced::Claim(uiNode)) != -1) {
-        return false;
-    }
+    CHECK_NULL_VOID(handle);
+    CHECK_NULL_VOID(host);
     if (!handle->node) {
         handle->node =
             NG::LazyForEachNode::CreateLazyForEachNode(ElementRegister::GetInstance()->MakeUniqueId(), handle->builder);
     }
-    if (AceType::InstanceOf<NG::FrameNode>(uiNode)) {
-        auto* frameNode = reinterpret_cast<NG::FrameNode*>(uiNode);
-        if (frameNode->GetPattern()->OnAttachAdapter(Referenced::Claim(frameNode), handle->node)) {
-            return true;
-        } else if (frameNode->GetFirstChild() == nullptr) {
-            uiNode->AddChild(handle->node);
-            return true;
-        }
-    }
-    return false;
+    auto* uiNode = reinterpret_cast<NG::UINode*>(host);
+    uiNode->AddChild(handle->node);
 }
 
 void DetachHostNode(ArkUINodeHandle host)
 {
     CHECK_NULL_VOID(host);
     auto* uiNode = reinterpret_cast<NG::UINode*>(host);
-    if (!AceType::InstanceOf<NG::FrameNode>(uiNode)) {
-        return;
-    }
-    auto* frameNode = reinterpret_cast<NG::FrameNode*>(uiNode);
-    // Component overload unbinding method, unbind LazyForEach according to your own specifications
-    if (frameNode->GetPattern()->DetachHostNodeAdapter(Referenced::Claim(frameNode))) {
-        return;
-    }
-    int32_t index = 0;
-    // The default first node is LazyForEach. If the LazyForEach node is not unbound
-    if (!AceType::InstanceOf<NG::LazyForEachNode>(uiNode->GetChildAtIndex(0))) {
-        index = GetLazyForEachChildIndex(Referenced::Claim(uiNode));
-    }
-    if (index == -1) {
-        return;
-    }
-    const auto& child = AceType::DynamicCast<NG::LazyForEachNode>(uiNode->GetChildAtIndex(index));
+    const auto& child = AceType::DynamicCast<NG::LazyForEachNode>(uiNode->GetChildAtIndex(0));
     CHECK_NULL_VOID(child);
     uiNode->RemoveChild(child);
     const auto& builder = AceType::DynamicCast<NG::NativeLazyForEachBuilder>(child->GetBuilder());
@@ -453,95 +424,28 @@ ArkUINodeAdapterHandle GetNodeAdapter(ArkUINodeHandle host)
 {
     CHECK_NULL_RETURN(host, nullptr);
     auto* uiNode = reinterpret_cast<NG::UINode*>(host);
-    if (!AceType::InstanceOf<NG::FrameNode>(uiNode)) {
-        return nullptr;
-    }
-    ArkUINodeAdapterHandle handle = nullptr;
-    auto* frameNode = reinterpret_cast<NG::FrameNode*>(uiNode);
-    if (frameNode->GetPattern()->GetNodeAdapterComponent(handle, Referenced::Claim(frameNode))) {
-        return handle;
-    }
-    int32_t index = 0;
-    // The default first node is LazyForEach. If the LazyForEach node is not unbound
-    if (!AceType::InstanceOf<NG::LazyForEachNode>(uiNode->GetChildAtIndex(0))) {
-        index = GetLazyForEachChildIndex(Referenced::Claim(uiNode));
-    }
-    if (index == -1) {
-        return nullptr;
-    }
-    const auto& child = AceType::DynamicCast<NG::LazyForEachNode>(uiNode->GetChildAtIndex(index));
+    const auto& child = AceType::DynamicCast<NG::LazyForEachNode>(uiNode->GetChildAtIndex(0));
     CHECK_NULL_RETURN(child, nullptr);
     const auto& builder = AceType::DynamicCast<NG::NativeLazyForEachBuilder>(child->GetBuilder());
     CHECK_NULL_RETURN(builder, nullptr);
     return builder->GetHostHandle();
 }
 
-ArkUI_CharPtr GetNodeTypeInNodeAdapter(ArkUINodeAdapterHandle handle)
-{
-    CHECK_NULL_RETURN(handle, "");
-    CHECK_NULL_RETURN(handle->node, "");
-    static std::string nodeType = handle->node->GetTag();
-    return nodeType.c_str();
-}
-
-void FireArkUIObjectLifecycleCallback(void* data, ArkUINodeAdapterHandle handle)
-{
-    CHECK_NULL_VOID(data);
-    CHECK_NULL_VOID(handle);
-    CHECK_NULL_VOID(handle->node);
-    auto context = handle->node->GetContext();
-    CHECK_NULL_VOID(context);
-    context->FireArkUIObjectLifecycleCallback(data);
-}
 } // namespace
 
 const ArkUINodeAdapterAPI* GetNodeAdapterAPI()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
-    static const ArkUINodeAdapterAPI impl {
-        .create = Create,
-        .dispose = Dispose,
-        .setTotalNodeCount = SetTotalNodeCount,
-        .getTotalNodeCount = GetTotalNodeCount,
-        .registerEventReceiver = RegisterEventReceiver,
-        .unregisterEventReceiver = UnregisterEventReceiver,
-        .notifyItemReloaded = NotifyItemReloaded,
-        .notifyItemChanged = NotifyItemChanged,
-        .notifyItemRemoved = NotifyItemRemoved,
-        .notifyItemInserted = NotifyItemInserted,
-        .notifyItemMoved = NotifyItemMoved,
-        .getAllItem = GetAllItem,
-        .attachHostNode = AttachHostNode,
-        .detachHostNode = DetachHostNode,
-        .getNodeAdapter = GetNodeAdapter,
-        .getNodeType = GetNodeTypeInNodeAdapter,
-        .fireArkUIObjectLifecycleCallback = FireArkUIObjectLifecycleCallback
-    };
-    CHECK_INITIALIZED_FIELDS_END(impl, 0, 0, 0); // don't move this line
+    static const ArkUINodeAdapterAPI impl { Create, Dispose, SetTotalNodeCount, GetTotalNodeCount,
+        RegisterEventReceiver, UnregisterEventReceiver, NotifyItemReloaded, NotifyItemChanged, NotifyItemRemoved,
+        NotifyItemInserted, NotifyItemMoved, GetAllItem, AttachHostNode, DetachHostNode, GetNodeAdapter };
     return &impl;
 }
 
 const CJUINodeAdapterAPI* GetCJUINodeAdapterAPI()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
-    static const CJUINodeAdapterAPI impl {
-        .create = Create,
-        .dispose = Dispose,
-        .setTotalNodeCount = SetTotalNodeCount,
-        .getTotalNodeCount = GetTotalNodeCount,
-        .registerEventReceiver = RegisterEventReceiver,
-        .unregisterEventReceiver = UnregisterEventReceiver,
-        .notifyItemReloaded = NotifyItemReloaded,
-        .notifyItemChanged = NotifyItemChanged,
-        .notifyItemRemoved = NotifyItemRemoved,
-        .notifyItemInserted = NotifyItemInserted,
-        .notifyItemMoved = NotifyItemMoved,
-        .getAllItem = GetAllItem,
-        .attachHostNode = AttachHostNode,
-        .detachHostNode = DetachHostNode,
-        .getNodeAdapter = GetNodeAdapter
-    };
-    CHECK_INITIALIZED_FIELDS_END(impl, 0, 0, 0); // don't move this line
+    static const CJUINodeAdapterAPI impl { Create, Dispose, SetTotalNodeCount, GetTotalNodeCount,
+        RegisterEventReceiver, UnregisterEventReceiver, NotifyItemReloaded, NotifyItemChanged, NotifyItemRemoved,
+        NotifyItemInserted, NotifyItemMoved, GetAllItem, AttachHostNode, DetachHostNode, GetNodeAdapter };
     return &impl;
 }
 

@@ -15,7 +15,14 @@
 
 #include "core/components_ng/gestures/recognizers/parallel_recognizer.h"
 
+#include <vector>
+
+#include "base/geometry/offset.h"
+#include "base/log/log.h"
+#include "base/utils/utils.h"
 #include "core/components_ng/base/frame_node.h"
+#include "core/components_ng/gestures/gesture_referee.h"
+#include "core/components_ng/gestures/recognizers/gesture_recognizer.h"
 
 namespace OHOS::Ace::NG {
 
@@ -26,13 +33,12 @@ void ParallelRecognizer::OnAccepted()
         currentBatchRecognizer_->AboutToAccept();
         currentBatchRecognizer_.Reset();
     }
-    for (auto& recognizer : succeedBlockRecognizers_) {
+
+    auto succeedBlockRecognizers = std::move(succeedBlockRecognizers_);
+    for (auto& recognizer : succeedBlockRecognizers) {
         if (recognizer && recognizer->GetGestureState() == RefereeState::SUCCEED_BLOCKED) {
             recognizer->AboutToAccept();
         }
-    }
-    if (!succeedBlockRecognizers_.empty()) {
-        succeedBlockRecognizers_.clear();
     }
 }
 
@@ -75,9 +81,6 @@ void ParallelRecognizer::OnBlocked()
         refereeState_ = RefereeState::SUCCEED_BLOCKED;
         if (currentBatchRecognizer_) {
             currentBatchRecognizer_->OnBlocked();
-            if (currentBatchRecognizer_->GetGestureState() == RefereeState::SUCCEED_BLOCKED) {
-                AddSucceedBlockRecognizer(currentBatchRecognizer_);
-            }
             currentBatchRecognizer_.Reset();
         }
         return;
@@ -86,6 +89,9 @@ void ParallelRecognizer::OnBlocked()
         refereeState_ = RefereeState::PENDING_BLOCKED;
         if (currentBatchRecognizer_) {
             currentBatchRecognizer_->OnBlocked();
+            if (currentBatchRecognizer_->GetGestureState() == RefereeState::SUCCEED_BLOCKED) {
+                AddSucceedBlockRecognizer(currentBatchRecognizer_);
+            }
             currentBatchRecognizer_.Reset();
         }
     }
@@ -93,6 +99,10 @@ void ParallelRecognizer::OnBlocked()
 
 bool ParallelRecognizer::HandleEvent(const TouchEvent& point)
 {
+    if (point.type == TouchType::DOWN || point.type == TouchType::UP) {
+        TAG_LOGI(AceLogTag::ACE_INPUTKEYFLOW, "Id:%{public}d, parallel %{public}d type: %{public}d", point.touchEventId,
+            point.id, static_cast<int32_t>(point.type));
+    }
     if (refereeState_ == RefereeState::READY) {
         refereeState_ = RefereeState::DETECTING;
     }
@@ -130,7 +140,6 @@ bool ParallelRecognizer::HandleEvent(const AxisEvent& event)
     for (const auto& recognizer : recognizers_) {
         if (recognizer) {
             recognizer->HandleEvent(event);
-            AddGestureProcedure(event, recognizer);
         }
     }
     return true;
@@ -215,9 +224,8 @@ bool ParallelRecognizer::ReconcileFrom(const RefPtr<NGGestureRecognizer>& recogn
 void ParallelRecognizer::CleanRecognizerState()
 {
     for (const auto& child : recognizers_) {
-        auto childRecognizer = AceType::DynamicCast<MultiFingersRecognizer>(child);
-        if (childRecognizer && childRecognizer->GetTouchPointsSize() <= 1) {
-            childRecognizer->CleanRecognizerState();
+        if (child) {
+            child->CleanRecognizerState();
         }
     }
     if ((refereeState_ == RefereeState::SUCCEED ||
@@ -241,14 +249,5 @@ void ParallelRecognizer::ForceCleanRecognizer()
     MultiFingersRecognizer::ForceCleanRecognizer();
     currentBatchRecognizer_ = nullptr;
     succeedBlockRecognizers_.clear();
-}
-
-void ParallelRecognizer::CleanRecognizerStateVoluntarily()
-{
-    for (const auto& child : recognizers_) {
-        if (child && AceType::InstanceOf<RecognizerGroup>(child)) {
-            child->CleanRecognizerStateVoluntarily();
-        }
-    }
 }
 } // namespace OHOS::Ace::NG

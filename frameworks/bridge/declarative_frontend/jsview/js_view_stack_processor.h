@@ -92,31 +92,10 @@ public:
     static void JsGetAndPushFrameNode(const JSCallbackInfo& info);
 
     /*
-     * move deleted elmtIds from C+ ElementRegistry to this component.
-     * JS caller must allocate empty Array<number> and provide as param
-     */
-    static void JsMoveDeletedElmtIds(const JSCallbackInfo& info);
-
-    static void JsPushPrebuildCompCmd(const JSCallbackInfo& info);
-
-    static bool JsCheckIsPrebuildTimeout();
-
-    /*
-    * Orders a frame request and registers a callback on next vsync
+     move deleted elmtIds from C+ ElementRegistry to this component.
+     JS caller must allocate empty Array<number> and provide as param
     */
-    static void JSScheduleUpdateOnNextVSync(const JSCallbackInfo& info);
-
-    /**
-     * Send state info profiler when state var changed
-     * Used in V2.
-     */
-    static void JsSendStateInfo(const std::string& stateInfo);
-
-#ifdef ACE_STATIC
-    static void JsPush(const JSCallbackInfo& info);
-    
-    static void JsPop();
-#endif
+    static void JsMoveDeletedElmtIds(const JSCallbackInfo& info);
 
 private:
     static void JSVisualState(const JSCallbackInfo& info);

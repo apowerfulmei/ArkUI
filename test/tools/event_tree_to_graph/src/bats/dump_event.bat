@@ -12,28 +12,39 @@
 :: limitations under the License.
 
 @echo off
-setlocal enabledelayedexpansion
 
-hdc shell param set persist.ace.debug.enabled 1
+@rem Set local scope for the variables with windows NT shell
+if "%OS%"=="Windows_NT" setlocal
 
-set "output="
+set DIRNAME=%~dp0
+if "%DIRNAME%" == "" set DIRNAME=.
+set APP_BASE_NAME=%~n0
+set APP_HOME=%DIRNAME%
 
-for /f "delims=" %%a in ('hdc shell "hidumper -s WindowManagerService -a '-a'"') do (
-    set "output=!output!%%a"
-    echo %%a
+goto start
+
+:start
+adb devices | findstr /i "device" > nul
+if %errorlevel%==0 (
+    goto execute
+) else (
+    echo.
+    echo Error: No device found.
+    echo.
+    goto fail
 )
 
-echo !output! | findstr /C:"Fail" >nul
-if %errorlevel% equ 0 (
-    exit
-)
+:execute
+@echo off
+@rem Replace here with hdc command
+adb devices
 
-endlocal 
+echo.
+echo Please enter the window ID which is to be dumped.
+echo.
+set /p userInput="please enter the window ID:"
 
-@set /p windowId=input WindowId :
+adb shell "dumpsys window windows | grep -E %userInput%" > window_id.txt
 
-for /F %%i in ('hdc shell "find data/ -name arkui.dump"') do (
-	hdc shell "rm %%i"
-)
-
-hdc shell "hidumper -s WindowManagerService -a '-w %windowId% -event'" > dump_temp.txt
+:fail
+exit /b 1

@@ -31,7 +31,6 @@ void LongPressRecognizer::OnAccepted()
         LongPressInfo info(trackPoint.id);
         info.SetTimeStamp(time_);
         info.SetScreenLocation(trackPoint.GetScreenOffset());
-        info.SetGlobalDisplayLocation(trackPoint.GetGlobalDisplayOffset());
         info.SetGlobalLocation(trackPoint.GetOffset()).SetLocalLocation(trackPoint.GetOffset() - coordinateOffset_);
         info.SetTarget(GetEventTarget().value_or(EventTarget()));
         onLongPress_(info);
@@ -48,7 +47,7 @@ void LongPressRecognizer::OnAccepted()
         SendCallbackMsg(onActionEnd_, false);
         Reset();
     } else if (pendingCancel_) {
-        SendCallbackMsg(onActionCancel_, false);
+        SendCancelMsg();
         Reset();
     }
 }
@@ -145,12 +144,12 @@ void LongPressRecognizer::HandleTouchCancelEvent(const TouchEvent& event)
 {
     if (state_ == DetectState::READY || state_ == DetectState::DETECTING) {
         Adjudicate(AceType::Claim(this), GestureDisposal::REJECT);
-        SendCallbackMsg(onActionCancel_, false);
+        SendCancelMsg();
         return;
     }
 
     if (refereeState_ == RefereeState::SUCCEED) {
-        SendCallbackMsg(onActionCancel_, false);
+        SendCancelMsg();
         Reset();
     } else {
         pendingCancel_ = true;
@@ -245,7 +244,6 @@ void LongPressRecognizer::SendCallbackMsg(const std::unique_ptr<GestureEventFunc
         info.SetDeviceId(deviceId_);
         info.SetGlobalPoint(globalPoint_);
         info.SetScreenLocation(trackPoint.GetScreenOffset());
-        info.SetGlobalDisplayLocation(trackPoint.GetGlobalDisplayOffset());
         info.SetGlobalLocation(trackPoint.GetOffset()).SetLocalLocation(trackPoint.GetOffset() - coordinateOffset_);
         info.SetTarget(GetEventTarget().value_or(EventTarget()));
         info.SetForce(trackPoint.force);

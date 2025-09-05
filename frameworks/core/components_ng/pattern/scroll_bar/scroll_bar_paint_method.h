@@ -22,7 +22,7 @@
 namespace OHOS::Ace::NG {
 
 class ScrollBarPaintMethod : public NodePaintMethod {
-    DECLARE_ACE_TYPE(ScrollBarPaintMethod, NodePaintMethod);
+    DECLARE_ACE_TYPE(ScrollBarPaintMethod, NodePaintMethod)
 
 public:
     explicit ScrollBarPaintMethod(bool hasChild) : hasChild_(hasChild) {};
@@ -31,16 +31,6 @@ public:
     void SetScrollBar(WeakPtr<ScrollBar>&& scrollBar)
     {
         scrollBar_ = scrollBar;
-    }
-
-    RefPtr<ScrollBar> GetScrollBar()
-    {
-        return scrollBar_.Upgrade();
-    }
-
-    RefPtr<ScrollBarOverlayModifier> GetScrollBarOverlayModifier()
-    {
-        return scrollBarOverlayModifier_.Upgrade();
     }
 
     void SetScrollBarOverlayModifier(WeakPtr<ScrollBarOverlayModifier>&& scrollBarOverlayModifier)

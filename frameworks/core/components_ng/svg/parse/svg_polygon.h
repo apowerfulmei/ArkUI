@@ -30,10 +30,12 @@ public:
     static RefPtr<SvgNode> CreatePolygon();
     static RefPtr<SvgNode> CreatePolyline();
 
+#ifndef USE_ROSEN_DRAWING
+    SkPath AsPath(const Size& viewPort) const override;
+#else
     RSRecordingPath AsPath(const Size& viewPort) const override;
-    RSRecordingPath AsPath(const SvgLengthScaleRule& lengthRule) override;
+#endif
     bool ParseAndSetSpecializedAttr(const std::string& name, const std::string& value) override;
-    void ConvertPoints(std::vector<RSPoint>& points, const SvgLengthScaleRule& lengthRule);
 
 private:
     SvgPolygonAttribute polyAttr_;

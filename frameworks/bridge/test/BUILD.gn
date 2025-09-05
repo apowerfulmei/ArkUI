@@ -36,6 +36,7 @@ group("unittest") {
       deps += [
         "unittest/cardfrontend/frontend:unittest",
         "unittest/cardfrontend/mediaquery:unittest",
+        "unittest/common/pluginadapter:unittest",
         "unittest/pluginfrontend:unittest",
       ]
     }

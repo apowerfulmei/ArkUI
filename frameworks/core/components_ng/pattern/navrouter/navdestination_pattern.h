@@ -27,6 +27,7 @@
 #include "core/components_ng/pattern/navrouter/navdestination_context.h"
 #include "core/components_ng/pattern/navrouter/navdestination_event_hub.h"
 #include "core/components_ng/pattern/navrouter/navdestination_group_node.h"
+#include "core/components_ng/pattern/navigation/navdestination_pattern_base.h"
 #include "core/components_ng/pattern/navrouter/navdestination_layout_algorithm.h"
 #include "core/components_ng/pattern/navrouter/navdestination_layout_property.h"
 #include "core/components_ng/pattern/navrouter/navdestination_scrollable_processor.h"
@@ -124,7 +125,6 @@ public:
     {
         navDestinationContext_ = context;
         if (navDestinationContext_) {
-            navDestinationContext_->SetNavDestinationPattern(WeakClaim(this));
             navDestinationContext_->SetNavDestinationId(navDestinationId_);
         }
     }
@@ -156,6 +156,11 @@ public:
 
     bool GetBackButtonState();
 
+    RefPtr<UINode> GetNavigationNode()
+    {
+        return navigationNode_.Upgrade();
+    }
+
     NavDestinationState GetNavDestinationState() const
     {
         auto eventHub = GetEventHub<NavDestinationEventHub>();
@@ -165,15 +170,22 @@ public:
     }
 
     void DumpInfo() override;
-    void DumpInfo(std::unique_ptr<JsonValue>& json) override;
-    void DumpSimplifyInfo(std::shared_ptr<JsonValue>& json) override {}
 
     uint64_t GetNavDestinationId() const
     {
         return navDestinationId_;
     }
+    
+    void SetNavigationNode(const RefPtr<UINode>& navigationNode)
+    {
+        navigationNode_ = AceType::WeakClaim(RawPtr(navigationNode));
+    }
 
-    void OnDetachFromMainTree() override;
+    void OnDetachFromMainTree() override
+    {
+        backupStyle_.reset();
+        currStyle_.reset();
+    }
 
     bool OverlayOnBackPressed();
 
@@ -198,7 +210,7 @@ public:
 
     void SetNavigationId(const std::string& id)
     {
-        inspectorId_ = id;
+        inspectorId_= id;
     }
 
     std::string GetNavigationId() const
@@ -252,58 +264,6 @@ public:
     void CancelShowTitleAndToolBarTask();
     // Restore the titleBar&toolBar to its original position (hide or show state).
     void ResetTitleAndToolBarState();
-    
-    void OnCoordScrollStart() override;
-    float OnCoordScrollUpdate(float offset, float currentOffset) override;
-    void OnCoordScrollEnd() override;
-    void UpdateBackgroundColor();
-    bool NeedCoordWithScroll() override
-    {
-        return IsNeedHandleScroll();
-    }
-
-    bool IsNeedHandleScroll() const override
-    {
-        auto eventHub = GetEventHub<NavDestinationEventHub>();
-        if (eventHub && eventHub->HasOnCoordScrollStartAction()) {
-            return true;
-        }
-        return false;
-    }
-    
-    float GetTitleBarHeightLessThanMaxBarHeight() const override
-    {
-        return 0.0;
-    }
-    
-    bool CanCoordScrollUp(float offset) const override
-    {
-        return IsNeedHandleScroll();
-    }
-
-    void SetIsActive(bool isActive)
-    {
-        isActive_ = isActive;
-    }
-
-    bool IsActive() const
-    {
-        return isActive_;
-    }
-
-    std::string GetSerializedParam() const
-    {
-        return serializedParam_;
-    }
-
-    void UpdateSerializedParam(const std::string& param)
-    {
-        if (param != "" && param != "{}" && param != "undefined") {
-            serializedParam_ = param;
-        }
-    }
-
-    void BeforeCreateLayoutWrapper() override;
 
 private:
     struct HideBarOnSwipeContext {
@@ -335,21 +295,15 @@ private:
     void OnAttachToFrameNode() override;
     void OnDetachFromFrameNode(FrameNode* frameNode) override;
     void OnWindowSizeChanged(int32_t width, int32_t height, WindowSizeChangeReason type) override;
-    void CloseLongPressDialog();
-    void CheckIfOrientationChanged();
-    void StopAnimation();
-    bool OnDirtyLayoutWrapperSwap(const RefPtr<LayoutWrapper>& dirty, const DirtySwapConfig& config) override;
-    void CheckIfStatusBarConfigChanged();
-    void CheckIfNavigationIndicatorConfigChagned();
 
     RefPtr<ShallowBuilder> shallowBuilder_;
     std::string name_;
     std::string inspectorId_;
     RefPtr<NavDestinationContext> navDestinationContext_;
     RefPtr<UINode> customNode_;
+    WeakPtr<UINode> navigationNode_;
     RefPtr<OverlayManager> overlayManager_;
     bool isOnShow_ = false;
-    bool isActive_ = false;
     bool isUserDefinedBgColor_ = false;
     bool isRightToLeft_ = false;
     uint64_t navDestinationId_ = 0;
@@ -360,11 +314,6 @@ private:
     RefPtr<NavDestinationScrollableProcessor> scrollableProcessor_;
     HideBarOnSwipeContext titleBarSwipeContext_;
     HideBarOnSwipeContext toolBarSwipeContext_;
-    bool isFirstTimeCheckOrientation_ = true;
-    bool isFirstTimeCheckStatusBarConfig_ = true;
-    bool isFirstTimeCheckNavigationIndicatorConfig_ = true;
-    RefPtr<TouchEventImpl> touchListener_ = nullptr;
-    std::string serializedParam_ = "";
 };
 } // namespace OHOS::Ace::NG
 

@@ -22,20 +22,26 @@
 #include "frameworks/bridge/declarative_frontend/view_stack_processor.h"
 
 namespace OHOS::Ace {
+std::unique_ptr<BlankModel> BlankModel::instance_ = nullptr;
+std::mutex BlankModel::mutex_;
+
 BlankModel* BlankModel::GetInstance()
 {
+    if (!instance_) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (!instance_) {
 #ifdef NG_BUILD
-    static NG::BlankModelNG instance;
-    return &instance;
+            instance_.reset(new NG::BlankModelNG());
 #else
-    if (Container::IsCurrentUseNewPipeline()) {
-        static NG::BlankModelNG instance;
-        return &instance;
-    } else {
-        static Framework::BlankModelImpl instance;
-        return &instance;
-    }
+            if (Container::IsCurrentUseNewPipeline()) {
+                instance_.reset(new NG::BlankModelNG());
+            } else {
+                instance_.reset(new Framework::BlankModelImpl());
+            }
 #endif
+        }
+    }
+    return instance_.get();
 }
 } // namespace OHOS::Ace
 
@@ -69,18 +75,12 @@ void JSBlank::Height(const JSCallbackInfo& info)
 
 void JSBlank::Color(const JSCallbackInfo& info)
 {
-    BlankModel::GetInstance()->ResetResObj("blank.color");
     class Color value;
-    RefPtr<ResourceObject> blockResObj;
-    if (!ParseJsColor(info[0], value, blockResObj)) {
+    if (!ParseJsColor(info[0], value)) {
         BlankModel::GetInstance()->SetColor(Color::TRANSPARENT);
         return;
     }
-    if (SystemProperties::ConfigChangePerform() && blockResObj) {
-        BlankModel::GetInstance()->SetColor(blockResObj);
-    } else {
-        BlankModel::GetInstance()->SetColor(value);
-    }
+    BlankModel::GetInstance()->SetColor(value);
 }
 
 void JSBlank::JSBind(BindingTarget globalObj)

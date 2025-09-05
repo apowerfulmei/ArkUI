@@ -25,6 +25,7 @@
 #include "bridge/declarative_frontend/engine/jsi/nativeModule/arkts_utils.h"
 #include "core/common/resource/resource_manager.h"
 #include "core/components/common/properties/color.h"
+#include "core/pipeline_ng/pipeline_context.h"
 
 namespace OHOS::Ace::NG {
 namespace {
@@ -69,15 +70,14 @@ ArkUINativeModuleValue ResourceBridge::UpdateColorMode(ArkUIRuntimeCallInfo* run
         colorModeValue = MapJsColorModeToColorMode(firstArgValue);
     }
     if (colorModeValue != ColorMode::COLOR_MODE_UNDEFINED) {
-        auto pipeline = NG::PipelineContext::GetCurrentContextSafely();
-        CHECK_NULL_RETURN(pipeline, panda::JSValueRef::Undefined(vm));
 #if defined(ANDROID_PLATFORM) || defined(IOS_PLATFORM)
         UpdateColorModeForThemeConstants(colorModeValue);
 #else
-        ResourceManager::GetInstance().UpdateColorMode(
-            pipeline->GetBundleName(), pipeline->GetModuleName(), pipeline->GetInstanceId(), colorModeValue);
+        ResourceManager::GetInstance().UpdateColorMode(colorModeValue);
 #endif
-        pipeline->SetLocalColorMode(colorModeValue);
+        auto pipelineContext = NG::PipelineContext::GetCurrentContext();
+        CHECK_NULL_RETURN(pipelineContext, panda::JSValueRef::Undefined(vm));
+        pipelineContext->SetLocalColorMode(colorModeValue);
     }
     return panda::JSValueRef::Undefined(vm);
 }
@@ -87,16 +87,15 @@ ArkUINativeModuleValue ResourceBridge::Restore(ArkUIRuntimeCallInfo* runtimeCall
     EcmaVM* vm = runtimeCallInfo->GetVM();
     CHECK_NULL_RETURN(vm, panda::NativePointerRef::New(vm, nullptr));
 
-    auto pipeline = NG::PipelineContext::GetCurrentContextSafely();
-    CHECK_NULL_RETURN(pipeline, panda::JSValueRef::Undefined(vm));
-    pipeline->SetLocalColorMode(ColorMode::COLOR_MODE_UNDEFINED);
+    auto pipelineContext = NG::PipelineContext::GetCurrentContext();
+    CHECK_NULL_RETURN(pipelineContext, panda::JSValueRef::Undefined(vm));
+    pipelineContext->SetLocalColorMode(ColorMode::COLOR_MODE_UNDEFINED);
 
-    auto colorModeValue = pipeline->GetColorMode();
+    auto colorModeValue = SystemProperties::GetColorMode();
 #if defined(ANDROID_PLATFORM) || defined(IOS_PLATFORM)
     UpdateColorModeForThemeConstants(colorModeValue);
 #else
-    ResourceManager::GetInstance().UpdateColorMode(
-        pipeline->GetBundleName(), pipeline->GetModuleName(), pipeline->GetInstanceId(), colorModeValue);
+    ResourceManager::GetInstance().UpdateColorMode(colorModeValue);
 #endif
     return panda::JSValueRef::Undefined(vm);
 }
@@ -110,30 +109,6 @@ ArkUINativeModuleValue ResourceBridge::GetColorValue(ArkUIRuntimeCallInfo* runti
     if (ArkTSUtils::ParseJsColorAlpha(vm, firstArg, color)) {
         uint32_t colorValue = color.GetValue();
         return panda::NumberRef::New(vm, colorValue);
-    }
-    return panda::JSValueRef::Undefined(vm);
-}
-
-ArkUINativeModuleValue ResourceBridge::GetStringValue(ArkUIRuntimeCallInfo* runtimeCallInfo)
-{
-    EcmaVM* vm = runtimeCallInfo->GetVM();
-    CHECK_NULL_RETURN(vm, panda::NativePointerRef::New(vm, nullptr));
-    Local<JSValueRef> firstArg = runtimeCallInfo->GetCallArgRef(0);
-    std::string result;
-    if (ArkTSUtils::ParseJsString(vm, firstArg, result)) {
-        return panda::StringRef::NewFromUtf8(vm, result.c_str());
-    }
-    return panda::JSValueRef::Undefined(vm);
-}
-
-ArkUINativeModuleValue ResourceBridge::GetNumberValue(ArkUIRuntimeCallInfo* runtimeCallInfo)
-{
-    EcmaVM* vm = runtimeCallInfo->GetVM();
-    CHECK_NULL_RETURN(vm, panda::NativePointerRef::New(vm, nullptr));
-    Local<JSValueRef> firstArg = runtimeCallInfo->GetCallArgRef(0);
-    double result;
-    if (ArkTSUtils::ParseJsDouble(vm, firstArg, result)) {
-        return panda::NumberRef::New(vm, result);
     }
     return panda::JSValueRef::Undefined(vm);
 }

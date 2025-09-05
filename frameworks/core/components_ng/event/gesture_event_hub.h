@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022-2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -24,8 +24,7 @@
 #include "core/common/interaction/interaction_data.h"
 #include "core/components/common/layout/constants.h"
 #include "core/components_ng/event/click_event.h"
-#include "core/components_ng/event/drag_drop_event.h"
-#include "core/components_ng/event/event_constants.h"
+#include "core/components_ng/event/drag_event.h"
 #include "core/components_ng/event/long_press_event.h"
 #include "core/components_ng/event/pan_event.h"
 #include "core/components_ng/event/scrollable_event.h"
@@ -35,24 +34,68 @@
 #include "core/components_ng/gestures/recognizers/exclusive_recognizer.h"
 #include "core/components_ng/gestures/recognizers/parallel_recognizer.h"
 #include "core/components_ng/manager/drag_drop/drag_drop_proxy.h"
-#include "core/event/pointer_event.h"
 #include "core/gestures/gesture_info.h"
-#include "core/components/common/properties/placement.h"
 
 namespace OHOS::Ace {
 struct DragNotifyMsg;
-struct KeyEvent;
 class UnifiedData;
-class Subwindow;
 }
 
+enum class MenuPreviewMode {
+    NONE,
+    IMAGE,
+    CUSTOM,
+};
+
+enum class MenuBindingType {
+    LONG_PRESS,
+    RIGHT_CLICK,
+};
 namespace OHOS::Ace::NG {
+
+enum class HitTestMode {
+    /**
+     *  Both self and children respond to the hit test for touch events,
+     *  but block hit test of the other nodes which is masked by this node.
+     */
+    HTMDEFAULT = 0,
+
+    /**
+     * Self respond to the hit test for touch events,
+     * but block hit test of children and other nodes which is masked by this node.
+     */
+    HTMBLOCK,
+
+    /**
+     * Self and child respond to the hit test for touch events,
+     * and allow hit test of other nodes which is masked by this node.
+     */
+    HTMTRANSPARENT,
+
+    /**
+     * Self not respond to the hit test for touch events,
+     * but children respond to the hit test for touch events.
+     */
+    HTMNONE,
+
+    /**
+     * Self and child respond to the hit test for touch events,
+     * when self consumed allow hit test of other nodes which is masked by this node,
+     * when child consumed block hit test of other nodes.
+     */
+    HTMTRANSPARENT_SELF,
+};
+
 using TouchInterceptFunc = std::function<NG::HitTestMode(TouchEventInfo&)>;
 
 using ShouldBuiltInRecognizerParallelWithFunc = std::function<RefPtr<NGGestureRecognizer>(
     const RefPtr<NGGestureRecognizer>&, const std::vector<RefPtr<NGGestureRecognizer>>&)>;
-using TouchTestDoneCallback = std::function<void(
-    const std::shared_ptr<BaseGestureEvent>&, const std::list<RefPtr<NGGestureRecognizer>>&)>;
+
+enum class TouchTestStrategy {
+    DEFAULT = 0,
+    FORWARD_COMPETITION,
+    FORWARD
+};
 
 struct TouchTestInfo {
     PointF windowPoint;
@@ -65,6 +108,17 @@ struct TouchTestInfo {
 struct TouchResult {
     TouchTestStrategy strategy;
     std::string id;
+};
+
+enum class HitTestResult {
+    // The touch point is located outside the current component area;
+    OUT_OF_REGION,
+    // node consumption events and prevent bubbling;
+    STOP_BUBBLING,
+    // node process events and bubble;
+    BUBBLING,
+    // node process events and bubble;
+    SELF_TRANSPARENT,
 };
 
 struct DragDropBaseInfo {
@@ -85,58 +139,8 @@ struct BindMenuStatus {
     }
 };
 
-struct PreparedInfoForDrag {
-    bool isMenuShow = false;
-    int32_t badgeNumber = 0;
-    float previewScale = 1.0f;
-    bool isNeedCreateTiled = false;
-    OffsetF dragPreviewOffsetToScreen = { 0.0f, 0.0f };
-    OffsetF dragMovePosition = { 0.0f, 0.0f };
-    RefPtr<PixelMap> pixelMap;
-    RefPtr<FrameNode> imageNode;
-    NG::DraggingSizeChangeEffect sizeChangeEffect = DraggingSizeChangeEffect::DEFAULT;
-    RefPtr<FrameNode> relativeContainerNode { nullptr };
-    RefPtr<FrameNode> menuPreviewNode { nullptr };
-    RefPtr<FrameNode> textRowNode { nullptr };
-    RefPtr<FrameNode> textNode { nullptr };
-    RefPtr<FrameNode> menuNode { nullptr };
-    RefPtr<FrameNode> scrollNode { nullptr };
-    // for menu follow animation
-    float menuPositionLeft = 0.0f;
-    float menuPositionTop = 0.0f;
-    float menuPositionRight = 0.0f;
-    float menuPositionBottom = 0.0f;
-    // for menu follow animations
-    Placement menuPosition = Placement::NONE;
-    RectF menuRect;
-    RectF frameNodeRect;
-    RefPtr<FrameNode> menuPreviewImageNode { nullptr };
-    RefPtr<FrameNode> stackNode { nullptr };
-    RefPtr<FrameNode> gatherNode { nullptr };
-    RectF originPreviewRect;
-    RectF dragPreviewRect;
-    BorderRadiusProperty borderRadius = BorderRadiusProperty(0.0_vp);
-    SourceType deviceType = SourceType::NONE;
-    bool isMenuNotShow = false;
-};
-
-struct PreparedAsyncCtxForAnimate {
-    int32_t containerId = -1;
-    bool hasTouchPoint = false;
-    DragPointerEvent dragPointerEvent;
-    DragPreviewOption dragPreviewOption;
-    DimensionOffset touchPoint = DimensionOffset(0.0_vp, 0.0_vp);
-    std::vector<std::shared_ptr<Media::PixelMap>> pixelMapList;
-};
-
-struct DragframeNodeInfo {
-    WeakPtr<FrameNode> frameNode;
-    std::vector<RefPtr<FrameNode>> gatherFrameNode;
-};
-
 using OnDragStartFunc = std::function<DragDropBaseInfo(const RefPtr<OHOS::Ace::DragEvent>&, const std::string&)>;
 using OnDragDropFunc = std::function<void(const RefPtr<OHOS::Ace::DragEvent>&, const std::string&)>;
-using OnDragDropSpringLoadingFunc = std::function<void(const RefPtr<DragSpringLoadingContext>& info)>;
 using OnChildTouchTestFunc = std::function<TouchResult(const std::vector<TouchTestInfo>& touchInfo)>;
 using OnReponseRegionFunc = std::function<void(const std::vector<DimensionRect>&)>;
 struct DragDropInfo {
@@ -162,256 +166,600 @@ constexpr float DEFALUT_DRAG_PPIXELMAP_SCALE = 1.05f;
 constexpr float PIXELMAP_DRAG_DEFAULT_HEIGHT = -28.0f;
 
 class EventHub;
-class PipelineContext;
 
 // The gesture event hub is mainly used to handle common gesture events.
 class ACE_FORCE_EXPORT GestureEventHub : public Referenced {
 public:
     explicit GestureEventHub(const WeakPtr<EventHub>& eventHub);
     ~GestureEventHub() override = default;
-    void AddGesture(const RefPtr<NG::Gesture>& gesture);
+
+    void AddGesture(const RefPtr<NG::Gesture>& gesture)
+    {
+        if (!recreateGesture_) {
+            gestures_.clear();
+            backupGestures_.clear();
+        }
+        gestures_.emplace_back(gesture);
+        backupGestures_.emplace_back(gesture);
+        recreateGesture_ = true;
+    }
+
     // call by CAPI do distinguish with AddGesture called by ARKUI;
     void ClearGesture();
-    void AttachGesture(const RefPtr<NG::Gesture>& gesture);
-    void RemoveGesture(const RefPtr<NG::Gesture>& gesture);
+    void AttachGesture(const RefPtr<NG::Gesture>& gesture)
+    {
+        modifierGestures_.emplace_back(gesture);
+        backupModifierGestures_.emplace_back(gesture);
+        recreateGesture_ = true;
+        OnModifyDone();
+    }
+
+    void RemoveGesture(const RefPtr<NG::Gesture>& gesture)
+    {
+        modifierGestures_.remove(gesture);
+        backupModifierGestures_.remove(gesture);
+        recreateGesture_ = true;
+        OnModifyDone();
+    }
+
     void RemoveGesturesByTag(const std::string& gestureTag);
+
     void ClearModifierGesture();
-    void AddScrollableEvent(const RefPtr<ScrollableEvent>& scrollableEvent);
-    void RemoveScrollableEvent(const RefPtr<ScrollableEvent>& scrollableEvent);
-    void AddScrollEdgeEffect(const Axis& axis, RefPtr<ScrollEdgeEffect>& scrollEffect);
-    void RemoveScrollEdgeEffect(const RefPtr<ScrollEdgeEffect>& scrollEffect);
-    void AddPreviewMenuHandleDragEnd(GestureEventFunc&& actionEnd);
+
+    void AddScrollableEvent(const RefPtr<ScrollableEvent>& scrollableEvent)
+    {
+        if (!scrollableActuator_) {
+            scrollableActuator_ = MakeRefPtr<ScrollableActuator>(WeakClaim(this));
+        }
+        scrollableActuator_->AddScrollableEvent(scrollableEvent);
+    }
+
+    void RemoveScrollableEvent(const RefPtr<ScrollableEvent>& scrollableEvent)
+    {
+        if (!scrollableActuator_) {
+            return;
+        }
+        scrollableActuator_->RemoveScrollableEvent(scrollableEvent);
+    }
+
+    void AddScrollEdgeEffect(const Axis& axis, RefPtr<ScrollEdgeEffect>& scrollEffect)
+    {
+        if (!scrollableActuator_) {
+            scrollableActuator_ = MakeRefPtr<ScrollableActuator>(WeakClaim(this));
+        }
+        scrollableActuator_->AddScrollEdgeEffect(axis, scrollEffect);
+    }
+
+    void RemoveScrollEdgeEffect(const RefPtr<ScrollEdgeEffect>& scrollEffect)
+    {
+        if (!scrollableActuator_) {
+            return;
+        }
+        scrollableActuator_->RemoveScrollEdgeEffect(scrollEffect);
+    }
+
+    void AddPreviewMenuHandleDragEnd(GestureEventFunc&& actionEnd)
+    {
+        if (!scrollableActuator_) {
+            scrollableActuator_ = MakeRefPtr<ScrollableActuator>(WeakClaim(this));
+        }
+        scrollableActuator_->AddPreviewMenuHandleDragEnd(std::move(actionEnd));
+    }
+
     // Set by user define, which will replace old one.
-    void SetTouchEvent(TouchEventFunc&& touchEventFunc);
+    void SetTouchEvent(TouchEventFunc&& touchEventFunc)
+    {
+        if (!touchEventActuator_) {
+            touchEventActuator_ = MakeRefPtr<TouchEventActuator>();
+        }
+        touchEventActuator_->ReplaceTouchEvent(std::move(touchEventFunc));
+    }
+
     // Set by node container.
     void SetOnTouchEvent(TouchEventFunc&& touchEventFunc);
     // Set by JS FrameNode.
-    void SetFrameNodeCommonOnTouchEvent(TouchEventFunc&& touchEventFunc);
-    void AddTouchEvent(const RefPtr<TouchEventImpl>& touchEvent);
-    void AddTouchAfterEvent(const RefPtr<TouchEventImpl>& touchEvent);
-    void RemoveTouchEvent(const RefPtr<TouchEventImpl>& touchEvent);
+    void SetJSFrameNodeOnTouchEvent(TouchEventFunc&& touchEventFunc);
+
+    void AddTouchEvent(const RefPtr<TouchEventImpl>& touchEvent)
+    {
+        if (!touchEventActuator_) {
+            touchEventActuator_ = MakeRefPtr<TouchEventActuator>();
+        }
+        touchEventActuator_->AddTouchEvent(touchEvent);
+    }
+
+    void AddTouchAfterEvent(const RefPtr<TouchEventImpl>& touchEvent)
+    {
+        if (!touchEventActuator_) {
+            touchEventActuator_ = MakeRefPtr<TouchEventActuator>();
+        }
+        touchEventActuator_->AddTouchAfterEvent(touchEvent);
+    }
+
+    void RemoveTouchEvent(const RefPtr<TouchEventImpl>& touchEvent)
+    {
+        if (!touchEventActuator_) {
+            return;
+        }
+        touchEventActuator_->RemoveTouchEvent(touchEvent);
+    }
+
     void SetFocusClickEvent(GestureEventFunc&& clickEvent);
-    bool IsClickable() const;
-    bool IsComponentClickable() const;
-    bool IsUserClickable() const;
+
+    bool IsClickable() const
+    {
+        return clickEventActuator_ != nullptr;
+    }
+
+    bool IsUserClickable() const
+    {
+        return clickEventActuator_ != nullptr && clickEventActuator_->IsUserClickable();
+    }
+
     bool IsAccessibilityClickable();
     bool IsAccessibilityLongClickable();
+
     bool ActClick(std::shared_ptr<JsonValue> secComphandle = nullptr);
+
     void CheckClickActuator();
     // Set by user define, which will replace old one.
     void SetUserOnClick(GestureEventFunc&& clickEvent,
         double distanceThreshold = std::numeric_limits<double>::infinity());
-    void SetUserOnClick(GestureEventFunc&& clickEvent, Dimension distanceThreshold);
     void SetNodeClickDistance(double distanceThreshold = std::numeric_limits<double>::infinity());
      // Set by JS FrameNode.
-    void SetFrameNodeCommonOnClick(GestureEventFunc&& clickEvent);
+    void SetJSFrameNodeOnClick(GestureEventFunc&& clickEvent);
+
     void SetOnGestureJudgeBegin(GestureJudgeFunc&& gestureJudgeFunc);
+
     void SetOnTouchIntercept(TouchInterceptFunc&& touchInterceptFunc);
+
     TouchInterceptFunc GetOnTouchIntercept() const;
+
     void SetShouldBuildinRecognizerParallelWithFunc(ShouldBuiltInRecognizerParallelWithFunc&& parallelGestureToFunc);
+
     ShouldBuiltInRecognizerParallelWithFunc GetParallelInnerGestureToFunc() const;
+
     void SetOnGestureRecognizerJudgeBegin(GestureRecognizerJudgeFunc&& gestureRecognizerJudgeFunc);
+
     GestureRecognizerJudgeFunc GetOnGestureRecognizerJudgeBegin() const;
+
     void SetOnGestureJudgeNativeBegin(GestureJudgeFunc&& gestureJudgeFunc);
-    void SetOnGestureJudgeNativeBeginForMenu(GestureJudgeFunc&& gestureJudgeFunc);
-    TouchTestDoneCallback GetOnTouchTestDoneCallbackForInner() const;
-    void SetOnTouchTestDoneCallbackForInner(TouchTestDoneCallback&& touchTestDoneFunc);
-    TouchTestDoneCallback GetOnTouchTestDoneCallback() const;
-    void SetOnTouchTestDoneCallback(TouchTestDoneCallback&& touchTestDoneFunc);
-    GetEventTargetImpl CreateGetEventTargetImpl() const;
-    GestureJudgeFunc GetOnGestureJudgeBeginCallback() const;
-    GestureJudgeFunc GetOnGestureJudgeNativeBeginCallback();
+
+    GestureJudgeFunc GetOnGestureJudgeBeginCallback() const
+    {
+        return gestureJudgeFunc_;
+    }
+
+    GestureJudgeFunc GetOnGestureJudgeNativeBeginCallback() const
+    {
+        return gestureJudgeNativeFunc_;
+    }
+
     // When the event param is undefined, it will clear the callback.
     void ClearUserOnClick();
     void ClearUserOnTouch();
+
+
     void ClearJSFrameNodeOnClick();
     void ClearJSFrameNodeOnTouch();
     void AddClickEvent(const RefPtr<ClickEvent>& clickEvent);
     void AddClickAfterEvent(const RefPtr<ClickEvent>& clickEvent);
-    void RemoveClickEvent(const RefPtr<ClickEvent>& clickEvent);
-    bool IsClickEventsEmpty() const;
-    GestureEventFunc GetClickEvent();
+
+    void RemoveClickEvent(const RefPtr<ClickEvent>& clickEvent)
+    {
+        if (!clickEventActuator_) {
+            return;
+        }
+        clickEventActuator_->RemoveClickEvent(clickEvent);
+    }
+
+    bool IsClickEventsEmpty() const
+    {
+        if (!clickEventActuator_) {
+            return true;
+        }
+        return clickEventActuator_->IsClickEventsEmpty();
+    }
+
+    GestureEventFunc GetClickEvent()
+    {
+        if (!IsClickable()) {
+            return nullptr;
+        }
+        return clickEventActuator_->GetClickEvent();
+    }
+
     void BindMenu(GestureEventFunc&& showMenu);
-    void RegisterMenuOnTouch(TouchEventFunc&& callback);
-    bool IsLongClickable() const;
-    void SetRedirectClick(bool redirectClick);
+
+    bool IsLongClickable() const
+    {
+        return longPressEventActuator_ != nullptr;
+    }
+
+    void SetRedirectClick(bool redirectClick)
+    {
+        redirectClick_ = redirectClick;
+    }
+
     bool ActLongClick();
+
     void SetLongPressEvent(const RefPtr<LongPressEvent>& event, bool isForDrag = false, bool isDisableMouseLeft = false,
-        int32_t duration = 500);
+        int32_t duration = 500)
+    {
+        if (!longPressEventActuator_) {
+            longPressEventActuator_ = MakeRefPtr<LongPressEventActuator>(WeakClaim(this));
+            longPressEventActuator_->SetOnAccessibility(GetOnAccessibilityEventFunc());
+        }
+        longPressEventActuator_->SetLongPressEvent(event, isForDrag, isDisableMouseLeft);
+        longPressEventActuator_->SetDuration(duration);
+    }
+
     // Set by user define, which will replace old one.
-    void SetPanEvent(const RefPtr<PanEvent>& panEvent, PanDirection direction, int32_t fingers, Dimension distance);
-    void SetPanEvent(
-        const RefPtr<PanEvent>& panEvent, PanDirection direction, int32_t fingers, PanDistanceMap distanceMap);
-    void AddPanEvent(const RefPtr<PanEvent>& panEvent, PanDirection direction, int32_t fingers, Dimension distance);
-    void AddPanEvent(
-        const RefPtr<PanEvent>& panEvent, PanDirection direction, int32_t fingers, PanDistanceMap distanceMap);
-    void AddPanEvent(const RefPtr<PanEvent>& panEvent,
-        PanDirection direction, int32_t fingers, const PanDistanceMapDimension& distanceMap);
-    void RemovePanEvent(const RefPtr<PanEvent>& panEvent);
-    void SetPanEventType(GestureTypeName typeName);
-    void SetLongPressEventType(GestureTypeName typeName);
+    void SetPanEvent(const RefPtr<PanEvent>& panEvent, PanDirection direction, int32_t fingers, Dimension distance)
+    {
+        if (!panEventActuator_) {
+            panEventActuator_ =
+                MakeRefPtr<PanEventActuator>(WeakClaim(this), direction, fingers, distance.ConvertToPx());
+        }
+        panEventActuator_->ReplacePanEvent(panEvent);
+    }
+
+    void AddPanEvent(const RefPtr<PanEvent>& panEvent, PanDirection direction, int32_t fingers, Dimension distance)
+    {
+        if (!panEventActuator_ || direction.type != panEventActuator_->GetDirection().type) {
+            panEventActuator_ =
+                MakeRefPtr<PanEventActuator>(WeakClaim(this), direction, fingers, distance.ConvertToPx());
+        }
+        panEventActuator_->AddPanEvent(panEvent);
+    }
+
+    void RemovePanEvent(const RefPtr<PanEvent>& panEvent)
+    {
+        if (!panEventActuator_) {
+            return;
+        }
+        panEventActuator_->RemovePanEvent(panEvent);
+    }
+
+    void SetPanEventType(GestureTypeName typeName)
+    {
+        CHECK_NULL_VOID(panEventActuator_);
+        panEventActuator_->SetPanEventType(typeName);
+    }
+
     // Set by user define, which will replace old one.
-    void SetDragEvent(const RefPtr<DragEvent>& dragEvent, PanDirection direction, int32_t fingers, Dimension distance);
-    void SetDragDropEvent();
+    void SetDragEvent(const RefPtr<DragEvent>& dragEvent, PanDirection direction, int32_t fingers, Dimension distance)
+    {
+        if (!dragEventActuator_) {
+            dragEventActuator_ =
+                MakeRefPtr<DragEventActuator>(WeakClaim(this), direction, fingers, distance.ConvertToPx());
+        }
+        dragEventActuator_->ReplaceDragEvent(dragEvent);
+    }
+
     void SetCustomDragEvent(
-        const RefPtr<DragEvent>& dragEvent, PanDirection direction, int32_t fingers, Dimension distance);
-    bool HasDragEvent() const;
+        const RefPtr<DragEvent>& dragEvent, PanDirection direction, int32_t fingers, Dimension distance)
+    {
+        if (!dragEventActuator_) {
+            dragEventActuator_ =
+                MakeRefPtr<DragEventActuator>(WeakClaim(this), direction, fingers, distance.ConvertToPx());
+        }
+        dragEventActuator_->SetCustomDragEvent(dragEvent);
+    }
+
+    bool HasDragEvent() const
+    {
+        return dragEventActuator_ && dragEventActuator_->HasDragEvent();
+    }
+
     // the return value means prevents event bubbling.
     bool ProcessTouchTestHit(const OffsetF& coordinateOffset, const TouchRestrict& touchRestrict,
         TouchTestResult& innerTargets, TouchTestResult& finalResult, int32_t touchId, const PointF& localPoint,
         const RefPtr<TargetComponent>& targetComponent, ResponseLinkResult& responseLinkResult);
-    bool ProcessEventTouchTestHit(const OffsetF& coordinateOffset, const TouchRestrict& touchRestrict,
-        TouchTestResult& innerTargets, TouchTestResult& finalResult, int32_t touchId, const PointF& localPoint,
-        const RefPtr<TargetComponent>& targetComponent, ResponseLinkResult& responseLinkResult);
-    bool ProcessDragEventTouchTestHit(const OffsetF& coordinateOffset, const TouchRestrict& touchRestrict,
-        TouchTestResult& innerTargets, TouchTestResult& finalResult, int32_t touchId, const PointF& localPoint,
-        const RefPtr<TargetComponent>& targetComponent, ResponseLinkResult& responseLinkResult);
 
     RefPtr<FrameNode> GetFrameNode() const;
+
     void OnContextAttached() {}
-    static std::string GetHitTestModeStr(const RefPtr<GestureEventHub>& GestureEventHub);
-    HitTestMode GetHitTestMode() const;
-    void SetHitTestMode(HitTestMode hitTestMode);
-    void RemoveDragEvent();
+
+    std::string GetHitTestModeStr() const;
+
+    HitTestMode GetHitTestMode() const
+    {
+        return hitTestMode_;
+    }
+
+    void SetHitTestMode(HitTestMode hitTestMode)
+    {
+        hitTestMode_ = hitTestMode;
+    }
+
+    void RemoveDragEvent()
+    {
+        if (!dragEventActuator_) {
+            return;
+        }
+        dragEventActuator_->ClearDragEvent();
+    }
+
     void CombineIntoExclusiveRecognizer(
         const PointF& globalPoint, const PointF& localPoint, TouchTestResult& result, int32_t touchId);
-    const std::vector<DimensionRect>& GetResponseRegion() const;
-    const std::vector<DimensionRect>& GetMouseResponseRegion() const;
-    void SetResponseRegionFunc(const OnReponseRegionFunc& func);
+
+    const std::vector<DimensionRect>& GetResponseRegion() const
+    {
+        return responseRegion_;
+    }
+
+    const std::vector<DimensionRect>& GetMouseResponseRegion() const
+    {
+        return mouseResponseRegion_;
+    }
+
+    void SetResponseRegionFunc(const OnReponseRegionFunc& func)
+    {
+        responseRegionFunc_ = func;
+    }
+
     void SetResponseRegion(const std::vector<DimensionRect>& responseRegion);
-    void SetOnTouchTestFunc(OnChildTouchTestFunc&& callback);
-    const OnChildTouchTestFunc& GetOnTouchTestFunc();
-    void SetMouseResponseRegion(const std::vector<DimensionRect>& mouseResponseRegion);
-    void AddResponseRect(const DimensionRect& responseRect);
+
+    void SetOnTouchTestFunc(OnChildTouchTestFunc&& callback)
+    {
+        onChildTouchTestFunc_ = callback;
+    }
+
+    const OnChildTouchTestFunc& GetOnTouchTestFunc()
+    {
+        return onChildTouchTestFunc_;
+    }
+
+    void SetMouseResponseRegion(const std::vector<DimensionRect>& mouseResponseRegion)
+    {
+        mouseResponseRegion_ = mouseResponseRegion;
+        if (!mouseResponseRegion_.empty()) {
+            isResponseRegion_ = true;
+        }
+    }
+
+    void AddResponseRect(const DimensionRect& responseRect)
+    {
+        responseRegion_.emplace_back(responseRect);
+        isResponseRegion_ = true;
+
+        if (responseRegionFunc_) {
+            responseRegionFunc_(responseRegion_);
+        }
+    }
+
     void RemoveLastResponseRect();
-    bool GetTouchable() const;
-    void SetTouchable(bool touchable);
-    void SetThumbnailCallback(std::function<void(Offset)>&& callback);
+
+    bool GetTouchable() const
+    {
+        return touchable_;
+    }
+
+    void SetTouchable(bool touchable)
+    {
+        touchable_ = touchable;
+    }
+
+    void SetThumbnailCallback(std::function<void(Offset)>&& callback)
+    {
+        if (dragEventActuator_) {
+            dragEventActuator_->SetThumbnailCallback(std::move(callback));
+        }
+    }
+
     bool IsDragForbidden() const;
+
     void SetDragForbiddenForcely(bool isDragForbidden);
-    bool GetTextDraggable() const;
-    void SetTextDraggable(bool draggable);
-    void SetIsTextDraggable(bool isTextDraggable);
-    bool GetIsTextDraggable();
-    void SetPreviewMode(MenuPreviewMode mode);
-    MenuPreviewMode GetPreviewMode();
-    void SetContextMenuShowStatus(bool contextMenuShowStatus);
-    bool GetContextMenuShowStatus();
-    void SetMenuBindingType(MenuBindingType menuBindingType);
-    MenuBindingType GetMenuBindingType();
-    void SetPixelMap(RefPtr<PixelMap> pixelMap);
-    RefPtr<PixelMap> GetPixelMap();
-    void SetDragPreviewPixelMap(RefPtr<PixelMap> pixelMap);
-    RefPtr<LongPressRecognizer> GetLongPressRecognizer() const;
-    void SetIsAllowMouse(bool isAllowMouse) const;
-    const RefPtr<ClickEventActuator>& GetUserClickEventActuator();
+
+    bool GetTextDraggable() const
+    {
+        return textDraggable_;
+    }
+
+    void SetTextDraggable(bool draggable)
+    {
+        textDraggable_ = draggable;
+    }
+
+    void SetIsTextDraggable(bool isTextDraggable)
+    {
+        isTextDraggable_ = isTextDraggable;
+    }
+
+    bool GetIsTextDraggable()
+    {
+        return isTextDraggable_;
+    }
+
+    void SetPreviewMode(MenuPreviewMode mode)
+    {
+        previewMode_ = mode;
+    }
+
+    MenuPreviewMode GetPreviewMode()
+    {
+        return previewMode_;
+    }
+
+    void SetContextMenuShowStatus(bool contextMenuShowStatus)
+    {
+        contextMenuShowStatus_ = contextMenuShowStatus;
+    }
+
+    bool GetContextMenuShowStatus()
+    {
+        return contextMenuShowStatus_;
+    }
+
+    void SetMenuBindingType(MenuBindingType menuBindingType)
+    {
+        menuBindingType_ = menuBindingType;
+    }
+
+    MenuBindingType GetMenuBindingType()
+    {
+        return menuBindingType_;
+    }
+
+    void SetPixelMap(RefPtr<PixelMap> pixelMap)
+    {
+        pixelMap_ = pixelMap;
+    }
+
+    RefPtr<PixelMap> GetPixelMap()
+    {
+        return pixelMap_;
+    }
+
+    void SetDragPreviewPixelMap(RefPtr<PixelMap> pixelMap)
+    {
+        dragPreviewPixelMap_ = pixelMap;
+    }
+
+    RefPtr<LongPressRecognizer> GetLongPressRecognizer() const
+    {
+        CHECK_NULL_RETURN(longPressEventActuator_, nullptr);
+        return longPressEventActuator_->GetLongPressRecognizer();
+    }
+
+    void SetIsAllowMouse(bool isAllowMouse) const
+    {
+        CHECK_NULL_VOID(panEventActuator_);
+        panEventActuator_->SetIsAllowMouse(isAllowMouse);
+    }
+
+    const RefPtr<ClickEventActuator>& GetUserClickEventActuator()
+    {
+        return userParallelClickEventActuator_;
+    }
+
+    int32_t SetDragData(const RefPtr<UnifiedData>& unifiedData, std::string& udKey);
     OnDragCallbackCore GetDragCallback(const RefPtr<PipelineBase>& context, const WeakPtr<EventHub>& hub);
+
     void GenerateMousePixelMap(const GestureEvent& info);
-    OffsetF GetPixelMapOffset(const GestureEvent& info, const SizeF& size, const PreparedInfoForDrag& dragInfoData,
-        const float scale = 1.0f, const RectF& innerRect = RectF()) const;
-    void CalcFrameNodeOffsetAndSize(const RefPtr<FrameNode> frameNode, bool isMenuShow);
-    OffsetF GetDragPreviewInitPositionToScreen(const RefPtr<PipelineBase>& context, PreparedInfoForDrag& data);
-    int32_t GetBadgeNumber(const RefPtr<OHOS::Ace::DragEvent>& dragEvent);
-    bool TryDoDragStartAnimation(const RefPtr<PipelineBase>& context, const RefPtr<Subwindow>& subwindow,
-        const GestureEvent& info, PreparedInfoForDrag& data);
-    float GetDefaultPixelMapScale(
-        const RefPtr<FrameNode>& frameNode, const GestureEvent& info, bool isMenuShow, RefPtr<PixelMap> pixelMap);
+    OffsetF GetPixelMapOffset(const GestureEvent& info, const SizeF& size, const float scale = 1.0f,
+        bool isCalculateInSubwindow = false, const RectF& innerRect = RectF()) const;
     RefPtr<PixelMap> GetPreScaledPixelMapIfExist(float targetScale, RefPtr<PixelMap> defaultPixelMap);
     float GetPixelMapScale(const int32_t height, const int32_t width) const;
     bool IsPixelMapNeedScale() const;
-    bool CheckAllowDrag(const GestureEvent& info, const RefPtr<PipelineBase>& context,
-        const RefPtr<FrameNode>& frameNode);
-    RefPtr<OHOS::Ace::DragEvent> CreateDragEvent(const GestureEvent& info, const RefPtr<PipelineBase>& context,
-        const RefPtr<FrameNode>& frameNode);
     void InitDragDropEvent();
     void HandleOnDragStart(const GestureEvent& info);
-    void HandleDragThroughMouse(const RefPtr<FrameNode> frameNode);
-    void HandleDragThroughTouch(const RefPtr<FrameNode> frameNode);
-    void HandleDragEndAction(const DragframeNodeInfo& info);
     void HandleOnDragUpdate(const GestureEvent& info);
     void HandleOnDragEnd(const GestureEvent& info);
     void HandleOnDragCancel();
-    void StartLongPressActionForWeb();
+
+    void StartLongPressActionForWeb(bool isFloatImage = true);
     void CancelDragForWeb();
-    bool StartDragTaskForWeb();
+    void StartDragTaskForWeb();
     void ResetDragActionForWeb();
+
     void OnModifyDone();
     bool KeyBoardShortCutClick(const KeyEvent& event, const WeakPtr<NG::FrameNode>& node);
     bool IsAllowedDrag(RefPtr<EventHub> eventHub);
-    void HandleNotAllowDrag(const GestureEvent& info);
-    RefPtr<DragEventActuator> GetDragEventActuator();
+    void HandleNotallowDrag(const GestureEvent& info);
+    bool ParsePixelMapAsync(DragDropInfo& dragDropInfo, const DragDropInfo& dragPreviewInfo, const GestureEvent& info);
+
+    RefPtr<DragEventActuator> GetDragEventActuator()
+    {
+        return dragEventActuator_;
+    }
+
     bool GetMonopolizeEvents() const;
+
     void SetMonopolizeEvents(bool monopolizeEvents);
     virtual RefPtr<NGGestureRecognizer> PackInnerRecognizer(
         const Offset& offset, std::list<RefPtr<NGGestureRecognizer>>& innerRecognizers, int32_t touchId,
         const RefPtr<TargetComponent>& targetComponent);
-    void CleanExternalRecognizers();
-    void CleanInnerRecognizer();
-    void CleanNodeRecognizer();
+
+    void CleanExternalRecognizers()
+    {
+        externalParallelRecognizer_.clear();
+        externalExclusiveRecognizer_.clear();
+    }
+
+    void CleanInnerRecognizer()
+    {
+        innerExclusiveRecognizer_ = nullptr;
+    }
+
+    void CleanNodeRecognizer()
+    {
+        nodeParallelRecognizer_ = nullptr;
+        nodeExclusiveRecognizer_ = nullptr;
+    }
+
+    bool parallelCombineClick = false;
+    RefPtr<ParallelRecognizer> innerParallelRecognizer_;
+
     void CopyGestures(const RefPtr<GestureEventHub>& gestureEventHub);
+
     void CopyEvent(const RefPtr<GestureEventHub>& gestureEventHub);
+
     bool IsTextCategoryComponent(const std::string& frameTag);
+
     int32_t RegisterCoordinationListener(const RefPtr<PipelineBase>& context);
+
     DragDropInfo GetDragDropInfo(const GestureEvent& info, const RefPtr<FrameNode> frameNode,
         DragDropInfo& dragPreviewInfo, const RefPtr<OHOS::Ace::DragEvent>& dragEvent);
+
     RefPtr<UnifiedData> GetUnifiedData(const std::string& frameTag, DragDropInfo& dragDropInfo,
         const RefPtr<OHOS::Ace::DragEvent>& dragEvent);
     int32_t GetSelectItemSize();
-    bool IsNeedSwitchToSubWindow(const PreparedInfoForDrag& dragInfoData) const;
-    RefPtr<PixelMap> GetDragPreviewPixelMap();
+
+    bool IsNeedSwitchToSubWindow() const;
+    RefPtr<PixelMap> GetDragPreviewPixelMap()
+    {
+        return dragPreviewPixelMap_;
+    }
     void SetDragGatherPixelMaps(const GestureEvent& info);
     void SetMouseDragGatherPixelMaps();
     void SetNotMouseDragGatherPixelMaps();
     void FireCustomerOnDragEnd(const RefPtr<PipelineBase>& context, const WeakPtr<EventHub>& hub);
     void SetMouseDragMonitorState(bool state);
-    bool ParsePixelMapAsync(DragDropInfo& dragDropInfo, const DragDropInfo& dragPreviewInfo,
-        const GestureEvent& info);
-    void DoOnDragStartHandling(const GestureEvent& info, const RefPtr<FrameNode> frameNode,
-        DragDropInfo dragDropInfo, const RefPtr<OHOS::Ace::DragEvent>& event,
-        DragDropInfo dragPreviewInfo, const RefPtr<PipelineContext>& pipeline);
     void HideMenu();
-    const GestureEvent GetGestureEventInfo();
-    const ClickInfo GetClickInfo();
 #if defined(PIXEL_MAP_SUPPORTED)
     static void PrintBuilderNode(const RefPtr<UINode>& customNode);
     static void PrintIfImageNode(
         const RefPtr<UINode>& builderNode, int32_t depth, bool& hasImageNode, std::list<RefPtr<FrameNode>>& imageNodes);
     static void CheckImageDecode(std::list<RefPtr<FrameNode>>& imageNodes);
-    bool StartDragForCustomBuilderSync(const GestureEvent& info, const RefPtr<PipelineBase>& pipeline,
-        const RefPtr<FrameNode> frameNode, DragDropInfo dragDropInfo, const RefPtr<OHOS::Ace::DragEvent>& event);
     void StartDragForCustomBuilder(const GestureEvent& info, const RefPtr<PipelineBase>& pipeline,
         const RefPtr<FrameNode> frameNode, DragDropInfo dragDropInfo, const RefPtr<OHOS::Ace::DragEvent>& event);
 #endif
-    void SetMenuPreviewScale(float menuPreviewScale);
-    float GetMenuPreviewScale() const;
-    void SetBindMenuStatus(bool setIsShow, bool isShow, MenuPreviewMode previewMode);
-    const BindMenuStatus& GetBindMenuStatus() const;
-    bool WillRecreateGesture() const;
+    void SetMenuPreviewScale(float menuPreviewScale)
+    {
+        menuPreviewScale_ = menuPreviewScale;
+    }
 
-    bool parallelCombineClick = false;
-    RefPtr<ParallelRecognizer> innerParallelRecognizer_;
+    float GetMenuPreviewScale() const
+    {
+        return menuPreviewScale_;
+    }
+    
+    void SetBindMenuStatus(bool setIsShow, bool isShow, MenuPreviewMode previewMode);
+    const BindMenuStatus& GetBindMenuStatus() const
+    {
+        return bindMenuStatus_;
+    }
+
+    bool WillRecreateGesture() const
+    {
+        return recreateGesture_;
+    }
 
     bool IsGestureEmpty() const;
 
     bool IsPanEventEmpty() const;
 
-    void SetExcludedAxisForPanEvent(bool isExcludedAxis);
-
     void DumpVelocityInfoFroPanEvent(int32_t fingerId);
-
-    bool IsDragNewFwk() const;
-    bool TriggerTouchEvent(const TouchEvent& point);
-    void SetRecognizerDelayStatus(const RecognizerDelayStatus& recognizerDelayStatus = RecognizerDelayStatus::NONE);
-    void DragNodeDetachFromParent();
 private:
     void ProcessTouchTestHierarchy(const OffsetF& coordinateOffset, const TouchRestrict& touchRestrict,
         std::list<RefPtr<NGGestureRecognizer>>& innerRecognizers, TouchTestResult& finalResult, int32_t touchId,
         const RefPtr<TargetComponent>& targetComponent, ResponseLinkResult& responseLinkResult);
 
     void UpdateGestureHierarchy();
-    void UpdateModifierGestureHierarchy();
 
-    void AddGestureToGestureHierarchy(const RefPtr<NG::Gesture>& gesture, bool isModifier);
+    void AddGestureToGestureHierarchy(const RefPtr<NG::Gesture>& gesture);
 
     // old path.
     void UpdateExternalNGGestureRecognizer();
@@ -420,15 +768,8 @@ private:
 
     void OnDragStart(const GestureEvent& info, const RefPtr<PipelineBase>& context, const RefPtr<FrameNode> frameNode,
         DragDropInfo dragDropInfo, const RefPtr<OHOS::Ace::DragEvent>& dragEvent);
-    void PrepareDragStartInfo(
-        RefPtr<PipelineContext>& pipeline, PreparedInfoForDrag& data, const RefPtr<FrameNode> frameNode);
-    void UpdateMenuNode(
-        const RefPtr<FrameNode> menuWrapperNode, PreparedInfoForDrag& data, const RefPtr<FrameNode> frameNode);
-    void StartVibratorByDrag(const RefPtr<FrameNode>& frameNode);
-    void UpdateExtraInfo(const RefPtr<FrameNode>& frameNode, std::unique_ptr<JsonValue>& arkExtraInfoJson, float scale,
-        const PreparedInfoForDrag& dragInfoData);
-    void ProcessMenuPreviewScale(const RefPtr<FrameNode> imageNode, float& scale, float previewScale,
-        float windowScale, float defaultMenuPreviewScale);
+    void UpdateExtraInfo(const RefPtr<FrameNode>& frameNode, std::unique_ptr<JsonValue>& arkExtraInfoJson,
+        float scale);
 
     template<typename T>
     const RefPtr<T> GetAccessibilityRecognizer();
@@ -436,20 +777,17 @@ private:
     template<typename T>
     const RefPtr<T> AccessibilityRecursionSearchRecognizer(const RefPtr<NGGestureRecognizer>& recognizer);
 
-    void ProcessParallelPriorityGesture(const Offset& offset, int32_t touchId,
-        const RefPtr<TargetComponent>& targetComponent, const RefPtr<FrameNode>& host,
-        RefPtr<NGGestureRecognizer>& current, std::list<RefPtr<NGGestureRecognizer>>& recognizers,
-        int32_t& parallelIndex, bool needRebuildForCurrent = false);
+    void ProcessParallelPriorityGesture(RefPtr<NGGestureRecognizer>& current,
+        std::list<RefPtr<NGGestureRecognizer>>& recognizers, int32_t& parallelIndex, const Offset& offset,
+        int32_t touchId, const RefPtr<TargetComponent>& targetComponent, const RefPtr<FrameNode>& host,
+        bool needRebuildForCurrent = false);
 
-    void ProcessExternalExclusiveRecognizer(const Offset& offset, int32_t touchId,
-        const RefPtr<TargetComponent>& targetComponent, const RefPtr<FrameNode>& host, GesturePriority priority,
-        RefPtr<NGGestureRecognizer>& current, std::list<RefPtr<NGGestureRecognizer>>& recognizers,
-        int32_t& exclusiveIndex, bool needRebuildForCurrent = false);
+    void ProcessExternalExclusiveRecognizer(RefPtr<NGGestureRecognizer>& current,
+        std::list<RefPtr<NGGestureRecognizer>>& recognizers, int32_t& exclusiveIndex, const Offset& offset,
+        int32_t touchId, const RefPtr<TargetComponent>& targetComponent, const RefPtr<FrameNode>& host,
+        GesturePriority priority, bool needRebuildForCurrent = false);
 
     bool CheckLastInnerRecognizerCollected(GesturePriority priority, int32_t gestureGroupIndex = 0);
-
-    void UpdateNodePositionBeforeStartAnimation(const RefPtr<FrameNode>& frameNode,
-        PreparedInfoForDrag& data);
 
     WeakPtr<EventHub> eventHub_;
     RefPtr<ScrollableActuator> scrollableActuator_;
@@ -473,11 +811,9 @@ private:
     std::list<RefPtr<NG::Gesture>> backupGestures_;
     std::list<RefPtr<NG::Gesture>> backupModifierGestures_;
     std::list<RefPtr<NGGestureRecognizer>> gestureHierarchy_;
-    std::list<RefPtr<NGGestureRecognizer>> modifierGestureHierarchy_;
 
     // used in bindMenu, need to delete the old callback when bindMenu runs again
     RefPtr<ClickEvent> showMenu_;
-    RefPtr<TouchEventImpl> bindMenuTouch_;
 
     HitTestMode hitTestMode_ = HitTestMode::HTMDEFAULT;
     bool recreateGesture_ = true;
@@ -501,10 +837,6 @@ private:
 
     GestureJudgeFunc gestureJudgeFunc_;
     GestureJudgeFunc gestureJudgeNativeFunc_;
-    GestureJudgeFunc gestureJudgeNativeFuncForMenu_;
-
-    TouchTestDoneCallback touchTestDoneCallbackForInner_;
-    TouchTestDoneCallback touchTestDoneCallback_;
 
     TouchInterceptFunc touchInterceptFunc_;
 
@@ -516,14 +848,12 @@ private:
     bool contextMenuShowStatus_  = false;
     MenuBindingType menuBindingType_  = MenuBindingType::LONG_PRESS;
     BindMenuStatus bindMenuStatus_;
-    DragframeNodeInfo dragframeNodeInfo_;
     // disable drag for the node itself and its all children
     bool isDragForbiddenForWholeSubTree_ = false;
     bool textDraggable_ = false;
     bool isTextDraggable_ = false;
     bool monopolizeEvents_ = false;
     float menuPreviewScale_ = DEFALUT_DRAG_PPIXELMAP_SCALE;
-    bool isDragNewFwk_ = false;
 };
 
 } // namespace OHOS::Ace::NG

@@ -19,10 +19,8 @@
 #include "bridge/declarative_frontend/engine/jsi/nativeModule/arkts_native_api_bridge.h"
 
 namespace OHOS::Ace::NG {
-class ArkUI_Toggle_Params;
 class ToggleBridge {
 public:
-    static ArkUINativeModuleValue ParseParams(ArkUIRuntimeCallInfo* runtimeCallInfo, ArkUI_Params& params);
     static ArkUINativeModuleValue SetSelectedColor(ArkUIRuntimeCallInfo* runtimeCallInfo);
     static ArkUINativeModuleValue ResetSelectedColor(ArkUIRuntimeCallInfo* runtimeCallInfo);
     static ArkUINativeModuleValue SetSwitchPointColor(ArkUIRuntimeCallInfo* runtimeCallInfo);
@@ -40,15 +38,6 @@ public:
     static ArkUINativeModuleValue SetSwitchStyle(ArkUIRuntimeCallInfo* runtimeCallInfo);
     static ArkUINativeModuleValue ResetSwitchStyle(ArkUIRuntimeCallInfo* runtimeCallInfo);
     static ArkUINativeModuleValue SetContentModifierBuilder(ArkUIRuntimeCallInfo* runtimeCallInfo);
-    static ArkUINativeModuleValue SetToggleOptions(ArkUIRuntimeCallInfo* runtimeCallInfo);
-    static ArkUINativeModuleValue SetOnChange(ArkUIRuntimeCallInfo* runtimeCallInfo);
-    static ArkUINativeModuleValue ResetOnChange(ArkUIRuntimeCallInfo* runtimeCallInfo);
-    static ArkUINativeModuleValue SetMargin(ArkUIRuntimeCallInfo* runtimeCallInfo);
-    static ArkUINativeModuleValue ResetMargin(ArkUIRuntimeCallInfo* runtimeCallInfo);
-    static void SetPointRadius(const EcmaVM* vm,  ArkUINodeHandle nativeNode, const Local<JSValueRef>& arg);
-    static void SetPointColor(const EcmaVM* vm,  ArkUINodeHandle nativeNode, const Local<JSValueRef>& arg);
-    static void SetUnselectedColor(const EcmaVM* vm,  ArkUINodeHandle nativeNode, const Local<JSValueRef>& arg);
-    static void SetTrackRadius(const EcmaVM* vm,  ArkUINodeHandle nativeNode, const Local<JSValueRef>& arg);
 };
 } // namespace OHOS::Ace::NG
 

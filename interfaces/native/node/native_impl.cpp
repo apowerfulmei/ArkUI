@@ -14,11 +14,13 @@
  */
 
 #include "native_interface.h"
+#include "native_node.h"
+#include "native_animate.h"
 #include "node/animate_impl.h"
 #include "node/dialog_model.h"
 #include "node/gesture_impl.h"
+#include "node/native_compatible.h"
 #include "node/node_model.h"
-#include "node/node_model_safely.h"
 #include "node_extened.h"
 
 #include "base/log/log_wrapper.h"
@@ -26,10 +28,6 @@
 namespace {
 
 constexpr int32_t CURRENT_NATIVE_NODE_API_VERSION = 1;
-constexpr int32_t NATIVE_DIALOG_VERSION_0 = 0;
-constexpr int32_t NATIVE_DIALOG_VERSION_1 = 1;
-constexpr int32_t NATIVE_DIALOG_VERSION_2 = 2;
-constexpr int32_t NATIVE_DIALOG_VERSION_3 = 3;
 
 ArkUI_NativeNodeAPI_Compatible nodeImpl_compatible = {
     CURRENT_NATIVE_NODE_API_VERSION,
@@ -94,50 +92,6 @@ ArkUI_NativeNodeAPI_1 nodeImpl_1 = {
     OHOS::Ace::NodeModel::RemoveAllChildren,
 };
 
-ArkUI_NativeNodeAPI_1 multiThreadNodeImpl_1 = {
-    .version = CURRENT_NATIVE_NODE_API_VERSION,
-    .createNode = OHOS::Ace::NodeModel::CreateNodeSafely,
-    .disposeNode = OHOS::Ace::NodeModel::DisposeNodeSafely,
-    .addChild = OHOS::Ace::NodeModel::AddChildSafely,
-    .removeChild = OHOS::Ace::NodeModel::RemoveChildSafely,
-    .insertChildAfter = OHOS::Ace::NodeModel::InsertChildAfterSafely,
-    .insertChildBefore = OHOS::Ace::NodeModel::InsertChildBeforeSafely,
-    .insertChildAt = OHOS::Ace::NodeModel::InsertChildAtSafely,
-    .setAttribute = OHOS::Ace::NodeModel::SetAttributeSafely,
-    .getAttribute = OHOS::Ace::NodeModel::GetAttributeSafely,
-    .resetAttribute = OHOS::Ace::NodeModel::ResetAttributeSafely,
-    .registerNodeEvent = OHOS::Ace::NodeModel::RegisterNodeEventSafely,
-    .unregisterNodeEvent = OHOS::Ace::NodeModel::UnregisterNodeEventSafely,
-    .registerNodeEventReceiver = OHOS::Ace::NodeModel::RegisterOnEventSafely,
-    .unregisterNodeEventReceiver = OHOS::Ace::NodeModel::UnregisterOnEventSafely,
-    .markDirty = OHOS::Ace::NodeModel::MarkDirtySafely,
-    .getTotalChildCount = OHOS::Ace::NodeModel::GetTotalChildCountSafely,
-    .getChildAt = OHOS::Ace::NodeModel::GetChildAtSafely,
-    .getFirstChild = OHOS::Ace::NodeModel::GetFirstChildSafely,
-    .getLastChild = OHOS::Ace::NodeModel::GetLastChildSafely,
-    .getPreviousSibling = OHOS::Ace::NodeModel::GetPreviousSiblingSafely,
-    .getNextSibling = OHOS::Ace::NodeModel::GetNextSiblingSafely,
-    .registerNodeCustomEvent = OHOS::Ace::NodeModel::RegisterNodeCustomEventSafely,
-    .unregisterNodeCustomEvent = OHOS::Ace::NodeModel::UnregisterNodeCustomEventSafely,
-    .registerNodeCustomEventReceiver = OHOS::Ace::NodeModel::RegisterNodeCustomReceiverSafely,
-    .unregisterNodeCustomEventReceiver = OHOS::Ace::NodeModel::UnregisterNodeCustomEventReceiverSafely,
-    .setMeasuredSize = OHOS::Ace::NodeModel::SetMeasuredSizeSafely,
-    .setLayoutPosition = OHOS::Ace::NodeModel::SetLayoutPositionSafely,
-    .getMeasuredSize = OHOS::Ace::NodeModel::GetMeasuredSizeSafely,
-    .getLayoutPosition = OHOS::Ace::NodeModel::GetLayoutPositionSafely,
-    .measureNode = OHOS::Ace::NodeModel::MeasureNodeSafely,
-    .layoutNode = OHOS::Ace::NodeModel::LayoutNodeSafely,
-    .addNodeEventReceiver = OHOS::Ace::NodeModel::AddNodeEventReceiverSafely,
-    .removeNodeEventReceiver = OHOS::Ace::NodeModel::RemoveNodeEventReceiverSafely,
-    .addNodeCustomEventReceiver = OHOS::Ace::NodeModel::AddNodeCustomEventReceiverSafely,
-    .removeNodeCustomEventReceiver = OHOS::Ace::NodeModel::RemoveNodeCustomEventReceiverSafely,
-    .setUserData = OHOS::Ace::NodeModel::SetUserDataSafely,
-    .getUserData = OHOS::Ace::NodeModel::GetUserDataSafely,
-    .setLengthMetricUnit = OHOS::Ace::NodeModel::SetLengthMetricUnitSafely,
-    .getParent = OHOS::Ace::NodeModel::GetParentSafely,
-    .removeAllChildren = OHOS::Ace::NodeModel::RemoveAllChildrenSafely,
-};
-
 ArkUI_NativeDialogAPI_1 dialogImpl_1 = {
     OHOS::Ace::DialogModel::Create,
     OHOS::Ace::DialogModel::Dispose,
@@ -167,30 +121,6 @@ ArkUI_NativeDialogAPI_2 dialogImpl_2 = {
     OHOS::Ace::DialogModel::SetImmersiveMode,
 };
 
-ArkUI_NativeDialogAPI_3 dialogImpl_3 = {
-    dialogImpl_1,
-    dialogImpl_2,
-    OHOS::Ace::DialogModel::SetLevelOrder,
-    OHOS::Ace::DialogModel::RegisterOnWillAppear,
-    OHOS::Ace::DialogModel::RegisterOnDidAppear,
-    OHOS::Ace::DialogModel::RegisterOnWillDisappear,
-    OHOS::Ace::DialogModel::RegisterOnDidDisappear,
-    OHOS::Ace::DialogModel::SetBorderWidth,
-    OHOS::Ace::DialogModel::SetBorderColor,
-    OHOS::Ace::DialogModel::SetBorderStyle,
-    OHOS::Ace::DialogModel::SetWidth,
-    OHOS::Ace::DialogModel::SetHeight,
-    OHOS::Ace::DialogModel::SetShadow,
-    OHOS::Ace::DialogModel::SetCustomShadow,
-    OHOS::Ace::DialogModel::SetBackgroundBlurStyle,
-    OHOS::Ace::DialogModel::SetKeyboardAvoidMode,
-    OHOS::Ace::DialogModel::EnableHoverMode,
-    OHOS::Ace::DialogModel::SetHoverModeArea,
-    OHOS::Ace::DialogModel::SetFocusable,
-    OHOS::Ace::DialogModel::SetBackgroundBlurStyleOptions,
-    OHOS::Ace::DialogModel::SetBackgroundEffect,
-};
-
 constexpr int32_t CURRENT_NATIVE_GESTURE_API_VERSION = 1;
 ArkUI_NativeGestureAPI_1 gestureImpl_1 = {
     CURRENT_NATIVE_GESTURE_API_VERSION,
@@ -211,11 +141,6 @@ ArkUI_NativeGestureAPI_1 gestureImpl_1 = {
     OHOS::Ace::GestureModel::GetGestureType,
     OHOS::Ace::GestureModel::SetInnerGestureParallelTo,
     OHOS::Ace::GestureModel::CreateTapGestureWithDistanceThreshold,
-};
-
-ArkUI_NativeGestureAPI_2 gestureImpl_2 = {
-    &gestureImpl_1,
-    OHOS::Ace::GestureModel::SetGestureInterrupterToNodeWithUserData,  
 };
 
 ArkUI_NativeAnimateAPI_1 animateImpl_1 = {
@@ -254,13 +179,11 @@ void* OH_ArkUI_QueryModuleInterface(ArkUI_NativeAPIVariantKind type, int32_t ver
         }
         case ARKUI_NATIVE_DIALOG: {
             switch (version) {
-                case NATIVE_DIALOG_VERSION_0:
-                case NATIVE_DIALOG_VERSION_1:
+                case 0:
+                case 1:
                     return &dialogImpl_1;
-                case NATIVE_DIALOG_VERSION_2:
+                case 2:
                     return &dialogImpl_2;
-                case NATIVE_DIALOG_VERSION_3:
-                    return &dialogImpl_3;
                 default: {
                     TAG_LOGE(OHOS::Ace::AceLogTag::ACE_NATIVE_NODE,
                         "fail to get dialog api family, version is incorrect: %{public}d", version);
@@ -273,8 +196,6 @@ void* OH_ArkUI_QueryModuleInterface(ArkUI_NativeAPIVariantKind type, int32_t ver
                 case 0:
                 case 1:
                     return &gestureImpl_1;
-                case 2:
-                    return &gestureImpl_2;
                 default: {
                     TAG_LOGE(OHOS::Ace::AceLogTag::ACE_NATIVE_NODE,
                         "fail to get gesture api family, version is incorrect: %{public}d", version);
@@ -314,25 +235,16 @@ void* OH_ArkUI_QueryModuleInterfaceByName(ArkUI_NativeAPIVariantKind type, const
                 return &dialogImpl_1;
             } else if (strcmp(structName, "ArkUI_NativeDialogAPI_2") == 0) {
                 return &dialogImpl_2;
-            } else if (strcmp(structName, "ArkUI_NativeDialogAPI_3") == 0) {
-                return &dialogImpl_3;
             }
             break;
         case ARKUI_NATIVE_GESTURE:
             if (strcmp(structName, "ArkUI_NativeGestureAPI_1") == 0) {
                 return &gestureImpl_1;
-            } else if (strcmp(structName, "ArkUI_NativeGestureAPI_2") == 0) {
-                return &gestureImpl_2;
             }
             break;
         case ARKUI_NATIVE_ANIMATE:
             if (strcmp(structName, "ArkUI_NativeAnimateAPI_1") == 0) {
                 return &animateImpl_1;
-            }
-            break;
-        case ARKUI_MULTI_THREAD_NATIVE_NODE:
-            if (strcmp(structName, "ArkUI_NativeNodeAPI_1") == 0) {
-                return &multiThreadNodeImpl_1;
             }
             break;
         default:

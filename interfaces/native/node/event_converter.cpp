@@ -14,14 +14,19 @@
  */
 #include "node/event_converter.h"
 
+#include <cstdint>
+
+#include "native_node.h"
 #include "node/gesture_impl.h"
+#include "node/native_compatible.h"
 #include "node/node_model.h"
 #include "securec.h"
 
+#include "base/log/log_wrapper.h"
 #include "base/error/error_code.h"
 #include "core/event/touch_event.h"
+#include "core/interfaces/arkoala/arkoala_api.h"
 #include "interfaces/native/drag_and_drop.h"
-#include "interfaces/native/native_key_event.h"
 
 namespace OHOS::Ace::NodeModel {
 namespace {
@@ -37,7 +42,6 @@ constexpr int32_t ORIGIN_INPUT_EVENT_TOOL_TYPE_JOYSTICK = 10;
 constexpr int32_t ORIGIN_MOUSE_ACTION_PRESS = 1;
 constexpr int32_t ORIGIN_MOUSE_ACTION_RELEASE = 2;
 constexpr int32_t ORIGIN_MOUSE_ACTION_MOVE = 3;
-constexpr int32_t ORIGIN_MOUSE_ACTION_CANCEL = 13;
 constexpr int32_t ORIGIN_MOUSE_BUTTON_LEFT = 1;
 constexpr int32_t ORIGIN_MOUSE_BUTTON_RIGHT = 2;
 constexpr int32_t ORIGIN_MOUSE_BUTTON_MIDDLE = 4;
@@ -176,8 +180,6 @@ ArkUI_Int32 ConvertOriginEventType(ArkUI_NodeEventType type, int32_t nodeType)
             return ON_FOCUS;
         case NODE_ON_BLUR:
             return ON_BLUR;
-        case NODE_ON_SIZE_CHANGE:
-            return ON_SIZE_CHANGE;
         case NODE_TEXT_INPUT_ON_SUBMIT:
             return ON_TEXT_INPUT_SUBMIT;
         case NODE_REFRESH_STATE_CHANGE:
@@ -230,12 +232,6 @@ ArkUI_Int32 ConvertOriginEventType(ArkUI_NodeEventType type, int32_t nodeType)
             return ON_KEY_PREIME;
         case NODE_DISPATCH_KEY_EVENT:
             return ON_KEY_DISPATCH;
-        case NODE_ON_CLICK_EVENT:
-            return ON_CLICK_EVENT;
-        case NODE_ON_HOVER_EVENT:
-            return ON_HOVER_EVENT;
-        case NODE_VISIBLE_AREA_APPROXIMATE_CHANGE_EVENT:
-            return ON_VISIBLE_AREA_APPROXIMATE_CHANGE;
         case NODE_CHECKBOX_EVENT_ON_CHANGE:
             return ON_CHECKBOX_CHANGE;
         case NODE_SLIDER_EVENT_ON_CHANGE:
@@ -286,8 +282,6 @@ ArkUI_Int32 ConvertOriginEventType(ArkUI_NodeEventType type, int32_t nodeType)
             return ON_TEXT_AREA_DID_DELETE;
         case NODE_SWIPER_EVENT_ON_CHANGE:
             return ON_SWIPER_CHANGE;
-        case NODE_SWIPER_EVENT_ON_SELECTED:
-            return ON_SWIPER_SELECTED;
         case NODE_SWIPER_EVENT_ON_ANIMATION_START:
             return ON_SWIPER_ANIMATION_START;
         case NODE_SWIPER_EVENT_ON_ANIMATION_END:
@@ -320,14 +314,6 @@ ArkUI_Int32 ConvertOriginEventType(ArkUI_NodeEventType type, int32_t nodeType)
                 return ON_WATER_FLOW_REACH_END;
             }
             return ON_SCROLL_REACH_END;
-        case NODE_SCROLL_EVENT_ON_WILL_STOP_DRAGGING:
-            return ON_SCROLL_WILL_STOP_DRAGGING;
-        case NODE_SCROLL_EVENT_ON_DID_ZOOM:
-            return ON_SCROLL_DID_ZOOM;
-        case NODE_SCROLL_EVENT_ON_ZOOM_START:
-            return ON_SCROLL_ZOOM_START;
-        case NODE_SCROLL_EVENT_ON_ZOOM_STOP:
-            return ON_SCROLL_ZOOM_STOP;
         case NODE_WATER_FLOW_ON_DID_SCROLL:
             return ON_WATER_FLOW_DID_SCROLL;
         case NODE_LIST_ON_SCROLL_INDEX:
@@ -350,12 +336,8 @@ ArkUI_Int32 ConvertOriginEventType(ArkUI_NodeEventType type, int32_t nodeType)
             return ON_LIST_WILL_SCROLL;
         case NODE_SWIPER_EVENT_ON_CONTENT_DID_SCROLL:
             return ON_SWIPER_DID_CONTENT_SCROLL;
-        case NODE_SWIPER_EVENT_ON_UNSELECTED:
-            return ON_SWIPER_UNSELECTED;
         case NODE_SWIPER_EVENT_ON_CONTENT_WILL_SCROLL:
             return ON_SWIPER_CONTENT_WILL_SCROLL;
-        case NODE_SWIPER_EVENT_ON_SCROLL_STATE_CHANGED:
-            return ON_SWIPER_SCROLL_STATE_CHANGED;
         case NODE_ON_ACCESSIBILITY_ACTIONS:
             return ON_ACCESSIBILITY_ACTIONS;
         case NODE_REFRESH_ON_OFFSET_CHANGE:
@@ -378,14 +360,6 @@ ArkUI_Int32 ConvertOriginEventType(ArkUI_NodeEventType type, int32_t nodeType)
             return ON_TEXT_AREA_CHANGE_WITH_PREVIEW_TEXT;
         case NODE_CHECKBOX_GROUP_EVENT_ON_CHANGE:
             return ON_CHECKBOX_GROUP_CHANGE;
-        case NODE_ON_AXIS:
-            return ON_AXIS;
-        case NODE_TEXT_SPAN_ON_LONG_PRESS:
-            return ON_TEXT_SPAN_LONG_PRESS;
-        case NODE_TEXT_AREA_ON_WILL_CHANGE:
-            return ON_TEXT_AREA_WILL_CHANGE;
-        case NODE_TEXT_INPUT_ON_WILL_CHANGE:
-            return ON_TEXT_INPUT_WILL_CHANGE;
         default:
             return -1;
     }
@@ -414,8 +388,6 @@ ArkUI_Int32 ConvertToNodeEventType(ArkUIEventSubKind type)
             return NODE_EVENT_ON_DISAPPEAR;
         case ON_AREA_CHANGE:
             return NODE_EVENT_ON_AREA_CHANGE;
-        case ON_SIZE_CHANGE:
-            return NODE_ON_SIZE_CHANGE;
         case ON_TEXTAREA_CHANGE:
             return NODE_TEXT_AREA_ON_CHANGE;
         case ON_FOCUS:
@@ -472,14 +444,8 @@ ArkUI_Int32 ConvertToNodeEventType(ArkUIEventSubKind type)
             return NODE_ON_KEY_EVENT;
         case ON_KEY_PREIME:
             return NODE_ON_KEY_PRE_IME;
-        case ON_VISIBLE_AREA_APPROXIMATE_CHANGE:
-            return NODE_VISIBLE_AREA_APPROXIMATE_CHANGE_EVENT;
         case ON_KEY_DISPATCH:
             return NODE_DISPATCH_KEY_EVENT;
-        case ON_CLICK_EVENT:
-            return NODE_ON_CLICK_EVENT;
-        case ON_HOVER_EVENT:
-            return NODE_ON_HOVER_EVENT;
         case ON_CHECKBOX_CHANGE:
             return NODE_CHECKBOX_EVENT_ON_CHANGE;
         case ON_SLIDER_CHANGE:
@@ -530,8 +496,6 @@ ArkUI_Int32 ConvertToNodeEventType(ArkUIEventSubKind type)
             return NODE_TEXT_AREA_ON_DID_DELETE;
         case ON_SWIPER_CHANGE:
             return NODE_SWIPER_EVENT_ON_CHANGE;
-        case ON_SWIPER_SELECTED:
-            return NODE_SWIPER_EVENT_ON_SELECTED;
         case ON_SWIPER_ANIMATION_START:
             return NODE_SWIPER_EVENT_ON_ANIMATION_START;
         case ON_SWIPER_ANIMATION_END:
@@ -586,14 +550,6 @@ ArkUI_Int32 ConvertToNodeEventType(ArkUIEventSubKind type)
             return NODE_SCROLL_EVENT_ON_REACH_START;
         case ON_SCROLL_REACH_START:
             return NODE_SCROLL_EVENT_ON_REACH_START;
-        case ON_SCROLL_WILL_STOP_DRAGGING:
-            return NODE_SCROLL_EVENT_ON_WILL_STOP_DRAGGING;
-        case ON_SCROLL_DID_ZOOM:
-            return NODE_SCROLL_EVENT_ON_DID_ZOOM;
-        case ON_SCROLL_ZOOM_START:
-            return NODE_SCROLL_EVENT_ON_ZOOM_START;
-        case ON_SCROLL_ZOOM_STOP:
-            return NODE_SCROLL_EVENT_ON_ZOOM_STOP;
         case ON_LIST_REACH_START:
             return NODE_SCROLL_EVENT_ON_REACH_START;
         case ON_DETECT_RESULT_UPDATE:
@@ -606,12 +562,8 @@ ArkUI_Int32 ConvertToNodeEventType(ArkUIEventSubKind type)
             return NODE_RADIO_EVENT_ON_CHANGE;
         case ON_SWIPER_DID_CONTENT_SCROLL:
             return NODE_SWIPER_EVENT_ON_CONTENT_DID_SCROLL;
-        case ON_SWIPER_UNSELECTED:
-            return NODE_SWIPER_EVENT_ON_UNSELECTED;
         case ON_SWIPER_CONTENT_WILL_SCROLL:
             return NODE_SWIPER_EVENT_ON_CONTENT_WILL_SCROLL;
-        case ON_SWIPER_SCROLL_STATE_CHANGED:
-            return NODE_SWIPER_EVENT_ON_SCROLL_STATE_CHANGED;
         case ON_ACCESSIBILITY_ACTIONS:
             return NODE_ON_ACCESSIBILITY_ACTIONS;
         case ON_REFRESH_ON_OFFSET_CHANGE:
@@ -634,14 +586,6 @@ ArkUI_Int32 ConvertToNodeEventType(ArkUIEventSubKind type)
             return NODE_TEXT_AREA_ON_CHANGE_WITH_PREVIEW_TEXT;
         case ON_CHECKBOX_GROUP_CHANGE:
             return NODE_CHECKBOX_GROUP_EVENT_ON_CHANGE;
-        case ON_AXIS:
-            return NODE_ON_AXIS;
-        case ON_TEXT_SPAN_LONG_PRESS:
-            return NODE_TEXT_SPAN_ON_LONG_PRESS;
-        case ON_TEXT_AREA_WILL_CHANGE:
-            return NODE_TEXT_AREA_ON_WILL_CHANGE;
-        case ON_TEXT_INPUT_WILL_CHANGE:
-            return NODE_TEXT_INPUT_ON_WILL_CHANGE;
         default:
             return -1;
     }
@@ -718,33 +662,15 @@ bool ConvertEvent(ArkUINodeEvent* origin, ArkUI_NodeEvent* event)
             event->kind = ConvertToNodeEventType(subKind);
             return true;
         }
-        case FOCUS_AXIS_EVENT: {
-            event->category = static_cast<int32_t>(NODE_EVENT_CATEGORY_INPUT_EVENT);
-            ArkUIEventSubKind subKind = static_cast<ArkUIEventSubKind>(origin->focusAxisEvent.subKind);
-            event->kind = ConvertToNodeEventType(subKind);
-            return true;
-        }
         case TEXT_INPUT_CHANGE: {
             event->category = static_cast<int32_t>(NODE_EVENT_CATEGORY_STRING_ASYNC_EVENT);
             ArkUIEventSubKind subKind = static_cast<ArkUIEventSubKind>(origin->textChangeEvent.subKind);
             event->kind = ConvertToNodeEventType(subKind);
             return true;
         }
-        case AXIS_EVENT: {
+        case FOCUS_AXIS_EVENT: {
             event->category = static_cast<int32_t>(NODE_EVENT_CATEGORY_INPUT_EVENT);
-            ArkUIEventSubKind subKind = static_cast<ArkUIEventSubKind>(origin->axisEvent.subKind);
-            event->kind = ConvertToNodeEventType(subKind);
-            return true;
-        }
-        case CLICK_EVENT: {
-            event->category = static_cast<int32_t>(NODE_EVENT_CATEGORY_INPUT_EVENT);
-            ArkUIEventSubKind subKind = static_cast<ArkUIEventSubKind>(origin->clickEvent.subKind);
-            event->kind = ConvertToNodeEventType(subKind);
-            return true;
-        }
-        case HOVER_EVENT: {
-            event->category = static_cast<int32_t>(NODE_EVENT_CATEGORY_INPUT_EVENT);
-            ArkUIEventSubKind subKind = static_cast<ArkUIEventSubKind>(origin->hoverEvent.subKind);
+            ArkUIEventSubKind subKind = static_cast<ArkUIEventSubKind>(origin->focusAxisEvent.subKind);
             event->kind = ConvertToNodeEventType(subKind);
             return true;
         }
@@ -787,6 +713,23 @@ int32_t ConvertToCTouchActionType(int32_t originActionType)
     return -1;
 }
 
+int32_t ConvertToOriginTouchActionType(int32_t actionType)
+{
+    switch (actionType) {
+        case UI_TOUCH_EVENT_ACTION_DOWN:
+            return static_cast<int32_t>(ORIGIN_TOUCH_ACTION_DOWN);
+        case UI_TOUCH_EVENT_ACTION_UP:
+            return static_cast<int32_t>(ORIGIN_TOUCH_ACTION_UP);
+        case UI_TOUCH_EVENT_ACTION_MOVE:
+            return static_cast<int32_t>(ORIGIN_TOUCH_ACTION_MOVE);
+        case UI_TOUCH_EVENT_ACTION_CANCEL:
+            return static_cast<int32_t>(ORIGIN_TOUCH_ACTION_CANCEL);
+        default:
+            break;
+    }
+    return -1;
+}
+
 int32_t ConvertToCInputEventToolType(int32_t originSourceToolType)
 {
     switch (originSourceToolType) {
@@ -815,8 +758,6 @@ int32_t ConvertToCMouseActionType(int32_t originActionType)
             return static_cast<int32_t>(UI_MOUSE_EVENT_ACTION_RELEASE);
         case ORIGIN_MOUSE_ACTION_MOVE:
             return static_cast<int32_t>(UI_MOUSE_EVENT_ACTION_MOVE);
-        case ORIGIN_MOUSE_ACTION_CANCEL:
-            return static_cast<int32_t>(UI_MOUSE_EVENT_ACTION_CANCEL);
         default:
             break;
     }
@@ -859,23 +800,6 @@ int32_t ConvertToCAxisActionType(int32_t originActionType)
             break;
     }
     return static_cast<int32_t>(UI_AXIS_EVENT_ACTION_NONE);
-}
-
-int32_t ConvertToCKeyActionType(int32_t originActionType)
-{
-    switch (originActionType) {
-        case ORIGIN_TOUCH_ACTION_DOWN:
-            return static_cast<int32_t>(ARKUI_KEY_EVENT_DOWN);
-        case ORIGIN_TOUCH_ACTION_UP:
-            return static_cast<int32_t>(ARKUI_KEY_EVENT_UP);
-        case ORIGIN_TOUCH_ACTION_MOVE:
-            return static_cast<int32_t>(ARKUI_KEY_EVENT_UNKNOWN);
-        case ORIGIN_TOUCH_ACTION_CANCEL:
-            return static_cast<int32_t>(ARKUI_KEY_EVENT_UNKNOWN);
-        default:
-            break;
-    }
-    return -1;
 }
 
 bool ConvertEvent(ArkUINodeEvent* origin, ArkUI_CompatibleNodeEvent* event)
@@ -1056,15 +980,15 @@ int32_t OH_ArkUI_NodeEvent_GetStringValue(
     if (size <= 0) {
         return OHOS::Ace::ERROR_CODE_NATIVE_IMPL_NODE_EVENT_PARAM_INVALID;
     }
+    bool copyResult = false;
     if (strLen >= size) {
-        if (!strncpy_s(string[index], size, str, size - 1)) {
-            return OHOS::Ace::ERROR_CODE_NATIVE_IMPL_NODE_EVENT_PARAM_INVALID;
-        }
+        copyResult = strncpy_s(string[index], size, str, size - 1);
         string[index][size - 1] = '\0';
     } else {
-        if (!strcpy_s(string[index], size, str)) {
-            return OHOS::Ace::ERROR_CODE_NATIVE_IMPL_NODE_EVENT_PARAM_INVALID;
-        }
+        copyResult = strcpy_s(string[index], size, str);
+    }
+    if (!copyResult) {
+        return OHOS::Ace::ERROR_CODE_NATIVE_IMPL_NODE_EVENT_PARAM_INVALID;
     }
     return OHOS::Ace::ERROR_CODE_NO_ERROR;
 }

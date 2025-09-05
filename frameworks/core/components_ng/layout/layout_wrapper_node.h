@@ -48,7 +48,7 @@ class LayoutWrapperNode;
 using LazyBuildFunction = std::function<void(RefPtr<LayoutWrapperNode>)>;
 
 class ACE_EXPORT LayoutWrapperNode : public LayoutWrapper {
-    DECLARE_ACE_TYPE(LayoutWrapperNode, LayoutWrapper);
+    DECLARE_ACE_TYPE(LayoutWrapperNode, LayoutWrapper)
 public:
     LayoutWrapperNode(
         WeakPtr<FrameNode> hostNode, RefPtr<GeometryNode> geometryNode, RefPtr<LayoutProperty> layoutProperty);
@@ -172,9 +172,9 @@ public:
 
     bool SkipMeasureContent() const override;
 
-    bool ConstraintChanged() const
+    bool IsConstraintNoChanged() const
     {
-        return !isConstraintNotChanged_;
+        return isConstraintNotChanged_;
     }
 
     // dirty layoutBox mount to host and switch layoutBox.

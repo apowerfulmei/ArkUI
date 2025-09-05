@@ -16,7 +16,6 @@
 #ifndef FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_PATTERNS_NODE_CONTAINER_NODE_CONTAINER_NODE_H
 #define FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_PATTERNS_NODE_CONTAINER_NODE_CONTAINER_NODE_H
 
-#include "core/common/builder_util.h"
 #include "core/components_ng/base/frame_node.h"
 #include "core/components_ng/pattern/node_container/node_container_pattern.h"
 
@@ -29,7 +28,7 @@ public:
     NodeContainerNode(const std::string& tag, int32_t nodeId, const RefPtr<Pattern>& pattern)
         : FrameNode(tag, nodeId, pattern)
     {}
-    ~NodeContainerNode() override;
+    ~NodeContainerNode() override = default;
 
     static RefPtr<FrameNode> GetOrCreateNodeContainerNode(int32_t nodeId);
 

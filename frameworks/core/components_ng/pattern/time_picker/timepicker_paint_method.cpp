@@ -30,12 +30,11 @@ constexpr float DIVIDER_LINE_WIDTH = 1.0f;
 
 CanvasDrawFunction TimePickerPaintMethod::GetForegroundDrawFunction(PaintWrapper* paintWrapper)
 {
-    auto pipeline = PipelineContext::GetCurrentContextSafelyWithCheck();
+    auto pipeline = PipelineContext::GetCurrentContext();
     CHECK_NULL_RETURN(pipeline, nullptr);
     auto theme = pipeline->GetTheme<PickerTheme>();
-    CHECK_NULL_RETURN(theme, nullptr);
-    CHECK_EQUAL_RETURN(theme->IsCircleDial(), true, nullptr);
     auto dividerColor = theme->GetDividerColor();
+
     const auto& geometryNode = paintWrapper->GetGeometryNode();
     CHECK_NULL_RETURN(geometryNode, nullptr);
     auto frameRect = geometryNode->GetFrameRect();

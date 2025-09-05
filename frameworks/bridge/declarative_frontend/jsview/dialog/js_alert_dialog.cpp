@@ -19,12 +19,10 @@
 #include <vector>
 
 #include "base/log/ace_scoring_log.h"
-#include "bridge/declarative_frontend/engine/js_converter.h"
 #include "bridge/declarative_frontend/jsview/models/alert_dialog_model_impl.h"
 #include "core/common/container.h"
 #include "core/components_ng/base/view_stack_processor.h"
 #include "core/components_ng/pattern/dialog/alert_dialog_model_ng.h"
-#include "core/components_ng/pattern/overlay/level_order.h"
 #include "frameworks/bridge/common/utils/engine_helper.h"
 #include "frameworks/bridge/declarative_frontend/engine/functions/js_function.h"
 
@@ -236,6 +234,24 @@ void ParseDialogTitleAndMessage(DialogProperties& properties, JSRef<JSObject> ob
     }
 }
 
+void ParseTextStyle(DialogProperties& properties, JSRef<JSObject> obj)
+{
+    auto textStyleObj = obj->GetProperty("textStyle");
+    if (textStyleObj->IsNull() || !textStyleObj->IsObject()) {
+        return;
+    }
+    auto textStyle = JSRef<JSObject>::Cast(textStyleObj);
+    auto args = textStyle->GetProperty("wordBreak");
+    int32_t index = 1;
+    if (args->IsNumber()) {
+        index = args->ToNumber<int32_t>();
+    }
+    if (index < 0 || index >= static_cast<int32_t>(WORD_BREAK_TYPES.size())) {
+        index = 1;
+    }
+    properties.wordBreak = WORD_BREAK_TYPES[index];
+}
+
 void ParseAlertShadow(DialogProperties& properties, JSRef<JSObject> obj)
 {
     // Parse shadow.
@@ -260,15 +276,6 @@ void ParseAlertBorderWidthAndColor(DialogProperties& properties, JSRef<JSObject>
             borderColor.SetColor(Color::BLACK);
             properties.borderColor = borderColor;
         }
-    }
-}
-
-void ParseAlertRadius(DialogProperties& properties, JSRef<JSObject> obj)
-{
-    auto cornerRadiusValue = obj->GetProperty("cornerRadius");
-    NG::BorderRadiusProperty radius;
-    if (JSAlertDialog::ParseBorderRadius(cornerRadiusValue, radius)) {
-        properties.borderRadius = radius;
     }
 }
 
@@ -302,6 +309,15 @@ void UpdateAlertAlignment(DialogAlignment& alignment)
     }
 }
 
+void ParseAlertRadius(DialogProperties& properties, JSRef<JSObject> obj)
+{
+    auto cornerRadiusValue = obj->GetProperty("cornerRadius");
+    NG::BorderRadiusProperty radius;
+    if (JSAlertDialog::ParseBorderRadius(cornerRadiusValue, radius)) {
+        properties.borderRadius = radius;
+    }
+}
+
 void ParseAlertAlignment(DialogProperties& properties, JSRef<JSObject> obj)
 {
     // Parse alignment
@@ -332,24 +348,6 @@ void ParseAlertOffset(DialogProperties& properties, JSRef<JSObject> obj)
         Dimension offsetX = isRtl ? properties.offset.GetX() * (-1) : properties.offset.GetX();
         properties.offset.SetX(offsetX);
     }
-}
-
-void ParseTextStyle(DialogProperties& properties, JSRef<JSObject> obj)
-{
-    auto textStyleObj = obj->GetProperty("textStyle");
-    if (textStyleObj->IsNull() || !textStyleObj->IsObject()) {
-        return;
-    }
-    auto textStyle = JSRef<JSObject>::Cast(textStyleObj);
-    auto args = textStyle->GetProperty("wordBreak");
-    int32_t index = 1;
-    if (args->IsNumber()) {
-        index = args->ToNumber<int32_t>();
-    }
-    if (index < 0 || index >= static_cast<int32_t>(WORD_BREAK_TYPES.size())) {
-        index = 1;
-    }
-    properties.wordBreak = WORD_BREAK_TYPES[index];
 }
 
 void ParseAlertMaskRect(DialogProperties& properties, JSRef<JSObject> obj)
@@ -393,35 +391,6 @@ void ParseAlertDialogLevelMode(DialogProperties& properties, JSRef<JSObject> obj
     }
 }
 
-void ParseAlertLevelOrder(DialogProperties& properties, JSRef<JSObject> obj)
-{
-    if (properties.isShowInSubWindow) {
-        return;
-    }
-
-    auto levelOrderValue = obj->GetProperty("levelOrder");
-    if (!levelOrderValue->IsObject()) {
-        return;
-    }
-    napi_value levelOrderApi = JsConverter::ConvertJsValToNapiValue(levelOrderValue);
-    CHECK_NULL_VOID(levelOrderApi);
-
-    auto engine = EngineHelper::GetCurrentEngine();
-    CHECK_NULL_VOID(engine);
-    NativeEngine* nativeEngine = engine->GetNativeEngine();
-    CHECK_NULL_VOID(nativeEngine);
-    auto env = reinterpret_cast<napi_env>(nativeEngine);
-    NG::LevelOrder* levelOrder = nullptr;
-    napi_status status = napi_unwrap(env, levelOrderApi, reinterpret_cast<void**>(&levelOrder));
-    if (status != napi_ok || !levelOrder) {
-        LOGE("Failed to unwrap LevelOrder.");
-        return;
-    }
-
-    double order = levelOrder->GetOrder();
-    properties.levelOrder = std::make_optional(order);
-}
-
 void JSAlertDialog::Show(const JSCallbackInfo& args)
 {
     auto scopedDelegate = EngineHelper::GetCurrentDelegateSafely();
@@ -431,7 +400,7 @@ void JSAlertDialog::Show(const JSCallbackInfo& args)
         return;
     }
 
-    DialogProperties properties { .type = DialogType::ALERT_DIALOG, .isAlertDialog = true };
+    DialogProperties properties { .type = DialogType::ALERT_DIALOG };
     if (args[0]->IsObject()) {
         auto obj = JSRef<JSObject>::Cast(args[0]);
         auto dialogNode = AceType::WeakClaim(NG::ViewStackProcessor::GetInstance()->GetMainFrameNode());
@@ -439,12 +408,12 @@ void JSAlertDialog::Show(const JSCallbackInfo& args)
 
         ParseDialogTitleAndMessage(properties, obj);
         ParseButtons(execContext, properties, obj);
+        ParseTextStyle(properties, obj);
         ParseAlertShadow(properties, obj);
         ParseAlertBorderWidthAndColor(properties, obj);
         ParseAlertRadius(properties, obj);
         ParseAlertAlignment(properties, obj);
         ParseAlertOffset(properties, obj);
-        ParseTextStyle(properties, obj);
         ParseAlertMaskRect(properties, obj);
         ParseAlertDialogLevelMode(properties, obj);
 
@@ -499,11 +468,9 @@ void JSAlertDialog::Show(const JSCallbackInfo& args)
             AlertDialogModel::GetInstance()->SetOnCancel(eventFunc, properties);
         }
 
-        std::function<void(const int32_t& info, const int32_t& instanceId)> onWillDismissFunc = nullptr;
+        std::function<void(const int32_t& info)> onWillDismissFunc = nullptr;
         ParseDialogCallback(obj, onWillDismissFunc);
         AlertDialogModel::GetInstance()->SetOnWillDismiss(std::move(onWillDismissFunc), properties);
-
-        JSViewAbstract::ParseAppearDialogCallback(args, properties);
 
         // Parse showInSubWindowValue.
         auto showInSubWindowValue = obj->GetProperty("showInSubWindow");
@@ -528,6 +495,7 @@ void JSAlertDialog::Show(const JSCallbackInfo& args)
         if (JSViewAbstract::ParseJsColor(backgroundColorValue, backgroundColor)) {
             properties.backgroundColor = backgroundColor;
         }
+
         auto backgroundBlurStyle = obj->GetProperty("backgroundBlurStyle");
         if (backgroundBlurStyle->IsNumber()) {
             auto blurStyle = backgroundBlurStyle->ToNumber<int32_t>();
@@ -538,11 +506,8 @@ void JSAlertDialog::Show(const JSCallbackInfo& args)
         }
         // Parse transition.
         properties.transitionEffect = ParseJsTransitionEffect(args);
-        ParseAlertLevelOrder(properties, obj);
         JSViewAbstract::SetDialogProperties(obj, properties);
         JSViewAbstract::SetDialogHoverModeProperties(obj, properties);
-        JSViewAbstract::SetDialogBlurStyleOption(obj, properties);
-        JSViewAbstract::SetDialogEffectOption(obj, properties);
         AlertDialogModel::GetInstance()->SetShowDialog(properties);
     }
 }

@@ -15,7 +15,9 @@
 
 #include "cj_measure_ffi.h"
 
+#include <malloc.h>
 
+#include "bridge/cj_frontend/interfaces/cj_ffi/utils.h"
 #include "bridge/cj_frontend/frontend/cj_frontend_abstract.h"
 
 using namespace OHOS::Ace;
@@ -48,8 +50,7 @@ std::vector<TextCase> TEXTCASE = {
 std::vector<WordBreak> WORDBREAK = {
     WordBreak::NORMAL,
     WordBreak::BREAK_ALL,
-    WordBreak::BREAK_WORD,
-    WordBreak::HYPHENATION
+    WordBreak::BREAK_WORD
 };
 
 MeasureContext FromCJCreateMeasureContext(CJMeasureContextToC context)
@@ -116,19 +117,29 @@ MeasureContext FromCJCreateMeasureContext(CJMeasureContextToC context)
 extern "C" {
 double FfiMeasureText(const CJMeasureContextToC cjcontext)
 {
+    auto frontend = AceType::DynamicCast<CJFrontendAbstract>(Utils::GetCurrentFrontend());
+    if (!frontend) {
+        LOGE("Can not get frontend.");
+        return 0.0;
+    }
     MeasureContext context = FromCJCreateMeasureContext(cjcontext);
 
-    return MeasureUtil::MeasureText(context);
+    return frontend->MeasureText(context);
 }
 
 CJSize FfiMeasureTextSize(const CJMeasureContextToC cjcontext)
 {
+    auto frontend = AceType::DynamicCast<CJFrontendAbstract>(Utils::GetCurrentFrontend());
     CJSize thisSize;
     thisSize.height = 0.0;
     thisSize.width = 0.0;
+    if (!frontend) {
+        LOGE("Can not get frontend.");
+        return thisSize;
+    }
 
     MeasureContext measureContext = FromCJCreateMeasureContext(cjcontext);
-    auto size = MeasureUtil::MeasureTextSize(measureContext);
+    auto size = frontend->MeasureTextSize(measureContext);
     thisSize.height = size.Height();
     thisSize.width = size.Width();
     return thisSize;

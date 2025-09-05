@@ -15,6 +15,8 @@
 
 #include "core/components_ng/event/response_ctrl.h"
 
+#include "base/log/log.h"
+#include "base/log/log_wrapper.h"
 #include "core/components_ng/base/frame_node.h"
 
 namespace OHOS::Ace::NG {

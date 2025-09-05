@@ -15,6 +15,17 @@
 
 #include "core/components_ng/gestures/recognizers/sequenced_recognizer.h"
 
+#include <iterator>
+#include <vector>
+
+#include "base/memory/referenced.h"
+#include "base/thread/task_executor.h"
+#include "base/utils/utils.h"
+#include "core/components_ng/gestures/gesture_referee.h"
+#include "core/components_ng/gestures/recognizers/gesture_recognizer.h"
+#include "core/components_ng/gestures/recognizers/multi_fingers_recognizer.h"
+#include "core/components_ng/gestures/recognizers/recognizer_group.h"
+#include "core/event/touch_event.h"
 #include "core/pipeline_ng/pipeline_context.h"
 
 namespace OHOS::Ace::NG {
@@ -38,17 +49,6 @@ void SequencedRecognizer::OnAccepted()
     }
 }
 
-void SequencedRecognizer::SendCallbackMsg(const std::unique_ptr<GestureEventFunc>& callback)
-{
-    if (gestureInfo_ && gestureInfo_->GetDisposeTag()) {
-        return;
-    }
-    if (callback && *callback) {
-        GestureEvent info;
-        (*callback)(info);
-    }
-}
-
 void SequencedRecognizer::OnRejected()
 {
     refereeState_ = RefereeState::FAIL;
@@ -69,7 +69,7 @@ void SequencedRecognizer::OnRejected()
     }
 
     if (currentIndex_ != -1) {
-        SendCallbackMsg(onActionCancel_);
+        SendCancelMsg();
     }
 }
 
@@ -198,6 +198,8 @@ bool SequencedRecognizer::HandleEvent(const TouchEvent& point)
     if (point.type == TouchType::DOWN || point.type == TouchType::UP) {
         inputEventType_ = point.sourceType == SourceType::TOUCH ? InputEventType::TOUCH_SCREEN :
             InputEventType::MOUSE_BUTTON;
+        TAG_LOGI(AceLogTag::ACE_INPUTKEYFLOW, "Id:%{public}d, sequenced %{public}d type: %{public}d",
+            point.touchEventId, point.id, static_cast<int32_t>(point.type));
     }
     auto iter = recognizers_.begin();
     std::advance(iter, currentIndex_);
@@ -267,7 +269,6 @@ bool SequencedRecognizer::HandleEvent(const AxisEvent& point)
     }
     if (point.action != AxisAction::NONE) {
         curRecognizer->HandleEvent(point);
-        AddGestureProcedure(point, curRecognizer);
     }
 
     if ((point.action == AxisAction::END) && (refereeState_ == RefereeState::PENDING) &&
@@ -390,7 +391,7 @@ void SequencedRecognizer::OnResetStatus()
 
 void SequencedRecognizer::DeadlineTimer()
 {
-    auto context = PipelineContext::GetCurrentContextSafelyWithCheck();
+    auto context = PipelineContext::GetCurrentContext();
     CHECK_NULL_VOID(context);
 
     auto callback = [weakPtr = AceType::WeakClaim(this)]() {
@@ -446,9 +447,8 @@ bool SequencedRecognizer::ReconcileFrom(const RefPtr<NGGestureRecognizer>& recog
 void SequencedRecognizer::CleanRecognizerState()
 {
     for (const auto& child : recognizers_) {
-        auto childRecognizer = AceType::DynamicCast<MultiFingersRecognizer>(child);
-        if (childRecognizer && childRecognizer->GetTouchPointsSize() <= 1) {
-            childRecognizer->CleanRecognizerState();
+        if (child) {
+            child->CleanRecognizerState();
         }
     }
     if ((refereeState_ == RefereeState::SUCCEED ||
@@ -473,26 +473,4 @@ void SequencedRecognizer::ForceCleanRecognizer()
     currentIndex_ = 0;
     childTouchTestList_.clear();
 }
-
-void SequencedRecognizer::CheckAndSetRecognizerCleanFlag(const RefPtr<NGGestureRecognizer>& recognizer)
-{
-    if (currentIndex_ == static_cast<int32_t>(recognizers_.size() - 1)) {
-        SetIsNeedResetRecognizer(true);
-    }
-}
-
-void SequencedRecognizer::CleanRecognizerStateVoluntarily()
-{
-    for (const auto& child : recognizers_) {
-        if (child && AceType::InstanceOf<RecognizerGroup>(child)) {
-            child->CleanRecognizerStateVoluntarily();
-        }
-    }
-    if (IsNeedResetRecognizerState()) {
-        currentIndex_ = 0;
-        refereeState_ = RefereeState::READY;
-        SetIsNeedResetRecognizer(false);
-    }
-}
-
 } // namespace OHOS::Ace::NG

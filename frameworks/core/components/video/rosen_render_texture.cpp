@@ -19,13 +19,16 @@
 #include "include/core/SkCanvas.h"
 #include "include/core/SkColor.h"
 #endif
+#include "core/components/common/layout/constants.h"
 #ifdef ENABLE_ROSEN_BACKEND
-#include "core/pipeline/base/rs_node_adapter.h"
 #include "render_service_client/core/ui/rs_surface_node.h"
-#include "render_service_client/core/ui/rs_ui_director.h"
 #endif
 
+#include "base/log/ace_trace.h"
 #include "base/log/dump_log.h"
+#include "base/log/log.h"
+#include "base/utils/system_properties.h"
+#include "core/components/display/render_display.h"
 #include "core/pipeline/base/rosen_render_context.h"
 
 namespace OHOS::Ace {
@@ -169,10 +172,7 @@ void RosenRenderTexture::DumpTree(int32_t depth)
 std::shared_ptr<RSNode> RosenRenderTexture::CreateRSNode() const
 {
     struct Rosen::RSSurfaceNodeConfig surfaceNodeConfig = {.SurfaceNodeName = "RosenRenderTexture"};
-    if (!SystemProperties::GetMultiInstanceEnabled()) {
-        return OHOS::Rosen::RSSurfaceNode::Create(surfaceNodeConfig, false);
-    }
-    return RsNodeAdapter::CreateSurfaceNode(surfaceNodeConfig);
+    return OHOS::Rosen::RSSurfaceNode::Create(surfaceNodeConfig, false);
 }
 
 #ifdef OHOS_STANDARD_SYSTEM

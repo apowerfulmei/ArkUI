@@ -21,10 +21,11 @@
 #define protected public
 #undef SECURITY_COMPONENT_ENABLE
 
-#include "test/mock/base/mock_pixel_map.h"
+#include "test/mock/base/mock_drag_window.h"
 #include "test/mock/base/mock_task_executor.h"
-#include "test/mock/core/common/mock_udmf.h"
 #include "test/mock/core/pipeline/mock_pipeline_context.h"
+#include "test/mock/core/common/mock_interaction_interface.h"
+#include "test/mock/core/common/mock_udmf.h"
 
 #include "base/geometry/axis.h"
 #include "base/geometry/ng/offset_t.h"
@@ -42,6 +43,9 @@
 #include "core/components_ng/pattern/pattern.h"
 #include "core/components_v2/inspector/inspector_constants.h"
 #include "frameworks/core/common/event_manager.h"
+#include "frameworks/core/components_ng/pattern/text/text_pattern.h"
+#include "core/components_ng/pattern/grid/grid_item_pattern.h"
+#include "core/components_ng/pattern/grid/grid_pattern.h"
 #include "frameworks/core/components_ng/pattern/text_drag/text_drag_base.h"
 
 namespace OHOS::Ace::NG {
@@ -65,46 +69,9 @@ RefPtr<MockTaskExecutor> MOCK_TASK_EXECUTOR;
 constexpr float DRAG_DISTANCE = 10.5f;
 const PanDirection DRAG_DIRECTION = { PanDirection::LEFT };
 constexpr int32_t FINGERS_NUMBER = 2;
-constexpr int32_t PARALLEL_INDEX_1 = 2;
-constexpr int32_t PARALLEL_INDEX_2 = 0;
-constexpr float PREVIEW_DOWN_SCALE = 0.8f;
-constexpr float PREVIEW_UP_SCALE = 1.2f;
-constexpr float EXPECT_SCALE = 1.0f;
-constexpr float PREVIEW_NEGA_SCALE = -1.0f;
-constexpr int32_t PIXELMAP_WIDTH_LARGE = 200;
-constexpr int32_t PIXELMAP_WIDTH = 100;
-constexpr int32_t PIXELMAP_HEIGHT = 200;
-constexpr int32_t INSTANCE_ID = 123;
-constexpr float SIZE_X = 100.0f;
-constexpr float SIZE_Y = 100.0f;
-constexpr float INIT_MOVE_X = 50.0f;
-constexpr float INIT_MOVE_Y = 50.0f;
-constexpr float LAST_MOVE_X = 30.0f;
-constexpr float LAST_MOVE_Y = 30.0f;
-constexpr float TOTAL_MOVE_X = 20.0f;
-constexpr float TOTAL_MOVE_Y = 20.0f;
-constexpr float SIZE_ZERO = 0.0f;
-constexpr float DEFAULT_SCALE = 1.0f;
-constexpr float FRAME_OFFSET_X = 30.0f;
-constexpr float FRAME_OFFSET_Y = 40.0f;
-constexpr float FRAME_WIDTH = 30.0f;
-constexpr float FRAME_HEIGHT = 60.0f;
-constexpr float MOVE_OFFSET_X = 10.0f;
-constexpr float MOVE_OFFSET_Y = 10.0f;
-constexpr float GESTURE_GLOBAL_X = 10.0f;
-constexpr float GESTURE_GLOBAL_Y = 20.0f;
-constexpr float INNER_OFFSET_X = 5.0f;
-constexpr float INNER_OFFSET_Y = 10.0f;
-constexpr float DRAG_OFFSET_X = 40.0f;
-constexpr float DRAG_OFFSET_Y = 40.0f;
 } // namespace
 
 class GestureEventHubTestNg : public testing::Test {
-public:
-    static void SetUpTestSuite();
-    static void TearDownTestSuite();
-};
-class GestureEventHubTestCoverageNg : public testing::Test {
 public:
     static void SetUpTestSuite();
     static void TearDownTestSuite();

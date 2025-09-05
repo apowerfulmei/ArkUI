@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024-2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -114,77 +114,6 @@ HWTEST_F(GridIrregularFillerTest, FindNextItem001, TestSize.Level1)
 }
 
 /**
- * @tc.name: IrregularFiller::FindNextItem002
- * @tc.desc: Test IrregularFiller::FindNextItem
- * @tc.type: FUNC
- */
-HWTEST_F(GridIrregularFillerTest, FindNextItem002, TestSize.Level1)
-{
-    // 0 | 1 | 2 | 3 | 4
-    // 0 | 5 | 2 | 3 | 4
-    // 7 | 5 | 6 | 6 | 8
-    // 7 | 9 | 6 | 6 | 8
-    GridLayoutInfo info;
-    info.crossCount_ = 5;
-
-    info.gridMatrix_[0][0] = 0;
-    info.gridMatrix_[0][1] = 1;
-    info.gridMatrix_[0][2] = 2;
-    info.gridMatrix_[0][3] = 3;
-    info.gridMatrix_[0][4] = 4;
-
-    info.gridMatrix_[1][0] = 0;
-    info.gridMatrix_[1][1] = 5;
-    info.gridMatrix_[1][2] = -2;
-    info.gridMatrix_[1][3] = -3;
-    info.gridMatrix_[1][4] = -4;
-
-    info.gridMatrix_[2][0] = 7;
-    info.gridMatrix_[2][1] = -5;
-    info.gridMatrix_[2][2] = 6;
-    info.gridMatrix_[2][3] = -6;
-    info.gridMatrix_[2][4] = 8;
-
-    info.gridMatrix_[3][0] = -7;
-    info.gridMatrix_[3][1] = 9;
-    info.gridMatrix_[3][2] = -6;
-    info.gridMatrix_[3][3] = -6;
-    info.gridMatrix_[3][4] = -8;
-    {
-        GridIrregularFiller filler(&info, nullptr);
-
-        EXPECT_TRUE(filler.FindNextItem(0));
-
-        EXPECT_TRUE(filler.FindNextItem(1));
-
-        EXPECT_TRUE(filler.FindNextItem(2));
-
-        EXPECT_TRUE(filler.FindNextItem(3));
-
-        EXPECT_TRUE(filler.FindNextItem(4));
-
-        EXPECT_TRUE(filler.FindNextItem(5));
-        EXPECT_EQ(filler.posX_, 1);
-        EXPECT_EQ(filler.posY_, 1);
-
-        EXPECT_TRUE(filler.FindNextItem(6));
-        EXPECT_EQ(filler.posX_, 2);
-        EXPECT_EQ(filler.posY_, 2);
-
-        // Find item index at position before last item
-        EXPECT_TRUE(filler.FindNextItem(7));
-        EXPECT_EQ(filler.posX_, 0);
-        EXPECT_EQ(filler.posY_, 2);
-
-        EXPECT_TRUE(filler.FindNextItem(8));
-        EXPECT_EQ(filler.posX_, 4);
-        EXPECT_EQ(filler.posY_, 2);
-
-        EXPECT_TRUE(filler.FindNextItem(9));
-    }
-}
-
-/**
  * @tc.name: IrregularFiller::UpdateLength001
  * @tc.desc: Test IrregularFiller::UpdateLength
  * @tc.type: FUNC
@@ -241,7 +170,7 @@ HWTEST_F(GridIrregularFillerTest, FillOne001, TestSize.Level1)
     GridModelNG model = CreateGrid();
     model.SetColumnsTemplate("1fr 1fr");
     model.SetLayoutOptions(option);
-    CreateDone();
+    CreateDone(frameNode_);
 
     GridLayoutInfo info;
     info.crossCount_ = 2;
@@ -280,7 +209,7 @@ HWTEST_F(GridIrregularFillerTest, FillOne002, TestSize.Level1)
     GridModelNG model = CreateGrid();
     model.SetColumnsTemplate("1fr 1fr 1fr");
     model.SetLayoutOptions(GetOptionDemo10());
-    CreateDone();
+    CreateDone(frameNode_);
 
     GridLayoutInfo info;
     info.crossCount_ = 3;
@@ -310,7 +239,7 @@ HWTEST_F(GridIrregularFillerTest, MeasureItem001, TestSize.Level1)
     model.SetColumnsTemplate("1fr 1fr 1fr 1fr");
     model.SetLayoutOptions(option);
     CreateFixedItems(10);
-    CreateDone();
+    CreateDone(frameNode_);
 
     GridLayoutInfo info;
     info.crossCount_ = 4;
@@ -348,7 +277,7 @@ HWTEST_F(GridIrregularFillerTest, MeasureItem002, TestSize.Level1)
     model.SetColumnsTemplate("1fr 1fr 1fr 1fr");
     model.SetLayoutOptions(option);
     CreateFixedItems(10);
-    CreateDone();
+    CreateDone(frameNode_);
 
     GridLayoutInfo info;
     info.crossCount_ = 4;
@@ -382,8 +311,8 @@ HWTEST_F(GridIrregularFillerTest, Fill001, TestSize.Level1)
     GridModelNG model = CreateGrid();
     model.SetColumnsTemplate("1fr 1fr 1fr");
     model.SetLayoutOptions(GetOptionDemo9());
-    CreateGridItems(10, ITEM_MAIN_SIZE, NULL_VALUE, GridItemStyle::NONE);
-    CreateDone();
+    CreateGridItems(10, ITEM_WIDTH, NULL_VALUE, GridItemStyle::NONE);
+    CreateDone(frameNode_);
 
     GridLayoutInfo info;
     info.crossCount_ = 3;
@@ -410,8 +339,8 @@ HWTEST_F(GridIrregularFillerTest, Fill002, TestSize.Level1)
     GridModelNG model = CreateGrid();
     model.SetColumnsTemplate("1fr 1fr 1fr");
     model.SetLayoutOptions(GetOptionDemo11());
-    CreateGridItems(10, ITEM_MAIN_SIZE, NULL_VALUE, GridItemStyle::NONE);
-    CreateDone();
+    CreateGridItems(10, ITEM_WIDTH, NULL_VALUE, GridItemStyle::NONE);
+    CreateDone(frameNode_);
 
     GridLayoutInfo info;
     info.crossCount_ = 3;
@@ -446,12 +375,10 @@ HWTEST_F(GridIrregularFillerTest, Fill002, TestSize.Level1)
 HWTEST_F(GridIrregularFillerTest, Fill003, TestSize.Level1)
 {
     GridModelNG model = CreateGrid();
-    ViewAbstract::SetWidth(CalcLength(480.0f));
-    ViewAbstract::SetHeight(CalcLength(800.f));
     model.SetColumnsTemplate("1fr 1fr");
     model.SetLayoutOptions(GetOptionDemo5());
-    CreateGridItems(11, 120.0f, 200.0f);
-    CreateDone();
+    CreateFixedItems(11);
+    CreateDone(frameNode_);
 
     GridLayoutInfo info;
     info.crossCount_ = 2;
@@ -489,12 +416,10 @@ HWTEST_F(GridIrregularFillerTest, Fill003, TestSize.Level1)
 HWTEST_F(GridIrregularFillerTest, Fill004, TestSize.Level1)
 {
     GridModelNG model = CreateGrid();
-    ViewAbstract::SetWidth(CalcLength(480.0f));
-    ViewAbstract::SetHeight(CalcLength(800.f));
     model.SetLayoutOptions(GetOptionDemo2());
-    CreateGridItems(8, 120.0f, 200.0f);
+    CreateFixedItems(8);
     model.SetColumnsTemplate("1fr 1fr 1fr");
-    CreateDone();
+    CreateDone(frameNode_);
 
     GridLayoutInfo info;
     info.crossCount_ = 3;
@@ -527,12 +452,10 @@ HWTEST_F(GridIrregularFillerTest, Fill004, TestSize.Level1)
 HWTEST_F(GridIrregularFillerTest, Fill005, TestSize.Level1)
 {
     GridModelNG model = CreateGrid();
-    ViewAbstract::SetWidth(CalcLength(480.0f));
-    ViewAbstract::SetHeight(CalcLength(800.f));
     model.SetLayoutOptions(GetOptionDemo10());
-    CreateGridItems(8, 120.0f, 200.0f);
+    CreateFixedItems(8);
     model.SetColumnsTemplate("1fr 1fr 1fr");
-    CreateDone();
+    CreateDone(frameNode_);
 
     GridLayoutInfo info;
     info.crossCount_ = 3;
@@ -569,7 +492,7 @@ HWTEST_F(GridIrregularFillerTest, FillMatrixOnly001, TestSize.Level1)
     model.SetColumnsTemplate("1fr 1fr 1fr");
     model.SetLayoutOptions(GetOptionDemo8());
     CreateFixedItems(7);
-    CreateDone();
+    CreateDone(frameNode_);
 
     GridLayoutInfo info;
     info.crossCount_ = 3;
@@ -598,8 +521,8 @@ HWTEST_F(GridIrregularFillerTest, MeasureBackward001, TestSize.Level1)
     GridModelNG model = CreateGrid();
     model.SetColumnsTemplate("1fr 1fr 1fr");
     model.SetLayoutOptions(GetOptionDemo8());
-    CreateGridItems(10, ITEM_MAIN_SIZE, NULL_VALUE, GridItemStyle::NONE);
-    CreateDone();
+    CreateGridItems(10, ITEM_WIDTH, NULL_VALUE, GridItemStyle::NONE);
+    CreateDone(frameNode_);
 
     GridIrregularFiller filler(&info, AceType::RawPtr(frameNode_));
     float len = filler.MeasureBackward({ { 50.0f, 50.0f, 50.0f }, 5.0f, 5.0f }, 1000.0f, 5);
@@ -619,7 +542,7 @@ HWTEST_F(GridIrregularFillerTest, FillMatrixByLine001, TestSize.Level1)
     model.SetColumnsTemplate("1fr 1fr 1fr");
     model.SetLayoutOptions(GetOptionDemo2());
     CreateFixedItems(8);
-    CreateDone();
+    CreateDone(frameNode_);
 
     GridLayoutInfo info;
     info.crossCount_ = 3;
@@ -659,7 +582,7 @@ HWTEST_F(GridIrregularFillerTest, FillMatrixByLine002, TestSize.Level1)
     model.SetColumnsTemplate("1fr 1fr");
     model.SetLayoutOptions(GetOptionDemo5());
     CreateFixedItems(11);
-    CreateDone();
+    CreateDone(frameNode_);
 
     GridLayoutInfo info;
     info.crossCount_ = 2;
@@ -681,34 +604,5 @@ HWTEST_F(GridIrregularFillerTest, FillMatrixByLine002, TestSize.Level1)
     idx = filler.FillMatrixByLine(5, 13);
     EXPECT_EQ(idx, 10);
     EXPECT_EQ(info.gridMatrix_, MATRIX_DEMO_5);
-}
-
-/**
- * @tc.name: GridIrregularFiller::FillToTarget
- * @tc.desc: Test GridIrregularFiller::FillToTarget with illegal startLine
- * @tc.type: FUNC
- */
-HWTEST_F(GridIrregularFillerTest, FillToTarget001, TestSize.Level1)
-{
-    GridModelNG model = CreateGrid();
-    model.SetColumnsTemplate("1fr 1fr");
-    model.SetLayoutOptions(GetOptionDemo5());
-    CreateFixedItems(11);
-    CreateDone();
-
-    GridIrregularFiller::FillParameters params {
-        .crossLens = { 120.0f, 120.0f }, .crossGap = 0.0f, .mainGap = 0.0f
-    };
-
-    GridLayoutInfo info;
-    info.crossCount_ = 2;
-    info.childrenCount_ = 11;
-    info.gridMatrix_ = {};
-
-    GridIrregularFiller filler(&info, AceType::RawPtr(frameNode_));
-    filler.FillToTarget(params, 5, -1);
-    auto iter = info.gridMatrix_.begin();
-    EXPECT_NE(iter, info.gridMatrix_.end());
-    EXPECT_EQ(iter->first, 0);
 }
 } // namespace OHOS::Ace::NG

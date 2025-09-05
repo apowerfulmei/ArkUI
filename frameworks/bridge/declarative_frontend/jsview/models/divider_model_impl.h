@@ -27,7 +27,6 @@ public:
     void DividerColor(const Color& value) override;
     void StrokeWidth(const Dimension& value) override;
     void LineCap(const enum LineCap& value) override;
-    void ResetDividerColor() override {};
 };
 
 } // namespace OHOS::Ace::Framework

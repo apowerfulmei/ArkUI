@@ -15,6 +15,8 @@
 
 #include "core/components_v2/grid_layout/render_grid_col.h"
 
+#include "base/memory/ace_type.h"
+#include "core/components/common/layout/layout_param.h"
 #include "core/components_v2/grid_layout/grid_col_component.h"
 
 namespace OHOS::Ace::V2 {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022-2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -14,23 +14,13 @@
  */
 #include "core/components_ng/render/adapter/rosen_modifier_adapter.h"
 
-#include "interfaces/inner_api/ace_kit/src/view/draw/modifier_adapter.h"
-#include "ui/view/draw/content_modifier.h"
-
-#include "core/animation/native_curve_helper.h"
 #include "core/components_ng/animation/animatable_arithmetic_proxy.h"
+#include "core/animation/native_curve_helper.h"
 
 namespace OHOS::Ace::NG {
 
 std::unordered_map<int32_t, std::shared_ptr<RSModifier>> g_ModifiersMap;
 std::mutex g_ModifiersMapLock;
-
-std::shared_ptr<RSModifier> ConvertKitContentModifier(const RefPtr<Kit::Modifier>& modifier)
-{
-    auto kitModifier = AceType::DynamicCast<Kit::ContentModifier>(modifier);
-    CHECK_NULL_RETURN(kitModifier, nullptr);
-    return kitModifier->GetRSModifier();
-}
 
 std::shared_ptr<RSModifier> ConvertContentModifier(const RefPtr<Modifier>& modifier)
 {
@@ -80,10 +70,19 @@ void ModifierAdapter::RemoveModifier(int32_t modifierId)
 void ContentModifierAdapter::Draw(RSDrawingContext& context) const
 {
     // use dummy deleter avoid delete the SkCanvas by shared_ptr, its owned by context
+#ifndef USE_ROSEN_DRAWING
+    std::shared_ptr<SkCanvas> skCanvas { context.canvas, [](SkCanvas*) {} };
+    RSCanvas canvas(&skCanvas);
+#else
     CHECK_NULL_VOID(context.canvas);
+#endif
     auto modifier = modifier_.Upgrade();
     CHECK_NULL_VOID(modifier);
+#ifndef USE_ROSEN_DRAWING
+    DrawingContext context_ = { canvas, context.width, context.height };
+#else
     DrawingContext context_ = { *context.canvas, context.width, context.height };
+#endif
     modifier->Draw(context_);
 }
 
@@ -92,8 +91,7 @@ void ContentModifierAdapter::Draw(RSDrawingContext& context) const
         auto castProp = AceType::DynamicCast<srcType>(prop);                       \
         auto rsProp = std::make_shared<RSProperty<propType>>(castProp->Get());     \
         castProp->SetUpCallbacks([rsProp]() -> propType { return rsProp->Get(); }, \
-            [rsProp](const propType& value) { rsProp->Set(value); },               \
-            [rsProp]() -> propType { return rsProp->Get(); });                     \
+            [rsProp](const propType& value) { rsProp->Set(value); });              \
         return rsProp;                                                             \
     }
 
@@ -119,15 +117,12 @@ inline std::shared_ptr<RSPropertyBase> ConvertToRSProperty(const RefPtr<Property
     CONVERT_PROP(property, PropertyString, std::string);
     CONVERT_PROP(property, PropertyColor, Color);
     CONVERT_PROP(property, PropertyRectF, RectF);
-    CONVERT_PROP(property, PropertyVectorFloat, LinearVector<float>);
-    CONVERT_PROP(property, PropertyCanvasImageModifierWrapper, CanvasImageModifierWrapper);
     CONVERT_ANIMATABLE_PROP(property, AnimatablePropertyOffsetF, OffsetF);
     CONVERT_ANIMATABLE_PROP(property, AnimatablePropertyUint8, uint8_t);
     CONVERT_ANIMATABLE_PROP(property, AnimatablePropertyFloat, float);
     CONVERT_ANIMATABLE_PROP(property, AnimatablePropertyColor, LinearColor);
     CONVERT_ANIMATABLE_PROP(property, AnimatablePropertyVectorColor, GradientArithmetic);
     CONVERT_ANIMATABLE_PROP(property, AnimatablePropertyVectorFloat, LinearVector<float>);
-    CONVERT_ANIMATABLE_PROP(property, AnimatablePropertyVectorLinearVector, LinearVector<LinearColor>);
     CONVERT_ANIMATABLE_PROP(property, AnimatablePropertySizeF, SizeF);
 
     if (AceType::InstanceOf<AnimatableArithmeticProperty>(property)) {
@@ -144,12 +139,15 @@ inline std::shared_ptr<RSPropertyBase> ConvertToRSProperty(const RefPtr<Property
         };
         castProp->SetUpCallbacks(getter, setter);
         if (castProp->GetUpdateCallback()) {
-            rsProp->SetUpdateCallback([cb = castProp->GetUpdateCallback()](
-                                          const AnimatableArithmeticProxy& value) { cb(value.GetObject()); });
+            rsProp->SetUpdateCallback(
+                [cb = castProp->GetUpdateCallback()](const AnimatableArithmeticProxy& value) {
+                    cb(value.GetObject());
+                });
         }
         return rsProp;
     }
 
+    LOGE("ConvertToRSProperty failed!");
     return nullptr;
 }
 
@@ -168,10 +166,19 @@ void ContentModifierAdapter::AttachProperties()
 void OverlayModifierAdapter::Draw(RSDrawingContext& context) const
 {
     // use dummy deleter avoid delete the SkCanvas by shared_ptr, its owned by context
+#ifndef USE_ROSEN_DRAWING
+    std::shared_ptr<SkCanvas> skCanvas { context.canvas, [](SkCanvas*) {} };
+    RSCanvas canvas(&skCanvas);
+#else
     CHECK_NULL_VOID(context.canvas);
+#endif
     auto modifier = modifier_.Upgrade();
     CHECK_NULL_VOID(modifier);
+#ifndef USE_ROSEN_DRAWING
+    DrawingContext context_ = { canvas, context.width, context.height };
+#else
     DrawingContext context_ = { *context.canvas, context.width, context.height };
+#endif
     modifier->Draw(context_);
 }
 
@@ -190,10 +197,19 @@ void OverlayModifierAdapter::AttachProperties()
 void ForegroundModifierAdapter::Draw(RSDrawingContext& context) const
 {
     // use dummy deleter avoid delete the SkCanvas by shared_ptr, its owned by context
+#ifndef USE_ROSEN_DRAWING
+    std::shared_ptr<SkCanvas> skCanvas { context.canvas, [](SkCanvas*) {} };
+    RSCanvas canvas(&skCanvas);
+#else
     CHECK_NULL_VOID(context.canvas);
+#endif
     auto modifier = modifier_.Upgrade();
     CHECK_NULL_VOID(modifier);
+#ifndef USE_ROSEN_DRAWING
+    DrawingContext context_ = { canvas, context.width, context.height };
+#else
     DrawingContext context_ = { *context.canvas, context.width, context.height };
+#endif
     modifier->Draw(context_);
 }
 
@@ -246,46 +262,40 @@ Rosen::RSAnimationTimingProtocol OptionToTimingProtocol(const AnimationOption& o
 }
 } // namespace
 
-// Common template implementation
-template<typename T, typename S>
-void NodeAnimatableProperty<T, S>::AnimateWithVelocity(
-    const AnimationOption& option, T value, T velocity, const FinishCallback& finishCallback)
+template<>
+void NodeAnimatableProperty<float, AnimatablePropertyFloat>::AnimateWithVelocity(const AnimationOption& option,
+    float value, float velocity, const FinishCallback& finishCallback)
 {
     const auto& timingProtocol = OptionToTimingProtocol(option);
-    auto targetValue = std::make_shared<RSAnimatableProperty<T>>(value);
-    auto initialVelocity = std::make_shared<RSAnimatableProperty<T>>(velocity);
-    auto modifier = std::static_pointer_cast<RSNodeModifierImpl>(GetModifyImpl());
-    if (modifier) {
-        auto property = std::static_pointer_cast<RSAnimatableProperty<T>>(modifier->GetProperty());
+    auto targetValue = std::make_shared<RSAnimatableProperty<float>>(value);
+    auto initialVelocity = std::make_shared<RSAnimatableProperty<float>>(velocity);
+    auto modify = std::static_pointer_cast<RSNodeModifierImpl>(GetModifyImpl());
+    if (modify) {
+        auto property = std::static_pointer_cast<RSAnimatableProperty<float>>(modify->GetProperty());
         if (property) {
-            property->AnimateWithInitialVelocity(timingProtocol, 
-                NativeCurveHelper::ToNativeCurve(option.GetCurve()),
+            property->AnimateWithInitialVelocity(timingProtocol, NativeCurveHelper::ToNativeCurve(option.GetCurve()),
                 targetValue, initialVelocity, finishCallback, nullptr);
         }
     }
 }
 
-template<typename T, typename S>
-void NodeAnimatableProperty<T, S>::SetThresholdType(ThresholdType type)
+template<>
+void NodeAnimatableProperty<float, AnimatablePropertyFloat>::SetThresholdType(ThresholdType type)
 {
-    auto modifier = std::static_pointer_cast<RSNodeModifierImpl>(GetModifyImpl());
-    CHECK_NULL_VOID(modifier);
-    auto property = std::static_pointer_cast<RSPropertyBase>(modifier->GetProperty());
+    auto modify = std::static_pointer_cast<RSNodeModifierImpl>(GetModifyImpl());
+    CHECK_NULL_VOID(modify);
+    auto property = std::static_pointer_cast<RSPropertyBase>(modify->GetProperty());
     CHECK_NULL_VOID(property);
     property->SetThresholdType(static_cast<Rosen::ThresholdType>(type));
 }
 
-template<typename T, typename S>
-void NodeAnimatableProperty<T, S>::SetPropertyUnit(PropertyUnit unit)
+template<>
+void NodeAnimatableProperty<float, AnimatablePropertyFloat>::SetPropertyUnit(PropertyUnit unit)
 {
-    auto modifier = std::static_pointer_cast<RSNodeModifierImpl>(GetModifyImpl());
-    CHECK_NULL_VOID(modifier);
-    auto property = std::static_pointer_cast<RSAnimatableProperty<T>>(modifier->GetProperty());
+    auto modify = std::static_pointer_cast<RSNodeModifierImpl>(GetModifyImpl());
+    CHECK_NULL_VOID(modify);
+    auto property = std::static_pointer_cast<RSAnimatableProperty<float>>(modify->GetProperty());
     CHECK_NULL_VOID(property);
     property->SetPropertyUnit(static_cast<Rosen::RSPropertyUnit>(unit));
 }
-
-// Explicit template instantiations
-template class NodeAnimatableProperty<float, AnimatablePropertyFloat>;
-template class NodeAnimatableProperty<OffsetF, AnimatablePropertyOffsetF>;
 } // namespace OHOS::Ace::NG

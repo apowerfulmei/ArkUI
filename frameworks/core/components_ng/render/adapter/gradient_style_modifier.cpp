@@ -19,7 +19,7 @@
 #ifndef USE_ROSEN_DRAWING
 #include "core/components_ng/render/adapter/skia_decoration_painter.h"
 #else
-#include "core/components_ng/render/adapter/drawing_decoration_painter.h"
+#include "core/components_ng/render/adapter/rosen/drawing_decoration_painter.h"
 #endif
 
 namespace OHOS::Ace::NG {
@@ -89,7 +89,6 @@ Gradient GradientStyleModifier::GetGradient() const
     }
     GradientColor color;
     for (size_t index = 0; index < size; index++) {
-        colors[index].SetColorSpace(colorSpace_);
         color.SetColor(colors[index]);
         auto colorStop =
             stops[index].Value() > MAX_COLOR_STOP ? Dimension(MAX_COLOR_STOP, DimensionUnit::PERCENT) : stops[index];
@@ -124,11 +123,6 @@ void GradientStyleModifier::SetGradient(const Gradient& gradient)
         AttachProperty(gradient_);
     } else {
         gradient_->Set(gradient);
-    }
-    if (gradient.GetColors().empty()) {
-        colorSpace_ = ColorSpace::SRGB;
-    } else {
-        colorSpace_ = gradient.GetColors().back().GetColor().GetColorSpace();
     }
 }
 

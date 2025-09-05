@@ -72,7 +72,7 @@ public:
         tipColor_ = color;
     }
 
-    void SetTipFlag(bool flag, const RefPtr<FrameNode>& host);
+    void SetTipFlag(bool flag);
 
     void SetContentOffset(const OffsetF& contentOffset)
     {
@@ -123,7 +123,6 @@ public:
     void BuildParagraph();
     void UpdateBubbleSize();
     bool UpdateOverlayRect(const SizeF& frameSize);
-    void UpdateThemeParams(const RefPtr<SliderTheme>& theme);
 
 private:
     void PaintHorizontalBubble(float vertexOffsetFromBlock, RSPath& path);
@@ -131,8 +130,8 @@ private:
     void PaintHorizontalBubbleSuitableAging(float vertexOffsetFromBlock, RSPath& path);
     void PaintVerticalBubbleSuitableAging(float vertexOffsetFromBlock, RSPath& path);
     void PaintText(DrawingContext& context);
-    void SetBubbleDisplayAnimation(const RefPtr<FrameNode>& host);
-    void SetBubbleDisappearAnimation(const RefPtr<FrameNode>& host);
+    void SetBubbleDisplayAnimation();
+    void SetBubbleDisappearAnimation();
     void CreateParagraphAndLayout(
         const TextStyle& textStyle, const std::string& content);
     bool CreateParagraph(const TextStyle& textStyle, std::string content);
@@ -162,7 +161,6 @@ private:
     Dimension textFontSize_;
     std::function<std::pair<OffsetF, float>()> getBubbleVertexFunc_;
     int32_t taskId_ = 0;
-    int32_t tipDelayTime_ = 0;
 
     ACE_DISALLOW_COPY_AND_MOVE(SliderTipModifier);
 };

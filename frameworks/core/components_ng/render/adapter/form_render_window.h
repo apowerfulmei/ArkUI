@@ -20,7 +20,7 @@
 
 #ifdef ENABLE_ROSEN_BACKEND
 #include <mutex>
-#include "render_service_client/core/feature/hyper_graphic_manager/rs_frame_rate_linker.h"
+#include "render_service_client/core/ui/rs_frame_rate_linker.h"
 #include "render_service_client/core/ui/rs_ui_director.h"
 #include "vsync_receiver.h"
 #endif
@@ -30,7 +30,6 @@
 #include "base/utils/noncopyable.h"
 #include "core/common/window.h"
 #include "core/pipeline/pipeline_context.h"
-#include "interfaces/inner_api/ace/constants.h"
 
 namespace OHOS::Ace {
 class ACE_EXPORT FormRenderWindow : public Window {
@@ -47,7 +46,7 @@ public:
     void FlushFrameRate(int32_t rate, int32_t animatorExpectedFrameRate, int32_t rateType) override;
 
 #ifdef ENABLE_ROSEN_BACKEND
-    std::shared_ptr<OHOS::Rosen::RSUIDirector> GetRSUIDirector() const override
+    std::shared_ptr<OHOS::Rosen::RSUIDirector> GetRsUIDirector() const
     {
         return rsUIDirector_;
     }
@@ -59,63 +58,43 @@ public:
 
     bool FlushAnimation(uint64_t timeStamp) override
     {
-        CHECK_NULL_RETURN(rsUIDirector_, false);
         return rsUIDirector_->FlushAnimation(timeStamp);
-    }
-
-    bool HasFirstFrameAnimation() override
-    {
-        CHECK_NULL_RETURN(rsUIDirector_, false);
-        return rsUIDirector_->HasFirstFrameAnimation();
     }
 
     void FlushAnimationStartTime(uint64_t timeStamp) override
     {
-        CHECK_NULL_VOID(rsUIDirector_);
         rsUIDirector_->FlushAnimationStartTime(timeStamp);
     }
 
     void FlushModifier() override
     {
-        CHECK_NULL_VOID(rsUIDirector_);
         rsUIDirector_->FlushModifier();
     }
 
     bool HasUIRunningAnimation() override
     {
-        CHECK_NULL_RETURN(rsUIDirector_, false);
         return rsUIDirector_->HasUIRunningAnimation();
     }
 
     int32_t GetCurrentRefreshRateMode() const override
     {
-        CHECK_NULL_RETURN(rsUIDirector_, -1);
         return rsUIDirector_->GetCurrentRefreshRateMode();
     }
 
     int32_t GetAnimateExpectedRate() const override
     {
-        CHECK_NULL_RETURN(rsUIDirector_, 0);
         return rsUIDirector_->GetAnimateExpectedRate();
     }
 #endif
 
     void OnShow() override;
     void OnHide() override;
-    void FlushTasks(std::function<void()> callback = nullptr) override;
-
-    void Lock() override;
-    void Unlock() override;
-    int64_t GetVSyncPeriod() const override;
-    void RecordFrameTime(uint64_t timeStamp, const std::string& name) override;
+    void FlushTasks() override;
 
 private:
     WeakPtr<TaskExecutor> taskExecutor_ = nullptr;
     int32_t id_ = 0;
-    UIContentType uiContentType_ = UIContentType::UNDEFINED;
 #ifdef ENABLE_ROSEN_BACKEND
-    void InitOnVsyncCallback();
-    static std::recursive_mutex globalMutex_;
     std::shared_ptr<Rosen::VSyncReceiver> receiver_ = nullptr;
     Rosen::VSyncReceiver::FrameCallback frameCallback_;
     OnVsyncCallback onVsyncCallback_;

@@ -15,9 +15,14 @@
 
 #include "core/components_ng/pattern/linear_split/linear_split_model_ng.h"
 
-#include "core/common/resource/resource_parse_utils.h"
+#include <string>
+
+#include "base/memory/referenced.h"
+#include "core/components_ng/base/frame_node.h"
 #include "core/components_ng/base/view_stack_processor.h"
 #include "core/components_ng/pattern/linear_split/linear_split_pattern.h"
+#include "core/components_ng/pattern/linear_split/linear_split_layout_property.h"
+#include "core/components_v2/inspector/inspector_constants.h"
 
 namespace OHOS::Ace::NG {
 void LinearSplitModelNG::Create(SplitType splitType)
@@ -37,38 +42,9 @@ void LinearSplitModelNG::SetResizable(NG::SplitType splitType, bool resizable)
     ACE_UPDATE_LAYOUT_PROPERTY(LinearSplitLayoutProperty, Resizable, resizable);
 }
 
-void LinearSplitModelNG::SetDivider(NG::SplitType splitType, const ColumnSplitDivider& divider)
+void LinearSplitModelNG::SetDivider(NG::SplitType splitType, const ItemDivider& divider)
 {
-    if (SystemProperties::ConfigChangePerform()) {
-        auto frameNode = ViewStackProcessor::GetInstance()->GetMainFrameNode();
-        CHECK_NULL_VOID(frameNode);
-        auto pattern = frameNode->GetPattern<LinearSplitPattern>();
-        CHECK_NULL_VOID(pattern);
-        RefPtr<ResourceObject> resObj = AceType::MakeRefPtr<ResourceObject>("", "", -1);
-        auto&& updateFunc = [divider, weak = AceType::WeakClaim(frameNode)](const RefPtr<ResourceObject>& resObj) {
-            auto frameNode = weak.Upgrade();
-            CHECK_NULL_VOID(frameNode);
-            ColumnSplitDivider& value = const_cast<ColumnSplitDivider&>(divider);
-            value.ReloadResources();
-            ACE_UPDATE_NODE_LAYOUT_PROPERTY(LinearSplitLayoutProperty, Divider, value, frameNode);
-            frameNode->MarkModifyDone();
-            frameNode->MarkDirtyNode();
-        };
-        pattern->AddResObj("columnSplit.divider", resObj, std::move(updateFunc));
-    }
     ACE_UPDATE_LAYOUT_PROPERTY(LinearSplitLayoutProperty, Divider, divider);
-}
-
-void LinearSplitModelNG::ResetResObj(const std::string& key)
-{
-    if (!SystemProperties::ConfigChangePerform()) {
-        return;
-    }
-    auto frameNode = ViewStackProcessor::GetInstance()->GetMainFrameNode();
-    CHECK_NULL_VOID(frameNode);
-    auto pattern = frameNode->GetPattern<LinearSplitPattern>();
-    CHECK_NULL_VOID(pattern);
-    pattern->RemoveResObj(key);
 }
 
 void LinearSplitModelNG::SetResizable(FrameNode* frameNode, NG::SplitType splitType, bool resizable)
@@ -76,53 +52,10 @@ void LinearSplitModelNG::SetResizable(FrameNode* frameNode, NG::SplitType splitT
     CHECK_NULL_VOID(frameNode);
     ACE_UPDATE_NODE_LAYOUT_PROPERTY(LinearSplitLayoutProperty, Resizable, resizable, frameNode);
 }
-void LinearSplitModelNG::SetDivider(FrameNode* frameNode, NG::SplitType splitType, const ColumnSplitDivider& divider)
+void LinearSplitModelNG::SetDivider(FrameNode* frameNode, NG::SplitType splitType, const ItemDivider& divider)
 {
     CHECK_NULL_VOID(frameNode);
-    if (SystemProperties::ConfigChangePerform()) {
-        auto pattern = frameNode->GetPattern<LinearSplitPattern>();
-        CHECK_NULL_VOID(pattern);
-        RefPtr<ResourceObject> resObj = AceType::MakeRefPtr<ResourceObject>("", "", -1);
-        auto&& updateFunc = [divider, weak = AceType::WeakClaim(frameNode)](const RefPtr<ResourceObject>& resObj) {
-            auto frameNode = weak.Upgrade();
-            CHECK_NULL_VOID(frameNode);
-            ColumnSplitDivider& value = const_cast<ColumnSplitDivider&>(divider);
-            value.ReloadResources();
-            ACE_UPDATE_NODE_LAYOUT_PROPERTY(LinearSplitLayoutProperty, Divider, value, frameNode);
-            frameNode->MarkModifyDone();
-            frameNode->MarkDirtyNode();
-        };
-        pattern->AddResObj("columnSplit.divider", resObj, std::move(updateFunc));
-    }
     ACE_UPDATE_NODE_LAYOUT_PROPERTY(LinearSplitLayoutProperty, Divider, divider, frameNode);
 }
-
-void LinearSplitModelNG::RegisterResObj(
-    const RefPtr<ResourceObject>& resObj, NG::ColumnSplitDivider& divider, const std::string key)
-{
-    if (SystemProperties::ConfigChangePerform() && resObj) {
-        auto&& updateFunc = [key](const RefPtr<ResourceObject>& resObj, NG::ColumnSplitDivider& divider) {
-            CalcDimension result;
-            ResourceParseUtils::ParseResDimensionVp(resObj, result);
-            if (key == "columnSplit.divider.startMargin") {
-                divider.startMargin = result;
-            } else if (key == "columnSplit.divider.endMargin") {
-                divider.endMargin = result;
-            }
-        };
-        divider.AddResource(key, resObj, std::move(updateFunc));
-    }
 }
-
-void LinearSplitModelNG::ResetResObj(FrameNode* frameNode, const std::string& key)
-{
-    if (!SystemProperties::ConfigChangePerform()) {
-        return;
-    }
-    CHECK_NULL_VOID(frameNode);
-    auto pattern = frameNode->GetPattern<LinearSplitPattern>();
-    CHECK_NULL_VOID(pattern);
-    pattern->RemoveResObj(key);
-}
-} // namespace OHOS::Ace::NG
 // namespace OHOS::Ace::NG

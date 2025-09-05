@@ -13,8 +13,6 @@
  * limitations under the License.
  */
 
-#include <cstdint>
-#include "base/utils/utils.h"
 #ifndef PREVIEW
 
 #include "core/components_ng/pattern/select_overlay/service_collaboration_menu_ace_helper.h"
@@ -49,6 +47,8 @@
 #include "core/components_ng/pattern/menu/menu_pattern.h"
 #include "core/components_ng/pattern/menu/menu_view.h"
 #include "core/components_ng/pattern/menu/sub_menu_layout_algorithm.h"
+#include "core/components_ng/pattern/option/option_paint_property.h"
+#include "core/components_ng/pattern/option/option_view.h"
 #include "core/components_ng/pattern/rich_editor/rich_editor_pattern.h"
 #include "core/components_ng/pattern/rich_editor/rich_editor_theme.h"
 #include "core/components_ng/pattern/text/text_pattern.h"
@@ -60,16 +60,11 @@
 
 namespace OHOS::Ace::NG {
 
-namespace {
-constexpr int32_t TOAST_DURATION = 2000;
-const std::string END_ICON_PATH = "resource:///ohos_ic_public_cancel.svg";
-} // namespace
-
 void ServiceCollaborationMenuAceHelper::CreateText(
-    const std::string& value, const RefPtr<FrameNode>& parent, const Color& color, bool needMargin, bool hasEndIcon)
+    const std::string& value, const RefPtr<FrameNode>& parent, const Color& color, bool needMargin)
 {
     TAG_LOGI(AceLogTag::ACE_MENU, "text is %{public}s", value.c_str());
-    auto textPipeline = PipelineContext::GetCurrentContextSafelyWithCheck();
+    auto textPipeline = PipelineBase::GetCurrentContextSafely();
     CHECK_NULL_VOID(textPipeline);
     auto textTheme = textPipeline->GetTheme<SelectTheme>();
     CHECK_NULL_VOID(textTheme);
@@ -88,19 +83,17 @@ void ServiceCollaborationMenuAceHelper::CreateText(
     textProperty->UpdateContent(value);
     if (needMargin) {
         MarginProperty margin;
-        margin.right = CalcLength(
-            static_cast<float>(hasEndIcon ? TEXT_RIGHT_MARGIN : TEXT_RIGHT_MARGIN_NO_ENDICON), DimensionUnit::VP);
+        margin.right = CalcLength(static_cast<float>(TEXT_RIGHT_MARGIN));
         margin.left = CalcLength(static_cast<float>(TEXT_LEFT_MARGIN));
         textProperty->UpdateMargin(margin);
     }
     textNode->MountToParent(parent);
     textNode->MarkModifyDone();
 }
-void ServiceCollaborationMenuAceHelper::CreateHeaderText(
-    const std::string& value, const RefPtr<FrameNode>& row, const RefPtr<FrameNode>& menuItemGroupNode)
+void ServiceCollaborationMenuAceHelper::CreateHeaderText(const std::string& value, const RefPtr<FrameNode>& parent)
 {
     TAG_LOGI(AceLogTag::ACE_MENU, "enter, text is %{public}s", value.c_str());
-    auto textPipeline = PipelineContext::GetCurrentContextSafelyWithCheck();
+    auto textPipeline = PipelineBase::GetCurrentContextSafely();
     CHECK_NULL_VOID(textPipeline);
     auto textTheme = textPipeline->GetTheme<SelectTheme>();
     CHECK_NULL_VOID(textTheme);
@@ -111,13 +104,10 @@ void ServiceCollaborationMenuAceHelper::CreateHeaderText(
     CHECK_NULL_VOID(textNode);
     auto textProperty = textNode->GetLayoutProperty<TextLayoutProperty>();
     CHECK_NULL_VOID(textProperty);
-    textProperty->UpdateFontSize(Dimension(static_cast<float>(HEADER_TEXT_FONT_SIZE), DimensionUnit::FP));
-    textProperty->UpdateFontWeight(FontWeight::MEDIUM);
-    textProperty->UpdateTextColor(textTheme->GetSecondaryFontColor());
-    textProperty->UpdateMaxLines(HEADER_TEXT_MAX_LINE);
-    textProperty->UpdateEllipsisMode(EllipsisMode::TAIL);
     textProperty->UpdateTextOverflow(TextOverflow::ELLIPSIS);
-    textProperty->UpdateWordBreak(WordBreak::BREAK_ALL);
+    textProperty->UpdateFontSize(textTheme->GetMenuFontSize());
+    textProperty->UpdateFontWeight(FontWeight::REGULAR);
+    textProperty->UpdateTextColor(richTheme->GetMenuTitleColor());
     textProperty->UpdateCalcMinSize(
         CalcSize(CalcLength(static_cast<float>(HEADER_MIN_WIDTH)), CalcLength(static_cast<float>(HEADER_MIN_HEIGHT))));
     auto textRenderContext = textNode->GetRenderContext();
@@ -130,86 +120,79 @@ void ServiceCollaborationMenuAceHelper::CreateHeaderText(
     margin.top = CalcLength(static_cast<float>(HEADER_MARGIN_TOP));
     margin.bottom = CalcLength(static_cast<float>(HEADER_MARGIN_BOTTOM));
     textProperty->UpdateMargin(margin);
-    textNode->MountToParent(row);
-    auto menuItemGroupPattern = menuItemGroupNode->GetPattern<MenuItemGroupPattern>();
-    CHECK_NULL_VOID(menuItemGroupPattern);
-    menuItemGroupPattern->AddHeaderContent(textNode);
-    menuItemGroupPattern->AddHeader(row);
+    textNode->MountToParent(parent);
     textNode->MarkModifyDone();
 }
-void ServiceCollaborationMenuAceHelper::CreateEndIcon(uint32_t iconId, const RefPtr<FrameNode>& parent)
+void ServiceCollaborationMenuAceHelper::CreateEndIcon(const std::string& icon, const RefPtr<FrameNode>& parent)
 {
-    TAG_LOGI(AceLogTag::ACE_MENU, "enter, icon is %{public}d", iconId);
-    auto iconPipeline = PipelineContext::GetCurrentContextSafelyWithCheck();
+    TAG_LOGI(AceLogTag::ACE_MENU, "enter, icon is %{public}s", icon.c_str());
+    auto iconPipeline = PipelineBase::GetCurrentContextSafely();
     CHECK_NULL_VOID(iconPipeline);
     auto iconTheme = iconPipeline->GetTheme<SelectTheme>();
     CHECK_NULL_VOID(iconTheme);
     auto richTheme = iconPipeline->GetTheme<RichEditorTheme>();
     CHECK_NULL_VOID(richTheme);
-    auto iconNode = FrameNode::GetOrCreateFrameNode(V2::SYMBOL_ETS_TAG,
-        ElementRegister::GetInstance()->MakeUniqueId(), []() { return AceType::MakeRefPtr<TextPattern>(); });
+    auto iconNode = FrameNode::CreateFrameNode(
+        V2::IMAGE_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(), AceType::MakeRefPtr<ImagePattern>());
     CHECK_NULL_VOID(iconNode);
-    auto iconProperty = iconNode->GetLayoutProperty<TextLayoutProperty>();
+    auto iconProperty = iconNode->GetLayoutProperty<ImageLayoutProperty>();
     CHECK_NULL_VOID(iconProperty);
-    iconProperty->UpdateSymbolSourceInfo(SymbolSourceInfo(iconId));
-    iconProperty->UpdateSymbolColorList({ richTheme->GetMenuIconColor() });
-    iconProperty->UpdateFontSize(iconTheme->GetIconSideLength());
-    iconProperty->UpdateAlignment(Alignment::CENTER);
+    ImageSourceInfo info(icon);
+    info.SetFillColor(richTheme->GetMenuIconColor());
+    iconProperty->UpdateImageSourceInfo(info);
+    iconProperty->UpdateUserDefinedIdealSize(
+        CalcSize(CalcLength(iconTheme->GetIconSideLength()), CalcLength(iconTheme->GetIconSideLength())));
+    iconProperty->UpdateAlignment(Alignment::CENTER_LEFT);
+    MarginProperty margin;
+    margin.right = CalcLength(static_cast<float>(ENDICON_MARGIN_RIGHT));
+    iconProperty->UpdateMargin(margin);
     iconNode->MountToParent(parent);
     iconNode->MarkModifyDone();
 }
-void ServiceCollaborationMenuAceHelper::CreateStartIcon(uint32_t iconId, const RefPtr<FrameNode>& parent)
+void ServiceCollaborationMenuAceHelper::CreateStartIcon(const std::string& icon, const RefPtr<FrameNode>& parent)
 {
-    TAG_LOGI(AceLogTag::ACE_MENU, "enter, icon is %{public}d", iconId);
-    auto iconPipeline = PipelineContext::GetCurrentContextSafelyWithCheck();
+    TAG_LOGI(AceLogTag::ACE_MENU, "enter, icon is %{public}s", icon.c_str());
+    auto iconPipeline = PipelineBase::GetCurrentContextSafely();
     CHECK_NULL_VOID(iconPipeline);
     auto iconTheme = iconPipeline->GetTheme<SelectTheme>();
     CHECK_NULL_VOID(iconTheme);
     auto richTheme = iconPipeline->GetTheme<RichEditorTheme>();
     CHECK_NULL_VOID(richTheme);
-    auto iconNode = FrameNode::GetOrCreateFrameNode(V2::SYMBOL_ETS_TAG,
-        ElementRegister::GetInstance()->MakeUniqueId(), []() { return AceType::MakeRefPtr<TextPattern>(); });
+    auto iconNode = FrameNode::CreateFrameNode(
+        V2::IMAGE_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(), AceType::MakeRefPtr<ImagePattern>());
     CHECK_NULL_VOID(iconNode);
-    auto iconProperty = iconNode->GetLayoutProperty<TextLayoutProperty>();
+    auto iconProperty = iconNode->GetLayoutProperty<ImageLayoutProperty>();
     CHECK_NULL_VOID(iconProperty);
-    iconProperty->UpdateSymbolSourceInfo(SymbolSourceInfo(iconId));
-    iconProperty->UpdateSymbolColorList({ richTheme->GetMenuIconColor() });
-    iconProperty->UpdateFontSize(iconTheme->GetIconSideLength());
+    ImageSourceInfo info(icon);
+    info.SetFillColor(richTheme->GetMenuIconColor());
+    iconProperty->UpdateImageSourceInfo(info);
+    iconProperty->UpdateUserDefinedIdealSize(
+        CalcSize(CalcLength(iconTheme->GetIconSideLength()), CalcLength(iconTheme->GetIconSideLength())));
     iconProperty->UpdateAlignment(Alignment::CENTER_LEFT);
     MarginProperty margin;
     margin.right = CalcLength(iconTheme->GetIconContentPadding());
-    margin.left = CalcLength(-2.0f);
     iconProperty->UpdateMargin(margin);
     iconNode->MountToParent(parent, 0);
     iconNode->MarkModifyDone();
 }
 RefPtr<FrameNode> ServiceCollaborationMenuAceHelper::CreateMainMenuItem(
-    const std::string& value, const std::string& iconType, const Color& color, bool needEndIcon)
+    const std::string& value, InternalResource::ResourceId resId, const Color& color)
 {
-    auto textPipeline = PipelineContext::GetCurrentContextSafelyWithCheck();
-    CHECK_NULL_RETURN(textPipeline, nullptr);
-    auto selectTheme = textPipeline->GetTheme<SelectTheme>();
-    CHECK_NULL_RETURN(selectTheme, nullptr);
-    auto richTheme = textPipeline->GetTheme<RichEditorTheme>();
+    auto iconPipeline = PipelineContext::GetCurrentContextSafely();
+    CHECK_NULL_RETURN(iconPipeline, nullptr);
+    auto iconTheme = iconPipeline->GetTheme<IconTheme>();
+    CHECK_NULL_RETURN(iconTheme, nullptr);
+    auto richTheme = iconPipeline->GetTheme<RichEditorTheme>();
     CHECK_NULL_RETURN(richTheme, nullptr);
-    auto mainMenuItem = CreateMainMenuItem(
-        value, GetSymbolId(iconType), richTheme->GetMenuTextColor(), needEndIcon);
-    CHECK_NULL_RETURN(mainMenuItem, nullptr);
-    if (!needEndIcon) {
-        auto leftRow = DynamicCast<FrameNode>(mainMenuItem->GetChildAtIndex(0));
-        CHECK_NULL_RETURN(leftRow, nullptr);
-        auto textNode = DynamicCast<FrameNode>(leftRow->GetChildAtIndex(0));
-        CHECK_NULL_RETURN(textNode, nullptr);
-        textNode->GetRenderContext()->UpdateOpacity(selectTheme->GetDisabledFontColorAlpha());
-        textNode->MarkModifyDone();
-    }
-    return mainMenuItem;
+    auto iconPath = iconTheme ? iconTheme->GetIconPath(resId) : "";
+    return CreateMainMenuItem(
+        value, iconPath, color == Color::BLACK ? richTheme->GetMenuTextColor() : color);
 }
 RefPtr<FrameNode> ServiceCollaborationMenuAceHelper::CreateMainMenuItem(
-    const std::string& value, uint32_t iconId, const Color& color, bool needEndIcon)
+    const std::string& value, const std::string& icon, const Color& color)
 {
     TAG_LOGI(AceLogTag::ACE_MENU, "enter");
-    auto menuPipeline = PipelineContext::GetCurrentContextSafelyWithCheck();
+    auto menuPipeline = PipelineBase::GetCurrentContextSafely();
     CHECK_NULL_RETURN(menuPipeline, nullptr);
     auto menuTheme = menuPipeline->GetTheme<SelectTheme>();
     CHECK_NULL_RETURN(menuTheme, nullptr);
@@ -220,7 +203,7 @@ RefPtr<FrameNode> ServiceCollaborationMenuAceHelper::CreateMainMenuItem(
     CHECK_NULL_RETURN(menuItemNode, nullptr);
     auto menuItemProperty = menuItemNode->GetLayoutProperty<MenuItemLayoutProperty>();
     CHECK_NULL_RETURN(menuItemProperty, nullptr);
-    menuItemProperty->UpdatePadding({ .right = CalcLength(2.0f) });
+    menuItemProperty->UpdatePadding({ .right = CalcLength(2.0f), .top = CalcLength(0.0f) });
     auto renderContext = menuItemNode->GetRenderContext();
     CHECK_NULL_RETURN(renderContext, nullptr);
     renderContext->UpdateBorderRadius(BorderRadiusProperty(menuTheme->GetMenuDefaultInnerRadius()));
@@ -229,58 +212,57 @@ RefPtr<FrameNode> ServiceCollaborationMenuAceHelper::CreateMainMenuItem(
     CHECK_NULL_RETURN(row, nullptr);
     auto rowProperty = row->GetLayoutProperty<LinearLayoutProperty>();
     CHECK_NULL_RETURN(rowProperty, nullptr);
-    auto rightRow = FrameNode::CreateFrameNode(V2::ROW_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(),
-        AceType::MakeRefPtr<LinearLayoutPattern>(false));
-    CHECK_NULL_RETURN(rightRow, nullptr);
-    auto rightRowProperty = rightRow->GetLayoutProperty<LinearLayoutProperty>();
-    CHECK_NULL_RETURN(rightRowProperty, nullptr);
-    rightRowProperty->UpdatePadding({ .right = CalcLength(22.0f) });
-    auto paintProperty = menuItemNode->GetPaintProperty<MenuItemPaintProperty>();
-    CHECK_NULL_RETURN(paintProperty, nullptr);
-    paintProperty->UpdateStrokeWidth(Dimension(static_cast<float>(BORDER_WIDTH), DimensionUnit::PX));
-    paintProperty->UpdateStartMargin(Dimension(12.0f, DimensionUnit::VP));
-    paintProperty->UpdateEndMargin(Dimension(12.0f, DimensionUnit::VP));
-    paintProperty->UpdateDividerColor(menuTheme->GetLineColor());
+    BorderWidthProperty borderWidth;
+    borderWidth.topDimen = Dimension(static_cast<float>(BORDER_WIDTH), DimensionUnit::PX);
+    BorderWidthProperty width;
+    width.UpdateWithCheck(borderWidth);
+    rowProperty->UpdateBorderWidth(width);
+    auto rowContext = row->GetRenderContext();
+    CHECK_NULL_RETURN(rowContext, nullptr);
+    rowContext->UpdateBorderWidth(width);
+    BorderColorProperty borderColorProperty;
+    borderColorProperty.SetColor(Color::GRAY);
+    rowContext->UpdateBorderColor(borderColorProperty);
     rowProperty->UpdateCalcMinSize(
-        CalcSize(CalcLength(static_cast<float>(MENUITEM_WIDTH), DimensionUnit::VP),
-        CalcLength(static_cast<float>(MENUITEM_HEIGHT), DimensionUnit::VP)));
-    CreateText(value, row, color, true, needEndIcon);
+        CalcSize(CalcLength(static_cast<float>(MENUITEM_WIDTH)), CalcLength(static_cast<float>(MENUITEM_HEIGHT))));
+    PaddingProperty rowpadding { .right = CalcLength(static_cast<float>(PANDDING_ZERO)) };
+    if (Container::GreatOrEqualAPITargetVersion(PlatformVersion::VERSION_TWELVE)) {
+        rowpadding.top = CalcLength(menuTheme->GetMenuItemVerticalPadding().ConvertToPx());
+    }
+    rowProperty->UpdatePadding(rowpadding);
+    MarginProperty margin;
+    margin.bottom = CalcLength(static_cast<float>(ROW_PADDING));
+    rowProperty->UpdateMargin(margin);
+    CreateText(value, row, color, true);
+    CreateEndIcon(icon, row);
     row->MountToParent(menuItemNode);
     row->MarkModifyDone();
-    if (needEndIcon) {
-        CreateEndIcon(iconId, rightRow);
-        rightRow->MountToParent(menuItemNode);
-        rightRow->MarkModifyDone();
-    }
-    menuItemNode->MarkModifyDone();
-    menuItemNode->MarkDirtyNode(PROPERTY_UPDATE_RENDER);
     return menuItemNode;
 }
-uint32_t ServiceCollaborationMenuAceHelper::GetSymbolId(const std::string& abilityType)
+std::string ServiceCollaborationMenuAceHelper::GetIconPath(const std::string& abilityType)
 {
-    auto iconPipeline = PipelineContext::GetCurrentContextSafelyWithCheck();
-    CHECK_NULL_RETURN(iconPipeline, 0);
-    auto richTheme = iconPipeline->GetTheme<RichEditorTheme>();
-    CHECK_NULL_RETURN(richTheme, 0);
+    auto iconPipeline = PipelineContext::GetCurrentContextSafely();
+    CHECK_NULL_RETURN(iconPipeline, "");
+    auto iconTheme = iconPipeline->GetTheme<IconTheme>();
+    CHECK_NULL_RETURN(iconTheme, "");
+    auto iconPath = iconTheme ? iconTheme->GetIconPath(InternalResource::ResourceId::IC_TAKEPHOTO_SVG) : "";
+    TAG_LOGI(AceLogTag::ACE_MENU, "iconPath is %{public}s", iconPath.c_str());
     if (abilityType == "CAMERA") {
-        return richTheme->GetCameraSymbolId();
+        return "resource:///ohos_ic_public_camera.svg";
     }
     if (abilityType == "SCAN") {
-        return richTheme->GetScanSymbolId();
+        return "resource:///ohos_ic_public_scan.svg";
     }
     if (abilityType == "IMAGE_PICKER") {
-        return richTheme->GetImageSymbolId();
+        return "resource:///ohos_ic_public_albums.svg";
     }
-    if (abilityType == "CHEVRON_RIGHT") {
-        return richTheme->GetChevronRightSymbolId();
-    }
-    return 0;
+    return "";
 }
 RefPtr<FrameNode> ServiceCollaborationMenuAceHelper::CreateDeviceMenuItem(
-    const std::string& value, uint32_t iconId)
+    const std::string& value, const std::string& icon)
 {
-    TAG_LOGI(AceLogTag::ACE_MENU, "enter iconId is %{public}d, value is %{public}s", iconId, value.c_str());
-    auto menuPipeline = PipelineContext::GetCurrentContextSafelyWithCheck();
+    TAG_LOGI(AceLogTag::ACE_MENU, "enter icon is %{public}s, value is %{public}s", icon.c_str(), value.c_str());
+    auto menuPipeline = PipelineBase::GetCurrentContextSafely();
     CHECK_NULL_RETURN(menuPipeline, nullptr);
     auto menuTheme = menuPipeline->GetTheme<SelectTheme>();
     CHECK_NULL_RETURN(menuTheme, nullptr);
@@ -306,8 +288,8 @@ RefPtr<FrameNode> ServiceCollaborationMenuAceHelper::CreateDeviceMenuItem(
         ? menuTheme->GetMenuChildMinHeight().ConvertToPx()
         : menuTheme->GetOptionMinHeight().ConvertToPx();
     rowProperty->UpdateCalcMinSize(CalcSize(std::nullopt, CalcLength(menuHeight)));
-    CreateStartIcon(iconId, row);
-    CreateText(value, row, richTheme->GetMenuTextColor(), false, false);
+    CreateStartIcon(icon, row);
+    CreateText(value, row, richTheme->GetMenuTextColor(), false);
     row->MountToParent(menuItemNode);
     row->MarkModifyDone();
     return menuItemNode;
@@ -354,18 +336,6 @@ void ServiceCollaborationMenuAceHelper::RemoveSubmenu(const RefPtr<FrameNode>& m
         }
     }
 }
-RefPtr<FrameNode> ServiceCollaborationMenuAceHelper::CreateMenuNode()
-{
-    TAG_LOGI(AceLogTag::ACE_MENU, "enter");
-    auto menuNode = FrameNode::CreateFrameNode(V2::MENU_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(),
-        AceType::MakeRefPtr<InnerMenuPattern>(INNER_MENU_ID, V2::MENU_ETS_TAG, MenuType::MULTI_MENU));
-    CHECK_NULL_RETURN(menuNode, nullptr);
-    auto menuLayoutProperty = menuNode->GetLayoutProperty<MenuLayoutProperty>();
-    CHECK_NULL_RETURN(menuLayoutProperty, nullptr);
-    menuLayoutProperty->UpdateAlignment(Alignment::CENTER_LEFT);
-    menuNode->MarkModifyDone();
-    return menuNode;
-}
 RefPtr<FrameNode> ServiceCollaborationMenuAceHelper::CreateMenuItemGroupNode(
     uint32_t index, const std::string& deviceName)
 {
@@ -374,10 +344,6 @@ RefPtr<FrameNode> ServiceCollaborationMenuAceHelper::CreateMenuItemGroupNode(
         ElementRegister::GetInstance()->MakeUniqueId(),
         []() { return AceType::MakeRefPtr<MenuItemGroupPattern>();});
     CHECK_NULL_RETURN(menuItemGroupNode, nullptr);
-    auto menuItemGroupPaintPros = menuItemGroupNode->GetPaintProperty<MenuItemGroupPaintProperty>();
-    CHECK_NULL_RETURN(menuItemGroupPaintPros, nullptr);
-    menuItemGroupPaintPros->UpdateStrokeWidth(Dimension(static_cast<float>(0), DimensionUnit::VP));
-
     TAG_LOGI(AceLogTag::ACE_MENU, "DEVICE NAME IS %{public}s", deviceName.c_str());
     auto row = FrameNode::CreateFrameNode(V2::ROW_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(),
         AceType::MakeRefPtr<LinearLayoutPattern>(false));
@@ -385,12 +351,12 @@ RefPtr<FrameNode> ServiceCollaborationMenuAceHelper::CreateMenuItemGroupNode(
     auto rowProperty = row->GetLayoutProperty<LinearLayoutProperty>();
     CHECK_NULL_RETURN(rowProperty, nullptr);
     MarginProperty margin;
-    margin.right = CalcLength(static_cast<float>(GROUP_MARGIN), DimensionUnit::VP);
-    margin.left = CalcLength(static_cast<float>(GROUP_MARGIN), DimensionUnit::VP);
+    margin.right = CalcLength(static_cast<float>(GROUP_MARGIN));
+    margin.left = CalcLength(static_cast<float>(GROUP_MARGIN));
     rowProperty->UpdateCalcMinSize(
-        CalcSize(CalcLength(static_cast<float>(GROUP_MIN_WIDTH), DimensionUnit::VP), std::nullopt));
-    
+        CalcSize(CalcLength(static_cast<float>(GROUP_MIN_WIDTH)), std::nullopt));
     if (index > 0) {
+        margin.top = CalcLength(static_cast<float>(BORDER_MARGIN_TOP));
         BorderWidthProperty borderWidth;
         borderWidth.topDimen = Dimension(static_cast<float>(BORDER_WIDTH), DimensionUnit::VP);
         BorderWidthProperty borderWidth1;
@@ -399,33 +365,27 @@ RefPtr<FrameNode> ServiceCollaborationMenuAceHelper::CreateMenuItemGroupNode(
         auto context = row->GetRenderContext();
         CHECK_NULL_RETURN(context, nullptr);
         context->UpdateBorderWidth(borderWidth1);
-        auto menuPipeline = PipelineContext::GetCurrentContextSafelyWithCheck();
-        CHECK_NULL_RETURN(menuPipeline, nullptr);
-        auto menuTheme = menuPipeline->GetTheme<SelectTheme>();
-        CHECK_NULL_RETURN(menuTheme, nullptr);
         BorderColorProperty borderColorProperty;
-        borderColorProperty.SetColor(menuTheme->GetLineColor());
+        borderColorProperty.SetColor(Color(BORDER_COLOR));
         context->UpdateBorderColor(borderColorProperty);
     }
     rowProperty->UpdateMargin(margin);
-    CreateHeaderText(deviceName, row, menuItemGroupNode);
-
+    CreateHeaderText(deviceName, row);
     auto focusHub = row->GetFocusHub();
     focusHub->SetEnabled(false);
-    menuItemGroupNode->MarkModifyDone();
-    menuItemGroupNode->MarkDirtyNode(PROPERTY_UPDATE_RENDER);
+    row->MountToParent(menuItemGroupNode);
     return menuItemGroupNode;
 }
 
 
-RefPtr<FrameNode> ServiceCollaborationMenuAceHelper::CreateSubDeviceOutMenu(
-    const RefPtr<FrameNode>& innerMenu, const RefPtr<FrameNode>& menuWrapper)
+RefPtr<FrameNode> ServiceCollaborationMenuAceHelper::CreateSubDeviceMenuOnCol(
+    const RefPtr<FrameNode>& column, const RefPtr<FrameNode>& menuWrapper)
 {
     TAG_LOGI(AceLogTag::ACE_MENU, "CreateSubDeviceMenuOnCol");
     MenuParam param;
     param.type = MenuType::SUB_MENU;
     param.isShowInSubWindow = false;
-    auto subMenu = MenuView::Create(innerMenu, SUB_MENU_ID, SUN_MENU_TAG, param);
+    auto subMenu = MenuView::Create(column, SUB_MENU_ID, SUN_MENU_TAG, param);
     auto inputHub = subMenu->GetOrCreateInputEventHub();
     CHECK_NULL_RETURN(inputHub, nullptr);
     auto mouseTask = [weakHelper = WeakClaim(this), weakMenuWrapper = WeakClaim(RawPtr(menuWrapper))](bool isHover) {
@@ -452,21 +412,12 @@ RefPtr<FrameNode> ServiceCollaborationMenuAceHelper::CreateSubDeviceOutMenu(
         taskExecutor->PostDelayedTask(
             cancelableCallback, TaskExecutor::TaskType::UI, 100, "ArkUIRichEditorRemoveMenuNode");
     };
-    auto hoverEvent = AceType::MakeRefPtr<InputEvent>(std::move(mouseTask));
-    inputHub->AddOnHoverEvent(hoverEvent);
+    auto mouseEvent = AceType::MakeRefPtr<InputEvent>(std::move(mouseTask));
+    inputHub->AddOnHoverEvent(mouseEvent);
     return subMenu;
 }
 
 void ServiceCollaborationMenuAceHelper::SubMeunMountToMainMenu(
-    const RefPtr<FrameNode>& menuNode, const RefPtr<FrameNode>& menuWrapper,
-    std::function<RefPtr<FrameNode>(void)> subDeviceMenuCreator)
-{
-    AddHoverEventToMainMenu(menuNode, menuWrapper, subDeviceMenuCreator);
-    AddClickEventToMainMenu(menuNode, menuWrapper, subDeviceMenuCreator);
-    AddLongPressEventToMainMenu(menuNode, menuWrapper, subDeviceMenuCreator);
-}
-
-void ServiceCollaborationMenuAceHelper::AddHoverEventToMainMenu(
     const RefPtr<FrameNode>& menuNode, const RefPtr<FrameNode>& menuWrapper,
     std::function<RefPtr<FrameNode>(void)> subDeviceMenuCreator)
 {
@@ -517,84 +468,8 @@ void ServiceCollaborationMenuAceHelper::AddHoverEventToMainMenu(
         taskExecutor->PostDelayedTask(
             cancelableCallback, TaskExecutor::TaskType::UI, 100, "ArkUIRichEditorRemoveMenuNode");
     };
-    auto hoverEvent = AceType::MakeRefPtr<InputEvent>(std::move(mouseTask));
-    inputHub->AddOnHoverEvent(hoverEvent);
-}
-
-void ServiceCollaborationMenuAceHelper::AddClickEventToMainMenu(
-    const RefPtr<FrameNode>& menuNode, const RefPtr<FrameNode>& menuWrapper,
-    std::function<RefPtr<FrameNode>(void)> subDeviceMenuCreator)
-{
-    TAG_LOGI(AceLogTag::ACE_MENU, "Service Collaborationfwk mainMenu clickTask enter");
-    auto gestureHub = menuNode->GetOrCreateGestureEventHub();
-    CHECK_NULL_VOID(gestureHub);
-    auto clickTask = [weakHelper = WeakClaim(this), weakMenuWrapper = WeakClaim(RawPtr(menuWrapper)),
-                      weakMenuNode = WeakClaim(RawPtr(menuNode)), subDeviceMenuCreator](GestureEvent& event) {
-        TAG_LOGI(AceLogTag::ACE_MENU, "menuitem clickTask enter");
-        auto menuItemNode = weakMenuNode.Upgrade();
-        auto menuWrapper = weakMenuWrapper.Upgrade();
-        auto helper = weakHelper.Upgrade();
-        CHECK_NULL_VOID(menuItemNode && menuWrapper && helper);
-        helper->subMenuIsShow_ = false;
-        if (!helper->subMenuIsShow_) {
-            TAG_LOGI(AceLogTag::ACE_MENU, "clickTask create SubMenu enter.1");
-            auto subMenu = subDeviceMenuCreator();
-            CHECK_NULL_VOID(subMenu);
-            TAG_LOGI(AceLogTag::ACE_MENU, "clickTask create SubMenu enter.2");
-            auto submenuPattern = subMenu->GetPattern<MenuPattern>();
-            CHECK_NULL_VOID(submenuPattern);
-            submenuPattern->SetParentMenuItem(menuItemNode);
-            subMenu->MountToParent(menuWrapper);
-            auto menuProps = subMenu->GetLayoutProperty<MenuLayoutProperty>();
-            auto frameSize = menuItemNode->GetGeometryNode()->GetMarginFrameSize();
-            OffsetF position = menuItemNode->GetPaintRectOffset(false, true) + OffsetF(frameSize.Width(), 0.0);
-            menuProps->UpdateMenuOffset(position);
-            subMenu->MarkDirtyNode(PROPERTY_UPDATE_MEASURE_SELF_AND_CHILD);
-            helper->subMenuIsShow_ = true;
-        }
-    };
-    auto clickEvent = AceType::MakeRefPtr<ClickEvent>(std::move(clickTask));
-    gestureHub->AddClickEvent(clickEvent);
-}
-
-void ServiceCollaborationMenuAceHelper::AddLongPressEventToMainMenu(
-    const RefPtr<FrameNode>& menuNode, const RefPtr<FrameNode>& menuWrapper,
-    std::function<RefPtr<FrameNode>(void)> subDeviceMenuCreator)
-{
-    CHECK_NULL_VOID(menuNode && menuWrapper && subDeviceMenuCreator);
-    TAG_LOGI(AceLogTag::ACE_MENU, "Service Collaborationfwk mainMenu longPressTask enter");
-    auto gestureHub = menuNode->GetOrCreateGestureEventHub();
-    CHECK_NULL_VOID(gestureHub);
-
-    auto longPressTask = [weakHelper = WeakClaim(this), weakMenuWrapper = WeakClaim(RawPtr(menuWrapper)),
-                          weakMenuNode = WeakClaim(RawPtr(menuNode)), subDeviceMenuCreator](GestureEvent& event) {
-        TAG_LOGI(AceLogTag::ACE_MENU, "menuitem longPressTask enter");
-        auto menuItemNode = weakMenuNode.Upgrade();
-        auto menuWrapper = weakMenuWrapper.Upgrade();
-        auto helper = weakHelper.Upgrade();
-        CHECK_NULL_VOID(menuItemNode && menuWrapper && helper);
-        helper->subMenuIsShow_ = false;
-        if (!helper->subMenuIsShow_) {
-            TAG_LOGI(AceLogTag::ACE_MENU, "longPressTask create SubMenu enter.1");
-            auto subMenu = subDeviceMenuCreator();
-            CHECK_NULL_VOID(subMenu);
-            TAG_LOGI(AceLogTag::ACE_MENU, "longPressTask create SubMenu enter.2");
-            auto submenuPattern = subMenu->GetPattern<MenuPattern>();
-            CHECK_NULL_VOID(submenuPattern);
-            submenuPattern->SetParentMenuItem(menuItemNode);
-            subMenu->MountToParent(menuWrapper);
-            auto menuProps = subMenu->GetLayoutProperty<MenuLayoutProperty>();
-            CHECK_NULL_VOID(menuProps);
-            auto frameSize = menuItemNode->GetGeometryNode()->GetMarginFrameSize();
-            OffsetF position = menuItemNode->GetPaintRectOffset(false, true) + OffsetF(frameSize.Width(), 0.0);
-            menuProps->UpdateMenuOffset(position);
-            subMenu->MarkDirtyNode(PROPERTY_UPDATE_MEASURE_SELF_AND_CHILD);
-            helper->subMenuIsShow_ = true;
-        }
-    };
-
-    auto longPressEvent = AceType::MakeRefPtr<LongPressEvent>(std::move(longPressTask));
-    gestureHub->SetLongPressEvent(longPressEvent);
+    auto mouseEvent = AceType::MakeRefPtr<InputEvent>(std::move(mouseTask));
+    inputHub->AddOnHoverEvent(mouseEvent);
 }
 
 // Callback
@@ -602,7 +477,7 @@ void ServiceCollaborationMenuAceHelper::AddLongPressEventToMainMenu(
 void ServiceCollaborationAceCallback::CreateText(const std::string& value, const RefPtr<FrameNode>& parent)
 {
     TAG_LOGI(AceLogTag::ACE_MENU, "enter, text is %{public}s", value.c_str());
-    auto textPipeline = PipelineContext::GetCurrentContextSafelyWithCheck();
+    auto textPipeline = PipelineBase::GetCurrentContextSafely();
     CHECK_NULL_VOID(textPipeline);
     auto textTheme = textPipeline->GetTheme<SelectTheme>();
     CHECK_NULL_VOID(textTheme);
@@ -622,8 +497,8 @@ void ServiceCollaborationAceCallback::CreateText(const std::string& value, const
     textRenderContext->UpdateForegroundColor(textTheme->GetMenuFontColor());
     textProperty->UpdateContent(value);
     MarginProperty margin;
-    margin.top = CalcLength(static_cast<float>(TEXT_MARGIN_TOP), DimensionUnit::VP);
-    margin.bottom = CalcLength(static_cast<float>(TEXT_MARGIN_BOTTOM), DimensionUnit::VP);
+    margin.top = CalcLength(static_cast<float>(TEXT_MARGIN_TOP));
+    margin.bottom = CalcLength(static_cast<float>(TEXT_MARGIN_BOTTOM));
     textProperty->UpdateMargin(margin);
     textNode->MountToParent(parent);
     textNode->MarkModifyDone();
@@ -673,16 +548,16 @@ void ServiceCollaborationAceCallback::AddMouseEventToEndIcon(const RefPtr<FrameN
             iconContext->UpdateBackgroundColor(helper->endIconIsHover_ ? theme->GetHoverColor() : Color::TRANSPARENT);
         }
     };
-    auto hoverEvent = MakeRefPtr<InputEvent>(std::move(mouseTask));
+    auto mouseEvent = MakeRefPtr<InputEvent>(std::move(mouseTask));
     auto touchEvent = MakeRefPtr<TouchEventImpl>(std::move(touchCallback));
-    inputHub->AddOnHoverEvent(hoverEvent);
+    inputHub->AddOnHoverEvent(mouseEvent);
     gestureHub->AddTouchEvent(touchEvent);
 }
 
 void ServiceCollaborationAceCallback::CreateEndIcon(const std::string& icon, const RefPtr<FrameNode>& parent)
 {
     TAG_LOGI(AceLogTag::ACE_MENU, "enter, icon is %{public}s", icon.c_str());
-    auto iconPipeline = PipelineContext::GetCurrentContextSafelyWithCheck();
+    auto iconPipeline = PipelineBase::GetCurrentContextSafely();
     CHECK_NULL_VOID(iconPipeline);
     auto iconTheme = iconPipeline->GetTheme<RichEditorTheme>();
     CHECK_NULL_VOID(iconTheme);
@@ -706,10 +581,10 @@ void ServiceCollaborationAceCallback::CreateEndIcon(const std::string& icon, con
         .bottom = CalcLength(static_cast<float>(ICON_PADDING), DimensionUnit::VP) });
     iconProperty->UpdateAlignment(Alignment::CENTER_LEFT);
     MarginProperty margin;
-    margin.right = CalcLength(static_cast<float>(ENDICON_MARGIN_FIVE), DimensionUnit::VP);
-    margin.left = CalcLength(static_cast<float>(ENDICON_MARGIN_THREE), DimensionUnit::VP);
-    margin.top = CalcLength(static_cast<float>(ENDICON_MARGIN_TOP), DimensionUnit::VP);
-    margin.bottom = CalcLength(static_cast<float>(ENDICON_MARGIN), DimensionUnit::VP);
+    margin.right = CalcLength(static_cast<float>(ENDICON_MARGIN));
+    margin.left = CalcLength(static_cast<float>(ENDICON_MARGIN));
+    margin.top = CalcLength(static_cast<float>(ENDICON_MARGIN_TOP));
+    margin.bottom = CalcLength(static_cast<float>(ENDICON_MARGIN));
     iconProperty->UpdateMargin(margin);
     auto clickEvent = AceType::MakeRefPtr<ClickEvent>([weakCallback = WeakClaim(this)](GestureEvent& event) {
         auto callback = weakCallback.Upgrade();
@@ -728,48 +603,36 @@ void ServiceCollaborationAceCallback::CreateEndIcon(const std::string& icon, con
     AddMouseEventToEndIcon(iconNode);
 }
 
-void ServiceCollaborationAceCallback::CreateStartIcon(uint32_t iconId, const RefPtr<FrameNode>& parent)
+void ServiceCollaborationAceCallback::CreateStartIcon(const std::string& icon, const RefPtr<FrameNode>& parent)
 {
-    TAG_LOGI(AceLogTag::ACE_MENU, "enter, iconId is %{public}d", iconId);
-    auto iconPipeline = PipelineContext::GetCurrentContextSafelyWithCheck();
+    TAG_LOGI(AceLogTag::ACE_MENU, "enter, icon is %{public}s", icon.c_str());
+    auto iconPipeline = PipelineBase::GetCurrentContextSafely();
     CHECK_NULL_VOID(iconPipeline);
     auto iconTheme = iconPipeline->GetTheme<RichEditorTheme>();
     CHECK_NULL_VOID(iconTheme);
-    auto iconNode = FrameNode::GetOrCreateFrameNode(V2::SYMBOL_ETS_TAG,
-        ElementRegister::GetInstance()->MakeUniqueId(), []() { return AceType::MakeRefPtr<TextPattern>(); });
+    auto iconNode = FrameNode::CreateFrameNode(
+        V2::IMAGE_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(), AceType::MakeRefPtr<ImagePattern>());
     CHECK_NULL_VOID(iconNode);
-    auto iconProperty = iconNode->GetLayoutProperty<TextLayoutProperty>();
+    auto iconProperty = iconNode->GetLayoutProperty<ImageLayoutProperty>();
     CHECK_NULL_VOID(iconProperty);
-    iconProperty->UpdateSymbolSourceInfo(SymbolSourceInfo(iconId));
-    iconProperty->UpdateSymbolColorList({ iconTheme->GetPopIconColor() });
-    iconProperty->UpdateFontSize(Dimension(static_cast<float>(STARTICON_SIZE), DimensionUnit::VP));
+    ImageSourceInfo info(icon);
+    info.SetFillColor(iconTheme->GetPopIconColor());
+    iconProperty->UpdateImageSourceInfo(info);
+    iconProperty->UpdateUserDefinedIdealSize(
+        CalcSize(
+            CalcLength(static_cast<float>(STARTICON_SIZE), DimensionUnit::VP),
+            CalcLength(static_cast<float>(STARTICON_SIZE), DimensionUnit::VP)
+        )
+    );
     iconProperty->UpdateAlignment(Alignment::CENTER_LEFT);
     MarginProperty margin;
-    margin.right = CalcLength(static_cast<float>(STARTICON_MARGIN), DimensionUnit::VP);
-    margin.left = CalcLength(static_cast<float>(STARTICON_MARGIN), DimensionUnit::VP);
-    margin.top = CalcLength(static_cast<float>(STARTICON_MARGIN), DimensionUnit::VP);
-    margin.bottom = CalcLength(static_cast<float>(STARTICON_MARGIN), DimensionUnit::VP);
+    margin.right = CalcLength(static_cast<float>(STARTICON_MARGIN));
+    margin.left = CalcLength(static_cast<float>(STARTICON_MARGIN));
+    margin.top = CalcLength(static_cast<float>(STARTICON_MARGIN));
+    margin.bottom = CalcLength(static_cast<float>(STARTICON_MARGIN));
     iconProperty->UpdateMargin(margin);
     iconNode->MountToParent(parent, 0);
     iconNode->MarkModifyDone();
-}
-
-uint32_t ServiceCollaborationAceCallback::GetSymbolId(const std::string& abilityType)
-{
-    auto iconPipeline = PipelineContext::GetCurrentContextSafelyWithCheck();
-    CHECK_NULL_RETURN(iconPipeline, 0);
-    auto richTheme = iconPipeline->GetTheme<RichEditorTheme>();
-    CHECK_NULL_RETURN(richTheme, 0);
-    if (abilityType == "CAMERA") {
-        return richTheme->GetCameraSymbolId();
-    }
-    if (abilityType == "SCAN") {
-        return richTheme->GetScanSymbolId();
-    }
-    if (abilityType == "IMAGE_PICKER") {
-        return richTheme->GetImageSymbolId();
-    }
-    return 0;
 }
 
 RefPtr<FrameNode> ServiceCollaborationAceCallback::CreateCustomPopUpNode(
@@ -781,9 +644,17 @@ RefPtr<FrameNode> ServiceCollaborationAceCallback::CreateCustomPopUpNode(
         CHECK_NULL_RETURN(row, nullptr);
         auto rowProperty = row->GetLayoutProperty<LinearLayoutProperty>();
         CHECK_NULL_RETURN(rowProperty, nullptr);
-        CreateStartIcon(GetSymbolId(ability_), row);
+        if (ability_ == "CAMERA") {
+            CreateStartIcon("resource:///ohos_ic_public_camera.svg", row);
+        }
+        if (ability_ == "SCAN") {
+            CreateStartIcon("resource:///ohos_ic_public_scan.svg", row);
+        }
+        if (ability_ == "IMAGE_PICKER") {
+            CreateStartIcon("resource:///ohos_ic_public_albums.svg", row);
+        }
         CreateText(value, row);
-        CreateEndIcon(END_ICON_PATH, row);
+        CreateEndIcon("resource:///ohos_ic_public_cancel.svg", row);
         row_ = row;
         row_->MarkDirtyNode(PROPERTY_UPDATE_MEASURE_SELF_AND_CHILD);
         return row_;
@@ -802,7 +673,7 @@ RefPtr<FrameNode> ServiceCollaborationAceCallback::CreateCustomPopUpNode(
 
 void ServiceCollaborationAceCallback::RemovePopupNode()
 {
-    auto pipeline = PipelineContext::GetCurrentContextSafelyWithCheck();
+    auto pipeline = PipelineContext::GetCurrentContextSafely();
     CHECK_NULL_VOID(pipeline);
     auto overlay = pipeline->GetOverlayManager();
     CHECK_NULL_VOID(overlay);
@@ -811,7 +682,7 @@ void ServiceCollaborationAceCallback::RemovePopupNode()
     CHECK_NULL_VOID(info_->pattern.Upgrade()->GetHost());
     auto pattern = AceType::DynamicCast<RichEditorPattern>(info_->pattern.Upgrade());
     CHECK_NULL_VOID(pattern);
-    pattern->RegisterCaretChangeListener(nullptr);
+    pattern->RegisiterCaretChangeListener(nullptr);
     auto targetId = info_->pattern.Upgrade()->GetHost()->GetId();
     auto popupInfo = overlay->GetPopupInfo(targetId);
     popupInfo.markNeedUpdate = true;
@@ -832,23 +703,12 @@ RefPtr<PopupParam> ServiceCollaborationAceCallback::GetPopupParam(bool isShow, S
     popupParam->SetUseCustomComponent(true);
     popupParam->SetBackgroundColor(Color::WHITE);
     popupParam->SetTargetSpace(Dimension(static_cast<float>(TARGET_SPACE), DimensionUnit::VP));
-    popupParam->SetOnStateChange(
-        [weakHelper = WeakClaim(this), onStateChange](const std::string& isShow) {
-        auto helper = weakHelper.Upgrade();
-        CHECK_NULL_VOID(helper);
-        bool show = JsonUtil::ParseJsonString(isShow)->GetBool("isVisible");
-        if (!show && !helper->isMultiImage_) {
-            onStateChange(isShow);
-        }
-    });
+    popupParam->SetOnStateChange(std::move(onStateChange));
     Shadow shadow;
+    auto colorMode = SystemProperties::GetColorMode();
     auto container = Container::Current();
-    CHECK_NULL_RETURN(container, popupParam);
-    auto colorMode = container->GetColorMode();
     auto pipelineContext = container->GetPipelineContext();
-    CHECK_NULL_RETURN(pipelineContext, popupParam);
     auto shadowTheme = pipelineContext->GetTheme<ShadowTheme>();
-    CHECK_NULL_RETURN(shadowTheme, popupParam);
     shadow =  shadowTheme->GetShadow(ShadowStyle::OuterDefaultSM, colorMode);
     popupParam->SetShadow(shadow);
     return popupParam;
@@ -872,7 +732,7 @@ int32_t ServiceCollaborationAceCallback::OnEvent(uint32_t code, uint32_t eventId
                 callback->info_ = nullptr;
             }
         };
-        pattern->RegisterCaretChangeListener(std::move(func));
+        pattern->RegisiterCaretChangeListener(std::move(func));
         auto row = CreateCustomPopUpNode(category, "");
         CHECK_NULL_RETURN(row, -1);
         ViewAbstract::BindPopup(popupParam, info_->pattern.Upgrade()->GetHost(), row);
@@ -885,10 +745,9 @@ int32_t ServiceCollaborationAceCallback::OnEvent(uint32_t code, uint32_t eventId
         return 0;
     }
     if (code == MULTI_PHOTO_SENDING_BACK) {
-        if (!isMultiImage_) {
-            isMultiImage_ = true;
-            RemovePopupNode();
-        }
+        auto popupParam = GetPopupParam(true, onStateChange_);
+        auto row = CreateCustomPopUpNode(category, "");
+        ViewAbstract::BindPopup(popupParam, info_->pattern.Upgrade()->GetHost(), row);
         return 0;
     }
     if (code == REMOTE_CANCEL) {
@@ -896,13 +755,12 @@ int32_t ServiceCollaborationAceCallback::OnEvent(uint32_t code, uint32_t eventId
         info_ = nullptr;
         return 0;
     }
-    isMultiImage_ = false;
     RemovePopupNode();
     auto toastPipeline = PipelineContext::GetCurrentContext();
     CHECK_NULL_RETURN(toastPipeline, -1);
     auto overlay = toastPipeline->GetOverlayManager();
     CHECK_NULL_RETURN(overlay, -1);
-    overlay->ShowToast({ .message = category, .duration = TOAST_DURATION, .alignment = -1 }, nullptr);
+    overlay->ShowToast({ .message = category, .duration = 2000, .alignment = -1 });
     info_ = nullptr;
     return 0;
 }
@@ -951,8 +809,10 @@ int32_t ServiceCollaborationAceCallback::OnDataCallback(uint32_t code, uint32_t 
         ContainerScope scope(instanceId);
         ImageSpanOptions options;
         options.imagePixelMap = imagePix;
+        options.offset = richEditorPattern->GetCaretPosition() + helper->photoCount_;
         auto width = imagePix->GetWidth();
         auto height = imagePix->GetHeight();
+        helper->photoCount_++;
         ImageSpanAttribute attr = {
             .size = ImageSpanSize{ .width = CalcDimension(width), .height = CalcDimension(height) } };
         options.imageAttribute = attr;
@@ -963,21 +823,17 @@ int32_t ServiceCollaborationAceCallback::OnDataCallback(uint32_t code, uint32_t 
         if (!richEditorPattern->GetTextSelector().SelectNothing()) {
             richEditorPattern->DeleteBackward(1);
         }
-        options.offset = richEditorPattern->GetCaretPosition() + helper->photoCount_;
-        richEditorPattern->AddImageSpanFromCollaboration(options, false);
-        helper->photoCount_++;
+        richEditorPattern->AddImageSpan(options, false, 0, false);
         if (code == SEND_PHOTO_SUCCESS) {
             richEditorPattern->SetCaretPosition(richEditorPattern->GetCaretPosition() + helper->photoCount_);
             callback->RemovePopupNode();
             callback->isTransmit_ = false;
             callback->info_ = nullptr;
-            callback->isMultiImage_ = false;
         }
     });
     auto taskExecutor = context->GetTaskExecutor();
     CHECK_NULL_RETURN(taskExecutor, -1);
-    taskExecutor->PostTask(caretTwinklingTask, TaskExecutor::TaskType::UI, "ArkUIRichEditorAddImageSpan",
-                           PriorityType::VIP);
+    taskExecutor->PostTask(caretTwinklingTask, TaskExecutor::TaskType::UI, "ArkUIRichEditorAddImageSpan");
     return 0;
 }
 } // namespace OHOS::Ace::NG

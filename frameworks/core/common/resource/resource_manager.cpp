@@ -15,9 +15,6 @@
 
 #include "core/common/resource/resource_manager.h"
 
-#include "base/log/dump_log.h"
-#include "base/utils/time_util.h"
-
 namespace OHOS::Ace {
 namespace {
 const std::string DEFAULT_BUNDLE_NAME = "";
@@ -30,82 +27,27 @@ ResourceManager& ResourceManager::GetInstance()
     return instance;
 }
 
-RefPtr<ResourceAdapter> ResourceManager::GetOrCreateResourceAdapter(const RefPtr<ResourceObject>& resourceObject)
+RefPtr<ResourceAdapter> ResourceManager::GetOrCreateResourceAdapter(RefPtr<ResourceObject>& resourceObject)
 {
-    int32_t instanceId = resourceObject->GetInstanceId();
     std::string bundleName = resourceObject->GetBundleName();
     std::string moduleName = resourceObject->GetModuleName();
 
-    auto resourceAdapter = GetResourceAdapter(bundleName, moduleName, instanceId);
+    auto resourceAdapter = GetResourceAdapter(bundleName, moduleName);
     if (resourceAdapter == nullptr) {
         resourceAdapter = ResourceAdapter::CreateNewResourceAdapter(bundleName, moduleName);
         if (!resourceAdapter) {
-            return GetResourceAdapter(DEFAULT_BUNDLE_NAME, DEFAULT_MODULE_NAME, instanceId);
+            return GetResourceAdapter(DEFAULT_BUNDLE_NAME, DEFAULT_MODULE_NAME);
         }
-        AddResourceAdapter(bundleName, moduleName, instanceId, resourceAdapter);
+        AddResourceAdapter(bundleName, moduleName, resourceAdapter);
     }
     return resourceAdapter;
 }
 
-void ResourceManager::RegisterMainResourceAdapter(const std::string& bundleName, const std::string& moduleName,
-    int32_t instanceId, const RefPtr<ResourceAdapter>& resAdapter)
+void ResourceManager::RegisterMainResourceAdapter(
+    const std::string& bundleName, const std::string& moduleName, const RefPtr<ResourceAdapter>& resAdapter)
 {
     std::unique_lock<std::shared_mutex> lock(mutex_);
-    auto key = MakeCacheKey(bundleName, moduleName, instanceId);
+    auto key = MakeCacheKey(bundleName, moduleName);
     resourceAdapters_.emplace(key, resAdapter);
-}
-
-void ResourceManager::UpdateResourceConfig(const std::string& /*bundleName*/, const std::string& /*moduleName*/,
-    int32_t instanceId, const ResourceConfiguration& config, bool themeFlag)
-{
-    std::unique_lock<std::shared_mutex> lock(mutex_);
-    std::string compareId = std::to_string(instanceId);
-    for (auto iter = resourceAdapters_.begin(); iter != resourceAdapters_.end(); ++iter) {
-        if (GetCacheKeyInstanceId(iter->first) == compareId) {
-            iter->second->UpdateConfig(config, themeFlag);
-        }
-    }
-    for (auto iter = cacheList_.begin(); iter != cacheList_.end(); ++iter) {
-        if (GetCacheKeyInstanceId(iter->cacheKey) == compareId) {
-            iter->cacheObj->UpdateConfig(config, themeFlag);
-        }
-    }
-}
-
-void ResourceManager::UpdateColorMode(
-    const std::string& /*bundleName*/, const std::string& /*moduleName*/, int32_t instanceId, ColorMode colorMode)
-{
-    std::unique_lock<std::shared_mutex> lock(mutex_);
-    std::string compareId = std::to_string(instanceId);
-    for (auto iter = resourceAdapters_.begin(); iter != resourceAdapters_.end(); ++iter) {
-        if (GetCacheKeyInstanceId(iter->first) == compareId) {
-            iter->second->UpdateColorMode(colorMode);
-        }
-    }
-    for (auto iter = cacheList_.begin(); iter != cacheList_.end(); ++iter) {
-        if (GetCacheKeyInstanceId(iter->cacheKey) == compareId) {
-            iter->cacheObj->UpdateColorMode(colorMode);
-        }
-    }
-}
-
-void ResourceManager::DumpResLoadError()
-{
-    std::unique_lock<std::shared_mutex> lock(errorMutex_);
-    auto resLoadErrorSize = resourceErrorList_.size();
-    DumpLog::GetInstance().Print("----------ResourceLoadWrrorInfo----------");
-    if (resLoadErrorSize == 0) {
-        DumpLog::GetInstance().Print("No resource load error have occurred.");
-        return;
-    }
-
-    DumpLog::GetInstance().Print("ResourceLoadErrorTimes: " + std::to_string(resLoadErrorSize));
-    for (const auto& nodeError : resourceErrorList_) {
-        DumpLog::GetInstance().Print(1, "Node: " + std::to_string(nodeError.nodeId) +
-            ", nodeTag: " + nodeError.nodeTag + ", sourceKey: " + nodeError.sourceKey +
-            ", sourceTag: " + nodeError.sourceTag +
-            ", errorCode: " + std::to_string(nodeError.state) + ", errorTime: " +
-            ConvertTimestampToStr(nodeError.errorTime));
-    }
 }
 } // namespace OHOS::Ace

@@ -16,6 +16,37 @@
 #ifndef FOUNDATION_ACE_FRAMEWORKS_CORE_COMMON_RESOURCE_RESOURCE_CONFIGURATION_H
 #define FOUNDATION_ACE_FRAMEWORKS_CORE_COMMON_RESOURCE_RESOURCE_CONFIGURATION_H
 
-#include "ui/resource/resource_configuration.h"
+namespace OHOS::Ace {
+struct ConfigurationChange {
+    bool colorModeUpdate = false;
+    bool languageUpdate = false;
+    bool directionUpdate = false;
+    bool dpiUpdate = false;
+    bool fontUpdate = false;
+    bool iconUpdate = false;
+    bool skinUpdate = false;
+    bool fontScaleUpdate = false;
+    bool fontWeightScaleUpdate = false;
 
-#endif // FOUNDATION_ACE_FRAMEWORKS_CORE_COMMON_RESOURCE_RESOURCE_CONFIGURATION_H
+    bool IsNeedUpdate() const
+    {
+        return colorModeUpdate || languageUpdate || directionUpdate || dpiUpdate || fontUpdate || iconUpdate ||
+               skinUpdate || fontScaleUpdate || fontWeightScaleUpdate;
+    }
+
+    void MergeConfig(const ConfigurationChange& config)
+    {
+        colorModeUpdate |= config.colorModeUpdate;
+        languageUpdate |= config.languageUpdate;
+        directionUpdate |= config.directionUpdate;
+        dpiUpdate |= config.dpiUpdate;
+        fontUpdate |= config.fontUpdate;
+        iconUpdate |= config.iconUpdate;
+        skinUpdate |= config.skinUpdate;
+        fontScaleUpdate |= config.fontScaleUpdate;
+        fontWeightScaleUpdate |= config.fontWeightScaleUpdate;
+    }
+};
+} // namespace OHOS::Ace
+
+#endif

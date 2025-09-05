@@ -15,7 +15,20 @@
 
 #include "core/components_ng/pattern/indexer/indexer_layout_algorithm.h"
 
+#include "base/geometry/dimension.h"
+#include "base/geometry/ng/size_t.h"
+#include "base/utils/utils.h"
+#include "core/components/common/layout/layout_param.h"
+#include "core/components_ng/base/frame_node.h"
+#include "core/components_ng/base/view_stack_processor.h"
+#include "core/components_ng/layout/layout_wrapper.h"
+#include "core/components_ng/pattern/indexer/indexer_pattern.h"
+#include "core/components_ng/pattern/indexer/indexer_theme.h"
+#include "core/components_ng/pattern/text/text_model.h"
 #include "core/components_ng/pattern/text/text_pattern.h"
+#include "core/components_ng/property/layout_constraint.h"
+#include "core/components_ng/property/measure_property.h"
+#include "core/components_ng/property/measure_utils.h"
 
 namespace OHOS::Ace::NG {
 
@@ -30,14 +43,12 @@ void IndexerLayoutAlgorithm::Measure(LayoutWrapper* layoutWrapper)
     }
 
     LayoutConstraintF layoutConstraint;
-    auto constraint = indexerLayoutProperty->GetLayoutConstraint();
-    if (constraint.has_value()) {
-        layoutConstraint = constraint.value();
+    if (indexerLayoutProperty->GetLayoutConstraint().has_value()) {
+        layoutConstraint = indexerLayoutProperty->GetLayoutConstraint().value();
     }
     OptionalSize<float> selfIdealSize = layoutConstraint.selfIdealSize;
     Dimension itemSize = indexerLayoutProperty->GetItemSize().value_or(Dimension(INDEXER_ITEM_SIZE, DimensionUnit::VP));
-    itemSize_ = ConvertToPx(itemSize, layoutConstraint.scaleProperty, layoutConstraint.maxSize.Height())
-                    .value_or(Dimension(INDEXER_ITEM_SIZE, DimensionUnit::VP).ConvertToPx());
+    itemSize_ = ConvertToPx(itemSize, layoutConstraint.scaleProperty, layoutConstraint.maxSize.Height()).value();
 
     auto defaultHorizontalPadding = Dimension(INDEXER_PADDING_LEFT, DimensionUnit::VP).ConvertToPx();
     auto defaultVerticalPadding = Container::GreatOrEqualAPITargetVersion(PlatformVersion::VERSION_TWELVE)
@@ -54,43 +65,18 @@ void IndexerLayoutAlgorithm::Measure(LayoutWrapper* layoutWrapper)
     auto frameWidth = selfIdealSize.Width().has_value()
                            ? selfIdealSize.Width().value()
                            : std::clamp(contentWidth + horizontalPadding, 0.0f, layoutConstraint.maxSize.Width());
-    auto layoutPolicy = indexerLayoutProperty->GetLayoutPolicyProperty();
-    LayoutCalPolicy widthLayoutPolicy = LayoutCalPolicy::NO_MATCH;
-    LayoutCalPolicy heightLayoutPolicy = LayoutCalPolicy::NO_MATCH;
-    if (layoutPolicy.has_value()) {
-        widthLayoutPolicy = layoutPolicy.value().widthLayoutPolicy_.value_or(LayoutCalPolicy::NO_MATCH);
-        heightLayoutPolicy = layoutPolicy.value().heightLayoutPolicy_.value_or(LayoutCalPolicy::NO_MATCH);
-    }
-    auto parentIdealSize = layoutConstraint.parentIdealSize;
-    if (widthLayoutPolicy == LayoutCalPolicy::FIX_AT_IDEAL_SIZE) {
-        // When the width parameter is FIX_AT_IDEAL_SIZE, reset the width adaptive content area
-        frameWidth = contentWidth + horizontalPadding;
-    }
     itemWidth_ = GreatNotEqual(frameWidth - horizontalPadding, 0.0f) ? frameWidth - horizontalPadding : 0.0f;
 
     auto contentHeight = childCount * itemSize_;
     float maxFrameHeight =
         selfIdealSize.Height().has_value() ? selfIdealSize.Height().value() : layoutConstraint.maxSize.Height();
     maxContentHeight_ = GreatNotEqual(maxFrameHeight - verticalPadding, 0.0f) ? maxFrameHeight - verticalPadding : 0.0f;
-    bool isHeightFixAtIdealSize = heightLayoutPolicy == LayoutCalPolicy::FIX_AT_IDEAL_SIZE;
-    if (!isHeightFixAtIdealSize) {
-        // When the height setting is not FIX_AT_IDEAL_SIZE,
-        // there is a maximum height restriction for the content area.
-        contentHeight = GreatNotEqual(contentHeight, maxContentHeight_) ? maxContentHeight_ : contentHeight;
-    }
+    contentHeight = GreatNotEqual(contentHeight, maxContentHeight_) ? maxContentHeight_ : contentHeight;
     itemHeight_ = GreatNotEqual(contentHeight, 0.0f) && childCount > 0 ? contentHeight / childCount : 0.0f;
     float frameHeight = selfIdealSize.Height().has_value()
                             ? selfIdealSize.Height().value()
                             : std::clamp(contentHeight + verticalPadding, 0.0f, layoutConstraint.maxSize.Height());
 
-    if (heightLayoutPolicy == LayoutCalPolicy::MATCH_PARENT && parentIdealSize.Height().has_value()) {
-        // When the height parameter is MATCH_PARENT, set the height to be equal to the parent's height.
-        frameHeight = layoutConstraint.parentIdealSize.Height().value();
-    }
-    if (isHeightFixAtIdealSize) {
-        // When the height parameter is FIX_AT_IDEAL_SIZE, reset the height adaptive content area
-        frameHeight = contentHeight + verticalPadding;
-    }
     auto childLayoutConstraint = indexerLayoutProperty->CreateChildConstraint();
     for (int32_t index = 0; index < childCount; index++) {
         auto childWrapper = layoutWrapper->GetOrCreateChildByIndex(index);

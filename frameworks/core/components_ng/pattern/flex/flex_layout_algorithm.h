@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -19,7 +19,6 @@
 #include "core/components/common/layout/constants.h"
 #include "core/components_ng/layout/layout_algorithm.h"
 #include "core/components_ng/layout/layout_wrapper.h"
-#include "core/components_ng/pattern/flex/flex_layout_property.h"
 #include "core/components_ng/pattern/flex/flex_layout_styles.h"
 
 namespace OHOS::Ace::NG {
@@ -69,9 +68,6 @@ public:
     }
 
 private:
-    float UpdateChildPositionWidthIgnoreLayoutSafeArea(const RefPtr<FrameNode>& host,
-        const RefPtr<LayoutWrapper>& childLayoutWrapper, const OffsetF& originOffset, const OffsetF& paddingOffset,
-        bool needExpandMainAxis);
     void InitFlexProperties(LayoutWrapper* layoutWrapper);
     void TravelChildrenFlexProps(LayoutWrapper* layoutWrapper);
     void UpdateAllocatedSize(const RefPtr<LayoutWrapper>& layoutWrapper, float& crossAxisSize);
@@ -86,15 +82,14 @@ private:
     FlexAlign GetSelfAlign(const RefPtr<LayoutWrapper>& layoutWrapper) const;
     float GetStretchCrossAxisLimit() const;
     void MeasureOutOfLayoutChildren(LayoutWrapper* layoutWrapper);
-    void MeasureAdaptiveLayoutChildren(LayoutWrapper* layoutWrapper, SizeF& realSize);
+    void MeasureAdaptiveLayoutChildren(LayoutWrapper* layoutWrapper, const SizeF& realSize);
     void MeasureAndCleanMagicNodes(LayoutWrapper* containerLayoutWrapper, FlexItemProperties& flexItemProperties);
     bool HandleBlankFirstTimeMeasure(const MagicLayoutNode& child, FlexItemProperties& flexItemProperties);
-    bool CheckBlankIllegality(const RefPtr<LayoutProperty>& blankLayoutProperty);
     void UpdateFlexProperties(FlexItemProperties& flexItemProperties, const RefPtr<LayoutWrapper>& layoutWrapper);
     void SecondaryMeasureByProperty(FlexItemProperties& flexItemProperties, LayoutWrapper* layoutWrapper);
     void UpdateLayoutConstraintOnMainAxis(LayoutConstraintF& layoutConstraint, float size);
     void UpdateLayoutConstraintOnCrossAxis(LayoutConstraintF& layoutConstraint, float size);
-    void AdjustTotalAllocatedSize(LayoutWrapper* layoutWrapper, bool includeLayoutPolicyChildren = false);
+    void AdjustTotalAllocatedSize(LayoutWrapper* layoutWrapper);
     void CheckIsGrowOrShrink(std::function<float(const RefPtr<LayoutWrapper>&)>& getFlex, float remainSpace,
         float& spacePerFlex, FlexItemProperties& flexItemProperties, RefPtr<LayoutWrapper>& lastChild);
     void CheckBlankAndKeepMin(const RefPtr<LayoutWrapper>& childLayoutWrapper, float& flexSize);
@@ -102,14 +97,11 @@ private:
     bool MarginOnMainAxisNegative(LayoutWrapper* layoutWrapper);
     bool IsKeepMinSize(const RefPtr<LayoutWrapper>& childLayoutWrapper, float& flexSize);
     bool CheckSetConstraint(const std::unique_ptr<MeasureProperty>& propertyPtr);
-    void CheckMainAxisSizeAuto(
-        LayoutWrapper* layoutWrapper, const std::unique_ptr<MeasureProperty>& calcLayoutConstraint);
-    void ApplyPatternOperation(LayoutWrapper* layoutWrapper, FlexOperatorType operation, uintptr_t addr = 0,
-        FlexLayoutResult layoutResult = {});
+    void CheckMainAxisSizeAuto(const std::unique_ptr<MeasureProperty>& calcLayoutConstraint);
+
     void SetInitMainAxisSize(LayoutWrapper* layoutWrapper);
-    void SetFinalRealSize(
-        LayoutWrapper* layoutWrapper, SizeF& realSize, std::optional<NG::LayoutPolicyProperty> layoutPolicy);
-    void SetCrossPos(const RefPtr<LayoutWrapper>& layoutWrapper, float& crossPos, const float& crossAxisSize);
+    void SetFinalRealSize(LayoutWrapper* layoutWrapper, SizeF& realSize);
+    void SetCrossPos(const RefPtr<LayoutWrapper>& layoutWrapper, float& crossPos);
     void AddElementIntoMagicNodes(int32_t childDisplayPriority, MagicLayoutNode node, float childLayoutWeight);
     bool AddElementIntoLayoutPolicyChildren(LayoutWrapper* layoutWrapper, RefPtr<LayoutWrapper> child);
     std::map<int32_t, std::list<MagicLayoutNode>>::reverse_iterator FirstMeasureInWeightMode();
@@ -117,32 +109,7 @@ private:
     void FinalMeasureInWeightMode();
     void MeasureInPriorityMode(FlexItemProperties& flexItemProperties);
     void SecondMeasureInGrowOrShrink();
-    void PopOutOfDispayMagicNodesInPriorityMode(
-        const std::list<MagicLayoutNode>& childList, FlexItemProperties& flexItemProperties);
-    void CalcMainExpand(
-        const ExpandEdges& mainExpand, ExpandEdges& sae, bool isHorizontal, bool isExpandConstraintNeeded);
-    bool CheckReCalcMainExpand(const FlexAlign& crossAlign);
 
-    template<typename T>
-    void PatternOperator(T pattern, FlexOperatorType operation, FlexMeasureResult& measureResult,
-        FlexLayoutResult layoutResult, uintptr_t addr)
-    {
-        switch (operation) {
-            case FlexOperatorType::RESTORE_MEASURE_RESULT:
-                measureResult = pattern->GetFlexMeasureResult();
-                break;
-            case FlexOperatorType::UPDATE_MEASURE_RESULT:
-                pattern->SetFlexMeasureResult(
-                    { .allocatedSize = allocatedSize_, .validSizeCount = validSizeCount_ }, addr);
-                break;
-            case FlexOperatorType::UPDATE_LAYOUT_RESULT:
-                pattern->SetFlexLayoutResult(layoutResult, addr);
-                break;
-            default:
-                break;
-        }
-    }
-    void UpdatePercentSensitive(LayoutWrapper* layoutWrapper);
     OptionalSizeF realSize_;
     float mainAxisSize_ = 0.0f;
     float crossAxisSize_ = 0.0f;
@@ -169,7 +136,6 @@ private:
     bool selfAdaptive_ = false;
     TextDirection textDir_ = TextDirection::LTR;
     bool childrenHasAlignSelfBaseLine_ = false;
-    bool isUsingPercentReference_ = false;
 
     ACE_DISALLOW_COPY_AND_MOVE(FlexLayoutAlgorithm);
 };

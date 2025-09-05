@@ -15,28 +15,38 @@
 
 #include "udmf_impl.h"
 
-#include "data_load_params_napi.h"
-#include "data_params_conversion.h"
+#include <memory>
+#include <unordered_map>
+#include <variant>
+
 #include "html.h"
 #include "image.h"
 #include "link.h"
 #include "summary_napi.h"
 #include "system_defined_form.h"
 #include "system_defined_pixelmap.h"
+#include "text.h"
 #include "plain_text.h"
+#include "udmf_client.h"
 #include "application_defined_record.h"
+#include "async_task_params.h"
+#include "data_params_conversion.h"
 #include "get_data_params_napi.h"
 #include "udmf_async_client.h"
+#include "unified_data.h"
 #include "unified_data_napi.h"
-#include "unified_meta.h"
 #include "unified_types.h"
-#include "utd_client.h"
 #include "video.h"
+#include "native_engine/native_engine.h"
 #include "frameworks/bridge/common/utils/engine_helper.h"
 #include "frameworks/bridge/common/utils/utils.h"
+#include "frameworks/bridge/js_frontend/engine/common/js_engine.h"
+#include "js_native_api_types.h"
 
+#include "base/image/file_uri_helper.h"
+#include "base/utils/utils.h"
+#include "core/common/udmf/unified_data.h"
 #include "ndk_data_conversion.h"
-
 namespace OHOS::Ace {
 UdmfClient* UdmfClient::GetInstance()
 {
@@ -65,28 +75,13 @@ RefPtr<UnifiedData> UdmfClientImpl::TransformUnifiedData(napi_value napiValue)
     return udData;
 }
 
-RefPtr<DataLoadParams> UdmfClientImpl::TransformDataLoadParams(napi_env env, napi_value napiValue)
-{
-    UDMF::DataLoadParams dataLoadParams;
-    if (UDMF::DataLoadParamsNapi::Convert2NativeValue(env, napiValue, dataLoadParams)) {
-        auto udDataLoadParams = AceType::MakeRefPtr<DataLoadParamsImpl>();
-        CHECK_NULL_RETURN(udDataLoadParams, nullptr);
-        udDataLoadParams->SetDataLoadParams(std::make_shared<UDMF::DataLoadParams>(dataLoadParams));
-        return udDataLoadParams;
-    }
-    TAG_LOGI(AceLogTag::ACE_DRAG, "dataLoadParamsNapi convert2NativeValue failed");
-    return nullptr;
-}
-
 napi_value UdmfClientImpl::TransformUdmfUnifiedData(RefPtr<UnifiedData>& UnifiedData)
 {
     auto engine = EngineHelper::GetCurrentEngine();
     CHECK_NULL_RETURN(engine, nullptr);
     NativeEngine* nativeEngine = engine->GetNativeEngine();
     napi_env env = reinterpret_cast<napi_env>(nativeEngine);
-    auto unifiedDataImpl = AceType::DynamicCast<UnifiedDataImpl>(UnifiedData);
-    CHECK_NULL_RETURN(unifiedDataImpl, nullptr);
-    auto unifiedData = unifiedDataImpl->GetUnifiedData();
+    auto unifiedData = AceType::DynamicCast<UnifiedDataImpl>(UnifiedData)->GetUnifiedData();
     CHECK_NULL_RETURN(unifiedData, nullptr);
     napi_value dataVal = nullptr;
     UDMF::UnifiedDataNapi::NewInstance(env, unifiedData, dataVal);
@@ -119,21 +114,6 @@ RefPtr<UnifiedData> UdmfClientImpl::TransformUnifiedDataForNative(void* rawData)
     return udData;
 }
 
-RefPtr<DataLoadParams> UdmfClientImpl::TransformDataLoadParamsForNative(void* rawData)
-{
-    CHECK_NULL_RETURN(rawData, nullptr);
-    auto udDataLoadParams = AceType::MakeRefPtr<DataLoadParamsImpl>();
-    auto udmfDataLoadParams = static_cast<OH_UdmfDataLoadParams*>(rawData);
-    CHECK_NULL_RETURN(udmfDataLoadParams, nullptr);
-    UDMF::DataLoadParams dataLoadParams;
-    auto status = OHOS::UDMF::DataParamsConversion::GetDataLoaderParams(*udmfDataLoadParams, dataLoadParams);
-    if (status) {
-        return nullptr;
-    }
-    udDataLoadParams->SetDataLoadParams(std::make_shared<UDMF::DataLoadParams>(dataLoadParams));
-    return udDataLoadParams;
-}
-
 napi_value UdmfClientImpl::TransformSummary(std::map<std::string, int64_t>& summary)
 {
     auto engine = EngineHelper::GetCurrentEngine();
@@ -161,17 +141,6 @@ int32_t UdmfClientImpl::SetData(const RefPtr<UnifiedData>& unifiedData, std::str
     auto udData = AceType::DynamicCast<UnifiedDataImpl>(unifiedData);
     CHECK_NULL_RETURN(udData, UDMF::E_ERROR);
     int32_t ret = client.SetData(udCustomOption, *udData->GetUnifiedData(), key);
-    return ret;
-}
-
-int32_t UdmfClientImpl::SetDelayInfo(RefPtr<DataLoadParams> dataLoadParams, std::string& key)
-{
-    CHECK_NULL_RETURN(dataLoadParams, UDMF::E_ERROR);
-    auto& client = UDMF::UdmfClient::GetInstance();
-    auto udDataLoadParams = AceType::DynamicCast<DataLoadParamsImpl>(dataLoadParams);
-    CHECK_NULL_RETURN(udDataLoadParams, UDMF::E_ERROR);
-    CHECK_NULL_RETURN(udDataLoadParams->GetDataLoadParams(), UDMF::E_ERROR);
-    int32_t ret = client.SetDelayInfo(*udDataLoadParams->GetDataLoadParams(), key);
     return ret;
 }
 
@@ -203,21 +172,14 @@ int32_t UdmfClientImpl::Cancel(const std::string& key)
     return static_cast<int32_t>(UDMF::UdmfAsyncClient::GetInstance().Cancel(key));
 }
 
-int32_t UdmfClientImpl::GetSummary(std::string& key, DragSummaryInfo& dragSummaryInfo)
+int32_t UdmfClientImpl::GetSummary(std::string& key, std::map<std::string, int64_t>& summaryMap)
 {
     auto& client = UDMF::UdmfClient::GetInstance();
     UDMF::Summary summary;
     UDMF::QueryOption queryOption;
     queryOption.key = key;
     int32_t ret = client.GetSummary(queryOption, summary);
-    if (ret != 0) {
-        return ret;
-    }
-    dragSummaryInfo.summary = summary.summary;
-    dragSummaryInfo.detailedSummary = summary.specificSummary;
-    dragSummaryInfo.summaryFormat = summary.summaryFormat;
-    dragSummaryInfo.version = summary.version;
-    dragSummaryInfo.totalSize = summary.totalSize;
+    summaryMap = summary.summary;
     return ret;
 }
 
@@ -252,22 +214,6 @@ std::shared_ptr<UDMF::UnifiedData> UnifiedDataImpl::GetUnifiedData()
 void UnifiedDataImpl::SetUnifiedData(std::shared_ptr<UDMF::UnifiedData> unifiedData)
 {
     unifiedData_ = unifiedData;
-}
-
-uint32_t DataLoadParamsImpl::GetRecordCount()
-{
-    CHECK_NULL_RETURN(dataLoadParams_, 0);
-    return dataLoadParams_->dataLoadInfo.recordCount;
-}
-
-std::shared_ptr<UDMF::DataLoadParams> DataLoadParamsImpl::GetDataLoadParams() const
-{
-    return dataLoadParams_;
-}
-
-void DataLoadParamsImpl::SetDataLoadParams(const std::shared_ptr<UDMF::DataLoadParams>& dataLoadParams)
-{
-    dataLoadParams_ = dataLoadParams;
 }
 
 void UdmfClientImpl::AddFormRecord(
@@ -404,26 +350,9 @@ bool UdmfClientImpl::AddFileUriRecord(const RefPtr<UnifiedData>& unifiedData, st
     CHECK_NULL_RETURN(udData->GetUnifiedData(), false);
 
     for (std::string u : uri) {
-        std::vector<std::string> types;
-        std::string belongsToType = "general.image";
-        char pointChar = '.';
-        size_t pos = u.rfind(pointChar);
-        std::string filenameExtension;
-        if (pos != std::string::npos) {
-            filenameExtension = u.substr(pos);
-            LOGI("DragDrop event AddFileUriRecord, filename extension is %{public}s", filenameExtension.c_str());
-        }
-        auto status = UDMF::UtdClient::GetInstance().GetUniformDataTypesByFilenameExtension(
-            filenameExtension, types, belongsToType);
-        if (status == UDMF::Status::E_OK && types.size() > 0) {
-            LOGI("DragDrop event AddFileUriRecord, extension type is %{public}s", types[0].c_str());
-            std::shared_ptr<UDMF::Object> obj = std::make_shared<UDMF::Object>();
-            obj->value_[UDMF::UNIFORM_DATA_TYPE] = "general.file-uri";
-            obj->value_[UDMF::FILE_URI_PARAM] = u;
-            obj->value_[UDMF::FILE_TYPE] = types[0];
-            auto record = std::make_shared<UDMF::UnifiedRecord>(UDMF::UDType::FILE_URI, obj);
-            udData->GetUnifiedData()->AddRecord(record);
-        }
+        LOGI("DragDrop event AddFileUriRecord, uri:%{public}s", u.c_str());
+        auto record = std::make_shared<UDMF::Image>(u);
+        udData->GetUnifiedData()->AddRecord(record);
     }
 
     return true;
@@ -488,12 +417,9 @@ std::pair<int32_t, std::string> UdmfClientImpl::GetErrorInfo(int32_t errorCode)
 {
     switch (errorCode) {
         case UDMF::E_NOT_FOUND:
-            return { ERROR_CODE_DRAG_DATA_NOT_FOUND,
-                "GetData failed, data not found. Possible causes: 1.The data is too large and has not been "
-                "synchronized yet; 2.No permission to access data." };
+            return { ERROR_CODE_DRAG_DATA_NOT_FOUND, "GetData failed, data not found." };
         default:
-            return { ERROR_CODE_DRAG_DATA_ERROR,
-                "GetData failed, data error. Possible cause: Data synchronization failed." };
+            return { ERROR_CODE_DRAG_DATA_ERROR, "GetData failed, data error." };
     }
 }
 
@@ -672,40 +598,4 @@ std::vector<uint8_t> UdmfClientImpl::GetSpanStringEntry(const RefPtr<UnifiedData
     }
     return GetSpanStringRecord(unifiedData);
 }
-
-bool UdmfClientImpl::IsAppropriateType(DragSummaryInfo& dragSummaryInfo, const std::set<std::string>& allowTypes)
-{
-    UDMF::Summary summary;
-    summary.summary = dragSummaryInfo.summary;
-    summary.specificSummary = dragSummaryInfo.detailedSummary;
-    summary.summaryFormat = dragSummaryInfo.summaryFormat;
-    summary.version = dragSummaryInfo.version;
-    summary.totalSize = dragSummaryInfo.totalSize;
-    auto& client = UDMF::UdmfClient::GetInstance();
-    std::vector<std::string> allowTypesArr(allowTypes.begin(), allowTypes.end());
-    return client.IsAppropriateType(summary, allowTypesArr);
-}
-
-#if defined(ACE_STATIC)
-RefPtr<UnifiedData> UdmfClientImpl::TransformUnifiedDataFromANI(void* rawData)
-{
-    CHECK_NULL_RETURN(rawData, nullptr);
-    auto unifiedDataPtr = reinterpret_cast<UDMF::UnifiedData*>(rawData);
-    std::shared_ptr<UDMF::UnifiedData> unifiedData(unifiedDataPtr);
-    auto udData = AceType::MakeRefPtr<UnifiedDataImpl>();
-    udData->SetUnifiedData(unifiedData);
-    return udData;
-}
-
-void UdmfClientImpl::TransformSummaryANI(std::map<std::string, int64_t>& summary, void* summaryPtr)
-{
-    auto udmfSummary = reinterpret_cast<UDMF::Summary*>(summaryPtr);
-    CHECK_NULL_VOID(udmfSummary);
-    udmfSummary->totalSize = 0;
-    for (auto element : summary) {
-        udmfSummary->totalSize += element.second;
-    }
-    udmfSummary->summary = std::move(summary);
-}
-#endif
 } // namespace OHOS::Ace

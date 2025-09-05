@@ -31,10 +31,9 @@
 namespace OHOS::Ace {
 using IdType = uint64_t;
 using IdToDisplaySyncMap = std::unordered_map<IdType, WeakPtr<UIDisplaySync>>;
-constexpr uint32_t ACE_ANIMATOR_OFFSET = 16;
 
 class ACE_FORCE_EXPORT UIDisplaySyncManager : public AceType {
-    DECLARE_ACE_TYPE(UIDisplaySyncManager, AceType);
+    DECLARE_ACE_TYPE(UIDisplaySyncManager, AceType)
 public:
     bool AddDisplaySync(const RefPtr<UIDisplaySync>& displaySync);
     bool RemoveDisplaySync(const RefPtr<UIDisplaySync>& displaySync);
@@ -61,7 +60,6 @@ public:
 
     int32_t GetAnimatorRate();
     bool IsAnimatorStopped();
-    int32_t GetMonitorVsyncRate() const;
 
     UIDisplaySyncManager();
     ~UIDisplaySyncManager() noexcept override;
@@ -74,7 +72,6 @@ private:
     int32_t sourceVsyncRate_ = 0;
     int64_t vsyncPeriod_ = 0;
     int32_t refreshRateMode_ = 0;
-    int32_t monitorVsyncRate_ = 0;
     RefPtr<FrameRateRange> displaySyncRange_ = AceType::MakeRefPtr<FrameRateRange>();
 
     IdToDisplaySyncMap uiDisplaySyncMap_;

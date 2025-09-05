@@ -15,11 +15,12 @@
 
 #include "core/components_ng/pattern/shape/shape_abstract_model_ng.h"
 
-#include "core/common/resource/resource_parse_utils.h"
+#include "base/geometry/dimension.h"
+#include "core/components/common/properties/color.h"
 #include "core/components_ng/base/view_abstract.h"
 #include "core/components_ng/base/view_stack_processor.h"
 #include "core/components_ng/pattern/shape/shape_paint_property.h"
-#include "core/components_ng/pattern/shape/shape_pattern.h"
+#include "core/components_v2/inspector/inspector_constants.h"
 
 namespace OHOS::Ace::NG {
 
@@ -35,15 +36,6 @@ void ShapeAbstractModelNG::SetStroke(FrameNode* frameNode, const Color& color)
 
 void ShapeAbstractModelNG::SetFill(const Color& color)
 {
-    ACE_UPDATE_PAINT_PROPERTY(ShapePaintProperty, Fill, color);
-    ACE_UPDATE_RENDER_CONTEXT(ForegroundColor, color);
-    ACE_UPDATE_RENDER_CONTEXT(ForegroundColorFlag, true);
-}
-void ShapeAbstractModelNG::SetForegroundColor(const Color& color)
-{
-    if (!ViewStackProcessor::GetInstance()->IsCurrentVisualStateProcess()) {
-        return;
-    }
     ACE_UPDATE_PAINT_PROPERTY(ShapePaintProperty, Fill, color);
     ACE_UPDATE_RENDER_CONTEXT(ForegroundColor, color);
     ACE_UPDATE_RENDER_CONTEXT(ForegroundColorFlag, true);
@@ -146,44 +138,5 @@ void ShapeAbstractModelNG::ResetWidth(FrameNode* frameNode)
 void ShapeAbstractModelNG::ResetHeight(FrameNode* frameNode)
 {
     ViewAbstract::ClearWidthOrHeight(frameNode, false);
-}
-
-void ShapeAbstractModelNG::SetStrokeDashArray(
-    const std::vector<Ace::Dimension>& segments, const std::vector<RefPtr<ResourceObject>>& resObjArray)
-{
-    if (!SystemProperties::ConfigChangePerform()) {
-        return;
-    }
-    auto frameNode = ViewStackProcessor::GetInstance()->GetMainFrameNode();
-    CHECK_NULL_VOID(frameNode);
-    SetStrokeDashArray(frameNode, segments, resObjArray);
-}
-
-void ShapeAbstractModelNG::SetStrokeDashArray(FrameNode* frameNode, const std::vector<Ace::Dimension>& segments,
-    const std::vector<RefPtr<ResourceObject>>& resObjArray)
-{
-    if (!SystemProperties::ConfigChangePerform()) {
-        return;
-    }
-    auto pattern = frameNode->GetPattern<ShapePattern>();
-    CHECK_NULL_VOID(pattern);
-    auto&& updateFunc = [frameNode, segments, resObjArray](const RefPtr<ResourceObject>& resObj) {
-        if (segments.size() != resObjArray.size()) {
-            return;
-        }
-        std::vector<Ace::Dimension> result;
-        for (size_t i = 0; i < segments.size(); i++) {
-            if (resObjArray[i]) {
-                Dimension dim;
-                ResourceParseUtils::ConvertFromResObjNG(resObjArray[i], dim);
-                result.emplace_back(dim);
-            } else {
-                result.emplace_back(segments[i]);
-            }
-        }
-        ACE_UPDATE_NODE_PAINT_PROPERTY(ShapePaintProperty, StrokeDashArray, result, frameNode);
-    };
-    RefPtr<ResourceObject> resObj = AceType::MakeRefPtr<ResourceObject>();
-    pattern->AddResObj("ShapeAbstractStrokeDashArray", resObj, std::move(updateFunc));
 }
 } // namespace OHOS::Ace::NG

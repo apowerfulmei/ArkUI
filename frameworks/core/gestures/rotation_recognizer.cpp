@@ -14,7 +14,6 @@
 */
 
 #include "core/gestures/rotation_recognizer.h"
-#include "core/pipeline/base/constants.h"
 
 namespace OHOS::Ace {
 
@@ -32,7 +31,7 @@ void RotationRecognizer::OnAccepted()
         SendCallbackMsg(onActionEnd_);
         Reset();
     } else if (pendingCancel_) {
-        SendCallbackMsg(onActionCancel_);
+        SendCancelMsg();
         Reset();
     }
 }
@@ -120,7 +119,7 @@ void RotationRecognizer::HandleTouchCancelEvent(const TouchEvent& event)
     }
 
     if (refereeState_ == RefereeState::SUCCEED) {
-        SendCallbackMsg(onActionCancel_);
+        SendCancelMsg();
         Reset();
     } else {
         pendingCancel_ = true;
@@ -133,7 +132,7 @@ double RotationRecognizer::ComputeAngle()
     double fy = touchPoints_[0].y;
     double sx = touchPoints_[1].x;
     double sy = touchPoints_[1].y;
-    double angle = atan2(fy - sy, fx - sx) * 180.0 / ACE_PI;
+    double angle = atan2(fy - sy, fx - sx) * 180.0 / M_PI;
     return angle;
 }
 

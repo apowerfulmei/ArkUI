@@ -17,6 +17,9 @@
 #include "core/components_ng/render/adapter/rosen_render_context.h"
 #include "frameworks/core/common/container.h"
 
+#include "render_service_client/core/ui/rs_ui_director.h"
+#include "render_service_client/core/ui/rs_ui_share_context.h"
+
 namespace OHOS::Ace::NG {
 
 Render3D::HapInfo ModelAdapterWrapper::SetHapInfo()
@@ -64,23 +67,20 @@ std::shared_future<void> ModelAdapterWrapper::Deinit()
 #if defined(KIT_3D_ENABLE)
     if (sceneAdapter_) {
         sceneAdapter_->Deinit();
-        if (textureLayer_) {
-            textureLayer_->DestroyRenderTarget();
-        }
         return std::shared_future<void>();
     }
 #endif
     std::shared_ptr<Render3D::WidgetAdapter> widgetAdapter(widgetAdapter_);
+    std::shared_ptr<Render3D::TextureLayer> textureLayer(textureLayer_);
     auto key = key_;
-    if (textureLayer_) {
-        textureLayer_->DestroyRenderTarget();
-    }
-    return Render3D::GraphicsTask::GetInstance().PushAsyncMessage([widgetAdapter, key] {
+    return Render3D::GraphicsTask::GetInstance().PushAsyncMessage([widgetAdapter, textureLayer, key] {
         ACE_SCOPED_TRACE("ModelAdapterWrapper::Deinit render");
         
         CHECK_NULL_VOID(widgetAdapter);
         widgetAdapter->DeInitEngine();
         Render3D::GraphicsManager::GetInstance().UnRegister(key);
+        CHECK_NULL_VOID(textureLayer);
+        textureLayer->DestroyRenderTarget();
     });
 }
 
@@ -91,14 +91,14 @@ void ModelAdapterWrapper::CreateTextureLayer()
         return;
     }
 #endif
-    const auto& key = GetKey();
-    textureLayer_ = std::make_shared<Render3D::TextureLayer>(key);
-    Render3D::GraphicsTask::GetInstance().PushAsyncMessage([weak = WeakClaim(this), key] {
+    Render3D::GraphicsTask::GetInstance().PushAsyncMessage([weak = WeakClaim(this)] {
         auto adapter = weak.Upgrade();
         CHECK_NULL_VOID(adapter);
 
         auto& gfxManager = Render3D::GraphicsManager::GetInstance();
+        const auto& key = adapter->GetKey();
         gfxManager.Register(key);
+        adapter->textureLayer_ = std::make_shared<Render3D::TextureLayer>(key);
     });
 }
 
@@ -155,15 +155,14 @@ void ModelAdapterWrapper::OnDirtyLayoutWrapperSwap(const Render3D::WindowChangeI
         return;
     }
 #endif
-    CHECK_NULL_VOID(textureLayer_);
-    textureLayer_->OnWindowChange(windowChangeInfo);
-    const auto textureInfo = textureLayer_->GetTextureInfo();
-    Render3D::GraphicsTask::GetInstance().PushAsyncMessage([weak = WeakClaim(this), textureInfo] {
+    Render3D::GraphicsTask::GetInstance().PushAsyncMessage([weak = WeakClaim(this), windowChangeInfo] {
         auto adapter = weak.Upgrade();
         CHECK_NULL_VOID(adapter);
+        CHECK_NULL_VOID(adapter->textureLayer_);
         CHECK_NULL_VOID(adapter->widgetAdapter_);
 
-        adapter->widgetAdapter_->OnWindowChange(textureInfo);
+        adapter->textureLayer_->OnWindowChange(windowChangeInfo);
+        adapter->widgetAdapter_->OnWindowChange(adapter->textureLayer_->GetTextureInfo());
     });
 }
 
@@ -173,8 +172,20 @@ void ModelAdapterWrapper::OnRebuildFrame(RefPtr<RenderContext>& context)
     auto rsContext = DynamicCast<NG::RosenRenderContext>(context);
     CHECK_NULL_VOID(rsContext);
     auto rsNode = rsContext->GetRSNode();
-    CHECK_NULL_VOID(textureLayer_);
-    textureLayer_->SetParent(rsNode);
+#if defined(KIT_3D_ENABLE)
+    if (sceneAdapter_) {
+        CHECK_NULL_VOID(textureLayer_);
+        textureLayer_->SetParent(rsNode);
+        return;
+    }
+#endif
+    Render3D::GraphicsTask::GetInstance().PushAsyncMessage([weak = WeakClaim(this), rsNode]() mutable {
+        auto adapter = weak.Upgrade();
+        CHECK_NULL_VOID(adapter);
+        CHECK_NULL_VOID(adapter->textureLayer_);
+
+        adapter->textureLayer_->SetParent(rsNode);
+    });
 #endif
 }
 

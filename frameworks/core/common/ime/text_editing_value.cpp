@@ -28,9 +28,7 @@ const char SELECTION_START[] = "selectionStart";
 const char SELECTION_END[] = "selectionEnd";
 const char IS_DELETE[] = "isDelete";
 const char APPEND_TEXT[] = "appendText";
-#if defined(IOS_PLATFORM)
-const char UNMARK_TEXT[] = "unmarkText";
-#endif
+
 
 } // namespace
 
@@ -40,9 +38,6 @@ void TextEditingValue::ParseFromJson(const JsonValue& json)
     hint = json.GetString(HINT);
     isDelete = json.GetBool(IS_DELETE);
     appendText = json.GetString(APPEND_TEXT);
-#if defined(IOS_PLATFORM)
-    unmarkText = json.GetBool(UNMARK_TEXT);
-#endif
     selection.baseOffset = json.GetInt(SELECTION_START, -1);
     selection.extentOffset = json.GetInt(SELECTION_END, -1);
 }
@@ -167,7 +162,6 @@ void TextEditingValue::SelectionAwareTextManipulation(const TextManipulation& ma
 
         std::wstring inSelection;
         if (start != end) {
-            start = std::clamp(start, 0, static_cast<int32_t>(wideText.length()));
             inSelection = wideText.substr(start, end - start);
             manipulation(inSelection);
         }
@@ -175,7 +169,6 @@ void TextEditingValue::SelectionAwareTextManipulation(const TextManipulation& ma
         std::wstring afterSelection;
         size_t lenLeft = wideText.length() - static_cast<size_t>(end);
         if (lenLeft > 0) {
-            end = std::clamp(end, 0, static_cast<int32_t>(wideText.length()));
             afterSelection = wideText.substr(end, lenLeft);
             manipulation(afterSelection);
         }
@@ -221,7 +214,6 @@ std::string TextEditingValue::GetSelectedText() const
         start = 0;
     }
     if (end > 0 && start != end) {
-        start = std::clamp(start, 0, static_cast<int32_t>(wideText.length()));
         std::wstring inSelection = wideText.substr(start, end - start);
         selectedText = StringUtils::ToString(inSelection);
     }
@@ -242,7 +234,6 @@ std::string TextEditingValue::GetSelectedText(const TextSelection& textSelection
     }
 
     if (end > 0 && start < end) {
-        start = std::clamp(start, 0, static_cast<int32_t>(wideText.length()));
         std::wstring inSelection = wideText.substr(start, end - start);
         selectedText = StringUtils::ToString(inSelection);
     }

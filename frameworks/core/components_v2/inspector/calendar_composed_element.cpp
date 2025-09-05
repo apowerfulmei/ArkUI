@@ -15,7 +15,9 @@
 
 #include "core/components_v2/inspector/calendar_composed_element.h"
 
+#include "base/log/dump_log.h"
 #include "core/components/calendar/calendar_element.h"
+#include "core/components/common/layout/constants.h"
 #include "core/components_v2/inspector/utils.h"
 
 namespace OHOS::Ace::V2 {
@@ -167,8 +169,7 @@ std::string CalendarComposedElement::ConvertOffDayToString(std::string offDay) c
 std::vector<std::string> CalendarComposedElement::SplitString(const std::string& s, const std::string& c) const
 {
     std::vector<std::string> v;
-    std::string::size_type pos1;
-    std::string::size_type pos2;
+    std::string::size_type pos1, pos2;
     pos1 = 0;
     pos2 = s.find(c);
     while (std::string::npos != pos2) {

@@ -22,20 +22,6 @@ class ArkCheckboxComponent extends ArkComponent implements CheckboxAttribute {
   constructor(nativePtr: KNode, classType?: ModifierType) {
     super(nativePtr, classType);
   }
-  allowChildCount(): number {
-    return 0;
-  }
-  initialize(value: Object[]): this {
-    if (!value.length) {
-      return this;
-    }
-    if (!isUndefined(value[0]) && !isNull(value[0]) && isObject(value[0])) {
-      modifierWithKey(this._modifiersWithKeys, CheckboxOptionsModifier.identity, CheckboxOptionsModifier, value[0]);
-    } else {
-      modifierWithKey(this._modifiersWithKeys, CheckboxOptionsModifier.identity, CheckboxOptionsModifier, undefined);
-    }
-    return this;
-  }
   shape(value: CheckBoxShape): this {
     modifierWithKey(this._modifiersWithKeys, CheckBoxShapeModifier.identity, CheckBoxShapeModifier, value);
     return this;
@@ -100,36 +86,6 @@ class ArkCheckboxComponent extends ArkComponent implements CheckboxAttribute {
       this._modifiersWithKeys, CheckBoxResponseRegionModifier.identity, CheckBoxResponseRegionModifier, value);
     return this;
   }
-  margin(value: Margin | Length): this {
-    let arkValue = new ArkPadding();
-    if (value !== null && value !== undefined) {
-      if (isLengthType(value) || isResource(value)) {
-        arkValue.top = <Length>value;
-        arkValue.right = <Length>value;
-        arkValue.bottom = <Length>value;
-        arkValue.left = <Length>value;
-      } else {
-        arkValue.top = value.top;
-        arkValue.bottom = value.bottom;
-        if (Object.keys(value).indexOf('right') >= 0) {
-          arkValue.right = value.right;
-        }
-        if (Object.keys(value).indexOf('end') >= 0) {
-          arkValue.right = value.end;
-        }
-        if (Object.keys(value).indexOf('left') >= 0) {
-          arkValue.left = value.left;
-        }
-        if (Object.keys(value).indexOf('start') >= 0) {
-          arkValue.left = value.start;
-        }
-      }
-      modifierWithKey(this._modifiersWithKeys, CheckboxMarginModifier.identity, CheckboxMarginModifier, arkValue);
-    } else {
-      modifierWithKey(this._modifiersWithKeys, CheckboxMarginModifier.identity, CheckboxMarginModifier, undefined);
-    }
-    return this;
-  }
   contentModifier(value: ContentModifier<CheckBoxConfiguration>): this {
     modifierWithKey(this._modifiersWithKeys, CheckBoxContentModifier.identity, CheckBoxContentModifier, value);
     return this;
@@ -159,28 +115,8 @@ class ArkCheckboxComponent extends ArkComponent implements CheckboxAttribute {
     }
     return this.checkboxNode.getFrameNode();
   }
-  onChange(callback:OnCheckboxChangeCallback):this{
-    modifierWithKey(this._modifiersWithKeys, CheckBoxOnChangeModifier.identity, CheckBoxOnChangeModifier, callback);
-    return this;
-  }
-}
-
-class CheckboxOptionsModifier extends ModifierWithKey<CheckboxOptions> {
-  constructor(value: CheckboxOptions) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('checkBoxOptions');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().checkbox.setCheckboxOptions(node, undefined, undefined);
-    } else {
-      getUINativeModule().checkbox.setCheckboxOptions(node, this.value.name, this.value.group);
-    }
-  }
-
-  checkObjectDiff(): boolean {
-    return !isBaseOrResourceEqual(this.stageValue.name, this.value.name) ||
-      !isBaseOrResourceEqual(this.stageValue.group, this.value.group);
+  onChange(callback: (value: boolean) => void): this {
+    throw new Error('Method not implemented.');
   }
 }
 
@@ -417,41 +353,6 @@ class CheckboxUnselectedColorModifier extends ModifierWithKey<ResourceColor> {
 
   checkObjectDiff(): boolean {
     return !isBaseOrResourceEqual(this.stageValue, this.value);
-  }
-}
-class CheckBoxOnChangeModifier extends ModifierWithKey<OnCheckboxChangeCallback>{
-  constructor(value: OnCheckboxChangeCallback){
-    super(value);
-  }
-  static identity: Symbol = Symbol('CheckboxOnchange');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().checkbox.resetOnChange(node);
-    } else {
-      getUINativeModule().checkbox.setOnChange(node, this.value);
-    }
-  }
-}
-
-class CheckboxMarginModifier extends ModifierWithKey<ArkPadding> {
-  constructor(value: ArkPadding) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('checkboxMargin');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().checkbox.resetMargin(node);
-    } else {
-      getUINativeModule().checkbox.setMargin(node, this.value.top,
-        this.value.right, this.value.bottom, this.value.left);
-    }
-  }
-
-  checkObjectDiff(): boolean {
-    return !isBaseOrResourceEqual(this.stageValue.top, this.value.top) ||
-      !isBaseOrResourceEqual(this.stageValue.right, this.value.right) ||
-      !isBaseOrResourceEqual(this.stageValue.bottom, this.value.bottom) ||
-      !isBaseOrResourceEqual(this.stageValue.left, this.value.left);
   }
 }
 

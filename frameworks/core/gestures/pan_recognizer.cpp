@@ -34,7 +34,7 @@ void PanRecognizer::OnAccepted()
         SendCallbackMsg(onActionEnd_);
         Reset();
     } else if (pendingCancel_) {
-        SendCallbackMsg(onActionCancel_);
+        SendCancelMsg();
         Reset();
     }
 }
@@ -268,7 +268,7 @@ void PanRecognizer::HandleTouchCancelEvent(const TouchEvent& event)
     }
 
     if (refereeState_ == RefereeState::SUCCEED) {
-        SendCallbackMsg(onActionCancel_);
+        SendCancelMsg();
         Reset();
     } else {
         pendingCancel_ = true;

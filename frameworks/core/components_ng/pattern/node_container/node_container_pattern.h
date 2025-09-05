@@ -73,14 +73,6 @@ public:
         return makeFunc_();
     }
 
-    void FireOnWillBind(int32_t containerId);
-
-    void FireOnWillUnbind(int32_t containerId);
-
-    void FireOnBind(int32_t containerId);
-
-    void FireOnUnbind(int32_t containerId);
-
     void SetOnResize(std::function<void(const SizeF& size)>&& resizeFunc)
     {
         resizeFunc_ = std::move(resizeFunc);
@@ -115,34 +107,16 @@ public:
 
     void ResetExportTextureInfo();
 
-    bool IsEnableChildrenMatchParent() override
-    {
-        return true;
-    }
-
-    bool IsEnableMatchParent() override
-    {
-        return true;
-    }
-
-    bool IsEnableFix() override
-    {
-        return true;
-    }
-
-    void AddBaseNode(const RefPtr<UINode>& newNode);
-
 private:
     void OnDetachFromFrameNode(FrameNode* frameNode) override;
     void OnMountToParentDone() override;
     void SetExportTextureInfoIfNeeded();
-    bool HandleTextureExport(bool isStop, FrameNode* frameNode);
+    bool HandleTextureExport(bool isStop);
     std::function<void()> resetFunc_;
     std::function<RefPtr<UINode>()> makeFunc_;
     std::function<void(const SizeF& size)> resizeFunc_;
     WeakPtr<UINode> exportTextureNode_;
     uint64_t surfaceId_ = 0U;
-    RefPtr<NodeContainerEventHub> GetNodeContainerEventHub();
 
     ACE_DISALLOW_COPY_AND_MOVE(NodeContainerPattern);
 };

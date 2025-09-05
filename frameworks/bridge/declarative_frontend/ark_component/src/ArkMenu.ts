@@ -15,9 +15,6 @@
 
 /// <reference path='./import.ts' />
 class MenuFontColorModifier extends ModifierWithKey<ResourceColor> {
-  constructor(value: ResourceColor) {
-    super(value);
-  }
   static identity: Symbol = Symbol('fontColor');
   applyPeer(node: KNode, reset: boolean): void {
     if (reset) {
@@ -28,14 +25,15 @@ class MenuFontColorModifier extends ModifierWithKey<ResourceColor> {
   }
 
   checkObjectDiff(): boolean {
-    return !isBaseOrResourceEqual(this.stageValue, this.value);
+    if (isResource(this.stageValue) && isResource(this.value)) {
+      return !isResourceEqual(this.stageValue, this.value);
+    } else {
+      return true;
+    }
   }
 }
 
 class MenuFontModifier extends ModifierWithKey<Font> {
-  constructor(value: Font) {
-    super(value);
-  }
   static identity: Symbol = Symbol('font');
   applyPeer(node: KNode, reset: boolean): void {
     if (reset || !this.value) {
@@ -59,9 +57,6 @@ class MenuFontModifier extends ModifierWithKey<Font> {
 }
 
 class RadiusModifier extends ModifierWithKey<Dimension | BorderRadiuses> {
-  constructor(value: Dimension | BorderRadiuses) {
-    super(value);
-  }
   static identity: Symbol = Symbol('radius');
   applyPeer(node: KNode, reset: boolean): void {
     if (reset) {
@@ -81,7 +76,9 @@ class RadiusModifier extends ModifierWithKey<Dimension | BorderRadiuses> {
   }
 
   checkObjectDiff(): boolean {
-    if (!isResource(this.stageValue) && !isResource(this.value)) {
+    if (isResource(this.stageValue) && isResource(this.value)) {
+      return !isResourceEqual(this.stageValue, this.value);
+    } else if (!isResource(this.stageValue) && !isResource(this.value)) {
       return !((this.stageValue as BorderRadiuses).topLeft === (this.value as BorderRadiuses).topLeft &&
         (this.stageValue as BorderRadiuses).topRight === (this.value as BorderRadiuses).topRight &&
         (this.stageValue as BorderRadiuses).bottomLeft === (this.value as BorderRadiuses).bottomLeft &&
@@ -110,24 +107,6 @@ class MenuWidthModifier extends ModifierWithKey<Length> {
   }
 }
 
-class MenuFontSizeModifier extends ModifierWithKey<Length> {
-  constructor(value: Length) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('menuFontSize');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().menu.resetFontSize(node);
-    } else {
-      getUINativeModule().menu.setFontSize(node, this.value);
-    }
-  }
-
-  checkObjectDiff(): boolean {
-    return !isBaseOrResourceEqual(this.stageValue, this.value);
-  }
-}
-
 class MenuItemDividerModifier extends ModifierWithKey<DividerStyleOptions> {
   constructor(value: DividerStyleOptions) {
     super(value);
@@ -137,18 +116,18 @@ class MenuItemDividerModifier extends ModifierWithKey<DividerStyleOptions> {
     if (reset || !this.value) {
       getUINativeModule().menu.resetMenuItemDivider(node);
     } else {
-      getUINativeModule().menu.setMenuItemDivider(node, this.value.strokeWidth, this.value.color,
-        this.value.startMargin, this.value.endMargin, this.value.mode);
+      getUINativeModule().menu.setMenuItemDivider(node, this.value.strokeWidth, this.value.color, this.value.startMargin, this.value.endMargin);
     }
   }
 
   checkObjectDiff(): boolean {
-    if (!isResource(this.stageValue) && !isResource(this.value)) {
+    if (isResource(this.stageValue) && isResource(this.value)) {
+      return !isResourceEqual(this.stageValue, this.value);
+    } else if (!isResource(this.stageValue) && !isResource(this.value)) {
       return !((this.stageValue as DividerStyleOptions).strokeWidth === (this.value as DividerStyleOptions).strokeWidth &&
         (this.stageValue as DividerStyleOptions).color === (this.value as DividerStyleOptions).color &&
         (this.stageValue as DividerStyleOptions).startMargin === (this.value as DividerStyleOptions).startMargin &&
-        (this.stageValue as DividerStyleOptions).endMargin === (this.value as DividerStyleOptions).endMargin &&
-        (this.stageValue as DividerStyleOptions).mode === (this.value as DividerStyleOptions).mode);
+        (this.stageValue as DividerStyleOptions).endMargin === (this.value as DividerStyleOptions).endMargin);
     } else {
       return true;
     }
@@ -164,18 +143,18 @@ class MenuItemGroupDividerModifier extends ModifierWithKey<DividerStyleOptions> 
     if (reset || !this.value) {
       getUINativeModule().menu.resetMenuItemGroupDivider(node);
     } else {
-      getUINativeModule().menu.setMenuItemGroupDivider(node, this.value.strokeWidth, this.value.color,
-        this.value.startMargin, this.value.endMargin, this.value.mode);
+      getUINativeModule().menu.setMenuItemGroupDivider(node, this.value.strokeWidth, this.value.color, this.value.startMargin, this.value.endMargin);
     }
   }
 
   checkObjectDiff(): boolean {
-    if (!isResource(this.stageValue) && !isResource(this.value)) {
+    if (isResource(this.stageValue) && isResource(this.value)) {
+      return !isResourceEqual(this.stageValue, this.value);
+    } else if (!isResource(this.stageValue) && !isResource(this.value)) {
       return !((this.stageValue as DividerStyleOptions).strokeWidth === (this.value as DividerStyleOptions).strokeWidth &&
         (this.stageValue as DividerStyleOptions).color === (this.value as DividerStyleOptions).color &&
         (this.stageValue as DividerStyleOptions).startMargin === (this.value as DividerStyleOptions).startMargin &&
-        (this.stageValue as DividerStyleOptions).endMargin === (this.value as DividerStyleOptions).endMargin &&
-        (this.stageValue as DividerStyleOptions).mode === (this.value as DividerStyleOptions).mode);
+        (this.stageValue as DividerStyleOptions).endMargin === (this.value as DividerStyleOptions).endMargin);
     } else {
       return true;
     }
@@ -196,23 +175,6 @@ class SubMenuExpandingModeModifier extends ModifierWithKey<number> {
   }
 }
 
-class SubMenuExpandSymbolModifier extends ModifierWithKey<SymbolGlyphModifier> {
-  constructor(value: SymbolGlyphModifier) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('subMenuExpandSymbol');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset || !this.value) {
-      getUINativeModule().menu.resetSubMenuExpandSymbol(node);
-    } else {
-      getUINativeModule().menu.setSubMenuExpandSymbol(node, this.value);
-    }
-  }
-  checkObjectDiff(): boolean {
-    return !isBaseOrResourceEqual(this.stageValue, this.value);
-  }
-}
-
 class ArkMenuComponent extends ArkComponent implements MenuAttribute {
   constructor(nativePtr: KNode, classType?: ModifierType) {
     super(nativePtr, classType);
@@ -221,9 +183,8 @@ class ArkMenuComponent extends ArkComponent implements MenuAttribute {
     modifierWithKey(this._modifiersWithKeys, MenuWidthModifier.identity, MenuWidthModifier, value);
     return this;
   }
-  fontSize(value: Length): this {
-    modifierWithKey(this._modifiersWithKeys, MenuFontSizeModifier.identity, MenuFontSizeModifier, value);
-    return this;
+  fontSize(value: any): this {
+    throw new Error('Method not implemented.');
   }
   font(value: Font): this {
     modifierWithKey(this._modifiersWithKeys, MenuFontModifier.identity, MenuFontModifier, value);
@@ -247,10 +208,6 @@ class ArkMenuComponent extends ArkComponent implements MenuAttribute {
   }
   subMenuExpandingMode(value: SubMenuExpandingMode): this {
     modifierWithKey(this._modifiersWithKeys, SubMenuExpandingModeModifier.identity, SubMenuExpandingModeModifier, value);
-    return this;
-  }
-  subMenuExpandSymbol(value: SymbolGlyphModifier): this {
-    modifierWithKey(this._modifiersWithKeys, SubMenuExpandSymbolModifier.identity, SubMenuExpandSymbolModifier, value);
     return this;
   }
 }

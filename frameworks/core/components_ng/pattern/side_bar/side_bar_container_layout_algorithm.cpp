@@ -15,8 +15,18 @@
 
 #include "core/components_ng/pattern/side_bar/side_bar_container_layout_algorithm.h"
 
+#include "base/geometry/dimension.h"
+#include "base/geometry/ng/offset_t.h"
+#include "base/utils/utils.h"
+#include "core/common/ace_application_info.h"
+#include "core/common/container.h"
+#include "core/components/common/layout/constants.h"
+#include "core/components_ng/base/frame_node.h"
 #include "core/components_ng/pattern/side_bar/side_bar_container_pattern.h"
+#include "core/components_ng/property/calc_length.h"
 #include "core/components_ng/property/measure_utils.h"
+#include "core/pipeline_ng/pipeline_context.h"
+
 namespace OHOS::Ace::NG {
 
 namespace {
@@ -41,8 +51,7 @@ constexpr Dimension CONTROL_BUTTON_PADDING = 12.0_vp;
 void SideBarContainerLayoutAlgorithm::Measure(LayoutWrapper* layoutWrapper)
 {
     autoHide_ = false;
-    CHECK_NULL_VOID(layoutWrapper);
-    UpdateDefaultValueByVersion(layoutWrapper);
+    UpdateDefaultValueByVersion();
     const auto& children = layoutWrapper->GetAllChildrenWithBuild(layoutWrapper->IsActive());
     if (children.size() < DEFAULT_MIN_CHILDREN_SIZE) {
         return;
@@ -50,11 +59,7 @@ void SideBarContainerLayoutAlgorithm::Measure(LayoutWrapper* layoutWrapper)
     auto layoutProperty = AceType::DynamicCast<SideBarContainerLayoutProperty>(layoutWrapper->GetLayoutProperty());
     CHECK_NULL_VOID(layoutProperty);
     const auto& constraint = layoutProperty->GetLayoutConstraint();
-    auto hostNode = layoutWrapper->GetHostNode();
-    CHECK_NULL_VOID(hostNode);
-    auto pipeline = hostNode->GetContextRefPtr();
-    CHECK_NULL_VOID(pipeline);
-    auto idealSize = pipeline->GetMinPlatformVersion() >= PLATFORM_VERSION_TEN ?
+    auto idealSize = PipelineContext::GetCurrentContext()->GetMinPlatformVersion() >= PLATFORM_VERSION_TEN ?
     CreateIdealSizeByPercentRef(constraint.value(), Axis::HORIZONTAL,
         layoutProperty->GetMeasureType(MeasureType::MATCH_PARENT)).ConvertToSizeT() :
     CreateIdealSize(
@@ -66,8 +71,9 @@ void SideBarContainerLayoutAlgorithm::Measure(LayoutWrapper* layoutWrapper)
     auto parentWidth = idealSize.Width();
     realSideBarWidth_ = ConvertToPx(realSideBarWidthDimension_, constraint->scaleProperty, parentWidth).value_or(-1.0f);
     if (needInitRealSideBarWidth_ || NearZero(realSideBarWidth_)) {
+        auto pipeline = PipelineContext::GetCurrentContext();
         if (pipeline->GetMinPlatformVersion() >= PLATFORM_VERSION_TEN) {
-            GetAllPropertyValue(layoutProperty, layoutWrapper, parentWidth);
+            GetAllPropertyValue(layoutProperty, parentWidth);
         } else {
             InitRealSideBarWidth(layoutWrapper, parentWidth);
         }
@@ -132,66 +138,11 @@ void SideBarContainerLayoutAlgorithm::Measure(LayoutWrapper* layoutWrapper)
     } else {
         realSideBarWidthDimension_ = Dimension(realSideBarWidth_, DimensionUnit::PX);
     }
-    
-    AddChildToIgnoreLayoutSafeBundle(layoutWrapper);
 }
 
-void SideBarContainerLayoutAlgorithm::AddChildToIgnoreLayoutSafeBundle(LayoutWrapper* layoutWrapper)
+void SideBarContainerLayoutAlgorithm::UpdateDefaultValueByVersion()
 {
-    const auto& children = layoutWrapper->GetAllChildrenWithBuild(layoutWrapper->IsActive());
-    auto host = layoutWrapper->GetHostNode();
-    CHECK_NULL_VOID(host);
-    auto layoutConstraint = layoutWrapper->GetLayoutProperty()->CreateChildConstraint();
-    auto context = host->GetContext();
-    CHECK_NULL_VOID(context);
-    IgnoreLayoutSafeAreaBundle bundle;
-    int32_t index = 0;
-    for (auto it = children.rbegin(); it != children.rend(); ++it) {
-        index++;
-        if (index != INDEX_SIDE_BAR) {
-            continue;
-        }
-        auto sideBarLayoutWrapper = (*it);
-        CHECK_NULL_VOID(sideBarLayoutWrapper);
-        auto sideBarNode = sideBarLayoutWrapper->GetHostNode();
-        CHECK_NULL_VOID(sideBarNode);
-        auto sideBarLayoutProperty = sideBarNode->GetLayoutProperty();
-        if (sideBarLayoutProperty && sideBarLayoutProperty->IsExpandConstraintNeeded()) {
-            bundle.first.emplace_back(sideBarNode);
-            auto sideBarGeo = sideBarLayoutWrapper->GetGeometryNode();
-            CHECK_NULL_VOID(sideBarGeo);
-            layoutConstraint.parentIdealSize.SetSize(sideBarGeo->GetFrameSize());
-            sideBarGeo->SetParentLayoutConstraint(layoutConstraint);
-            SetNeedPostponeForIgnore();
-        }
-    }
-    if (children.size() > DEFAULT_MIN_CHILDREN_SIZE) { // when sidebar only add one component, content is not display
-        auto contentLayoutWrapper = children.front();
-        CHECK_NULL_VOID(contentLayoutWrapper);
-        auto contentNode = contentLayoutWrapper->GetHostNode();
-        CHECK_NULL_VOID(contentNode);
-        auto contentLayoutProperty = contentNode->GetLayoutProperty();
-        if (contentLayoutProperty && contentLayoutProperty->IsExpandConstraintNeeded()) {
-            bundle.first.emplace_back(contentNode);
-            auto contentGeo = contentLayoutWrapper->GetGeometryNode();
-            CHECK_NULL_VOID(contentGeo);
-            layoutConstraint.parentIdealSize.SetSize(contentGeo->GetFrameSize());
-            contentGeo->SetParentLayoutConstraint(layoutConstraint);
-            SetNeedPostponeForIgnore();
-        }
-    }
-    if (GetNeedPostponeForIgnore()) {
-        bundle.second = host;
-        context->AddIgnoreLayoutSafeAreaBundle(std::move(bundle));
-    }
-}
-
-void SideBarContainerLayoutAlgorithm::UpdateDefaultValueByVersion(LayoutWrapper* layoutWrapper)
-{
-    CHECK_NULL_VOID(layoutWrapper);
-    auto hostNode = layoutWrapper->GetHostNode();
-    CHECK_NULL_VOID(hostNode);
-    auto pipeline = hostNode->GetContextRefPtr();
+    auto pipeline = PipelineContext::GetCurrentContext();
     CHECK_NULL_VOID(pipeline);
     if (pipeline->GetMinPlatformVersion() >= PLATFORM_VERSION_TEN) {
         DEFAULT_SIDE_BAR_WIDTH = 240.0_vp;
@@ -223,13 +174,10 @@ void SideBarContainerLayoutAlgorithm::AdjustMinAndMaxSideBarWidth(LayoutWrapper*
 {
     adjustMinSideBarWidth_ = DEFAULT_MIN_SIDE_BAR_WIDTH;
     adjustMaxSideBarWidth_ = DEFAULT_MAX_SIDE_BAR_WIDTH;
-    CHECK_NULL_VOID(layoutWrapper);
     auto layoutProperty = AceType::DynamicCast<SideBarContainerLayoutProperty>(layoutWrapper->GetLayoutProperty());
     CHECK_NULL_VOID(layoutProperty);
 
-    auto hostNode = layoutWrapper->GetHostNode();
-    CHECK_NULL_VOID(hostNode);
-    auto pipeline = hostNode->GetContextRefPtr();
+    auto pipeline = PipelineContext::GetCurrentContext();
     CHECK_NULL_VOID(pipeline);
 
     if (pipeline->GetMinPlatformVersion() < PLATFORM_VERSION_TEN) {
@@ -269,11 +217,11 @@ void SideBarContainerLayoutAlgorithm::AdjustMinAndMaxSideBarWidth(LayoutWrapper*
 }
 
 void SideBarContainerLayoutAlgorithm::GetAllPropertyValue(
-    const RefPtr<SideBarContainerLayoutProperty>& layoutProperty, LayoutWrapper* layoutWrapper, float parentWidth)
+    const RefPtr<SideBarContainerLayoutProperty>& layoutProperty, float parentWidth)
 {
     const auto& constraint = layoutProperty->GetLayoutConstraint();
     const auto& scaleProperty = constraint->scaleProperty;
-    auto realSideBarWidth = GetSideBarWidth(layoutProperty, layoutWrapper);
+    auto realSideBarWidth = layoutProperty->GetSideBarWidth().value_or(-1.0_vp);
     auto minSideBarWidth = layoutProperty->GetMinSideBarWidth().value_or(-1.0_vp);
     auto minContentWidth = layoutProperty->GetMinContentWidth().value_or(-1.0_vp);
     auto maxSideBarWidth = layoutProperty->GetMaxSideBarWidth().value_or(-1.0_vp);
@@ -302,22 +250,6 @@ void SideBarContainerLayoutAlgorithm::GetAllPropertyValue(
     sideBarContainerPattern->SetMaxSideBarWidth(maxSideBarWidth_);
     sideBarContainerPattern->SetMinContentWidth(minContentWidth_);
     sideBarContainerPattern->SetTypeUpdateWidth(typeUpdateWidth_);
-}
-
-Dimension SideBarContainerLayoutAlgorithm::GetSideBarWidth(
-    const RefPtr<SideBarContainerLayoutProperty>& layoutProperty, LayoutWrapper* layoutWrapper)
-{
-    CHECK_NULL_RETURN(layoutProperty, -1.0_vp);
-    if (layoutProperty->GetSideBarWidth().has_value()) {
-        return layoutProperty->GetSideBarWidth().value();
-    }
-    auto hostNode = layoutWrapper->GetHostNode();
-    CHECK_NULL_RETURN(hostNode, -1.0_vp);
-    auto pipelineContext = hostNode->GetContext();
-    CHECK_NULL_RETURN(pipelineContext, -1.0_vp);
-    auto searchTheme = pipelineContext->GetTheme<SideBarTheme>();
-    CHECK_NULL_RETURN(searchTheme, -1.0_vp);
-    return searchTheme->GetSideBarWidth();
 }
 
 void SideBarContainerLayoutAlgorithm::MeasureTypeUpdateWidth()
@@ -484,12 +416,7 @@ void SideBarContainerLayoutAlgorithm::MeasureSideBar(
     const RefPtr<SideBarContainerLayoutProperty>& layoutProperty, const RefPtr<LayoutWrapper>& sideBarLayoutWrapper)
 {
     auto constraint = layoutProperty->GetLayoutConstraint();
-    CHECK_NULL_VOID(sideBarLayoutWrapper);
-    auto hostNode = sideBarLayoutWrapper->GetHostNode();
-    CHECK_NULL_VOID(hostNode);
-    auto pipeline = hostNode->GetContextRefPtr();
-    CHECK_NULL_VOID(pipeline);
-    auto sideBarIdealSize = pipeline->GetMinPlatformVersion() >= PLATFORM_VERSION_TEN ?
+    auto sideBarIdealSize = PipelineContext::GetCurrentContext()->GetMinPlatformVersion() >= PLATFORM_VERSION_TEN ?
         CreateIdealSizeByPercentRef(constraint.value(), Axis::HORIZONTAL,
         layoutProperty->GetMeasureType(MeasureType::MATCH_PARENT)).ConvertToSizeT():
         CreateIdealSize(constraint.value(), Axis::HORIZONTAL,
@@ -502,6 +429,8 @@ void SideBarContainerLayoutAlgorithm::MeasureSideBar(
     sideBarIdealSize.SetWidth(realSideBarWidth_);
     sideBarIdealSize.SetHeight(realSideBarHeight_);
 
+    auto pipeline = PipelineContext::GetCurrentContext();
+    CHECK_NULL_VOID(pipeline);
     if (pipeline->GetMinPlatformVersion() >= PLATFORM_VERSION_TEN) {
         auto sideBarLayoutProperty = sideBarLayoutWrapper->GetLayoutProperty();
         CHECK_NULL_VOID(sideBarLayoutProperty);
@@ -578,12 +507,7 @@ void SideBarContainerLayoutAlgorithm::MeasureSideBarContent(
     }
     contentWidth = std::max(contentWidth, minContentWidth_);
 
-    CHECK_NULL_VOID(contentLayoutWrapper);
-    auto contentNode = contentLayoutWrapper->GetHostNode();
-    CHECK_NULL_VOID(contentNode);
-    auto pipeline = contentNode->GetContextRefPtr();
-    CHECK_NULL_VOID(pipeline);
-    auto contentIdealSize = pipeline->GetMinPlatformVersion() >= PLATFORM_VERSION_TEN ?
+    auto contentIdealSize = PipelineContext::GetCurrentContext()->GetMinPlatformVersion() >= PLATFORM_VERSION_TEN ?
     CreateIdealSizeByPercentRef(constraint.value(), Axis::HORIZONTAL,
         layoutProperty->GetMeasureType(MeasureType::MATCH_PARENT)).ConvertToSizeT() :
     CreateIdealSize(
@@ -616,11 +540,6 @@ void SideBarContainerLayoutAlgorithm::Layout(LayoutWrapper* layoutWrapper)
 {
     const auto& children = layoutWrapper->GetAllChildrenWithBuild(layoutWrapper->IsActive());
     if (children.size() < DEFAULT_MIN_CHILDREN_SIZE) {
-        return;
-    }
-    
-    auto host = layoutWrapper->GetHostNode();
-    if (host && !host->GetIgnoreLayoutProcess() && GetNeedPostponeForIgnore()) {
         return;
     }
 
@@ -675,14 +594,6 @@ void SideBarContainerLayoutAlgorithm::LayoutControlButton(
     auto controlButtonTopPx = ConvertToPx(controlButtonTop, scaleProperty, parentWidth).value_or(0);
     controlButtonLeftPx += padding.left.value_or(0);
     controlButtonTopPx += padding.top.value_or(0);
-    auto sideBarContainerPattern = AceType::DynamicCast<SideBarContainerPattern>(pattern_.Upgrade());
-    if (sideBarContainerPattern) {
-        auto toolbarManager = sideBarContainerPattern->GetToolBarManager();
-        if (toolbarManager != nullptr && toolbarManager->GetIsMoveUp()) {
-            auto decorBarHeight = static_cast<float>(toolbarManager->GetTitleHeight().ConvertToPx());
-            controlButtonTopPx += decorBarHeight;
-        }
-    }
     /*
      * Control buttion left position need to special handle:
      *   1. when sideBarPosition set to END and controlButtonLeft do not set in ButtonStyle
@@ -746,18 +657,7 @@ void SideBarContainerLayoutAlgorithm::LayoutSideBar(
             break;
     }
 
-    auto decorBarHeight = 0.0f;
-    auto sideBarContainerPattern = AceType::DynamicCast<SideBarContainerPattern>(pattern_.Upgrade());
-    if (sideBarContainerPattern) {
-        auto toolbarManager = sideBarContainerPattern->GetToolBarManager();
-        if (toolbarManager && toolbarManager->GetIsMoveUp()) {
-            decorBarHeight = static_cast<float>(toolbarManager->GetTitleHeight().ConvertToPx());
-        }
-    }
-    sideBarOffset_ = OffsetF(sideBarOffsetX, sideBarOffsetY + decorBarHeight);
-    
-    AdjustChildOffset(sideBarLayoutWrapper, sideBarOffset_);
-    
+    sideBarOffset_ = OffsetF(sideBarOffsetX, sideBarOffsetY);
     sideBarLayoutWrapper->GetGeometryNode()->SetMarginFrameOffset(sideBarOffset_);
     sideBarLayoutWrapper->Layout();
 }
@@ -782,9 +682,6 @@ void SideBarContainerLayoutAlgorithm::LayoutSideBarContent(
     }
 
     auto contentOffset = OffsetF(contentOffsetX, contentOffsetY);
-    
-    AdjustChildOffset(contentLayoutWrapper, contentOffset);
-    
     contentLayoutWrapper->GetGeometryNode()->SetMarginFrameOffset(contentOffset);
     contentLayoutWrapper->Layout();
 }
@@ -852,22 +749,5 @@ SideBarPosition SideBarContainerLayoutAlgorithm::GetSideBarPositionWithRtl(
         sideBarPosition = (sideBarPosition == SideBarPosition::START) ? SideBarPosition::END : SideBarPosition::START;
     }
     return sideBarPosition;
-}
-
-void SideBarContainerLayoutAlgorithm::AdjustChildOffset(const RefPtr<LayoutWrapper>& layoutWrapper, OffsetF& offset)
-{
-    auto node = layoutWrapper->GetHostNode();
-    CHECK_NULL_VOID(node);
-    auto layoutProperty = node->GetLayoutProperty();
-    if (layoutProperty && layoutProperty->IsIgnoreOptsValid()) {
-        auto geometryNode = layoutWrapper->GetGeometryNode();
-        CHECK_NULL_VOID(geometryNode);
-        geometryNode->SetMarginFrameOffset(offset);
-        IgnoreLayoutSafeAreaOpts& opts = *(layoutProperty->GetIgnoreLayoutSafeAreaOpts());
-        auto safeExpand = node->GetAccumulatedSafeAreaExpand(false, opts);
-        auto offsetX = safeExpand.left.value_or(0.0f);
-        auto offsetY = safeExpand.top.value_or(0.0f);
-        offset -= OffsetF(offsetX, offsetY);
-    }
 }
 } // namespace OHOS::Ace::NG

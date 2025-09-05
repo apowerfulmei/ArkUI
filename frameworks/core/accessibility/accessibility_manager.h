@@ -22,41 +22,19 @@
 #include "core/accessibility/accessibility_constants.h"
 #include "core/accessibility/accessibility_provider.h"
 #include "core/accessibility/accessibility_utils.h"
+#include "core/pipeline/base/base_composed_component.h"
 
 namespace OHOS::Accessibility {
 class AccessibilityElementInfo;
 class AccessibilityEventInfo;
 class AccessibilityElementOperator;
-class ExtraEventInfo;
 } // namespace OHOS::Accessibility
 
 namespace OHOS::Ace::NG {
 class WebPattern;
-class FrameNode;
-class UIExtensionManager;
 } // namespace OHOS::Ace::NG
 
 namespace OHOS::Ace {
-
-constexpr int32_t ZERO_ANGLE = 0;
-constexpr int32_t QUARTER_ANGLE = 90;
-constexpr int32_t HALF_ANGLE = 180;
-constexpr int32_t THREE_QUARTER_ANGLE = 270;
-constexpr int32_t FULL_ANGLE = 360;
-
-struct RotateTransform {
-    int32_t rotateDegree = 0;  // final rotate degree of parent interface
-    int32_t centerX = 0;       // center X of parent interface relative to real window
-    int32_t centerY = 0;       // center Y of parent interface relative to real window
-    int32_t innerCenterX = 0;  // relative center X of parent interface relative without transform
-    int32_t innerCenterY = 0;  // relative center Y of parent interface relative without transform
-
-    RotateTransform(int32_t degree = 0, int32_t x = 0, int32_t y = 0, int32_t innerX = 0, int32_t innerY = 0)
-        : rotateDegree(degree), centerX(x), centerY(y), innerCenterX(innerX), innerCenterY(innerY) {}
-};
-
-class ComposedElement;
-class PipelineBase;
 
 struct AccessibilityEvent {
     int64_t nodeId = 0;
@@ -72,9 +50,6 @@ struct AccessibilityEvent {
     double currentItemIndex = 0.0;
     double itemCount = 0.0;
     AccessibilityEventType type = AccessibilityEventType::UNKNOWN;
-    int32_t startIndex = 0;
-    int32_t endIndex = 0;
-    std::map<std::string, std::string> extraEventInfo;
 };
 
 enum class OperatorType {
@@ -104,7 +79,9 @@ struct AccessibilityParentRectInfo {
     int32_t top = 0;
     float scaleX = 1.0f;       // scale of parent interface
     float scaleY = 1.0f;       // scale of parent interface
-    RotateTransform rotateTransform;
+    int32_t centerX = 0;       // center X of parent interface relative to real window
+    int32_t centerY = 0;       // center Y scale of parent interface relative to real window
+    int32_t rotateDegree = 0;  // final rotate degree of parent interface
     bool isChanged = false;    // only for uiextension, true means uec transfered translate params to uiextension
 };
 
@@ -114,13 +91,11 @@ struct AccessibilityWindowInfo {
     int32_t innerWindowId = -1;
     float_t scaleX = 1.0f;
     float_t scaleY = 1.0f;
-    RotateTransform rotateTransform;
 };
 
 struct AccessibilityWorkMode {
     bool isTouchExplorationEnabled = true;
 };
-
 
 enum class AccessibilityCallbackEventId : uint32_t {
     ON_LOAD_PAGE = 0,
@@ -193,21 +168,10 @@ public:
     virtual void SendAccessibilityAsyncEvent(const AccessibilityEvent& accessibilityEvent) = 0;
     virtual void SendWebAccessibilityAsyncEvent(const AccessibilityEvent& accessibilityEvent,
         const RefPtr<NG::WebPattern>& webPattern) {}
-
-    virtual bool IsTouchExplorationEnabled()
-    {
-        return true;
-    }
     virtual bool IsScreenReaderEnabled()
     {
         return false;
     }
-    virtual WeakPtr<NG::WebPattern> GetWebPatternBySurfaceId(const std::string& surfaceId)
-    {
-        return nullptr;
-    }
-    virtual void SetWebPatternBySurfaceId(const std::string& surfaceId, WeakPtr<NG::WebPattern> pattern) {}
-    virtual void RemoveWebPatternBySurfaceId(const std::string& surfaceId) {}
     virtual void UpdateVirtualNodeFocus() = 0;
     virtual int64_t GenerateNextAccessibilityId() = 0;
     virtual RefPtr<AccessibilityNode> CreateSpecializedNode(
@@ -224,7 +188,7 @@ public:
         const std::string& id, const std::string& target, const RefPtr<AccessibilityNode>& node) = 0;
     virtual void HandleComponentPostBinding() = 0;
     virtual void OnDumpInfo(const std::vector<std::string>& params) = 0;
-    virtual void OnDumpInfoNG(const std::vector<std::string>& params, uint32_t windowId, bool hasJson = false) = 0;
+    virtual void OnDumpInfoNG(const std::vector<std::string>& params, uint32_t windowId) = 0;
     virtual void SetCardViewPosition(int id, float offsetX, float offsetY) = 0;
     virtual void SetCardViewParams(const std::string& key, bool focus) = 0;
     virtual void SetSupportAction(uint32_t action, bool isEnable) = 0;
@@ -238,8 +202,6 @@ public:
     virtual bool IsVisibleChangeNodeExists(NodeId nodeId) = 0;
     virtual void UpdateEventTarget(NodeId id, BaseEventInfo& info) = 0;
     virtual void SetWindowPos(int32_t left, int32_t top, int32_t windowId) = 0;
-    virtual AccessibilityParentRectInfo GetTransformRectInfoRelativeToWindow(
-        const RefPtr<NG::FrameNode>& node, const RefPtr<PipelineBase>& context) { return {}; }
 #ifdef WINDOW_SCENE_SUPPORTED
     virtual void SearchElementInfoByAccessibilityIdNG(int64_t elementId, int32_t mode,
         std::list<Accessibility::AccessibilityElementInfo>& infos, const RefPtr<PipelineBase>& context,
@@ -268,8 +230,7 @@ public:
     {
         return false;
     }
-    virtual bool DeregisterWebInteractionOperationAsChildTree(int32_t treeId,
-        const WeakPtr<NG::WebPattern>& webPattern)
+    virtual bool DeregisterWebInteractionOperationAsChildTree(int32_t treeId)
     {
         return false;
     }
@@ -297,14 +258,6 @@ public:
     virtual void SendEventToAccessibilityWithNode(const AccessibilityEvent& accessibilityEvent,
         const RefPtr<AceType>& node, const RefPtr<PipelineBase>& context) {};
 
-    virtual void AddFrameNodeToUecStatusVec(const RefPtr<NG::FrameNode>& node) {};
-    virtual void AddFrameNodeToDefaultFocusList(const RefPtr<NG::FrameNode>& node, bool isFocus) {};
-
-    virtual void RegisterUIExtGetPageModeCallback(RefPtr<NG::UIExtensionManager>& uiExtManager) {};
-    virtual void UpdateFrameNodeState(int32_t nodeId) {};
-
-    virtual void UpdatePageMode(const std::string& pageMode) {};
-
     virtual void RegisterAccessibilitySAObserverCallback(
         int64_t elementId, const std::shared_ptr<AccessibilitySAObserverCallback> &callback) {};
 
@@ -326,11 +279,6 @@ public:
     }
 
     virtual void FireAccessibilityEventCallback(uint32_t eventId, int64_t parameter) {}
-
-    virtual void UpdateAccessibilityNextFocusIdMap(int32_t containerId,
-                                                   const std::string& nextFocusInspectorKey, int64_t preAccessibilityId)
-    {
-    }
 
     bool IsRegister()
     {
@@ -363,30 +311,12 @@ public:
         return AccessibilityWindowInfo();
     }
 
+    virtual void UpdateWindowInfo(AccessibilityWindowInfo& windowInfo, const RefPtr<PipelineBase>& context) {}
+
     virtual AccessibilityWorkMode GenerateAccessibilityWorkMode()
     {
         return AccessibilityWorkMode();
     }
-
-    virtual void UpdateWindowInfo(AccessibilityWindowInfo& windowInfo, const RefPtr<PipelineBase>& context) {}
-    virtual void UpdateAccessibilityNodeRect(const RefPtr<NG::FrameNode>& frameNode) {}
-    virtual void OnAccessbibilityDetachFromMainTree(const RefPtr<NG::FrameNode>& frameNode) {}
-    virtual int32_t GetTransformDegreeRelativeToWindow(const RefPtr<NG::FrameNode>& node, bool excludeSelf = false)
-    {
-        return 0;
-    }
-
-    virtual void ReleasePageEvent(
-        const RefPtr<NG::FrameNode>& node,
-        bool deleteController = true,
-        bool releaseAll = false) {}
-    virtual void AddToPageEventController(const RefPtr<NG::FrameNode>& node) {}
-    virtual bool DeleteFromPageEventController(const RefPtr<NG::FrameNode>& node) {return false;}
-    virtual bool CheckPageEventCached(const RefPtr<NG::FrameNode>& node, bool onlyCurrentPage) {return false;}
-    virtual bool CheckAccessibilityVisible(const RefPtr<NG::FrameNode>& node) {return true;}
-
-    virtual void AddHoverTransparentCallback(const RefPtr<NG::FrameNode>& node) {};
-    virtual bool CheckHoverTransparentCallbackListEmpty(int32_t containerId) {return true;};
 
 protected:
     int32_t treeId_ = 0;
@@ -397,107 +327,6 @@ private:
     int64_t uiExtensionId_ = 0;
 };
 
-class AccessibilityRect {
-private:
-    float x_;
-    float y_;
-    float width_;
-    float height_;
-
-    void calculateNewCenter(float cx, float cy, float rectCx, float rectCy,
-        int angle, float& newCx, float& newCy)
-    {
-        int addDouble = 2;
-        switch (angle) {
-            case QUARTER_ANGLE:
-                newCx = cx - (rectCy - cy);
-                newCy = cy + (rectCx - cx);
-                break;
-            case HALF_ANGLE:
-                newCx = addDouble * cx - rectCx;
-                newCy = addDouble * cy - rectCy;
-                break;
-            case THREE_QUARTER_ANGLE:
-                newCx = cx + (rectCy - cy);
-                newCy = cy - (rectCx - cx);
-                break;
-        }
-    }
-public:
-    AccessibilityRect(float x = 0.0f, float y = 0.0f, float width = 0.0f, float height = 0.0f)
-        : x_(x), y_(y), width_(width), height_(height) {}
-    float GetX() const
-    {
-        return x_;
-    }
-
-    float GetY() const
-    {
-        return y_;
-    }
-
-    float GetWidth() const
-    {
-        return width_;
-    }
-
-    float GetHeight() const
-    {
-        return height_;
-    }
-
-    void SetPosition(float x, float y)
-    {
-        x_ = x;
-        y_ = y;
-    }
-
-    void SetSize(float width, float height)
-    {
-        width_ = width;
-        height_ = height;
-    }
-
-    void Rotate(float rotateCenterX, float rotateCenterY, int angle)
-    {
-        if (angle > FULL_ANGLE) {
-            angle %= FULL_ANGLE;
-        }
-        if (angle == ZERO_ANGLE) {
-            return;
-        }
-        const float rectCenterX = x_ + width_ * 0.5f;
-        const float rectCenterY = y_ + height_ * 0.5f;
-        float newCenterX;
-        float newCenterY;
-        calculateNewCenter(rotateCenterX, rotateCenterY, rectCenterX, rectCenterY, angle, newCenterX, newCenterY);
-        float newWidth = width_;
-        float newHeight = height_;
-        if (angle == QUARTER_ANGLE || angle == THREE_QUARTER_ANGLE) {
-            newWidth = height_;
-            newHeight = width_;
-        }
-        x_ = newCenterX - newWidth * 0.5f;
-        y_ = newCenterY - newHeight * 0.5f;
-        width_ = newWidth;
-        height_ = newHeight;
-    }
-
-    void Rotate(int angle)
-    {
-        const float centerX = x_ + width_ * 0.5f;
-        const float centerY = y_ + height_ * 0.5f;
-        Rotate(centerX, centerY, angle);
-    }
-
-    void ApplyTransformation(const RotateTransform& rotateTransform, const float& scaleX, const float& scaleY)
-    {
-        x_ = (x_ - rotateTransform.innerCenterX) * scaleX + rotateTransform.centerX;
-        y_ = (y_ - rotateTransform.innerCenterY) * scaleY + rotateTransform.centerY;
-        width_ *= scaleX;
-        height_ *= scaleY;
-    }
-};
 } // namespace OHOS::Ace
 
 #endif // FOUNDATION_ACE_FRAMEWORKS_CORE_ACCESSIBILITY_ACCESSIBILITY_MANAGER_H

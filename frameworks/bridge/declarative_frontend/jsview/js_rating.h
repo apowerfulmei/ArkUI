@@ -18,7 +18,6 @@
 
 #include "frameworks/bridge/declarative_frontend/jsview/js_interactable_view.h"
 #include "frameworks/bridge/declarative_frontend/jsview/js_view_abstract.h"
-#include "frameworks/core/components_ng/pattern/rating/rating_model.h"
 
 namespace OHOS::Ace::Framework {
 
@@ -30,7 +29,6 @@ public:
     static void SetStepSize(const JSCallbackInfo& info);
     static void SetStarStyle(const JSCallbackInfo& info);
     static void SetOnChange(const JSCallbackInfo& info);
-    static void CreateWithResourceObj(const RefPtr<ResourceObject>& resObj, const RatingUriType& ratingUriType);
 };
 
 } // namespace OHOS::Ace::Framework

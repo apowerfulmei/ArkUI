@@ -28,13 +28,6 @@
 #include "core/components_ng/pattern/scrollable/scrollable_properties.h"
 #include "core/components_ng/pattern/swiper/swiper_content_transition_proxy.h"
 #include "core/components_v2/inspector/inspector_composed_component.h"
-#ifdef SUPPORT_DIGITAL_CROWN
-#include "core/event/crown_event.h"
-#endif
-
-namespace OHOS::Ace::Framework {
-class JSIndicatorController;
-}
 
 namespace OHOS::Ace {
 
@@ -53,22 +46,6 @@ struct SwiperParameters {
     std::optional<Color> colorVal;
     std::optional<Color> selectedColorVal;
     std::optional<int32_t> maxDisplayCountVal;
-    std::optional<bool> ignoreSizeValue;
-    std::optional<bool> setIgnoreSizeValue;
-    std::optional<Dimension> dimSpace;
-
-    RefPtr<ResourceObject> resourceDimLeftValueObject;
-    RefPtr<ResourceObject> resourceDimTopValueObject;
-    RefPtr<ResourceObject> resourceDimRightValueObject;
-    RefPtr<ResourceObject> resourceDimBottomValueObject;
-    RefPtr<ResourceObject> resourceColorValueObject;
-    RefPtr<ResourceObject> resourceSelectedColorValueObject;
-    RefPtr<ResourceObject> resourceItemWidthValueObject;
-    RefPtr<ResourceObject> resourceItemHeightValueObject;
-    RefPtr<ResourceObject> resourceSelectedItemWidthValueObject;
-    RefPtr<ResourceObject> resourceSelectedItemHeightValueObject;
-    RefPtr<ResourceObject> resourceItemSizeValueObject;
-    std::unordered_set<std::string> parametersByUser;
 };
 
 struct SwiperDigitalParameters {
@@ -84,26 +61,6 @@ struct SwiperDigitalParameters {
     std::optional<Dimension> selectedFontSize;
     std::optional<FontWeight> fontWeight;
     std::optional<FontWeight> selectedFontWeight;
-    std::optional<bool> ignoreSizeValue;
-    std::optional<bool> setIgnoreSizeValue;
-
-    RefPtr<ResourceObject> resourceDimLeftValueObject;
-    RefPtr<ResourceObject> resourceDimTopValueObject;
-    RefPtr<ResourceObject> resourceDimRightValueObject;
-    RefPtr<ResourceObject> resourceDimBottomValueObject;
-    RefPtr<ResourceObject> resourceFontColorValueObject;
-    RefPtr<ResourceObject> resourceSelectedFontColorValueObject;
-    RefPtr<ResourceObject> resourceFontSizeValueObject;
-    RefPtr<ResourceObject> resourceSelectedFontSizeValueObject;
-    std::unordered_set<std::string> parametersByUser;
-};
-
-struct SwiperArcDotParameters {
-    std::optional<SwiperArcDirection> arcDirection;
-    std::optional<Color> itemColor;
-    std::optional<Color> selectedItemColor;
-    std::optional<Color> containerColor;
-    std::optional<NG::Gradient> maskColor;
 };
 
 struct SwiperArrowParameters {
@@ -113,12 +70,6 @@ struct SwiperArrowParameters {
     std::optional<Color> backgroundColor;
     std::optional<Dimension> arrowSize;
     std::optional<Color> arrowColor;
-
-    RefPtr<ResourceObject> resourceBackgroundSizeValueObject;
-    RefPtr<ResourceObject> resourceBackgroundColorValueObject;
-    RefPtr<ResourceObject> resourceArrowSizeValueObject;
-    RefPtr<ResourceObject> resourceArrowColorValueObject;
-    std::unordered_set<std::string> parametersByUser;
 };
 
 struct AnimationCallbackInfo {
@@ -131,10 +82,6 @@ struct AnimationCallbackInfo {
 struct SwiperMarginOptions {
     float margin;
     bool ignoreBlank;
-};
-
-struct SwiperAutoPlayOptions {
-    bool stopWhenTouched = true;
 };
 
 struct SwiperContentWillScrollResult {
@@ -157,7 +104,7 @@ public:
     static SwiperModel* GetInstance();
     virtual ~SwiperModel() = default;
 
-    virtual RefPtr<SwiperController> Create(bool isCreateArc = false);
+    virtual RefPtr<SwiperController> Create();
     virtual void SetDirection(Axis axis);
     virtual void SetIndex(uint32_t index);
     virtual void SetIndicatorInteractive(bool interactive) {}
@@ -170,17 +117,14 @@ public:
     virtual void SetDisableSwipe(bool disableSwipe);
     virtual void SetEdgeEffect(EdgeEffect EdgeEffect);
     virtual void SetDisplayMode(SwiperDisplayMode displayMode);
-    virtual void ResetDisplayMode() {}
     virtual void SetDisplayCount(int32_t displayCount);
     virtual void ResetDisplayCount() {}
     virtual void SetMinSize(const Dimension& minSize);
-    virtual void ResetMinSize() {}
     virtual void SetShowIndicator(bool showIndicator);
     virtual void SetItemSpace(const Dimension& itemSpace);
     virtual void SetCachedCount(int32_t cachedCount);
     virtual void SetCachedIsShown(bool isShown) {}
     virtual void SetOnChange(std::function<void(const BaseEventInfo* info)>&& onChange);
-    virtual void SetOnUnselected(std::function<void(const BaseEventInfo* info)>&& onUnselected) {}
     virtual void SetOnAnimationStart(std::function<void(const BaseEventInfo* info)>&& onAnimationStart) {}
     virtual void SetOnAnimationEnd(std::function<void(const BaseEventInfo* info)>&& onAnimationEnd) {}
     virtual void SetOnAnimationStart(AnimationStartEvent&& onAnimationStart) {}
@@ -196,13 +140,11 @@ public:
     virtual void SetIndicatorType(SwiperIndicatorType indicatorType) {}
     virtual void SetIsIndicatorCustomSize(bool isCustomSize) {}
     virtual void SetDotIndicatorStyle(const SwiperParameters& swiperParameters) {}
-    virtual void SetArcDotIndicatorStyle(const SwiperArcDotParameters& swiperArcDotParameters) {}
     virtual void SetDigitIndicatorStyle(const SwiperDigitalParameters& swiperDigitalParameters) {}
     virtual void SetPreviousMargin(const Dimension& prevMargin, bool ignoreBlank) {}
     virtual void SetNextMargin(const Dimension& nextMargin, bool ignoreBlank) {}
     virtual void SetOnChangeEvent(std::function<void(const BaseEventInfo* info)>&& onChangeEvent);
     virtual void SetIndicatorIsBoolean(bool isBoolean) {}
-    virtual void SetAutoPlayOptions(const SwiperAutoPlayOptions& swiperAutoPlayOptions) {}
     virtual void SetArrowStyle(const SwiperArrowParameters& swiperArrowParameters) {}
     virtual void SetDisplayArrow(bool displayArrow) {}
     virtual void SetHoverShow(bool hoverShow) {}
@@ -210,20 +152,9 @@ public:
     virtual void SetSwipeByGroup(bool swipeByGroup) {}
     virtual void SetCustomContentTransition(SwiperContentAnimatedTransition& transition) {}
     virtual void SetOnContentDidScroll(ContentDidScrollEvent&& onContentDidScroll) {}
-    virtual void SetOnContentWillScroll(ContentWillScrollEvent&& onContentWillScroll) {}
-    virtual void SetOnScrollStateChanged(
-        std::function<void(const BaseEventInfo* info)>&& onScrollStateChanged) {}
-    virtual void SetPageFlipMode(int32_t pageFlipMode) {}
-    virtual void SetDigitalCrownSensitivity(int32_t sensitivity) {}
-    virtual void SetDisableTransitionAnimation(bool isDisable) {}
     virtual void SetBindIndicator(bool bind) {}
-    virtual void SetJSIndicatorController(std::function<void()> resetFunc) {}
-    virtual void SetOnSelected(std::function<void(const BaseEventInfo* info)>&& onSelected) {}
-    virtual void SetIndicatorController(Framework::JSIndicatorController* controller) {}
-    virtual Framework::JSIndicatorController* GetIndicatorController() { return nullptr; }
-    virtual void SetMaintainVisibleContentPosition(bool value) {}
-    virtual void ProcessNextMarginWithResourceObj(const RefPtr<ResourceObject>& resObj) {}
-    virtual void ProcessPreviousMarginWithResourceObj(const RefPtr<ResourceObject>& resObj) {};
+    virtual void SetPageFlipMode(int32_t pageFlipMode) {}
+    virtual void SetOnContentWillScroll(ContentWillScrollEvent&& onContentWillScroll) {}
 
 private:
     static std::unique_ptr<SwiperModel> instance_;

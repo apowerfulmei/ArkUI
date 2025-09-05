@@ -32,9 +32,6 @@ class ImageColorFilterModifier extends ModifierWithKey<ColorFilter | DrawingColo
 }
 
 class ImageFillColorModifier extends ModifierWithKey<ResourceColor> {
-  constructor(value: ResourceColor) {
-    super(value);
-  }
   static identity: Symbol = Symbol('imageFillColor');
   applyPeer(node: KNode, reset: boolean): void {
     if (reset) {
@@ -49,9 +46,6 @@ class ImageFillColorModifier extends ModifierWithKey<ResourceColor> {
 }
 
 class ImageAltModifier extends ModifierWithKey<ResourceStr> {
-  constructor(value: ResourceStr) {
-    super(value);
-  }
   static identity: Symbol = Symbol('imageAlt');
   applyPeer(node: KNode, reset: boolean): void {
     if (reset) {
@@ -66,9 +60,6 @@ class ImageAltModifier extends ModifierWithKey<ResourceStr> {
 }
 
 class ImageCopyOptionModifier extends ModifierWithKey<CopyOptions> {
-  constructor(value: CopyOptions) {
-    super(value);
-  }
   static identity: Symbol = Symbol('imageCopyOption');
   applyPeer(node: KNode, reset: boolean): void {
     if (reset) {
@@ -83,9 +74,6 @@ class ImageCopyOptionModifier extends ModifierWithKey<CopyOptions> {
 }
 
 class ImageAutoResizeModifier extends ModifierWithKey<boolean> {
-  constructor(value: boolean) {
-    super(value);
-  }
   static identity: Symbol = Symbol('imageAutoResize');
   applyPeer(node: KNode, reset: boolean): void {
     if (reset) {
@@ -100,9 +88,6 @@ class ImageAutoResizeModifier extends ModifierWithKey<boolean> {
 }
 
 class ImageFitOriginalSizeModifier extends ModifierWithKey<boolean> {
-  constructor(value: boolean) {
-    super(value);
-  }
   static identity: Symbol = Symbol('imageFitOriginalSize');
   applyPeer(node: KNode, reset: boolean): void {
     if (reset) {
@@ -117,9 +102,6 @@ class ImageFitOriginalSizeModifier extends ModifierWithKey<boolean> {
 }
 
 class ImageDraggableModifier extends ModifierWithKey<boolean> {
-  constructor(value: boolean) {
-    super(value);
-  }
   static identity: Symbol = Symbol('imageDraggable');
   applyPeer(node: KNode, reset: boolean): void {
     if (reset) {
@@ -159,10 +141,10 @@ class ImageResizableModifier extends ModifierWithKey<ResizableOptions> {
     if (reset) {
       getUINativeModule().image.resetResizable(node);
     } else {
-      if (!isUndefined(this.value.lattice) && !isNull(this.value.lattice)) {
+      if (!isUndefined(this.value.lattice)) {
         getUINativeModule().image.setResizableLattice(node, this.value.lattice);
       }
-      if (!isUndefined(this.value.slice) && !isNull(this.value.slice)) {
+      if (!isUndefined(this.value.slice)) {
         let sliceTop: Length | undefined;
         let sliceRight: Length | undefined;
         let sliceBottom: Length | undefined;
@@ -195,23 +177,6 @@ class ImageDynamicRangeModeModifier extends ModifierWithKey<DynamicRangeMode> {
   }
 }
 
-class ImageHdrBrightnessModifier extends ModifierWithKey<number> {
-  constructor(value: number) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('hdrBrightness');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().image.resetHdrBrightness(node);
-    } else {
-      getUINativeModule().image.setHdrBrightness(node, this.value!);
-    }
-  }
-  checkObjectDiff(): boolean {
-    return this.stageValue !== this.value;
-  }
-}
-
 class ImageEnhancedImageQualityModifier extends ModifierWithKey<AIImageQuality> {
   constructor(value: ResolutionQuality) {
     super(value);
@@ -230,9 +195,6 @@ class ImageEnhancedImageQualityModifier extends ModifierWithKey<AIImageQuality> 
 }
 
 class ImageInterpolationModifier extends ModifierWithKey<ImageInterpolation> {
-  constructor(value: ImageInterpolation) {
-    super(value);
-  }
   static identity: Symbol = Symbol('imageInterpolation');
   applyPeer(node: KNode, reset: boolean): void {
     if (reset) {
@@ -265,9 +227,6 @@ class ImageSourceSizeModifier extends ModifierWithKey<{ width: number; height: n
 }
 
 class ImageMatchTextDirectionModifier extends ModifierWithKey<boolean> {
-  constructor(value: boolean) {
-    super(value);
-  }
   static identity: Symbol = Symbol('imageMatchTextDirection');
   applyPeer(node: KNode, reset: boolean): void {
     if (reset) {
@@ -282,9 +241,6 @@ class ImageMatchTextDirectionModifier extends ModifierWithKey<boolean> {
 }
 
 class ImageObjectRepeatModifier extends ModifierWithKey<ImageRepeat> {
-  constructor(value: ImageRepeat) {
-    super(value);
-  }
   static identity: Symbol = Symbol('imageObjectRepeat');
   applyPeer(node: KNode, reset: boolean): void {
     if (reset) {
@@ -299,9 +255,6 @@ class ImageObjectRepeatModifier extends ModifierWithKey<ImageRepeat> {
 }
 
 class ImageRenderModeModifier extends ModifierWithKey<ImageRenderMode> {
-  constructor(value: ImageRenderMode) {
-    super(value);
-  }
   static identity: Symbol = Symbol('imageRenderMode');
   applyPeer(node: KNode, reset: boolean): void {
     if (reset) {
@@ -316,9 +269,6 @@ class ImageRenderModeModifier extends ModifierWithKey<ImageRenderMode> {
 }
 
 class ImageSyncLoadModifier extends ModifierWithKey<boolean> {
-  constructor(value: boolean) {
-    super(value);
-  }
   static identity: Symbol = Symbol('imageSyncLoad');
   applyPeer(node: KNode, reset: boolean): void {
     if (reset) {
@@ -333,9 +283,6 @@ class ImageSyncLoadModifier extends ModifierWithKey<boolean> {
 }
 
 class ImageObjectFitModifier extends ModifierWithKey<ImageFit> {
-  constructor(value: ImageFit) {
-    super(value);
-  }
   static identity: Symbol = Symbol('imageObjectFit');
   applyPeer(node: KNode, reset: boolean): void {
     if (reset) {
@@ -394,7 +341,9 @@ class ImageBorderRadiusModifier extends ModifierWithKey<Length | BorderRadiuses>
   }
 
   checkObjectDiff(): boolean {
-    if (!isResource(this.stageValue) && !isResource(this.value)) {
+    if (isResource(this.stageValue) && isResource(this.value)) {
+      return !isResourceEqual(this.stageValue, this.value);
+    } else if (!isResource(this.stageValue) && !isResource(this.value)) {
       return !((this.stageValue as BorderRadiuses).topLeft === (this.value as BorderRadiuses).topLeft &&
         (this.stageValue as BorderRadiuses).topRight === (this.value as BorderRadiuses).topRight &&
         (this.stageValue as BorderRadiuses).bottomLeft === (this.value as BorderRadiuses).bottomLeft &&
@@ -552,7 +501,7 @@ class ImageSrcModifier extends ModifierWithKey<ResourceStr | PixelMap | Drawable
   static identity: Symbol = Symbol('imageShowSrc');
   applyPeer(node: KNode, reset: boolean): void {
     if (reset) {
-      getUINativeModule().image.setImageShowSrc(node, "");
+      getUINativeModule().image.setImageShowSrc(node, '');
     }
     else {
       getUINativeModule().image.setImageShowSrc(node, this.value);
@@ -823,7 +772,7 @@ class ArkImageComponent extends ArkComponent implements ImageAttribute {
       contentOffsetY: number;
     }) => void,
   ): this {
-    modifierWithKey(this._modifiersWithKeys, ImageOnCompleteModifier.identity, ImageOnCompleteModifier, value);
+    modifierWithKey(this._modifiersWithKeys, ImageOnCompleteModifier.identity, ImageOnCompleteModifier, callback);
     return this;
   }
   onError(callback: (event: {
@@ -855,10 +804,6 @@ class ArkImageComponent extends ArkComponent implements ImageAttribute {
       this._modifiersWithKeys, ImageDynamicRangeModeModifier.identity, ImageDynamicRangeModeModifier, value);
     return this;
   }
-  hdrBrightness(value: number): this {
-    modifierWithKey(this._modifiersWithKeys, ImageHdrBrightnessModifier.identity, ImageHdrBrightnessModifier, value);
-    return this;
-  }
   orientation(value: ImageRotateOrientaion): this {
     modifierWithKey(
     this._modifiersWithKeys, ImageRotateOrientationModifier.identity, ImageRotateOrientationModifier, value);
@@ -879,10 +824,6 @@ class ArkImageComponent extends ArkComponent implements ImageAttribute {
   }
   analyzerConfig(value: object): this {
     modifierWithKey(this._modifiersWithKeys, ImageAnalyzerConfigModifier.identity, ImageAnalyzerConfigModifier, value);
-    return this;
-  }
-  resizable(value: ResizableOptions): this {
-    modifierWithKey(this._modifiersWithKeys, ImageResizableModifier.identity, ImageResizableModifier, value);
     return this;
   }
 }

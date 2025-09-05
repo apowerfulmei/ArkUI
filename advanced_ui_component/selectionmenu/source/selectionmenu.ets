@@ -16,17 +16,11 @@
 import pasteboard from '@ohos.pasteboard'
 import { BusinessError } from '@ohos.base';
 import hilog from '@ohos.hilog';
-import common from '@ohos.app.ability.common';
-import { SymbolGlyphModifier } from '@kit.ArkUI';
 
 const WITHOUT_BUILDER = -2
-const MAX_FONT_STANDARD = 1.0
-const MAX_FONT_SCALE = 1.75
-const SYMBOL_SIZE: number = 24;
 
 export interface EditorMenuOptions {
   icon: ResourceStr
-  symbolStyle?: SymbolGlyphModifier
   action?: () => void
   builder?: () => void
 }
@@ -49,34 +43,17 @@ export interface SelectionMenuOptions {
   onSelectAll?: (event?: EditorEventInfo) => void;
 }
 
-interface SelectionMenuSymbolTheme {
-  fontSize: string;
-  fontColor: Array<ResourceColor>;
-  symbolCutIcon: SymbolGlyphModifier;
-  symbolCopyIcon: SymbolGlyphModifier;
-  symbolPasteIcon: SymbolGlyphModifier;
-  symbolSelectAllIcon: SymbolGlyphModifier;
-  symbolShareIcon: SymbolGlyphModifier;
-  symbolTranslateIcon: SymbolGlyphModifier;
-  symbolSearchIcon: SymbolGlyphModifier;
-  symbolArrowDownIcon: SymbolGlyphModifier;
-}
-
 interface SelectionMenuTheme {
   imageSize: number;
   buttonSize: number;
   menuSpacing: number;
+  editorOptionMargin: number;
   expandedOptionPadding: number;
   defaultMenuWidth: number;
-  menuItemPadding: Resource;
   imageFillColor: Resource;
   backGroundColor: Resource;
   iconBorderRadius: Resource;
   containerBorderRadius: Resource;
-  borderWidth: Resource;
-  borderColor: Resource;
-  outlineWidth: Resource;
-  outlineColor: Resource;
   cutIcon: Resource;
   copyIcon: Resource;
   pasteIcon: Resource;
@@ -86,45 +63,28 @@ interface SelectionMenuTheme {
   searchIcon: Resource;
   arrowDownIcon: Resource;
   iconPanelShadowStyle: ShadowStyle;
-  defaultSymbolTheme: SelectionMenuSymbolTheme;
 }
 
 const defaultTheme: SelectionMenuTheme = {
   imageSize: 24,
-  buttonSize: 40,
+  buttonSize: 48,
   menuSpacing: 8,
-  expandedOptionPadding: 4,
-  defaultMenuWidth: 224,
-  menuItemPadding: $r('sys.float.padding_level1'),
+  editorOptionMargin: 1,
+  expandedOptionPadding: 3,
+  defaultMenuWidth: 256,
   imageFillColor: $r('sys.color.ohos_id_color_primary'),
   backGroundColor: $r('sys.color.ohos_id_color_dialog_bg'),
-  iconBorderRadius: $r('sys.float.corner_radius_level2'),
-  containerBorderRadius: $r('sys.float.corner_radius_level4'),
-  borderWidth: $r('sys.float.ohos_id_menu_inner_border_width'),
-  borderColor: $r('sys.color.ohos_id_menu_inner_border_color'),
-  outlineWidth: $r('sys.float.ohos_id_menu_outer_border_width'),
-  outlineColor: $r('sys.color.ohos_id_menu_outer_border_color'),
-  cutIcon: $r('sys.media.ohos_ic_public_cut'),
-  copyIcon: $r('sys.media.ohos_ic_public_copy'),
-  pasteIcon: $r('sys.media.ohos_ic_public_paste'),
-  selectAllIcon: $r('sys.media.ohos_ic_public_select_all'),
-  shareIcon: $r('sys.media.ohos_ic_public_share'),
-  translateIcon: $r('sys.media.ohos_ic_public_translate_c2e'),
-  searchIcon: $r('sys.media.ohos_ic_public_search_filled'),
-  arrowDownIcon: $r('sys.media.ohos_ic_public_arrow_down'),
-  iconPanelShadowStyle: ShadowStyle.OUTER_DEFAULT_SM,
-  defaultSymbolTheme: {
-    fontSize: `${SYMBOL_SIZE}vp`,
-    fontColor: [$r('sys.color.ohos_id_color_primary')],
-    symbolCutIcon: new SymbolGlyphModifier($r('sys.symbol.cut')),
-    symbolCopyIcon: new SymbolGlyphModifier($r('sys.symbol.plus_square_on_square')),
-    symbolPasteIcon: new SymbolGlyphModifier($r('sys.symbol.plus_square_dashed_on_square')),
-    symbolSelectAllIcon: new SymbolGlyphModifier($r('sys.symbol.checkmark_square_on_square')),
-    symbolShareIcon: new SymbolGlyphModifier($r('sys.symbol.share')),
-    symbolTranslateIcon: new SymbolGlyphModifier($r('sys.symbol.translate_c2e')),
-    symbolSearchIcon: new SymbolGlyphModifier($r('sys.symbol.magnifyingglass')),
-    symbolArrowDownIcon: new SymbolGlyphModifier($r('sys.symbol.chevron_down')),
-  },
+  iconBorderRadius: $r('sys.float.ohos_id_corner_radius_default_m'),
+  containerBorderRadius: $r('sys.float.ohos_id_corner_radius_card'),
+  cutIcon: $r("sys.media.ohos_ic_public_cut"),
+  copyIcon: $r("sys.media.ohos_ic_public_copy"),
+  pasteIcon: $r("sys.media.ohos_ic_public_paste"),
+  selectAllIcon: $r("sys.media.ohos_ic_public_select_all"),
+  shareIcon: $r("sys.media.ohos_ic_public_share"),
+  translateIcon: $r("sys.media.ohos_ic_public_translate_c2e"),
+  searchIcon: $r("sys.media.ohos_ic_public_search_filled"),
+  arrowDownIcon: $r("sys.media.ohos_ic_public_arrow_down"),
+  iconPanelShadowStyle: ShadowStyle.OUTER_DEFAULT_MD,
 }
 
 @Component
@@ -149,15 +109,9 @@ struct SelectionMenuComponent {
   @State cutAndCopyEnable: boolean = false
   @State pasteEnable: boolean = false
   @State visibilityValue: Visibility = Visibility.Visible
-  @State fontScale: number = 1
-  @State customMenuWidth: number = this.theme.defaultMenuWidth
-  @State horizontalMenuHeight: number = 0
-  @State horizontalMenuWidth: number = this.theme.defaultMenuWidth
-  private fontWeightTable: string[] =
-    ['100', '200', '300', '400', '500', '600', '700', '800', '900', 'bold', 'normal', 'bolder', 'lighter', 'medium',
-      'regular']
-  private isFollowingSystemFontScale: boolean = false
-  private appMaxFontScale: number = 3.2
+  @State customMenuSize: string | number = '100%'
+  private customMenuHeight: number = this.theme.menuSpacing
+  private fontWeightTable: string[] = ["100", "200", "300", "400", "500", "600", "700", "800", "900", "bold", "normal", "bolder", "lighter", "medium", "regular"]
 
   aboutToAppear() {
     if (this.controller) {
@@ -179,19 +133,9 @@ struct SelectionMenuComponent {
     if (sysBoard && sysBoard.hasDataSync()) {
       this.pasteEnable = true
     }
-    let uiContext: UIContext = this.getUIContext()
-    if (uiContext) {
-      this.isFollowingSystemFontScale = uiContext.isFollowingSystemFontScale()
-      this.appMaxFontScale = uiContext.getMaxFontScale()
+    if (!(this.editorMenuOptions && this.editorMenuOptions.length > 0)) {
+      this.customMenuHeight = 0
     }
-    this.fontScale = this.getFontScale()
-  }
-
-  hasSystemMenu(): boolean {
-    let showMenuOption = this.showCustomerIndex === -1 &&
-        (this.controller || (this.expandedMenuOptions && this.expandedMenuOptions.length > 0))
-    let showBuilder = this.showCustomerIndex > -1 && this.builder
-    return Boolean(showMenuOption || showBuilder)
   }
 
   build() {
@@ -203,20 +147,19 @@ struct SelectionMenuComponent {
         this.SystemMenu()
       }
       .backgroundColor(this.theme.backGroundColor)
+      .flexShrink(1)
       .shadow(this.theme.iconPanelShadowStyle)
       .borderRadius(this.theme.containerBorderRadius)
-      .outline(this.hasSystemMenu() ? { width: this.theme.outlineWidth, color: this.theme.outlineColor,
-        radius: this.theme.containerBorderRadius } : undefined)
-      .constraintSize({
-        maxHeight: `calc(100% - ${this.horizontalMenuHeight > 0 ? this.horizontalMenuHeight + this.theme.menuSpacing : 0}vp)`,
-        minWidth: this.theme.defaultMenuWidth
+      .onAreaChange((oldValue: Area, newValue: Area) => {
+        let newValueHeight = newValue.height as number
+        let oldValueHeight = oldValue.height as number
+        this.customMenuHeight += newValueHeight - oldValueHeight
+        this.customMenuSize = this.customMenuHeight
       })
     }
     .useShadowBatching(true)
-    .constraintSize({
-      maxHeight: '100%',
-      minWidth: this.theme.defaultMenuWidth
-    })
+    .flexShrink(1)
+    .height(this.customMenuSize)
   }
 
   pushDataToPasteboard(richEditorSelection: RichEditorSelection) {
@@ -249,9 +192,9 @@ struct SelectionMenuComponent {
     }
     sysBoard.clearData()
     sysBoard.setData(pasteData).then(() => {
-      hilog.info(0x3900, 'Ace', 'SelectionMenu copy option, Succeeded in setting PasteData.');
+      hilog.info(0x3900, "Ace", 'SelectionMenu copy option, Succeeded in setting PasteData.');
     }).catch((err: BusinessError) => {
-      hilog.info(0x3900, 'Ace', 'SelectionMenu copy option, Failed to set PasteData. Cause:' + err.message);
+      hilog.info(0x3900, "Ace", 'SelectionMenu copy option, Failed to set PasteData. Cause:' + err.message);
     })
   }
 
@@ -277,7 +220,7 @@ struct SelectionMenuComponent {
           fontWeight: FontWeight.Normal,
           fontFamily: "HarmonyOS Sans",
           fontStyle: FontStyle.Normal,
-          decoration: { type: TextDecorationType.None, color: '#FF000000' }
+          decoration: { type: TextDecorationType.None, color: "#FF000000" }
         }
         if (data.getProperty() && data.getProperty().additions[i]) {
           const tmp = data.getProperty().additions[i] as Record<string, Object | undefined>;
@@ -326,60 +269,11 @@ struct SelectionMenuComponent {
   }
 
   measureButtonWidth(): number {
-    let numOfBtnPerRow = 5
-    let width = this.fontScale > MAX_FONT_SCALE ? this.customMenuWidth : this.theme.defaultMenuWidth;
-    if (this.editorMenuOptions && this.editorMenuOptions.length <= numOfBtnPerRow) {
-      return (width - this.theme.expandedOptionPadding * 2) / this.editorMenuOptions.length
+    if (this.editorMenuOptions && this.editorMenuOptions.length < 5) {
+      return (this.theme.defaultMenuWidth - this.theme.expandedOptionPadding * 2 -
+        this.theme.editorOptionMargin * 2 * this.editorMenuOptions.length) / this.editorMenuOptions.length
     }
-    return (width - this.theme.expandedOptionPadding * 2) / numOfBtnPerRow
-  }
-
-  measureFlexPadding(): number {
-    return Math.floor((this.theme.expandedOptionPadding - px2vp(2.0)) * 10) / 10
-  }
-
-  getFontScale(): number {
-    try {
-      let uiContext: UIContext = this.getUIContext();
-      let systemFontScale = (uiContext.getHostContext() as common.UIAbilityContext)?.config?.fontSizeScale ?? 1;
-      if (!this.isFollowingSystemFontScale) {
-        return 1;
-      }
-      return Math.min(systemFontScale, this.appMaxFontScale);
-    } catch (exception) {
-      let code: number = (exception as BusinessError).code;
-      let message: string = (exception as BusinessError).message;
-      hilog.error(0x3900, 'Ace', `Faild to init fontsizescale info,cause, code: ${code}, message: ${message}`);
-      return 1;
-    }
-  }
-
-  onMeasureSize(selfLayoutInfo: GeometryInfo, children: Measurable[], constraint: ConstraintSizeOptions): SizeResult {
-    this.fontScale = this.getFontScale();
-    let sizeResult: SizeResult = { height: 0, width: 0 };
-    children.forEach((child) => {
-      let childMeasureResult: MeasureResult = child.measure(constraint);
-      sizeResult.width = childMeasureResult.width;
-      sizeResult.height = childMeasureResult.height;
-    });
-    return sizeResult;
-  }
-
-  updateMenuItemVisibility() {
-    if (!this.controller) {
-      return
-    }
-    let richEditorSelection = this.controller.getSelection()
-    let start = richEditorSelection.selection[0]
-    let end = richEditorSelection.selection[1]
-    if (start !== end) {
-      this.cutAndCopyEnable = true
-    }
-    if (start === 0 && this.controller.getSpans({ start: end + 1, end: end + 1 }).length === 0) {
-      this.visibilityValue = Visibility.None
-    } else {
-      this.visibilityValue = Visibility.Visible
-    }
+    return this.theme.buttonSize
   }
 
   @Builder
@@ -388,35 +282,16 @@ struct SelectionMenuComponent {
       if (this.editorMenuOptions) {
         ForEach(this.editorMenuOptions, (item: EditorMenuOptions, index: number) => {
           Button() {
-            if (item.symbolStyle !== undefined) {
-              SymbolGlyph()
-                .fontColor(this.theme.defaultSymbolTheme.fontColor)
-                .attributeModifier(item.symbolStyle)
-                .focusable(true)
-                .draggable(false)
-                .effectStrategy(SymbolEffectStrategy.NONE)
-                .symbolEffect(new SymbolEffect(), false)
-                .fontSize(this.theme.defaultSymbolTheme.fontSize)
-            } else {
-              if (Util.isSymbolResource(item.icon)) {
-                SymbolGlyph(item.icon as Resource)
-                  .fontColor(this.theme.defaultSymbolTheme.fontColor)
-                  .focusable(true)
-                  .draggable(false)
-                  .fontSize(this.theme.defaultSymbolTheme.fontSize)
-              } else {
-                Image(item.icon)
-                  .width(this.theme.imageSize)
-                  .height(this.theme.imageSize)
-                  .fillColor(this.theme.imageFillColor)
-                  .focusable(true)
-                  .draggable(false)
-              }
-
-            }
+            Image(item.icon)
+              .width(this.theme.imageSize)
+              .height(this.theme.imageSize)
+              .fillColor(this.theme.imageFillColor)
+              .focusable(true)
+              .draggable(false)
           }
           .enabled(!(!item.action && !item.builder))
           .type(ButtonType.Normal)
+          .margin(this.theme.editorOptionMargin)
           .backgroundColor(this.theme.backGroundColor)
           .onClick(() => {
             if (item.builder) {
@@ -442,22 +317,17 @@ struct SelectionMenuComponent {
     }
     .onAreaChange((oldValue: Area, newValue: Area) => {
       let newValueHeight = newValue.height as number
-      let newValueWidth = newValue.width as number
-      this.horizontalMenuHeight = newValueHeight
-      this.horizontalMenuWidth = newValueWidth
+      let oldValueHeight = oldValue.height as number
+      this.customMenuHeight += newValueHeight - oldValueHeight
+      this.customMenuSize = this.customMenuHeight
     })
     .clip(true)
-    .width(this.fontScale > MAX_FONT_SCALE ? this.customMenuWidth : this.theme.defaultMenuWidth)
-    .padding({ top: this.measureFlexPadding(), bottom: this.measureFlexPadding(),
-      left: this.measureFlexPadding() - 0.1, right: this.measureFlexPadding() - 0.1 })
+    .width(this.theme.defaultMenuWidth)
+    .padding(this.theme.expandedOptionPadding)
     .borderRadius(this.theme.containerBorderRadius)
     .margin({ bottom: this.theme.menuSpacing })
     .backgroundColor(this.theme.backGroundColor)
     .shadow(this.theme.iconPanelShadowStyle)
-    .border({ width: this.theme.borderWidth, color: this.theme.borderColor,
-      radius: this.theme.containerBorderRadius })
-    .outline({ width: this.theme.outlineWidth, color: this.theme.outlineColor,
-      radius: this.theme.containerBorderRadius })
   }
 
   @Builder
@@ -468,15 +338,8 @@ struct SelectionMenuComponent {
         Menu() {
           if (this.controller) {
             MenuItemGroup() {
-              MenuItem({
-                startIcon: this.theme.cutIcon,
-                symbolStartIcon: this.theme.defaultSymbolTheme.symbolCutIcon,
-                content: '剪切',
-                labelInfo: 'Ctrl+X'
-              })
+              MenuItem({ startIcon: this.theme.cutIcon, content: "剪切", labelInfo: "Ctrl+X" })
                 .enabled(this.cutAndCopyEnable)
-                .height(this.fontScale > MAX_FONT_STANDARD ? 'auto' : this.theme.buttonSize)
-                .borderRadius(this.theme.iconBorderRadius)
                 .onClick(() => {
                   if (!this.controller) {
                     return
@@ -492,16 +355,8 @@ struct SelectionMenuComponent {
                     })
                   }
                 })
-              MenuItem({
-                startIcon: this.theme.copyIcon,
-                symbolStartIcon: this.theme.defaultSymbolTheme.symbolCopyIcon,
-                content: '复制',
-                labelInfo: 'Ctrl+C'
-              })
+              MenuItem({ startIcon: this.theme.copyIcon, content: "复制", labelInfo: "Ctrl+C" })
                 .enabled(this.cutAndCopyEnable)
-                .height(this.fontScale > MAX_FONT_STANDARD ? 'auto' : this.theme.buttonSize)
-                .borderRadius(this.theme.iconBorderRadius)
-                .margin({ top: this.theme.menuItemPadding })
                 .onClick(() => {
                   if (!this.controller) {
                     return
@@ -514,16 +369,8 @@ struct SelectionMenuComponent {
                     this.controller.closeSelectionMenu()
                   }
                 })
-              MenuItem({
-                startIcon: this.theme.pasteIcon,
-                symbolStartIcon: this.theme.defaultSymbolTheme.symbolPasteIcon,
-                content: '粘贴',
-                labelInfo: 'Ctrl+V'
-              })
+              MenuItem({ startIcon: this.theme.pasteIcon, content: "粘贴", labelInfo: "Ctrl+V" })
                 .enabled(this.pasteEnable)
-                .height(this.fontScale > MAX_FONT_STANDARD ? 'auto' : this.theme.buttonSize)
-                .borderRadius(this.theme.iconBorderRadius)
-                .margin({ top: this.theme.menuItemPadding })
                 .onClick(() => {
                   if (!this.controller) {
                     return
@@ -536,16 +383,8 @@ struct SelectionMenuComponent {
                     this.controller.closeSelectionMenu()
                   }
                 })
-              MenuItem({
-                startIcon: this.theme.selectAllIcon,
-                symbolStartIcon: this.theme.defaultSymbolTheme.symbolSelectAllIcon,
-                content: '全选',
-                labelInfo: 'Ctrl+A'
-              })
+              MenuItem({ startIcon: this.theme.selectAllIcon, content: "全选", labelInfo: "Ctrl+A" })
                 .visibility(this.visibilityValue)
-                .height(this.fontScale > MAX_FONT_STANDARD ? 'auto' : this.theme.buttonSize)
-                .borderRadius(this.theme.iconBorderRadius)
-                .margin({ top: this.theme.menuItemPadding })
                 .onClick(() => {
                   if (!this.controller) {
                     return
@@ -562,32 +401,21 @@ struct SelectionMenuComponent {
             }
           }
           if (this.controller && !this.showExpandedMenuOptions &&
-          this.expandedMenuOptions && this.expandedMenuOptions.length > 0) {
-            MenuItem({
-              content: '更多',
-              endIcon: this.theme.arrowDownIcon,
-              symbolEndIcon: this.theme.defaultSymbolTheme.symbolArrowDownIcon
-            })
-              .height(this.fontScale > MAX_FONT_STANDARD ? 'auto' : this.theme.buttonSize)
-              .borderRadius(this.theme.iconBorderRadius)
-              .margin({ top: this.theme.menuItemPadding })
+            this.expandedMenuOptions && this.expandedMenuOptions.length > 0) {
+            MenuItem({ content: "更多", endIcon: this.theme.arrowDownIcon })
               .onClick(() => {
                 this.showExpandedMenuOptions = true
+                this.customMenuSize = '100%'
               })
           } else if (this.showExpandedMenuOptions && this.expandedMenuOptions && this.expandedMenuOptions.length > 0) {
             ForEach(this.expandedMenuOptions, (expandedMenuOptionItem: ExpandedMenuOptions, index) => {
               MenuItem({
                 startIcon: expandedMenuOptionItem.startIcon,
-                symbolStartIcon: expandedMenuOptionItem.symbolStartIcon,
                 content: expandedMenuOptionItem.content,
                 endIcon: expandedMenuOptionItem.endIcon,
-                symbolEndIcon: expandedMenuOptionItem.symbolEndIcon,
                 labelInfo: expandedMenuOptionItem.labelInfo,
                 builder: expandedMenuOptionItem.builder
               })
-                .height(this.fontScale > MAX_FONT_STANDARD ? 'auto' : this.theme.buttonSize)
-                .borderRadius(this.theme.iconBorderRadius)
-                .margin({ top: this.theme.menuItemPadding })
                 .onClick(() => {
                   if (expandedMenuOptionItem.action) {
                     expandedMenuOptionItem.action()
@@ -596,40 +424,34 @@ struct SelectionMenuComponent {
             })
           }
         }
+        .onVisibleAreaChange([0.0, 1.0], () => {
+          if (!this.controller) {
+            return
+          }
+          let richEditorSelection = this.controller.getSelection()
+          let start = richEditorSelection.selection[0]
+          let end = richEditorSelection.selection[1]
+          if (start !== end) {
+            this.cutAndCopyEnable = true
+          }
+          if (start === 0 && this.controller.getSpans({ start: end + 1, end: end + 1 }).length === 0) {
+            this.visibilityValue = Visibility.None
+          } else {
+            this.visibilityValue = Visibility.Visible
+          }
+        })
         .radius(this.theme.containerBorderRadius)
         .clip(true)
-        .width(this.fontScale > MAX_FONT_SCALE ? 'auto' : this.theme.defaultMenuWidth)
-        .constraintSize({
-          minWidth: this.theme.defaultMenuWidth
-        })
-        .onVisibleAreaChange([0.0, 1.0], () => {
-          this.updateMenuItemVisibility()
-        })
-        .onAreaChange((oldValue: Area, newValue: Area) => {
-          let newValueWidth = newValue.width as number
-          this.customMenuWidth =
-            this.fontScale > MAX_FONT_SCALE && newValueWidth > this.theme.defaultMenuWidth ? newValueWidth :
-            this.theme.defaultMenuWidth
-          this.updateMenuItemVisibility()
-        })
+        .width(this.theme.defaultMenuWidth)
       } else if (this.showCustomerIndex > -1 && this.builder) {
-        Column() {
-          if (this.customerChange) {
-            this.builder()
-          } else {
-            this.builder()
-          }
+        if (this.customerChange) {
+          this.builder()
+        } else {
+          this.builder()
         }
-        .width(this.horizontalMenuWidth)
       }
     }
-    .width(this.fontScale > MAX_FONT_SCALE ? 'auto' : this.theme.defaultMenuWidth)
-    .shadow(this.theme.iconPanelShadowStyle)
-    .border({ width: this.theme.borderWidth, color: this.theme.borderColor,
-      radius: this.theme.containerBorderRadius })
-    .constraintSize({
-      minWidth: this.theme.defaultMenuWidth
-    })
+    .width(this.theme.defaultMenuWidth)
   }
 }
 
@@ -644,26 +466,4 @@ export function SelectionMenu(options: SelectionMenuOptions) {
     onCut: options.onCut,
     onSelectAll: options.onSelectAll
   })
-}
-
-class Util {
-  private static RESOURCE_TYPE_SYMBOL = 40000;
-
-  public static isSymbolResource(resourceStr: ResourceStr | undefined): boolean {
-    if (!Util.isResourceType(resourceStr)) {
-      return false;
-    }
-    let resource = resourceStr as Resource;
-    return resource.type === Util.RESOURCE_TYPE_SYMBOL;
-  }
-
-  public static isResourceType(resource: ResourceStr | Resource | undefined): boolean {
-    if (!resource) {
-      return false;
-    }
-    if (typeof resource === 'string' || typeof resource === 'undefined') {
-      return false;
-    }
-    return true;
-  }
 }

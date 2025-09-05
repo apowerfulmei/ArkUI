@@ -14,6 +14,7 @@
  */
 
 #include "core/components_ng/pattern/model/model_touch_handler.h"
+#include "core/event/touch_event.h"
 
 namespace OHOS::Ace::NG {
 
@@ -70,8 +71,6 @@ TouchEvent ModelTouchHandler::CreateTouchEvent(const TouchEventInfo& info) const
         .SetY(point.GetLocalLocation().GetY())
         .SetScreenX(point.GetGlobalLocation().GetX())
         .SetScreenY(point.GetGlobalLocation().GetY())
-        .SetGlobalDisplayX(point.GetGlobalDisplayLocation().GetX())
-        .SetGlobalDisplayY(point.GetGlobalDisplayLocation().GetY())
         .SetType(point.GetTouchType());
 }
 

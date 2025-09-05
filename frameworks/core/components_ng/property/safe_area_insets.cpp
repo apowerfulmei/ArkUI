@@ -15,6 +15,8 @@
 
 #include "safe_area_insets.h"
 
+#include <string>
+
 namespace OHOS::Ace::NG {
 SafeAreaInsets SafeAreaInsets::Combine(const SafeAreaInsets& other) const
 {

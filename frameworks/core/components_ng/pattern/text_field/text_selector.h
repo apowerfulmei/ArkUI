@@ -22,7 +22,6 @@
 
 #include "base/geometry/ng/offset_t.h"
 #include "base/geometry/ng/rect_t.h"
-#include "frameworks/core/components/common/properties/decoration.h"
 
 // avoid windows build error about macro defined in wincon.h
 #ifdef DOUBLE_CLICK
@@ -46,16 +45,6 @@ enum class CaretUpdateType {
     RIGHT_CLICK,
     VISIBLE_PASSWORD_ICON,
     DOUBLE_CLICK
-};
-
-enum class AIResetSelectionReason {
-    INIT_SELECTION = 0,
-    SHOW_FOR_CANCEL = 1,
-    LONG_PRESS = 2,
-    CLICK = 3,
-    DRAG_START = 4,
-    DRAG_START_ON_CHILDREN = 5,
-    CLOSE_CONTEXT_MENU = 6
 };
 /**
  * Stands for selection indexes
@@ -104,9 +93,6 @@ struct TextSelector {
         }
         bool isChanged = baseOffset != destinationOffset || base != destination;
         baseOffset = base;
-        if (baseOffset >= 0) {
-            lastValidStart = baseOffset;
-        }
         destinationOffset = destination;
         if (isChanged) {
             FireAccessibilityCallback();
@@ -123,9 +109,6 @@ struct TextSelector {
         }
         baseOffset = both;
         destinationOffset = both;
-        if (baseOffset >= 0) {
-            lastValidStart = baseOffset;
-        }
     }
 
     void ReverseTextSelector()
@@ -202,17 +185,6 @@ struct TextSelector {
         return baseOffset > destinationOffset;
     }
 
-    bool ContainsRange(const std::pair<int32_t, int32_t>& range) const
-    {
-        return IsValid() && GetTextStart() <= range.first && range.second <= GetTextEnd();
-    }
-
-    void ResetAiSelected()
-    {
-        aiStart = std::nullopt;
-        aiEnd = std::nullopt;
-    }
-
     std::string ToString()
     {
         std::string result;
@@ -243,16 +215,12 @@ struct TextSelector {
     int32_t destinationOffset = -1;
     OffsetF selectionDestinationOffset;
 
-    std::optional<int32_t> aiStart;
-    std::optional<int32_t> aiEnd;
-
     int32_t charCount = 0;
     RectF firstHandle;
     RectF secondHandle;
     OffsetF firstHandleOffset_;
     OffsetF secondHandleOffset_;
     OnAccessibilityCallback onAccessibilityCallback_;
-    int32_t lastValidStart = 0;
 };
 
 enum class TextSpanType : int32_t {
@@ -275,17 +243,12 @@ enum class SelectionMenuType : int32_t {
     PREVIEW_MENU = 1,
 };
 
-struct PreviewMenuOptions {
-    HapticFeedbackMode hapticFeedbackMode = HapticFeedbackMode::DISABLED;
-};
-
 struct SelectMenuParam {
     std::function<void(int32_t, int32_t)> onAppear;
     std::function<void()> onDisappear;
     std::function<void(int32_t, int32_t)> onMenuShow;
     std::function<void(int32_t, int32_t)> onMenuHide;
     bool isValid = true;
-    PreviewMenuOptions previewMenuOptions;
 };
 
 struct SelectionMenuParams {

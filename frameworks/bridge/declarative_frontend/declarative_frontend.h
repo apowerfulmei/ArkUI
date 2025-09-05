@@ -62,13 +62,6 @@ public:
 
     UIContentErrorCode RunPageByNamedRouter(const std::string& name, const std::string& params) override;
 
-    UIContentErrorCode RunIntentPage() override;
-
-    UIContentErrorCode SetRouterIntentInfo(const std::string& intentInfoSerialized, bool isColdStart,
-        const std::function<void()>&& loadPageCallback) override;
-
-    std::string GetTopNavDestinationInfo(bool onlyFullScreen, bool needParam) override;
-
     void ReplacePage(const std::string& url, const std::string& params) override;
 
     void PushPage(const std::string& url, const std::string& params) override;
@@ -100,7 +93,6 @@ public:
     void TransferComponentResponseData(int32_t callbackId, int32_t code, std::vector<uint8_t>&& data) const override;
     void TransferJsResponseData(int32_t callbackId, int32_t code, std::vector<uint8_t>&& data) const override;
     napi_value GetContextValue() override;
-    bool BuilderNodeFunc(std::string functionName, const std::vector<int32_t>& nodeIds) override;
     napi_value GetFrameNodeValueByNodeId(int32_t nodeId) override;
 #if defined(PREVIEW)
     void SetPkgNameList(const std::map<std::string, std::string>& map)
@@ -171,8 +163,7 @@ public:
     void OnSurfaceChanged(int32_t width, int32_t height) override;
     void OnLayoutCompleted(const std::string& componentId) override;
     void OnDrawCompleted(const std::string& componentId) override;
-    void OnDrawChildrenCompleted(const std::string& componentId) override;
-    bool IsDrawChildrenCallbackFuncExist(const std::string& componentId) override;
+
     void DumpFrontend() const override;
     std::string GetPagePath() const override;
     void TriggerGarbageCollection() override;
@@ -256,8 +247,6 @@ public:
     {
         return AceType::DynamicCast<Framework::FrontendDelegate>(delegate_);
     }
-
-    std::string GetPagePathByUrl(const std::string& url) const override;
 
 protected:
     bool isFormRender_ = false;

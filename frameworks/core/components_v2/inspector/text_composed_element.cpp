@@ -16,6 +16,9 @@
 #include "core/components_v2/inspector/text_composed_element.h"
 
 #include "base/log/dump_log.h"
+#include "base/utils/string_utils.h"
+#include "core/components/common/layout/constants.h"
+#include "core/components/text/text_element.h"
 #include "core/components_v2/inspector/utils.h"
 
 namespace OHOS::Ace::V2 {
@@ -102,7 +105,7 @@ std::string TextComposedElement::GetTextDecoration() const
 {
     auto renderText = GetRenderText();
     auto textDecoration =
-        renderText ? renderText->GetTextStyle().GetTextDecorationFirst() : TextDecoration::NONE;
+        renderText ? renderText->GetTextStyle().GetTextDecoration() : TextDecoration::NONE;
     auto textDecorationColor = renderText ? renderText->GetTextStyle().GetTextDecorationColor() : Color::BLACK;
     auto textDecorationStyle =
         renderText ? renderText->GetTextStyle().GetTextDecorationStyle() : TextDecorationStyle::SOLID;

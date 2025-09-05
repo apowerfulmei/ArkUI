@@ -33,14 +33,6 @@ inline RefPtr<NavigationBarTheme> NavigationGetTheme()
     return pipeline->GetTheme<NavigationBarTheme>();
 }
 
-
-inline RefPtr<NavigationBarTheme> NavigationGetTheme(int32_t themeScopeId)
-{
-    auto pipeline = PipelineBase::GetCurrentContext();
-    CHECK_NULL_RETURN(pipeline, nullptr);
-    return pipeline->GetTheme<NavigationBarTheme>(themeScopeId);
-}
-
 // TODO：move some items to theme
 // title bar back button
 constexpr const char* BACK_BUTTON = "Back";
@@ -131,13 +123,6 @@ constexpr const char* DES_FIELD = "__NavdestinationField__";
 // font scale
 constexpr float STANDARD_FONT_SCALE = 1.0f;
 
-constexpr int32_t ROTATION_0 = 0;
-constexpr int32_t ROTATION_90 = 90;
-constexpr int32_t ROTATION_180 = 180;
-constexpr int32_t ROTATION_270 = 270;
-
-constexpr uint32_t BAR_ITEM_MARGIN_NUM = 2;
-
 enum class NavToolbarItemStatus {
     NORMAL = 0,
     DISABLED,
@@ -154,11 +139,6 @@ struct BarItem {
     NavToolbarItemStatus status;
     std::optional<std::string> activeIcon;
     std::optional<std::function<void(WeakPtr<NG::FrameNode>)>> activeIconSymbol;
-    struct resourceUpdater {
-        RefPtr<ResourceObject> resObj;
-        std::function<void(const RefPtr<ResourceObject>&, BarItem&)> updateFunc;
-    };
-    std::unordered_map<std::string, resourceUpdater> resMap_;
     std::string ToString() const
     {
         std::string result;
@@ -167,22 +147,6 @@ struct BarItem {
         result.append(", icon: ");
         result.append(icon.value_or("na"));
         return result;
-    }
-
-    void AddResource(const std::string& key, const RefPtr<ResourceObject>& resObj,
-        std::function<void(const RefPtr<ResourceObject>&, BarItem&)>&& updateFunc)
-    {
-        if (resObj == nullptr || !updateFunc) {
-            return;
-        }
-        resMap_[key] = { resObj, std::move(updateFunc) };
-    }
-
-    void ReloadResources()
-    {
-        for (const auto& [key, resourceUpdater] : resMap_) {
-            resourceUpdater.updateFunc(resourceUpdater.resObj, *this);
-        }
     }
 };
 
@@ -255,25 +219,14 @@ enum class NavigationOperation {
 };
 
 enum NavDestinationLifecycle {
-    ON_WILL_APPEAR = 0,
+    ON_WILL_APPEAR,
     ON_APPEAR,
     ON_WILL_SHOW,
     ON_SHOW,
-    ON_ACTIVE,
     ON_WILL_HIDE,
-    ON_INACTIVE,
     ON_HIDE,
     ON_WILL_DISAPPEAR,
     ON_DISAPPEAR
-};
-
-enum class NavDestinationActiveReason {
-    TRANSITION = 0,
-    CONTENT_COVER,
-    SHEET,
-    DIALOG,
-    OVERLAY,
-    APP_STATE_CHANGE
 };
 
 enum class NavigationSystemTransitionType {
@@ -285,12 +238,6 @@ enum class NavigationSystemTransitionType {
     EXPLODE = 1 << 3,
     SLIDE_RIGHT = 1 << 4,
     SLIDE_BOTTOM = 1 << 5,
-};
-
-enum class NavDestinationType {
-    DETAIL = 0,
-    HOME = 1,
-    PROXY = 2
 };
 
 inline NavigationSystemTransitionType operator& (NavigationSystemTransitionType lv, NavigationSystemTransitionType rv)
@@ -310,21 +257,8 @@ struct NavDestinationTransition {
     std::function<void()> onTransitionEnd;
 };
 
-enum class LaunchMode {
-    STANDARD = 0,
-    MOVE_TO_TOP_SINGLETON,
-    POP_TO_TOP_SINGLETON,
-    NEW_INSTANCE,
-};
-
-struct NavigationOptions {
-    LaunchMode launchMode = LaunchMode::STANDARD;
-    bool animated = true;
-};
-
 using NavDestinationTransitionDelegate = std::function<std::optional<std::vector<NavDestinationTransition>>(
     NavigationOperation operation, bool isEnter)>;
-using NavDestinationOnNewParamCallback = std::function<void(napi_value param)>;
 
 } // namespace OHOS::Ace::NG
 #endif // FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_DECLARATION_NAVIGATION_NAVIGATION_DECLARATION_H

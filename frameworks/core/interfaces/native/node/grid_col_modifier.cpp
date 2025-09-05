@@ -14,8 +14,11 @@
  */
 
 #include "core/interfaces/native/node/grid_col_modifier.h"
-
-#include "core/common/container.h"
+#include <cstdint>
+#include "core/pipeline/base/element_register.h"
+#include "core/components_ng/base/frame_node.h"
+#include "core/components_ng/base/view_abstract.h"
+#include "core/components/common/layout/constants.h"
 #include "core/components_ng/pattern/grid_col/grid_col_model_ng.h"
 
 namespace OHOS::Ace::NG {
@@ -46,42 +49,12 @@ void InheritGridContainerSize(OHOS::Ace::V2::GridContainerSize &gridContainerSiz
     gridContainerSize.xxl = containerSizeArray[COL_5];
 }
 
-void InheritGridSpans(OHOS::Ace::V2::GridContainerSize& gridContainerSize, int32_t* containerSizeArray, int32_t size)
-{
-    for (int32_t i = 0; i < size; ++i) {
-        if (containerSizeArray[i] >= 0) {
-            containerSizeArray[0] = containerSizeArray[i];
-            break;
-        }
-    }
-    if (containerSizeArray[0] < 0) {
-        return;
-    }
-    for (int32_t i = 1; i < size; ++i) {
-        if (containerSizeArray[i] < 0) {
-            containerSizeArray[i] = containerSizeArray[i - 1];
-        }
-    }
-    gridContainerSize.xs = containerSizeArray[COL_0];
-    gridContainerSize.sm = containerSizeArray[COL_1];
-    gridContainerSize.md = containerSizeArray[COL_2];
-    gridContainerSize.lg = containerSizeArray[COL_3];
-    gridContainerSize.xl = containerSizeArray[COL_4];
-    gridContainerSize.xxl = containerSizeArray[COL_5];
-}
-
 void SetSpan(ArkUINodeHandle node, int32_t *containerSizeArray, int32_t size)
 {
     auto *frameNode = reinterpret_cast<FrameNode *>(node);
     CHECK_NULL_VOID(frameNode);
-    OHOS::Ace::V2::GridContainerSize span;
-    if (Container::LessThanAPITargetVersion(PlatformVersion::VERSION_TWENTY)) {
-        span = OHOS::Ace::V2::GridContainerSize(1);
-        InheritGridContainerSize(span, containerSizeArray, size, 1);
-    } else {
-        span = OHOS::Ace::V2::GridContainerSize(1);
-        InheritGridSpans(span, containerSizeArray, size);
-    }
+    auto span = OHOS::Ace::V2::GridContainerSize(1);
+    InheritGridContainerSize(span, containerSizeArray, size, 1);
     GridColModelNG::SetSpan(frameNode, span);
 }
 
@@ -89,7 +62,10 @@ void ResetSpan(ArkUINodeHandle node)
 {
     auto *frameNode = reinterpret_cast<FrameNode *>(node);
     CHECK_NULL_VOID(frameNode);
-    GridColModelNG::SetSpan(frameNode, OHOS::Ace::V2::GridContainerSize(1));
+    auto span = OHOS::Ace::V2::GridContainerSize(1);
+    int32_t containerSizeArray[SIZE_ARRAY] = {1, 1, 1, 1, 1, 1};
+    InheritGridContainerSize(span, containerSizeArray, SIZE_ARRAY, 1);
+    GridColModelNG::SetSpan(frameNode, span);
 }
 
 void SetGridColOffset(ArkUINodeHandle node, int32_t *containerSizeArray, int32_t size)
@@ -133,31 +109,17 @@ void ResetOrder(ArkUINodeHandle node)
 namespace NodeModifier {
 const ArkUIGridColModifier* GetGridColModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
     static const ArkUIGridColModifier modifier = {
-        .setSpan = SetSpan,
-        .resetSpan = ResetSpan,
-        .setGridColOffset = SetGridColOffset,
-        .resetGridColOffset = ResetGridColOffset,
-        .setOrder = SetOrder,
-        .resetOrder = ResetOrder,
+        SetSpan, ResetSpan, SetGridColOffset, ResetGridColOffset, SetOrder, ResetOrder,
     };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
     return &modifier;
 }
 
 const CJUIGridColModifier* GetCJUIGridColModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
     static const CJUIGridColModifier modifier = {
-        .setSpan = SetSpan,
-        .resetSpan = ResetSpan,
-        .setGridColOffset = SetGridColOffset,
-        .resetGridColOffset = ResetGridColOffset,
-        .setOrder = SetOrder,
-        .resetOrder = ResetOrder,
+        SetSpan, ResetSpan, SetGridColOffset, ResetGridColOffset, SetOrder, ResetOrder,
     };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
     return &modifier;
 }
 }

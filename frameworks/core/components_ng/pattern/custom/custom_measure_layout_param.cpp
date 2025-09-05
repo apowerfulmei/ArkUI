@@ -15,7 +15,6 @@
 
 #include "core/components_ng/pattern/custom/custom_measure_layout_param.h"
 
-#include "core/components_ng/layout/layout_property.h"
 namespace OHOS::Ace::NG {
 RefPtr<LayoutWrapper> MeasureLayoutChild::GetChild() const
 {
@@ -59,9 +58,7 @@ RefPtr<LayoutWrapper> MeasureLayoutParam::GetOrCreateChildByIndex(int32_t index)
 
 LayoutConstraintF MeasureLayoutParam::CreateChildConstraint() const
 {
-    const auto& layoutProperty = layoutWrapper_->GetLayoutProperty();
-    CHECK_NULL_RETURN(layoutProperty, LayoutConstraintF());
-    return layoutProperty->CreateChildConstraint();
+    return layoutWrapper_->GetLayoutProperty()->CreateChildConstraint();
 }
 
 void MeasureLayoutParam::Update(LayoutWrapper* layoutWrapper)

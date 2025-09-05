@@ -16,7 +16,7 @@
 #define FOUNDATION_ACE_FRAMEWORKS_CORE_GESTURES_GESTURE_EVENT_H
 
 #include "core/gestures/gesture_info.h"
-#include "core/components/common/layout/constants.h"
+
 namespace OHOS::MMI {
 class PointerEvent;
 } // namespace OHOS::MMI
@@ -124,17 +124,6 @@ public:
     const Offset& GetGlobalLocation() const
     {
         return globalLocation_;
-    }
-
-    GestureEvent& SetGlobalDisplayLocation(const Offset& globalDisplayLocation)
-    {
-        globalDisplayLocation_ = globalDisplayLocation;
-        return *this;
-    }
-
-    const Offset& GetGlobalDisplayLocation() const
-    {
-        return globalDisplayLocation_;
     }
 
     const Offset& GetPinchCenter() const
@@ -256,15 +245,6 @@ public:
         return pointerEvent_;
     }
 
-    void SetClickPointerEvent(const std::shared_ptr<MMI::PointerEvent>& clickPointerEvent)
-    {
-        clickPointerEvent_ = clickPointerEvent;
-    }
-    const std::shared_ptr<MMI::PointerEvent>& GetClickPointerEvent() const
-    {
-        return clickPointerEvent_;
-    }
-
     void SetRawGlobalLocation(const Offset& rawGlobalLocation)
     {
         rawGlobalLocation_ = rawGlobalLocation;
@@ -313,36 +293,6 @@ public:
     int32_t GetPointerEventId() const
     {
         return pointerEventId_;
-    }
-
-    void SetGestureTypeName(GestureTypeName gestureType)
-    {
-        gestureType_ = gestureType;
-    }
-
-    GestureTypeName GetGestureTypeName() const
-    {
-        return gestureType_;
-    }
-
-    void SetLastAction(int32_t action)
-    {
-        lastAction_.emplace(action);
-    }
-
-    std::optional<int32_t> GetLastAction() const
-    {
-        return lastAction_;
-    }
-
-    void SetPassThrough(bool passThrough)
-    {
-        passThrough_ = passThrough;
-    }
-
-    bool GetPassThrough() const
-    {
-        return passThrough_;
     }
 #ifdef SECURITY_COMPONENT_ENABLE
     void SetDisplayX(double displayX)
@@ -396,7 +346,6 @@ private:
     std::shared_ptr<JsonValue> secCompHandleEvent_;
 #endif
     std::shared_ptr<MMI::PointerEvent> pointerEvent_;
-    std::shared_ptr<MMI::PointerEvent> clickPointerEvent_;
     Point globalPoint_;
     // global position at which the touch point contacts the screen.
     Offset globalLocation_;
@@ -405,8 +354,6 @@ private:
     Offset localLocation_;
     // Will be used in drag.
     Offset screenLocation_;
-    // The location where the touch point touches the screen when there are multiple screens.
-    Offset globalDisplayLocation_;
     // Raw last touchPoint global location.
     Offset rawGlobalLocation_;
     Offset pinchCenter_;
@@ -417,9 +364,6 @@ private:
     bool isInterpolated_ = false;
     float inputXDeltaSlope_ = 0.0f;
     float inputYDeltaSlope_ = 0.0f;
-    GestureTypeName gestureType_ = GestureTypeName::UNKNOWN;
-    std::optional<int32_t> lastAction_;
-    bool passThrough_ = false;
 };
 
 using GestureEventFunc = std::function<void(GestureEvent& info)>;
@@ -449,9 +393,9 @@ public:
     {
         onActionEndId_ = std::make_unique<GestureEventFunc>(onActionEndId);
     }
-    void SetOnActionCancelId(const GestureEventFunc& onActionCancelId)
+    void SetOnActionCancelId(const GestureEventNoParameter& onActionCancelId)
     {
-        onActionCancelId_ = std::make_unique<GestureEventFunc>(onActionCancelId);
+        onActionCancelId_ = std::make_unique<GestureEventNoParameter>(onActionCancelId);
     }
     void SetPriority(GesturePriority priority)
     {
@@ -482,7 +426,7 @@ protected:
     std::unique_ptr<GestureEventFunc> onActionStartId_;
     std::unique_ptr<GestureEventFunc> onActionUpdateId_;
     std::unique_ptr<GestureEventFunc> onActionEndId_;
-    std::unique_ptr<GestureEventFunc> onActionCancelId_;
+    std::unique_ptr<GestureEventNoParameter> onActionCancelId_;
 };
 
 } // namespace OHOS::Ace

@@ -16,6 +16,8 @@
 #include "bridge/cj_frontend/interfaces/cj_ffi/cj_texttimer_ffi.h"
 
 #include "cj_lambda.h"
+#include "bridge/cj_frontend/interfaces/cj_ffi/cj_view_abstract_ffi.h"
+#include "bridge/cj_frontend/interfaces/cj_ffi/utils.h"
 #include "bridge/common/utils/utils.h"
 
 using namespace OHOS::Ace;
@@ -58,27 +60,6 @@ constexpr double MAX_COUNT_DOWN = 86400000.0;
 } // namespace OHOS::Ace::Framework
 
 extern "C" {
-VectorNativeTextTimerShadow FfiTextTimerCreateVectorNativeTextShadow(int64_t size)
-{
-    LOGI("Create NativeTextShadow Vector");
-    return new std::vector<NativeTextTimerShadow>(size);
-}
-
-void FfiTextTimerVectorNativeTextShadowSetElement(
-    VectorNativeTextTimerShadow vec, int64_t index, NativeTextTimerShadow textShadow)
-{
-    LOGI("NativeTextShadow Vector Set Element");
-    auto actualVec = reinterpret_cast<std::vector<NativeTextTimerShadow>*>(vec);
-    (*actualVec)[index] = textShadow;
-    LOGI("NativeTextShadow Vector Set Element Success");
-}
-
-void FfiTextTimerVectorNativeTextShadowDelete(VectorNativeTextTimerShadow vec)
-{
-    auto actualVec = reinterpret_cast<std::vector<NativeTextTimerShadow>*>(vec);
-    delete actualVec;
-}
-
 void FfiOHOSAceFrameworkTextTimerCreate(bool isCountDown, int64_t count, int64_t controllerId)
 {
     auto textTimer = TextTimerModel::GetInstance()->Create();
@@ -142,26 +123,6 @@ void FfiOHOSAceFrameworkTextTimerSetFontFamily(const char* fontFamily)
     std::vector<std::string> fontFamilies;
     fontFamilies = ConvertStrToFontFamilies(fontFamily);
     TextTimerModel::GetInstance()->SetFontFamily(fontFamilies);
-}
-
-void FfiOHOSAceFrameworkTextTimerSetTextShadow(VectorStringPtr vecContent)
-{
-    auto nativeTextShadowVec = *reinterpret_cast<std::vector<NativeTextTimerShadow>*>(vecContent);
-    
-    std::vector<Shadow> shadows(nativeTextShadowVec.size());
-    for (size_t i = 0; i < nativeTextShadowVec.size(); i++) {
-        Dimension dOffsetX(nativeTextShadowVec[i].offsetX, DimensionUnit::VP);
-        Dimension dOffsetY(nativeTextShadowVec[i].offsetY, DimensionUnit::VP);
-
-        shadows[i].SetBlurRadius(nativeTextShadowVec[i].radius);
-        shadows[i].SetOffsetX(dOffsetX.Value());
-        shadows[i].SetOffsetY(dOffsetY.Value());
-        shadows[i].SetColor(Color(nativeTextShadowVec[i].color));
-        shadows[i].SetIsFilled(nativeTextShadowVec[i].isFilled);
-        shadows[i].SetShadowType(nativeTextShadowVec[i].type == 0 ? ShadowType::COLOR : ShadowType::BLUR);
-    }
-    
-    TextTimerModel::GetInstance()->SetTextShadow(shadows);
 }
 
 void FfiOHOSAceFrameworkTextTimerSetOnTimer(void (*callback)(int64_t utc, int64_t elapsedTime))

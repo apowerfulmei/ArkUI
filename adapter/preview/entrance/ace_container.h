@@ -33,16 +33,12 @@
 #include "core/common/js_message_dispatcher.h"
 #include "core/common/platform_bridge.h"
 #include "frameworks/bridge/js_frontend/engine/common/js_engine.h"
-#include "core/event/crown_event.h"
+
 
 #include <refbase.h>
 
 namespace OHOS::Rosen {
     class Window;
-}
-
-namespace OHOS::AbilityRuntime {
-    class Context;
 }
 
 namespace OHOS::Ace::Platform {
@@ -77,8 +73,7 @@ public:
         int32_t height, UIEnvCallback callback);
 #endif
 
-    static UIContentErrorCode RunPage(
-        int32_t instanceId, const std::string& url, const std::string& params, bool isNamedRouter = false);
+    static UIContentErrorCode RunPage(int32_t instanceId, const std::string& url, const std::string& params);
     static RefPtr<AceContainer> GetContainerInstance(int32_t instanceId);
     static void AddRouterChangeCallback(int32_t instanceId, const OnRouterChangeCallback& onRouterChangeCallback);
     static void NativeOnConfigurationUpdated(int32_t instanceId);
@@ -311,25 +306,6 @@ public:
         moduleName_ = moduleName;
     }
 
-    void RegisterCrownEventCallback(CrownEventCallback&& callback)
-    {
-        ACE_DCHECK(callback);
-        crownEventCallback_ = std::move(callback);
-    }
-
-    void SetLocalStorage(NativeReference* storage, const std::shared_ptr<OHOS::AbilityRuntime::Context>& context);
-    std::shared_ptr<OHOS::AbilityRuntime::Context> GetAbilityContextByModule(
-        const std::string& bundle, const std::string& module);
-    void SetAbilityContext(const std::weak_ptr<OHOS::AbilityRuntime::Context>& context);
-    void RecordResAdapter(const std::string& key)
-    {
-        resAdapterRecord_.emplace(key);
-    }
-
-    const ResourceInfo& GetResourceInfo() const
-    {
-        return resourceInfo_;
-    }
 private:
     void InitializeFrontend();
     void InitializeCallback();
@@ -367,9 +343,7 @@ private:
     std::string bundleName_;
     std::string moduleName_;
     RefPtr<StagePkgContextInfo> PkgContextInfo_;
-    std::weak_ptr<OHOS::AbilityRuntime::Context> runtimeContext_;
-    std::unordered_set<std::string> resAdapterRecord_;
-    
+
     // Support to execute the ets code mocked by developer
     std::map<std::string, std::string> mockJsonInfo_;
 
@@ -378,8 +352,6 @@ private:
     int32_t labelId_;
     static bool isComponentMode_;
     std::string containerSdkPath_;
-    CrownEventCallback crownEventCallback_;
-    friend class WindowFreeContainer;
 
     ACE_DISALLOW_COPY_AND_MOVE(AceContainer);
 };

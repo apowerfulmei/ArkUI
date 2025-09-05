@@ -39,7 +39,7 @@ public:
 
         RefPtr<RefreshTheme> Build(const RefPtr<ThemeConstants>& themeConstants) const
         {
-            RefPtr<RefreshTheme> theme = AceType::MakeRefPtr<RefreshTheme>();
+            RefPtr<RefreshTheme> theme = AceType::Claim(new RefreshTheme());
             if (!themeConstants) {
                 return theme;
             }
@@ -66,7 +66,6 @@ public:
             theme->showTimeDistance_ = pattern->GetAttr<Dimension>("default_showtime_distance", 96.0_vp);
             theme->textStyle_.SetFontWeight(FontWeight(pattern->GetAttr<int>("textfield_font_weight",
                 TEXT_FIELD_FONT_WEIGHT)));
-            theme->ratio_ = pattern->GetAttr<double>("refresh_over_edge_following_ratio_api_twenty", 5.0f);
         }
     };
 
@@ -117,12 +116,6 @@ public:
         return backgroundColor_;
     }
 
-    float GetRatio() const
-    {
-        return ratio_;
-    }
-
-
 protected:
     RefreshTheme() = default;
 
@@ -136,7 +129,6 @@ private:
     TextStyle textStyle_;
     Color progressColor_;
     Color backgroundColor_;
-    float ratio_ = 5.0f;
 };
 
 } // namespace OHOS::Ace

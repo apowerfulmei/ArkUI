@@ -23,9 +23,6 @@ void UIDisplaySyncManager::DispatchFunc(int64_t nanoTimestamp)
     displaySyncRange_->Reset();
 
     if (uiDisplaySyncMap_.empty()) {
-        if (sourceVsyncRate_ > 0) {
-            monitorVsyncRate_ = sourceVsyncRate_;
-        }
         return;
     }
 
@@ -46,9 +43,6 @@ void UIDisplaySyncManager::DispatchFunc(int64_t nanoTimestamp)
             auto rateRange = displaySync->GetDisplaySyncData()->rateRange_;
             if (rateRange->IsValid()) {
                 displaySyncRange_->Merge(*rateRange);
-                monitorVsyncRate_ = rateRange->preferred_;
-            } else if (sourceVsyncRate_ > 0) {
-                monitorVsyncRate_ = sourceVsyncRate_;
             }
             TAG_LOGD(AceLogTag::ACE_DISPLAY_SYNC, "UIDisplaySyncMapSize:%{public}d Id:%{public}d"
                 " FrameRateRange: {%{public}d, %{public}d, %{public}d}",
@@ -118,7 +112,7 @@ int32_t UIDisplaySyncManager::GetVsyncRate() const
 
 bool UIDisplaySyncManager::SetVsyncPeriod(int64_t vsyncPeriod)
 {
-    if (vsyncPeriod <= 0) {
+    if (vsyncPeriod < 0) {
         return false;
     }
 
@@ -238,31 +232,20 @@ int32_t UIDisplaySyncManager::GetAnimatorRate()
         return INVALID_ANIMATOR_EXPECTED_RATE;
     }
 
-    bool existAnimatorNoExpectdRate = false;
     IdToDisplaySyncMap backupedMap(uiDisplaySyncMap_);
     for (const auto& [Id, weakDisplaySync] : backupedMap) {
         auto displaySync = weakDisplaySync.Upgrade();
         if (displaySync) {
-            if (displaySync->GetAnimatorExpectedRate() == 0) {
-                existAnimatorNoExpectdRate = true;
-            }
             maxAnimatorRateHap_.push(displaySync->GetAnimatorExpectedRate());
         } else {
             uiDisplaySyncMap_.erase(Id);
         }
     }
-
+    
     if (maxAnimatorRateHap_.empty()) {
         return INVALID_ANIMATOR_EXPECTED_RATE;
     }
     int32_t currMaxAnimatorExpectedRate = maxAnimatorRateHap_.top();
-    if (currMaxAnimatorExpectedRate < 0) {
-        return currMaxAnimatorExpectedRate;
-    }
-    // currMaxAnimatorExpectedRate int32_t  example: 0x003c0001
-    // [0, 16) is existAnimatorNoExpectdRate = 1
-    // [16, 32) is aceAnimatorExpectedFrameRate = 60
-    currMaxAnimatorExpectedRate = (currMaxAnimatorExpectedRate << ACE_ANIMATOR_OFFSET) + existAnimatorNoExpectdRate;
     return currMaxAnimatorExpectedRate;
 }
 
@@ -272,11 +255,6 @@ bool UIDisplaySyncManager::IsAnimatorStopped()
         return true;
     }
     return false;
-}
-
-int32_t UIDisplaySyncManager::GetMonitorVsyncRate() const
-{
-    return monitorVsyncRate_;
 }
 
 UIDisplaySyncManager::UIDisplaySyncManager() {}

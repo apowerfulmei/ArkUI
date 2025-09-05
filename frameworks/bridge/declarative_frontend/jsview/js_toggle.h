@@ -33,7 +33,6 @@ public:
     static void JsWidth(const JSCallbackInfo& info);
     static void JsHeight(const JSCallbackInfo& info);
     static void JsPadding(const JSCallbackInfo& info);
-    static void JsMargin(const JSCallbackInfo& info);
     static void JsResponseRegion(const JSCallbackInfo& info);
     static void JsWidth(const JSRef<JSVal>& jsValue);
     static void JsHeight(const JSRef<JSVal>& jsValue);
@@ -52,15 +51,8 @@ public:
         const std::optional<CalcDimension>& right);
     static void JsRadius(const JSCallbackInfo& info);
     static void JsBorder(const JSCallbackInfo& info);
-
 private:
     static int32_t toggleType_;
-    static void CreateWithDimensionResourceObj(RefPtr<ResourceObject>& resObj, const int32_t resType);
-    static void CreateWithColorResourceObj(RefPtr<ResourceObject>& resObj, const int32_t resType);
-    static void SetPointRadius(const JSRef<JSObject>& jsObj);
-    static void SetUnselectedColor(const JSRef<JSObject>& jsObj);
-    static void SetPointColor(const JSRef<JSObject>& jsObj);
-    static void SetTrackBorderRadius(const JSRef<JSObject>& jsObj);
 };
 
 } // namespace OHOS::Ace::Framework

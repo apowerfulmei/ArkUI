@@ -40,15 +40,12 @@ namespace OHOS::Ace::NG {
 
 class RosenWindow : public Window {
 public:
-    RosenWindow(const OHOS::sptr<OHOS::Rosen::Window>& window,
-        RefPtr<TaskExecutor> taskExecutor, int32_t id, bool isGlobalPipeline = false);
+    RosenWindow(const OHOS::sptr<OHOS::Rosen::Window>& window, RefPtr<TaskExecutor> taskExecutor, int32_t id);
     ~RosenWindow() override = default;
 
     void RequestFrame() override;
 
     void Init() override;
-
-    void InitArkUI_X() override;
 
     void Destroy() override;
 
@@ -70,7 +67,7 @@ public:
 
     void RecordFrameTime(uint64_t timeStamp, const std::string& name) override;
 
-    void FlushTasks(std::function<void()> callback = nullptr) override;
+    void FlushTasks() override;
 
     void SetTaskRunner(RefPtr<TaskExecutor> taskExecutor, int32_t id);
 
@@ -78,32 +75,22 @@ public:
 
     bool FlushAnimation(uint64_t timeStamp) override
     {
-        CHECK_NULL_RETURN(rsUIDirector_, false);
         int64_t vsyncPeriod = GetVSyncPeriod();
         return rsUIDirector_->FlushAnimation(timeStamp, vsyncPeriod);
     }
 
-    bool HasFirstFrameAnimation() override
-    {
-        CHECK_NULL_RETURN(rsUIDirector_, false);
-        return rsUIDirector_->HasFirstFrameAnimation();
-    }
-
     void FlushAnimationStartTime(uint64_t timeStamp) override
     {
-        CHECK_NULL_VOID(rsUIDirector_);
         rsUIDirector_->FlushAnimationStartTime(timeStamp);
     }
 
     void FlushModifier() override
     {
-        CHECK_NULL_VOID(rsUIDirector_);
         rsUIDirector_->FlushModifier();
     }
 
     bool HasUIRunningAnimation() override
     {
-        CHECK_NULL_RETURN(rsUIDirector_, false);
         return rsUIDirector_->HasUIRunningAnimation();
     }
 
@@ -115,7 +102,6 @@ public:
     float GetRefreshRate() const override;
 
     void SetKeepScreenOn(bool keepScreenOn) override;
-    void SetViewKeepScreenOn(bool keepScreenOn) override;
 
     int64_t GetVSyncPeriod() const override;
 
@@ -123,47 +109,24 @@ public:
 
     int32_t GetCurrentRefreshRateMode() const override
     {
-        CHECK_NULL_RETURN(rsUIDirector_, -1);
         return rsUIDirector_->GetCurrentRefreshRateMode();
     }
 
     int32_t GetAnimateExpectedRate() const override
     {
-        CHECK_NULL_RETURN(rsUIDirector_, 0);
         return rsUIDirector_->GetAnimateExpectedRate();
     }
-
-    void FlushImplicitTransaction(const std::shared_ptr<Rosen::RSUIDirector>& rsUIDirector);
-
-    void OnVsync(uint64_t nanoTimestamp, uint64_t frameCount) override;
-
     void SetUiDvsyncSwitch(bool vsyncSwitch) override;
 
-    uint32_t GetStatusBarHeight() const override;
-
-    bool GetIsRequestVsync() override;
-
-    void NotifyExtensionTimeout(int32_t errorCode) override;
-
-    bool GetIsRequestFrame() override;
-
-    void NotifySnapshotUpdate() override;
-
-    void SetDVSyncUpdate(uint64_t dvsyncTime) override;
-
-    void ForceFlushVsync(uint64_t nanoTimestamp, uint64_t frameCount) override;
+    void OnVsync(uint64_t nanoTimestamp, uint32_t frameCount) override;
 
 private:
-    void RemoveVsyncTimeoutDFXTask(uint64_t frameCount);
-    void PostVsyncTimeoutDFXTask(const RefPtr<TaskExecutor>& taskExecutor);
-
     OHOS::sptr<OHOS::Rosen::Window> rsWindow_;
     WeakPtr<TaskExecutor> taskExecutor_;
     int32_t id_ = 0;
     std::shared_ptr<OHOS::Rosen::RSUIDirector> rsUIDirector_;
     std::shared_ptr<OHOS::Rosen::VsyncCallback> vsyncCallback_;
     bool isFirstRequestVsync_ = true;
-    bool directorFromWindow_ = false;
 
     ACE_DISALLOW_COPY_AND_MOVE(RosenWindow);
 };

@@ -15,7 +15,10 @@
 
 #include "core/components_ng/syntax/for_each_node.h"
 
+#include "base/log/ace_trace.h"
+#include "core/components_ng/base/frame_node.h"
 #include "core/components_ng/pattern/list/list_item_pattern.h"
+#include "core/pipeline/base/element_register.h"
 #include "core/pipeline_ng/pipeline_context.h"
 
 namespace OHOS::Ace::NG {
@@ -153,9 +156,6 @@ void ForEachNode::MappingChildWithId(std::unordered_set<std::string>& oldIdsSet,
             auto newCompsIter = additionalChildComps.begin();
             std::advance(newCompsIter, additionalChildIndex++);
             if (newCompsIter != additionalChildComps.end()) {
-                // foreach node use some swap magic to re add every child to children_ list,
-                // so we reset parent here to avoid the double add check in AddChild.
-                (*newCompsIter)->SetAncestor(nullptr);
                 // Call AddChild to execute AttachToMainTree of new child.
                 // Allow adding default transition.
                 AddChild(*newCompsIter, DEFAULT_NODE_SLOT, false, true);
@@ -165,9 +165,6 @@ void ForEachNode::MappingChildWithId(std::unordered_set<std::string>& oldIdsSet,
             auto iter = oldNodeByIdMap.find(newId);
             // the ID was used before, only need to update the child position.
             if (iter != oldNodeByIdMap.end() && iter->second) {
-                // foreach node use some swap magic to re add every child to children_ list,
-                // so we reset parent here to avoid the double add check in AddChild.
-                iter->second->SetAncestor(nullptr);
                 AddChild(iter->second, DEFAULT_NODE_SLOT, true);
             }
         }
@@ -266,18 +263,6 @@ void ForEachNode::SetOnMove(std::function<void(int32_t, int32_t)>&& onMove)
     onMoveEvent_ = onMove;
 }
 
-void ForEachNode::SetItemDragHandler(std::function<void(int32_t)>&& onLongPress,
-    std::function<void(int32_t)>&& onDragStart, std::function<void(int32_t, int32_t)>&& onMoveThrough,
-    std::function<void(int32_t)>&& onDrop)
-{
-    if (onMoveEvent_) {
-        onLongPressEvent_ = onLongPress;
-        onDragStartEvent_ = onDragStart;
-        onMoveThroughEvent_ = onMoveThrough;
-        onDropEvent_ = onDrop;
-    }
-}
-
 void ForEachNode::MoveData(int32_t from, int32_t to)
 {
     if (from == to) {
@@ -314,10 +299,7 @@ void ForEachNode::InitDragManager(const RefPtr<UINode>& child)
 {
     CHECK_NULL_VOID(onMoveEvent_);
     CHECK_NULL_VOID(child);
-    if (child->GetChildren().size() != 1) {
-        return;
-    }
-    auto childNode = AceType::DynamicCast<FrameNode>(child->GetFirstChild());
+    auto childNode = AceType::DynamicCast<FrameNode>(child->GetFrameChildByIndex(0, false));
     CHECK_NULL_VOID(childNode);
     auto parentNode = GetParentFrameNode();
     CHECK_NULL_VOID(parentNode);
@@ -335,10 +317,6 @@ void ForEachNode::InitAllChildrenDragManager(bool init)
     CHECK_NULL_VOID(parentNode);
     if (parentNode->GetTag() != V2::LIST_ETS_TAG) {
         onMoveEvent_ = nullptr;
-        onLongPressEvent_ = nullptr;
-        onDragStartEvent_ = nullptr;
-        onMoveThroughEvent_ = nullptr;
-        onDropEvent_ = nullptr;
         return;
     }
     const auto& children = GetChildren();

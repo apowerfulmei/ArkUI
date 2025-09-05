@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2022-2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -60,20 +60,18 @@ constexpr float HALF = 0.5f;
 // harder it is to maintain
 struct GridLayoutInfo {
     /**
-     * @param prune
-     * @if true, try eliminate lines that are above viewport.
-     * @else trust startMainLineIndex_ to determine the viewport.
+     * @param regular running regular/irregular layout. For compatibility.
+     * Because in regular we used to add starting lines that are above viewport.
      *
-     * @return height in view range.
+     * @return height of all lines in viewport.
      */
-    float GetTotalHeightOfItemsInView(float mainGap, bool prune = false) const;
-
-    using HeightMapIt = std::map<int32_t, float>::const_iterator;
+    float GetTotalHeightOfItemsInView(float mainGap, bool regular = true) const;
     /**
      * @brief skip starting lines that are outside viewport in LayoutIrregular
      *
      * @return [iterator to the first line in view, offset of that first line]
      */
+    using HeightMapIt = std::map<int32_t, float>::const_iterator;
     std::pair<HeightMapIt, float> SkipLinesAboveView(float mainGap) const;
 
     void UpdateStartIndexByStartLine()
@@ -129,8 +127,6 @@ struct GridLayoutInfo {
         }
         return totalHeight - currentOffset_;
     }
-
-    bool IsAllItemsMeasured() const;
 
     float GetTotalLineHeight(float mainGap, bool removeLastGap = true) const
     {
@@ -354,25 +350,10 @@ struct GridLayoutInfo {
 
     void UpdateDefaultCachedCount();
 
-    int32_t FindInMatrixByMainIndexAndCrossIndex(int32_t mainIndex, int32_t crossIndex) const;
-
-    // Only used for debugging.
-    void PrintMatrix();
-    void PrintLineHeight();
-
-    bool CheckGridMatrix(int32_t cachedCount);
-
-    int32_t GetChildrenCount() const
-    {
-        return firstRepeatCount_ > 0 ? firstRepeatCount_ : childrenCount_;
-    }
-
-    std::string ToString() const;
-
     Axis axis_ = Axis::VERTICAL;
 
-    double currentOffset_ = 0.0; // offset on the current top GridItem on [startMainLineIndex_]
-    double prevOffset_ = 0.0;
+    float currentOffset_ = 0.0f; // offset on the current top GridItem on [startMainLineIndex_]
+    float prevOffset_ = 0.0f;
     float currentHeight_ = 0.0f; // height from first item to current top GridItem on [startMainLineIndex_]
     float prevHeight_ = 0.0f;
     float lastMainSize_ = 0.0f;
@@ -393,12 +374,9 @@ struct GridLayoutInfo {
     int32_t endMainLineIndex_ = 0;
 
     int32_t jumpIndex_ = EMPTY_JUMP_INDEX;
-    int32_t jumpForRecompose_ = EMPTY_JUMP_INDEX; // new mark index to notify frontend recomposition
-    std::optional<double> extraOffset_;
+    std::optional<float> extraOffset_;
     int32_t crossCount_ = 0;
     int32_t childrenCount_ = 0;
-    int32_t firstRepeatCount_ = 0;
-    int32_t repeatDifference_ = 0;
     ScrollAlign scrollAlign_ = ScrollAlign::AUTO;
 
     // Map structure: [mainIndex, [crossIndex, index]],
@@ -434,8 +412,6 @@ struct GridLayoutInfo {
 
     // default cached count
     int32_t defCachedCount_ = 1;
-
-    int32_t times_ = 0;
 
 private:
     float GetCurrentOffsetOfRegularGrid(float mainGap) const;

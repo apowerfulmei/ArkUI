@@ -76,8 +76,7 @@ void RenderList::Update(const RefPtr<Component>& component)
 
     if (!layoutManager_ || preColumnCount != columnCount_) {
         if (columnCount_ <= 1) {
-            if (SystemProperties::GetDeviceType() == DeviceType::WATCH ||
-                SystemProperties::GetDeviceType() == DeviceType::WEARABLE) {
+            if (SystemProperties::GetDeviceType() == DeviceType::WATCH) {
                 layoutManager_ = AceType::MakeRefPtr<ListWatchLayoutManager>(*this);
             } else {
                 layoutManager_ = AceType::MakeRefPtr<ListLayoutManager>(*this);
@@ -254,9 +253,7 @@ double RenderList::CalculateItemPosition(int32_t index, ScrollType type)
                 layoutManager_->LayoutMore(GetMainSize(viewPort_));
             }
             double sticky = 0.0; // When exist sticky items, add sticky size when jump.
-            bool isWatchOrWearable = SystemProperties::GetDeviceType() == DeviceType::WATCH ||
-                             SystemProperties::GetDeviceType() == DeviceType::WEARABLE;
-            if (!isWatchOrWearable || !IsSupportScale()) {
+            if (SystemProperties::GetDeviceType() != DeviceType::WATCH || !IsSupportScale()) {
                 CalculateStickyItem(Offset(0.0, -GetItemPosition(index)));
                 if (stickyItem_) {
                     sticky = GetStickyMainSize(index);

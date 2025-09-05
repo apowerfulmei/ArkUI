@@ -14,10 +14,9 @@
  */
 #include "core/components_ng/pattern/scroll_bar/scroll_bar_model_ng.h"
 
-#include "core/common/resource/resource_parse_utils.h"
-#include "core/components_ng/pattern/arc_scroll_bar/arc_scroll_bar_pattern.h"
-#include "core/components_ng/pattern/scrollable/scrollable_model_ng.h"
-#include "core/components_ng/pattern/scroll_bar/scroll_bar_paint_property.h"
+#include "base/geometry/axis.h"
+#include "core/components_ng/base/view_stack_processor.h"
+#include "core/components_v2/inspector/inspector_constants.h"
 
 namespace OHOS::Ace::NG {
 namespace {
@@ -35,25 +34,15 @@ RefPtr<ScrollProxy> ScrollBarModelNG::GetScrollBarProxy(const RefPtr<ScrollProxy
 }
 
 void ScrollBarModelNG::Create(const RefPtr<ScrollProxy>& proxy, bool infoflag, bool proxyFlag,
-    int directionValue, int stateValue, bool isCreateArc)
+    int directionValue, int stateValue)
 {
     CHECK_NULL_VOID(proxy);
     auto* stack = ViewStackProcessor::GetInstance();
     CHECK_NULL_VOID(stack);
     auto nodeId = stack->ClaimNodeId();
-    RefPtr<FrameNode> frameNode = nullptr;
-    if (isCreateArc) {
-        ACE_LAYOUT_SCOPED_TRACE("Create[%s][self:%d]", V2::ARC_SCROLL_BAR_ETS_TAG, nodeId);
-        auto deviceType = SystemProperties::GetDeviceType();
-        if (deviceType == DeviceType::WATCH || deviceType == DeviceType::WEARABLE) {
-            frameNode = FrameNode::GetOrCreateFrameNode(
-                V2::ARC_SCROLL_BAR_ETS_TAG, nodeId, []() { return AceType::MakeRefPtr<ArcScrollBarPattern>(); });
-        }
-    } else {
-        ACE_LAYOUT_SCOPED_TRACE("Create[%s][self:%d]", V2::SCROLL_BAR_ETS_TAG, nodeId);
-        frameNode = FrameNode::GetOrCreateFrameNode(
-            V2::SCROLL_BAR_ETS_TAG, nodeId, []() { return AceType::MakeRefPtr<ScrollBarPattern>(); });
-    }
+    ACE_LAYOUT_SCOPED_TRACE("Create[%s][self:%d]", V2::SCROLL_BAR_ETS_TAG, nodeId);
+    auto frameNode = FrameNode::GetOrCreateFrameNode(
+        V2::SCROLL_BAR_ETS_TAG, nodeId, []() { return AceType::MakeRefPtr<ScrollBarPattern>(); });
     CHECK_NULL_VOID(frameNode);
     stack->Push(frameNode);
     auto scrollbarpattern = frameNode->GetPattern();
@@ -142,59 +131,5 @@ void ScrollBarModelNG::SetEnableNestedScroll(FrameNode* frameNode, bool enableNe
     if (enableNestedSroll == false && enableNestedSroll != enableNested) {
         UnSetNestedScroll(node, pattern);
     }
-}
-
-void ScrollBarModelNG::SetScrollBarColor(const Color& color)
-{
-    ACE_UPDATE_PAINT_PROPERTY(ScrollBarPaintProperty, ScrollBarColor, color);
-}
-
-void ScrollBarModelNG::SetScrollBarColor(FrameNode* frameNode, Color color)
-{
-    ACE_UPDATE_NODE_PAINT_PROPERTY(ScrollBarPaintProperty, ScrollBarColor, color, frameNode);
-}
-
-void ScrollBarModelNG::ResetScrollBarColor()
-{
-    ACE_RESET_PAINT_PROPERTY_WITH_FLAG(ScrollBarPaintProperty, ScrollBarColor, PROPERTY_UPDATE_RENDER);
-}
-
-void ScrollBarModelNG::ResetScrollBarColor(FrameNode* frameNode)
-{
-    ACE_RESET_NODE_PAINT_PROPERTY_WITH_FLAG(ScrollBarPaintProperty, ScrollBarColor, PROPERTY_UPDATE_RENDER, frameNode);
-}
-
-void ScrollBarModelNG::CreateWithResourceObj(ScrollBarJsResType jsResourceType, const RefPtr<ResourceObject>& resObj)
-{
-    CHECK_NULL_VOID(SystemProperties::ConfigChangePerform());
-    auto frameNode = ViewStackProcessor::GetInstance()->GetMainFrameNode();
-    CHECK_NULL_VOID(frameNode);
-    switch (jsResourceType) {
-        case ScrollBarJsResType::SCROLLBAR_COLOR:
-            HandleSetScrollBarColor(frameNode, resObj);
-            break;
-        default:
-            break;
-    }
-}
-
-void ScrollBarModelNG::HandleSetScrollBarColor(FrameNode* frameNode, const RefPtr<ResourceObject>& resObj)
-{
-    CHECK_NULL_VOID(frameNode);
-    auto pattern = frameNode->GetPattern<ScrollBarPattern>();
-    CHECK_NULL_VOID(pattern);
-    pattern->RemoveResObj("ScrollBar.SetScrollBarColor");
-    CHECK_NULL_VOID(resObj);
-    auto&& updateFunc = [weak = AceType::WeakClaim(frameNode)](const RefPtr<ResourceObject>& resObj) {
-        auto frameNode = weak.Upgrade();
-        CHECK_NULL_VOID(frameNode);
-        Color result;
-        if (ResourceParseUtils::ParseResColor(resObj, result)) {
-            ScrollBarModelNG::SetScrollBarColor(AceType::RawPtr(frameNode), result);
-        } else {
-            ScrollBarModelNG::ResetScrollBarColor(AceType::RawPtr(frameNode));
-        }
-    };
-    pattern->AddResObj("ScrollBar.SetScrollBarColor", resObj, std::move(updateFunc));
 }
 } // namespace OHOS::Ace::NG

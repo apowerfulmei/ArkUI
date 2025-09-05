@@ -15,8 +15,6 @@
 
 #include "mouse_style_ohos.h"
 
-#include "base/log/log.h"
-
 namespace OHOS::Ace {
 
 RefPtr<MouseStyle> MouseStyle::CreateMouseStyle()

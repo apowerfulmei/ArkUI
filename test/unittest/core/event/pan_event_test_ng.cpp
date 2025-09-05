@@ -50,6 +50,7 @@ constexpr int32_t FINGERS_NUMBER_GREATER_THAN_DEFAULT = 2;
 constexpr float DISTANCE = 3.0f;
 constexpr float DISTANCE_GREATER_THAN_DEFAULT = 6.0f;
 constexpr int32_t DEFAULT_PAN_FINGER = 1;
+constexpr Dimension DEFAULT_PAN_DISTANCE = 5.0_vp;
 } // namespace
 
 class PanEventTestNg : public testing::Test {
@@ -100,7 +101,7 @@ HWTEST_F(PanEventTestNg, PanEventOnCollectTouchTargetTest001, TestSize.Level1)
         AceType::WeakClaim(AceType::RawPtr(gestureEventHub)), PAN_EVENT_DIRECTION, FINGERS_NUMBER, DISTANCE);
     EXPECT_NE(panEventActuator, nullptr);
     EXPECT_EQ(panEventActuator->fingers_, DEFAULT_PAN_FINGER);
-    EXPECT_EQ(panEventActuator->distance_, DISTANCE);
+    EXPECT_EQ(panEventActuator->distance_, DEFAULT_PAN_DISTANCE.ConvertToPx());
 
     /**
      * @tc.steps: step2. Create DragEventActuator when fingers number and distance are both greater than the default.
@@ -196,7 +197,7 @@ HWTEST_F(PanEventTestNg, PanEventOnCollectTouchTargetTest002, TestSize.Level1)
     EXPECT_EQ(unknownPropertyValue, GESTURE_EVENT_PROPERTY_VALUE);
     (*(panEventActuator->panRecognizer_->onActionEnd_))(info);
     EXPECT_EQ(unknownPropertyValue, GESTURE_EVENT_PROPERTY_VALUE);
-    (*(panEventActuator->panRecognizer_->onActionCancel_))(info);
+    (*(panEventActuator->panRecognizer_->onActionCancel_))();
     EXPECT_EQ(unknownPropertyValue, GESTURE_EVENT_PROPERTY_VALUE);
 
     /**
@@ -210,32 +211,7 @@ HWTEST_F(PanEventTestNg, PanEventOnCollectTouchTargetTest002, TestSize.Level1)
     (*(panEventActuator->panRecognizer_->onActionStart_))(info);
     (*(panEventActuator->panRecognizer_->onActionUpdate_))(info);
     (*(panEventActuator->panRecognizer_->onActionEnd_))(info);
-    (*(panEventActuator->panRecognizer_->onActionCancel_))(info);
+    (*(panEventActuator->panRecognizer_->onActionCancel_))();
     EXPECT_EQ(unknownPropertyValue, GESTURE_EVENT_PROPERTY_DEFAULT_VALUE);
-}
-
-/**
- * @tc.name: PanEventOnCollectTouchTargetTest003
- * @tc.desc: Create PanEvent.
- * @tc.type: FUNC
- */
-HWTEST_F(PanEventTestNg, PanEventOnCollectTouchTargetTest003, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. Create PanEventActuator
-     * @tc.expected: create successfully.
-     * value.
-     */
-    auto eventHub = AceType::MakeRefPtr<EventHub>();
-    auto gestureEventHub = AceType::MakeRefPtr<GestureEventHub>(AceType::WeakClaim(AceType::RawPtr(eventHub)));
-    PanDistanceMapDimension panDistanceMapDimension = { { SourceTool::UNKNOWN, DEFAULT_PAN_DISTANCE } };
-    auto panEventActuator = AceType::MakeRefPtr<PanEventActuator>(AceType::WeakClaim(AceType::RawPtr(gestureEventHub)),
-        PAN_EVENT_DIRECTION, 1, panDistanceMapDimension);
-    EXPECT_NE(panEventActuator, nullptr);
-    EXPECT_EQ(panEventActuator->fingers_, DEFAULT_PAN_FINGER);
-    auto panEventActuatorEx = AceType::MakeRefPtr<PanEventActuator>(
-        AceType::WeakClaim(AceType::RawPtr(gestureEventHub)), PAN_EVENT_DIRECTION, -1, panDistanceMapDimension);
-    EXPECT_NE(panEventActuatorEx, nullptr);
-    EXPECT_EQ(panEventActuatorEx->fingers_, DEFAULT_PAN_FINGER);
 }
 } // namespace OHOS::Ace::NG

@@ -82,15 +82,8 @@ class ArkNavDestinationComponent extends ArkComponent implements NavDestinationA
     }
     return this;
   }
-  toolbarConfiguration(value: Array<ToolbarItem> | undefined, options?: NavigationToolbarOptions | undefined): this {
-    let configuration = new ArkNavigationToolBarConfiguration();
-    configuration.value = value;
-    if (!isNull(options)) {
-      configuration.options = options;
-    }
-    modifierWithKey(this._modifiersWithKeys, NavDestinationToolBarConfigurationModifier.identity,
-      NavDestinationToolBarConfigurationModifier, configuration);
-    return this;
+  toolbarConfiguration(value: any): this {
+    throw new Error('Method not implemented.');
   }
   backButtonIcon(value: any): this {
     modifierWithKey(this._modifiersWithKeys, NavDestinationBackButtonIconModifier.identity,
@@ -108,36 +101,13 @@ class ArkNavDestinationComponent extends ArkComponent implements NavDestinationA
     return this;
   }
   onShown(callback: () => void): this {
-    modifierWithKey(this._modifiersWithKeys, NavDestinationOnShownModifier.identity, NavDestinationOnShownModifier, callback);
-    return this;
+    throw new Error('Method not implemented.');
   }
   onHidden(callback: () => void): this {
-    modifierWithKey(this._modifiersWithKeys, NavDestinationOnHiddenModifier.identity, NavDestinationOnHiddenModifier, callback);
-    return this;
-  }
-  onWillHide(callback: () => void): this {
-    modifierWithKey(this._modifiersWithKeys, NavDestinationOnWillHideModifier.identity, NavDestinationOnWillHideModifier, callback);
-    return this;
-  }
-  onWillAppear(callback: () => void): this {
-    modifierWithKey(this._modifiersWithKeys, NavDestinationOnWillAppearModifier.identity, NavDestinationOnWillAppearModifier, callback);
-    return this;
-  }
-  onWillShow(callback: () => void): this {
-    modifierWithKey(this._modifiersWithKeys, NavDestinationOnWillShowModifier.identity, NavDestinationOnWillShowModifier, callback);
-    return this;
-  }
-  onWillDisappear(callback: () => void): this {
-    modifierWithKey(this._modifiersWithKeys, NavDestinationOnWillDisappearModifier.identity, NavDestinationOnWillDisappearModifier, callback);
-    return this;
+    throw new Error('Method not implemented.');
   }
   onBackPressed(callback: () => boolean): this {
-    modifierWithKey(this._modifiersWithKeys, NavDestinationOnBackPressedModifier.identity, NavDestinationOnBackPressedModifier, callback);
-    return this;
-  }
-  onReady(callback:Callback<NavDestinationContext>): this {
-    modifierWithKey(this._modifiersWithKeys, NavDestinationOnReadyModifier.identity, NavDestinationOnReadyModifier, callback);
-    return this;
+    throw new Error('Method not implemented.');
   }
   ignoreLayoutSafeArea(types?: Array<SafeAreaType>, edges?: Array<SafeAreaEdge>): this {
     let opts = new ArkSafeAreaExpandOpts();
@@ -183,42 +153,6 @@ class ArkNavDestinationComponent extends ArkComponent implements NavDestinationA
   recoverable(value: boolean | undefined): this {
     modifierWithKey(this._modifiersWithKeys, NavDestinationRecoverableModifier.identity, NavDestinationRecoverableModifier, value);
     return this;
-  }
-  preferredOrientation(orientation: Optional<number>): this {
-    modifierWithKey(this._modifiersWithKeys, PreferredOrientationModifier.identity, PreferredOrientationModifier, orientation);
-    return this;
-  }
-  enableStatusBar(enable: Optional<boolean>, animated? boolean): this {
-    let statusBar = new ArkEnableStatusBar();
-    statusBar.enable = enable;
-    statusBar.animated = animated;
-    modifierWithKey(this._modifiersWithKeys, EnableStatusBarModifier.identity, EnableStatusBarModifier, statusBar);
-    return this;
-  }
-  enableNavigationIndicator(enable: Optional<boolean>): this {
-    modifierWithKey(this._modifiersWithKeys, EnableNavigationIndicatorModifier.identity, EnableNavigationIndicatorModifier, enable);
-    return this;
-  }
-  systemBarStyle(style: Optional<SystemBarStyle>): this {
-    modifierWithKey(this._modifiersWithKeys, NavDestinationSystemBarStyleModifier.identity, NavDestinationSystemBarStyleModifier, style);
-    return this;
-  }
-}
-
-class NavDestinationToolBarConfigurationModifier extends ModifierWithKey<ArkNavigationToolBarConfiguration> {
-  constructor(value: ArkNavigationToolBarConfiguration) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('toolbarConfiguration');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset || !this.value) {
-      getUINativeModule().navDestination.resetToolBarConfiguration(node);
-    } else {
-      getUINativeModule().navDestination.setToolBarConfiguration(node, this.value.value, this.value.options);
-    }
-  }
-  checkObjectDiff(): boolean {
-    return this.stageValue !== this.value;
   }
 }
 
@@ -278,7 +212,7 @@ class HideTitleBarModifier extends ModifierWithKey<ArkNavHideTitleBarOrToolBar |
     super(value);
   }
   static identity: Symbol = Symbol('hideTitleBar');
-
+  
   applyPeer(node: KNode, reset: boolean): void {
     if (reset) {
       getUINativeModule().navDestination.resetHideTitleBar(node);
@@ -300,24 +234,6 @@ class NavDestinationHideToolBarModifier extends ModifierWithKey<ArkNavHideTitleB
     } else {
       getUINativeModule().navDestination.setHideToolBar(node, this.value?.isHide, this.value?.animated);
     }
-  }
-}
-
-class NavDestinationBackgroundColorModifier extends ModifierWithKey<ResourceColor> {
-  constructor(value: ResourceColor) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('navDestinationBackgroundColor');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().navDestination.resetBackgroundColor(node);
-    } else {
-      getUINativeModule().navDestination.setBackgroundColor(node, this.value);
-    }
-  }
-
-  checkObjectDiff(): boolean {
-    return !isBaseOrResourceEqual(this.stageValue, this.value);
   }
 }
 
@@ -398,183 +314,6 @@ class NavDestinationRecoverableModifier extends ModifierWithKey<boolean | undefi
   }
 }
 
-class PreferredOrientationModifier extends ModifierWithKey<Optional<number>> {
-  constructor(value: Optional<number>) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('preferredOrientation');
-
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().navDestination.resetPreferredOrientation(node);
-    } else {
-      getUINativeModule().navDestination.setPreferredOrientation(node, this.value);
-    }
-  }
-}
-
-class EnableStatusBarModifier extends ModifierWithKey<ArkEnableStatusBar> {
-  constructor(statusBar: ArkEnableStatusBar) {
-    super(statusBar);
-  }
-  static identity: Symbol = Symbol('enableStatusBar');
-
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().navDestination.resetEnableStatusBar(node);
-    } else {
-      getUINativeModule().navDestination.setEnableStatusBar(node, this.value?.enable, this.value?.animated);
-    }
-  }
-
-  checkObjectDiff(): boolean {
-    return this.value.enable !== this.stageValue.enable || this.value.animated !== this.stageValue.animated;
-  }
-}
-
-class EnableNavigationIndicatorModifier extends ModifierWithKey<Optional<boolean>> {
-  constructor(navigationIndicator: Optional<boolean>) {
-    super(navigationIndicator);
-  }
-  static identity: Symbol = Symbol('enableNavigationIndicator');
-
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().navDestination.resetEnableNavigationIndicator(node);
-    } else {
-      getUINativeModule().navDestination.setEnableNavigationIndicator(node, this.value);
-    }
-  }
-}
-
-class NavDestinationSystemBarStyleModifier extends ModifierWithKey<Optional<SystemBarStyle>> {
-  constructor(value: Optional<SystemBarStyle>) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('systemBarStyle');
-  applyPeer(node: KNode, reset: boolean): void {
-    if(reset || !this.value) {
-      getUINativeModule().navDestination.resetSystemBarStyle(node);
-    } else {
-      getUINativeModule().navDestination.setSystemBarStyle(node, this.value.statusBarContentColor);
-    }
-  }
-  checkObjectDiff(): boolean {
-    return !(this.stageValue.statusBarContentColor === this.value.statusBarContentColor);
-  }
-}
-
-class NavDestinationOnShownModifier extends ModifierWithKey<() => void> {
-  constructor(value: () => void) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('onShown');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().navDestination.resetOnShown(node);
-    } else {
-      getUINativeModule().navDestination.setOnShown(node, this.value);
-    }
-  }
-}
-
-class NavDestinationOnHiddenModifier extends ModifierWithKey<() => void> {
-  constructor(value: () => void) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('onHidden');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().navDestination.resetOnHidden(node);
-    } else {
-      getUINativeModule().navDestination.setOnHidden(node, this.value);
-    }
-  }
-}
-
-class NavDestinationOnWillHideModifier extends ModifierWithKey<Callback<void>> {
-  constructor(value: () => void) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('onWillHide');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().navDestination.resetOnWillHide(node);
-    } else {
-      getUINativeModule().navDestination.setOnWillHide(node, this.value);
-    }
-  }
-}
-
-class NavDestinationOnWillAppearModifier extends ModifierWithKey<Callback<void>> {
-  constructor(value: () => void) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('onWillAppear');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().navDestination.resetOnWillAppear(node);
-    } else {
-      getUINativeModule().navDestination.setOnWillAppear(node, this.value);
-    }
-  }
-}
-
-class NavDestinationOnWillShowModifier extends ModifierWithKey<Callback<void>> {
-  constructor(value: () => void) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('onWillShow');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().navDestination.resetOnWillShow(node);
-    } else {
-      getUINativeModule().navDestination.setOnWillShow(node, this.value);
-    }
-  }
-}
-
-class NavDestinationOnWillDisappearModifier extends ModifierWithKey<Callback<void>> {
-  constructor(value: () => void) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('onWillDisappear');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().navDestination.resetOnWillDisappear(node);
-    } else {
-      getUINativeModule().navDestination.setOnWillDisappear(node, this.value);
-    }
-  }
-}
-
-class NavDestinationOnBackPressedModifier extends ModifierWithKey<()=> boolean> {
-  constructor(value: ()=> boolean) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('onBackPressed');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().navDestination.resetOnBackPressed(node);
-    } else {
-      getUINativeModule().navDestination.setOnBackPressed(node, this.value);
-    }
-  }
-}
-
-class NavDestinationOnReadyModifier extends ModifierWithKey<Callback<NavDestinationContext>> {
-  constructor(value: Callback<NavDestinationContext>) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('onReady');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().navDestination.resetOnReady(node);
-    } else {
-      getUINativeModule().navDestination.setOnReady(node, this.value);
-    }
-  }
-}
 //@ts-ignore
 globalThis.NavDestination.attributeModifier = function (modifier: ArkComponent): void {
   attributeModifierFunc.call(this, modifier, (nativePtr: KNode) => {

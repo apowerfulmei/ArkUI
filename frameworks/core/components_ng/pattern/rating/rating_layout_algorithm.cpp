@@ -14,8 +14,11 @@
  */
 #include "core/components_ng/pattern/rating/rating_layout_algorithm.h"
 
-#include "core/common/container.h"
+#include "base/geometry/dimension.h"
+#include "core/components_ng/base/frame_node.h"
+#include "core/components_ng/pattern/rating/rating_layout_property.h"
 #include "core/components_ng/pattern/rating/rating_pattern.h"
+#include "core/pipeline_ng/ui_task_scheduler.h"
 
 namespace OHOS::Ace::NG {
 std::optional<SizeF> RatingLayoutAlgorithm::MeasureContent(
@@ -26,11 +29,7 @@ std::optional<SizeF> RatingLayoutAlgorithm::MeasureContent(
     auto pattern = host->GetPattern<RatingPattern>();
     CHECK_NULL_RETURN(pattern, std::nullopt);
     if (pattern->UseContentModifier()) {
-        if (host->GreatOrEqualAPITargetVersion(PlatformVersion::VERSION_EIGHTEEN)) {
-            host->GetGeometryNode()->ResetContent();
-        } else {
-            host->GetGeometryNode()->Reset();
-        }
+        host->GetGeometryNode()->Reset();
         return std::nullopt;
     }
     // case 1: rating component is set with valid size, return contentConstraint.selfIdealSize as component size
@@ -42,14 +41,8 @@ std::optional<SizeF> RatingLayoutAlgorithm::MeasureContent(
     auto ratingTheme = pipeline->GetTheme<RatingTheme>();
     CHECK_NULL_RETURN(ratingTheme, std::nullopt);
     auto ratingLayoutProperty = DynamicCast<RatingLayoutProperty>(layoutWrapper->GetLayoutProperty());
-    CHECK_NULL_RETURN(ratingLayoutProperty, std::nullopt);
     auto stars = ratingLayoutProperty->GetStarsValue(ratingTheme->GetStarNum());
     CHECK_EQUAL_RETURN(stars, 0, std::nullopt);
-
-    auto layoutPolicy = ratingLayoutProperty->GetLayoutPolicyProperty();
-    if (layoutPolicy.has_value() && layoutPolicy->IsMatch()) {
-        return LayoutPolicyIsMatchParent(contentConstraint, layoutPolicy, stars);
-    }
     // case 2: rating component is only set with valid width or height
     // return height = width / stars, or width = height * stars.
     if (contentConstraint.selfIdealSize.Width() && !contentConstraint.selfIdealSize.Height()) {
@@ -81,18 +74,13 @@ void RatingLayoutAlgorithm::Layout(LayoutWrapper* layoutWrapper)
     CHECK_NULL_VOID(pattern);
 
     if (pattern->UseContentModifier()) {
-        if (host->GreatOrEqualAPITargetVersion(PlatformVersion::VERSION_EIGHTEEN)) {
-            host->GetGeometryNode()->ResetContent();
-        } else {
-            host->GetGeometryNode()->Reset();
-        }
+        host->GetGeometryNode()->Reset();
         return;
     }
     // if layout size has not decided yet, resize target can not be calculated
     CHECK_NULL_VOID(layoutWrapper->GetGeometryNode()->GetContent());
     const auto& ratingSize = layoutWrapper->GetGeometryNode()->GetContentSize();
     auto ratingLayoutProperty = DynamicCast<RatingLayoutProperty>(layoutWrapper->GetLayoutProperty());
-    CHECK_NULL_VOID(ratingLayoutProperty);
     auto pipeline = PipelineBase::GetCurrentContext();
     CHECK_NULL_VOID(pipeline);
     auto ratingTheme = pipeline->GetTheme<RatingTheme>();
@@ -102,43 +90,11 @@ void RatingLayoutAlgorithm::Layout(LayoutWrapper* layoutWrapper)
     CHECK_EQUAL_VOID(stars, 0);
     float singleWidth = ratingSize.Width() / static_cast<float>(stars);
     SizeF singleStarSize(singleWidth, ratingSize.Height());
+
     // step2: make 3 images canvas and set its dst size as single star size.
-    CHECK_NULL_VOID(foregroundLoadingCtx_);
     foregroundLoadingCtx_->MakeCanvasImage(singleStarSize, true, ImageFit::FILL);
-    CHECK_NULL_VOID(secondaryLoadingCtx_);
     secondaryLoadingCtx_->MakeCanvasImage(singleStarSize, true, ImageFit::FILL);
-    CHECK_NULL_VOID(backgroundLoadingCtx_);
     backgroundLoadingCtx_->MakeCanvasImage(singleStarSize, true, ImageFit::FILL);
-    if (pattern->IsNeedFocusStyle()) {
-        backgroundFocusLoadingCtx_->MakeCanvasImage(singleStarSize, true, ImageFit::FILL);
-    }
-}
-
-std::optional<SizeF> RatingLayoutAlgorithm::LayoutPolicyIsMatchParent(const LayoutConstraintF& contentConstraint,
-    std::optional<NG::LayoutPolicyProperty> layoutPolicy, int32_t stars)
-{
-    float width = 0.0f;
-    float height = 0.0f;
-    if (layoutPolicy->IsWidthMatch()) {
-        width = contentConstraint.parentIdealSize.Width().value_or(0.0f);
-        if (!layoutPolicy->IsHeightMatch() && contentConstraint.selfIdealSize.Height()) {
-            height = contentConstraint.selfIdealSize.Height().value();
-        }
-        if (!layoutPolicy->IsHeightMatch() && !contentConstraint.selfIdealSize.Height()) {
-            height = width / static_cast<float>(stars);
-        }
-    }
-
-    if (layoutPolicy->IsHeightMatch()) {
-        height = contentConstraint.parentIdealSize.Height().value_or(0.0f);
-        if (!layoutPolicy->IsWidthMatch() && contentConstraint.selfIdealSize.Width()) {
-            width = contentConstraint.selfIdealSize.Width().value();
-        }
-        if (!layoutPolicy->IsWidthMatch() && !contentConstraint.selfIdealSize.Width()) {
-            width = height * static_cast<float>(stars);
-        }
-    }
-    return SizeF(width, height);
 }
 
 } // namespace OHOS::Ace::NG

@@ -21,7 +21,6 @@
 #include <map>
 
 #include "core/components_ng/gestures/recognizers/multi_fingers_recognizer.h"
-#include "core/components_ng/event/event_constants.h"
 
 namespace OHOS::Ace::NG {
 
@@ -37,16 +36,6 @@ public:
 
     virtual RefPtr<GestureSnapshot> Dump() const override;
 
-    void SetDistance(double distance)
-    {
-        distance_ = distance;
-    }
-
-    double GetDistance() const
-    {
-        return distance_;
-    }
-
 private:
     void HandleTouchDownEvent(const TouchEvent& event) override;
     void HandleTouchUpEvent(const TouchEvent& event) override;
@@ -61,9 +50,7 @@ private:
     double ComputeAverageDeviation();
 
     void OnResetStatus() override;
-    void SendCallbackMsg(const std::unique_ptr<GestureEventFunc>& callback, GestureCallbackType type);
-    void GetGestureEventInfo(GestureEvent& info);
-    void HandleReports(const GestureEvent& info, GestureCallbackType type) override;
+    void SendCallbackMsg(const std::unique_ptr<GestureEventFunc>& callback);
     GestureJudgeResult TriggerGestureJudgeCallback();
     Offset ComputePinchCenter();
 
@@ -71,8 +58,6 @@ private:
 
     void OnFlushTouchEventsBegin() override;
     void OnFlushTouchEventsEnd() override;
-    bool ProcessAxisAbnormalCondition(const AxisEvent& event);
-    bool ProcessAxisReject();
 
     double distance_ = 0.0;
     double initialDev_ = 0.0;

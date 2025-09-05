@@ -15,12 +15,10 @@
 
 #include "core/components_ng/pattern/canvas/canvas_modifier.h"
 
-#include "base/utils/time_util.h"
+#include "base/utils/system_properties.h"
+#include "base/utils/utils.h"
+#include "core/components_ng/pattern/canvas/custom_paint_util.h"
 #include "core/components_ng/render/render_context.h"
-#ifdef ENABLE_ROSEN_BACKEND
-#include "render_service_client/core/ui/rs_ui_director.h"
-#include "2d_graphics/include/recording/draw_cmd_list.h"
-#endif
 
 namespace OHOS::Ace::NG {
 constexpr size_t MAX_SIZE = 10;
@@ -38,11 +36,6 @@ void CanvasModifier::onDraw(DrawingContext& drawingContext)
     CHECK_NULL_VOID(drawCmdList);
     auto rsDrawCmdList = static_cast<RSRecordingCanvas&>(recordingCanvas).GetDrawCmdList();
     CHECK_NULL_VOID(rsDrawCmdList);
-#ifdef ENABLE_ROSEN_BACKEND
-    if (Rosen::RSUIDirector::GetHybridRenderSwitch(OHOS::Rosen::ComponentEnableSwitch::CANVAS)) {
-        rsDrawCmdList->SetHybridRenderType(RSHybridRenderType::CANVAS);
-    }
-#endif
     ACE_SCOPED_TRACE("CanvasModifier::onDraw Op count: %zu.", drawCmdList->GetOpItemSize());
     if (SystemProperties::GetCanvasDebugMode() > 0) {
         TAG_LOGI(AceLogTag::ACE_CANVAS,
@@ -103,10 +96,5 @@ void CanvasModifier::GetSimplifyDumpInfo(std::unique_ptr<JsonValue>& array)
         info->Put("CommandSize", std::to_string(dumpInfo.opItemSize).c_str());
         array->PutRef(std::move(info));
     }
-}
-
-void CanvasModifier::SetRenderContext(const WeakPtr<RenderContext>& renderContext)
-{
-    renderContext_ = renderContext;
 }
 } // namespace OHOS::Ace::NG

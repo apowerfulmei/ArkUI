@@ -16,9 +16,10 @@
 #ifndef FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_PATTERNS_IMAGE_ANIMATOR_IMAGE_ANIMATOR_PATTERN_H
 #define FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_PATTERNS_IMAGE_ANIMATOR_IMAGE_ANIMATOR_PATTERN_H
 
+#include "core/animation/animator.h"
+#include "core/animation/picture_animation.h"
 #include "core/components/declaration/image/image_animator_declaration.h"
 #include "core/components_ng/base/frame_node.h"
-#include "core/components_ng/pattern/image_animator/controlled_animator.h"
 #include "core/components_ng/pattern/image_animator/image_animator_event_hub.h"
 #include "core/components_ng/pattern/pattern.h"
 
@@ -32,7 +33,7 @@ public:
     ImageAnimatorPattern();
     ~ImageAnimatorPattern() override
     {
-        controlledAnimator_ = nullptr;
+        animator_ = nullptr;
     }
 
     struct CacheImageStruct {
@@ -48,10 +49,6 @@ public:
 
     void OnAttachToFrameNode() override;
 
-    void OnAttachToMainTree() override;
-    void OnAttachToFrameNodeMultiThread();
-    void OnAttachToMainTreeMultiThread();
-
     bool IsAtomicNode() const override
     {
         return true;
@@ -66,16 +63,9 @@ public:
 
     void SetImages(std::vector<ImageProperties>&& images)
     {
-        if (images_.size() == images.size() && images_ == images) {
-            isImagesSame_ = true;
-            return;
-        }
         images_ = std::move(images);
         durationTotal_ = 0;
-        for (auto& childImage : images_) {
-            if (childImage.duration < 0) {
-                childImage.duration = 0;
-            }
+        for (const auto& childImage : images_) {
             if ((!childImage.src.empty() || childImage.pixelMap != nullptr) && childImage.duration > 0) {
                 durationTotal_ += childImage.duration;
             }
@@ -83,14 +73,14 @@ public:
         imagesChangedFlag_ = true;
     }
 
-    void SetStatus(ControlledAnimator::ControlStatus status)
+    void SetStatus(Animator::Status status)
     {
         status_ = status;
     }
 
     void SetFillMode(FillMode fillMode)
     {
-        controlledAnimator_->SetFillMode(fillMode);
+        animator_->SetFillMode(fillMode);
     }
 
     void SetPreDecode(int32_t preDecode) {}
@@ -107,16 +97,15 @@ public:
 
     void OnInActive() override
     {
-        if (status_ == ControlledAnimator::ControlStatus::RUNNING) {
-            controlledAnimator_->Pause();
+        if (status_ == Animator::Status::RUNNING) {
+            animator_->Pause();
         }
     }
 
     void OnActive() override
     {
-        if (status_ == ControlledAnimator::ControlStatus::RUNNING &&
-            controlledAnimator_->GetControlStatus() != ControlledAnimator::ControlStatus::RUNNING) {
-            isReverse_ ? controlledAnimator_->Backward() : controlledAnimator_->Forward();
+        if (status_ == Animator::Status::RUNNING && animator_->GetStatus() != Animator::Status::RUNNING) {
+            isReverse_ ? animator_->Backward() : animator_->Forward();
         }
     }
 
@@ -132,10 +121,10 @@ public:
     }
 
     int32_t GetDuration() {
-        return controlledAnimator_->GetDuration();
+        return animator_->GetDuration();
     }
 
-    ControlledAnimator::ControlStatus GetStatus() {
+    Animator::Status GetStatus() {
         return status_;
     }
 
@@ -144,39 +133,17 @@ public:
     }
 
     FillMode GetFillMode() {
-        return controlledAnimator_->GetFillMode();
+        return animator_->GetFillMode();
     }
 
-    int32_t GetImagesSize()
-    {
+    int32_t GetImagesSize() {
         return static_cast<int32_t>(images_.size());
     }
 
-    bool CheckIfNeedVisibleAreaChange()
-    {
-        return isAutoMonitorInvisibleArea_;
-    }
-
-    void SetAutoMonitorInvisibleArea(bool isAutoMonitorInvisibleArea)
-    {
-        isAutoMonitorInvisibleArea_ = isAutoMonitorInvisibleArea;
-    }
-
-    bool IsEnableMatchParent() override
-    {
-        return true;
-    }
-
-    bool IsEnableFix() override
-    {
-        return true;
-    }
-
 private:
-    std::vector<PictureInfo> CreatePictureAnimation(int32_t size);
+    RefPtr<PictureAnimation<int32_t>> CreatePictureAnimation(int32_t size);
     void UpdateEventCallback();
     std::string ImagesToString() const;
-    void CheckClearUserDefinedSize(const RefPtr<LayoutProperty>& layoutProperty);
     void AdaptSelfSize();
     void SetShowingIndex(int32_t index);
     void DisablePreAnimatedImageAnimation(uint32_t index);
@@ -197,32 +164,25 @@ private:
     void ResetFormAnimationStartTime();
     void ResetFormAnimationFlag();
     void RunAnimatorByStatus(int32_t index);
-    void ShowIndex(int32_t index);
-    void UpdateBorderRadius();
-    void RegisterVisibleAreaChange();
-    void OnVisibleAreaChange(bool visible = true, double ratio = 0.0);
 
     int32_t iteration_ = 1;
-    RefPtr<ControlledAnimator> controlledAnimator_;
+    RefPtr<Animator> animator_;
     std::vector<ImageProperties> images_;
     std::list<CacheImageStruct> cacheImages_;
-    ControlledAnimator::ControlStatus status_ = ControlledAnimator::ControlStatus::IDLE;
+    Animator::Status status_ = Animator::Status::IDLE;
     int32_t durationTotal_ = 0;
     int32_t nowImageIndex_ = 0;
+    uint64_t repeatCallbackId_ = 0;
     bool isReverse_ = false;
     bool fixedSize_ = true;
 
-    bool isImagesSame_ = false;
     bool imagesChangedFlag_ = false;
     bool firstUpdateEvent_ = true;
-    bool showingIndexByStoppedOrPaused_ = false;
     bool isLayouted_ = false;
     int64_t formAnimationStartTime_ = 0;
     int32_t formAnimationRemainder_ = 0;
     bool isFormAnimationStart_ = true;
     bool isFormAnimationEnd_ = false;
-    bool isAutoMonitorInvisibleArea_ = false; // Controls whether the system's onVisibleAreaChange callback is used to
-                                              // manage the play and stop behavior of ImageAnimator.
 };
 
 } // namespace OHOS::Ace::NG

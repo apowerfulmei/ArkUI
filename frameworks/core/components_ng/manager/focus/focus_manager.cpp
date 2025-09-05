@@ -16,34 +16,20 @@
 #include "core/components_ng/manager/focus/focus_manager.h"
 
 #include "base/log/dump_log.h"
-#include "base/subwindow/subwindow_manager.h"
-#include "core/components/theme/app_theme.h"
+#include "base/log/log_wrapper.h"
+#include "base/memory/ace_type.h"
+#include "base/memory/referenced.h"
+#include "base/utils/utils.h"
+#include "core/components_ng/pattern/pattern.h"
 #include "core/pipeline_ng/pipeline_context.h"
 
 namespace OHOS::Ace::NG {
-namespace {
-RefPtr<FocusManager> GetCurrentFocusManager()
-{
-    auto context = NG::PipelineContext::GetCurrentContextSafely();
-    CHECK_NULL_RETURN(context, nullptr);
-    auto focusManager = context->GetFocusManager();
-    return focusManager;
-}
-}
 
 FocusManager::FocusManager(const RefPtr<PipelineContext>& pipeline) : pipeline_(pipeline)
 {
-    CHECK_NULL_VOID(pipeline);
-    if (pipeline->GetRootElement()) {
+    if (pipeline && pipeline->GetRootElement()) {
         currentFocus_ = pipeline->GetRootElement()->GetFocusHub();
     }
-    // After switching between portrait and landscape mode
-    // reset the isNeedTriggerScroll parameter to enable screen focus scrolling.
-    pipeline->RegisterSurfaceChangedCallback([weak = WeakClaim(this)](int32_t width, int32_t height, int32_t oldWidth,
-                                                 int32_t oldHeight, WindowSizeChangeReason type) {
-        auto context = weak.Upgrade();
-        context->SetNeedTriggerScroll(true);
-    });
 }
 
 void FocusManager::FocusViewShow(const RefPtr<FocusView>& focusView, bool isTriggerByStep)
@@ -142,21 +128,10 @@ void FocusManager::FocusViewClose(const RefPtr<FocusView>& focusView, bool isDet
     }
     if (focusViewStack_.empty()) {
         lastFocusView_ = nullptr;
-        TAG_LOGW(AceLogTag::ACE_FOCUS, "viewStack empty");
         return;
     }
     if (focusViewStack_.back() != lastFocusView_) {
         lastFocusView_ = focusViewStack_.back();
-        auto lastFocusView = lastFocusView_.Upgrade();
-        CHECK_NULL_VOID(lastFocusView);
-        auto lastFocusViewHub = lastFocusView->GetFocusHub();
-        CHECK_NULL_VOID(lastFocusViewHub);
-        if (!lastFocusViewHub->IsFocusableNode()) {
-            TAG_LOGW(AceLogTag::ACE_FOCUS,
-                "unfocusable view:%{public}s enable:%{public}d show:%{public}d focusable:%{public}d",
-                lastFocusViewHub->GetFrameName().c_str(), lastFocusViewHub->IsEnabled(), lastFocusViewHub->IsShow(),
-                lastFocusViewHub->focusable_);
-        }
     }
 }
 
@@ -341,21 +316,28 @@ RefPtr<FocusHub> FocusManager::GetCurrentFocus()
     return currentFocus_.Upgrade();
 }
 
-void FocusManager::TriggerAllFocusActiveChangeCallback(bool isFocusActive)
+int32_t FocusManager::AddFocusListener(FocusChangeCallback&& callback)
 {
-    auto focusActiveChangeCallbackManager = GetFocusActiveChangeCallbackManager();
-    if (focusActiveChangeCallbackManager) {
-        focusActiveChangeCallbackManager->NotifyListener(isFocusActive);
+    // max callbacks count: INT32_MAX - 1
+    if (listeners_.size() == static_cast<size_t>(std::numeric_limits<int32_t>::max() - 1)) {
+        return -1;
     }
-    auto isFocusActiveUpdateEventManager = GetIsFocusActiveUpdateEventManager();
-    if (isFocusActiveUpdateEventManager) {
-        isFocusActiveUpdateEventManager->NotifyListener(isFocusActive);
-    }
+    int32_t handler = nextListenerHdl_;
+    listeners_.emplace(handler, std::move(callback));
+
+    do {
+        nextListenerHdl_ = (nextListenerHdl_ == std::numeric_limits<int32_t>::max()) ? 0 : ++nextListenerHdl_;
+    } while (listeners_.count(nextListenerHdl_) != 0);
+    return handler;
+}
+
+void FocusManager::RemoveFocusListener(int32_t handler)
+{
+    listeners_.erase(handler);
 }
 
 RefPtr<FocusManager> FocusManager::GetFocusManager(RefPtr<FrameNode>& node)
 {
-    CHECK_NULL_RETURN(node, nullptr);
     auto context = node->GetContextRefPtr();
     CHECK_NULL_RETURN(context, nullptr);
     auto focusManager = context->GetFocusManager();
@@ -372,9 +354,8 @@ void FocusManager::FocusSwitchingStart(const RefPtr<FocusHub>& focusHub,
 
 void FocusManager::ReportFocusSwitching(FocusReason focusReason)
 {
-    auto callbacksManager = GetFocusChangeCallbackManager();
-    if (callbacksManager) {
-        callbacksManager->NotifyListener(currentFocus_, switchingFocus_, focusReason);
+    for (auto& [_, cb] : listeners_) {
+        cb(currentFocus_, switchingFocus_, focusReason);
     }
     currentFocus_ = switchingFocus_;
     isSwitchingFocus_.reset();
@@ -441,6 +422,7 @@ void FocusManager::WindowFocusMoveEnd()
 void FocusManager::FocusGuard::CreateFocusGuard(const RefPtr<FocusHub>& focusHub,
     const RefPtr<FocusManager>& focusManager, SwitchingStartReason reason)
 {
+    CHECK_NULL_VOID(focusHub);
     CHECK_NULL_VOID(focusManager);
     if (focusManager->isSwitchingFocus_.value_or(false)) {
         return;
@@ -453,12 +435,14 @@ FocusManager::FocusGuard::FocusGuard(const RefPtr<FocusHub>& focusHub,
     SwitchingStartReason reason)
 {
     RefPtr<FocusHub> hub = focusHub;
-    if (!hub || !hub->GetFocusManager()) {
+    if (!focusHub ||!focusHub->GetFocusManager()) {
         auto curFocusView = FocusView::GetCurrentFocusView();
-        hub = curFocusView ? curFocusView->GetFocusHub() : nullptr;
+        CHECK_NULL_VOID(curFocusView);
+        auto curFocusViewHub = curFocusView->GetFocusHub();
+        CHECK_NULL_VOID(curFocusViewHub);
+        hub = curFocusViewHub;
     }
-
-    auto mng = hub ? hub->GetFocusManager() : GetCurrentFocusManager();
+    auto mng = hub->GetFocusManager();
     CreateFocusGuard(hub, mng, reason);
 }
 
@@ -488,7 +472,7 @@ void FocusManager::WindowFocus(bool isFocus)
     if (!curFocusViewHub) {
         TAG_LOGW(AceLogTag::ACE_FOCUS, "Current focus view can not found!");
     } else if (curFocusView->GetIsViewHasFocused() && !curFocusViewHub->IsCurrentFocus()) {
-        TAG_LOGD(AceLogTag::ACE_FOCUS, "Request focus on current focus view: %{public}s/%{public}d",
+        TAG_LOGI(AceLogTag::ACE_FOCUS, "Request focus on current focus view: %{public}s/%{public}d",
             curFocusView->GetFrameName().c_str(), curFocusView->GetFrameId());
         if (!IsAutoFocusTransfer()) {
             SetFocusViewRootScope(curFocusView);
@@ -499,10 +483,6 @@ void FocusManager::WindowFocus(bool isFocus)
     } else {
         auto container = Container::Current();
         if (container && (container->IsUIExtensionWindow() || container->IsDynamicRender())) {
-            TAG_LOGI(AceLogTag::ACE_FOCUS,
-                "Request default focus on current focus view: %{public}s/%{public}d",
-                curFocusView->GetFrameName().c_str(),
-                curFocusView->GetFrameId());
             curFocusView->SetIsViewRootScopeFocused(false);
             curFocusView->RequestDefaultFocus();
         }
@@ -515,143 +495,11 @@ void FocusManager::WindowFocus(bool isFocus)
     auto rootFocusHub = root->GetFocusHub();
     CHECK_NULL_VOID(rootFocusHub);
     if (!rootFocusHub->IsCurrentFocus()) {
-        TAG_LOGI(AceLogTag::ACE_FOCUS,
-            "Request focus on rootFocusHub: %{public}s/%{public}d",
-            rootFocusHub->GetFrameName().c_str(),
-            rootFocusHub->GetFrameId());
         auto focusDepend = rootFocusHub->GetFocusDependence();
         rootFocusHub->SetFocusDependence(FocusDependence::SELF);
         rootFocusHub->RequestFocusImmediatelyInner(FocusReason::WINDOW_FOCUS);
         rootFocusHub->SetFocusDependence(focusDepend);
     }
     pipeline->RequestFrame();
-}
-
-bool FocusManager::SetIsFocusActive(bool isFocusActive, FocusActiveReason reason, bool autoFocusInactive)
-{
-    if (!NeedChangeFocusAvtive(isFocusActive, reason, autoFocusInactive)) {
-        return false;
-    }
-    TAG_LOGI(AceLogTag::ACE_FOCUS, "focusActive turns:%{public}d, reason:%{public}d", isFocusActive, reason);
-
-    SyncWindowsFocus(isFocusActive, reason, autoFocusInactive);
-    TriggerAllFocusActiveChangeCallback(isFocusActive);
-
-    auto pipeline = pipeline_.Upgrade();
-    CHECK_NULL_RETURN(pipeline, false);
-    auto rootNode = pipeline->GetRootElement();
-    CHECK_NULL_RETURN(rootNode, false);
-    auto rootFocusHub = rootNode->GetFocusHub();
-    CHECK_NULL_RETURN(rootFocusHub, false);
-    if (isFocusActive_) {
-        return rootFocusHub->PaintAllFocusState();
-    }
-    rootFocusHub->ClearAllFocusState();
-    return true;
-}
-
-bool FocusManager::SyncWindowsFocus(bool isFocusActive, FocusActiveReason reason, bool autoFocusInactive)
-{
-    isFocusActive_ = isFocusActive;
-    auto pipeline = pipeline_.Upgrade();
-    CHECK_NULL_RETURN(pipeline, false);
-    auto containerId = Container::CurrentId();
-    auto container = Container::Current();
-    CHECK_NULL_RETURN(container, false);
-
-    auto isSubContainer = container->IsSubContainer();
-    if (!isSubContainer) {
-        auto subWindowContainerId = SubwindowManager::GetInstance()->GetSubContainerId(containerId);
-        if (subWindowContainerId >= 0) {
-            auto subPipeline = pipeline->GetContextByContainerId(subWindowContainerId);
-            CHECK_NULL_RETURN(subPipeline, false);
-            ContainerScope scope(subWindowContainerId);
-            auto subFocusManager = subPipeline->GetOrCreateFocusManager();
-            CHECK_NULL_RETURN(subFocusManager, false);
-            if (isFocusActive_ != subFocusManager->GetIsFocusActive()) {
-                subFocusManager->SetIsFocusActive(isFocusActive, reason, autoFocusInactive);
-            }
-        }
-        return true;
-    }
-    auto parentContainerId = Container::CurrentId();
-    if (parentContainerId >= 0) {
-        auto parentPipeline = pipeline->GetContextByContainerId(containerId);
-        CHECK_NULL_RETURN(parentPipeline, false);
-        ContainerScope scope(parentContainerId);
-        auto parentFocusManager = parentPipeline->GetOrCreateFocusManager();
-        CHECK_NULL_RETURN(parentFocusManager, false);
-        if (isFocusActive_ != parentFocusManager->GetIsFocusActive()) {
-            // To prevent recursive invocation between the parent and child windows.
-            parentFocusManager->SetIsFocusActive(isFocusActive, reason, autoFocusInactive);
-        }
-    }
-    return true;
-}
-
-bool FocusManager::NeedChangeFocusAvtive(bool isFocusActive, FocusActiveReason reason, bool autoFocusInactive)
-{
-    if (reason == FocusActiveReason::USE_API) {
-        TAG_LOGI(AceLogTag::ACE_FOCUS, "autoFocusInactive turns to %{public}d", autoFocusInactive);
-        autoFocusInactive_ = autoFocusInactive;
-    }
-    if (isFocusActive_ == isFocusActive) {
-        return false;
-    }
-    if (reason == FocusActiveReason::ACTIVE_MARK) {
-        return true;
-    }
-    if (isFocusActive) {
-        if (!SystemProperties::GetFocusCanBeActive()) {
-            TAG_LOGI(AceLogTag::ACE_FOCUS, "FocusActive false");
-            return false;
-        }
-        auto pipeline = pipeline_.Upgrade();
-        auto appTheme = pipeline ? pipeline->GetTheme<AppTheme>() : nullptr;
-        if (reason == FocusActiveReason::KEY_TAB && appTheme && !appTheme->NeedFocusActiveByTab()) {
-            return false;
-        }
-    }
-    if (!isFocusActive && reason == FocusActiveReason::POINTER_EVENT && !autoFocusInactive_) {
-        TAG_LOGI(AceLogTag::ACE_FOCUS, "focus cannot be deactived automaticly by pointer event");
-        return false;
-    }
-    return true;
-}
-
-bool FocusManager::HandleKeyForExtendOrActivateFocus(const KeyEvent& event, const RefPtr<FocusView>& curFocusView)
-{
-    if (event.action == KeyAction::DOWN) {
-        if (event.activeMark.has_value()) {
-            if (event.activeMark.value()) {
-                return ExtendOrActivateFocus(curFocusView, FocusActiveReason::ACTIVE_MARK);
-            } else {
-                return SetIsFocusActive(false, FocusActiveReason::ACTIVE_MARK);
-            }
-        }
-        if (event.IsKey({ KeyCode::KEY_TAB })) {
-            return ExtendOrActivateFocus(curFocusView, FocusActiveReason::KEY_TAB);
-        }
-        if (event.IsDirectionalKey() && event.sourceType == SourceType::JOYSTICK) {
-            return ExtendOrActivateFocus(curFocusView, FocusActiveReason::JOYSTICK_DPAD);
-        }
-        auto curEntryFocusView = curFocusView ? curFocusView->GetEntryFocusView() : nullptr;
-        auto curEntryFocusHub = curEntryFocusView ? curFocusView->GetFocusHub() : nullptr;
-        if (event.IsDirectionalKey() && curEntryFocusHub && curEntryFocusHub->GetDirectionalKeyFocus()) {
-            return ExtendOrActivateFocus(curFocusView);
-        }
-    }
-    return false;
-}
-
-bool FocusManager::ExtendOrActivateFocus(const RefPtr<FocusView>& curFocusView, FocusActiveReason reason)
-{
-    auto isViewRootScopeFocused = curFocusView ? curFocusView->GetIsViewRootScopeFocused() : true;
-    auto isExtend = false;
-    if (curFocusView && isViewRootScopeFocused) {
-        isExtend = curFocusView->TriggerFocusMove();
-    }
-    auto isActive = SetIsFocusActive(true, reason);
-    return isExtend || isActive;
 }
 } // namespace OHOS::Ace::NG

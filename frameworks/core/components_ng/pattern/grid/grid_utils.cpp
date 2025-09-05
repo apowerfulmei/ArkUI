@@ -15,6 +15,9 @@
 
 #include "core/components_ng/pattern/grid/grid_utils.h"
 
+#include <cmath>
+#include <iostream>
+
 namespace OHOS::Ace::NG {
 namespace {
 
@@ -65,11 +68,6 @@ float GridUtils::GetMainGap(const RefPtr<GridLayoutProperty>& props, const SizeF
 float GridUtils::GetCrossGap(const RefPtr<GridLayoutProperty>& props, const SizeF& frameSize, Axis axis)
 {
     return axis == Axis::HORIZONTAL ? GetRowGap(props, frameSize.Height()) : GetColumnGap(props, frameSize.Width());
-}
-
-bool GridUtils::CheckNeedCacheLayout(const RefPtr<LayoutWrapper>& layoutWrapper)
-{
-    return !layoutWrapper || (layoutWrapper->CheckNeedForceMeasureAndLayout() && !layoutWrapper->CheckHasPreMeasured());
 }
 
 } // namespace OHOS::Ace::NG

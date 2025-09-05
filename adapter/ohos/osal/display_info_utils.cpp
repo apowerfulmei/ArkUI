@@ -17,14 +17,12 @@
 
 #include "display_manager.h"
 
+#include "core/common/display_info.h"
+
 namespace OHOS::Ace {
-constexpr uint64_t DEFAULT_DISPLAY_ID = 0;
-RefPtr<DisplayInfo> DisplayInfoUtils::GetDisplayInfo(int32_t displayId)
+RefPtr<DisplayInfo> DisplayInfoUtils::GetDisplayInfo()
 {
-    auto displayManager = Rosen::DisplayManager::GetInstance().GetDisplayById(displayId);
-    if (!displayManager) {
-        displayManager = Rosen::DisplayManager::GetInstance().GetDefaultDisplay();
-    }
+    auto displayManager = Rosen::DisplayManager::GetInstance().GetDefaultDisplay();
     CHECK_NULL_RETURN(displayManager, nullptr);
     displayInfo_->SetWidth(displayManager->GetWidth());
     displayInfo_->SetHeight(displayManager->GetHeight());
@@ -86,35 +84,5 @@ std::vector<Rect> DisplayInfoUtils::GetCurrentFoldCreaseRegion()
     displayInfo_->SetCurrentFoldCreaseRegion(rects);
     hasInitFoldCreaseRegion_ = true;
     return rects;
-}
-
-Rect DisplayInfoUtils::GetDisplayAvailableRect(int32_t displayId) const
-{
-    auto display = Rosen::DisplayManager::GetInstance().GetDisplayById(displayId);
-    if (!display) {
-        TAG_LOGW(AceLogTag::ACE_WINDOW, "failed to get display by id: %{public}u", (uint32_t)displayId);
-        return Rect();
-    }
-
-    Rosen::DMRect availableArea;
-    Rosen::DMError ret = display->GetAvailableArea(availableArea);
-    if (ret != Rosen::DMError::DM_OK) {
-        TAG_LOGW(AceLogTag::ACE_WINDOW, "failed to get availableArea of displayId: %{public}u", (uint32_t)displayId);
-        return Rect();
-    }
-
-    return Rect(availableArea.posX_, availableArea.posY_, availableArea.width_, availableArea.height_);
-}
-
-Rect DisplayInfoUtils::GetFoldExpandAvailableRect() const
-{
-    Rosen::DMRect rect;
-    Rosen::DMError ret = Rosen::DisplayManager::GetInstance().GetExpandAvailableArea(DEFAULT_DISPLAY_ID, rect);
-    if (ret != Rosen::DMError::DM_OK) {
-        TAG_LOGW(AceLogTag::ACE_WINDOW, "failed to get expandAvailableArea");
-        return Rect();
-    }
-
-    return Rect(rect.posX_, rect.posY_, rect.width_, rect.height_);
 }
 } // namespace OHOS::Ace::DisplayInfoUtils

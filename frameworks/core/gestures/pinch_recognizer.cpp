@@ -35,7 +35,7 @@ void PinchRecognizer::OnAccepted()
         SendCallbackMsg(onActionEnd_);
         Reset();
     } else if (pendingCancel_) {
-        SendCallbackMsg(onActionCancel_);
+        SendCancelMsg();
         Reset();
     }
 }
@@ -183,7 +183,7 @@ void PinchRecognizer::HandleTouchCancelEvent(const TouchEvent& event)
     }
 
     if (refereeState_ == RefereeState::SUCCEED) {
-        SendCallbackMsg(onActionCancel_);
+        SendCancelMsg();
         Reset();
     } else {
         pendingCancel_ = true;
@@ -192,7 +192,7 @@ void PinchRecognizer::HandleTouchCancelEvent(const TouchEvent& event)
 
 void PinchRecognizer::HandleTouchCancelEvent(const AxisEvent& event)
 {
-    SendCallbackMsg(onActionCancel_);
+    SendCancelMsg();
     Reset();
 }
 

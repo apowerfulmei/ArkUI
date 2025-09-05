@@ -16,7 +16,11 @@
 #include "bridge/cj_frontend/interfaces/cj_ffi/cj_marquee_ffi.h"
 
 #include "cj_lambda.h"
+#include "bridge/cj_frontend/interfaces/cj_ffi/cj_view_abstract_ffi.h"
+#include "bridge/cj_frontend/interfaces/cj_ffi/utils.h"
 #include "bridge/common/utils/utils.h"
+#include "core/components_ng/base/view_abstract_model_ng.h"
+#include "core/components_ng/pattern/marquee/marquee_model.h"
 #include "core/components_ng/pattern/marquee/marquee_model_ng.h"
 
 using namespace OHOS::Ace;
@@ -63,16 +67,6 @@ void FfiOHOSAceFrameworkMarqueeSetFontFamily(const char* fontFamily)
     std::vector<std::string> fontFamilies;
     fontFamilies = ConvertStrToFontFamilies(fontFamily);
     MarqueeModel::GetInstance()->SetFontFamily(fontFamilies);
-}
-
-void FfiOHOSAceFrameworkMarqueeSetMarqueeUpdateStrategy(int32_t value)
-{
-    if (value == 0) {
-        MarqueeModel::GetInstance()->SetMarqueeUpdateStrategy(MarqueeUpdateStrategy::DEFAULT);
-    }
-    if (value == 1) {
-        MarqueeModel::GetInstance()->SetMarqueeUpdateStrategy(MarqueeUpdateStrategy::PRESERVE_POSITION);
-    }
 }
 
 void FfiOHOSAceFrameworkMarqueeOnStart(void (*callback)())

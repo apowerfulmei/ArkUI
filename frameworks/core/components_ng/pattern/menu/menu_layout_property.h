@@ -22,6 +22,7 @@
 #include "core/components/select/select_theme.h"
 #include "core/components_ng/base/frame_node.h"
 #include "core/components_ng/layout/layout_property.h"
+#include "core/components_ng/pattern/option/option_pattern.h"
 #include "core/components_ng/pattern/select/select_pattern.h"
 #include "core/components_ng/property/property.h"
 #include "core/components_v2/inspector/utils.h"
@@ -36,7 +37,6 @@ enum class SubMenuExpandingMode { SIDE, EMBEDDED, STACK };
 struct MenuItemFontStyle {
     ACE_DEFINE_PROPERTY_GROUP_ITEM(FontSize, Dimension);
     ACE_DEFINE_PROPERTY_GROUP_ITEM(FontColor, Color);
-    ACE_DEFINE_PROPERTY_GROUP_ITEM(FontColorSetByUser, bool);
     ACE_DEFINE_PROPERTY_GROUP_ITEM(FontWeight, FontWeight);
     ACE_DEFINE_PROPERTY_GROUP_ITEM(FontFamily, std::vector<std::string>);
     ACE_DEFINE_PROPERTY_GROUP_ITEM(ItalicFontStyle, Ace::FontStyle);
@@ -67,11 +67,9 @@ public:
         value->propTitle_ = CloneTitle();
         value->propMenuPlacement_ = CloneMenuPlacement();
         value->propSelectMenuAlignOption_ = CloneSelectMenuAlignOption();
-        value->propSelectAvoidanceMode_ = CloneSelectAvoidanceMode();
         value->propBorderRadius_ = CloneBorderRadius();
         value->propMenuWidth_ = CloneMenuWidth();
         value->propShowInSubWindow_ = CloneShowInSubWindow();
-        value->propShowDefaultSelectedIcon_ = CloneShowDefaultSelectedIcon();
         value->propExpandingMode_ = CloneExpandingMode();
         value->propItemDivider_ = CloneItemDivider();
         value->propItemGroupDivider_ = CloneItemGroupDivider();
@@ -89,24 +87,12 @@ public:
         ResetTitle();
         ResetMenuPlacement();
         ResetSelectMenuAlignOption();
-        ResetSelectAvoidanceMode();
         ResetBorderRadius();
         ResetMenuWidth();
         ResetShowInSubWindow();
-        ResetShowDefaultSelectedIcon();
         ResetExpandingMode();
         ResetItemDivider();
         ResetItemGroupDivider();
-    }
-
-    std::function<void(WeakPtr<NG::FrameNode>)>& GetExpandSymbol()
-    {
-        return expandSymbol_;
-    }
-
-    void SetExpandSymbol(const std::function<void(WeakPtr<NG::FrameNode>)>& symbol)
-    {
-        expandSymbol_ = symbol;
     }
 
     // if is a rect in target frameNode
@@ -118,9 +104,7 @@ public:
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(BorderRadius, NG::BorderRadiusProperty, PROPERTY_UPDATE_MEASURE);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(MenuWidth, Dimension, PROPERTY_UPDATE_MEASURE);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(ItemDivider, V2::ItemDivider, PROPERTY_UPDATE_MEASURE);
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(ItemDividerMode, DividerMode, PROPERTY_UPDATE_MEASURE);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(ItemGroupDivider, V2::ItemDivider, PROPERTY_UPDATE_MEASURE);
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(ItemGroupDividerMode, DividerMode, PROPERTY_UPDATE_MEASURE);
 
     // offset to cursor
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(PositionOffset, NG::OffsetF, PROPERTY_UPDATE_LAYOUT);
@@ -129,14 +113,12 @@ public:
 
     // placement to menu
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(MenuPlacement, Placement, PROPERTY_UPDATE_LAYOUT);
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(AnchorPosition, NG::OffsetF, PROPERTY_UPDATE_LAYOUT);
     
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(SelectMenuModifiedWidth, float, PROPERTY_UPDATE_MEASURE);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(SelectModifiedHeight, float, PROPERTY_UPDATE_MEASURE);
     ACE_DEFINE_PROPERTY_GROUP(MenuItemFontStyle, MenuItemFontStyle);
     ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP(MenuItemFontStyle, FontSize, Dimension, PROPERTY_UPDATE_MEASURE);
     ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP(MenuItemFontStyle, FontColor, Color, PROPERTY_UPDATE_MEASURE);
-    ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP(MenuItemFontStyle, FontColorSetByUser, bool, PROPERTY_UPDATE_MEASURE);
     ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP(MenuItemFontStyle, FontWeight, FontWeight, PROPERTY_UPDATE_MEASURE);
     ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP(MenuItemFontStyle, FontFamily,
         std::vector<std::string>, PROPERTY_UPDATE_MEASURE);
@@ -146,19 +128,13 @@ public:
     ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP(SelectMenuAlignOption, AlignType, MenuAlignType, PROPERTY_UPDATE_MEASURE);
     ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP(SelectMenuAlignOption, Offset, DimensionOffset, PROPERTY_UPDATE_MEASURE);
 
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(SelectAvoidanceMode, AvoidanceMode, PROPERTY_UPDATE_MEASURE);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(ShowInSubWindow, bool, PROPERTY_UPDATE_MEASURE);
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(ShowDefaultSelectedIcon, bool, PROPERTY_UPDATE_MEASURE);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(ExpandingMode, SubMenuExpandingMode, PROPERTY_UPDATE_MEASURE)
 
     void ToJsonValue(std::unique_ptr<JsonValue>& json, const InspectorFilter& filter) const override;
     void BindToJsonValue(std::unique_ptr<JsonValue>& json, const InspectorFilter& filter) const;
     void DividerToJsonValue(std::unique_ptr<JsonValue>& json) const;
-    void MaskToJsonValue(std::unique_ptr<JsonValue>& json, const InspectorFilter& filter) const;
     ACE_DISALLOW_COPY_AND_MOVE(MenuLayoutProperty);
-
-private:
-    std::function<void(WeakPtr<NG::FrameNode>)> expandSymbol_;
 };
 } // namespace OHOS::Ace::NG
 

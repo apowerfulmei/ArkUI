@@ -19,7 +19,7 @@
 #include <functional>
 #include <string>
 
-#include "worker.h"
+#include "commonlibrary/ets_utils/js_concurrent_module/worker/worker.h"
 #include "jsnapi.h"
 #include "native_engine.h"
 
@@ -36,6 +36,9 @@
 #include "bridge/declarative_frontend/engine/jsi/jsi_types.h"
 #include "bridge/declarative_frontend/jsview/js_utils.h"
 #include "bridge/js_frontend/engine/jsi/js_value.h"
+#include "core/common/container.h"
+#include "core/common/container_scope.h"
+#include "core/components_ng/pattern/ui_extension/ui_extension_model.h"
 #include "core/components_ng/pattern/ui_extension/ui_extension_model_ng.h"
 
 using namespace Commonlibrary::Concurrent::WorkerModule;
@@ -94,9 +97,7 @@ void JSIsolatedComponent::Create(const JSCallbackInfo& info)
 
     TAG_LOGI(AceLogTag::ACE_ISOLATED_COMPONENT, "worker running=%{public}d,  worker name=%{public}s",
         worker->IsRunning(), worker->GetName().c_str());
-    NG::UIExtensionConfig config;
-    config.sessionType = NG::SessionType::ISOLATED_COMPONENT;
-    UIExtensionModel::GetInstance()->Create(config);
+    UIExtensionModel::GetInstance()->Create();
     auto frameNode = NG::ViewStackProcessor::GetInstance()->GetMainFrameNode();
     CHECK_NULL_VOID(frameNode);
     auto instanceId = Container::CurrentId();

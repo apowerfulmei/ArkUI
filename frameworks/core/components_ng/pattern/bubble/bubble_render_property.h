@@ -20,14 +20,13 @@
 #include "core/components/common/layout/constants.h"
 #include "core/components/common/properties/color.h"
 #include "core/components/common/properties/placement.h"
-#include "core/components/common/properties/popup_param.h"
 #include "core/components_ng/render/paint_property.h"
 
 namespace OHOS::Ace::NG {
 
 // PaintProperty are used to set render properties.
 class BubbleRenderProperty : public PaintProperty {
-    DECLARE_ACE_TYPE(BubbleRenderProperty, PaintProperty);
+    DECLARE_ACE_TYPE(BubbleRenderProperty, PaintProperty)
 public:
     BubbleRenderProperty() = default;
     ~BubbleRenderProperty() override = default;
@@ -39,13 +38,11 @@ public:
         paintProperty->propMaskColor_ = CloneMaskColor();
         paintProperty->propEnableArrow_ = CloneEnableArrow();
         paintProperty->propUseCustom_ = CloneUseCustom();
-        paintProperty->propIsTips_ = CloneIsTips();
         paintProperty->propBackgroundColor_ = CloneBackgroundColor();
         paintProperty->propArrowOffset_ = CloneArrowOffset();
         paintProperty->propPlacement_ = ClonePlacement();
         paintProperty->propPrimaryButtonShow_ = ClonePrimaryButtonShow();
         paintProperty->propSecondaryButtonShow_ = CloneSecondaryButtonShow();
-        paintProperty->propShowAtAnchor_ = CloneShowAtAnchor();
         return paintProperty;
     }
 
@@ -57,12 +54,10 @@ public:
         ResetEnableArrow();
         ResetMaskColor();
         ResetUseCustom();
-        ResetIsTips();
         ResetPlacement();
         ResetArrowOffset();
         ResetPrimaryButtonShow();
         ResetSecondaryButtonShow();
-        ResetShowAtAnchor();
     }
 
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(AutoCancel, bool, PROPERTY_UPDATE_RENDER);
@@ -71,11 +66,9 @@ public:
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(Placement, Placement, PROPERTY_UPDATE_RENDER);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(EnableArrow, bool, PROPERTY_UPDATE_RENDER);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(UseCustom, bool, PROPERTY_UPDATE_RENDER);
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(IsTips, bool, PROPERTY_UPDATE_RENDER);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(ArrowOffset, Dimension, PROPERTY_UPDATE_RENDER);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(PrimaryButtonShow, bool, PROPERTY_UPDATE_RENDER);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(SecondaryButtonShow, bool, PROPERTY_UPDATE_RENDER);
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(ShowAtAnchor, TipsAnchorType, PROPERTY_UPDATE_RENDER);
 
     ACE_DISALLOW_COPY_AND_MOVE(BubbleRenderProperty);
 };

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2021-2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -53,7 +53,6 @@ const char ROOT_ETS_TAG[] = "root";
 const char STAGE_ETS_TAG[] = "stage";
 // overlay view
 const char OVERLAY_ETS_TAG[] = "overlay";
-const char ORDER_OVERLAY_ETS_TAG[] = "OrderOverlay";
 // page view
 const char PAGE_ETS_TAG[] = "page";
 // container modal view (title bar)
@@ -75,8 +74,6 @@ const char JS_SYNTAX_ITEM_ETS_TAG[] = "SyntaxItem";
 const char JS_REPEAT_ETS_TAG[] = "Repeat";
 // js if else node
 const char JS_IF_ELSE_ETS_TAG[] = "IfElse";
-// js with theme node
-const char JS_WITH_THEME_ETS_TAG[] = "WithTheme";
 // js node slot
 const char JS_NODE_SLOT_ETS_TAG[] = "NodeSlot";
 
@@ -101,7 +98,6 @@ const char TEXT_ATTRS_MAX_LINES[] = "maxLines";
 // rich editor
 const char RICH_EDITOR_ETS_TAG[] = "RichEditor";
 const char RICH_EDITOR_DRAG_ETS_TAG[] = "RichEditorDRAG";
-const char RICH_EDITOR_CONTENT_ETS_TAG[] = "RichEditorContent";
 
 // stack
 const char STACK_COMPONENT_TAG[] = "StackComponent";
@@ -143,9 +139,7 @@ const char NAVIGATION_MENU_ETS_TAG[] = "NavigationMenu";
 const char BACK_BUTTON_ETS_TAG[] = "BackButton";
 const char BACK_BUTTON_IMAGE_ETS_TAG[] = "BackButtonImage";
 const char NAVBAR_CONTENT_ETS_TAG[] = "NavBarContent";
-const char SPLIT_PLACEHOLDER_CONTENT_ETS_TAG[] = "SplitPlaceholderContentNode";
 const char NAVBAR_ETS_TAG[] = "NavBar";
-const char PRIMARY_CONTENT_NODE_ETS_TAG[] = "PrimaryContent";
 
 // navRouter view
 const char NAVROUTER_VIEW_ETS_TAG[] = "NavRouter";
@@ -351,12 +345,6 @@ const char FORM_ETS_TAG[] = "FormComponent";
 const char FORM_LINK_TAG[] = "FormLink";
 const char FORM_LINK_ETS_TAG[] = "FormLink";
 
-// formButton
-#ifdef FORM_BUTTON_COMPONENT_SUPPORT
-const char FORM_BUTTON_TAG[] = "FormButton";
-const char FORM_BUTTON_ETS_TAG[] = "FormButton";
-#endif
-
 // PluginComponent
 const char PLUGIN_COMPONENT_TAG[] = "PluginComponent";
 const char PLUGIN_ETS_TAG[] = "PluginComponent";
@@ -407,12 +395,6 @@ const char STEPPER_ETS_TAG[] = "Stepper";
 const char STEPPER_ITEM_COMPONENT_TAG[] = "StepperItemComponentV2";
 const char STEPPER_ITEM_ETS_TAG[] = "StepperItem";
 
-// toolbar
-const char TOOLBAR_ETS_TAG[] = "Tool_Bar";
-
-// toolbaritem
-const char TOOLBARITEM_ETS_TAG[] = "ToolBarItem";
-
 // scrollbar
 const char SCROLL_BAR_COMPONENT_TAG[] = "ScrollBarComponent";
 const char SCROLL_BAR_ETS_TAG[] = "ScrollBar";
@@ -461,7 +443,6 @@ const char MENU_ITEM_ETS_TAG[] = "MenuItem";
 const char MENU_ITEM_GROUP_ETS_TAG[] = "MenuItemGroup";
 const char MENU_WRAPPER_ETS_TAG[] = "MenuWrapper";
 const char MENU_PREVIEW_ETS_TAG[] = "MenuPreview";
-const char MENU_DIVIDER_TAG[] = "MenuDivider";
 
 // textarea
 const char TEXTAREA_COMPONENT_TAG[] = "TextFieldComponent";
@@ -605,6 +586,10 @@ const char PARTICLE_ETS_TAG[] = "Particle";
 // SelectOverlay
 const char SELECT_OVERLAY_ETS_TAG[] = "SelectOverlay";
 
+// ContainerSpan
+const char CONTAINER_SPAN_COMPONENT_TAG[] = "ContainerSpanComponent";
+const char CONTAINER_SPAN_ETS_TAG[] = "ContainerSpan";
+
 // Symbol
 const char SYMBOL_COMPONENT_TAG[] = "SymbolGlyphComponent";
 const char SYMBOL_ETS_TAG[] = "SymbolGlyph";
@@ -612,14 +597,6 @@ const char SYMBOL_ETS_TAG[] = "SymbolGlyph";
 // IsolatedComponent
 const char ISOLATED_COMPONENT_TAG[] = "IsolatedComponent";
 const char ISOLATED_COMPONENT_ETS_TAG[] = "IsolatedComponent";
-
-// DynamicComponent
-const char DYNAMIC_COMPONENT_TAG[] = "DynamicComponent";
-const char DYNAMIC_COMPONENT_ETS_TAG[] = "DynamicComponent";
-
-// ContainerSpan
-const char CONTAINER_SPAN_COMPONENT_TAG[] = "ContainerSpanComponent";
-const char CONTAINER_SPAN_ETS_TAG[] = "ContainerSpan";
 
 //RenderNode
 const char RENDER_NODE_ETS_TAG[] = "RenderNode";
@@ -637,35 +614,7 @@ const char MOVING_PHOTO_ETS_TAG[] = "MovingPhoto";
 // CustomSpanNode
 const char CUSTOM_SPAN_NODE_ETS_TAG[] = "CustomSpanNode";
 
-// LinearIndicator
-const char LINEARINDICATOR_COMPONENT_TAG[] = "LinearIndicatorComponent";
-const char LINEARINDICATOR_ETS_TAG[] = "LinearIndicator";
-
-// ArcList
-const char ARC_LIST_COMPONENT_TAG[] = "ArcListComponent";
-const char ARC_LIST_ETS_TAG[] = "ArcList";
-
-// ArcListItem
-const char ARC_LIST_ITEM_COMPONENT_TAG[] = "ArcListItemComponent";
-const char ARC_LIST_ITEM_ETS_TAG[] = "ArcListItem";
-
-// ArcScrollBar
-const char ARC_SCROLL_BAR_COMPONENT_TAG[] = "ArcScrollBarComponent";
-const char ARC_SCROLL_BAR_ETS_TAG[] = "ArcScrollBar";
-
-// ArcAlphabetIndexer
-const char ARC_INDEXER_COMPONENT_TAG[] = "ArcIndexerComponent";
-const char ARC_INDEXER_ETS_TAG[] = "ArcAlphabetIndexer";
-
-// Magnifier
-const char MAGNIFIER_TAG[] = "Magnifier";
-
-// AccessibilityFocusPaintNode
-const char ACCESSIBILITY_FOCUS_PAINT_NODE_TAG[] = "Accessibility_focus_paint_node";
-
-// LazyVGridLayout
-const char LAZY_V_GRID_LAYOUT_ETS_TAG[] = "LazyVGridLayout";
-
-// UndefinedNode
-const char UNDEFINED_NODE_ETS_TAG[] = "";
+// AnalogClock
+const char ANALOGCLOCK_COMPONENT_TAG[] = "AnalogClockComponent";
+const char ANALOGCLOCK_ETS_TAG[] = "AnalogClock";
 } // namespace OHOS::Ace::V2

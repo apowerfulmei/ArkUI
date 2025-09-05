@@ -26,20 +26,13 @@
 namespace OHOS::Ace::NG {
 class ACE_EXPORT SpanModelNG : public SpanModel {
 public:
-    void Create(const std::u16string& content) override;
-    void Create(const std::u16string& content, RefPtr<ResourceObject>& resObj) override;
+    void Create(const std::string& content) override;
     void SetFont(const Font& value) override;
-    void ResetFont() override;
     void SetFontSize(const Dimension& value) override;
-    void ResetFontSize() override;
     void SetTextColor(const Color& value) override;
-    void ResetTextColor() override;
     void SetItalicFontStyle(Ace::FontStyle value) override;
-    void ResetItalicFontStyle() override;
     void SetFontWeight(FontWeight value) override;
-    void ResetFontWeight() override;
     void SetFontFamily(const std::vector<std::string>& value) override;
-    void ResetFontFamily() override;
     void SetTextDecoration(TextDecoration value) override;
     void SetTextDecorationStyle(TextDecorationStyle value) override;
     void SetTextDecorationColor(const Color& value) override;
@@ -53,12 +46,9 @@ public:
     void SetAccessibilityText(const std::string& text) override;
     void SetAccessibilityDescription(const std::string& description) override;
     void SetAccessibilityImportance(const std::string& importance) override;
-    void SetLineThicknessScale(float value) override;
-    void SetOnHover(OnHoverFunc&& onHoverEventFunc) override;
-    void ResetOnHover() override;
 
-    static RefPtr<SpanNode> CreateSpanNode(int32_t nodeId, const std::u16string& content);
-    static void InitSpan(UINode* uiNode, const std::u16string& content);
+    static RefPtr<SpanNode> CreateSpanNode(int32_t nodeId, const std::string& content);
+    static void InitSpan(UINode* uiNode, const std::string& content);
     static void SetFontWeight(UINode* uiNode, FontWeight value);
     static void ResetFontWeight(UINode* uiNode);
     static void SetTextCase(UINode* uiNode, TextCase value);
@@ -84,7 +74,7 @@ public:
     static void SetBaselineOffset(UINode* uiNode, const Dimension& value);
     static void SetFont(UINode* uiNode, const Font& value);
     static void ResetFont(UINode* uiNode);
-    static std::u16string GetContent(UINode* uiNode);
+    static std::string GetContent(UINode* uiNode);
     static Ace::TextDecoration GetTextDecoration(UINode* uiNode);
     static Color GetTextDecorationColor(UINode* uiNode);
     static Ace::TextDecorationStyle GetTextDecorationStyle(UINode* uiNode);
@@ -96,7 +86,7 @@ public:
     static Ace::TextCase GetTextCase(UINode* uiNode);
     static Dimension GetLetterSpacing(UINode* uiNode);
     static Dimension GetBaselineOffset(UINode* uiNode);
-    static TextStyle GetDefaultTextStyle(int32_t themeScopeId);
+    static TextStyle GetDefaultTextStyle();
     void CreateContainSpan() override;
     void SetTextBackgroundStyle(const TextBackgroundStyle& style) override;
     static void SetTextBackgroundStyle(UINode* uiNode, const TextBackgroundStyle& style);
@@ -107,19 +97,15 @@ public:
     static std::vector<Shadow> GetTextShadow(UINode* uiNode);
     static void SetOnClick(UINode* uiNode, GestureEventFunc&& click);
     static void ClearOnClick(UINode* uiNode);
-    static void SetOnLongPress(UINode* uiNode, GestureEventFunc&& onLongPress);
-    static void ClearOnLongPress(UINode* uiNode);
     static void SetAccessibilityText(UINode* uiNode, const std::string& text);
     static void SetAccessibilityDescription(UINode* uiNode, const std::string& description);
     static void SetAccessibilityImportance(UINode* uiNode, const std::string& importance);
-    static void SetOnHover(UINode* uiNode, OnHoverFunc&& onHoverEventFunc);
-    static void ResetOnHover(UINode* uiNode);
     static std::vector<std::string> GetSpanFontFamily(UINode* uiNode);
+#ifdef USE_GRAPHIC_TEXT_GINE
     // impl in render/adapter/span_model_adapter.cpp
     static RefPtr<SpanItem> CreateSpanItem(ArkUI_SpanItem* item);
     static ParagraphStyle CreateParagraphStyle(ArkUI_StyledString* styledString);
-    static void SetLineThicknessScale(UINode *uiNode, float value);
-    static void ResetLineThicknessScale(UINode* uiNode);
+#endif
 };
 } // namespace OHOS::Ace::NG
 

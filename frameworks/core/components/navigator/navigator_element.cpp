@@ -38,9 +38,7 @@ void NavigatorElement::PerformBuild()
 void NavigatorElement::OnClick()
 {
     auto renderNode = AceType::DynamicCast<RenderNavigator>(renderNode_);
-    if (renderNode) {
-        renderNode->NavigatePage();
-    }
+    renderNode->NavigatePage();
 }
 
 void NavigatorElement::SetTargetContainer(const WeakPtr<StageElement>& targetContainer, bool useSubStage)

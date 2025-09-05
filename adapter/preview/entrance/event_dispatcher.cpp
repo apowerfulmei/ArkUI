@@ -76,8 +76,6 @@ void ConvertTouchEvent(const std::shared_ptr<MMI::PointerEvent>& pointerEvent, T
     event.y = pointerEvent->y;
     event.screenX = pointerEvent->screenX;
     event.screenY = pointerEvent->screenY;
-    event.globalDisplayX = pointerEvent->globalDisplayX;
-    event.globalDisplayY = pointerEvent->globalDisplayY;
     event.type = static_cast<TouchType>(static_cast<size_t>(pointerEvent->type));
     event.pullType = static_cast<TouchType>(static_cast<size_t>(pointerEvent->pullType));
     event.time = pointerEvent->time;
@@ -94,8 +92,6 @@ void ConvertTouchEvent(const std::shared_ptr<MMI::PointerEvent>& pointerEvent, T
         .y = event.y,
         .screenX = event.screenX,
         .screenY = event.screenY,
-        .globalDisplayX = event.globalDisplayX,
-        .globalDisplayY = event.globalDisplayY,
         .downTime = event.time,
         .size = event.size,
         .force = event.force,
@@ -118,7 +114,6 @@ void ConvertKeyEvent(const std::shared_ptr<MMI::KeyEvent>& keyEvent, KeyEvent& e
     event.sourceType = static_cast<SourceType>(static_cast<int32_t>(keyEvent->sourceType));
     event.rawKeyEvent = keyEvent;
     event.enableCapsLock = keyEvent->enableCapsLock_;
-    event.numLock = keyEvent->enableNumLock_;
 }
 
 } // namespace
@@ -252,8 +247,6 @@ static void ConvertMouseEvent(const std::shared_ptr<MMI::PointerEvent>& pointerE
     mouseEvent.y = pointerEvent->y;
     mouseEvent.screenX = pointerEvent->screenX;
     mouseEvent.screenY = pointerEvent->screenY;
-    mouseEvent.globalDisplayX = pointerEvent->globalDisplayX;
-    mouseEvent.globalDisplayY = pointerEvent->globalDisplayY;
     GetMouseEventAction(pointerEvent->pointerAction_, mouseEvent);
     GetMouseEventButton(pointerEvent->buttonId_, mouseEvent);
     mouseEvent.sourceType = SourceType::MOUSE;

@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 #include "core/interfaces/native/node/util_modifier.h"
-
+#include "base/utils/system_properties.h"
 #include "core/common/container.h"
 
 namespace OHOS::Ace::NG {
@@ -48,25 +48,21 @@ ArkUI_Float32 GetDesignWidthScale(int deviceId)
 namespace NodeModifier {
 const ArkUIUtilsModifier* GetUtilsModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
     static const ArkUIUtilsModifier modifier = {
-        .getDensity = GetDensity,
-        .getFontScale = GetFontScale,
-        .getDesignWidthScale = GetDesignWidthScale,
+        GetDensity,
+        GetFontScale,
+        GetDesignWidthScale,
     };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
     return &modifier;
 }
 
 const CJUIUtilsModifier* GetCJUIUtilsModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
     static const CJUIUtilsModifier modifier = {
-        .getDensity = GetDensity,
-        .getFontScale = GetFontScale,
-        .getDesignWidthScale = GetDesignWidthScale,
+        GetDensity,
+        GetFontScale,
+        GetDesignWidthScale,
     };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
     return &modifier;
 }
 }

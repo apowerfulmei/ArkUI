@@ -15,6 +15,8 @@
 
 #include "core/components_ng/pattern/navigation/bar_item_node.h"
 
+#include "base/memory/ace_type.h"
+#include "base/memory/referenced.h"
 #include "core/components_ng/pattern/navigation/bar_item_pattern.h"
 
 namespace OHOS::Ace::NG {

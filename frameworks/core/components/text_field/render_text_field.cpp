@@ -15,9 +15,18 @@
 
 #include "core/components/text_field/render_text_field.h"
 
+#include <regex>
+#include <string>
+#include <unordered_map>
+#include <utility>
+
+#include "base/geometry/dimension.h"
 #include "base/i18n/localization.h"
+#include "base/json/json_util.h"
+#include "base/log/ace_trace.h"
 #include "base/log/dump_log.h"
 #include "base/log/log_wrapper.h"
+#include "base/mousestyle/mouse_style.h"
 #include "base/subwindow/subwindow_manager.h"
 #include "base/utils/string_utils.h"
 #include "base/utils/utils.h"
@@ -27,12 +36,16 @@
 #include "core/common/font_manager.h"
 #include "core/common/ime/text_input_type.h"
 #include "core/common/text_field_manager.h"
+#include "core/components/stack/stack_element.h"
 #include "core/components/text/text_utils.h"
+#include "core/components/text_overlay/text_overlay_component.h"
 #include "core/components/text_overlay/text_overlay_element.h"
+#include "core/components_v2/inspector/utils.h"
+#include "core/event/ace_event_helper.h"
+#include "core/event/mouse_event.h"
 #if defined(ENABLE_STANDARD_INPUT)
 #include "core/components/text_field/on_text_changed_listener_impl.h"
 #endif
-#include "render_service_client/core/ui/rs_node.h"
 
 namespace OHOS::Ace {
 namespace {
@@ -90,7 +103,6 @@ void RemoveErrorTextFromValue(const std::string& value, const std::string& error
         valuePtr++;
         errorTextPtr++;
     }
-    valuePtr = std::clamp(valuePtr, 0, static_cast<int32_t>(value.length()));
     result += value.substr(valuePtr);
 }
 #endif
@@ -624,7 +636,7 @@ void RenderTextField::OnTouchTestHit(
             auto textField = weak.Upgrade();
             if (textField) {
                 textField->StartPressAnimation(false);
-                textField->OnTapCallback(info);
+                textField->OnTapCallback();
             }
         });
 
@@ -735,7 +747,7 @@ void RenderTextField::OnClick(const ClickInfo& clickInfo)
     }
 }
 
-void RenderTextField::OnTapCallback(const TouchEventInfo& info)
+void RenderTextField::OnTapCallback()
 {
     auto context = GetContext().Upgrade();
     if (context) {
@@ -747,11 +759,6 @@ void RenderTextField::OnTapCallback(const TouchEventInfo& info)
             isLongPressStatus_ = false;
         } else {
             onTapCallbackResult_ = tapCallback_(true);
-        }
-        if (!isLongPressStatus_ && onTapCallbackResult_ && !info.GetTouches().empty()) {
-            auto globalPosition = info.GetTouches().front().GetGlobalLocation();
-            auto position = GetCursorPositionForClick(globalPosition);
-            UpdateSelection(position);
         }
     }
 }
@@ -1594,7 +1601,6 @@ void RenderTextField::KeyboardEditingValueFilter(TextEditingValue& valueToUpdate
         }
         std::string strInSelection;
         if (start < end) {
-            start = std::clamp(start, 0, static_cast<int32_t>(valueToUpdate.text.length()));
             strInSelection = valueToUpdate.text.substr(start, end - start);
             textChanged |= FilterWithRegex(strInSelection, keyboardFilterValue);
         }
@@ -2561,21 +2567,6 @@ void RenderTextField::InsertValueDone(const std::string& appendElement)
     MarkNeedLayout();
 }
 
-void RenderTextField::SyncGeometryProperties()
-{
-    if (!IsTailRenderNode()) {
-        return;
-    }
-    auto rsNode = GetRSNode();
-    if (!rsNode) {
-        return;
-    }
-    Offset paintOffset = GetPaintOffset();
-    Size paintSize = GetLayoutSize();
-    rsNode->SetBounds(paintOffset.GetX(), paintOffset.GetY(), paintSize.Width(), paintSize.Height());
-    rsNode->SetFrame(paintOffset.GetX(), paintOffset.GetY(), paintSize.Width(), paintSize.Height());
-}
-
 void RenderTextField::UpdateAccessibilityAttr()
 {
     auto refPtr = accessibilityNode_.Upgrade();
@@ -2826,7 +2817,7 @@ void RenderTextField::Delete(int32_t start, int32_t end)
 
 std::u16string RenderTextField::GetLeftTextOfCursor(int32_t number)
 {
-    auto start = GetEditingValue().selection.GetEnd();
+    auto start = cursorPositionForShow_;
     if (IsSelected()) {
         start = std::min(GetEditingValue().selection.GetStart(), GetEditingValue().selection.GetEnd());
     }
@@ -2836,7 +2827,7 @@ std::u16string RenderTextField::GetLeftTextOfCursor(int32_t number)
 
 std::u16string RenderTextField::GetRightTextOfCursor(int32_t number)
 {
-    auto end = GetEditingValue().selection.GetEnd();
+    auto end = cursorPositionForShow_;
     if (IsSelected()) {
         end = std::max(GetEditingValue().selection.GetStart(), GetEditingValue().selection.GetEnd());
     }

@@ -30,11 +30,6 @@ public:
 
     bool IsScrollable() const override;
 
-    bool HasAccessibilityLevel()
-    {
-        return accessibilityLevel_.has_value();
-    }
-
 protected:
     void SetSpecificSupportAction() override;
 

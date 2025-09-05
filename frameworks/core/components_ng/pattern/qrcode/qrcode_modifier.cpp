@@ -15,6 +15,17 @@
 
 #include "core/components_ng/pattern/qrcode/qrcode_modifier.h"
 
+#include "base/geometry/ng/offset_t.h"
+#include "base/geometry/ng/size_t.h"
+#include "base/utils/utils.h"
+#include "core/common/container.h"
+#include "core/components/qrcode/qrcode_theme.h"
+#include "core/components_ng/base/modifier.h"
+#include "core/components_ng/pattern/qrcode/qrcode_paint_property.h"
+#include "core/components_ng/render/drawing.h"
+#include "core/components_ng/render/drawing_prop_convertor.h"
+#include "core/pipeline/pipeline_base.h"
+
 namespace OHOS::Ace::NG {
 QRCodeModifier::QRCodeModifier()
     : opacity_(AceType::MakeRefPtr<AnimatablePropertyFloat>(1.0f)),
@@ -43,7 +54,6 @@ void QRCodeModifier::onDraw(DrawingContext& context)
     auto qrCode = qrcodegen::QrCode::encodeText(value.c_str(), qrcodegen::QrCode::Ecc::LOW);
     if (!qrCode.getFlag() || qrCode.getSize() == 0 || qrCodeSize <= 0 ||
         qrCodeSize < static_cast<float>(qrCode.getSize())) {
-        TAG_LOGE(AceLogTag::ACE_QRCODE, "QRCodeSize is too small. QRCodeSize: %{public}f", qrCodeSize);
         return;
     }
     color = color.BlendOpacity(opacity);
@@ -77,10 +87,7 @@ RSBitmap QRCodeModifier::CreateBitMap(
 {
     RSBitmap bitMap;
     RSBitmapFormat colorType = { RSColorType::COLORTYPE_RGBA_8888, RSAlphaType::ALPHATYPE_OPAQUE };
-    if (!bitMap.Build(width, width, colorType)) {
-        TAG_LOGW(AceLogTag::ACE_QRCODE, "rsBitmap build fail.");
-        return bitMap;
-    }
+    bitMap.Build(width, width, colorType);
 
     void* rawData = bitMap.GetPixels();
     auto* data = reinterpret_cast<uint32_t*>(rawData);

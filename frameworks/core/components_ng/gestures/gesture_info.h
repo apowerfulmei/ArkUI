@@ -28,7 +28,7 @@
 #include "core/gestures/gesture_type.h"
 #include "core/gestures/velocity.h"
 #include "core/gestures/velocity_tracker.h"
-#include "core/components/common/properties/blur_style_option.h"
+#include "core/components/common/properties/common_decoration.h"
 #include "core/components/common/properties/shadow.h"
 
 namespace OHOS::Ace::NG {
@@ -40,15 +40,6 @@ enum class DragPreviewMode : int32_t {
     DISABLE_SCALE = 2,
     ENABLE_DEFAULT_SHADOW = 3,
     ENABLE_DEFAULT_RADIUS = 4,
-    ENABLE_DRAG_ITEM_GRAY_EFFECT = 5,
-    ENABLE_MULTI_TILE_EFFECT  = 6,
-    ENABLE_TOUCH_POINT_CALCULATION_BASED_ON_FINAL_PREVIEW = 7,
-};
-
-enum class DraggingSizeChangeEffect : int32_t {
-    DEFAULT = 0,
-    SIZE_TRANSITION = 1,
-    SIZE_CONTENT_TRANSITION = 2,
 };
 
 struct BlurBackGroundInfo {
@@ -73,10 +64,9 @@ struct BlurBackGroundInfo {
 };
 
 struct OptionsAfterApplied {
-    double opacity { 1.0f };
+    double opacity { 0.0 };
     std::optional<Shadow> shadow;
     std::string shadowPath;
-    bool isFilled = true;
     std::optional<BorderRadiusProperty> borderRadius;
     BlurBackGroundInfo blurbgEffect;
 };
@@ -89,13 +79,7 @@ struct DragPreviewOption {
     bool isDefaultShadowEnabled = false;
     bool isDefaultRadiusEnabled = false;
     bool isDragPreviewEnabled = true;
-    bool isDefaultDragItemGrayEffectEnabled = false;
-    bool enableEdgeAutoScroll = true;
-    bool enableHapticFeedback = false;
-    bool isMultiTiled = false;
     bool isLiftingDisabled = false;
-    bool isTouchPointCalculationBasedOnFinalPreviewEnable = false;
-    NG::DraggingSizeChangeEffect sizeChangeEffect = DraggingSizeChangeEffect::DEFAULT;
     union {
         int32_t badgeNumber;
         bool isShowBadge = true;
@@ -116,8 +100,6 @@ struct DragPreviewOption {
         isScaleEnabled = true;
         isDefaultShadowEnabled = false;
         isDefaultRadiusEnabled = false;
-        isDefaultDragItemGrayEffectEnabled = false;
-        isMultiTiled = false;
     }
 };
 
@@ -151,9 +133,9 @@ public:
     {
         onActionEndId_ = std::make_unique<GestureEventFunc>(onActionEndId);
     }
-    void SetOnActionCancelId(const GestureEventFunc& onActionCancelId)
+    void SetOnActionCancelId(const GestureEventNoParameter& onActionCancelId)
     {
-        onActionCancelId_ = std::make_unique<GestureEventFunc>(onActionCancelId);
+        onActionCancelId_ = std::make_unique<GestureEventNoParameter>(onActionCancelId);
     }
     void SetPriority(GesturePriority priority)
     {
@@ -182,11 +164,6 @@ public:
     void SetLimitFingerCount(bool limitFingerCount)
     {
         isLimitFingerCount_ = limitFingerCount;
-    }
-
-    bool GetLimitFingerCount() const
-    {
-        return isLimitFingerCount_;
     }
 
     void SetTag(std::string tag)
@@ -264,15 +241,6 @@ public:
         }
     }
 
-#ifdef ARKUI_CAPI_UNITTEST
-    std::optional<GestureTypeName> GetType()
-    {
-        if (gestureInfo_) {
-            return gestureInfo_->GetType();
-        }
-        return std::nullopt;
-    }
-#endif // ARKUI_CAPI_UNITTEST
 protected:
     int32_t fingers_ = 1;
     bool isLimitFingerCount_ = false;
@@ -282,7 +250,7 @@ protected:
     std::unique_ptr<GestureEventFunc> onActionStartId_;
     std::unique_ptr<GestureEventFunc> onActionUpdateId_;
     std::unique_ptr<GestureEventFunc> onActionEndId_;
-    std::unique_ptr<GestureEventFunc> onActionCancelId_;
+    std::unique_ptr<GestureEventNoParameter> onActionCancelId_;
     RefPtr<GestureInfo> gestureInfo_;
     void* userData_ = nullptr;
 };

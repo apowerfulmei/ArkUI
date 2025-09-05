@@ -22,7 +22,7 @@ namespace OHOS::Previewer {
     class PreviewerDisplay;
 }
 namespace OHOS::Ace {
-RefPtr<DisplayInfo> DisplayInfoUtils::GetDisplayInfo(int32_t displayId)
+RefPtr<DisplayInfo> DisplayInfoUtils::GetDisplayInfo()
 {
     return AceType::MakeRefPtr<DisplayInfo>();
 }
@@ -47,14 +47,5 @@ std::vector<Rect> DisplayInfoUtils::GetCurrentFoldCreaseRegion()
 {
     hasInitFoldCreaseRegion_ = true;
     return {};
-}
-
-Rect DisplayInfoUtils::GetDisplayAvailableRect(int32_t displayId) const
-{
-    return Rect();
-}
-Rect DisplayInfoUtils::GetFoldExpandAvailableRect() const
-{
-    return Rect();
 }
 } // namespace OHOS::Ace::DisplayInfoUtils

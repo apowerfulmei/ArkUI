@@ -15,7 +15,11 @@
 
 #include "core/components_ng/gestures/recognizers/recognizer_group.h"
 
+#include "base/memory/ace_type.h"
+#include "base/memory/referenced.h"
+#include "base/utils/utils.h"
 #include "core/components_ng/base/frame_node.h"
+#include "core/components_ng/gestures/recognizers/gesture_recognizer.h"
 #include "core/components_ng/gestures/gesture_group.h"
 
 namespace OHOS::Ace::NG {
@@ -230,36 +234,13 @@ void RecognizerGroup::AddHittedRecognizerType(
                 continue;
             }
             hittedRecognizerInfo[AceType::TypeName(item)].emplace_back(NG::TouchTestResultInfo {
-                frameNode->GetId(), frameNode->GetTag(), frameNode->GetInspectorIdValue(""), "" });
+                frameNode->GetId(), frameNode->GetTag(), frameNode->GetInspectorIdValue("") });
         }
         auto group = AceType::DynamicCast<RecognizerGroup>(item);
         if (group) {
             group->AddHittedRecognizerType(hittedRecognizerInfo);
         }
     }
-}
-
-void RecognizerGroup::ForceCleanRecognizerWithGroup()
-{
-    for (const auto& child : recognizers_) {
-        if (child) {
-            child->ForceCleanRecognizerWithGroup();
-        }
-    }
-    touchPoints_.clear();
-    fingersId_.clear();
-    fingerList_.clear();
-    activeFingers_.clear();
-    currentFingers_ = 0;
-    refereeState_ = RefereeState::READY;
-    disposal_ = GestureDisposal::NONE;
-    for (const auto& child : recognizers_) {
-        if (child) {
-            child->SetGestureGroup(nullptr);
-            child->ResetEventImportGestureGroup();
-        }
-    }
-    recognizers_.clear();
 }
 
 void RecognizerGroup::CleanRecognizerState()

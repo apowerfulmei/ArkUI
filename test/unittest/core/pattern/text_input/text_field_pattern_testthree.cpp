@@ -14,9 +14,13 @@
  */
 
 #include "text_input_base.h"
-#include "core/components_ng/pattern/select/select_pattern.h"
+
+#include "core/components/text_overlay/text_overlay_theme.h"
+#include "core/components_ng/pattern/indexer/indexer_layout_property.h"
+#include "core/components_ng/pattern/stage/page_pattern.h"
 #include "core/components_ng/pattern/text/span/span_string.h"
-#include "test/mock/core/render/mock_paragraph.h"
+#include "core/components_ng/pattern/select_overlay/select_overlay_pattern.h"
+#include "test/mock/core/common/mock_resource_adapter_v2.h"
 
 namespace OHOS::Ace::NG {
 
@@ -38,14 +42,12 @@ HWTEST_F(TextFieldPatternTestThree, UpdateFocusForward001, TestSize.Level0)
         model.SetCleanNodeStyle(CleanNodeStyle::CONSTANT);
         model.SetIsShowCancelButton(true);
         model.SetCancelIconSize(Dimension(ICON_SIZE, DimensionUnit::PX));
-        model.SetCancelButtonSymbol(false);
     });
     GetFocus();
     auto cleanNodeResponseArea = AceType::DynamicCast<CleanNodeResponseArea>(pattern_->cleanNodeResponseArea_);
     auto stackNode = cleanNodeResponseArea->cleanNode_;
     auto imageFrameNode = AceType::DynamicCast<FrameNode>(stackNode->GetFirstChild());
     auto imageLayoutProperty = imageFrameNode->GetLayoutProperty<ImageLayoutProperty>();
-    ASSERT_NE(imageLayoutProperty, nullptr);
     cleanNodeResponseArea->UpdateCleanNode(false);
     pattern_->focusIndex_ = FocuseIndex::TEXT;
     auto cleanNodeArea = AceType::DynamicCast<CleanNodeResponseArea>(pattern_->cleanNodeResponseArea_);
@@ -64,14 +66,12 @@ HWTEST_F(TextFieldPatternTestThree, UpdateFocusBackward001, TestSize.Level0)
         model.SetCleanNodeStyle(CleanNodeStyle::CONSTANT);
         model.SetIsShowCancelButton(true);
         model.SetCancelIconSize(Dimension(ICON_SIZE, DimensionUnit::PX));
-        model.SetCancelButtonSymbol(false);
     });
     GetFocus();
     auto cleanNodeResponseArea = AceType::DynamicCast<CleanNodeResponseArea>(pattern_->cleanNodeResponseArea_);
     auto stackNode = cleanNodeResponseArea->cleanNode_;
     auto imageFrameNode = AceType::DynamicCast<FrameNode>(stackNode->GetFirstChild());
     auto imageLayoutProperty = imageFrameNode->GetLayoutProperty<ImageLayoutProperty>();
-    ASSERT_NE(imageLayoutProperty, nullptr);
     cleanNodeResponseArea->UpdateCleanNode(false);
     pattern_->focusIndex_ = FocuseIndex::UNIT;
     auto cleanNodeArea = AceType::DynamicCast<CleanNodeResponseArea>(pattern_->cleanNodeResponseArea_);
@@ -174,7 +174,7 @@ HWTEST_F(TextFieldPatternTestThree, SetPreviewTextOperation001, TestSize.Level0)
     EXPECT_TRUE(pattern_->GetIsPreviewText());
     FlushLayoutTask(frameNode_);
 
-    pattern_->InitEditingValueText(u"");
+    pattern_->InitEditingValueText("");
     EXPECT_FALSE(pattern_->GetIsPreviewText());
     FlushLayoutTask(frameNode_);
 }
@@ -454,19 +454,19 @@ HWTEST_F(TextFieldPatternTestThree, UnitResponseKeyEvent002, TestSize.Level0)
 }
 
 /**
- * @tc.name: OnTextGestureSelectionEnd001
- * @tc.desc: test testInput text OnTextGestureSelectionEnd001
+ * @tc.name: OnTextGenstureSelectionEnd001
+ * @tc.desc: test testInput text OnTextGenstureSelectionEnd001
  * @tc.type: FUNC
  */
-HWTEST_F(TextFieldPatternTestThree, OnTextGestureSelectionEnd001, TestSize.Level0)
+HWTEST_F(TextFieldPatternTestThree, OnTextGenstureSelectionEnd001, TestSize.Level0)
 {
     CreateTextField(DEFAULT_TEXT);
     GetFocus();
-    TouchLocationInfo locationInfo(0);
-    pattern_->OnTextGestureSelectionEnd(locationInfo);
+
+    pattern_->OnTextGenstureSelectionEnd();
     EXPECT_FALSE(pattern_->IsContentRectNonPositive());
     pattern_->contentRect_.SetRect(10, 10, 0, 0);
-    pattern_->OnTextGestureSelectionEnd(locationInfo);
+    pattern_->OnTextGenstureSelectionEnd();
     EXPECT_TRUE(pattern_->IsContentRectNonPositive());
 }
 
@@ -505,8 +505,6 @@ HWTEST_F(TextFieldPatternTestThree, HandleAIWrite001, TestSize.Level0)
      */
     CreateTextField(DEFAULT_TEXT);
     GetFocus();
-    auto aiWriteAdapter = AceType::MakeRefPtr<AIWriteAdapter>();
-    pattern_->aiWriteAdapter_ = aiWriteAdapter;
 
     /**
      * @tc.steps: step2. test GetAIWriteInfo
@@ -546,41 +544,12 @@ HWTEST_F(TextFieldPatternTestThree, HandleAIWrite002, TestSize.Level0)
     pattern_->HandleOnAIWrite();
 
     std::vector<uint8_t> buff;
-    auto spanStr = AceType::MakeRefPtr<SpanString>(u"dddd结果回填123456");
+    auto spanStr = AceType::MakeRefPtr<SpanString>("dddd结果回填123456");
     spanStr->EncodeTlv(buff);
     pattern_->HandleAIWriteResult(0, 5, buff);
     pattern_->BeforeCreateLayoutWrapper();
     auto contentController = pattern_->GetTextContentController();
-    auto sentenceContent = StringUtils::Str16ToStr8(contentController->GetSelectedValue(0, spanStr->GetLength()));
+    auto sentenceContent = contentController->GetSelectedValue(0, spanStr->GetLength());
     ASSERT_EQ(sentenceContent, spanStr->GetString());
-}
-
-HWTEST_F(TextFieldPatternTestThree, HandleAIWrite003, TestSize.Level0)
-{
-    /**
-     * @tc.steps: step1. create target node.
-     */
-    CreateTextField(DEFAULT_TEXT);
-    GetFocus();
-#if defined(OHOS_STANDARD_SYSTEM) && !defined(PREVIEW)
-        pattern_->imeShown_ = true;
-#else
-        pattern_->connection_= true;
-#endif
-    pattern_->HandleOnCameraInput();
-    EXPECT_EQ(pattern_->selectController_->GetFirstHandleInfo().index, 26);
-    EXPECT_EQ(pattern_->selectController_->GetSecondHandleInfo().index, 26);
-}
-
-HWTEST_F(TextFieldPatternTestThree, HandleAIWrite004, TestSize.Level0)
-{
-    /**
-     * @tc.steps: step1. create target node.
-     */
-    CreateTextField(DEFAULT_TEXT);
-    GetFocus();
-    pattern_->HandleOnCameraInput();
-    EXPECT_EQ(pattern_->selectController_->GetFirstHandleInfo().index, 26);
-    EXPECT_EQ(pattern_->selectController_->GetSecondHandleInfo().index, 26);
 }
 } // namespace OHOS::Ace::NG

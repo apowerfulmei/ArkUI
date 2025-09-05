@@ -15,7 +15,11 @@
 
 #include "core/components_ng/pattern/effect_component/effect_component_model_ng.h"
 
+#include "core/components/common/layout/constants.h"
+#include "core/components_ng/base/frame_node.h"
 #include "core/components_ng/base/view_stack_processor.h"
+#include "core/components_ng/pattern/effect_component/effect_component_pattern.h"
+#include "core/components_v2/inspector/inspector_constants.h"
 
 namespace OHOS::Ace::NG {
 void EffectComponentModelNG::Create()
@@ -26,25 +30,5 @@ void EffectComponentModelNG::Create()
     auto frameNode = FrameNode::GetOrCreateFrameNode(
         V2::EFFECT_COMPONENT_ETS_TAG, nodeId, []() { return AceType::MakeRefPtr<EffectComponentPattern>(); });
     stack->Push(frameNode);
-}
-
-void EffectComponentModelNG::Create(NG::EffectLayer independentLayer)
-{
-    auto* stack = ViewStackProcessor::GetInstance();
-    auto nodeId = stack->ClaimNodeId();
-    ACE_LAYOUT_SCOPED_TRACE("Create[%s][self:%d]", V2::EFFECT_COMPONENT_ETS_TAG, nodeId);
-    auto frameNode = FrameNode::GetOrCreateFrameNode(V2::EFFECT_COMPONENT_ETS_TAG, nodeId, [independentLayer]() {
-        return AceType::MakeRefPtr<EffectComponentPattern>(independentLayer);
-    });
-    stack->Push(frameNode);
-}
-
-void EffectComponentModelNG::AlwaysSnapshot(bool enable)
-{
-    auto frameNode = ViewStackProcessor::GetInstance()->GetMainFrameNode();
-    CHECK_NULL_VOID(frameNode);
-    auto pattern = frameNode->GetPattern<EffectComponentPattern>();
-    CHECK_NULL_VOID(pattern);
-    pattern->AlwaysSnapshot(enable);
 }
 } // namespace OHOS::Ace::NG

@@ -15,12 +15,21 @@
 
 
 #include "cj_view_context_ffi.h"
+#include <functional>
+#include <memory>
+#include <sstream>
+#include <utility>
 #include "cj_lambda.h"
+#include "base/utils/system_properties.h"
+#include "base/utils/utils.h"
 #include "base/log/jank_frame_report.h"
+#include "bridge/common/utils/engine_helper.h"
+#include "bridge/common/utils/utils.h"
 #include "core/common/ace_engine.h"
+#include "core/components/common/properties/animation_option.h"
 #include "core/components_ng/base/view_stack_model.h"
+#include "core/components_ng/base/view_stack_processor.h"
 #include "core/components_ng/pattern/view_context/view_context_model_ng.h"
-#include "core/pipeline/pipeline_base.h"
 
 using namespace OHOS::Ace;
 using namespace OHOS::FFI;
@@ -38,51 +47,28 @@ int64_t GetFormAnimationTimeInterval(const RefPtr<PipelineBase>& pipelineContext
     return (GetMicroTickCount() - pipelineContext->GetFormAnimationStartTime()) / MICROSEC_TO_MILLISEC;
 }
 
-int64_t GetDurationInterval(int64_t interval)
-{
-    int64_t duration = 0;
-    if (interval < DEFAULT_DURATION) {
-        duration = DEFAULT_DURATION - interval;
-    }
-    return duration;
-}
-
 bool CheckIfSetFormAnimationDuration(const RefPtr<PipelineBase>& pipelineContext, const AnimationOption& option)
 {
     CHECK_NULL_RETURN(pipelineContext, false);
-    int64_t interval = GetFormAnimationTimeInterval(pipelineContext);
-    int64_t duration = 0;
-    if (interval < DEFAULT_DURATION) {
-        duration = DEFAULT_DURATION - interval;
-    }
-    return pipelineContext->IsFormAnimationFinishCallback() && pipelineContext->IsFormRenderExceptDynamicComponent() &&
-        option.GetDuration() > duration;
-}
-
-bool CheckContainer(const RefPtr<Container>& container)
-{
-    auto context = container->GetPipelineContext();
-    if (!context) {
-        return false;
-    }
-    if (!container->IsFRSCardContainer() && !container->WindowIsShow()) {
-        return false;
-    }
-    auto executor = container->GetTaskExecutor();
-    CHECK_NULL_RETURN(executor, false);
-    return executor->WillRunOnCurrentThread(TaskExecutor::TaskType::UI);
+    return pipelineContext->IsFormAnimationFinishCallback() && pipelineContext->IsFormRender() &&
+        option.GetDuration() > (DEFAULT_DURATION - GetFormAnimationTimeInterval(pipelineContext));
 }
 
 void AnimateToForStageMode(const RefPtr<PipelineBase>& pipelineContext, AnimationOption& option,
     void (*callback)(), const std::function<void()>& onFinishEvent, bool immediately)
 {
-    auto triggerId = pipelineContext->GetInstanceId();
+    auto triggerId = Container::CurrentIdSafely();
     AceEngine::Get().NotifyContainers([triggerId, option](const RefPtr<Container>& container) {
-        if (!CheckContainer(container)) {
+        auto context = container->GetPipelineContext();
+        if (!context) {
+            // pa container do not have pipeline context.
+            return;
+        }
+
+        if (!container->IsFRSCardContainer() && !container->WindowIsShow()) {
             return;
         }
         ContainerScope scope(container->GetInstanceId());
-        auto context = container->GetPipelineContext();
         context->FlushBuild();
         if (context->GetInstanceId() == triggerId) {
             return;
@@ -96,10 +82,15 @@ void AnimateToForStageMode(const RefPtr<PipelineBase>& pipelineContext, Animatio
     auto ffiCallback = CJLambda::Create(callback);
     ffiCallback();
     AceEngine::Get().NotifyContainers([triggerId](const RefPtr<Container>& container) {
-        if (!CheckContainer(container)) {
+        auto context = container->GetPipelineContext();
+        if (!context) {
+            // pa container do not have pipeline context.
             return;
         }
-        auto context = container->GetPipelineContext();
+
+        if (!container->IsFRSCardContainer() && !container->WindowIsShow()) {
+            return;
+        }
         ContainerScope scope(container->GetInstanceId());
         context->FlushBuild();
         if (context->GetInstanceId() == triggerId) {
@@ -129,8 +120,7 @@ void FfiOHOSAceFrameworkViewContextAnimation(NativeOptionAnimateParam animateOpt
     CHECK_NULL_VOID(container);
     auto pipelineContextBase = container->GetPipelineContext();
     CHECK_NULL_VOID(pipelineContextBase);
-    if (pipelineContextBase->IsFormAnimationFinishCallback() &&
-        pipelineContextBase->IsFormRenderExceptDynamicComponent() &&
+    if (pipelineContextBase->IsFormAnimationFinishCallback() && pipelineContextBase->IsFormRender() &&
         GetFormAnimationTimeInterval(pipelineContextBase) > DEFAULT_DURATION) {
         return;
     }
@@ -143,12 +133,11 @@ void FfiOHOSAceFrameworkViewContextAnimation(NativeOptionAnimateParam animateOpt
         return;
     }
     ParseCjAnimation(animateParam, animateOpt);
-    int64_t duration = GetDurationInterval(GetFormAnimationTimeInterval(pipelineContextBase));
-    if (pipelineContextBase->IsFormAnimationFinishCallback() &&
-        pipelineContextBase->IsFormRenderExceptDynamicComponent() && animateOpt.GetDuration() > duration) {
-        animateOpt.SetDuration(duration);
+    if (pipelineContextBase->IsFormAnimationFinishCallback() && pipelineContextBase->IsFormRender() &&
+        animateOpt.GetDuration() > (DEFAULT_DURATION - GetFormAnimationTimeInterval(pipelineContextBase))) {
+        animateOpt.SetDuration(DEFAULT_DURATION - GetFormAnimationTimeInterval(pipelineContextBase));
         TAG_LOGW(AceLogTag::ACE_FORM, "[Form animation]  Form animation SetDuration: %{public}lld ms",
-            static_cast<long long>(duration));
+            static_cast<long long>(DEFAULT_DURATION - GetFormAnimationTimeInterval(pipelineContextBase)));
     }
 
     if (SystemProperties::GetRosenBackendEnabled()) {
@@ -161,32 +150,25 @@ void FfiOHOSAceFrameworkViewContextAnimation(NativeOptionAnimateParam animateOpt
 void FfiOHOSAceFrameworkViewContextAnimationTo(NativeAnimateParam animateParam, void (*callback)(), bool isImmediately)
 {
     ACE_FUNCTION_TRACE();
-    auto container = Container::CurrentSafelyWithCheck();
+    AnimationOption animateOpt;
+    ParseCjAnimation(animateParam, animateOpt);
+    auto container = Container::CurrentSafely();
     CHECK_NULL_VOID(container);
-    if (!Container::CheckRunOnThreadByThreadId(container->GetInstanceId(), false)) {
-        TAG_LOGW(AceLogTag::ACE_ANIMATION, "animationTo not run on running thread, currentId:%{public}d",
-            container->GetInstanceId());
-        return;
-    }
-    ContainerScope scope(container->GetInstanceId());
     auto pipelineContextBase = container->GetPipelineContext();
     CHECK_NULL_VOID(pipelineContextBase);
-    if (pipelineContextBase->IsFormAnimationFinishCallback() &&
-        pipelineContextBase->IsFormRenderExceptDynamicComponent() &&
+    if (pipelineContextBase->IsFormAnimationFinishCallback() && pipelineContextBase->IsFormRender() &&
         GetFormAnimationTimeInterval(pipelineContextBase) > DEFAULT_DURATION) {
         return;
     }
-    AnimationOption animateOpt;
-    ParseCjAnimation(animateParam, animateOpt);
-    int64_t duration = GetDurationInterval(GetFormAnimationTimeInterval(pipelineContextBase));
     if (CheckIfSetFormAnimationDuration(pipelineContextBase, animateOpt)) {
-        animateOpt.SetDuration(duration);
+        animateOpt.SetDuration(DEFAULT_DURATION - GetFormAnimationTimeInterval(pipelineContextBase));
         TAG_LOGW(AceLogTag::ACE_FORM, "[Form animation]  Form animation SetDuration: %{public}lld ms",
-            static_cast<long long>(duration));
+            static_cast<long long>(DEFAULT_DURATION - GetFormAnimationTimeInterval(pipelineContextBase)));
     }
     if (SystemProperties::GetRosenBackendEnabled()) {
         if (pipelineContextBase->IsLayouting()) {
-            TAG_LOGW(AceLogTag::ACE_ANIMATION, "Pipeline layouting, post animateTo, dur:%{public}d, curve:%{public}s",
+            TAG_LOGW(AceLogTag::ACE_ANIMATION,
+                "pipeline is layouting, post animateTo, duration:%{public}d, curve:%{public}s",
                 animateOpt.GetDuration(), animateOpt.GetCurve() ? animateOpt.GetCurve()->ToString().c_str() : "");
             pipelineContextBase->GetTaskExecutor()->PostTask(
                 [id = Container::CurrentIdSafely(), animateOpt, callback, isImmediately]() mutable {

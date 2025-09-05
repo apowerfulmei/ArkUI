@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -25,7 +25,6 @@
 #include "base/utils/noncopyable.h"
 #include "core/components_ng/pattern/pattern.h"
 #include "core/components_ng/pattern/shape/shape_container_layout_algorithm.h"
-#include "core/components_ng/pattern/shape/shape_container_modifier.h"
 #include "core/components_ng/pattern/shape/shape_container_paint_property.h"
 #include "core/components_ng/pattern/shape/shape_view_box.h"
 
@@ -37,23 +36,6 @@ public:
     ShapeContainerPattern() = default;
     ~ShapeContainerPattern() override = default;
 
-    void UpdatePropertyImpl(const std::string& key, RefPtr<PropertyValueBase> value) override;
-
-    bool IsEnableMatchParent() override
-    {
-        return true;
-    }
-
-    bool IsEnableChildrenMatchParent() override
-    {
-        return true;
-    }
-
-    bool IsEnableFix() override
-    {
-        return true;
-    }
-
     RefPtr<LayoutAlgorithm> CreateLayoutAlgorithm() override
     {
         return MakeRefPtr<ShapeContainerLayoutAlgorithm>();
@@ -63,8 +45,6 @@ public:
     {
         return MakeRefPtr<ShapeContainerPaintProperty>();
     }
-
-    RefPtr<NodePaintMethod> CreateNodePaintMethod() override;
 
     void OnModifyDone() override;
 
@@ -84,7 +64,6 @@ private:
     bool OnDirtyLayoutWrapperSwap(const RefPtr<LayoutWrapper>& dirty, bool skipMeasure, bool skipLayout) override;
     bool isShapeContainerInit_ = false;
     std::vector<WeakPtr<FrameNode>> ChildNodes_;
-    RefPtr<ShapeContainerModifier> shapeContainerModifier_;
 
     ACE_DISALLOW_COPY_AND_MOVE(ShapeContainerPattern);
 };

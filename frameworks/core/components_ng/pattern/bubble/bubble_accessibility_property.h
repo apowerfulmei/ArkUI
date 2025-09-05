@@ -35,7 +35,7 @@ public:
         showedState_ = state;
     }
 
-    int32_t GetShowedState()
+    int32_t GetShowedState() const
     {
         return showedState_;
     }

@@ -42,17 +42,12 @@ build_component("web") {
       "ability_runtime:app_context",
       "ability_runtime:app_manager",
       "c_utils:utils",
-      "egl:libEGL",
-      "graphic_2d:EGL",
-      "graphic_2d:GLESv3",
       "graphic_2d:librender_service_client",
       "init:libbegetutil",
       "ipc:ipc_core",
       "napi:ace_napi",
       "opengles:libGLES",
       "webview:libnweb",
-      "webview:cj_webview_ffi",
-      "webview:ohos_base_glue_source",
       "window_manager:libwm",
     ]
   }

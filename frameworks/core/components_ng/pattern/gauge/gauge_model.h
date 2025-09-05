@@ -24,11 +24,6 @@
 #include "frameworks/base/geometry/dimension.h"
 
 namespace OHOS::Ace {
-enum class GaugeResourceType {
-    STROKE_WIDTH,
-    INDICATOR_ICON,
-    INDICATOR_SPACE,
-};
 class ACE_FORCE_EXPORT GaugeModel {
 public:
     static GaugeModel* GetInstance();
@@ -56,11 +51,6 @@ public:
     virtual void ResetShadowOptions() = 0;
     virtual void ResetIndicatorIconPath() = 0;
     virtual void ResetIndicatorSpace() = 0;
-    virtual void CreateWithResourceObj(GaugeResourceType jsResourceType, const RefPtr<ResourceObject>& resObj) = 0;
-    virtual void SetUseGradient(bool useGradient) = 0;
-    virtual void SetUseSpecialDefaultIndicator(bool useSpecialDefaultIndicator) = 0;
-    virtual void SetGradientColorModeInit() = 0;
-    virtual void SetGradientInit(const std::vector<NG::ColorStopArray>& colors) = 0;
 
 private:
     static std::unique_ptr<GaugeModel> instance_;

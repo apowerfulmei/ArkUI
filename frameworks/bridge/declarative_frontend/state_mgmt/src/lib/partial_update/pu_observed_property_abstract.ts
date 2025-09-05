@@ -162,10 +162,6 @@ implements ISinglePropertyChangeSubscriber<T>, IMultiPropertiesChangeSubscriber,
     return this.dependentElmtIdsByProperty_.hasDependencies();
   }
 
-  public getDependencies(): Set<number> {
-    return this.dependentElmtIdsByProperty_.getAllPropertyDependencies();
-  }
-
   /* for @Prop value from source we need to generate a @State
      that observes when this value changes. This ObservedPropertyPU
      sits inside SynchedPropertyOneWayPU.
@@ -181,7 +177,7 @@ implements ISinglePropertyChangeSubscriber<T>, IMultiPropertiesChangeSubscriber,
       : false;
   }
 
-  public getOwningView(): TargetInfo {
+  public getOwningView(): ViewPUInfo {
     return { componentName: this.owningView_?.constructor.name, id: this.owningView_?.id__() };
   }
 
@@ -279,17 +275,14 @@ implements ISinglePropertyChangeSubscriber<T>, IMultiPropertiesChangeSubscriber,
   // notify owning ViewPU and peers of a variable assignment
   // also property/item changes to  ObservedObjects of class object type, which use compat mode
   // Date and Array are notified as if there had been an assignment.
-  protected notifyPropertyHasChangedPU(isSync: boolean = false) : void {
+  protected notifyPropertyHasChangedPU() : void {
     stateMgmtProfiler.begin('ObservedPropertyAbstractPU.notifyPropertyHasChangedPU');
     stateMgmtConsole.debug(`${this.debugInfo()}: notifyPropertyHasChangedPU.`);
     if (this.owningView_) {
       if (this.delayedNotification_ === ObservedPropertyAbstractPU.DelayedNotifyChangesEnum.do_not_delay) {
-        if (!isSync) {
-          // send viewPropertyHasChanged right away
-          this.owningView_.viewPropertyHasChanged(this.info_, this.dependentElmtIdsByProperty_.getAllPropertyDependencies());
-        } else {
-          this.owningView_.collectElementsNeedToUpdateSynchronously(this.info_, this.dependentElmtIdsByProperty_.getAllPropertyDependencies(), true);
-        }
+        // send viewPropertyHasChanged right away
+        this.owningView_.viewPropertyHasChanged(this.info_, this.dependentElmtIdsByProperty_.getAllPropertyDependencies());
+
         // send changed observed property to profiler
         // only will be true when enable profiler
         if (stateMgmtDFX.enableProfiler) {
@@ -303,7 +296,7 @@ implements ISinglePropertyChangeSubscriber<T>, IMultiPropertiesChangeSubscriber,
     }
     this.subscriberRefs_.forEach((subscriber) => {
       if (subscriber && typeof subscriber === 'object' && 'syncPeerHasChanged' in subscriber) {
-        (subscriber as unknown as PeerChangeEventReceiverPU<T>).syncPeerHasChanged(this, isSync);
+        (subscriber as unknown as PeerChangeEventReceiverPU<T>).syncPeerHasChanged(this);
       } else {
         stateMgmtConsole.warn(`${this.debugInfo()}: notifyPropertyHasChangedPU: unknown subscriber ID 'subscribedId' error!`);
       }
@@ -313,19 +306,13 @@ implements ISinglePropertyChangeSubscriber<T>, IMultiPropertiesChangeSubscriber,
 
 
   // notify owning ViewPU and peers of a ObservedObject @Track property's assignment
-  protected notifyTrackedObjectPropertyHasChanged(changedPropertyName : string, isSync: boolean = false) : void {
+  protected notifyTrackedObjectPropertyHasChanged(changedPropertyName : string) : void {
     stateMgmtProfiler.begin('ObservedPropertyAbstract.notifyTrackedObjectPropertyHasChanged');
     stateMgmtConsole.debug(`${this.debugInfo()}: notifyTrackedObjectPropertyHasChanged.`);
     if (this.owningView_) {
       if (this.delayedNotification_ == ObservedPropertyAbstractPU.DelayedNotifyChangesEnum.do_not_delay) {
         // send viewPropertyHasChanged right away
-        if (!isSync) {
-          this.owningView_.viewPropertyHasChanged(this.info_, this.dependentElmtIdsByProperty_.getTrackedObjectPropertyDependencies(changedPropertyName, 'notifyTrackedObjectPropertyHasChanged'));
-        } else {
-          this.owningView_.collectElementsNeedToUpdateSynchronously(this.info_,
-            this.dependentElmtIdsByProperty_.getTrackedObjectPropertyDependencies(changedPropertyName, 'notifyTrackedObjectPropertyHasChanged'), false);
-        }
-        
+        this.owningView_.viewPropertyHasChanged(this.info_, this.dependentElmtIdsByProperty_.getTrackedObjectPropertyDependencies(changedPropertyName, 'notifyTrackedObjectPropertyHasChanged'));
         // send changed observed property to profiler
         // only will be true when enable profiler
         if (stateMgmtDFX.enableProfiler) {
@@ -340,7 +327,7 @@ implements ISinglePropertyChangeSubscriber<T>, IMultiPropertiesChangeSubscriber,
     this.subscriberRefs_.forEach((subscriber) => {
       if (subscriber) {
         if ('syncPeerTrackedPropertyHasChanged' in subscriber) {
-          (subscriber as unknown as PeerChangeEventReceiverPU<T>).syncPeerTrackedPropertyHasChanged(this, changedPropertyName, isSync);
+          (subscriber as unknown as PeerChangeEventReceiverPU<T>).syncPeerTrackedPropertyHasChanged(this, changedPropertyName);
         } else  {
           stateMgmtConsole.warn(`${this.debugInfo()}: notifyTrackedObjectPropertyHasChanged: unknown subscriber ID 'subscribedId' error!`);
         }
@@ -371,7 +358,7 @@ implements ISinglePropertyChangeSubscriber<T>, IMultiPropertiesChangeSubscriber,
 
   protected checkIsSupportedValue(value: T): boolean {
     // FIXME enable the check when V1-V2 interoperability is forbidden
-    // && !ObserveV2.IsProxiedObservedV2(value)
+    // && !ObserveV2.IsProxiedObservedV2(value))
     let res = ((typeof value === 'object' && typeof value !== 'function' &&
       !ObserveV2.IsObservedObjectV2(value) &&
       !ObserveV2.IsMakeObserved(value)) ||
@@ -407,7 +394,7 @@ implements ISinglePropertyChangeSubscriber<T>, IMultiPropertiesChangeSubscriber,
           customComponent: this.debugInfoOwningView(),
           variableDeco: this.debugInfoDecorator(),
           variableName: this.info(),
-          expectedType: `undefined, null, Object including Array and instance of SubscribableAbstract, excluding function and V2 @Observed/@Trace object`,
+          expectedType: `undefined, null, Object including Array and instance of SubscribableAbstract and excluding function and V3 @observed/@track object`,
           value: value
         });
     }
@@ -491,8 +478,8 @@ implements ISinglePropertyChangeSubscriber<T>, IMultiPropertiesChangeSubscriber,
       // not access recording 
       return;
     }
-    if (elmtId === UINodeRegisterProxy.monitorIllegalV1V2StateAccess) {
-      const error = `${this.debugInfo()}: recordPropertyDependentUpdate trying to use V1 state to init/update child V2 @Component. Application error`;
+    if (elmtId === UINodeRegisterProxy.monitorIllegalV2V3StateAccess) {
+      const error = `${this.debugInfo()}: recordPropertyDependentUpdate trying to use V2 state to init/update child V3 @Component. Application error`;
       stateMgmtConsole.applicationError(error);
       throw new TypeError(error);
     }

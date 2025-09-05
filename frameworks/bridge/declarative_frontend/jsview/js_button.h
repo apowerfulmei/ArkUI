@@ -21,7 +21,6 @@
 #include "core/components/button/button_component.h"
 #include "core/components/text/text_component.h"
 #include "core/components/touch_listener/touch_listener_component.h"
-#include "core/components_ng/pattern/button/button_model.h"
 #include "core/components_ng/pattern/button/button_request_data.h"
 #include "core/event/ace_event_handler.h"
 #include "frameworks/bridge/declarative_frontend/engine/bindings_defines.h"
@@ -52,8 +51,6 @@ public:
     static void JsRemoteMessage(const JSCallbackInfo& info);
     static void JsPadding(const JSCallbackInfo& info);
     static void SetRole(const JSCallbackInfo& info);
-    static void SetMinFontScale(const JSCallbackInfo& info);
-    static void SetMaxFontScale(const JSCallbackInfo& info);
     static void JSBind(BindingTarget globalObj);
     static void CreateWithChild(const JSCallbackInfo& info);
     static void CreateWithLabel(const JSCallbackInfo& info);
@@ -75,8 +72,6 @@ private:
     static CreateWithPara ParseCreatePara(const JSCallbackInfo& info, bool hasLabel);
     static void ParseButtonRole(const JSRef<JSObject>& optionObj, CreateWithPara& param);
     static bool isLabelButton_;
-    static void SetMinMaxFontSize(ButtonParameters& buttonParameters, const JSRef<JSVal>& fontSizeValue,
-        const ButtonDimensionType type);
 };
 } // namespace OHOS::Ace::Framework
 #endif // FRAMEWORKS_BRIDGE_DECLARATIVE_FRONTEND_JS_VIEW_JS_BUTTON_H

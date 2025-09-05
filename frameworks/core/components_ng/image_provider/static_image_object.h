@@ -30,12 +30,8 @@ public:
     {}
     ~StaticImageObject() override = default;
 
-    RefPtr<CanvasImage> QueryWeakCanvasFromCache(const ImageSourceInfo& src, const SizeF& size);
-
-    RefPtr<CanvasImage> QueryCanvasFromCache(const ImageSourceInfo& src, const SizeF& size);
-
-    void MakeCanvasImage(
-        const WeakPtr<ImageLoadingContext>& ctxWp, const SizeF& targetSize, bool forceResize, bool syncLoad) override;
+    void MakeCanvasImage(const RefPtr<ImageLoadingContext>& ctxWp, const SizeF& targetSize, bool forceResize,
+        bool syncLoad, bool loadInVipChannel = false) override;
 
     RefPtr<ImageObject> Clone() override;
 

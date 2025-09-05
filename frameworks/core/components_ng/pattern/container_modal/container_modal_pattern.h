@@ -16,12 +16,8 @@
 #ifndef FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_PATTERNS_CONTAINER_MODAL_CONTAINER_MODAL_PATTERN_H
 #define FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_PATTERNS_CONTAINER_MODAL_CONTAINER_MODAL_PATTERN_H
 
-#include "base/geometry/dimension.h"
-#include "base/memory/referenced.h"
 #include "core/components/container_modal/container_modal_constants.h"
-#include "core/components_ng/base/frame_node.h"
 #include "core/components_ng/pattern/container_modal/container_modal_accessibility_property.h"
-#include "core/components_ng/pattern/container_modal/container_modal_toolbar.h"
 #include "core/components_ng/pattern/custom/custom_title_node.h"
 #include "core/components_ng/pattern/pattern.h"
 #include "core/pipeline_ng/pipeline_context.h"
@@ -51,24 +47,22 @@ public:
         return false;
     }
 
-    void CallSetContainerWindow(bool considerFloatingWindow);
-
     void OnAttachToFrameNode() override
     {
         auto pipeline = PipelineContext::GetCurrentContext();
         CHECK_NULL_VOID(pipeline);
         auto host = GetHost();
         CHECK_NULL_VOID(host);
-        pipeline->AddWindowActivateChangedCallback(host->GetId());
+        pipeline->AddWindowFocusChangedCallback(host->GetId());
     }
 
-    void OnWindowActivated() override;
+    void OnWindowFocused() override;
 
-    void OnWindowDeactivated() override;
+    void OnWindowUnfocused() override;
 
     virtual void OnWindowForceUnfocused();
 
-    virtual void Init();
+    void Init();
 
     virtual void ShowTitle(bool isShow, bool hasDeco = true, bool needUpdate = false);
 
@@ -78,13 +72,16 @@ public:
 
     virtual void SetContainerButtonHide(bool hideSplit, bool hideMaximize, bool hideMinimize, bool hideClose);
 
-    virtual void SetCloseButtonStatus(bool isEnabled);
-
-    virtual void SetWindowContainerColor(const Color& activeColor, const Color& inactiveColor);
+    void SetCloseButtonStatus(bool isEnabled);
 
     bool GetIsFocus() const
     {
         return isFocus_;
+    }
+
+    void SetIsFocus(bool isFocus)
+    {
+        isFocus_ = isFocus;
     }
 
     std::string GetAppLabel()
@@ -124,9 +121,7 @@ public:
     {
         auto row = GetCustomTitleRow();
         CHECK_NULL_RETURN(row, nullptr);
-        auto title = row->GetChildren().front();
-        CHECK_NULL_RETURN(title, nullptr);
-        return AceType::DynamicCast<CustomTitleNode>(title->GetChildren().front());
+        return AceType::DynamicCast<CustomTitleNode>(row->GetChildren().front());
     }
 
     RefPtr<FrameNode> GetStackNode()
@@ -143,20 +138,11 @@ public:
         return AceType::DynamicCast<FrameNode>(stack->GetChildren().front());
     }
 
-    RefPtr<FrameNode> GetPageNode()
-    {
-        auto stageNode = GetContentNode();
-        CHECK_NULL_RETURN(stageNode, nullptr);
-        return AceType::DynamicCast<FrameNode>(stageNode->GetChildren().front());
-    }
-
     RefPtr<CustomTitleNode> GetFloatingTitleNode()
     {
         auto row = GetFloatingTitleRow();
         CHECK_NULL_RETURN(row, nullptr);
-        auto title = row->GetChildren().front();
-        CHECK_NULL_RETURN(title, nullptr);
-        return AceType::DynamicCast<CustomTitleNode>(title->GetChildren().front());
+        return AceType::DynamicCast<CustomTitleNode>(row->GetChildren().front());
     }
 
     RefPtr<FrameNode> GetGestureRow()
@@ -166,33 +152,29 @@ public:
         return AceType::DynamicCast<FrameNode>(column->GetChildAtIndex(2));
     }
 
-    RefPtr<CustomTitleNode> GetCustomButtonNode()
-    {
-        auto row = GetControlButtonRow();
-        CHECK_NULL_RETURN(row, nullptr);
-        return AceType::DynamicCast<CustomTitleNode>(row->GetChildren().front());
-    }
-    void UpdateRowHeight(const RefPtr<FrameNode>& row, Dimension height);
     void UpdateGestureRowVisible();
     void SetContainerModalTitleVisible(bool customTitleSettedShow, bool floatingTitleSettedShow);
-    bool GetContainerModalTitleVisible(bool isImmersive);
-    virtual void SetContainerModalTitleHeight(int32_t height);
-    void SetContainerModalTitleWithoutButtonsHeight(Dimension height);
-    void SetControlButtonsRowHeight(Dimension height);
+    void SetContainerModalTitleHeight(int32_t height);
     int32_t GetContainerModalTitleHeight();
-    virtual bool GetContainerModalButtonsRect(RectF& containerModal, RectF& buttons);
+    bool GetContainerModalButtonsRect(RectF& containerModal, RectF& buttons);
     void SubscribeContainerModalButtonsRectChange(
         std::function<void(RectF& containerModal, RectF& buttons)>&& callback);
-    virtual void CallContainerModalNative(const std::string& name, const std::string& value) {};
-    virtual void OnContainerModalEvent(const std::string& name, const std::string& value) {};
     void GetWindowPaintRectWithoutMeasureAndLayout(RectInt& rect);
-    void GetWindowPaintRectWithoutMeasureAndLayout(Rect& rect, bool isContainerModal);
     void CallButtonsRectChange();
-    bool OnDirtyLayoutWrapperSwap(const RefPtr<LayoutWrapper>&, const DirtySwapConfig&) override;
+    bool OnDirtyLayoutWrapperSwap(const RefPtr<LayoutWrapper>&, const DirtySwapConfig&) override
+    {
+        CallButtonsRectChange();
+        return false;
+    }
 
     void OnLanguageConfigurationUpdate() override;
 
     void InitColumnTouchTestFunc();
+
+    void SetIsHoveredMenu(bool isHoveredMenu)
+    {
+        isHoveredMenu_ = isHoveredMenu;
+    }
 
     bool GetIsHoveredMenu()
     {
@@ -200,6 +182,7 @@ public:
     }
 
     Dimension GetCustomTitleHeight();
+    Dimension GetStackNodeRadius();
 
     virtual void EnableContainerModalGesture(bool isEnable) {}
 
@@ -217,42 +200,6 @@ public:
     {
         return false;
     }
-
-    void InitAllTitleRowLayoutProperty();
-
-    void SetEnableContainerModalCustomGesture(bool enable)
-    {
-        this->enableContainerModalCustomGesture_ = enable;
-    }
-    
-    static void EnableContainerModalCustomGesture(RefPtr<PipelineContext> pipeline, bool enable);
-    void SetToolbarBuilder(const RefPtr<FrameNode>& parent, std::function<RefPtr<UINode>()>&& builder);
-    virtual CalcLength GetControlButtonRowWidth();
-
-    void SetIsHaveToolBar(bool isHave)
-    {
-        isHaveToolBar_ = isHave;
-    }
-
-    bool GetIsHaveToolBar() const
-    {
-        return isHaveToolBar_;
-    }
-
-    bool IsContainerModalTransparent() const;
-
-    Dimension titleHeight_ = CONTAINER_TITLE_HEIGHT;
-
-    RefPtr<ContainerModalToolBar> GetTitleManager()
-    {
-        return titleMgr_;
-    }
-
-    bool IsExpandStackNode() const
-    {
-        return isTitleShow_ && customTitleSettedShow_ && IsContainerModalTransparent();
-    }
-
 protected:
     virtual RefPtr<UINode> GetTitleItemByIndex(const RefPtr<FrameNode>& controlButtonsNode, int32_t originIndex)
     {
@@ -280,42 +227,26 @@ protected:
     bool CanShowFloatingTitle();
     bool CanShowCustomTitle();
     void TrimFloatingWindowLayout();
-    Color GetContainerColor(bool isFocus);
 
     WindowMode windowMode_;
     bool customTitleSettedShow_ = true;
     bool floatingTitleSettedShow_ = true;
     std::function<void(RectF&, RectF&)> controlButtonsRectChangeCallback_;
     RectF buttonsRect_;
-    bool isInitButtonsRect_ = false;
-    Color activeColor_;
-    Color inactiveColor_;
-    void InitTitleRowLayoutProperty(RefPtr<FrameNode> titleRow, bool isFloating);
-
-    RefPtr<FrameNode> sideBarDivider_ = nullptr;
-    RefPtr<FrameNode> navbarRow_ = nullptr;
-    RefPtr<FrameNode> leftNavRow_ = nullptr;
-    RefPtr<FrameNode> rightNavRow_ = nullptr;
-    RefPtr<FrameNode> navBarDivider_ = nullptr;
-    RefPtr<FrameNode> navDestbarRow_ = nullptr;
-    RefPtr<FrameNode> leftNavDestRow_ = nullptr;
-    RefPtr<FrameNode> rightNavDestRow_ = nullptr;
-
-protected:
+    Dimension titleHeight_ = CONTAINER_TITLE_HEIGHT;
+    void InitTitleRowLayoutProperty(RefPtr<FrameNode> titleRow);
+private:
     void WindowFocus(bool isFocus);
     void SetTitleButtonHide(
         const RefPtr<FrameNode>& controlButtonsNode, bool hideSplit, bool hideMaximize, bool hideMinimize,
             bool hideClose);
+    CalcLength GetControlButtonRowWidth();
     void InitTitle();
     void InitContainerEvent();
     void InitLayoutProperty();
-    void InitContainerColor();
-    RefPtr<PipelineContext> GetContextRefPtr();
 
-    virtual void InitButtonsLayoutProperty();
-    virtual void NotifyButtonsRectChange(const RectF& containerModal, const RectF& buttonsRect) {}
+    void InitButtonsLayoutProperty();
 
-    void UpdateContainerBgColor();
     std::string appLabel_;
     RefPtr<PanEvent> panEvent_ = nullptr;
 
@@ -324,14 +255,7 @@ protected:
     bool hasDeco_ = true;
     bool isFocus_ = false;
     bool hideSplitButton_ = false;
-    bool isHoveredMenu_ = false;
-    bool isTitleShow_ = false;
-    bool enableContainerModalCustomGesture_ = false;
-    RRect windowPaintRect_;
-    bool isCustomColor_;
-    RefPtr<ContainerModalToolBar> titleMgr_;
-    RefPtr<ContainerModalToolBar> floatTitleMgr_;
-    bool isHaveToolBar_ = false;
+    bool isHoveredMenu_;
 };
 } // namespace OHOS::Ace::NG
 #endif // FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_PATTERNS_CONTAINER_MODAL_CONTAINER_MODAL_PATTERN_H

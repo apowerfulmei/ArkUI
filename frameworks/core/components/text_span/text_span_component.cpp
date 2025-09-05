@@ -16,6 +16,7 @@
 #include "core/components/text_span/text_span_component.h"
 
 #include "core/components/text_span/render_text_span.h"
+#include "core/components/text_span/text_span_element.h"
 
 namespace OHOS::Ace {
 

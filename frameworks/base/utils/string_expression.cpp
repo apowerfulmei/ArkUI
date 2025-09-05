@@ -187,28 +187,28 @@ bool FilterCalcSpecialString(const std::string& formula)
     return (isSingleCalc && isNotIncludeEmptyBracket);
 }
 
-void ConvertDal2Rpn(std::string formula, std::vector<std::string> &result)
+std::vector<std::string> ConvertDal2Rpn(std::string formula)
 {
-    result.clear();
+    std::vector<std::string> result;
     std::vector<std::string> opStack;
     std::string curNum;
     std::regex calc("calc");
     std::regex space(" ");
     bool isValid = CheckCalcIsValid(formula);
     if (!isValid) {
-        return;
+        return result;
     }
     ReplaceSignNumberWithUnit(formula);
     ReplaceSignNumber(formula);
     formula = regex_replace(formula, space, "");
     isValid = FilterCalcSpecialString(formula);
     if (!isValid) {
-        return;
+        return result;
     }
     formula = regex_replace(formula, calc, "");
     bool ret = PushOpStack(formula, curNum, result, opStack);
     if (!ret) {
-        return;
+        return result;
     }
     if (!curNum.empty()) {
         result.emplace_back(curNum);
@@ -218,6 +218,7 @@ void ConvertDal2Rpn(std::string formula, std::vector<std::string> &result)
         result.emplace_back(opStack.back());
         opStack.pop_back();
     }
+    return result;
 }
 
 bool CalculateFourOperationsExp(const std::string& exp, const Dimension& num1, const Dimension& num2,
@@ -286,15 +287,9 @@ bool CalculateExpImpl(const std::vector<std::string>& rpnexp, const std::functio
     return true;
 }
 
-double CalculateExp(const std::string& expression, const std::function<double(const Dimension&)>& calcFunc,
-    const std::vector<std::string>& lengthString)
+double CalculateExp(const std::string& expression, const std::function<double(const Dimension&)>& calcFunc)
 {
-    std::vector<std::string> rpnexp;
-    if (!lengthString.empty()) {
-        rpnexp = lengthString;
-    } else {
-        ConvertDal2Rpn(expression, rpnexp);
-    }
+    std::vector<std::string> rpnexp = ConvertDal2Rpn(expression);
     std::vector<Dimension> result;
     double opRes = 0.0;
     auto ret = CalculateExpImpl(rpnexp, calcFunc, result, opRes);

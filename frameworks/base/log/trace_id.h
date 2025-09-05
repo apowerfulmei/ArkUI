@@ -17,7 +17,6 @@
 #define FOUNDATION_ACE_FRAMEWORKS_BASE_LOG_TRACE_ID_H
 
 #include <memory>
-
 namespace OHOS::Ace {
 
 class TraceId {

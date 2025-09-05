@@ -15,6 +15,8 @@
 
 #include "core/components_ng/event/touch_event.h"
 
+#include "core/components_ng/event/response_ctrl.h"
+#include "core/components_ng/gestures/recognizers/gesture_recognizer.h"
 #include "core/pipeline_ng/pipeline_context.h"
 
 namespace OHOS::Ace::NG {
@@ -36,15 +38,11 @@ void TouchEventActuator::OnFlushTouchEventsEnd()
 
 bool TouchEventActuator::HandleEvent(const TouchEvent& point)
 {
-    bool isNeedPropagation = false;
     // if current node is forbidden by monopolize, upper nodes should not response either
     if (!ShouldResponse()) {
-        SetNeedPropagation(isNeedPropagation);
         return false;
     }
-    isNeedPropagation = TriggerTouchCallBack(point);
-    SetNeedPropagation(isNeedPropagation);
-    return isNeedPropagation;
+    return TriggerTouchCallBack(point);
 }
 
 bool TouchEventActuator::TriggerTouchCallBack(const TouchEvent& point)
@@ -89,7 +87,7 @@ bool TouchEventActuator::TriggerTouchCallBack(const TouchEvent& point)
     for (const auto& item : point.history) {
         auto historyInfo = CreateHistoryTouchItemInfo(item, point);
         event.AddHistoryLocationInfo(std::move(historyInfo));
-        event.AddHistoryPointerEvent(item.GetTouchEventPointerEvent());
+        event.AddHistoryPointerEvent(item.pointerEvent);
     }
     TriggerCallBacks(event);
     return !event.IsStopPropagation();
@@ -97,7 +95,7 @@ bool TouchEventActuator::TriggerTouchCallBack(const TouchEvent& point)
 
 bool TouchEventActuator::ShouldResponse()
 {
-    auto context = PipelineContext::GetCurrentContextSafelyWithCheck();
+    auto context = PipelineContext::GetCurrentContext();
     CHECK_NULL_RETURN(context, true);
 
     auto eventManager = context->GetEventManager();
@@ -117,7 +115,7 @@ TouchEventInfo TouchEventActuator::CreateTouchEventInfo(const TouchEvent& lastPo
 {
     TouchEventInfo eventInfo("touchEvent");
     eventInfo.SetTimeStamp(lastPoint.time);
-    eventInfo.SetPointerEvent(lastPoint.GetTouchEventPointerEvent());
+    eventInfo.SetPointerEvent(lastPoint.pointerEvent);
     eventInfo.SetDeviceId(lastPoint.deviceId);
     eventInfo.SetTarget(GetEventTarget().value_or(EventTarget()));
     auto frameNode = GetAttachedNode().Upgrade();
@@ -133,9 +131,6 @@ TouchEventInfo TouchEventActuator::CreateTouchEventInfo(const TouchEvent& lastPo
     }
     if (lastPoint.tiltY.has_value()) {
         eventInfo.SetTiltY(lastPoint.tiltY.value());
-    }
-    if (lastPoint.rollAngle.has_value()) {
-        eventInfo.SetRollAngle(lastPoint.rollAngle.value());
     }
     eventInfo.SetSourceTool(lastPoint.sourceTool);
     eventInfo.SetPressedKeyCodes(lastPoint.pressedKeyCodes_);
@@ -153,14 +148,12 @@ TouchLocationInfo TouchEventActuator::CreateChangedTouchInfo(const TouchEvent& l
 {
     TouchLocationInfo changedInfo("onTouch", lastPoint.GetOriginalReCovertId());
     PointF lastLocalPoint(lastPoint.x, lastPoint.y);
-    NGGestureRecognizer::Transform(lastLocalPoint, GetAttachedNode(), false,
-        isPostEventResult_ || event.passThrough, event.postEventNodeId);
+    NGGestureRecognizer::Transform(lastLocalPoint, GetAttachedNode(), false, isPostEventResult_, event.postEventNodeId);
     auto localX = static_cast<float>(lastLocalPoint.GetX());
     auto localY = static_cast<float>(lastLocalPoint.GetY());
     changedInfo.SetLocalLocation(Offset(localX, localY));
     changedInfo.SetGlobalLocation(Offset(lastPoint.x, lastPoint.y));
     changedInfo.SetScreenLocation(Offset(lastPoint.screenX, lastPoint.screenY));
-    changedInfo.SetGlobalDisplayLocation(Offset(lastPoint.globalDisplayX, lastPoint.globalDisplayY));
     changedInfo.SetTouchType(lastPoint.type);
     changedInfo.SetForce(lastPoint.force);
     changedInfo.SetPressedTime(lastPoint.pressedTime);
@@ -184,19 +177,15 @@ TouchLocationInfo TouchEventActuator::CreateTouchItemInfo(
     float globalY = pointItem.y;
     float screenX = pointItem.screenX;
     float screenY = pointItem.screenY;
-    double globalDisplayX = pointItem.globalDisplayX;
-    double globalDisplayY = pointItem.globalDisplayY;
     PointF localPoint(globalX, globalY);
-    NGGestureRecognizer::Transform(
-        localPoint, GetAttachedNode(), false, isPostEventResult_ || event.passThrough, event.postEventNodeId);
+    NGGestureRecognizer::Transform(localPoint, GetAttachedNode(), false, isPostEventResult_, event.postEventNodeId);
     auto localX = static_cast<float>(localPoint.GetX());
     auto localY = static_cast<float>(localPoint.GetY());
     TouchLocationInfo info("onTouch", pointItem.GetOriginalReCovertId());
     info.SetGlobalLocation(Offset(globalX, globalY));
     info.SetLocalLocation(Offset(localX, localY));
     info.SetScreenLocation(Offset(screenX, screenY));
-    info.SetGlobalDisplayLocation(Offset(globalDisplayX, globalDisplayY));
-    info.SetTouchType((pointItem.originalId == event.originalId) ? type : TouchType::MOVE);
+    info.SetTouchType(type);
     info.SetForce(pointItem.force);
     info.SetPressedTime(pointItem.downTime);
     info.SetWidth(pointItem.width);
@@ -218,11 +207,8 @@ TouchLocationInfo TouchEventActuator::CreateHistoryTouchItemInfo(const TouchEven
     float globalY = eventItem.y;
     float screenX = eventItem.screenX;
     float screenY = eventItem.screenY;
-    double globalDisplayX = eventItem.globalDisplayX;
-    double globalDisplayY = eventItem.globalDisplayY;
     PointF localPoint(globalX, globalY);
-    NGGestureRecognizer::Transform(
-        localPoint, GetAttachedNode(), false, isPostEventResult_ || event.passThrough, event.postEventNodeId);
+    NGGestureRecognizer::Transform(localPoint, GetAttachedNode(), false, isPostEventResult_, event.postEventNodeId);
     auto localX = static_cast<float>(localPoint.GetX());
     auto localY = static_cast<float>(localPoint.GetY());
     TouchLocationInfo historyInfo("onTouch", eventItem.GetOriginalReCovertId());
@@ -230,7 +216,6 @@ TouchLocationInfo TouchEventActuator::CreateHistoryTouchItemInfo(const TouchEven
     historyInfo.SetGlobalLocation(Offset(globalX, globalY));
     historyInfo.SetLocalLocation(Offset(localX, localY));
     historyInfo.SetScreenLocation(Offset(screenX, screenY));
-    historyInfo.SetGlobalDisplayLocation(Offset(globalDisplayX, globalDisplayY));
     historyInfo.SetTouchType(eventItem.type);
     historyInfo.SetForce(eventItem.force);
     historyInfo.SetPressedTime(eventItem.pressedTime);
@@ -243,7 +228,6 @@ TouchLocationInfo TouchEventActuator::CreateHistoryTouchItemInfo(const TouchEven
         historyInfo.SetTiltY(eventItem.tiltY.value());
     }
     historyInfo.SetSourceTool(eventItem.sourceTool);
-    historyInfo.SetOperatingHand(eventItem.operatingHand);
     return historyInfo;
 }
 

@@ -15,9 +15,11 @@
 
 #include "core/components/xcomponent/xcomponent_element.h"
 
+#include "base/json/json_util.h"
 #include "core/common/container.h"
+#include "core/components/xcomponent/render_xcomponent.h"
 #include "core/components/xcomponent/rosen_render_xcomponent.h"
-#include "core/event/ace_event_helper.h"
+#include "core/components/xcomponent/xcomponent_component.h"
 
 namespace OHOS::Ace {
 #ifdef OHOS_STANDARD_SYSTEM
@@ -277,7 +279,7 @@ void XComponentElement::CreateSurface()
 
     producerSurface_->SetQueueSize(SURFACE_QUEUE_SIZE);
     producerSurface_->SetUserData("SURFACE_STRIDE_ALIGNMENT", SURFACE_STRIDE_ALIGNMENT);
-    producerSurface_->SetUserData("SURFACE_FORMAT", std::to_string(GRAPHIC_PIXEL_FMT_RGBA_8888));
+    producerSurface_->SetUserData("SURFACE_FORMAT", std::to_string(PIXEL_FMT_RGBA_8888));
 }
 
 void XComponentElement::OnSurfaceCreated(const OHOS::sptr<OHOS::Surface>& surface)

@@ -62,8 +62,6 @@ constexpr float CHECK_STROKE = 200.0;
 constexpr float CHECKMARK_PAINTSIZE = 400.0;
 constexpr float HOVER_DURATION = 250.0;
 constexpr float HOVER_TO_TOUCH_DURATION = 100.0;
-constexpr float SIZE_WIDTH_NEW = 50.0f;
-constexpr float SIZE_HEIGHT = 460.0f;
 constexpr double BORDER_WIDTH = 300.0;
 const Color POINT_COLOR = Color::BLUE;
 const Color ACTIVE_COLOR = Color::BLACK;
@@ -94,7 +92,6 @@ void CheckBoxGroupPaintPropertyTestNG::SetUpTestCase()
     auto themeManager = AceType::MakeRefPtr<MockThemeManager>();
     MockPipelineContext::GetCurrent()->SetThemeManager(themeManager);
     EXPECT_CALL(*themeManager, GetTheme(_)).WillRepeatedly(Return(AceType::MakeRefPtr<CheckboxTheme>()));
-    EXPECT_CALL(*themeManager, GetTheme(_, _)).WillRepeatedly(Return(AceType::MakeRefPtr<CheckboxTheme>()));
     RefPtr<FrameNode> stageNode = AceType::MakeRefPtr<FrameNode>("STAGE", -1, AceType::MakeRefPtr<Pattern>());
     auto stageManager = AceType::MakeRefPtr<StageManager>(stageNode);
     MockPipelineContext::GetCurrent()->stageManager_ = stageManager;
@@ -114,8 +111,7 @@ CheckBoxGroupModifier::Parameters CreateDefModifierParam()
     CheckBoxGroupModifier::Parameters parameters = { BORDER_WIDTH, BORDER_RADIUS, CHECK_STROKE, CHECKMARK_PAINTSIZE,
         HOVER_DURATION, HOVER_TO_TOUCH_DURATION, POINT_COLOR, ACTIVE_COLOR, INACTIVE_COLOR, SHADOW_COLOR,
         CLICK_EFFECT_COLOR, HOVER_COLOR, INACTIVE_POINT_COLOR, HOVER_RADIUS, HORIZONTAL_PADDING, VERTICAL_PADDING,
-        SHADOW_WIDTH_FORUPDATE, UIStatus::UNSELECTED, PADDING_SIZE, PADDING_SIZE, false,
-        CheckBoxGroupPaintProperty::SelectStatus::NONE };
+        SHADOW_WIDTH_FORUPDATE, UIStatus::UNSELECTED, PADDING_SIZE, CheckBoxGroupPaintProperty::SelectStatus::NONE };
 
     return parameters;
 }
@@ -808,36 +804,5 @@ HWTEST_F(CheckBoxGroupPaintPropertyTestNG, CheckBoxGroupPaintMethodTest016, Test
      */
     modifier->DrawTouchAndHoverBoard(canvas, CONTENT_SIZE, CONTENT_OFFSET);
     AceApplicationInfo::GetInstance().SetApiTargetVersion(backupApiVersion);
-}
-
-/**
- * @tc.name: SetModifierBoundsRect001
- * @tc.desc: test SetModifierBoundsRect
- * @tc.type: FUNC
- */
-HWTEST_F(CheckBoxGroupPaintPropertyTestNG, SetModifierBoundsRect001, TestSize.Level1)
-{
-    CheckBoxGroupModifier::Parameters parameters;
-    RefPtr<CheckBoxGroupModifier> checkboxGroupModifier = AceType::MakeRefPtr<CheckBoxGroupModifier>(parameters);
-    CheckBoxGroupPaintMethod checkBoxGroupPaintMethod(checkboxGroupModifier);
-    auto themeManager = AceType::MakeRefPtr<MockThemeManager>();
-    MockPipelineContext::GetCurrent()->SetThemeManager(themeManager);
-    auto checkBoxTheme = AceType::MakeRefPtr<CheckboxTheme>();
-    EXPECT_CALL(*themeManager, GetTheme(_)).WillRepeatedly(Return(checkBoxTheme));
-    EXPECT_CALL(*themeManager, GetTheme(_, _)).WillRepeatedly(Return(checkBoxTheme));
-    checkBoxTheme->hotZoneHorizontalPadding_ = Dimension(0.0f);
-    checkBoxTheme->hotZoneVerticalPadding_ = Dimension(0.0f);
-    checkBoxGroupPaintMethod.checkboxGroupModifier_->rect_->x_ = 0.0f;
-    checkBoxGroupPaintMethod.checkboxGroupModifier_->rect_->y_ = 0.0f;
-    checkBoxGroupPaintMethod.checkboxGroupModifier_->rect_->width_ = SIZE_WIDTH_NEW;
-    checkBoxGroupPaintMethod.checkboxGroupModifier_->rect_->height_ = SIZE_HEIGHT;
-    SizeF size(SIZE_WIDTH_NEW, SIZE_HEIGHT);
-    OffsetF offset(0.0f, 0.0f);
-    RefPtr<CheckBoxPaintProperty> paintProperty = AceType::MakeRefPtr<CheckBoxPaintProperty>();
-    WeakPtr<RenderContext> renderContext;
-    RefPtr<GeometryNode> geometryNode = AceType::MakeRefPtr<GeometryNode>();
-    PaintWrapper* paintWrapper = new PaintWrapper(renderContext, geometryNode, paintProperty);
-    checkBoxGroupPaintMethod.SetModifierBoundsRect(checkBoxTheme, size, offset, paintWrapper);
-    EXPECT_EQ(checkBoxGroupPaintMethod.checkboxGroupModifier_->rect_->height_, SIZE_HEIGHT);
 }
 } // namespace OHOS::Ace::NG

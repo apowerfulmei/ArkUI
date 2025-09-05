@@ -28,12 +28,12 @@
 namespace OHOS::Ace::NG {
 // RenderSurface is used for SurfaceNode
 class ACE_FORCE_EXPORT RenderSurface : public virtual AceType {
-    DECLARE_ACE_TYPE(NG::RenderSurface, AceType);
+    DECLARE_ACE_TYPE(NG::RenderSurface, AceType)
 
 public:
     RenderSurface() = default;
     ~RenderSurface() override = default;
-
+ 
 // under the condition of supporting cross platform and texture rendering,
 // it is necessary to dynamically set the rendering type of the surface node.
 // the defalut type is RenderSurfaceType::TEXTURE.
@@ -76,11 +76,6 @@ public:
         return "";
     }
 
-    virtual uint64_t GetUniqueIdNum() const
-    {
-        return 0;
-    }
-
     virtual void UpdateSurfaceSizeInUserData(uint32_t width, uint32_t height) {}
 
     virtual void SetExtSurfaceBounds(int32_t left, int32_t top, int32_t width, int32_t height) {}
@@ -95,8 +90,6 @@ public:
     virtual void SetTransformHint(uint32_t rotation) {}
 
     virtual void DumpInfo() {}
-
-    virtual void DumpInfo(std::unique_ptr<JsonValue>& json) {}
 
     virtual void SetIsTexture(bool isTexture) {}
 
@@ -123,10 +116,6 @@ public:
 
     virtual void SetPatternType(const std::string& type) {}
 
-    virtual void SetBufferUsage(const std::string& usage) {}
-
-    virtual void SetBufferTypeLeak(const std::string& bufferTypeLeak) {}
-
     virtual void SetSurfaceQueueSize(int32_t queueSize) {}
 
     virtual void DrawBufferForXComponent(RSCanvas& canvas, float width, float height, float offsetX, float offsetY) {};
@@ -143,16 +132,11 @@ public:
 
     virtual void RegisterBufferCallback() {}
 
-    virtual void OnWindowStateChange(bool isShow) {}
-
     virtual void SetIsNeedSyncGeometryProperties(bool isNeedSyncGeometryProperties) {}
 
     virtual void SetKeyBoardAvoidRect(RectF keyBoardAvoidRect) {}
 
-    virtual std::string GetPSurfaceName()
-    {
-        return "";
-    }
+    virtual void OnWindowStateChange(bool isShow) {}
 
 protected:
     ACE_DISALLOW_COPY_AND_MOVE(RenderSurface);

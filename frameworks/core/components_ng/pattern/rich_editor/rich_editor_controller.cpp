@@ -21,28 +21,30 @@ int32_t RichEditorController::AddImageSpan(const ImageSpanOptions& options)
 {
     auto richEditorPattern = pattern_.Upgrade();
     CHECK_NULL_RETURN(richEditorPattern, 0);
-    return richEditorPattern->AddImageSpan(options, TextChangeReason::CONTROLLER);
+    return richEditorPattern->AddImageSpan(options);
 }
 
 int32_t RichEditorController::AddTextSpan(const TextSpanOptions& options)
 {
     auto richEditorPattern = pattern_.Upgrade();
     CHECK_NULL_RETURN(richEditorPattern, 0);
-    return richEditorPattern->AddTextSpan(options, TextChangeReason::CONTROLLER);
+    TAG_LOGI(AceLogTag::ACE_RICH_TEXT, "textLength=%{public}d, offset=%{public}d",
+        static_cast<int32_t>(options.value.length()), options.offset.value_or(-1));
+    return richEditorPattern->AddTextSpan(options);
 }
 
 int32_t RichEditorController::AddSymbolSpan(const SymbolSpanOptions& options)
 {
     auto richEditorPattern = pattern_.Upgrade();
     CHECK_NULL_RETURN(richEditorPattern, 0);
-    return richEditorPattern->AddSymbolSpan(options, TextChangeReason::CONTROLLER);
+    return richEditorPattern->AddSymbolSpan(options);
 }
 
 int32_t RichEditorController::AddPlaceholderSpan(const RefPtr<UINode>& customNode, const SpanOptionBase& options)
 {
     auto richEditorPattern = pattern_.Upgrade();
     CHECK_NULL_RETURN(richEditorPattern, 0);
-    return richEditorPattern->AddPlaceholderSpan(customNode, options, TextChangeReason::CONTROLLER);
+    return richEditorPattern->AddPlaceholderSpan(customNode, options);
 }
 
 void RichEditorController::UpdateSpanStyle(
@@ -76,7 +78,7 @@ SelectionInfo RichEditorController::GetSpansInfo(int32_t start, int32_t end)
     auto richEditorPattern = pattern_.Upgrade();
     CHECK_NULL_RETURN(richEditorPattern, {});
     ACE_SCOPED_TRACE("RichEditorControllerGetSpansInfo");
-    return richEditorPattern->GetSpansInfoByRange(start, end);
+    return richEditorPattern->GetSpansInfo(start, end, GetSpansMethod::GETSPANS);
 }
 
 SelectionInfo RichEditorController::GetSelectionSpansInfo()
@@ -100,7 +102,7 @@ void RichEditorController::DeleteSpans(const RangeOptions& options)
 {
     auto richEditorPattern = pattern_.Upgrade();
     CHECK_NULL_VOID(richEditorPattern);
-    richEditorPattern->DeleteSpans(options, TextChangeReason::CONTROLLER);
+    richEditorPattern->DeleteSpans(options);
 }
 
 void RichEditorController::UpdateParagraphStyle(int32_t start, int32_t end, const struct UpdateParagraphStyle& style)

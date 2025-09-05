@@ -14,7 +14,10 @@
  */
 #include "core/interfaces/native/node/navigator_modifier.h"
 
+#include "core/components/common/layout/constants.h"
+#include "core/components_ng/base/frame_node.h"
 #include "core/components_ng/pattern/navigator/navigator_model_ng.h"
+#include "core/pipeline/base/element_register.h"
 
 namespace OHOS::Ace::NG {
 void SetTarget(ArkUINodeHandle node, ArkUI_CharPtr value)
@@ -79,36 +82,16 @@ void ResetParams(ArkUINodeHandle node)
 namespace NodeModifier {
 const ArkUINavigatorModifier* GetNavigatorModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
-    static const ArkUINavigatorModifier modifier = {
-        .setTarget = SetTarget,
-        .resetTarget = ResetTarget,
-        .setType = SetType,
-        .resetType = ResetType,
-        .setActive = SetActive,
-        .resetActive = ResetActive,
-        .setParams = SetParams,
-        .resetParams = ResetParams,
-    };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
+    static const ArkUINavigatorModifier modifier = {SetTarget, ResetTarget, SetType, ResetType, SetActive,
+        ResetActive, SetParams, ResetParams };
 
     return &modifier;
 }
 
 const CJUINavigatorModifier* GetCJUINavigatorModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
-    static const CJUINavigatorModifier modifier = {
-        .setTarget = SetTarget,
-        .resetTarget = ResetTarget,
-        .setType = SetType,
-        .resetType = ResetType,
-        .setActive = SetActive,
-        .resetActive = ResetActive,
-        .setParams = SetParams,
-        .resetParams = ResetParams,
-    };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
+    static const CJUINavigatorModifier modifier = {SetTarget, ResetTarget, SetType, ResetType, SetActive,
+        ResetActive, SetParams, ResetParams };
 
     return &modifier;
 }

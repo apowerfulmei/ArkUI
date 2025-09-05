@@ -15,7 +15,16 @@
 
 #include "core/components_ng/pattern/navrouter/navrouter_model_ng.h"
 
+#include "base/memory/ace_type.h"
+#include "base/memory/referenced.h"
+#include "core/components_ng/base/frame_node.h"
+#include "core/components_ng/base/group_node.h"
+#include "core/components_ng/base/view_abstract.h"
+#include "core/components_ng/base/view_stack_processor.h"
+#include "core/components_ng/pattern/navrouter/navrouter_event_hub.h"
 #include "core/components_ng/pattern/navrouter/navrouter_group_node.h"
+#include "core/components_ng/pattern/navrouter/navrouter_pattern.h"
+#include "core/components_v2/inspector/inspector_constants.h"
 
 namespace OHOS::Ace::NG {
 void NavRouterModelNG::Create()
@@ -56,12 +65,5 @@ void NavRouterModelNG::SetNavRouteMode(FrameNode* frameNode, int32_t mode)
     auto navRouterPattern = navRouterGroupNode->GetPattern<NavRouterPattern>();
     CHECK_NULL_VOID(navRouterPattern);
     navRouterPattern->SetNavRouteMode(static_cast<NG::NavRouteMode>(mode));
-}
-
-void NavRouterModelNG::SetOnStateChange(FrameNode* frameNode, std::function<void(bool isActivated)>&& onStateChange)
-{
-    auto navRouterEventHub = AceType::DynamicCast<NavRouterEventHub>(frameNode->GetEventHub<EventHub>());
-    CHECK_NULL_VOID(navRouterEventHub);
-    navRouterEventHub->SetOnStateChange(std::move(onStateChange));
 }
 } // namespace OHOS::Ace::NG

@@ -14,29 +14,25 @@
  */
 #include "core/interfaces/native/node/blank_modifier.h"
 
+#include "core/pipeline/base/element_register.h"
+#include "core/components_ng/base/frame_node.h"
 #include "core/components_ng/pattern/blank/blank_model_ng.h"
+#include "core/components/common/layout/constants.h"
+#include "core/components/common/properties/color.h"
 #include "core/components_ng/base/view_abstract.h"
 
 namespace OHOS::Ace::NG {
-void SetColor(ArkUINodeHandle node, ArkUI_Uint32 value, void* colorRawPtr)
+void SetColor(ArkUINodeHandle node, ArkUI_Uint32 value)
 {
     auto *frameNode = reinterpret_cast<FrameNode *>(node);
     CHECK_NULL_VOID(frameNode);
-    BlankModelNG::ResetResObj(frameNode, "blank.color");
-    if (SystemProperties::ConfigChangePerform() && colorRawPtr) {
-        auto* color = reinterpret_cast<ResourceObject*>(colorRawPtr);
-        auto colorResObj = AceType::Claim(color);
-        BlankModelNG::SetColor(frameNode, colorResObj);
-    } else {
-        BlankModelNG::SetColor(frameNode, Color(value));
-    }
+    BlankModelNG::SetColor(frameNode, Color(value));
 }
 
 void ResetColor(ArkUINodeHandle node)
 {
     auto *frameNode = reinterpret_cast<FrameNode *>(node);
     CHECK_NULL_VOID(frameNode);
-    BlankModelNG::ResetResObj(frameNode, "blank.color");
     BlankModelNG::SetColor(frameNode, Color::TRANSPARENT);
 }
 
@@ -71,31 +67,15 @@ void ResetBlankMin(ArkUINodeHandle node)
 namespace NodeModifier {
 const ArkUIBlankModifier* GetBlankModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
-    static const ArkUIBlankModifier modifier = {
-        .setColor = SetColor,
-        .resetColor = ResetColor,
-        .setBlankHeight = SetBlankHeight,
-        .resetBlankHeight = ResetBlankHeight,
-        .setBlankMin = SetBlankMin,
-        .resetBlankMin = ResetBlankMin,
-    };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
+    static const ArkUIBlankModifier modifier = { SetColor, ResetColor, SetBlankHeight, ResetBlankHeight,
+        SetBlankMin, ResetBlankMin };
     return &modifier;
 }
 
 const CJUIBlankModifier* GetCJUIBlankModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
-    static const CJUIBlankModifier modifier = {
-        .setColor = SetColor,
-        .resetColor = ResetColor,
-        .setBlankHeight = SetBlankHeight,
-        .resetBlankHeight = ResetBlankHeight,
-        .setBlankMin = SetBlankMin,
-        .resetBlankMin = ResetBlankMin,
-    };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
+    static const CJUIBlankModifier modifier = { SetColor, ResetColor, SetBlankHeight, ResetBlankHeight,
+        SetBlankMin, ResetBlankMin };
     return &modifier;
 }
 }

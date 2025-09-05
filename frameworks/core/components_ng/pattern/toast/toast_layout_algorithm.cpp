@@ -15,16 +15,15 @@
 
 #include "core/components_ng/pattern/toast/toast_layout_algorithm.h"
 
-#include "base/subwindow/subwindow_manager.h"
-#include "core/common/ace_engine.h"
+#include "base/utils/utils.h"
+#include "core/components_ng/layout/layout_wrapper.h"
+#include "core/components/dialog/dialog_properties.h"
+#include "core/components_ng/pattern/toast/toast_view.h"
 #include "core/components_ng/pattern/toast/toast_pattern.h"
 #include "core/components_ng/pattern/text/text_layout_algorithm.h"
+#include "core/components_ng/pattern/text/text_layout_property.h"
 
 namespace OHOS::Ace::NG {
-namespace {
-    constexpr Dimension LIMIT_SPACING = 8.0_vp;
-} // namespace
-
 void UpdateToastAlign(int32_t& alignment)
 {
     bool isRtl = AceApplicationInfo::GetInstance().IsRightToLeft();
@@ -82,12 +81,6 @@ void ToastLayoutAlgorithm::Layout(LayoutWrapper* layoutWrapper)
         toastProperty->ResetToastOffset();
     }
     auto text = layoutWrapper->GetOrCreateChildByIndex(0);
-    CHECK_NULL_VOID(text);
-    auto padding = toastProperty->CreatePaddingAndBorder();
-    OffsetF textOffset = padding.Offset();
-    auto geometryNode = text->GetGeometryNode();
-    CHECK_NULL_VOID(geometryNode);
-    geometryNode->SetFrameOffset(textOffset);
     text->Layout();
 }
 
@@ -107,6 +100,7 @@ size_t GetLineCount(const RefPtr<LayoutWrapper>& textWrapper, LayoutConstraintF&
 void ToastLayoutAlgorithm::Measure(LayoutWrapper* layoutWrapper)
 {
     CHECK_NULL_VOID(layoutWrapper);
+    auto layoutConstraint = layoutWrapper->GetLayoutProperty()->CreateChildConstraint();
     auto toastProps = DynamicCast<ToastLayoutProperty>(layoutWrapper->GetLayoutProperty());
     CHECK_NULL_VOID(toastProps);
     auto toastNode = layoutWrapper->GetHostNode();
@@ -115,66 +109,13 @@ void ToastLayoutAlgorithm::Measure(LayoutWrapper* layoutWrapper)
     CHECK_NULL_VOID(toastPattern);
     toastPattern->InitWrapperRect(layoutWrapper, toastProps);
     auto text = layoutWrapper->GetOrCreateChildByIndex(0);
-    auto layoutConstraint = GetTextLayoutConstraint(layoutWrapper);
     // TextAlign should be START when lines of text are greater than 1
     if (GetLineCount(text, layoutConstraint) > 1) {
         auto textLayoutProp = DynamicCast<TextLayoutProperty>(text->GetLayoutProperty());
         CHECK_NULL_VOID(textLayoutProp);
-        auto context = toastNode->GetContext();
-        CHECK_NULL_VOID(context);
-        auto toastTheme = context->GetTheme<ToastTheme>();
-        CHECK_NULL_VOID(toastTheme);
-        textLayoutProp->UpdateTextAlign(toastTheme->GetMultiLineTextAlign());
+        textLayoutProp->UpdateTextAlign(TextAlign::START);
     }
     text->Measure(layoutConstraint);
     PerformMeasureSelf(layoutWrapper);
-}
-
-LayoutConstraintF ToastLayoutAlgorithm::GetTextLayoutConstraint(LayoutWrapper* layoutWrapper)
-{
-    LayoutConstraintF layoutConstraint;
-    auto toastLayoutProperty = layoutWrapper->GetLayoutProperty();
-    CHECK_NULL_RETURN(toastLayoutProperty, layoutConstraint);
-    layoutConstraint = toastLayoutProperty->CreateChildConstraint();
-    auto frameNode = layoutWrapper->GetHostNode();
-    CHECK_NULL_RETURN(frameNode, layoutConstraint);
-    auto toastPattern = frameNode->GetPattern<ToastPattern>();
-    CHECK_NULL_RETURN(toastPattern, layoutConstraint);
-    auto toastProperty = frameNode->GetLayoutProperty<ToastLayoutProperty>();
-    CHECK_NULL_RETURN(toastProperty, layoutConstraint);
-    auto context = toastPattern->GetToastContext();
-    CHECK_NULL_RETURN(context, layoutConstraint);
-    auto safeAreaManager = context->GetSafeAreaManager();
-    auto keyboardInset = 0;
-    if (safeAreaManager) {
-        auto inset = safeAreaManager->GetKeyboardInset().Length();
-        keyboardInset = NearEqual(inset, 0.0f) ? safeAreaManager->GetRawKeyboardHeight() : inset;
-    }
-    auto deviceHeight = context->GetRootHeight();
-    auto keyboardOffset = deviceHeight - keyboardInset;
-    if (toastPattern->IsAlignedWithHostWindow() && GreatNotEqual(keyboardInset, 0)) {
-        deviceHeight = toastPattern->GetUiExtensionHostWindowRect().Height();
-
-        auto currentId = Container::CurrentId();
-        auto container = Container::Current();
-        CHECK_NULL_RETURN(container, layoutConstraint);
-        if (container->IsSubContainer()) {
-            auto parentContainerId = SubwindowManager::GetInstance()->GetParentContainerId(currentId);
-            auto parentContainer = AceEngine::Get().GetContainer(parentContainerId);
-            CHECK_NULL_RETURN(parentContainer, layoutConstraint);
-            CHECK_NULL_RETURN(parentContainer->IsUIExtensionWindow(), layoutConstraint);
-            auto toastSubwindow = SubwindowManager::GetInstance()->GetToastSubwindow(parentContainer);
-            if (toastSubwindow) {
-                auto parentWindowRect = toastSubwindow->GetParentWindowRect();
-                keyboardOffset = deviceHeight - keyboardInset - toastPattern->GetUiExtensionHostWindowRect().Bottom() +
-                                 parentWindowRect.Bottom();
-            }
-        }
-    }
-    if (GreatNotEqual(keyboardInset, 0) && (toastPattern->IsDefaultToast() || toastPattern->IsTopMostToast())) {
-        auto maxHeight = keyboardOffset - toastPattern->GetLimitPos().Value() - LIMIT_SPACING.ConvertToPx();
-        layoutConstraint.maxSize.SetHeight(maxHeight);
-    }
-    return layoutConstraint;
 }
 } // namespace OHOS::Ace::NG

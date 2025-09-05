@@ -15,6 +15,8 @@
 
 #include "core/components_ng/pattern/overlay/sheet_view.h"
 
+#include "base/geometry/axis.h"
+#include "base/geometry/ng/offset_t.h"
 #include "base/i18n/localization.h"
 #include "base/utils/utils.h"
 #include "core/common/ace_application_info.h"
@@ -23,31 +25,27 @@
 #include "core/components/drag_bar/drag_bar_theme.h"
 #include "core/components_ng/pattern/button/button_pattern.h"
 #include "core/components_ng/pattern/image/image_pattern.h"
+#include "core/components_ng/pattern/linear_layout/linear_layout_pattern.h"
 #include "core/components_ng/pattern/linear_layout/linear_layout_property.h"
 #include "core/components_ng/pattern/overlay/sheet_drag_bar_paint_property.h"
 #include "core/components_ng/pattern/overlay/sheet_drag_bar_pattern.h"
+#include "core/components_ng/pattern/overlay/sheet_presentation_pattern.h"
 #include "core/components_ng/pattern/overlay/sheet_presentation_property.h"
 #include "core/components_ng/pattern/overlay/sheet_style.h"
-#include "core/components_ng/pattern/overlay/sheet_wrapper_pattern.h"
 #include "core/components_ng/pattern/scroll/scroll_pattern.h"
 #include "core/components_ng/pattern/scrollable/scrollable_paint_property.h"
-#include "core/components_ng/pattern/sheet/sheet_mask_pattern.h"
 #include "core/components_ng/pattern/text/text_layout_property.h"
 #include "core/components_ng/pattern/text/text_pattern.h"
 #include "core/components_ng/property/measure_property.h"
+#include "core/components_ng/property/measure_utils.h"
 #include "core/components_v2/inspector/inspector_constants.h"
 #include "core/pipeline/base/element_register.h"
 #include "core/pipeline_ng/pipeline_context.h"
 
 namespace OHOS::Ace::NG {
 namespace {
-constexpr int32_t SHEET_DETENTS_ZERO = 0;
-constexpr int32_t SHEET_DETENTS_ONE = 1;
 constexpr int32_t SHEET_DETENTS_TWO = 2;
 constexpr int32_t SHEET_DETENTS_THREE = 3;
-constexpr int32_t SHEET_OPERATION_INDEX = 0;
-constexpr int32_t SHEET_CLOSE_ICON_INDEX = 1;
-constexpr int32_t SHEET_SCROLL_INDEX = 2;
 } // namespace
 RefPtr<FrameNode> SheetView::CreateSheetPage(int32_t targetId, std::string targetTag, RefPtr<UINode> builder,
     RefPtr<FrameNode> titleBuilder, std::function<void(const std::string&)>&& callback, NG::SheetStyle& sheetStyle)
@@ -59,28 +57,23 @@ RefPtr<FrameNode> SheetView::CreateSheetPage(int32_t targetId, std::string targe
     sheetNode->SetDragHitTestBlock(true);
     auto sheetLayoutProperty = sheetNode->GetLayoutProperty<SheetPresentationProperty>();
     CHECK_NULL_RETURN(sheetLayoutProperty, nullptr);
-    auto sheetPattern = sheetNode->GetPattern<SheetPresentationPattern>();
-    CHECK_NULL_RETURN(sheetPattern, nullptr);
     sheetLayoutProperty->UpdateSheetStyle(sheetStyle);
     auto eventConfirmHub = sheetNode->GetOrCreateGestureEventHub();
     CHECK_NULL_RETURN(eventConfirmHub, nullptr);
     eventConfirmHub->AddClickEvent(AceType::MakeRefPtr<NG::ClickEvent>(
         [](const GestureEvent& /* info */) { TAG_LOGD(AceLogTag::ACE_SHEET, "The sheet hits the click event."); }));
-    sheetPattern->UpdateSheetType();
-    sheetPattern->InitSheetObject();
     auto operationColumn = CreateOperationColumnNode(titleBuilder, sheetStyle, sheetNode);
     CHECK_NULL_RETURN(operationColumn, nullptr);
     operationColumn->MountToParent(sheetNode);
-    sheetPattern->SetTitleBuilderNode(WeakPtr<FrameNode>(operationColumn));
-    auto scrollNode = CreateScrollNode(sheetStyle);
+    auto scrollNode = CreateScrollNode();
     CHECK_NULL_RETURN(scrollNode, nullptr);
-    sheetPattern->SetScrollNode(WeakPtr<FrameNode>(scrollNode));
     builder->MountToParent(scrollNode);
 
     auto layoutProperty = scrollNode->GetLayoutProperty<ScrollLayoutProperty>();
     scrollNode->MountToParent(sheetNode);
     layoutProperty->UpdateMeasureType(MeasureType::MATCH_PARENT);
     CreateCloseIconButtonNode(sheetNode, sheetStyle);
+    sheetNode->MarkModifyDone();
     return sheetNode;
 }
 
@@ -96,59 +89,53 @@ RefPtr<FrameNode> SheetView::CreateOperationColumnNode(
     CHECK_NULL_RETURN(pipeline, nullptr);
     auto sheetTheme = pipeline->GetTheme<SheetTheme>();
     CHECK_NULL_RETURN(sheetTheme, nullptr);
-    auto sheetDragBarHeight = sheetTheme->GetSheetDragBarHeight();
-    CreateDragBarNode(titleBuilder, operationColumn, sheetStyle, sheetNode, sheetDragBarHeight);
     MarginProperty margin;
     margin.right = CalcLength(sheetTheme->GetTitleTextHorizMargin());
     margin.left = CalcLength(sheetTheme->GetTitleTextHorizMargin());
     layoutProps->UpdateMargin(margin);
-    auto sheetPattern = sheetNode->GetPattern<SheetPresentationPattern>();
+
     layoutProps->UpdateMeasureType(MeasureType::MATCH_PARENT_CROSS_AXIS);
     if (sheetStyle.isTitleBuilder.has_value() && pipeline->GetFontScale() == sheetTheme->GetSheetNormalScale()) {
-        layoutProps->UpdateUserDefinedIdealSize(CalcSize(
-            std::nullopt, CalcLength(sheetTheme->GetOperationAreaHeight() - sheetTheme->GetSheetTitleAreaMargin() -
-                                     sheetPattern->GetDragBarHeight(sheetPattern->GetDragBarNode()))));
+        layoutProps->UpdateUserDefinedIdealSize(
+            CalcSize(std::nullopt, CalcLength(SHEET_OPERATION_AREA_HEIGHT - SHEET_TITLE_AERA_MARGIN)));
         if (sheetStyle.sheetTitle.has_value() && sheetStyle.sheetSubtitle.has_value()) {
-            layoutProps->UpdateUserDefinedIdealSize(CalcSize(std::nullopt,
-                CalcLength(sheetTheme->GetOperationAreaHeightDouble() - sheetTheme->GetSheetTitleAreaMargin() -
-                           sheetPattern->GetDragBarHeight(sheetPattern->GetDragBarNode()))));
+            layoutProps->UpdateUserDefinedIdealSize(
+                CalcSize(std::nullopt, CalcLength(SHEET_OPERATION_AREA_HEIGHT_DOUBLE - SHEET_TITLE_AERA_MARGIN)));
         }
     }
-
-    // set accessibilityProperty to sheet operation column
-    auto accessibilityProperty = operationColumn->GetAccessibilityProperty<NG::AccessibilityProperty>();
-    CHECK_NULL_RETURN(accessibilityProperty, nullptr);
-    accessibilityProperty->SetAccessibilityZIndex(SHEET_OPERATION_INDEX);
+    CreateDragBarNode(titleBuilder, operationColumn, sheetStyle, sheetNode);
     return operationColumn;
 }
 
 void SheetView::CreateDragBarNode(const RefPtr<FrameNode>& titleBuilder, const RefPtr<FrameNode>& operationColumn,
-    NG::SheetStyle& sheetStyle, const RefPtr<FrameNode>& sheetNode, Dimension sheetDragBarHeight)
+    NG::SheetStyle& sheetStyle, const RefPtr<FrameNode>& sheetNode)
 {
     auto dragBarNode = FrameNode::GetOrCreateFrameNode("SheetDragBar", ElementRegister::GetInstance()->MakeUniqueId(),
         []() { return AceType::MakeRefPtr<SheetDragBarPattern>(); });
     auto dragBarLayoutProperty = dragBarNode->GetLayoutProperty();
     CHECK_NULL_VOID(dragBarLayoutProperty);
     dragBarLayoutProperty->UpdateUserDefinedIdealSize(
-        CalcSize(CalcLength(SHEET_DRAG_BAR_WIDTH), CalcLength(sheetDragBarHeight)));
+        CalcSize(CalcLength(SHEET_DRAG_BAR_WIDTH), CalcLength(SHEET_DRAG_BAR_HEIGHT)));
     dragBarLayoutProperty->UpdateAlignment(Alignment::CENTER);
     auto showDragIndicator = sheetStyle.showDragBar.value_or(true);
+    auto isSingleDetents = true;
+    if (sheetStyle.detents.size() == SHEET_DETENTS_TWO) {
+        isSingleDetents = sheetStyle.detents[0] == sheetStyle.detents[1];
+    } else if (sheetStyle.detents.size() == SHEET_DETENTS_THREE) {
+        isSingleDetents = sheetStyle.detents[0] == sheetStyle.detents[1] &&
+                          sheetStyle.detents[1] == sheetStyle.detents[SHEET_DETENTS_TWO];
+    }
 
-    // 1. showDragBar && not single detents && sheet in bottom style (only bottom style can show drag bar)
-    // 2. has SystemTitleBar
+    // 1、showDragBar && not single detents
+    // 2、has SystemTitleBar
     // need set drag bar invisible to occupy place
-    CHECK_NULL_VOID(sheetNode);
-    auto sheetPattern = sheetNode->GetPattern<SheetPresentationPattern>();
-    CHECK_NULL_VOID(sheetPattern);
-    sheetPattern->SetDragBarNode(WeakPtr<FrameNode>(dragBarNode));
-    if ((!IsSingleDetents(sheetStyle) && showDragIndicator && sheetPattern->IsSheetBottomStyle())
-        || sheetStyle.isTitleBuilder.has_value()) {
+    if ((!isSingleDetents && showDragIndicator) || sheetStyle.isTitleBuilder.has_value()) {
         dragBarLayoutProperty->UpdateVisibility(VisibleType::INVISIBLE);
     } else {
         dragBarLayoutProperty->UpdateVisibility(VisibleType::GONE);
     }
 
-    sheetNode->AddChild(dragBarNode, 0);
+    dragBarNode->MountToParent(operationColumn);
     dragBarNode->MarkModifyDone();
 
     if (sheetStyle.isTitleBuilder.has_value()) {
@@ -184,9 +171,8 @@ void SheetView::CreateCloseIconButtonNode(RefPtr<FrameNode> sheetNode, NG::Sheet
     BorderRadiusProperty borderRaduis;
     borderRaduis.SetRadius(sheetTheme->GetCloseIconRadius());
     buttonLayoutProperty->UpdateBorderRadius(borderRaduis);
-    buttonLayoutProperty->UpdateButtonStyle(static_cast<ButtonStyleMode>(sheetTheme->GetCloseIconButtonStyle()));
-    auto closeIconButtonSize = CalcLength(sheetTheme->GetCloseIconButtonWidth());
-    buttonLayoutProperty->UpdateUserDefinedIdealSize(CalcSize(closeIconButtonSize, closeIconButtonSize));
+    buttonLayoutProperty->UpdateUserDefinedIdealSize(
+        CalcSize(CalcLength(SHEET_CLOSE_ICON_WIDTH), CalcLength(SHEET_CLOSE_ICON_HEIGHT)));
     buttonLayoutProperty->UpdateVisibility(VisibleType::GONE);
     auto eventConfirmHub = buttonNode->GetOrCreateGestureEventHub();
     CHECK_NULL_VOID(eventConfirmHub);
@@ -206,16 +192,12 @@ void SheetView::CreateCloseIconButtonNode(RefPtr<FrameNode> sheetNode, NG::Sheet
 
     CreateCloseIconNode(buttonNode);
     buttonNode->MountToParent(sheetNode);
-    auto sheetPattern = sheetNode->GetPattern<SheetPresentationPattern>();
-    CHECK_NULL_VOID(sheetPattern);
-    sheetPattern->SetCloseButtonNode(WeakPtr<FrameNode>(buttonNode));
 
     // set accessibilityProperty to sheet close button
     auto accessibilityProperty = buttonNode->GetAccessibilityProperty<NG::AccessibilityProperty>();
     CHECK_NULL_VOID(accessibilityProperty);
-    std::string message = sheetTheme->GetSheetClose();
+    std::string message  = Localization::GetInstance()->GetEntryLetters("sheet.close");
     accessibilityProperty->SetAccessibilityText(message);
-    accessibilityProperty->SetAccessibilityZIndex(SHEET_CLOSE_ICON_INDEX);
 }
 
 void SheetView::CreateCloseIconNode(RefPtr<FrameNode> buttonNode)
@@ -256,19 +238,7 @@ void SheetView::CreateCloseIconNode(RefPtr<FrameNode> buttonNode)
     buttonNode->AddChild(iconNode);
 }
 
-bool SheetView::IsSingleDetents(const NG::SheetStyle& sheetStyle)
-{
-    bool isSingle = true;
-    if (sheetStyle.detents.size() == SHEET_DETENTS_TWO) {
-        isSingle = sheetStyle.detents[SHEET_DETENTS_ZERO] == sheetStyle.detents[SHEET_DETENTS_ONE];
-    } else if (sheetStyle.detents.size() == SHEET_DETENTS_THREE) {
-        isSingle = sheetStyle.detents[SHEET_DETENTS_ZERO] == sheetStyle.detents[SHEET_DETENTS_ONE] &&
-                   sheetStyle.detents[SHEET_DETENTS_ONE] == sheetStyle.detents[SHEET_DETENTS_TWO];
-    }
-    return isSingle;
-}
-
-RefPtr<FrameNode> SheetView::CreateScrollNode(const NG::SheetStyle& sheetStyle)
+RefPtr<FrameNode> SheetView::CreateScrollNode()
 {
     auto scroll = FrameNode::CreateFrameNode(
         V2::SCROLL_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(), AceType::MakeRefPtr<ScrollPattern>());
@@ -282,12 +252,7 @@ RefPtr<FrameNode> SheetView::CreateScrollNode(const NG::SheetStyle& sheetStyle)
     paintProps->UpdateScrollBarMode(DisplayMode::OFF);
     auto pattern = scroll->GetPattern<ScrollablePattern>();
     CHECK_NULL_RETURN(pattern, nullptr);
-    if (sheetStyle.sheetEffectEdge.has_value() && sheetStyle.sheetEffectEdge.value() == NG::SheetEffectEdge::NONE) {
-        pattern->SetEdgeEffect(EdgeEffect::NONE, false);
-    } else {
-        pattern->SetEdgeEffect(EdgeEffect::SPRING,
-            false, static_cast<EffectEdge>(sheetStyle.sheetEffectEdge.value_or(NG::SheetEffectEdge::ALL)));
-    }
+    pattern->SetEdgeEffect(EdgeEffect::SPRING, false);
     pattern->SetScrollToSafeAreaHelper(false);
     props->UpdateAlignment(Alignment::TOP_CENTER);
     if (AceApplicationInfo::GetInstance().GreatOrEqualTargetAPIVersion(PlatformVersion::VERSION_TWELVE)) {
@@ -298,11 +263,6 @@ RefPtr<FrameNode> SheetView::CreateScrollNode(const NG::SheetStyle& sheetStyle)
         pattern->SetNestedScroll(nestedOpt);
     }
     scroll->MarkModifyDone();
-
-    // set accessibilityProperty to sheet scroll node
-    auto accessibilityProperty = scroll->GetAccessibilityProperty<NG::AccessibilityProperty>();
-    CHECK_NULL_RETURN(accessibilityProperty, nullptr);
-    accessibilityProperty->SetAccessibilityZIndex(SHEET_SCROLL_INDEX);
     return scroll;
 }
 
@@ -321,19 +281,9 @@ RefPtr<FrameNode> SheetView::BuildMainTitle(RefPtr<FrameNode> sheetNode, NG::She
     auto titleProp = sheetTitle->GetLayoutProperty<TextLayoutProperty>();
     CHECK_NULL_RETURN(titleProp, nullptr);
     auto titleTextFontSize = sheetTheme->GetTitleTextFontSize();
-    auto sheetTitleFontWeight = sheetTheme->GetSheetTitleFontWeight();
     titleTextFontSize.SetUnit(DimensionUnit::FP);
-
-    auto textTheme = pipeline->GetTheme<TextTheme>();
-    if (textTheme && textTheme->GetIsTextFadeout()) {
-        titleProp->UpdateTextOverflow(TextOverflow::MARQUEE);
-        titleProp->UpdateTextMarqueeStartPolicy(MarqueeStartPolicy::ON_FOCUS);
-        titleProp->UpdateTextMarqueeFadeout(true);
-    } else {
-        titleProp->UpdateMaxLines(SHEET_TITLE_MAX_LINES);
-        titleProp->UpdateTextOverflow(TextOverflow::ELLIPSIS);
-    }
-
+    titleProp->UpdateMaxLines(SHEET_TITLE_MAX_LINES);
+    titleProp->UpdateTextOverflow(TextOverflow::ELLIPSIS);
     titleProp->UpdateAdaptMaxFontSize(titleTextFontSize);
     titleProp->UpdateAdaptMinFontSize(titleTextFontSize);
     if (sheetStyle.sheetTitle.has_value()) {
@@ -341,7 +291,7 @@ RefPtr<FrameNode> SheetView::BuildMainTitle(RefPtr<FrameNode> sheetNode, NG::She
     }
     titleProp->UpdateMaxFontScale(sheetTheme->GetSheetMaxAgingScale());
     titleProp->UpdateFontSize(titleTextFontSize);
-    titleProp->UpdateFontWeight(sheetTitleFontWeight);
+    titleProp->UpdateFontWeight(FontWeight::BOLD);
     titleProp->UpdateTextColor(sheetTheme->GetTitleTextFontColor());
 
     auto titleRow = FrameNode::CreateFrameNode(V2::ROW_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(),
@@ -358,7 +308,6 @@ RefPtr<FrameNode> SheetView::BuildMainTitle(RefPtr<FrameNode> sheetNode, NG::She
 
 RefPtr<FrameNode> SheetView::BuildSubTitle(RefPtr<FrameNode> sheetNode, NG::SheetStyle& sheetStyle)
 {
-    CHECK_NULL_RETURN(sheetNode, nullptr);
     auto pattern = sheetNode->GetPattern<SheetPresentationPattern>();
     CHECK_NULL_RETURN(pattern, nullptr);
     auto subtitleId = pattern->GetSubtitleId();
@@ -373,17 +322,8 @@ RefPtr<FrameNode> SheetView::BuildSubTitle(RefPtr<FrameNode> sheetNode, NG::Shee
     CHECK_NULL_RETURN(titleProp, nullptr);
     auto titleTextFontSize = sheetTheme->GetSubtitleTextFontSize();
     titleTextFontSize.SetUnit(DimensionUnit::VP);
-
-    auto textTheme = pipeline->GetTheme<TextTheme>();
-    if (textTheme && textTheme->GetIsTextFadeout()) {
-        titleProp->UpdateTextOverflow(TextOverflow::MARQUEE);
-        titleProp->UpdateTextMarqueeStartPolicy(MarqueeStartPolicy::ON_FOCUS);
-        titleProp->UpdateTextMarqueeFadeout(true);
-    } else {
-        titleProp->UpdateMaxLines(SHEET_TITLE_MAX_LINES);
-        titleProp->UpdateTextOverflow(TextOverflow::ELLIPSIS);
-    }
-
+    titleProp->UpdateMaxLines(SHEET_TITLE_MAX_LINES);
+    titleProp->UpdateTextOverflow(TextOverflow::ELLIPSIS);
     titleProp->UpdateAdaptMaxFontSize(titleTextFontSize);
     titleProp->UpdateAdaptMinFontSize(titleTextFontSize);
     if (sheetStyle.sheetSubtitle.has_value()) {
@@ -407,57 +347,15 @@ RefPtr<FrameNode> SheetView::BuildSubTitle(RefPtr<FrameNode> sheetNode, NG::Shee
     return subtitleRow;
 }
 
-void SheetView::SetTitleColumnMinSize(RefPtr<LayoutProperty> layoutProperty, const NG::SheetStyle& sheetStyle,
-    const RefPtr<SheetTheme>& sheetTheme)
+void SheetView::SetTitleColumnMinSize(RefPtr<LayoutProperty> layoutProperty, const NG::SheetStyle& sheetStyle)
 {
     if (sheetStyle.sheetTitle.has_value()) {
         layoutProperty->UpdateCalcMinSize(CalcSize(std::nullopt, CalcLength(SHEET_OPERATION_AREA_HEIGHT)));
         if (sheetStyle.sheetSubtitle.has_value()) {
-            layoutProperty->UpdateCalcMinSize(CalcSize(std::nullopt,
-                CalcLength(sheetTheme->GetOperationAreaHeightDouble() - SHEET_DOUBLE_TITLE_BOTTON_MARGIN)));
+            layoutProperty->UpdateCalcMinSize(CalcSize(
+                std::nullopt, CalcLength(SHEET_OPERATION_AREA_HEIGHT_DOUBLE - SHEET_DOUBLE_TITLE_BOTTON_MARGIN)));
         }
     }
-}
-
-RefPtr<FrameNode> SheetView::CreateSheetMaskShowInSubwindow(const RefPtr<FrameNode>& sheetPageNode,
-    const RefPtr<FrameNode>& sheetWrapperNode, const RefPtr<FrameNode>& targetNode, NG::SheetStyle& sheetStyle)
-{
-    auto container = Container::Current();
-    CHECK_NULL_RETURN(container, nullptr);
-    if (!container->IsSubContainer()) {
-        return nullptr;
-    }
-    // create and mount sheetWrapperNode
-    auto sheetWrapperPattern = sheetWrapperNode->GetPattern<SheetWrapperPattern>();
-    CHECK_NULL_RETURN(sheetWrapperPattern, nullptr);
-    auto maskNode = FrameNode::CreateFrameNode("SheetMask", ElementRegister::GetInstance()->MakeUniqueId(),
-        AceType::MakeRefPtr<SheetMaskPattern>(targetNode->GetId(), targetNode->GetTag()));
-    CHECK_NULL_RETURN(maskNode, nullptr);
-    if (sheetWrapperPattern->ShowInUEC()) {
-        maskNode->MountToParent(sheetWrapperNode);
-    } else {
-        auto subwindowId = sheetWrapperPattern->GetSubWindowId();
-        auto mainWindowId = SubwindowManager::GetInstance()->GetParentContainerId(subwindowId);
-        auto mainWindowContext = PipelineContext::GetContextByContainerId(mainWindowId);
-        CHECK_NULL_RETURN(mainWindowContext, nullptr);
-        auto overlayManager = mainWindowContext->GetOverlayManager();
-        CHECK_NULL_RETURN(overlayManager, nullptr);
-        auto mainWindowRoot = overlayManager->GetRootNode().Upgrade();
-        CHECK_NULL_RETURN(mainWindowRoot, nullptr);
-        overlayManager->MountToParentWithService(mainWindowRoot, maskNode);
-        mainWindowRoot->MarkDirtyNode(PROPERTY_UPDATE_MEASURE_SELF);
-    }
-    auto sheetNodePattern = sheetPageNode->GetPattern<SheetPresentationPattern>();
-    CHECK_NULL_RETURN(sheetNodePattern, nullptr);
-    TAG_LOGI(AceLogTag::ACE_SHEET, "show in subwindow mount sheet page node");
-    sheetPageNode->MountToParent(sheetWrapperNode);
-    // Update sheet type needs to get subwindow messages which is updated
-    // after sheetWrapper MountToParent root, after sheetPage MountToParent sheetWrapper.
-    sheetNodePattern->UpdateSheetType();
-    sheetNodePattern->UpdateSheetObject(sheetNodePattern->GetSheetTypeNoProcess());
-    sheetWrapperPattern->SetSheetMaskNode(maskNode);
-    sheetWrapperPattern->SetSheetPageNode(sheetPageNode);
-    return maskNode;
 }
 
 RefPtr<FrameNode> SheetView::BuildTitleColumn(RefPtr<FrameNode> sheetNode, NG::SheetStyle& sheetStyle)
@@ -467,19 +365,18 @@ RefPtr<FrameNode> SheetView::BuildTitleColumn(RefPtr<FrameNode> sheetNode, NG::S
     CHECK_NULL_RETURN(titleColumn, nullptr);
     auto layoutProperty = titleColumn->GetLayoutProperty();
     CHECK_NULL_RETURN(layoutProperty, nullptr);
+    SetTitleColumnMinSize(layoutProperty, sheetStyle);
     auto pipeline = PipelineContext::GetCurrentContext();
     CHECK_NULL_RETURN(pipeline, nullptr);
     auto sheetTheme = pipeline->GetTheme<SheetTheme>();
     CHECK_NULL_RETURN(sheetTheme, nullptr);
-    SetTitleColumnMinSize(layoutProperty, sheetStyle, sheetTheme);
     layoutProperty->UpdateMeasureType(MeasureType::MATCH_PARENT_CROSS_AXIS);
     bool isTitleCustombuilder = sheetStyle.isTitleBuilder.has_value() && sheetStyle.isTitleBuilder.value();
     if (pipeline->GetFontScale() == sheetTheme->GetSheetNormalScale() || isTitleCustombuilder) {
-        layoutProperty->UpdateUserDefinedIdealSize(
-            CalcSize(std::nullopt, CalcLength(sheetTheme->GetOperationAreaHeight())));
+        layoutProperty->UpdateUserDefinedIdealSize(CalcSize(std::nullopt, CalcLength(SHEET_OPERATION_AREA_HEIGHT)));
     }
     MarginProperty margin;
-    margin.top = CalcLength(sheetTheme->GetSheetTitleAreaMargin());
+    margin.top = CalcLength(SHEET_TITLE_AERA_MARGIN);
     margin.bottom = CalcLength(SHEET_DOUBLE_TITLE_BOTTON_MARGIN);
     layoutProperty->UpdateMargin(margin);
     auto columnProps = titleColumn->GetLayoutProperty<LinearLayoutProperty>();
@@ -490,7 +387,7 @@ RefPtr<FrameNode> SheetView::BuildTitleColumn(RefPtr<FrameNode> sheetNode, NG::S
         CHECK_NULL_RETURN(titleRow, nullptr);
         titleRow->MountToParent(titleColumn);
         MarginProperty titleMargin;
-        titleMargin.top = CalcLength(sheetTheme->GetTitleTopPadding());
+        titleMargin.top = CalcLength(SHEET_DOUBLE_TITLE_TOP_PADDING);
         auto titleProp = titleRow->GetLayoutProperty();
         CHECK_NULL_RETURN(titleProp, nullptr);
         titleProp->UpdateMargin(titleMargin);
@@ -499,8 +396,9 @@ RefPtr<FrameNode> SheetView::BuildTitleColumn(RefPtr<FrameNode> sheetNode, NG::S
             CHECK_NULL_RETURN(subtitleRow, nullptr);
             subtitleRow->MountToParent(titleColumn);
             if (pipeline->GetFontScale() == sheetTheme->GetSheetNormalScale()) {
-                layoutProperty->UpdateUserDefinedIdealSize(CalcSize(std::nullopt, CalcLength(
-                    sheetTheme->GetOperationAreaHeightDouble() - SHEET_DOUBLE_TITLE_BOTTON_MARGIN)));
+                layoutProperty->UpdateUserDefinedIdealSize(
+                    CalcSize(std::nullopt,
+                        CalcLength(SHEET_OPERATION_AREA_HEIGHT_DOUBLE - SHEET_DOUBLE_TITLE_BOTTON_MARGIN)));
             }
         }
     } else if (sheetStyle.isTitleBuilder.has_value()) {

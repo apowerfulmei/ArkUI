@@ -35,20 +35,13 @@ public:
     static SpanModel* GetInstance();
     virtual ~SpanModel() = default;
 
-    virtual void Create(const std::u16string& content) = 0;
-    virtual void Create(const std::u16string& content, RefPtr<ResourceObject>& resObj) = 0;
+    virtual void Create(const std::string& content) = 0;
     virtual void SetFont(const Font& value) = 0;
-    virtual void ResetFont() = 0;
     virtual void SetFontSize(const Dimension& value) = 0;
-    virtual void ResetFontSize() = 0;
     virtual void SetTextColor(const Color& value) = 0;
-    virtual void ResetTextColor() = 0;
     virtual void SetItalicFontStyle(Ace::FontStyle value) = 0;
-    virtual void ResetItalicFontStyle() = 0;
     virtual void SetFontWeight(FontWeight value) = 0;
-    virtual void ResetFontWeight() = 0;
     virtual void SetFontFamily(const std::vector<std::string>& value) = 0;
-    virtual void ResetFontFamily() = 0;
     virtual void SetTextDecoration(TextDecoration value) = 0;
     virtual void SetTextDecorationStyle(TextDecorationStyle value) = 0;
     virtual void SetTextDecorationColor(const Color& value) = 0;
@@ -62,9 +55,6 @@ public:
     virtual void SetAccessibilityText(const std::string& text) = 0;
     virtual void SetAccessibilityDescription(const std::string& description) = 0;
     virtual void SetAccessibilityImportance(const std::string& importance) = 0;
-    virtual void SetLineThicknessScale(float value) = 0;
-    virtual void SetOnHover(OnHoverFunc&& onHoverEventFunc) = 0;
-    virtual void ResetOnHover() = 0;
 
     virtual void CreateContainSpan() {};
     virtual void SetTextBackgroundStyle(const TextBackgroundStyle& style) {};

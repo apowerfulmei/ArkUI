@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024-2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -14,6 +14,14 @@
  */
 #include "core/interfaces/native/node/canvas_rendering_context_2d_modifier.h"
 
+#include <string>
+
+#include "base/log/log.h"
+#include "base/memory/ace_type.h"
+#include "base/utils/macros.h"
+#include "core/components/common/properties/color.h"
+#include "core/components_ng/base/frame_node.h"
+#include "core/components_ng/pattern/canvas/canvas_renderer_type.h"
 #include "core/components_ng/pattern/canvas/canvas_model_ng.h"
 
 namespace OHOS::Ace::NG {
@@ -38,7 +46,7 @@ void SetCanvasClosePath(ArkUINodeHandle node)
     canvasPattern->ClosePath();
 }
 
-void SetCanvasFill(ArkUINodeHandle node, const char* value)
+void SetCanvasFill(ArkUINodeHandle node, const char *value)
 {
     TAG_LOGD(AceLogTag::ACE_CANVAS_COMPONENT, "Arkoala SetCanvasFill: value: %{public}s", value);
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
@@ -68,7 +76,7 @@ void SetCanvasMoveTo(ArkUINodeHandle node, float x, float y)
     canvasPattern->MoveTo(x, y);
 }
 
-void SetCanvasArc(ArkUINodeHandle node, ArkUICanvasArcOptions* options)
+void SetCanvasArc(ArkUINodeHandle node, ArkUICanvasArcOptions *options)
 {
     CHECK_NULL_VOID(options);
     TAG_LOGD(AceLogTag::ACE_CANVAS_COMPONENT, "Arkoala SetCanvasArc: x: %{public}f, y: %{public}f, \
@@ -97,7 +105,10 @@ void SetCanvasLineTo(ArkUINodeHandle node, float x, float y)
     RefPtr<AceType> pattern = CanvasModelNG::GetCanvasPattern(frameNode);
     auto canvasPattern = AceType::DynamicCast<NG::CanvasPattern>(pattern);
     CHECK_NULL_VOID(canvasPattern);
-    canvasPattern->LineTo(Dimension(x, DimensionUnit::VP).ConvertToPx(), Dimension(y, DimensionUnit::VP).ConvertToPx());
+    canvasPattern->LineTo(
+        Dimension(x, DimensionUnit::VP).ConvertToPx(),
+        Dimension(y, DimensionUnit::VP).ConvertToPx()
+    );
 }
 
 void SetCanvasStrokeStyle(ArkUINodeHandle node, int color)
@@ -202,12 +213,15 @@ void SetCanvasFillRect(ArkUINodeHandle node, float x, float y, float w, float h)
     RefPtr<AceType> pattern = CanvasModelNG::GetCanvasPattern(frameNode);
     auto canvasPattern = AceType::DynamicCast<NG::CanvasPattern>(pattern);
     CHECK_NULL_VOID(canvasPattern);
-    canvasPattern->FillRect(
-        { Dimension(x, DimensionUnit::VP).ConvertToPx(), Dimension(y, DimensionUnit::VP).ConvertToPx(),
-            Dimension(w, DimensionUnit::VP).ConvertToPx(), Dimension(h, DimensionUnit::VP).ConvertToPx() });
+    canvasPattern->FillRect({
+        Dimension(x, DimensionUnit::VP).ConvertToPx(),
+        Dimension(y, DimensionUnit::VP).ConvertToPx(),
+        Dimension(w, DimensionUnit::VP).ConvertToPx(),
+        Dimension(h, DimensionUnit::VP).ConvertToPx()
+    });
 }
 
-void SetCanvasFillText(ArkUINodeHandle node, const char* value, float x, float y, float maxWidth)
+void SetCanvasFillText(ArkUINodeHandle node, const char *value, float x, float y, float maxWidth)
 {
     TAG_LOGD(AceLogTag::ACE_CANVAS_COMPONENT, "Arkoala SetCanvasFillText: value:%{public}s, \
         x: %{public}f, y: %{public}f, maxWith: %{public}f",
@@ -218,64 +232,63 @@ void SetCanvasFillText(ArkUINodeHandle node, const char* value, float x, float y
     auto canvasPattern = AceType::DynamicCast<NG::CanvasPattern>(pattern);
     CHECK_NULL_VOID(canvasPattern);
     std::string text(value);
-    canvasPattern->FillText(text, Dimension(x, DimensionUnit::VP).ConvertToPx(),
-        Dimension(y, DimensionUnit::VP).ConvertToPx(), Dimension(maxWidth, DimensionUnit::VP).ConvertToPx());
+    canvasPattern->FillText(text,
+        Dimension(x, DimensionUnit::VP).ConvertToPx(),
+        Dimension(y, DimensionUnit::VP).ConvertToPx(),
+        Dimension(maxWidth, DimensionUnit::VP).ConvertToPx()
+    );
 }
 
 namespace NodeModifier {
 const ArkUICanvasRenderingContext2DModifier* GetCanvasRenderingContext2DModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
     static const ArkUICanvasRenderingContext2DModifier modifier = {
-        .getCanvasRenderingContext2D = nullptr,
-        .setCanvasBeginPath = SetCanvasBeginPath,
-        .setCanvasClosePath = SetCanvasClosePath,
-        .setCanvasFill = SetCanvasFill,
-        .setCanvasMoveTo = SetCanvasMoveTo,
-        .setCanvasArc = SetCanvasArc,
-        .setCanvasLineTo = SetCanvasLineTo,
-        .setCanvasStrokeStyle = SetCanvasStrokeStyle,
-        .getCanvasStrokeStyle = GetCanvasStrokeStyle,
-        .setCanvasLineWidth = SetCanvasLineWidth,
-        .getCanvasLineWidth = GetCanvasLineWidth,
-        .setCanvasStroke = SetCanvasStroke,
-        .setCanvasAntiAlias = SetCanvasAntiAlias,
-        .setCanvasFillColor = SetCanvasFillColor,
-        .getCanvasFillColor = GetCanvasFillColor,
-        .setCanvasGlobalAlpha = SetCanvasGlobalAlpha,
-        .getCanvasGlobalAlpha = GetCanvasGlobalAlpha,
-        .setCanvasFillRect = SetCanvasFillRect,
-        .setCanvasFillText = SetCanvasFillText,
+        nullptr,
+        SetCanvasBeginPath,
+        SetCanvasClosePath,
+        SetCanvasFill,
+        SetCanvasMoveTo,
+        SetCanvasArc,
+        SetCanvasLineTo,
+        SetCanvasStrokeStyle,
+        GetCanvasStrokeStyle,
+        SetCanvasLineWidth,
+        GetCanvasLineWidth,
+        SetCanvasStroke,
+        SetCanvasAntiAlias,
+        SetCanvasFillColor,
+        GetCanvasFillColor,
+        SetCanvasGlobalAlpha,
+        GetCanvasGlobalAlpha,
+        SetCanvasFillRect,
+        SetCanvasFillText,
     };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
     return &modifier;
 }
 
 const CJUICanvasRenderingContext2DModifier* GetCJUICanvasRenderingContext2DModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
     static const CJUICanvasRenderingContext2DModifier modifier = {
-        .getCanvasRenderingContext2D = nullptr,
-        .setCanvasBeginPath = SetCanvasBeginPath,
-        .setCanvasClosePath = SetCanvasClosePath,
-        .setCanvasFill = SetCanvasFill,
-        .setCanvasMoveTo = SetCanvasMoveTo,
-        .setCanvasArc = SetCanvasArc,
-        .setCanvasLineTo = SetCanvasLineTo,
-        .setCanvasStrokeStyle = SetCanvasStrokeStyle,
-        .getCanvasStrokeStyle = GetCanvasStrokeStyle,
-        .setCanvasLineWidth = SetCanvasLineWidth,
-        .getCanvasLineWidth = GetCanvasLineWidth,
-        .setCanvasStroke = SetCanvasStroke,
-        .setCanvasAntiAlias = SetCanvasAntiAlias,
-        .setCanvasFillColor = SetCanvasFillColor,
-        .getCanvasFillColor = GetCanvasFillColor,
-        .setCanvasGlobalAlpha = SetCanvasGlobalAlpha,
-        .getCanvasGlobalAlpha = GetCanvasGlobalAlpha,
-        .setCanvasFillRect = SetCanvasFillRect,
-        .setCanvasFillText = SetCanvasFillText,
+        nullptr,
+        SetCanvasBeginPath,
+        SetCanvasClosePath,
+        SetCanvasFill,
+        SetCanvasMoveTo,
+        SetCanvasArc,
+        SetCanvasLineTo,
+        SetCanvasStrokeStyle,
+        GetCanvasStrokeStyle,
+        SetCanvasLineWidth,
+        GetCanvasLineWidth,
+        SetCanvasStroke,
+        SetCanvasAntiAlias,
+        SetCanvasFillColor,
+        GetCanvasFillColor,
+        SetCanvasGlobalAlpha,
+        GetCanvasGlobalAlpha,
+        SetCanvasFillRect,
+        SetCanvasFillText,
     };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
     return &modifier;
 }
 } // namespace NodeModifier

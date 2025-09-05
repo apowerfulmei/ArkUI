@@ -62,13 +62,7 @@ private:
     bool IsOutOfRangeInHoriCapsule(SizeF& leftCirclePoint, SizeF& rightCirclePoint, float maxDistance);
     bool IsOutOfRangeInVertiCapsule(SizeF& topCirclePoint, SizeF& bottomCirclePoint, float maxDistance);
     bool IsTextOutOfRangeInNormal();
-    void UpdateTextFlags(LayoutWrapper* layoutWrapper);
-    bool GetMaxLineLimitExceededFlag(std::optional<SizeF>& currentTextSize);
-    bool GetTextLimitExceededFlag(RefPtr<SecurityComponentLayoutProperty>& property, RefPtr<FrameNode>& frameNode,
-        std::optional<SizeF>& currentTextSize);
-    bool GetIconExceededFlag(RefPtr<SecurityComponentLayoutProperty>& property, RefPtr<FrameNode>& frameNode);
-    bool IsIconOutOfRange(SizeF& iconPoint, SizeF& point, double maxDistance);
-    bool IsIconOutOfBackground(const NG::BorderRadiusProperty& radius);
+    bool GetTextLimitExceededFlag(RefPtr<SecurityComponentLayoutProperty>& property, LayoutWrapper* layoutWrapper);
     bool CompareDistance(SizeF& point, SizeF& circlePoint, float maxDistance);
     bool TopLeftCompDistance(float obtainedRadius, float maxRadius, float threshold);
     bool TopRightCompDistance(float obtainedRadius, float maxRadius, float threshold);
@@ -76,8 +70,6 @@ private:
     bool BottomRightCompDistance(float obtainedRadius, float maxRadius, float threshold);
     bool IsTextOutOfOneColumn(RefPtr<FrameNode>& frameNode, float threshold);
     Alignment ParseAlignmentRTL(LayoutWrapper* layoutWrapper, Alignment align);
-    void InitLayoutWrapper(LayoutWrapper* layoutWrapper,
-        const RefPtr<SecurityComponentLayoutProperty>& securityComponentLayoutProperty);
 
     void UpdateTextSize();
 

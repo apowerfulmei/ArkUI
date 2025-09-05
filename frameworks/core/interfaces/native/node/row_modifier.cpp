@@ -13,7 +13,9 @@
  * limitations under the License.
  */
 #include "core/interfaces/native/node/row_modifier.h"
-
+#include "core/components/common/layout/constants.h"
+#include "core/pipeline/base/element_register.h"
+#include "core/components_ng/base/frame_node.h"
 #include "core/components_ng/pattern/linear_layout/row_model_ng.h"
 
 namespace OHOS::Ace::NG {
@@ -63,26 +65,18 @@ ArkUI_Int32 GetRowAlignItems(ArkUINodeHandle node)
     return static_cast<ArkUI_Int32>(RowModelNG::GetAlignItems(frameNode));
 }
 
-void SetRowSpace(ArkUINodeHandle node, ArkUI_Float32 value, ArkUI_Int32 unit, void* spaceRawPtr)
+void SetRowSpace(ArkUINodeHandle node, ArkUI_Float32 value, ArkUI_Int32 unit)
 {
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
-    RowModelNG::ResetResObj(frameNode, "row.space");
-    if (SystemProperties::ConfigChangePerform() && spaceRawPtr) {
-        auto* space = reinterpret_cast<ResourceObject*>(spaceRawPtr);
-        auto spaceResObj = AceType::Claim(space);
-        RowModelNG::SetSpace(frameNode, spaceResObj);
-    } else {
-        const auto space = CalcDimension(value, static_cast<OHOS::Ace::DimensionUnit>(unit));
-        RowModelNG::SetSpace(frameNode, space);
-    }
+    const auto space = CalcDimension(value, static_cast<OHOS::Ace::DimensionUnit>(unit));
+    RowModelNG::SetSpace(frameNode, space);
 }
 
 void ResetRowSpace(ArkUINodeHandle node)
 {
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
-    RowModelNG::ResetResObj(frameNode, "row.space");
     const auto space = CalcDimension(0.0, DimensionUnit::PX);
     RowModelNG::SetSpace(frameNode, space);
 }
@@ -104,37 +98,23 @@ void ResetRowReverse(ArkUINodeHandle node)
 namespace NodeModifier {
 const ArkUIRowModifier* GetRowModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
     static const ArkUIRowModifier modifier = {
-        .setRowJustifyContent = SetRowJustifyContent,
-        .resetRowJustifyContent = ResetRowJustifyContent,
-        .setRowAlignItems = SetRowAlignItems,
-        .resetRowAlignItems = ResetRowAlignItems,
-        .getRowJustifyContent = GetRowJustifyContent,
-        .getRowAlignItems = GetRowAlignItems,
-        .setRowSpace = SetRowSpace,
-        .resetRowSpace = ResetRowSpace,
-        .setRowReverse = SetRowReverse,
-        .resetRowReverse = ResetRowReverse,
+        SetRowJustifyContent, ResetRowJustifyContent, SetRowAlignItems,
+        ResetRowAlignItems, GetRowJustifyContent, GetRowAlignItems,
+        SetRowSpace, ResetRowSpace,
+        SetRowReverse,
+        ResetRowReverse,
     };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
     return &modifier;
 }
 
 const CJUIRowModifier* GetCJUIRowModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
     static const CJUIRowModifier modifier = {
-        .setRowJustifyContent = SetRowJustifyContent,
-        .resetRowJustifyContent = ResetRowJustifyContent,
-        .setRowAlignItems = SetRowAlignItems,
-        .resetRowAlignItems = ResetRowAlignItems,
-        .getRowJustifyContent = GetRowJustifyContent,
-        .getRowAlignItems = GetRowAlignItems,
-        .setRowSpace = SetRowSpace,
-        .resetRowSpace = ResetRowSpace,
+        SetRowJustifyContent, ResetRowJustifyContent, SetRowAlignItems,
+        ResetRowAlignItems, GetRowJustifyContent, GetRowAlignItems,
+        SetRowSpace, ResetRowSpace,
     };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
     return &modifier;
 }
 }

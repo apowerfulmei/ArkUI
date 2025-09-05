@@ -21,12 +21,11 @@
 #include "core/components_ng/base/inspector_filter.h"
 #include "core/components_ng/pattern/slider/slider_style.h"
 #include "core/components_ng/render/paint_property.h"
-#include "core/pipeline_ng/pipeline_context.h"
 
 namespace OHOS::Ace::NG {
 // PaintProperty are used to set render properties.
 class SliderPaintProperty : public PaintProperty {
-    DECLARE_ACE_TYPE(SliderPaintProperty, PaintProperty);
+    DECLARE_ACE_TYPE(SliderPaintProperty, PaintProperty)
 public:
     SliderPaintProperty() = default;
     ~SliderPaintProperty() override = default;
@@ -34,7 +33,6 @@ public:
     {
         auto value = MakeRefPtr<SliderPaintProperty>();
         value->PaintProperty::UpdatePaintProperty(DynamicCast<PaintProperty>(this));
-        value->PaintProperty::UpdatePaintPropertyHost(DynamicCast<PaintProperty>(this));
         value->propSliderPaintStyle_ = CloneSliderPaintStyle();
         value->propSliderTipStyle_ = CloneSliderTipStyle();
         return value;
@@ -57,11 +55,9 @@ public:
             }
             return GradientToJson(colors);
         }
-        auto host = GetHost();
-        CHECK_NULL_RETURN(host, "");
-        auto pipeline = host->GetContext();
+        auto pipeline = PipelineBase::GetCurrentContext();
         CHECK_NULL_RETURN(pipeline, "");
-        auto theme = pipeline->GetTheme<SliderTheme>(host->GetThemeScopeId());
+        auto theme = pipeline->GetTheme<SliderTheme>();
         CHECK_NULL_RETURN(theme, "");
         return theme->GetTrackBgColor().ColorToString();
     }
@@ -81,7 +77,7 @@ public:
 
     std::string InteractionModeToJson() const
     {
-        const std::array<std::string, 3> SLIDER_INTERACTION_MODE_TO_STRING = {
+        static const std::array<std::string, 3> SLIDER_INTERACTION_MODE_TO_STRING = {
             "SliderInteraction.SLIDE_AND_CLICK",
             "SliderInteraction.SLIDE_ONLY",
             "SliderInteraction.SLIDE_AND_CLICK_UP",
@@ -96,7 +92,7 @@ public:
 
     std::string BlockTypeToJson() const
     {
-        const std::array<std::string, 3> SLIDER_BLOCK_TYPE_TO_STRING = {
+        static const std::array<std::string, 3> SLIDER_BLOCK_TYPE_TO_STRING = {
             "BlockStyleType.DEFAULT",
             "BlockStyleType.IMAGE",
             "BlockStyleType.SHAPE",
@@ -106,25 +102,6 @@ public:
             return SLIDER_BLOCK_TYPE_TO_STRING.at(blockTypeIndex);
         }
         return "";
-    }
-
-    std::string ToJsonSelectColor() const
-    {
-        if (HasSelectGradientColor()) {
-            Gradient colors = GetSelectGradientColor().value();
-            if (GetSelectIsResourceColorValue(false)) {
-                return colors.GetColors()[0].GetLinearColor().ToColor().ColorToString();
-            } else {
-                return GradientToJson(colors);
-            }
-        }
-        auto host = GetHost();
-        CHECK_NULL_RETURN(host, "");
-        auto pipeline = host->GetContext();
-        CHECK_NULL_RETURN(pipeline, "");
-        auto theme = pipeline->GetTheme<SliderTheme>(host->GetThemeScopeId());
-        CHECK_NULL_RETURN(theme, "");
-        return GetSelectColor().value_or(theme->GetTrackSelectedColor()).ColorToString();
     }
 
     void ToJsonValue(std::unique_ptr<JsonValue>& json, const InspectorFilter& filter) const override
@@ -137,11 +114,9 @@ public:
             }
             return;
         }
-        auto host = GetHost();
-        CHECK_NULL_VOID(host);
-        auto pipeline = host->GetContext();
+        auto pipeline = PipelineBase::GetCurrentContext();
         CHECK_NULL_VOID(pipeline);
-        auto theme = pipeline->GetTheme<SliderTheme>(host->GetThemeScopeId());
+        auto theme = pipeline->GetTheme<SliderTheme>();
         CHECK_NULL_VOID(theme);
         auto jsonConstructor = JsonUtil::Create(true);
         jsonConstructor->Put("value", std::to_string(GetValue().value_or(0.0f)).c_str());
@@ -155,7 +130,8 @@ public:
         json->PutExtAttr("blockColor",
             GetBlockColor().value_or(theme->GetBlockColor()).ColorToString().c_str(), filter);
         json->PutExtAttr("trackColor", ToJsonTrackBackgroundColor().c_str(), filter);
-        json->PutExtAttr("selectedColor", ToJsonSelectColor().c_str(), filter);
+        json->PutExtAttr("selectedColor",
+            GetSelectColor().value_or(theme->GetTrackSelectedColor()).ColorToString().c_str(), filter);
         json->PutExtAttr("showSteps", GetShowSteps().value_or(false) ? "true" : "false", filter);
         json->PutExtAttr("showTips", GetShowTips().value_or(false) ? "true" : "false", filter);
         json->PutExtAttr("blockBorderColor",
@@ -183,33 +159,6 @@ public:
             slideRange->Put("to", std::to_string(slideRangeValues.value()->GetToValue()).c_str());
             json->PutExtAttr("slideRange", slideRange, filter);
         }
-        json->PutExtAttr("enableHapticFeedback", GetEnableHapticFeedback().value_or(true) ? "true" : "false", filter);
-#ifdef SUPPORT_DIGITAL_CROWN
-        static const std::array<std::string, 3> SLIDER_CROWN_SENSITIVITY_TO_STRING = {
-            "CrownSensitivity.LOW",
-            "CrownSensitivity.MEDIUM",
-            "CrownSensitivity.HIGH",
-        };
-        json->PutExtAttr("digitalCrownSensitivity",
-            SLIDER_CROWN_SENSITIVITY_TO_STRING
-                .at(static_cast<int>(GetDigitalCrownSensitivityValue(CrownSensitivity::MEDIUM)))
-                .c_str(),
-            filter);
-#endif
-        auto sliderShowStepOptions = GetSliderShowStepOptions();
-        if ((sliderShowStepOptions.has_value()) && (!sliderShowStepOptions.value().empty())) {
-            auto stepOptions = JsonUtil::Create(true);
-            for (auto option : sliderShowStepOptions.value()) {
-                stepOptions->Put(std::to_string(option.first).c_str(), option.second.c_str());
-            }
-            json->PutExtAttr("sliderShowStepOptions", stepOptions, filter);
-        }
-    }
-
-    void ToTreeJson(std::unique_ptr<JsonValue>& json, const InspectorConfig& config) const override
-    {
-        PaintProperty::ToTreeJson(json, config);
-        json->Put(TreeKey::CONTENT, GetCustomContent().value_or("").c_str());
     }
 
     SizeF GetBlockSizeValue(const SizeF& defaultValue)
@@ -244,22 +193,15 @@ public:
     ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP(SliderPaintStyle, Reverse, bool, PROPERTY_UPDATE_RENDER)
     ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP(SliderPaintStyle, Direction, Axis, PROPERTY_UPDATE_RENDER)
     ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP(SliderPaintStyle, BlockColor, Color, PROPERTY_UPDATE_RENDER)
-    ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP(SliderPaintStyle, BlockColorSetByUser, bool, PROPERTY_UPDATE_RENDER)
     ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP(SliderPaintStyle, TrackBackgroundColor, Gradient, PROPERTY_UPDATE_RENDER)
-    ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP(SliderPaintStyle, TrackBackgroundColorSetByUser, bool, PROPERTY_UPDATE_RENDER)
     ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP(SliderPaintStyle, TrackBackgroundIsResourceColor, bool, PROPERTY_UPDATE_RENDER)
     ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP(SliderPaintStyle, SelectColor, Color, PROPERTY_UPDATE_RENDER)
-    ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP(SliderPaintStyle, SelectColorSetByUser, bool, PROPERTY_UPDATE_RENDER)
-    ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP(SliderPaintStyle, SelectGradientColor, Gradient, PROPERTY_UPDATE_RENDER)
-    ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP(SliderPaintStyle, SelectIsResourceColor, bool, PROPERTY_UPDATE_RENDER)
     ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP(SliderPaintStyle, ShowSteps, bool, PROPERTY_UPDATE_RENDER)
     ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP(
         SliderPaintStyle, SliderInteractionMode, SliderModel::SliderInteraction, PROPERTY_UPDATE_RENDER)
     ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP(SliderPaintStyle, BlockBorderColor, Color, PROPERTY_UPDATE_RENDER)
-    ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP(SliderPaintStyle, BlockBorderColorSetByUser, bool, PROPERTY_UPDATE_RENDER)
     ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP(SliderPaintStyle, BlockBorderWidth, Dimension, PROPERTY_UPDATE_RENDER)
     ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP(SliderPaintStyle, StepColor, Color, PROPERTY_UPDATE_RENDER)
-    ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP(SliderPaintStyle, StepColorSetByUser, bool, PROPERTY_UPDATE_RENDER)
     ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP(SliderPaintStyle, TrackBorderRadius, Dimension, PROPERTY_UPDATE_RENDER)
     ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP(SliderPaintStyle, SelectedBorderRadius, Dimension, PROPERTY_UPDATE_RENDER)
     ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP(
@@ -272,13 +214,6 @@ public:
     ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP(SliderPaintStyle, SliderMode, SliderModel::SliderMode, PROPERTY_UPDATE_RENDER)
     ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP(
         SliderPaintStyle, ValidSlideRange, RefPtr<SliderModel::SliderValidRange>, PROPERTY_UPDATE_RENDER)
-    ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP(SliderPaintStyle, EnableHapticFeedback, bool, PROPERTY_UPDATE_RENDER)
-#ifdef SUPPORT_DIGITAL_CROWN
-    ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP(
-        SliderPaintStyle, DigitalCrownSensitivity, CrownSensitivity, PROPERTY_UPDATE_RENDER)
-#endif
-    ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP(
-        SliderPaintStyle, SliderShowStepOptions, SliderModel::SliderShowStepOptions, PROPERTY_UPDATE_RENDER)
     ACE_DEFINE_PROPERTY_GROUP(SliderTipStyle, SliderTipStyle)
     ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP(SliderTipStyle, ShowTips, bool, PROPERTY_UPDATE_RENDER)
     ACE_DEFINE_PROPERTY_ITEM_WITH_GROUP(SliderTipStyle, Padding, Dimension, PROPERTY_UPDATE_RENDER)

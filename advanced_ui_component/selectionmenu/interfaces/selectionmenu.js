@@ -14,7 +14,6 @@
  */
 const pasteboard = requireNapi('pasteboard');
 const hilog = requireNapi('hilog');
-const SymbolGlyphModifier = requireNapi('arkui.modifier').SymbolGlyphModifier;
 
 if (!('finalizeConstruction' in ViewPU.prototype)) {
     Reflect.set(ViewPU.prototype, 'finalizeConstruction', () => {
@@ -22,22 +21,13 @@ if (!('finalizeConstruction' in ViewPU.prototype)) {
 }
 
 const WITHOUT_BUILDER = -2;
-const MAX_FONT_STANDARD = 1.0;
-const MAX_FONT_SCALE = 1.75;
-const SYMBOL_SIZE = 24;
 const defaultTheme = {
     imageSize: 24,
-    buttonSize: 40,
+    buttonSize: 48,
     menuSpacing: 8,
-    expandedOptionPadding: 4,
-    defaultMenuWidth: 224,
-    menuItemPadding: {
-        'id': -1,
-        'type': 10002,
-        params: ['sys.float.padding_level1'],
-        'bundleName': '__harDefaultBundleName__',
-        'moduleName': '__harDefaultModuleName__'
-    },
+    editorOptionMargin: 1,
+    expandedOptionPadding: 3,
+    defaultMenuWidth: 256,
     imageFillColor: {
         'id': -1,
         'type': 10001,
@@ -55,42 +45,14 @@ const defaultTheme = {
     iconBorderRadius: {
         'id': -1,
         'type': 10002,
-        params: ['sys.float.corner_radius_level2'],
+        params: ['sys.float.ohos_id_corner_radius_default_m'],
         'bundleName': '__harDefaultBundleName__',
         'moduleName': '__harDefaultModuleName__'
     },
     containerBorderRadius: {
         'id': -1,
         'type': 10002,
-        params: ['sys.float.corner_radius_level4'],
-        'bundleName': '__harDefaultBundleName__',
-        'moduleName': '__harDefaultModuleName__'
-    },
-    borderWidth: {
-        'id': -1,
-        'type': 10002,
-        params: ['sys.float.ohos_id_menu_inner_border_width'],
-        'bundleName': '__harDefaultBundleName__',
-        'moduleName': '__harDefaultModuleName__'
-    },
-    borderColor: {
-        'id': -1,
-        'type': 10001,
-        params: ['sys.color.ohos_id_menu_inner_border_color'],
-        'bundleName': '__harDefaultBundleName__',
-        'moduleName': '__harDefaultModuleName__'
-    },
-    outlineWidth: {
-        'id': -1,
-        'type': 10002,
-        params: ['sys.float.ohos_id_menu_outer_border_width'],
-        'bundleName': '__harDefaultBundleName__',
-        'moduleName': '__harDefaultModuleName__'
-    },
-    outlineColor: {
-        'id': -1,
-        'type': 10001,
-        params: ['sys.color.ohos_id_menu_outer_border_color'],
+        params: ['sys.float.ohos_id_corner_radius_card'],
         'bundleName': '__harDefaultBundleName__',
         'moduleName': '__harDefaultModuleName__'
     },
@@ -150,73 +112,14 @@ const defaultTheme = {
         'bundleName': '__harDefaultBundleName__',
         'moduleName': '__harDefaultModuleName__'
     },
-    iconPanelShadowStyle: ShadowStyle.OUTER_DEFAULT_SM,
-    defaultSymbolTheme: {
-        fontSize: `${SYMBOL_SIZE}vp`,
-        fontColor: [{
-            'id': -1,
-            'type': 10001,
-            params: ['sys.color.ohos_id_color_primary'],
-            'bundleName': '__harDefaultBundleName__',
-            'moduleName': '__harDefaultModuleName__'
-        }],
-        symbolCutIcon: new SymbolGlyphModifier({
-            'id': -1,
-            'type': 40000,
-            params: ['sys.symbol.cut'],
-            'bundleName': '__harDefaultBundleName__',
-            'moduleName': '__harDefaultModuleName__'
-        }),
-        symbolCopyIcon: new SymbolGlyphModifier({
-            'id': -1,
-            'type': 40000,
-            params: ['sys.symbol.plus_square_on_square'],
-            'bundleName': '__harDefaultBundleName__',
-            'moduleName': '__harDefaultModuleName__'
-        }),
-        symbolPasteIcon: new SymbolGlyphModifier({
-            'id': -1,
-            'type': 40000,
-            params: ['sys.symbol.plus_square_dashed_on_square'],
-            'bundleName': '__harDefaultBundleName__',
-            'moduleName': '__harDefaultModuleName__'
-        }),
-        symbolSelectAllIcon: new SymbolGlyphModifier({
-            'id': -1,
-            'type': 40000,
-            params: ['sys.symbol.checkmark_square_on_square'],
-            'bundleName': '__harDefaultBundleName__',
-            'moduleName': '__harDefaultModuleName__'
-        }),
-        symbolShareIcon: new SymbolGlyphModifier({
-            'id': -1,
-            'type': 40000,
-            params: ['sys.symbol.share'],
-            'bundleName': '__harDefaultBundleName__',
-            'moduleName': '__harDefaultModuleName__'
-        }),
-        symbolTranslateIcon: new SymbolGlyphModifier({
-            'id': -1,
-            'type': 40000,
-            params: ['sys.symbol.translate_c2e'],
-            'bundleName': '__harDefaultBundleName__',
-            'moduleName': '__harDefaultModuleName__'
-        }),
-        symbolSearchIcon: new SymbolGlyphModifier({
-            'id': -1,
-            'type': 40000,
-            params: ['sys.symbol.magnifyingglass'],
-            'bundleName': '__harDefaultBundleName__',
-            'moduleName': '__harDefaultModuleName__'
-        }),
-        symbolArrowDownIcon: new SymbolGlyphModifier({
-            'id': -1,
-            'type': 40000,
-            params: ['sys.symbol.chevron_down'],
-            'bundleName': '__harDefaultBundleName__',
-            'moduleName': '__harDefaultModuleName__'
-        }),
+    aiWriteIcon: {
+        'id': -1,
+        'type': 20000,
+        params: ['sys.media.ic_public_ai_write'],
+        'bundleName': '__harDefaultBundleName__',
+        'moduleName': '__harDefaultModuleName__'
     },
+    iconPanelShadowStyle: ShadowStyle.OUTER_DEFAULT_MD,
 };
 
 class SelectionMenuComponent extends ViewPU {
@@ -240,17 +143,9 @@ class SelectionMenuComponent extends ViewPU {
         this.__cutAndCopyEnable = new ObservedPropertySimplePU(false, this, 'cutAndCopyEnable');
         this.__pasteEnable = new ObservedPropertySimplePU(false, this, 'pasteEnable');
         this.__visibilityValue = new ObservedPropertySimplePU(Visibility.Visible, this, 'visibilityValue');
-        this.__fontScale = new ObservedPropertySimplePU(1, this, 'fontScale');
-        this.__customMenuWidth = new ObservedPropertySimplePU(this.theme.defaultMenuWidth, this, 'customMenuWidth');
-        this.__horizontalMenuHeight = new ObservedPropertySimplePU(0, this, 'horizontalMenuHeight');
-        this.__horizontalMenuWidth =
-            new ObservedPropertySimplePU(this.theme.defaultMenuWidth, this, 'horizontalMenuWidth');
-        this.fontWeightTable =
-            ['100', '200', '300', '400', '500', '600', '700', '800', '900', 'bold', 'normal', 'bolder', 'lighter',
-                'medium',
-                'regular'];
-        this.isFollowingSystemFontScale = false;
-        this.appMaxFontScale = 3.2;
+        this.__customMenuSize = new ObservedPropertySimplePU('100%', this, 'customMenuSize');
+        this.customMenuHeight = this.theme.menuSpacing;
+        this.fontWeightTable = ['100', '200', '300', '400', '500', '600', '700', '800', '900', 'bold', 'normal', 'bolder', 'lighter', 'medium', 'regular'];
         this.setInitiallyProvidedValue(params);
         this.finalizeConstruction();
     }
@@ -301,26 +196,14 @@ class SelectionMenuComponent extends ViewPU {
         if (params.visibilityValue !== undefined) {
             this.visibilityValue = params.visibilityValue;
         }
-        if (params.fontScale !== undefined) {
-            this.fontScale = params.fontScale;
+        if (params.customMenuSize !== undefined) {
+            this.customMenuSize = params.customMenuSize;
         }
-        if (params.customMenuWidth !== undefined) {
-            this.customMenuWidth = params.customMenuWidth;
-        }
-        if (params.horizontalMenuHeight !== undefined) {
-            this.horizontalMenuHeight = params.horizontalMenuHeight;
-        }
-        if (params.horizontalMenuWidth !== undefined) {
-            this.horizontalMenuWidth = params.horizontalMenuWidth;
+        if (params.customMenuHeight !== undefined) {
+            this.customMenuHeight = params.customMenuHeight;
         }
         if (params.fontWeightTable !== undefined) {
             this.fontWeightTable = params.fontWeightTable;
-        }
-        if (params.isFollowingSystemFontScale !== undefined) {
-            this.isFollowingSystemFontScale = params.isFollowingSystemFontScale;
-        }
-        if (params.appMaxFontScale !== undefined) {
-            this.appMaxFontScale = params.appMaxFontScale;
         }
     }
 
@@ -334,10 +217,7 @@ class SelectionMenuComponent extends ViewPU {
         this.__cutAndCopyEnable.purgeDependencyOnElmtId(rmElmtId);
         this.__pasteEnable.purgeDependencyOnElmtId(rmElmtId);
         this.__visibilityValue.purgeDependencyOnElmtId(rmElmtId);
-        this.__fontScale.purgeDependencyOnElmtId(rmElmtId);
-        this.__customMenuWidth.purgeDependencyOnElmtId(rmElmtId);
-        this.__horizontalMenuHeight.purgeDependencyOnElmtId(rmElmtId);
-        this.__horizontalMenuWidth.purgeDependencyOnElmtId(rmElmtId);
+        this.__customMenuSize.purgeDependencyOnElmtId(rmElmtId);
     }
 
     aboutToBeDeleted() {
@@ -347,10 +227,7 @@ class SelectionMenuComponent extends ViewPU {
         this.__cutAndCopyEnable.aboutToBeDeleted();
         this.__pasteEnable.aboutToBeDeleted();
         this.__visibilityValue.aboutToBeDeleted();
-        this.__fontScale.aboutToBeDeleted();
-        this.__customMenuWidth.aboutToBeDeleted();
-        this.__horizontalMenuHeight.aboutToBeDeleted();
-        this.__horizontalMenuWidth.aboutToBeDeleted();
+        this.__customMenuSize.aboutToBeDeleted();
         SubscriberManager.Get().delete(this.id__());
         this.aboutToBeDeletedInternal();
     }
@@ -406,36 +283,12 @@ class SelectionMenuComponent extends ViewPU {
         this.__visibilityValue.set(newValue);
     }
 
-    get fontScale() {
-        return this.__fontScale.get();
+    get customMenuSize() {
+        return this.__customMenuSize.get();
     }
 
-    set fontScale(newValue) {
-        this.__fontScale.set(newValue);
-    }
-
-    get customMenuWidth() {
-        return this.__customMenuWidth.get();
-    }
-
-    set customMenuWidth(newValue) {
-        this.__customMenuWidth.set(newValue);
-    }
-
-    get horizontalMenuHeight() {
-        return this.__horizontalMenuHeight.get();
-    }
-
-    set horizontalMenuHeight(newValue) {
-        this.__horizontalMenuHeight.set(newValue);
-    }
-
-    get horizontalMenuWidth() {
-        return this.__horizontalMenuWidth.get();
-    }
-
-    set horizontalMenuWidth(newValue) {
-        this.__horizontalMenuWidth.set(newValue);
+    set customMenuSize(newValue) {
+        this.__customMenuSize.set(newValue);
     }
 
     aboutToAppear() {
@@ -448,47 +301,38 @@ class SelectionMenuComponent extends ViewPU {
             }
             if (start === 0 && this.controller.getSpans({ start: end + 1, end: end + 1 }).length === 0) {
                 this.visibilityValue = Visibility.None;
-            } else {
+            }
+            else {
                 this.visibilityValue = Visibility.Visible;
             }
-        } else if (this.expandedMenuOptions && this.expandedMenuOptions.length > 0) {
+        }
+        else if (this.expandedMenuOptions && this.expandedMenuOptions.length > 0) {
             this.showExpandedMenuOptions = true;
         }
         let sysBoard = pasteboard.getSystemPasteboard();
         if (sysBoard && sysBoard.hasDataSync()) {
             this.pasteEnable = true;
         }
-        let uiContext = this.getUIContext();
-        if (uiContext) {
-            this.isFollowingSystemFontScale = uiContext.isFollowingSystemFontScale();
-            this.appMaxFontScale = uiContext.getMaxFontScale();
+        if (!(this.editorMenuOptions && this.editorMenuOptions.length > 0)) {
+            this.customMenuHeight = 0;
         }
-        this.fontScale = this.getFontScale();
-    }
-
-    hasSystemMenu() {
-        let showMenuOption = this.showCustomerIndex === -1 &&
-            (this.controller || (this.expandedMenuOptions && this.expandedMenuOptions.length > 0));
-        let showBuilder = this.showCustomerIndex > -1 && this.builder;
-        return Boolean(showMenuOption || showBuilder);
     }
 
     initialRender() {
         this.observeComponentCreation2((elmtId, isInitialRender) => {
             Column.create();
             Column.useShadowBatching(true);
-            Column.constraintSize({
-                maxHeight: '100%',
-                minWidth: this.theme.defaultMenuWidth
-            });
+            Column.flexShrink(1);
+            Column.height(this.customMenuSize);
         }, Column);
         this.observeComponentCreation2((elmtId, isInitialRender) => {
             If.create();
             if (this.editorMenuOptions && this.editorMenuOptions.length > 0) {
                 this.ifElseBranchUpdateFunction(0, () => {
-                    this.IconPanel.bind(this)();
+                    this.IconPanel.bind(this)(this);
                 });
-            } else {
+            }
+            else {
                 this.ifElseBranchUpdateFunction(1, () => {
                 });
             }
@@ -497,19 +341,17 @@ class SelectionMenuComponent extends ViewPU {
         this.observeComponentCreation2((elmtId, isInitialRender) => {
             Scroll.create();
             Scroll.backgroundColor(this.theme.backGroundColor);
+            Scroll.flexShrink(1);
             Scroll.shadow(this.theme.iconPanelShadowStyle);
             Scroll.borderRadius(this.theme.containerBorderRadius);
-            Scroll.outline(this.hasSystemMenu() ? {
-                width: this.theme.outlineWidth, color: this.theme.outlineColor,
-                radius: this.theme.containerBorderRadius
-            } : undefined);
-            Scroll.constraintSize({
-                maxHeight: `calc(100% - ${this.horizontalMenuHeight > 0 ?
-                    this.horizontalMenuHeight + this.theme.menuSpacing : 0}vp)`,
-                minWidth: this.theme.defaultMenuWidth
+            Scroll.onAreaChange((oldValue, newValue) => {
+                let newValueHeight = newValue.height;
+                let oldValueHeight = oldValue.height;
+                this.customMenuHeight += newValueHeight - oldValueHeight;
+                this.customMenuSize = this.customMenuHeight;
             });
         }, Scroll);
-        this.SystemMenu.bind(this)();
+        this.SystemMenu.bind(this)(this);
         Scroll.pop();
         Column.pop();
     }
@@ -524,8 +366,7 @@ class SelectionMenuComponent extends ViewPU {
                 if (item?.textStyle) {
                     let span = item;
                     let style = span.textStyle;
-                    let data = pasteboard.createRecord(pasteboard.MIMETYPE_TEXT_PLAIN,
-                        span.value.substring(span.offsetInSpan[0], span.offsetInSpan[1]));
+                    let data = pasteboard.createRecord(pasteboard.MIMETYPE_TEXT_PLAIN, span.value.substring(span.offsetInSpan[0], span.offsetInSpan[1]));
                     let prop = pasteData.getProperty();
                     let temp = {
                         'color': style.fontColor,
@@ -601,8 +442,7 @@ class SelectionMenuComponent extends ViewPU {
                         tex.decoration = { type: tex.decoration.type, color: tex.decoration.color };
                     }
                 }
-                if (element && element.plainText && element.mimeType === pasteboard.MIMETYPE_TEXT_PLAIN &&
-                this.controller) {
+                if (element && element.plainText && element.mimeType === pasteboard.MIMETYPE_TEXT_PLAIN && this.controller) {
                     this.controller.addTextSpan(element.plainText, {
                         style: tex,
                         offset: start + moveOffset
@@ -620,61 +460,11 @@ class SelectionMenuComponent extends ViewPU {
     }
 
     measureButtonWidth() {
-        let numOfBtnPerRow = 5;
-        let width = this.fontScale > MAX_FONT_SCALE ? this.customMenuWidth : this.theme.defaultMenuWidth;
-        if (this.editorMenuOptions && this.editorMenuOptions.length <= numOfBtnPerRow) {
-            return (width - this.theme.expandedOptionPadding * 2) / this.editorMenuOptions.length;
+        if (this.editorMenuOptions && this.editorMenuOptions.length < 5) {
+            return (this.theme.defaultMenuWidth - this.theme.expandedOptionPadding * 2 -
+                this.theme.editorOptionMargin * 2 * this.editorMenuOptions.length) / this.editorMenuOptions.length;
         }
-        return (width - this.theme.expandedOptionPadding * 2) / numOfBtnPerRow;
-    }
-
-    measureFlexPadding() {
-        return Math.floor((this.theme.expandedOptionPadding - px2vp(2.0)) * 10) / 10;
-    }
-
-    getFontScale() {
-        try {
-            let uiContext = this.getUIContext();
-            let systemFontScale = uiContext.getHostContext()?.config?.fontSizeScale ?? 1;
-            if (!this.isFollowingSystemFontScale) {
-                return 1;
-            }
-            return Math.min(systemFontScale, this.appMaxFontScale);
-        } catch (exception) {
-            let code = exception.code;
-            let message = exception.message;
-            hilog.error(0x3900, 'Ace', `Faild to init fontsizescale info,cause, code: ${code}, message: ${message}`);
-            return 1;
-        }
-    }
-
-    onMeasureSize(selfLayoutInfo, children, constraint) {
-        this.fontScale = this.getFontScale();
-        let sizeResult = { height: 0, width: 0 };
-        children.forEach((child) => {
-            let childMeasureResult = child.measure(constraint);
-            sizeResult.width = childMeasureResult.width;
-            sizeResult.height = childMeasureResult.height;
-        });
-        return sizeResult;
-    }
-
-    updateMenuItemVisibility() {
-        if (!this.controller) {
-            return;
-        }
-        let richEditorSelection = this.controller.getSelection();
-        let start = richEditorSelection.selection[0];
-        let end = richEditorSelection.selection[1];
-        if (start !== end) {
-            this.cutAndCopyEnable = true;
-        }
-        if (start === 0 && this.controller.getSpans({ start: end + 1, end: end + 1 }).length === 0) {
-            this.visibilityValue = Visibility.None;
-        }
-        else {
-            this.visibilityValue = Visibility.Visible;
-        }
+        return this.theme.buttonSize;
     }
 
     IconPanel(parent = null) {
@@ -682,30 +472,17 @@ class SelectionMenuComponent extends ViewPU {
             Flex.create({ wrap: FlexWrap.Wrap });
             Flex.onAreaChange((oldValue, newValue) => {
                 let newValueHeight = newValue.height;
-                let newValueWidth = newValue.width;
-                this.horizontalMenuHeight = newValueHeight;
-                this.horizontalMenuWidth = newValueWidth;
+                let oldValueHeight = oldValue.height;
+                this.customMenuHeight += newValueHeight - oldValueHeight;
+                this.customMenuSize = this.customMenuHeight;
             });
             Flex.clip(true);
-            Flex.width(this.fontScale > MAX_FONT_SCALE ? this.customMenuWidth : this.theme.defaultMenuWidth);
-            Flex.padding({
-                top: this.measureFlexPadding(),
-                bottom: this.measureFlexPadding(),
-                left: this.measureFlexPadding() - 0.1,
-                right: this.measureFlexPadding() - 0.1
-            });
+            Flex.width(this.theme.defaultMenuWidth);
+            Flex.padding(this.theme.expandedOptionPadding);
             Flex.borderRadius(this.theme.containerBorderRadius);
             Flex.margin({ bottom: this.theme.menuSpacing });
             Flex.backgroundColor(this.theme.backGroundColor);
             Flex.shadow(this.theme.iconPanelShadowStyle);
-            Flex.border({
-                width: this.theme.borderWidth, color: this.theme.borderColor,
-                radius: this.theme.containerBorderRadius
-            });
-            Flex.outline({
-                width: this.theme.outlineWidth, color: this.theme.outlineColor,
-                radius: this.theme.containerBorderRadius
-            });
         }, Flex);
         this.observeComponentCreation2((elmtId, isInitialRender) => {
             If.create();
@@ -719,6 +496,7 @@ class SelectionMenuComponent extends ViewPU {
                                 Button.createWithChild();
                                 Button.enabled(!(!item.action && !item.builder));
                                 Button.type(ButtonType.Normal);
+                                Button.margin(this.theme.editorOptionMargin);
                                 Button.backgroundColor(this.theme.backGroundColor);
                                 Button.onClick(() => {
                                     if (item.builder) {
@@ -726,7 +504,8 @@ class SelectionMenuComponent extends ViewPU {
                                         this.showCustomerIndex = index;
                                         this.showExpandedMenuOptions = false;
                                         this.customerChange = !this.customerChange;
-                                    } else {
+                                    }
+                                    else {
                                         this.showCustomerIndex = WITHOUT_BUILDER;
                                         if (!this.controller) {
                                             this.showExpandedMenuOptions = true;
@@ -741,60 +520,21 @@ class SelectionMenuComponent extends ViewPU {
                                 Button.height(this.theme.buttonSize);
                             }, Button);
                             this.observeComponentCreation2((elmtId, isInitialRender) => {
-                                If.create();
-                                if (item.symbolStyle !== undefined) {
-                                    this.ifElseBranchUpdateFunction(0, () => {
-                                        this.observeComponentCreation2((elmtId, isInitialRender) => {
-                                            SymbolGlyph.create();
-                                            SymbolGlyph.fontColor(this.theme.defaultSymbolTheme.fontColor);
-                                            SymbolGlyph.attributeModifier.bind(this)(item.symbolStyle);
-                                            SymbolGlyph.focusable(true);
-                                            SymbolGlyph.draggable(false);
-                                            SymbolGlyph.effectStrategy(SymbolEffectStrategy.NONE);
-                                            SymbolGlyph.symbolEffect(new SymbolEffect(), false);
-                                            SymbolGlyph.fontSize(this.theme.defaultSymbolTheme.fontSize);
-                                        }, SymbolGlyph);
-                                    });
-                                } else {
-                                    this.ifElseBranchUpdateFunction(1, () => {
-                                        this.observeComponentCreation2((elmtId, isInitialRender) => {
-                                            If.create();
-                                            if (Util.isSymbolResource(item.icon)) {
-                                                this.ifElseBranchUpdateFunction(0, () => {
-                                                    this.observeComponentCreation2((elmtId, isInitialRender) => {
-                                                        SymbolGlyph.create(item.icon);
-                                                        SymbolGlyph.fontColor(this.theme.defaultSymbolTheme.fontColor);
-                                                        SymbolGlyph.focusable(true);
-                                                        SymbolGlyph.draggable(false);
-                                                        SymbolGlyph.fontSize(this.theme.defaultSymbolTheme.fontSize);
-                                                    }, SymbolGlyph);
-                                                });
-                                            } else {
-                                                this.ifElseBranchUpdateFunction(1, () => {
-                                                    this.observeComponentCreation2((elmtId, isInitialRender) => {
-                                                        Image.create(item.icon);
-                                                        Image.width(this.theme.imageSize);
-                                                        Image.height(this.theme.imageSize);
-                                                        Image.fillColor(this.theme.imageFillColor);
-                                                        Image.focusable(true);
-                                                        Image.draggable(false);
-                                                    }, Image);
-                                                });
-                                            }
-                                        }, If);
-                                        If.pop();
-                                    });
-                                }
-                            }, If);
-                            If.pop();
+                                Image.create(item.icon);
+                                Image.width(this.theme.imageSize);
+                                Image.height(this.theme.imageSize);
+                                Image.fillColor(this.theme.imageFillColor);
+                                Image.focusable(true);
+                                Image.draggable(false);
+                            }, Image);
                             Button.pop();
                         };
-                        this.forEachUpdateFunction(elmtId, this.editorMenuOptions, forEachItemGenFunction, undefined,
-                            true, false);
+                        this.forEachUpdateFunction(elmtId, this.editorMenuOptions, forEachItemGenFunction, undefined, true, false);
                     }, ForEach);
                     ForEach.pop();
                 });
-            } else {
+            }
+            else {
                 this.ifElseBranchUpdateFunction(1, () => {
                 });
             }
@@ -806,15 +546,7 @@ class SelectionMenuComponent extends ViewPU {
     SystemMenu(parent = null) {
         this.observeComponentCreation2((elmtId, isInitialRender) => {
             Column.create();
-            Column.width(this.fontScale > MAX_FONT_SCALE ? 'auto' : this.theme.defaultMenuWidth);
-            Column.shadow(this.theme.iconPanelShadowStyle);
-            Column.border({
-                width: this.theme.borderWidth, color: this.theme.borderColor,
-                radius: this.theme.containerBorderRadius
-            });
-            Column.constraintSize({
-                minWidth: this.theme.defaultMenuWidth
-            });
+            Column.width(this.theme.defaultMenuWidth);
         }, Column);
         this.observeComponentCreation2((elmtId, isInitialRender) => {
             If.create();
@@ -823,22 +555,29 @@ class SelectionMenuComponent extends ViewPU {
                 this.ifElseBranchUpdateFunction(0, () => {
                     this.observeComponentCreation2((elmtId, isInitialRender) => {
                         Menu.create();
+                        Menu.onVisibleAreaChange([0.0, 1.0], () => {
+                            if (!this.controller) {
+                                return;
+                            }
+                            let richEditorSelection = this.controller.getSelection();
+                            let start = richEditorSelection.selection[0];
+                            let end = richEditorSelection.selection[1];
+                            if (start !== end) {
+                                this.cutAndCopyEnable = true;
+                            }
+                            if (start === 0 && this.controller.getSpans({
+                                start: end + 1,
+                                end: end + 1
+                            }).length === 0) {
+                                this.visibilityValue = Visibility.None;
+                            }
+                            else {
+                                this.visibilityValue = Visibility.Visible;
+                            }
+                        });
                         Menu.radius(this.theme.containerBorderRadius);
                         Menu.clip(true);
-                        Menu.width(this.fontScale > MAX_FONT_SCALE ? 'auto' : this.theme.defaultMenuWidth);
-                        Menu.constraintSize({
-                            minWidth: this.theme.defaultMenuWidth
-                        });
-                        Menu.onVisibleAreaChange([0.0, 1.0], () => {
-                            this.updateMenuItemVisibility();
-                        });
-                        Menu.onAreaChange((oldValue, newValue) => {
-                            let newValueWidth = newValue.width;
-                            this.customMenuWidth =
-                                this.fontScale > MAX_FONT_SCALE && newValueWidth > this.theme.defaultMenuWidth ? newValueWidth :
-                                    this.theme.defaultMenuWidth;
-                            this.updateMenuItemVisibility();
-                        });
+                        Menu.width(this.theme.defaultMenuWidth);
                     }, Menu);
                     this.observeComponentCreation2((elmtId, isInitialRender) => {
                         If.create();
@@ -850,14 +589,10 @@ class SelectionMenuComponent extends ViewPU {
                                 this.observeComponentCreation2((elmtId, isInitialRender) => {
                                     MenuItem.create({
                                         startIcon: this.theme.cutIcon,
-                                        symbolStartIcon: this.theme.defaultSymbolTheme.symbolCutIcon,
                                         content: '剪切',
                                         labelInfo: 'Ctrl+X'
                                     });
                                     MenuItem.enabled(this.cutAndCopyEnable);
-                                    MenuItem.height(this.fontScale > MAX_FONT_STANDARD ? 'auto' :
-                                    this.theme.buttonSize);
-                                    MenuItem.borderRadius(this.theme.iconBorderRadius);
                                     MenuItem.onClick(() => {
                                         if (!this.controller) {
                                             return;
@@ -865,7 +600,8 @@ class SelectionMenuComponent extends ViewPU {
                                         let richEditorSelection = this.controller.getSelection();
                                         if (this.onCut) {
                                             this.onCut({ content: richEditorSelection });
-                                        } else {
+                                        }
+                                        else {
                                             this.pushDataToPasteboard(richEditorSelection);
                                             this.controller.deleteSpans({
                                                 start: richEditorSelection.selection[0],
@@ -878,15 +614,10 @@ class SelectionMenuComponent extends ViewPU {
                                 this.observeComponentCreation2((elmtId, isInitialRender) => {
                                     MenuItem.create({
                                         startIcon: this.theme.copyIcon,
-                                        symbolStartIcon: this.theme.defaultSymbolTheme.symbolCopyIcon,
                                         content: '复制',
                                         labelInfo: 'Ctrl+C'
                                     });
                                     MenuItem.enabled(this.cutAndCopyEnable);
-                                    MenuItem.height(this.fontScale > MAX_FONT_STANDARD ? 'auto' :
-                                    this.theme.buttonSize);
-                                    MenuItem.borderRadius(this.theme.iconBorderRadius);
-                                    MenuItem.margin({ top: this.theme.menuItemPadding });
                                     MenuItem.onClick(() => {
                                         if (!this.controller) {
                                             return;
@@ -894,7 +625,8 @@ class SelectionMenuComponent extends ViewPU {
                                         let richEditorSelection = this.controller.getSelection();
                                         if (this.onCopy) {
                                             this.onCopy({ content: richEditorSelection });
-                                        } else {
+                                        }
+                                        else {
                                             this.pushDataToPasteboard(richEditorSelection);
                                             this.controller.closeSelectionMenu();
                                         }
@@ -904,15 +636,10 @@ class SelectionMenuComponent extends ViewPU {
                                 this.observeComponentCreation2((elmtId, isInitialRender) => {
                                     MenuItem.create({
                                         startIcon: this.theme.pasteIcon,
-                                        symbolStartIcon: this.theme.defaultSymbolTheme.symbolPasteIcon,
                                         content: '粘贴',
                                         labelInfo: 'Ctrl+V'
                                     });
                                     MenuItem.enabled(this.pasteEnable);
-                                    MenuItem.height(this.fontScale > MAX_FONT_STANDARD ? 'auto' :
-                                    this.theme.buttonSize);
-                                    MenuItem.borderRadius(this.theme.iconBorderRadius);
-                                    MenuItem.margin({ top: this.theme.menuItemPadding });
                                     MenuItem.onClick(() => {
                                         if (!this.controller) {
                                             return;
@@ -920,7 +647,8 @@ class SelectionMenuComponent extends ViewPU {
                                         let richEditorSelection = this.controller.getSelection();
                                         if (this.onPaste) {
                                             this.onPaste({ content: richEditorSelection });
-                                        } else {
+                                        }
+                                        else {
                                             this.popDataFromPasteboard(richEditorSelection);
                                             this.controller.closeSelectionMenu();
                                         }
@@ -930,15 +658,10 @@ class SelectionMenuComponent extends ViewPU {
                                 this.observeComponentCreation2((elmtId, isInitialRender) => {
                                     MenuItem.create({
                                         startIcon: this.theme.selectAllIcon,
-                                        symbolStartIcon: this.theme.defaultSymbolTheme.symbolSelectAllIcon,
                                         content: '全选',
                                         labelInfo: 'Ctrl+A'
                                     });
                                     MenuItem.visibility(this.visibilityValue);
-                                    MenuItem.height(this.fontScale > MAX_FONT_STANDARD ? 'auto' :
-                                    this.theme.buttonSize);
-                                    MenuItem.borderRadius(this.theme.iconBorderRadius);
-                                    MenuItem.margin({ top: this.theme.menuItemPadding });
                                     MenuItem.onClick(() => {
                                         if (!this.controller) {
                                             return;
@@ -946,7 +669,8 @@ class SelectionMenuComponent extends ViewPU {
                                         if (this.onSelectAll) {
                                             let richEditorSelection = this.controller.getSelection();
                                             this.onSelectAll({ content: richEditorSelection });
-                                        } else {
+                                        }
+                                        else {
                                             this.controller.setSelection(-1, -1);
                                             this.visibilityValue = Visibility.None;
                                         }
@@ -956,7 +680,8 @@ class SelectionMenuComponent extends ViewPU {
                                 MenuItem.pop();
                                 MenuItemGroup.pop();
                             });
-                        } else {
+                        }
+                        else {
                             this.ifElseBranchUpdateFunction(1, () => {
                             });
                         }
@@ -964,27 +689,19 @@ class SelectionMenuComponent extends ViewPU {
                     If.pop();
                     this.observeComponentCreation2((elmtId, isInitialRender) => {
                         If.create();
-                        if (this.controller && !this.showExpandedMenuOptions &&
-                        this.expandedMenuOptions && this.expandedMenuOptions.length > 0) {
+                        if (this.controller && !this.showExpandedMenuOptions && this.expandedMenuOptions && this.expandedMenuOptions.length > 0) {
                             this.ifElseBranchUpdateFunction(0, () => {
                                 this.observeComponentCreation2((elmtId, isInitialRender) => {
-                                    MenuItem.create({
-                                        content: '更多',
-                                        endIcon: this.theme.arrowDownIcon,
-                                        symbolEndIcon: this.theme.defaultSymbolTheme.symbolArrowDownIcon
-                                    });
-                                    MenuItem.height(this.fontScale > MAX_FONT_STANDARD ? 'auto' :
-                                    this.theme.buttonSize);
-                                    MenuItem.borderRadius(this.theme.iconBorderRadius);
-                                    MenuItem.margin({ top: this.theme.menuItemPadding });
+                                    MenuItem.create({ content: '更多', endIcon: this.theme.arrowDownIcon });
                                     MenuItem.onClick(() => {
                                         this.showExpandedMenuOptions = true;
+                                        this.customMenuSize = '100%';
                                     });
                                 }, MenuItem);
                                 MenuItem.pop();
                             });
-                        } else if (this.showExpandedMenuOptions && this.expandedMenuOptions &&
-                            this.expandedMenuOptions.length > 0) {
+                        }
+                        else if (this.showExpandedMenuOptions && this.expandedMenuOptions && this.expandedMenuOptions.length > 0) {
                             this.ifElseBranchUpdateFunction(1, () => {
                                 this.observeComponentCreation2((elmtId, isInitialRender) => {
                                     ForEach.create();
@@ -993,17 +710,11 @@ class SelectionMenuComponent extends ViewPU {
                                         this.observeComponentCreation2((elmtId, isInitialRender) => {
                                             MenuItem.create({
                                                 startIcon: expandedMenuOptionItem.startIcon,
-                                                symbolStartIcon: expandedMenuOptionItem.symbolStartIcon,
                                                 content: expandedMenuOptionItem.content,
                                                 endIcon: expandedMenuOptionItem.endIcon,
-                                                symbolEndIcon: expandedMenuOptionItem.symbolEndIcon,
                                                 labelInfo: expandedMenuOptionItem.labelInfo,
                                                 builder: expandedMenuOptionItem.builder
                                             });
-                                            MenuItem.height(this.fontScale > MAX_FONT_STANDARD ? 'auto' :
-                                            this.theme.buttonSize);
-                                            MenuItem.borderRadius(this.theme.iconBorderRadius);
-                                            MenuItem.margin({ top: this.theme.menuItemPadding });
                                             MenuItem.onClick(() => {
                                                 if (expandedMenuOptionItem.action) {
                                                     expandedMenuOptionItem.action();
@@ -1012,12 +723,12 @@ class SelectionMenuComponent extends ViewPU {
                                         }, MenuItem);
                                         MenuItem.pop();
                                     };
-                                    this.forEachUpdateFunction(elmtId, this.expandedMenuOptions, forEachItemGenFunction,
-                                        undefined, true, false);
+                                    this.forEachUpdateFunction(elmtId, this.expandedMenuOptions, forEachItemGenFunction, undefined, true, false);
                                 }, ForEach);
                                 ForEach.pop();
                             });
-                        } else {
+                        }
+                        else {
                             this.ifElseBranchUpdateFunction(2, () => {
                             });
                         }
@@ -1025,28 +736,26 @@ class SelectionMenuComponent extends ViewPU {
                     If.pop();
                     Menu.pop();
                 });
-            } else if (this.showCustomerIndex > -1 && this.builder) {
+            }
+            else if (this.showCustomerIndex > -1 && this.builder) {
                 this.ifElseBranchUpdateFunction(1, () => {
-                    this.observeComponentCreation2((elmtId, isInitialRender) => {
-                        Column.create();
-                        Column.width(this.horizontalMenuWidth);
-                    }, Column);
                     this.observeComponentCreation2((elmtId, isInitialRender) => {
                         If.create();
                         if (this.customerChange) {
                             this.ifElseBranchUpdateFunction(0, () => {
-                                this.builder.bind(this)();
+                                this.builder.bind(this)(parent ? parent : this);
                             });
-                        } else {
+                        }
+                        else {
                             this.ifElseBranchUpdateFunction(1, () => {
-                                this.builder.bind(this)();
+                                this.builder.bind(this)(parent ? parent : this);
                             });
                         }
                     }, If);
                     If.pop();
-                    Column.pop();
                 });
-            } else {
+            }
+            else {
                 this.ifElseBranchUpdateFunction(2, () => {
                 });
             }
@@ -1065,7 +774,7 @@ export function SelectionMenu(options, parent = null) {
     {
         (parent ? parent : this).observeComponentCreation2((elmtId, isInitialRender, options = __options__) => {
             if (isInitialRender) {
-                let componentCall = new SelectionMenuComponent(parent ? parent : this, {
+                let componentCall = new SelectionMenuComponent(typeof PUV2ViewBase !== 'undefined' && parent instanceof PUV2ViewBase ? parent : this, {
                     editorMenuOptions: options.editorMenuOptions,
                     expandedMenuOptions: options.expandedMenuOptions,
                     controller: options.controller,
@@ -1074,7 +783,7 @@ export function SelectionMenu(options, parent = null) {
                     onCut: options.onCut,
                     onSelectAll: options.onSelectAll
                 }, undefined, elmtId, () => {
-                }, { page: 'SelectionMenu/src/main/ets/components/MainPage.ets', line: 633, col: 3 });
+                }, { page: 'library/src/main/ets/components/mainpage/MainPage.ets', line: 459, col: 3 });
                 ViewPU.create(componentCall);
                 let paramsLambda = () => {
                     return {
@@ -1088,33 +797,11 @@ export function SelectionMenu(options, parent = null) {
                     };
                 };
                 componentCall.paramsGenerator_ = paramsLambda;
-            } else {
+            }
+            else {
                 (parent ? parent : this).updateStateVarsOfChildByElmtId(elmtId, {});
             }
         }, { name: 'SelectionMenuComponent' });
     }
 }
-
-class Util {
-    static isSymbolResource(resourceStr) {
-        if (!Util.isResourceType(resourceStr)) {
-            return false;
-        }
-        let resource = resourceStr;
-        return resource.type === Util.RESOURCE_TYPE_SYMBOL;
-    }
-
-    static isResourceType(resource) {
-        if (!resource) {
-            return false;
-        }
-        if (typeof resource === 'string' || typeof resource === 'undefined') {
-            return false;
-        }
-        return true;
-    }
-}
-
-Util.RESOURCE_TYPE_SYMBOL = 40000;
-
 export default { SelectionMenu };

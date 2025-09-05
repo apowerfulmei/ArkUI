@@ -20,7 +20,6 @@
 
 #include "base/memory/referenced.h"
 #include "core/event/touch_event.h"
-#include "core/event/mouse_event.h"
 
 namespace OHOS::Ace::NG {
 
@@ -37,19 +36,12 @@ public:
     ~PostEventManager() override = default;
 
     bool PostEvent(const RefPtr<NG::UINode>& uiNode, TouchEvent& touchEvent);
-    bool PostTouchEvent(const RefPtr<NG::UINode>& uiNode, TouchEvent&& touchEvent);
-    bool PostMouseEvent(const RefPtr<NG::UINode>& uiNode, MouseEvent&& mouseEvent);
-    bool PostAxisEvent(const RefPtr<NG::UINode>& uiNode, AxisEvent&& axisEvent);
-    void SetPassThroughResult(bool passThroughResult);
-    RefPtr<FrameNode> GetPostTargetNode();
 
 private:
     bool CheckPointValidity(const TouchEvent& touchEvent);
     bool PostDownEvent(const RefPtr<NG::UINode>& targetNode, const TouchEvent& touchEvent);
     bool PostMoveEvent(const RefPtr<NG::UINode>& targetNode, const TouchEvent& touchEvent);
     bool PostUpEvent(const RefPtr<NG::UINode>& targetNode, const TouchEvent& touchEvent);
-    bool CheckTouchEvent(const RefPtr<NG::UINode>& targetNode, const TouchEvent& touchEvent);
-    void ClearPostInputActions(const RefPtr<NG::UINode>& targetNode, int32_t id);
 
     void HandlePostEvent(const RefPtr<NG::UINode>& targetNode, const TouchEvent& touchEvent);
 
@@ -58,10 +50,7 @@ private:
     bool HaveReceiveDownEvent(const RefPtr<NG::UINode>& targetNode, int32_t id);
     bool HaveReceiveUpOrCancelEvent(const RefPtr<NG::UINode>& targetNode, int32_t id);
     std::list<PostEventAction> postEventAction_;
-    std::list<PostEventAction> postInputEventAction_;
     std::map<int32_t, PostEventAction> lastEventMap_;
-    WeakPtr<FrameNode> targetNode_;
-    bool passThroughResult_ = false;
 };
 } // namespace OHOS::Ace::NG
 

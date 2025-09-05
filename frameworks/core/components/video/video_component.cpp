@@ -15,6 +15,7 @@
 
 #include "core/components/video/video_component.h"
 
+#include "base/log/log.h"
 #include "core/components/video/render_texture.h"
 #include "core/components/video/video_element.h"
 

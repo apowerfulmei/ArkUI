@@ -14,7 +14,9 @@
  */
 #include "core/interfaces/native/node/swiper_controller_modifier.h"
 
+#include "core/components_ng/base/frame_node.h"
 #include "core/components_ng/pattern/swiper/swiper_model_ng.h"
+#include "core/interfaces/native/node/view_model.h"
 
 namespace OHOS::Ace::NG {
 
@@ -43,27 +45,21 @@ void ShowPrevious(ArkUINodeHandle controller)
 namespace NodeModifier {
 const ArkUISwiperControllerModifier* GetSwiperControllerModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
     static const ArkUISwiperControllerModifier modifier = {
-        .getSwiperController = GetSwiperController,
-        .showNext = ShowNext,
-        .showPrevious = ShowPrevious,
+        GetSwiperController,
+        ShowNext,
+        ShowPrevious
     };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
-
     return &modifier;
 }
 
 const CJUISwiperControllerModifier* GetCJUISwiperControllerModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
     static const CJUISwiperControllerModifier modifier = {
-        .getSwiperController = GetSwiperController,
-        .showNext = ShowNext,
-        .showPrevious = ShowPrevious,
+        GetSwiperController,
+        ShowNext,
+        ShowPrevious
     };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
-
     return &modifier;
 }
 }

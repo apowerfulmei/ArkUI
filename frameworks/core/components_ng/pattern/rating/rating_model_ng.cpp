@@ -15,15 +15,16 @@
 
 #include "core/components_ng/pattern/rating/rating_model_ng.h"
 
-#include "core/common/resource/resource_parse_utils.h"
+#include "core/components_ng/base/frame_node.h"
 #include "core/components_ng/base/view_stack_processor.h"
 #include "core/components_ng/pattern/rating/rating_pattern.h"
+#include "core/components_ng/pattern/rating/rating_render_property.h"
+#include "core/components_v2/inspector/inspector_constants.h"
 
 namespace OHOS::Ace::NG {
 void RatingModelNG::Create(double rating, bool indicator)
 {
     auto* stack = ViewStackProcessor::GetInstance();
-    CHECK_NULL_VOID(stack);
     auto nodeId = stack->ClaimNodeId();
     ACE_LAYOUT_SCOPED_TRACE("Create[%s][self:%d]", V2::RATING_ETS_TAG, nodeId);
     auto frameNode = FrameNode::GetOrCreateFrameNode(
@@ -35,14 +36,8 @@ void RatingModelNG::Create(double rating, bool indicator)
 
 void RatingModelNG::SetRatingScore(double value)
 {
-    auto frameNode = ViewStackProcessor::GetInstance()->GetMainFrameNode();
-    CHECK_NULL_VOID(frameNode);
-    auto paintProperty = frameNode->GetPaintPropertyPtr<RatingRenderProperty>();
-    CHECK_NULL_VOID(paintProperty);
-    if (paintProperty->HasRatingScore() && !NearEqual(paintProperty->GetRatingScore().value(), value)) {
-        TAG_LOGI(AceLogTag::ACE_SELECT_COMPONENT, "rating set score %{public}f", value);
-    }
-    paintProperty->UpdateRatingScore(value);
+    TAG_LOGI(AceLogTag::ACE_SELECT_COMPONENT, "rating set score %{public}f", value);
+    ACE_UPDATE_PAINT_PROPERTY(RatingRenderProperty, RatingScore, value);
 }
 
 void RatingModelNG::SetIndicator(bool value)
@@ -87,7 +82,7 @@ void RatingModelNG::SetBackgroundSrc(const std::string& value, bool flag)
     }
 }
 
-void RatingModelNG::SetOnChange(RatingChangeEvent&& onChange)
+void RatingModelNG::SetOnChange(ChangeEvent&& onChange)
 {
     auto frameNode = ViewStackProcessor::GetInstance()->GetMainFrameNode();
     CHECK_NULL_VOID(frameNode);
@@ -96,21 +91,13 @@ void RatingModelNG::SetOnChange(RatingChangeEvent&& onChange)
     eventHub->SetOnChange(std::move(onChange));
 }
 
-void RatingModelNG::SetOnChangeEvent(RatingChangeEvent&& onChangeEvent)
+void RatingModelNG::SetOnChangeEvent(ChangeEvent&& onChangeEvent)
 {
     auto frameNode = ViewStackProcessor::GetInstance()->GetMainFrameNode();
     CHECK_NULL_VOID(frameNode);
     auto eventHub = frameNode->GetEventHub<RatingEventHub>();
     CHECK_NULL_VOID(eventHub);
     eventHub->SetOnChangeEvent(std::move(onChangeEvent));
-}
-
-RefPtr<FrameNode> RatingModelNG::CreateFrameNode(int32_t nodeId)
-{
-    auto frameNode = FrameNode::GetOrCreateFrameNode(
-        V2::RATING_ETS_TAG, nodeId, []() { return AceType::MakeRefPtr<RatingPattern>(); });
-    CHECK_NULL_RETURN(frameNode, nullptr);
-    return frameNode;
 }
 
 void RatingModelNG::SetStars(FrameNode* frameNode, int32_t value)
@@ -169,95 +156,5 @@ void RatingModelNG::SetChangeValue(FrameNode* frameNode, double value)
     auto pattern = frameNode->GetPattern<RatingPattern>();
     CHECK_NULL_VOID(pattern);
     pattern->SetRatingScore(value);
-}
-
-void RatingModelNG::SetRatingOptions(FrameNode* frameNode, double rating, bool indicator)
-{
-    ACE_UPDATE_NODE_LAYOUT_PROPERTY(RatingLayoutProperty, Indicator, indicator, frameNode);
-    ACE_UPDATE_NODE_PAINT_PROPERTY(RatingRenderProperty, RatingScore, rating, frameNode);
-}
-
-void RatingModelNG::SetOnChange(FrameNode* frameNode, RatingChangeEvent&& onChange)
-{
-    CHECK_NULL_VOID(frameNode);
-    auto eventHub = frameNode->GetEventHub<RatingEventHub>();
-    CHECK_NULL_VOID(eventHub);
-    eventHub->SetOnChange(std::move(onChange));
-}
-
-void RatingModelNG::CreateWithMediaResourceObj(const RefPtr<ResourceObject>& resObj, const RatingUriType ratingUriType)
-{
-    auto frameNode = ViewStackProcessor::GetInstance()->GetMainFrameNode();
-    CHECK_NULL_VOID(frameNode);
-    CreateWithMediaResourceObj(frameNode, resObj, ratingUriType);
-}
-
-void RatingModelNG::CreateWithMediaResourceObj(
-    FrameNode* frameNode, const RefPtr<ResourceObject>& resObj, const RatingUriType ratingUriType)
-{
-    CHECK_NULL_VOID(frameNode);
-    auto pattern = frameNode->GetPattern<RatingPattern>();
-    CHECK_NULL_VOID(pattern);
-    std::string key = "rating" + StringTypeToStr(ratingUriType);
-    if (!resObj) {
-        pattern->RemoveResObj(key);
-        return;
-    }
-    auto updateFunc = [ratingUriType, weak = AceType::WeakClaim(frameNode)](
-        const RefPtr<ResourceObject>& resObj) {
-        auto frameNode = weak.Upgrade();
-        CHECK_NULL_VOID(frameNode);
-        std::string result;
-        if (ResourceParseUtils::ParseResMedia(resObj, result)) {
-            UpdateStarStyleImage(AceType::RawPtr(frameNode), ratingUriType, result);
-        }
-    };
-    pattern->AddResObj(key, resObj, std::move(updateFunc));
-}
-
-void RatingModelNG::UpdateStarStyleImage(FrameNode* frameNode,
-    const RatingUriType& ratingUriType, const std::string& result)
-{
-    CHECK_NULL_VOID(frameNode);
-    auto pipeline = frameNode->GetContext();
-    CHECK_NULL_VOID(pipeline);
-    auto ratingTheme = pipeline->GetTheme<RatingTheme>();
-    CHECK_NULL_VOID(ratingTheme);
-    auto iconTheme = pipeline->GetTheme<IconTheme>();
-    CHECK_NULL_VOID(iconTheme);
-    auto layoutProperty = frameNode->GetLayoutProperty<RatingLayoutProperty>();
-    CHECK_NULL_VOID(layoutProperty);
-    auto pattern = frameNode->GetPattern<RatingPattern>();
-    CHECK_NULL_VOID(pattern);
-    switch (ratingUriType) {
-        case RatingUriType::BACKGROUND_URI:
-            SetBackgroundSrc(frameNode, result, result.empty());
-            pattern->LoadBackground(layoutProperty, ratingTheme, iconTheme);
-            break;
-        case RatingUriType::FOREGROUND_URI:
-            SetForegroundSrc(frameNode, result, result.empty());
-            pattern->LoadForeground(layoutProperty, ratingTheme, iconTheme);
-            break;
-        case RatingUriType::SECONDARY_URI:
-            SetSecondarySrc(frameNode, result, result.empty());
-            pattern->LoadSecondary(layoutProperty, ratingTheme, iconTheme);
-            break;
-        default:
-            break;
-    }
-}
-
-std::string RatingModelNG::StringTypeToStr(const RatingUriType ratingUriType)
-{
-    switch (ratingUriType) {
-        case RatingUriType::BACKGROUND_URI:
-            return "BackgroundUri";
-        case RatingUriType::FOREGROUND_URI:
-            return "ForegroundUri";
-        case RatingUriType::SECONDARY_URI:
-            return "SecondaryUri";
-        default:
-            return "";
-    }
 }
 } // namespace OHOS::Ace::NG

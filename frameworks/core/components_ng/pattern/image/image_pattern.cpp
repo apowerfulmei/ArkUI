@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2022-2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -17,38 +17,34 @@
 
 #include "core/components_ng/pattern/image/image_pattern.h"
 
-#include "base/utils/multi_thread.h"
-#include "base/image/image_perf.h"
 #include "base/log/dump_log.h"
-#include "base/network/download_manager.h"
+#include "base/utils/utils.h"
 #include "core/common/ace_engine_ext.h"
+#include "core/common/ai/image_analyzer_adapter.h"
 #include "core/common/ai/image_analyzer_manager.h"
+#include "core/common/container.h"
+#include "core/common/frontend.h"
 #include "core/common/udmf/udmf_client.h"
 #include "core/components/common/layout/constants.h"
 #include "core/components/image/image_theme.h"
 #include "core/components/text/text_theme.h"
 #include "core/components/theme/icon_theme.h"
-#include "core/components_ng/image_provider/image_utils.h"
-#include "core/components_ng/pattern/image/image_content_modifier.h"
-#include "core/components_ng/pattern/image/image_dfx.h"
+#include "core/components_ng/base/inspector_filter.h"
+#include "core/components_ng/base/view_stack_processor.h"
+#include "core/components_ng/manager/select_overlay/select_overlay_manager.h"
 #include "core/components_ng/pattern/image/image_layout_property.h"
 #include "core/components_ng/pattern/image/image_paint_method.h"
 #include "core/components_ng/property/border_property.h"
-#include "core/components_ng/render/drawing.h"
+#include "core/components_ng/property/measure_property.h"
 #include "core/pipeline_ng/pipeline_context.h"
 
 namespace OHOS::Ace::NG {
 namespace {
 constexpr int32_t DEFAULT_DURATION = 1000; // ms
-constexpr uint32_t CRITICAL_TIME = 50;     // ms. If show time of image is less than this, use more cacheImages.
+constexpr uint32_t CRITICAL_TIME = 50;      // ms. If show time of image is less than this, use more cacheImages.
 constexpr int64_t MICROSEC_TO_MILLISEC = 1000;
 constexpr int32_t DEFAULT_ITERATIONS = 1;
-constexpr int32_t MEMORY_LEVEL_CRITICAL_STATUS = 2;
-constexpr size_t URL_SAVE_LENGTH = 15;
-constexpr size_t URL_KEEP_TOTAL_LENGTH = 30;
-constexpr int32_t NEED_MASK_INDEX = 3;
-constexpr int32_t KERNEL_MAX_LENGTH_EXCEPT_OTHER = 245;
-constexpr size_t NEED_MASK_START_OFFSET = 2;
+constexpr int32_t MEMORY_LEVEL_LOW_STATUS = 1;
 
 std::string GetImageInterpolation(ImageInterpolation interpolation)
 {
@@ -89,14 +85,6 @@ std::string ConvertOrientationToString(ImageRotateOrientation orientation)
             return "DOWN";
         case ImageRotateOrientation::LEFT:
             return "LEFT";
-        case ImageRotateOrientation::UP_MIRRORED:
-            return "UP_MIRRORED";
-        case ImageRotateOrientation::RIGHT_MIRRORED:
-            return "RIGHT_MIRRORED";
-        case ImageRotateOrientation::DOWN_MIRRORED:
-            return "DOWN_MIRRORED";
-        case ImageRotateOrientation::LEFT_MIRRORED:
-            return "LEFT_MIRRORED";
         case ImageRotateOrientation::AUTO:
             return "AUTO";
         default:
@@ -109,9 +97,6 @@ constexpr float BOX_EPSILON = 0.5f;
 constexpr float IMAGE_SENSITIVE_RADIUS = 80.0f;
 constexpr double IMAGE_SENSITIVE_SATURATION = 1.0;
 constexpr double IMAGE_SENSITIVE_BRIGHTNESS = 1.08;
-constexpr uint32_t MAX_SRC_LENGTH = 120; // prevent the Base64 image format from too long.
-constexpr int32_t IMAGE_LOAD_FAIL = 0;
-constexpr int32_t IMAGE_LOAD_SUCCESS = 1;
 
 ImagePattern::ImagePattern()
 {
@@ -131,13 +116,14 @@ DataReadyNotifyTask ImagePattern::CreateDataReadyCallback()
     return [weak = WeakClaim(this)](const ImageSourceInfo& sourceInfo) {
         auto pattern = weak.Upgrade();
         CHECK_NULL_VOID(pattern);
+        pattern->isOrientationChange_ = false;
         auto imageLayoutProperty = pattern->GetLayoutProperty<ImageLayoutProperty>();
         CHECK_NULL_VOID(imageLayoutProperty);
         auto currentSourceInfo = imageLayoutProperty->GetImageSourceInfo().value_or(ImageSourceInfo(""));
         if (currentSourceInfo != sourceInfo) {
-            TAG_LOGW(AceLogTag::ACE_IMAGE, "src not match, %{public}s: %{private}s - %{private}s",
-                pattern->imageDfxConfig_.ToStringWithoutSrc().c_str(), currentSourceInfo.ToString().c_str(),
-                sourceInfo.ToString().c_str());
+            TAG_LOGW(AceLogTag::ACE_IMAGE, "sourceInfo does not match, ignore current callback. "
+                 "current: %{private}s vs callback's: %{private}s",
+                currentSourceInfo.ToString().c_str(), sourceInfo.ToString().c_str());
             return;
         }
         pattern->OnImageDataReady();
@@ -149,13 +135,14 @@ LoadSuccessNotifyTask ImagePattern::CreateLoadSuccessCallback()
     return [weak = WeakClaim(this)](const ImageSourceInfo& sourceInfo) {
         auto pattern = weak.Upgrade();
         CHECK_NULL_VOID(pattern);
+        pattern->isOrientationChange_ = false;
         auto imageLayoutProperty = pattern->GetLayoutProperty<ImageLayoutProperty>();
         CHECK_NULL_VOID(imageLayoutProperty);
         auto currentSourceInfo = imageLayoutProperty->GetImageSourceInfo().value_or(ImageSourceInfo(""));
         if (currentSourceInfo != sourceInfo) {
-            TAG_LOGW(AceLogTag::ACE_IMAGE, "src not match, %{public}s: %{private}s - %{private}s",
-                pattern->imageDfxConfig_.ToStringWithoutSrc().c_str(), currentSourceInfo.ToString().c_str(),
-                sourceInfo.ToString().c_str());
+            TAG_LOGW(AceLogTag::ACE_IMAGE, "sourceInfo does not match, ignore current callback. "
+                 "current: %{private}s vs callback's: %{private}s",
+                currentSourceInfo.ToString().c_str(), sourceInfo.ToString().c_str());
             return;
         }
         pattern->OnImageLoadSuccess();
@@ -164,21 +151,21 @@ LoadSuccessNotifyTask ImagePattern::CreateLoadSuccessCallback()
 
 LoadFailNotifyTask ImagePattern::CreateLoadFailCallback()
 {
-    return [weak = WeakClaim(this)](
-               const ImageSourceInfo& sourceInfo, const std::string& errorMsg, const ImageErrorInfo& errorInfo) {
+    return [weak = WeakClaim(this)](const ImageSourceInfo& sourceInfo, const std::string& errorMsg) {
         auto pattern = weak.Upgrade();
         CHECK_NULL_VOID(pattern);
+        pattern->isOrientationChange_ = false;
         auto imageLayoutProperty = pattern->GetLayoutProperty<ImageLayoutProperty>();
         CHECK_NULL_VOID(imageLayoutProperty);
         auto currentSourceInfo = imageLayoutProperty->GetImageSourceInfo().value_or(ImageSourceInfo(""));
         if (currentSourceInfo != sourceInfo) {
-            TAG_LOGW(AceLogTag::ACE_IMAGE, "src not match, %{public}s: %{private}s - %{private}s",
-                pattern->imageDfxConfig_.ToStringWithoutSrc().c_str(), currentSourceInfo.ToString().c_str(),
-                sourceInfo.ToString().c_str());
+            TAG_LOGW(AceLogTag::ACE_IMAGE, "sourceInfo does not match, ignore current callback. "
+                 "current: %{private}s vs callback's: %{private}s",
+                currentSourceInfo.ToString().c_str(), sourceInfo.ToString().c_str());
             return;
         }
         if (!currentSourceInfo.IsFromReset()) {
-            pattern->OnImageLoadFail(errorMsg, errorInfo);
+            pattern->OnImageLoadFail(errorMsg);
         }
     };
 }
@@ -192,9 +179,10 @@ OnCompleteInDataReadyNotifyTask ImagePattern::CreateCompleteCallBackInDataReady(
         CHECK_NULL_VOID(imageLayoutProperty);
         auto currentSourceInfo = imageLayoutProperty->GetImageSourceInfo().value_or(ImageSourceInfo(""));
         if (currentSourceInfo != sourceInfo) {
-            TAG_LOGW(AceLogTag::ACE_IMAGE, "src not match, %{public}s: %{private}s - %{private}s",
-                pattern->imageDfxConfig_.ToStringWithoutSrc().c_str(), currentSourceInfo.ToString().c_str(),
-                sourceInfo.ToString().c_str());
+            TAG_LOGW(AceLogTag::ACE_IMAGE,
+                "sourceInfo does not match, ignore current callback. "
+                "current: %{private}s vs callback's: %{private}s",
+                currentSourceInfo.ToString().c_str(), sourceInfo.ToString().c_str());
             return;
         }
         pattern->OnCompleteInDataReady();
@@ -219,11 +207,16 @@ void ImagePattern::OnCompleteInDataReady()
 
 void ImagePattern::TriggerFirstVisibleAreaChange()
 {
-    if (isComponentSnapshotNode_ || isImageAnimator_) {
-        OnVisibleAreaChange(true);
+    if (isComponentSnapshotNode_) {
         return;
     }
-    OnVisibleAreaChange(previousVisibility_);
+    auto host = GetHost();
+    CHECK_NULL_VOID(host);
+    RectF frameRect;
+    RectF visibleInnerRect;
+    RectF visibleRect;
+    host->GetVisibleRectWithClip(visibleRect, visibleInnerRect, frameRect);
+    OnVisibleAreaChange(GreatNotEqual(visibleInnerRect.Width(), 0.0) && GreatNotEqual(visibleInnerRect.Height(), 0.0));
 }
 
 void ImagePattern::PrepareAnimation(const RefPtr<CanvasImage>& image)
@@ -231,10 +224,12 @@ void ImagePattern::PrepareAnimation(const RefPtr<CanvasImage>& image)
     if (image->IsStatic()) {
         return;
     }
-    SetRedrawCallback(image);
-    SetOnFinishCallback(image);
     RegisterVisibleAreaChange();
     TriggerFirstVisibleAreaChange();
+    SetOnFinishCallback(image);
+    SetRedrawCallback(image);
+    // GIF images are not played by default, but depend on OnVisibleAreaChange callback.
+    image->ControlAnimation(gifAnimation_);
 }
 
 void ImagePattern::SetOnFinishCallback(const RefPtr<CanvasImage>& image)
@@ -274,7 +269,7 @@ void ImagePattern::RegisterVisibleAreaChange(bool isCalcClip)
     auto host = GetHost();
     CHECK_NULL_VOID(host);
     // add visibleAreaChangeNode(inner callback)
-    std::vector<double> ratioList = { 0.0 };
+    std::vector<double> ratioList = {0.0};
     pipeline->AddVisibleAreaChangeNode(host, ratioList, callback, false, isCalcClip);
 }
 
@@ -291,7 +286,7 @@ void ImagePattern::CheckHandles(SelectHandleInfo& handleInfo)
     const auto& geometryNode = host->GetGeometryNode();
     auto contentRect = geometryNode->GetContentRect();
     RectF visibleContentRect(contentRect.GetOffset() + parentGlobalOffset_, contentRect.GetSize());
-    auto parent = host->GetAncestorNodeOfFrame(true);
+    auto parent = host->GetAncestorNodeOfFrame(false);
     visibleContentRect = GetVisibleContentRect(parent, visibleContentRect);
     auto paintRect = handleInfo.paintRect;
     PointF bottomPoint = { paintRect.Left(), paintRect.Bottom() - BOX_EPSILON };
@@ -307,7 +302,8 @@ void ImagePattern::CalAndUpdateSelectOverlay()
     SelectOverlayInfo info;
     const auto& geometryNode = host->GetGeometryNode();
     CHECK_NULL_VOID(geometryNode);
-    SizeF handleSize = { SelectHandleInfo::GetDefaultLineWidth().ConvertToPx(),
+    SizeF handleSize = {
+        SelectHandleInfo::GetDefaultLineWidth().ConvertToPx(),
         geometryNode->GetContentSize().Height() };
     info.firstHandle.paintRect = RectF(rect.GetOffset(), handleSize);
     CheckHandles(info.firstHandle);
@@ -324,7 +320,7 @@ OffsetF ImagePattern::GetParentGlobalOffset() const
     auto pipeline = host->GetContext();
     CHECK_NULL_RETURN(pipeline, {});
     auto rootOffset = pipeline->GetRootRect().GetOffset();
-    return host->GetPaintRectOffset(false, true) - rootOffset;
+    return host->GetPaintRectOffset() - rootOffset;
 }
 
 void ImagePattern::OnAreaChangedInner()
@@ -385,42 +381,6 @@ void ImagePattern::ClearAltData()
     altSrcRect_.reset();
 }
 
-void ImagePattern::ApplyAIModificationsToImage()
-{
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    const auto& geometryNode = host->GetGeometryNode();
-    CHECK_NULL_VOID(geometryNode);
-    if (IsSupportImageAnalyzerFeature()) {
-        if (isPixelMapChanged_) {
-            UpdateAnalyzerOverlay();
-        }
-        UpdateAnalyzerUIConfig(geometryNode);
-        auto context = host->GetContext();
-        CHECK_NULL_VOID(context);
-        auto uiTaskExecutor = SingleTaskExecutor::Make(context->GetTaskExecutor(), TaskExecutor::TaskType::UI);
-        uiTaskExecutor.PostTask(
-            [weak = WeakClaim(this)] {
-                auto pattern = weak.Upgrade();
-                CHECK_NULL_VOID(pattern);
-                ContainerScope scope(pattern->GetHostInstanceId());
-                pattern->CreateAnalyzerOverlay();
-            },
-            "ArkUIImageCreateAnalyzerOverlay");
-    }
-}
-
-void ImagePattern::ReportPerfData(const RefPtr<NG::FrameNode>& host, int32_t state)
-{
-    auto accessibilityId = host->GetAccessibilityId();
-    auto geometryNode = host->GetGeometryNode();
-    CHECK_NULL_VOID(geometryNode);
-    auto type = loadingCtx_->GetSourceInfo().GetSrcType();
-    std::string srcType = GetSrcTypeToString(type);
-    std::pair<int32_t, int32_t> size(geometryNode->GetFrameSize().Width(), geometryNode->GetFrameSize().Height());
-    ImagePerf::GetPerfMonitor()->EndRecordImageLoadStat(accessibilityId, srcType, size, state);
-}
-
 void ImagePattern::OnImageLoadSuccess()
 {
     CHECK_NULL_VOID(loadingCtx_);
@@ -430,124 +390,52 @@ void ImagePattern::OnImageLoadSuccess()
     CHECK_NULL_VOID(geometryNode);
 
     image_ = loadingCtx_->MoveCanvasImage();
-    if (!image_) {
-        TAG_LOGW(AceLogTag::ACE_IMAGE, "%{public}s, %{private}s image is null.",
-            imageDfxConfig_.ToStringWithoutSrc().c_str(), imageDfxConfig_.GetImageSrc().c_str());
-        return;
-    }
+    CHECK_NULL_VOID(image_);
     srcRect_ = loadingCtx_->GetSrcRect();
     dstRect_ = loadingCtx_->GetDstRect();
     auto srcInfo = loadingCtx_->GetSourceInfo();
     auto frameCount = loadingCtx_->GetFrameCount();
-    imageDfxConfig_.SetFrameSize(geometryNode->GetFrameSize().Width(), geometryNode->GetFrameSize().Height());
 
-    image_->SetImageDfxConfig(imageDfxConfig_);
-
-    SetImagePaintConfig(image_, srcRect_, dstRect_, srcInfo, frameCount);
-    if (srcInfo.IsSvg()) {
-        UpdateSvgSmoothEdgeValue();
-    }
-    PrepareAnimation(image_);
-    if (enableDrag_) {
-        EnableDrag();
-    }
-    ClearAltData();
-
-    ApplyAIModificationsToImage();
-
-    ACE_SCOPED_TRACE("OnImageLoadSuccess %s", imageDfxConfig_.ToStringWithSrc().c_str());
-    if (SystemProperties::GetDebugEnabled()) {
-        TAG_LOGI(AceLogTag::ACE_IMAGE, "ImageLoadSuccess %{public}s", imageDfxConfig_.ToStringWithSrc().c_str());
-    }
-    auto context = host->GetRenderContext();
-    auto pixelMap = image_->GetPixelMap();
-    if (pixelMap) {
-        SetPixelMapMemoryName(pixelMap);
-    }
-    if (context && pixelMap) {
-        context->SetColorGamut(pixelMap->GetInnerColorGamut());
-    }
-    ReportPerfData(host, IMAGE_LOAD_SUCCESS);
-    /*  
-    * Trigger the completion callback. Since the callback is executed externally and its behavior 
-    * is not controlled here, it may lead to object mutation or destruction. Therefore, avoid 
-    * accessing internal member pointers or state after this call to prevent use-after-free 
-    * issues or crashes.  
-    */
     RectF paintRect = CalcImageContentPaintSize(geometryNode);
     LoadImageSuccessEvent event(loadingCtx_->GetImageSize().Width(), loadingCtx_->GetImageSize().Height(),
         geometryNode->GetFrameSize().Width(), geometryNode->GetFrameSize().Height(), 1, paintRect.Width(),
         paintRect.Height(), paintRect.GetX(), paintRect.GetY());
+
+    SetImagePaintConfig(image_, srcRect_, dstRect_, srcInfo, frameCount);
+    UpdateSvgSmoothEdgeValue();
+    PrepareAnimation(image_);
+    if (host->IsDraggable()) {
+        EnableDrag();
+    }
+    ClearAltData();
+
     auto eventHub = GetEventHub<ImageEventHub>();
     if (eventHub) {
         eventHub->FireCompleteEvent(event);
     }
+
+    if (IsSupportImageAnalyzerFeature()) {
+        if (isPixelMapChanged_) {
+            UpdateAnalyzerOverlay();
+        }
+        UpdateAnalyzerUIConfig(geometryNode);
+        auto context = host->GetContext();
+        CHECK_NULL_VOID(context);
+        auto uiTaskExecutor = SingleTaskExecutor::Make(context->GetTaskExecutor(), TaskExecutor::TaskType::UI);
+        uiTaskExecutor.PostTask([weak = WeakClaim(this)] {
+            auto pattern = weak.Upgrade();
+            CHECK_NULL_VOID(pattern);
+            ContainerScope scope(pattern->GetHostInstanceId());
+            pattern->CreateAnalyzerOverlay();
+        }, "ArkUIImageCreateAnalyzerOverlay");
+    }
+    ACE_LAYOUT_SCOPED_TRACE(
+        "OnImageLoadSuccess[self:%d][src:%s]", host->GetId(), loadingCtx_->GetSourceInfo().ToString().c_str());
+    if (SystemProperties::GetDebugEnabled()) {
+        TAG_LOGD(AceLogTag::ACE_IMAGE,
+            "imageLoadSuccess src=%{private}s", loadingCtx_->GetSourceInfo().ToString().c_str());
+    }
     host->MarkNeedRenderOnly();
-}
-
-bool ImagePattern::SetPixelMapMemoryName(RefPtr<PixelMap>& pixelMap)
-{
-    auto host = GetHost();
-    CHECK_NULL_RETURN(host, false);
-    auto id = host->GetInspectorId();
-    if (id.has_value()) {
-        std::string result = std::string("id:") + id.value();
-        pixelMap->SetMemoryName(result);
-        hasSetPixelMapMemoryName_ = true;
-        return true;
-    }
-    auto imageLayoutProperty = GetLayoutProperty<ImageLayoutProperty>();
-    CHECK_NULL_RETURN(imageLayoutProperty, false);
-    auto imageSourceInfo = imageLayoutProperty->GetImageSourceInfo();
-    if (imageSourceInfo.has_value() && !imageSourceInfo->GetPixmap()) {
-        pixelMap->SetMemoryName(HandleSrcForMemoryName(imageSourceInfo->GetSrc()));
-    }
-    return false;
-}
-
-std::string ImagePattern::HandleSrcForMemoryName(std::string url)
-{
-    auto imageObj = loadingCtx_->GetImageObject();
-    CHECK_NULL_RETURN(imageObj, "");
-    auto width = imageObj->GetImageSize().Width();
-    auto height = imageObj->GetImageSize().Height();
-    if (url.length() > KERNEL_MAX_LENGTH_EXCEPT_OTHER) {
-        url = url.substr(url.size() - KERNEL_MAX_LENGTH_EXCEPT_OTHER);
-    }
-    std::string result = std::to_string(static_cast<int>(width)) + std::string("x") +
-        std::to_string(static_cast<int>(height)) + std::string("-") + MaskUrl(url);
-    return result;
-}
-
-std::string ImagePattern::MaskUrl(std::string url)
-{
-    const size_t urlLength = url.length();
-    if (urlLength < URL_KEEP_TOTAL_LENGTH) {
-        for (size_t i = NEED_MASK_START_OFFSET; i < urlLength; i += NEED_MASK_INDEX) {
-            url[i] = '*';
-        }
-        return url;
-    }
-
-    // Long URL: keep head and tail, mask middle fully, and partially mask tail
-    std::string result;
-    // Pre-allocate memory to avoid multiple reallocations during string appends, improving performance
-    result.reserve(urlLength);
-    // 1. prefix: keep first URL_SAVE_LENGTH characters
-    result.append(url.substr(0, URL_SAVE_LENGTH));
-    // 2. middle: replace with stars
-    const size_t middleLength = urlLength - URL_KEEP_TOTAL_LENGTH;
-    result.append(middleLength, '*');
-    // 3. suffix: apply masked pattern on the last URL_SAVE_LENGTH chars
-    size_t suffixStart = urlLength - URL_SAVE_LENGTH;
-    for (size_t i = 0; i < URL_SAVE_LENGTH; ++i) {
-        if (i % NEED_MASK_INDEX == NEED_MASK_START_OFFSET) {
-            result += '*';
-        } else {
-            result += url[suffixStart + i];
-        }
-    }
-    return result;
 }
 
 bool ImagePattern::CheckIfNeedLayout()
@@ -598,7 +486,7 @@ void ImagePattern::UpdateOrientation()
         return;
     }
     imageObj->SetUserOrientation(userOrientation_);
-    selfOrientation_ = imageObj->GetOrientation();
+    auto selfOrientation_ = imageObj->GetOrientation();
     if (userOrientation_ == ImageRotateOrientation::UP) {
         joinOrientation_ = ImageRotateOrientation::UP;
         return;
@@ -612,7 +500,7 @@ void ImagePattern::UpdateOrientation()
     imageObj->SetOrientation(joinOrientation_);
 }
 
-void ImagePattern::OnImageLoadFail(const std::string& errorMsg, const ImageErrorInfo& errorInfo)
+void ImagePattern::OnImageLoadFail(const std::string& errorMsg)
 {
     auto host = GetHost();
     CHECK_NULL_VOID(host);
@@ -620,8 +508,7 @@ void ImagePattern::OnImageLoadFail(const std::string& errorMsg, const ImageError
     auto imageEventHub = GetEventHub<ImageEventHub>();
     CHECK_NULL_VOID(imageEventHub);
     LoadImageFailEvent event(
-        geometryNode->GetFrameSize().Width(), geometryNode->GetFrameSize().Height(), errorMsg, errorInfo);
-    ReportPerfData(host, IMAGE_LOAD_FAIL);
+        geometryNode->GetFrameSize().Width(), geometryNode->GetFrameSize().Height(), errorMsg);
     imageEventHub->FireErrorEvent(event);
 }
 
@@ -650,8 +537,6 @@ void ImagePattern::StartDecoding(const SizeF& dstSize)
         return;
     }
 
-    ACE_SCOPED_TRACE("StartDecoding imageInfo: [%s]", imageDfxConfig_.ToStringWithSrc().c_str());
-
     const auto& props = DynamicCast<ImageLayoutProperty>(host->GetLayoutProperty());
     CHECK_NULL_VOID(props);
     bool autoResize = props->GetAutoResize().value_or(autoResizeDefault_);
@@ -660,27 +545,35 @@ void ImagePattern::StartDecoding(const SizeF& dstSize)
     const std::optional<SizeF>& sourceSize = props->GetSourceSize();
     auto renderProp = host->GetPaintProperty<ImageRenderProperty>();
     bool hasValidSlice = renderProp && (renderProp->HasImageResizableSlice() || renderProp->HasImageResizableLattice());
-    bool isHdrDecoderNeed = renderProp && (renderProp->HasDynamicMode() || renderProp->HasHdrBrightness());
+    DynamicRangeMode dynamicMode = DynamicRangeMode::STANDARD;
+    bool isHdrDecoderNeed = false;
+    if (renderProp && renderProp->HasDynamicMode()) {
+        isHdrDecoderNeed = true;
+        dynamicMode = renderProp->GetDynamicMode().value_or(DynamicRangeMode::STANDARD);
+    }
 
     if (loadingCtx_) {
         loadingCtx_->SetIsHdrDecoderNeed(isHdrDecoderNeed);
+        loadingCtx_->SetDynamicRangeMode(dynamicMode);
         loadingCtx_->SetImageQuality(GetImageQuality());
-        loadingCtx_->SetPhotoDecodeFormat(GetExternalDecodeFormat());
         loadingCtx_->MakeCanvasImageIfNeed(dstSize, autoResize, imageFit, sourceSize, hasValidSlice);
     }
     if (altLoadingCtx_) {
-        altLoadingCtx_->SetIsHdrDecoderNeed(isHdrDecoderNeed);
-        altLoadingCtx_->SetImageQuality(GetImageQuality());
-        altLoadingCtx_->SetPhotoDecodeFormat(GetExternalDecodeFormat());
         altLoadingCtx_->MakeCanvasImageIfNeed(dstSize, autoResize, imageFit, sourceSize, hasValidSlice);
     }
 }
 
 void ImagePattern::UpdateSvgSmoothEdgeValue()
 {
+    auto host = GetHost();
+    CHECK_NULL_VOID(host);
+    auto pipeline = host->GetContext();
+    CHECK_NULL_VOID(pipeline);
+    auto theme = pipeline->GetTheme<ImageTheme>();
+    CHECK_NULL_VOID(theme);
     auto renderProp = GetPaintProperty<ImageRenderProperty>();
     CHECK_NULL_VOID(renderProp);
-    renderProp->UpdateSmoothEdge(std::max(smoothEdge_, renderProp->GetSmoothEdge().value_or(0.0f)));
+    renderProp->UpdateSmoothEdge(std::max(theme->GetMinEdgeAntialiasing(), renderProp->GetSmoothEdge().value_or(0.0f)));
 }
 
 void ImagePattern::SetImagePaintConfig(const RefPtr<CanvasImage>& canvasImage, const RectF& srcRect,
@@ -696,90 +589,34 @@ void ImagePattern::SetImagePaintConfig(const RefPtr<CanvasImage>& canvasImage, c
     config.imageFit_ = layoutProps->GetImageFit().value_or(ImageFit::COVER);
     config.isSvg_ = sourceInfo.IsSvg();
     config.frameCount_ = frameCount;
-    if (GreatNotEqual(frameCount, 1)) {
-        config.orientation_ = ImageRotateOrientation::UP;
-    } else {
-        config.orientation_ = joinOrientation_;
-    }
+    config.sourceInfo_ = sourceInfo;
+    config.orientation_ = joinOrientation_;
     canvasImage->SetPaintConfig(config);
 }
 
 RefPtr<NodePaintMethod> ImagePattern::CreateNodePaintMethod()
 {
-    CreateModifier();
     bool sensitive = false;
     if (isSensitive_) {
         auto host = GetHost();
         CHECK_NULL_RETURN(host, nullptr);
         sensitive = host->IsPrivacySensitive();
     }
-    ImagePaintMethodConfig imagePaintMethodConfig { .sensitive = sensitive,
-        .selected = isSelected_,
-        .imageOverlayModifier = overlayMod_,
-        .imageContentModifier = contentMod_,
-        .interpolation = interpolationDefault_ };
-    // Callback function executed after the graphics rendering is complete.
-    auto drawCompleteCallback = [weakPattern = WeakClaim(this)](const RenderedImageInfo& renderedImageInfo) {
-        auto pattern = weakPattern.Upgrade();
-        CHECK_NULL_VOID(pattern);
-        // Mark the rendering as successful on the instance.
-        pattern->SetRenderedImageInfo(std::move(renderedImageInfo));
-    };
-    if (image_) {
-        image_->SetDrawCompleteCallback(std::move(drawCompleteCallback));
-        imagePaintMethod_->UpdatePaintMethod(image_, imagePaintMethodConfig);
-        return imagePaintMethod_;
-    }
-    if (altImage_ && altDstRect_ && altSrcRect_) {
-        altImage_->SetDrawCompleteCallback(std::move(drawCompleteCallback));
-        imagePaintMethod_->UpdatePaintMethod(altImage_, imagePaintMethodConfig);
-        return imagePaintMethod_;
-    }
-    CreateObscuredImage();
-    if (obscuredImage_) {
-        obscuredImage_->SetDrawCompleteCallback(std::move(drawCompleteCallback));
-        imagePaintMethod_->UpdatePaintMethod(obscuredImage_, imagePaintMethodConfig);
-        return imagePaintMethod_;
-    }
-    imagePaintMethodConfig.imageContentModifier = nullptr;
-    imagePaintMethodConfig.imageOverlayModifier = nullptr;
-    imagePaintMethod_->UpdatePaintMethod(nullptr, imagePaintMethodConfig);
-    return imagePaintMethod_;
-}
-
-void ImagePattern::InitFromThemeIfNeed()
-{
-    if (isFullyInitializedFromTheme_) {
-        return;
-    }
-    isFullyInitializedFromTheme_ = true;
-
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    auto pipeline = host->GetContext();
-    CHECK_NULL_VOID(pipeline);
-
-    auto textTheme = pipeline->GetTheme<TextTheme>();
-    CHECK_NULL_VOID(textTheme);
-    selectedColor_ = textTheme->GetSelectedColor();
-
-    auto imageTheme = pipeline->GetTheme<ImageTheme>();
-    CHECK_NULL_VOID(imageTheme);
-    smoothEdge_ = imageTheme->GetMinEdgeAntialiasing();
-}
-
-void ImagePattern::CreateModifier()
-{
-    InitFromThemeIfNeed();
-    if (!contentMod_) {
-        contentMod_ = MakeRefPtr<ImageContentModifier>(WeakClaim(this));
-    }
     if (!overlayMod_) {
         overlayMod_ = MakeRefPtr<ImageOverlayModifier>(selectedColor_);
     }
-    if (!imagePaintMethod_) {
-        imagePaintMethod_ = MakeRefPtr<ImagePaintMethod>(nullptr);
+    if (image_) {
+        return MakeRefPtr<ImagePaintMethod>(image_, isSelected_, overlayMod_, sensitive, interpolationDefault_);
     }
+    if (altImage_ && altDstRect_ && altSrcRect_) {
+        return MakeRefPtr<ImagePaintMethod>(altImage_, isSelected_, overlayMod_, sensitive, interpolationDefault_);
+    }
+    CreateObscuredImage();
+    if (obscuredImage_) {
+        return MakeRefPtr<ImagePaintMethod>(
+            obscuredImage_, isSelected_, overlayMod_, sensitive, interpolationDefault_);
+    }
+    return MakeRefPtr<ImagePaintMethod>(nullptr, isSelected_, overlayMod_, sensitive, interpolationDefault_);
 }
 
 bool ImagePattern::OnDirtyLayoutWrapperSwap(const RefPtr<LayoutWrapper>& dirty, const DirtySwapConfig& config)
@@ -800,12 +637,9 @@ bool ImagePattern::OnDirtyLayoutWrapperSwap(const RefPtr<LayoutWrapper>& dirty, 
         return false;
     }
 
-    if (imageType_ == ImageType::PIXELMAP_DRAWABLE) {
-        return true;
-    }
-
     const auto& dstSize = dirty->GetGeometryNode()->GetContentSize();
     StartDecoding(dstSize);
+
     if (loadingCtx_) {
         auto renderProp = GetPaintProperty<ImageRenderProperty>();
         if (renderProp && (renderProp->HasImageResizableSlice() || renderProp->HasImageResizableLattice()) && image_) {
@@ -850,30 +684,8 @@ void ImagePattern::CreateObscuredImage()
     }
 }
 
-ImageDfxConfig ImagePattern::CreateImageDfxConfig(const ImageSourceInfo& src)
-{
-    auto host = GetHost();
-    CHECK_NULL_RETURN(host, ImageDfxConfig());
-    auto renderContext = host->GetRenderContext();
-    CHECK_NULL_RETURN(renderContext, ImageDfxConfig());
-    return {
-        { host->GetId(), host->GetAccessibilityId(), renderContext->GetNodeId() },
-        static_cast<int32_t>(src.GetSrcType()),
-        src.ToString().substr(0, MAX_SRC_LENGTH),
-        host->IsTrimMemRecycle(),
-    };
-}
-
-void ImagePattern::ClearReloadFlagsAfterLoad()
-{
-    // Reset the reload flag before loading the image to ensure a fresh state.
-    isImageReloadNeeded_ = false;
-    isOrientationChange_ = false;
-    // Before loading new image data, reset the render success status to `false`.
-    renderedImageInfo_.renderSuccess = false;
-}
-
-void ImagePattern::LoadImage(const ImageSourceInfo& src, bool needLayout)
+void ImagePattern::LoadImage(
+    const ImageSourceInfo& src, const PropertyChangeFlag& propertyChangeFlag, VisibleType visibleType)
 {
     if (loadingCtx_) {
         auto srcKey = src.GetKey();
@@ -883,23 +695,19 @@ void ImagePattern::LoadImage(const ImageSourceInfo& src, bool needLayout)
     LoadNotifier loadNotifier(CreateDataReadyCallback(), CreateLoadSuccessCallback(), CreateLoadFailCallback());
     loadNotifier.onDataReadyComplete_ = CreateCompleteCallBackInDataReady();
 
-    imageDfxConfig_ = CreateImageDfxConfig(src);
-
-    loadingCtx_ = AceType::MakeRefPtr<ImageLoadingContext>(
-        src, std::move(loadNotifier), syncLoad_, isSceneBoardWindow_, imageDfxConfig_);
-
+    loadingCtx_ = AceType::MakeRefPtr<ImageLoadingContext>(src, std::move(loadNotifier), syncLoad_);
     if (SystemProperties::GetDebugEnabled()) {
-        TAG_LOGI(AceLogTag::ACE_IMAGE, "load image, %{private}s", imageDfxConfig_.ToStringWithSrc().c_str());
+        TAG_LOGD(AceLogTag::ACE_IMAGE, "start loading image %{public}s", src.ToString().c_str());
     }
-
+    loadingCtx_->SetLoadInVipChannel(GetLoadInVipChannel());
+    loadingCtx_->SetNodeId(GetHost()->GetId());
     if (onProgressCallback_) {
         loadingCtx_->SetOnProgressCallback(std::move(onProgressCallback_));
     }
-    if (!needLayout) {
-        loadingCtx_->FinishMeasure();
+    if (!((propertyChangeFlag & PROPERTY_UPDATE_MEASURE) == PROPERTY_UPDATE_MEASURE) ||
+        visibleType == VisibleType::GONE) {
+        loadingCtx_->FinishMearuse();
     }
-    ClearReloadFlagsAfterLoad();
-    ImagePerf::GetPerfMonitor()->StartRecordImageLoadStat(imageDfxConfig_.GetAccessibilityId());
     loadingCtx_->LoadImageData();
 }
 
@@ -909,11 +717,7 @@ void ImagePattern::LoadAltImage(const ImageSourceInfo& altImageSourceInfo)
     LoadNotifier altLoadNotifier(CreateDataReadyCallbackForAlt(), CreateLoadSuccessCallbackForAlt(), nullptr);
     if (!altLoadingCtx_ || altLoadingCtx_->GetSourceInfo() != altImageSourceInfo ||
         (altLoadingCtx_ && altImageSourceInfo.IsSvg())) {
-        auto host = GetHost();
-
-        altImageDfxConfig_ = CreateImageDfxConfig(altImageSourceInfo);
-        altLoadingCtx_ = AceType::MakeRefPtr<ImageLoadingContext>(
-            altImageSourceInfo, std::move(altLoadNotifier), false, isSceneBoardWindow_, altImageDfxConfig_);
+        altLoadingCtx_ = AceType::MakeRefPtr<ImageLoadingContext>(altImageSourceInfo, std::move(altLoadNotifier));
         altLoadingCtx_->LoadImageData();
     }
 }
@@ -922,30 +726,32 @@ void ImagePattern::LoadImageDataIfNeed()
 {
     auto imageLayoutProperty = GetLayoutProperty<ImageLayoutProperty>();
     CHECK_NULL_VOID(imageLayoutProperty);
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
+    auto imageRenderProperty = GetPaintProperty<ImageRenderProperty>();
+    CHECK_NULL_VOID(imageRenderProperty);
     auto src = imageLayoutProperty->GetImageSourceInfo().value_or(ImageSourceInfo(""));
     UpdateInternalResource(src);
+    std::optional<Color> svgFillColorOpt = std::nullopt;
+    if (src.IsSvg()) {
+        svgFillColorOpt = src.GetFillColor();
+    }
 
-    if (!loadingCtx_ || loadingCtx_->GetSourceInfo() != src || isImageReloadNeeded_ || isOrientationChange_) {
-        bool needLayout = host->CheckNeedForceMeasureAndLayout() &&
-                          imageLayoutProperty->GetVisibility().value_or(VisibleType::VISIBLE) != VisibleType::GONE;
-        LoadImage(src, needLayout);
+    if (!loadingCtx_ || loadingCtx_->GetSourceInfo() != src || isImageQualityChange_ || isOrientationChange_) {
+        LoadImage(src, imageLayoutProperty->GetPropertyChangeFlag(),
+            imageLayoutProperty->GetVisibility().value_or(VisibleType::VISIBLE));
     } else if (IsSupportImageAnalyzerFeature()) {
+        auto host = GetHost();
+        CHECK_NULL_VOID(host);
         auto context = host->GetContext();
         CHECK_NULL_VOID(context);
         auto uiTaskExecutor = SingleTaskExecutor::Make(context->GetTaskExecutor(), TaskExecutor::TaskType::UI);
-        uiTaskExecutor.PostTask(
-            [weak = WeakClaim(this)] {
-                auto pattern = weak.Upgrade();
-                CHECK_NULL_VOID(pattern);
-                ContainerScope scope(pattern->GetHostInstanceId());
-                pattern->CreateAnalyzerOverlay();
-                auto host = pattern->GetHost();
-                CHECK_NULL_VOID(host);
-                pattern->UpdateAnalyzerUIConfig(host->GetGeometryNode());
-            },
-            "ArkUIImageUpdateAnalyzerUIConfig");
+        uiTaskExecutor.PostTask([weak = WeakClaim(this)] {
+            auto pattern = weak.Upgrade();
+            CHECK_NULL_VOID(pattern);
+            ContainerScope scope(pattern->GetHostInstanceId());
+            pattern->CreateAnalyzerOverlay();
+            auto host = pattern->GetHost();
+            pattern->UpdateAnalyzerUIConfig(host->GetGeometryNode());
+        }, "ArkUIImageUpdateAnalyzerUIConfig");
     }
     if (loadingCtx_->NeedAlt() && imageLayoutProperty->GetAlt()) {
         auto altImageSourceInfo = imageLayoutProperty->GetAlt().value_or(ImageSourceInfo(""));
@@ -976,8 +782,6 @@ void ImagePattern::UpdateGestureAndDragWhenModify()
         mouseEvent_ = nullptr;
     }
 
-    enableDrag_ = host->IsDraggable();
-
     if (host->IsDraggable()) {
         EnableDrag();
     }
@@ -989,56 +793,12 @@ void ImagePattern::OnModifyDone()
         case ImageType::BASE:
             OnImageModifyDone();
             break;
-        case ImageType::ANIMATED_DRAWABLE:
+        case ImageType::ANIMATION:
             OnAnimatedModifyDone();
-            break;
-        case ImageType::PIXELMAP_DRAWABLE:
-            OnPixelMapDrawableModifyDone();
             break;
         default:
             break;
     }
-
-    InitOnKeyEvent();
-}
-
-void ImagePattern::InitOnKeyEvent()
-{
-    if (Container::LessThanAPITargetVersion(PlatformVersion::VERSION_FOURTEEN) || keyEventCallback_) {
-        return;
-    }
-
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    auto hub = host->GetEventHub<EventHub>();
-    CHECK_NULL_VOID(hub);
-    auto focusHub = hub->GetOrCreateFocusHub();
-    CHECK_NULL_VOID(focusHub);
-    keyEventCallback_ = [weak = WeakClaim(this)](const KeyEvent& event) -> bool {
-        auto pattern = weak.Upgrade();
-        CHECK_NULL_RETURN(pattern, false);
-        pattern->OnKeyEvent(event);
-        return false;
-    };
-    focusHub->SetOnKeyEventInternal(std::move(keyEventCallback_));
-}
-
-void ImagePattern::OnKeyEvent(const KeyEvent& event)
-{
-    if (imageAnalyzerManager_) {
-        auto imageLayoutProperty = GetLayoutProperty<ImageLayoutProperty>();
-        CHECK_NULL_VOID(imageLayoutProperty);
-        auto imageInfo = imageLayoutProperty->GetImageSourceInfo().value_or(ImageSourceInfo(""));
-        if (!imageInfo.IsSvg()) {
-            imageAnalyzerManager_->UpdateKeyEvent(event);
-        }
-    }
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    auto focusHub = host->GetFocusHub();
-    CHECK_NULL_VOID(focusHub);
-    focusHub->PaintFocusState(true);
-    host->MarkDirtyNode(PROPERTY_UPDATE_RENDER);
 }
 
 void ImagePattern::OnAnimatedModifyDone()
@@ -1053,7 +813,7 @@ void ImagePattern::OnAnimatedModifyDone()
     }
     GenerateCachedImages();
     auto index = nowImageIndex_;
-    if ((status_ == AnimatorStatus::IDLE || status_ == AnimatorStatus::STOPPED) && !firstUpdateEvent_) {
+    if ((status_ == Animator::Status::IDLE || status_ == Animator::Status::STOPPED) && !firstUpdateEvent_) {
         index = 0;
     }
 
@@ -1078,30 +838,25 @@ void ImagePattern::OnAnimatedModifyDone()
 
 void ImagePattern::ControlAnimation(int32_t index)
 {
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    if (!host->IsOnMainTree()) {
-        return;
-    }
     if (!animator_->HasScheduler()) {
-        auto context = host->GetContextRefPtr();
+        auto context = PipelineContext::GetCurrentContext();
         if (context) {
             animator_->AttachScheduler(context);
         } else {
-            TAG_LOGW(AceLogTag::ACE_IMAGE, "pipeline is null.");
+            TAG_LOGW(AceLogTag::ACE_IMAGE, "pipelineContext is null.");
         }
     }
     switch (status_) {
-        case AnimatorStatus::IDLE:
+        case Animator::Status::IDLE:
             animator_->Cancel();
             ResetFormAnimationFlag();
             SetShowingIndex(index);
             break;
-        case AnimatorStatus::PAUSED:
+        case Animator::Status::PAUSED:
             animator_->Pause();
             ResetFormAnimationFlag();
             break;
-        case AnimatorStatus::STOPPED:
+        case Animator::Status::STOPPED:
             animator_->Finish();
             ResetFormAnimationFlag();
             break;
@@ -1111,6 +866,8 @@ void ImagePattern::ControlAnimation(int32_t index)
                 ResetFormAnimationFlag();
                 return;
             }
+            auto host = GetHost();
+            CHECK_NULL_VOID(host);
             if (host->IsVisible()) {
                 animator_->Forward();
             } else {
@@ -1124,131 +881,27 @@ void ImagePattern::OnImageModifyDone()
     Pattern::OnModifyDone();
     LoadImageDataIfNeed();
     UpdateGestureAndDragWhenModify();
-    CHECK_EQUAL_VOID(CheckImagePrivacyForCopyOption(), true);
-    CloseSelectOverlay();
-    UpdateOffsetForImageAnalyzerOverlay();
-    SetFrameOffsetForOverlayNode();
-}
 
-void ImagePattern::OnPixelMapDrawableModifyDone()
-{
-    Pattern::OnModifyDone();
-    UpdateGestureAndDragWhenModify();
-    CHECK_EQUAL_VOID(CheckImagePrivacyForCopyOption(), true);
-    CloseSelectOverlay();
-    UpdateOffsetForImageAnalyzerOverlay();
-    SetFrameOffsetForOverlayNode();
-    // Data loading is not managed by image. Therefore, during component
-    // attribute initilizationm, the dirty node mark of image needs to
-    // be registered withe Drawable. Drawable triggers drawing again after
-    // data loading is complete.
-    RegisterDrawableRedrawCallback();
-}
-
-void ImagePattern::RegisterDrawableRedrawCallback()
-{
-    if (isRegisterRedrawCallback_) {
-        return;
+    if (copyOption_ != CopyOptions::None) {
+        auto host = GetHost();
+        CHECK_NULL_VOID(host);
+        bool hasObscured = false;
+        if (host->GetRenderContext()->GetObscured().has_value()) {
+            auto obscuredReasons = host->GetRenderContext()->GetObscured().value();
+            hasObscured = std::any_of(obscuredReasons.begin(), obscuredReasons.end(),
+                [](const auto& reason) { return reason == ObscuredReasons::PLACEHOLDER; });
+        }
+        if (!hasObscured) {
+            InitCopy();
+            return;
+        }
     }
-    CHECK_NULL_VOID(drawable_);
-    drawable_->RegisterRedrawCallback([weak = WeakClaim(this)] {
-        auto pattern = weak.Upgrade();
-        CHECK_NULL_VOID(pattern);
-        auto context = pattern->GetContext();
-        CHECK_NULL_VOID(context);
-        auto taskExecutor = context->GetTaskExecutor();
-        CHECK_NULL_VOID(taskExecutor);
-        taskExecutor->PostTask(
-            [weak = weak] {
-                auto pattern = weak.Upgrade();
-                CHECK_NULL_VOID(pattern);
-                pattern->Validate();
-            },
-            TaskExecutor::TaskType::UI, "ArkUIImageDrawableMarkRender");
-    });
-    isRegisterRedrawCallback_ = true;
-}
 
-void ImagePattern::Validate()
-{
+    CloseSelectOverlay();
+
     auto host = GetHost();
     CHECK_NULL_VOID(host);
-    ACE_SCOPED_TRACE("[Drawable][%d] validate callback", host->GetId());
-    // first mark dirty render
-    host->MarkNeedRenderOnly();
-    CHECK_NULL_VOID(contentMod_);
-    // because drawable is not a drawing attribute of the
-    // content modifier, redrawing cannot be trigged when
-    // drawable validates the content modifier. Therefore
-    // count attribute in the modifier needs to be used to
-    // forcibly refresh the content modifier.
-    contentMod_->SetContentChange();
-}
 
-ImagePaintConfig ImagePattern::CreatePaintConfig()
-{
-    ImagePaintConfig config;
-    auto lp = GetLayoutProperty<ImageLayoutProperty>();
-    CHECK_NULL_RETURN(lp, config);
-    config.imageFit_ = lp->GetImageFit().value_or(ImageFit::COVER);
-    return config;
-}
-
-void ImagePattern::DrawDrawable(RSCanvas& canvas)
-{
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    ACE_SCOPED_TRACE("[Drawable][%d] draw to canvas", host->GetId());
-    CHECK_NULL_VOID(drawable_);
-    auto config = CreatePaintConfig();
-    drawable_->Draw(canvas, config);
-}
-
-std::optional<SizeF> ImagePattern::GetImageSizeForMeasure()
-{
-    if ((!loadingCtx_ || !loadingCtx_->GetImageSize().IsPositive()) &&
-        (!altLoadingCtx_ || !altLoadingCtx_->GetImageSize().IsPositive())) {
-        return std::nullopt;
-    }
-    auto rawImageSize = SizeF(-1.0, -1.0);
-    if (loadingCtx_) {
-        rawImageSize = loadingCtx_->GetImageSize();
-    }
-    if (rawImageSize.IsNegative() && altLoadingCtx_) {
-        rawImageSize = altLoadingCtx_->GetImageSize();
-    }
-    return std::make_optional<SizeF>(rawImageSize.Width(), rawImageSize.Height());
-}
-
-void ImagePattern::FinishMeasureForOnComplete()
-{
-    CHECK_NULL_VOID(loadingCtx_);
-    loadingCtx_->FinishMeasure();
-    loadingCtx_->CallbackAfterMeasureIfNeed();
-}
-
-bool ImagePattern::CheckImagePrivacyForCopyOption()
-{
-    if (copyOption_ == CopyOptions::None) {
-        return false;
-    }
-    auto host = GetHost();
-    CHECK_NULL_RETURN(host, false);
-    bool hasObscured = false;
-    if (host->GetRenderContext()->GetObscured().has_value()) {
-        auto obscuredReasons = host->GetRenderContext()->GetObscured().value();
-        hasObscured = std::any_of(obscuredReasons.begin(), obscuredReasons.end(),
-            [](const auto& reason) { return reason == ObscuredReasons::PLACEHOLDER; });
-    }
-    if (!hasObscured) {
-        InitCopy();
-        return true;
-    }
-    return false;
-}
-
-void ImagePattern::UpdateOffsetForImageAnalyzerOverlay()
-{
     if (imageAnalyzerManager_ && imageAnalyzerManager_->IsOverlayCreated()) {
         if (!IsSupportImageAnalyzerFeature()) {
             DestroyAnalyzerOverlay();
@@ -1256,13 +909,8 @@ void ImagePattern::UpdateOffsetForImageAnalyzerOverlay()
             UpdateAnalyzerOverlayLayout();
         }
     }
-}
 
-// SetUsingContentRectForRenderFrame is set for image paint
-void ImagePattern::SetFrameOffsetForOverlayNode()
-{
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
+    // SetUsingContentRectForRenderFrame is set for image paint
     auto overlayNode = host->GetOverlayNode();
     if (overlayNode) {
         auto layoutProperty = host->GetLayoutProperty();
@@ -1270,7 +918,7 @@ void ImagePattern::SetFrameOffsetForOverlayNode()
         auto padding = layoutProperty->CreatePaddingAndBorder();
         auto renderContext = overlayNode->GetRenderContext();
         if (renderContext) {
-            renderContext->SetRenderFrameOffset({ -padding.Offset().GetX(), -padding.Offset().GetY() });
+            renderContext->SetRenderFrameOffset({-padding.Offset().GetX(), -padding.Offset().GetY()});
         }
     }
 }
@@ -1285,9 +933,9 @@ DataReadyNotifyTask ImagePattern::CreateDataReadyCallbackForAlt()
         CHECK_NULL_VOID(imageLayoutProperty);
         auto currentAltSourceInfo = imageLayoutProperty->GetAlt().value_or(ImageSourceInfo(""));
         if (currentAltSourceInfo != sourceInfo) {
-            TAG_LOGW(AceLogTag::ACE_IMAGE, "alt src not match, %{public}s: %{private}s - %{private}s",
-                pattern->imageDfxConfig_.ToStringWithoutSrc().c_str(), currentAltSourceInfo.ToString().c_str(),
-                sourceInfo.ToString().c_str());
+            TAG_LOGW(AceLogTag::ACE_IMAGE, "alt image sourceInfo does not match, ignore current callback. "
+                 "current: %{private}s vs callback's: %{private}s",
+                currentAltSourceInfo.ToString().c_str(), sourceInfo.ToString().c_str());
             return;
         }
         auto host = pattern->GetHost();
@@ -1315,17 +963,15 @@ LoadSuccessNotifyTask ImagePattern::CreateLoadSuccessCallbackForAlt()
         CHECK_NULL_VOID(pattern);
         CHECK_NULL_VOID(pattern->altLoadingCtx_);
         auto layoutProps = pattern->GetLayoutProperty<ImageLayoutProperty>();
-        CHECK_NULL_VOID(layoutProps);
         auto currentAltSrc = layoutProps->GetAlt().value_or(ImageSourceInfo(""));
         if (currentAltSrc != sourceInfo) {
-            TAG_LOGW(AceLogTag::ACE_IMAGE, "alt src not match, %{public}s: %{private}s - %{private}s",
-                pattern->imageDfxConfig_.ToStringWithoutSrc().c_str(), currentAltSrc.ToString().c_str(),
-                sourceInfo.ToString().c_str());
+            TAG_LOGW(AceLogTag::ACE_IMAGE, "alt image sourceInfo does not match, ignore current callback. "
+                 "current: %{private}s vs callback's: %{private}s",
+                currentAltSrc.ToString().c_str(), sourceInfo.ToString().c_str());
             return;
         }
         pattern->altImage_ = pattern->altLoadingCtx_->MoveCanvasImage();
         CHECK_NULL_VOID(pattern->altImage_);
-        pattern->altImage_->SetImageDfxConfig(pattern->altImageDfxConfig_);
         pattern->altSrcRect_ = std::make_unique<RectF>(pattern->altLoadingCtx_->GetSrcRect());
         pattern->altDstRect_ = std::make_unique<RectF>(pattern->altLoadingCtx_->GetDstRect());
         pattern->SetImagePaintConfig(pattern->altImage_, *pattern->altSrcRect_, *pattern->altDstRect_,
@@ -1358,52 +1004,13 @@ void ImagePattern::UpdateInternalResource(ImageSourceInfo& sourceInfo)
     }
 }
 
-bool ImagePattern::RecycleImageData()
-{
-    // when image component is [onShow] , [no cache], do not clean image data
-    bool isDataNoCache = (!loadingCtx_ || (loadingCtx_->GetSourceInfo().GetSrcType() == SrcType::NETWORK &&
-                                              SystemProperties::GetDownloadByNetworkEnabled() &&
-                                              DownloadManager::GetInstance()->IsContains(
-                                                  loadingCtx_->GetSourceInfo().GetSrc()) == false));
-    if (isShow_ || isDataNoCache) {
-        return false;
-    }
-    auto frameNode = GetHost();
-    if (!frameNode) {
-        return false;
-    }
-    frameNode->SetTrimMemRecycle(true);
-    loadingCtx_ = nullptr;
-    auto rsRenderContext = frameNode->GetRenderContext();
-    if (!rsRenderContext) {
-        return false;
-    }
-    TAG_LOGI(AceLogTag::ACE_IMAGE, "%{public}s, %{private}s recycleImageData.",
-        imageDfxConfig_.ToStringWithoutSrc().c_str(), imageDfxConfig_.GetImageSrc().c_str());
-    rsRenderContext->RemoveContentModifier(contentMod_);
-    contentMod_ = nullptr;
-    image_ = nullptr;
-    altLoadingCtx_ = nullptr;
-    altImage_ = nullptr;
-    ACE_SCOPED_TRACE("OnRecycleImageData imageInfo: [%s]", imageDfxConfig_.ToStringWithSrc().c_str());
-    return true;
-}
-
 void ImagePattern::OnNotifyMemoryLevel(int32_t level)
 {
     // when image component is [onShow], do not clean image data
-    if (isShow_ || level < MEMORY_LEVEL_CRITICAL_STATUS) {
+    if (isShow_ || level <= static_cast<int32_t>(MEMORY_LEVEL_LOW_STATUS)) {
         return;
     }
-    auto frameNode = GetHost();
-    CHECK_NULL_VOID(frameNode);
-    frameNode->SetTrimMemRecycle(false);
-    auto rsRenderContext = frameNode->GetRenderContext();
-    CHECK_NULL_VOID(rsRenderContext);
-    TAG_LOGD(AceLogTag::ACE_IMAGE, "%{public}s, %{private}s OnNotifyMemoryLevel %{public}d.",
-        imageDfxConfig_.ToStringWithoutSrc().c_str(), imageDfxConfig_.GetImageSrc().c_str(), level);
-    rsRenderContext->RemoveContentModifier(contentMod_);
-    contentMod_ = nullptr;
+    // clean image data
     loadingCtx_ = nullptr;
     image_ = nullptr;
     altLoadingCtx_ = nullptr;
@@ -1413,7 +1020,6 @@ void ImagePattern::OnNotifyMemoryLevel(int32_t level)
 // when recycle image component, release the pixelmap resource
 void ImagePattern::OnRecycle()
 {
-    TAG_LOGD(AceLogTag::ACE_IMAGE, "OnRecycle. %{public}s", imageDfxConfig_.ToStringWithoutSrc().c_str());
     loadingCtx_ = nullptr;
     image_ = nullptr;
     altLoadingCtx_ = nullptr;
@@ -1423,10 +1029,8 @@ void ImagePattern::OnRecycle()
     CHECK_NULL_VOID(frameNode);
     auto rsRenderContext = frameNode->GetRenderContext();
     CHECK_NULL_VOID(rsRenderContext);
-    rsRenderContext->RemoveContentModifier(contentMod_);
-    contentMod_ = nullptr;
+    rsRenderContext->ClearDrawCommands();
     UnregisterWindowStateChangedCallback();
-    frameNode->SetTrimMemRecycle(false);
 }
 
 void ImagePattern::OnReuse()
@@ -1435,8 +1039,6 @@ void ImagePattern::OnReuse()
     auto renderProp = GetPaintProperty<ImageRenderProperty>();
     CHECK_NULL_VOID(renderProp);
     renderProp->UpdateNeedBorderRadius(needBorderRadius_);
-    auto imageLayoutProperty = GetLayoutProperty<ImageLayoutProperty>();
-    CHECK_NULL_VOID(imageLayoutProperty);
     LoadImageDataIfNeed();
 }
 
@@ -1465,44 +1067,34 @@ void ImagePattern::OnWindowHide()
 
 void ImagePattern::OnWindowShow()
 {
-    TAG_LOGD(AceLogTag::ACE_IMAGE, "OnWindowShow. %{public}s, isImageReloadNeeded_ = %{public}d",
-        imageDfxConfig_.ToStringWithoutSrc().c_str(), isImageReloadNeeded_);
     isShow_ = true;
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    if (!host->IsTrimMemRecycle()) {
-        LoadImageDataIfNeed();
-    }
+    LoadImageDataIfNeed();
 }
 
 void ImagePattern::OnVisibleChange(bool visible)
 {
     if (!visible) {
-        TAG_LOGD(AceLogTag::ACE_IMAGE, "OnInVisible. %{public}s", imageDfxConfig_.ToStringWithoutSrc().c_str());
         CloseSelectOverlay();
     }
 }
 
 void ImagePattern::OnVisibleAreaChange(bool visible, double ratio)
 {
-    ACE_SCOPED_TRACE(
-        "OnVisibleAreaChange visible: [%d], imageInfo: %s", visible, imageDfxConfig_.ToStringWithSrc().c_str());
     if (SystemProperties::GetDebugEnabled()) {
-        TAG_LOGI(AceLogTag::ACE_IMAGE, "OnVisibleAreaChange visible:%{public}d, %{public}s", visible,
-            imageDfxConfig_.ToStringWithoutSrc().c_str());
+        TAG_LOGD(AceLogTag::ACE_IMAGE, "OnVisibleAreaChange visible:%{public}d", (int)visible);
     }
-    previousVisibility_ = visible;
     if (!visible) {
         CloseSelectOverlay();
     }
     // control pixelMap List
-    if (GetIsAnimation() && !animator_->IsStopped() && animator_->HasScheduler()) {
+    if (GetIsAnimation() && !animator_->IsStopped()) {
         if (visible) {
             animator_->Forward();
         } else {
             animator_->Pause();
         }
     }
+    gifAnimation_ = visible;
     // control svg / gif animation
     if (image_) {
         image_->ControlAnimation(visible);
@@ -1523,7 +1115,6 @@ void ImagePattern::OnAttachToFrameNode()
 {
     auto host = GetHost();
     CHECK_NULL_VOID(host);
-    THREAD_SAFE_NODE_CHECK(host, OnAttachToFrameNode);
     auto renderCtx = host->GetRenderContext();
     CHECK_NULL_VOID(renderCtx);
     auto pipeline = host->GetContext();
@@ -1539,11 +1130,13 @@ void ImagePattern::OnAttachToFrameNode()
         pipeline->AddNodesToNotifyMemoryLevel(host->GetId());
         pipeline->AddWindowStateChangedCallback(host->GetId());
     }
+    auto theme = pipeline->GetTheme<TextTheme>();
+    CHECK_NULL_VOID(theme);
+    selectedColor_ = theme->GetSelectedColor();
 }
 
 void ImagePattern::OnDetachFromFrameNode(FrameNode* frameNode)
 {
-    THREAD_SAFE_NODE_CHECK(frameNode, OnDetachFromFrameNode, frameNode);
     CloseSelectOverlay();
 
     auto id = frameNode->GetId();
@@ -1553,33 +1146,12 @@ void ImagePattern::OnDetachFromFrameNode(FrameNode* frameNode)
     pipeline->RemoveNodesToNotifyMemoryLevel(id);
 }
 
-void ImagePattern::OnAttachToMainTree()
-{
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    THREAD_SAFE_NODE_CHECK(host, OnAttachToMainTree);
-}
-
-void ImagePattern::OnDetachFromMainTree()
-{
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    THREAD_SAFE_NODE_CHECK(host, OnAttachToFrameNode);
-    if (isNeedReset_) {
-        ResetImageAndAlt();
-        isNeedReset_ = false;
-    }
-    if (GetIsAnimation() && !animator_->IsStopped() && animator_->HasScheduler()) {
-        animator_->Stop();
-    }
-}
-
 void ImagePattern::EnableDrag()
 {
     auto host = GetHost();
     CHECK_NULL_VOID(host);
-    auto dragStart = [weak = WeakClaim(this)](const RefPtr<OHOS::Ace::DragEvent>& event, const std::string&
-                         /* extraParams */) -> DragDropInfo {
+    auto dragStart = [weak = WeakClaim(this)](const RefPtr<OHOS::Ace::DragEvent>& event,
+                         const std::string& /*extraParams*/) -> DragDropInfo {
         DragDropInfo info;
         auto imagePattern = weak.Upgrade();
         CHECK_NULL_RETURN(imagePattern && imagePattern->loadingCtx_, info);
@@ -1654,7 +1226,8 @@ void ImagePattern::OpenSelectOverlay()
     CHECK_NULL_VOID(geometryNode);
     auto rect = host->GetTransformRectRelativeToWindow();
     SelectOverlayInfo info;
-    SizeF handleSize = { SelectHandleInfo::GetDefaultLineWidth().ConvertToPx(),
+    SizeF handleSize = {
+        SelectHandleInfo::GetDefaultLineWidth().ConvertToPx(),
         geometryNode->GetContentSize().Height() };
     info.firstHandle.paintRect = RectF(rect.GetOffset(), handleSize);
     OffsetF offset(rect.Width() - handleSize.Width(), rect.Height() - handleSize.Height());
@@ -1668,11 +1241,19 @@ void ImagePattern::OpenSelectOverlay()
         pattern->HandleCopy();
         pattern->CloseSelectOverlay();
     };
-    info.onHandleMoveDone = [weak = WeakClaim(this)](const RectF&, bool isFirst) {
+    info.onHandleMoveDone = [weak = WeakClaim(this), firstRect = info.firstHandle.paintRect,
+                                secondRect = info.secondHandle.paintRect](const RectF&, bool isFirst) {
         // reset handle position
         auto pattern = weak.Upgrade();
         CHECK_NULL_VOID(pattern && pattern->selectOverlay_);
-        pattern->HandleMoveDone(isFirst);
+        SelectHandleInfo info;
+        if (isFirst) {
+            info.paintRect = firstRect;
+            pattern->selectOverlay_->UpdateFirstSelectHandleInfo(info);
+        } else {
+            info.paintRect = secondRect;
+            pattern->selectOverlay_->UpdateSecondSelectHandleInfo(info);
+        }
     };
     info.onClose = [weak = WeakClaim(this)](bool closedByGlobalEvent) {
         if (closedByGlobalEvent) {
@@ -1690,26 +1271,6 @@ void ImagePattern::OpenSelectOverlay()
     pipeline->AddOnAreaChangeNode(host->GetId());
     // paint selected mask effect
     host->MarkNeedRenderOnly();
-}
-
-void ImagePattern::HandleMoveDone(bool isFirst)
-{
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    auto rect = host->GetTransformRectRelativeToWindow();
-    const auto& geometryNode = host->GetGeometryNode();
-    CHECK_NULL_VOID(geometryNode);
-    SizeF handleSize = { SelectHandleInfo::GetDefaultLineWidth().ConvertToPx(),
-        geometryNode->GetContentSize().Height() };
-    SelectHandleInfo info;
-    if (isFirst) {
-        info.paintRect = RectF(rect.GetOffset(), handleSize);
-        selectOverlay_->UpdateFirstSelectHandleInfo(info);
-    } else {
-        OffsetF offset(rect.Width() - handleSize.Width(), rect.Height() - handleSize.Height());
-        info.paintRect = RectF(rect.GetOffset() + offset, handleSize);
-        selectOverlay_->UpdateSecondSelectHandleInfo(info);
-    }
 }
 
 void ImagePattern::CloseSelectOverlay()
@@ -1759,7 +1320,9 @@ void ImagePattern::ToJsonValue(std::unique_ptr<JsonValue>& json, const Inspector
     json->PutExtAttr("copyOption", COPY_OPTIONS[static_cast<int32_t>(copyOption_)], filter);
 
     json->PutExtAttr("syncLoad", syncLoad_ ? "true" : "false", filter);
-    json->PutExtAttr("draggable", enableDrag_ ? "true" : "false", filter);
+    auto host = GetHost();
+    CHECK_NULL_VOID(host);
+    json->PutExtAttr("draggable", host->IsDraggable() ? "true" : "false", filter);
     json->PutExtAttr("enableAnalyzer", isEnableAnalyzer_ ? "true" : "false", filter);
     auto renderProp = GetPaintProperty<ImageRenderProperty>();
     CHECK_NULL_VOID(renderProp);
@@ -1769,258 +1332,158 @@ void ImagePattern::ToJsonValue(std::unique_ptr<JsonValue>& json, const Inspector
     }
     json->PutExtAttr("dynamicRangeMode", GetDynamicModeString(dynamicMode).c_str(), filter);
     json->PutExtAttr("orientation", std::to_string(static_cast<int>(userOrientation_)).c_str(), filter);
-    Matrix4 defaultMatrixValue = Matrix4(1.0f, 0, 0, 0, 0, 1.0f, 0, 0, 0, 0, 1.0f, 0, 0, 0, 0, 1.0f);
+    Matrix4 defaultMatrixValue = Matrix4(
+        1.0f, 0, 0, 0,
+        0, 1.0f, 0, 0,
+        0, 0, 1.0f, 0,
+        0, 0, 0, 1.0f);
     Matrix4 matrixValue = renderProp->HasImageMatrix() ? renderProp->GetImageMatrixValue() : defaultMatrixValue;
     json->PutExtAttr("imageMatrix", matrixValue.ToString().c_str(), filter);
-    if (loadingCtx_) {
-        json->PutExtAttr("imageWidth", std::to_string(loadingCtx_->GetOriginImageSize().Width()).c_str(), filter);
-        json->PutExtAttr("imageHeight", std::to_string(loadingCtx_->GetOriginImageSize().Height()).c_str(), filter);
+}
+
+void ImagePattern::UpdateFillColorIfForegroundColor()
+{
+    auto frameNode = GetHost();
+    CHECK_NULL_VOID(frameNode);
+    auto renderContext = frameNode->GetRenderContext();
+    CHECK_NULL_VOID(renderContext);
+    if (renderContext->HasForegroundColor() || renderContext->HasForegroundColorStrategy()) {
+        auto imageLayoutProperty = frameNode->GetLayoutProperty<ImageLayoutProperty>();
+        auto imageSourceInfo = imageLayoutProperty->GetImageSourceInfo().value();
+        if (imageSourceInfo.IsSvg()) {
+            imageSourceInfo.SetFillColor(Color::FOREGROUND);
+            imageLayoutProperty->UpdateImageSourceInfo(imageSourceInfo);
+        }
+        auto imageRenderProperty = frameNode->GetPaintProperty<ImageRenderProperty>();
+        CHECK_NULL_VOID(imageRenderProperty);
+        imageRenderProperty->UpdateSvgFillColor(Color::FOREGROUND);
     }
 }
 
 void ImagePattern::DumpLayoutInfo()
 {
-    DumpLog::GetInstance().AddDesc("---- Image Component Layout Dump ----");
     auto layoutProp = GetLayoutProperty<ImageLayoutProperty>();
     CHECK_NULL_VOID(layoutProp);
-
-    DumpImageSourceInfo(layoutProp);
-    DumpAltSourceInfo(layoutProp);
-    DumpImageFit(layoutProp);
-    DumpFitOriginalSize(layoutProp);
-    DumpSourceSize(layoutProp);
-    DumpAutoResize(layoutProp);
-}
-
-void ImagePattern::DumpImageSourceInfo(const RefPtr<OHOS::Ace::NG::ImageLayoutProperty>& layoutProp)
-{
     auto src = layoutProp->GetImageSourceInfo().value_or(ImageSourceInfo(""));
     DumpLog::GetInstance().AddDesc(std::string("url: ").append(src.ToString()));
-    DumpLog::GetInstance().AddDesc(
-        std::string("SrcType: ").append(std::to_string(static_cast<int32_t>(src.GetSrcType()))));
-    DumpLog::GetInstance().AddDesc(
-        std::string("AbilityName: ").append(std::to_string(static_cast<int32_t>(Container::CurrentColorMode()))));
-    DumpLog::GetInstance().AddDesc(std::string("BundleName: ").append(src.GetBundleName()));
-    DumpLog::GetInstance().AddDesc(std::string("ModuleName: ").append(src.GetModuleName()));
-    DumpLog::GetInstance().AddDesc(
-        std::string("ColorMode: ").append(std::to_string(static_cast<int32_t>(Container::CurrentColorMode()))));
-    DumpLog::GetInstance().AddDesc(
-        std::string("LocalColorMode: ").append(std::to_string(static_cast<int32_t>(src.GetLocalColorMode()))));
-}
 
-inline void ImagePattern::DumpAltSourceInfo(const RefPtr<OHOS::Ace::NG::ImageLayoutProperty>& layoutProp)
-{
     auto altSrc = layoutProp->GetAlt().value_or(ImageSourceInfo(""));
     DumpLog::GetInstance().AddDesc(std::string("altUrl: ").append(altSrc.ToString()));
-}
 
-inline void ImagePattern::DumpImageFit(const RefPtr<OHOS::Ace::NG::ImageLayoutProperty>& layoutProp)
-{
     auto imageFit = layoutProp->GetImageFit().value_or(ImageFit::COVER);
     DumpLog::GetInstance().AddDesc(std::string("objectFit: ").append(GetImageFitStr(imageFit)));
-}
 
-inline void ImagePattern::DumpFitOriginalSize(const RefPtr<OHOS::Ace::NG::ImageLayoutProperty>& layoutProp)
-{
     auto fitOriginalSize = layoutProp->GetFitOriginalSize().value_or(false);
     DumpLog::GetInstance().AddDesc(std::string("fitOriginalSize: ").append(fitOriginalSize ? "true" : "false"));
-}
 
-inline void ImagePattern::DumpSourceSize(const RefPtr<OHOS::Ace::NG::ImageLayoutProperty>& layoutProp)
-{
     const std::optional<SizeF>& sourceSize = layoutProp->GetSourceSize();
     if (sourceSize.has_value()) {
         DumpLog::GetInstance().AddDesc(std::string("sourceSize: ").append(sourceSize.value().ToString()));
     }
-}
 
-inline void ImagePattern::DumpAutoResize(const RefPtr<OHOS::Ace::NG::ImageLayoutProperty>& layoutProp)
-{
     bool autoResize = layoutProp->GetAutoResize().value_or(autoResizeDefault_);
-    autoResize ? DumpLog::GetInstance().AddDesc("autoResize:true") : DumpLog::GetInstance().AddDesc("autoResize:false");
+    autoResize ? DumpLog::GetInstance().AddDesc("autoResize:true")
+                       : DumpLog::GetInstance().AddDesc("autoResize:false");
 }
 
 void ImagePattern::DumpRenderInfo()
 {
-    DumpLog::GetInstance().AddDesc("---- Image Component Render Dump ----");
     auto renderProp = GetPaintProperty<ImageRenderProperty>();
     CHECK_NULL_VOID(renderProp);
 
-    DumpRenderMode(renderProp);
-    DumpImageRepeat(renderProp);
-    DumpImageColorFilter(renderProp);
-    DumpFillColor(renderProp);
-    DumpDynamicRangeMode(renderProp);
-    DumpMatchTextDirection(renderProp);
-    DumpSmoothEdge(renderProp);
-    DumpBorderRadiusProperties(renderProp);
-    DumpResizable(renderProp);
-    DumpHdrBrightness(renderProp);
-}
-
-inline void ImagePattern::DumpHdrBrightness(const RefPtr<OHOS::Ace::NG::ImageRenderProperty>& renderProp)
-{
-    if (renderProp->HasHdrBrightness()) {
-        auto hdrBrightness = renderProp->GetHdrBrightness().value();
-        DumpLog::GetInstance().AddDesc(std::string("hdrBrightness: ").append(std::to_string(hdrBrightness)));
-    }
-}
-
-inline void ImagePattern::DumpRenderMode(const RefPtr<OHOS::Ace::NG::ImageRenderProperty>& renderProp)
-{
     auto imageRenderMode = renderProp->GetImageRenderMode().value_or(ImageRenderMode::ORIGINAL);
     DumpLog::GetInstance().AddDesc(
         std::string("renderMode: ").append((imageRenderMode == ImageRenderMode::ORIGINAL) ? "Original" : "Template"));
-}
 
-inline void ImagePattern::DumpImageRepeat(const RefPtr<OHOS::Ace::NG::ImageRenderProperty>& renderProp)
-{
     auto imageRepeat = renderProp->GetImageRepeat().value_or(ImageRepeat::NO_REPEAT);
     DumpLog::GetInstance().AddDesc(std::string("objectRepeat: ").append(GetImageRepeatStr(imageRepeat)));
-}
 
-inline void ImagePattern::DumpImageColorFilter(const RefPtr<OHOS::Ace::NG::ImageRenderProperty>& renderProp)
-{
     auto imageColorFilter = renderProp->GetColorFilter();
     if (imageColorFilter.has_value()) {
         auto colorFilter = imageColorFilter.value();
         DumpLog::GetInstance().AddDesc(std::string("colorFilter: ").append(GetImageColorFilterStr(colorFilter)));
     }
-}
 
-inline void ImagePattern::DumpFillColor(const RefPtr<OHOS::Ace::NG::ImageRenderProperty>& renderProp)
-{
     auto fillColor = renderProp->GetSvgFillColor();
     if (fillColor.has_value()) {
         auto color = fillColor.value();
-        DumpLog::GetInstance().AddDesc(std::string("fillColor_value: ").append(color.ToSvgFillColorKey()));
+        DumpLog::GetInstance().AddDesc(std::string("fillColor: ").append(color.ColorToString()));
+    } else {
+        DumpLog::GetInstance().AddDesc("fillColor: Null");
     }
-}
 
-inline void ImagePattern::DumpDynamicRangeMode(const RefPtr<OHOS::Ace::NG::ImageRenderProperty>& renderProp)
-{
     DynamicRangeMode dynamicMode = DynamicRangeMode::STANDARD;
     if (renderProp->HasDynamicMode()) {
         dynamicMode = renderProp->GetDynamicMode().value_or(DynamicRangeMode::STANDARD);
         DumpLog::GetInstance().AddDesc(std::string("dynamicRangeMode: ").append(GetDynamicModeString(dynamicMode)));
     }
-}
 
-inline void ImagePattern::DumpMatchTextDirection(const RefPtr<OHOS::Ace::NG::ImageRenderProperty>& renderProp)
-{
     auto matchTextDirection = renderProp->GetMatchTextDirection().value_or(false);
     matchTextDirection ? DumpLog::GetInstance().AddDesc("matchTextDirection:true")
                        : DumpLog::GetInstance().AddDesc("matchTextDirection:false");
-}
 
-inline void ImagePattern::DumpSmoothEdge(const RefPtr<OHOS::Ace::NG::ImageRenderProperty>& renderProp)
-{
     auto smoothEdge = renderProp->GetSmoothEdge();
     if (smoothEdge.has_value()) {
         DumpLog::GetInstance().AddDesc(std::string("edgeAntialiasing: ").append(std::to_string(smoothEdge.value())));
     }
-}
 
-inline void ImagePattern::DumpResizable(const RefPtr<OHOS::Ace::NG::ImageRenderProperty>& renderProp)
-{
-    if (renderProp->HasImageResizableSlice() && renderProp->GetImageResizableSliceValue({}).Valid()) {
-        DumpLog::GetInstance().AddDesc(
-            std::string("resizable slice: ").append(renderProp->GetImageResizableSliceValue({}).ToString()));
-    } else {
-        DumpLog::GetInstance().AddDesc(std::string("resizableSlice: Slice is null"));
-    }
-
-    auto resizableLattice = renderProp->GetImageResizableLatticeValue(nullptr);
-    DumpLog::GetInstance().AddDesc(
-        "resizableLattice:" + (resizableLattice ? resizableLattice->DumpToString() : "Lattice is null"));
-}
-
-void ImagePattern::DumpBorderRadiusProperties(const RefPtr<OHOS::Ace::NG::ImageRenderProperty>& renderProp)
-{
     auto needBorderRadius = renderProp->GetNeedBorderRadius().value_or(false);
     needBorderRadius ? DumpLog::GetInstance().AddDesc("needBorderRadius:true")
                      : DumpLog::GetInstance().AddDesc("needBorderRadius:false");
 
     auto borderRadius = renderProp->GetBorderRadius().value_or(BorderRadiusProperty());
-    DumpLog::GetInstance().AddDesc("ImageBorderRadius:" + borderRadius.ToString());
+    DumpLog::GetInstance().AddDesc(borderRadius.ToString());
 
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    auto renderContext = host->GetRenderContext();
-    CHECK_NULL_VOID(renderContext);
-    if (renderContext->HasBorderRadius()) {
+    if (renderProp && renderProp->HasImageResizableSlice() && renderProp->GetImageResizableSliceValue({}).Valid()) {
         DumpLog::GetInstance().AddDesc(
-            "borderRadius:" + renderContext->GetBorderRadiusValue(BorderRadiusProperty()).ToString());
-    } else {
-        DumpLog::GetInstance().AddDesc("borderRadius: null");
+            std::string("resizable slice: ").append(renderProp->GetImageResizableSliceValue({}).ToString()));
     }
-}
-
-void ImagePattern::DumpInterpolation(const RefPtr<OHOS::Ace::NG::ImageRenderProperty>& renderProp)
-{
-    auto imageInterpolation = renderProp->GetImageInterpolation().value_or(interpolationDefault_);
-    DumpLog::GetInstance().AddDesc("imageInterpolation:" + GetImageInterpolation(imageInterpolation));
 }
 
 void ImagePattern::DumpSvgInfo()
 {
-    DumpLog::GetInstance().AddDesc("---- SVG Related Dump ----");
-    DumpLog::GetInstance().AddDesc("Your SVG related log description here");
     auto imageLayoutProperty = GetLayoutProperty<ImageLayoutProperty>();
     CHECK_NULL_VOID(imageLayoutProperty);
     auto imageSourceInfo = imageLayoutProperty->GetImageSourceInfo();
     CHECK_NULL_VOID(imageSourceInfo);
-    if (!imageSourceInfo->IsSvg() || !loadingCtx_) {
+    if (!imageSourceInfo->IsSvg()|| !loadingCtx_) {
         return;
     }
     auto imageObject = loadingCtx_->GetImageObject();
     CHECK_NULL_VOID(imageObject);
-    DumpLog::GetInstance().AddDesc(std::string("Svg:").append(imageObject->GetDumpInfo()));
-}
-
-void ImagePattern::DumpOtherInfo()
-{
-    DumpLog::GetInstance().AddDesc("---- Image Component (Excluding Layout and Drawing) Other Info Dump ----");
-    DumpLog::GetInstance().AddDesc(renderedImageInfo_.ToString());
-    syncLoad_ ? DumpLog::GetInstance().AddDesc("syncLoad:true") : DumpLog::GetInstance().AddDesc("syncLoad:false");
-
-    if (loadingCtx_) {
-        auto currentLoadImageState = loadingCtx_->GetCurrentLoadingState();
-        DumpLog::GetInstance().AddDesc(std::string("currentLoadImageState : ").append(currentLoadImageState));
-        DumpLog::GetInstance().AddDesc(
-            std::string("rawImageSize: ").append(loadingCtx_->GetOriginImageSize().ToString()));
-        DumpLog::GetInstance().AddDesc(std::string("LoadErrorMsg: ").append(loadingCtx_->GetErrorMsg()));
-        DumpLog::GetInstance().AddDesc(
-            std::string("ImageDataSizeInfo: ").append(loadingCtx_->GetImageSizeInfo()));
-    } else {
-        DumpLog::GetInstance().AddDesc(std::string("imageLoadingContext: null"));
-    }
-
-    enableDrag_ ? DumpLog::GetInstance().AddDesc("draggable:true") : DumpLog::GetInstance().AddDesc("draggable:false");
     DumpLog::GetInstance().AddDesc(
-        std::string("userOrientation: ").append(ConvertOrientationToString(userOrientation_)));
-    DumpLog::GetInstance().AddDesc(
-        std::string("selfOrientation: ").append(ConvertOrientationToString(selfOrientation_)));
-    DumpLog::GetInstance().AddDesc(std::string("enableAnalyzer: ").append(isEnableAnalyzer_ ? "true" : "false"));
-    DumpMenmoryNameId();
-}
-
-void ImagePattern::DumpMenmoryNameId()
-{
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    auto id = host->GetInspectorId();
-    if (id.has_value() && hasSetPixelMapMemoryName_) {
-        DumpLog::GetInstance().AddDesc(std::string("PixelMapMemoryName id : ").append(id.value()));
-    }
+        std::string("Svg:").append(imageObject->GetDumpInfo()));
 }
 
 void ImagePattern::DumpInfo()
 {
     DumpLayoutInfo();
     DumpRenderInfo();
+
+    syncLoad_ ? DumpLog::GetInstance().AddDesc("syncLoad:true") : DumpLog::GetInstance().AddDesc("syncLoad:false");
+
+    DumpLog::GetInstance().AddDesc("imageInterpolation:" + GetImageInterpolation(interpolation_));
+    if (loadingCtx_) {
+        auto currentLoadImageState = loadingCtx_->GetCurrentLoadingState();
+        DumpLog::GetInstance().AddDesc(std::string("currentLoadImageState : ").append(currentLoadImageState));
+        DumpLog::GetInstance().AddDesc(
+            std::string("rawImageSize: ").append(loadingCtx_->GetOriginImageSize().ToString()));
+        DumpLog::GetInstance().AddDesc(std::string("LoadErrorMsg: ").append(loadingCtx_->GetErrorMsg()));
+    } else {
+        DumpLog::GetInstance().AddDesc(std::string("imageLoadingContext: null"));
+    }
+
+    auto host = GetHost();
+if (host) {
+        auto enDrage = host->IsDraggable();
+        enDrage ? DumpLog::GetInstance().AddDesc("draggable:true") : DumpLog::GetInstance().AddDesc("draggable:false");
+    }
+    DumpLog::GetInstance().AddDesc(
+        std::string("userOrientation: ").append(ConvertOrientationToString(userOrientation_)));
+    DumpLog::GetInstance().AddDesc(
+        std::string("selfOrientation: ").append(ConvertOrientationToString(selfOrientation_)));
+    DumpLog::GetInstance().AddDesc(std::string("enableAnalyzer: ").append(isEnableAnalyzer_ ? "true" : "false"));
     DumpSvgInfo();
-    DumpOtherInfo();
 }
 
 void ImagePattern::DumpAdvanceInfo()
@@ -2028,7 +1491,7 @@ void ImagePattern::DumpAdvanceInfo()
     auto layoutProp = GetLayoutProperty<ImageLayoutProperty>();
     CHECK_NULL_VOID(layoutProp);
     auto src = layoutProp->GetImageSourceInfo().value_or(ImageSourceInfo(""));
-    DumpLog::GetInstance().AddDesc(std::string("url: ").append(src.ToString()));
+    DumpLog::GetInstance().AddDesc(std::string("url: ").append(layoutProp->GetImageSourceInfo()->ToString()));
     syncLoad_ ? DumpLog::GetInstance().AddDesc("syncLoad:true") : DumpLog::GetInstance().AddDesc("syncLoad:false");
     if (loadingCtx_) {
         auto currentLoadImageState = loadingCtx_->GetCurrentLoadingState();
@@ -2069,25 +1532,6 @@ void ImagePattern::OnLanguageConfigurationUpdate()
 void ImagePattern::OnColorConfigurationUpdate()
 {
     OnConfigurationUpdate();
-    if (!SystemProperties::ConfigChangePerform()) {
-        return;
-    }
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    auto pipeline = host->GetContext();
-    CHECK_NULL_VOID(pipeline);
-    auto theme = pipeline->GetTheme<ImageTheme>();
-    CHECK_NULL_VOID(theme);
-    auto layoutProperty = host->GetLayoutProperty<ImageLayoutProperty>();
-    CHECK_NULL_VOID(layoutProperty);
-    if (layoutProperty->GetImageFillSetByUserValue(false)) {
-        if (Container::LessThanAPITargetVersion(PlatformVersion::VERSION_ELEVEN)) {
-            return;
-        }
-        CHECK_NULL_VOID(theme);
-        auto color = theme->GetFillColor();
-        UpdateImageFill(color);
-    }
 }
 
 void ImagePattern::OnDirectionConfigurationUpdate()
@@ -2102,18 +1546,14 @@ void ImagePattern::OnIconConfigurationUpdate()
 
 void ImagePattern::OnConfigurationUpdate()
 {
-    isFullyInitializedFromTheme_ = false;
-    TAG_LOGD(AceLogTag::ACE_IMAGE, "OnConfigurationUpdate, %{public}s-%{public}d",
-        imageDfxConfig_.ToStringWithoutSrc().c_str(), loadingCtx_ ? 1 : 0);
     CHECK_NULL_VOID(loadingCtx_);
     auto imageLayoutProperty = GetLayoutProperty<ImageLayoutProperty>();
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
+    CHECK_NULL_VOID(imageLayoutProperty);
     auto src = imageLayoutProperty->GetImageSourceInfo().value_or(ImageSourceInfo(""));
     UpdateInternalResource(src);
-    bool needLayout = host->CheckNeedForceMeasureAndLayout() &&
-                          imageLayoutProperty->GetVisibility().value_or(VisibleType::VISIBLE) != VisibleType::GONE;
-    LoadImage(src, needLayout);
+
+    LoadImage(src, imageLayoutProperty->GetPropertyChangeFlag(),
+        imageLayoutProperty->GetVisibility().value_or(VisibleType::VISIBLE));
     if (loadingCtx_->NeedAlt() && imageLayoutProperty->GetAlt()) {
         auto altImageSourceInfo = imageLayoutProperty->GetAlt().value_or(ImageSourceInfo(""));
         if (altLoadingCtx_ && altLoadingCtx_->GetSourceInfo() == altImageSourceInfo) {
@@ -2175,23 +1615,6 @@ std::string ImagePattern::GetImageColorFilterStr(const std::vector<float>& color
     return result + "]";
 }
 
-std::string ImagePattern::GetSrcTypeToString(SrcType srcType)
-{
-    static const std::unordered_map<SrcType, std::string> typeMap = { { SrcType::UNSUPPORTED, "unsupported" },
-        { SrcType::FILE, "file" }, { SrcType::ASSET, "asset" }, { SrcType::NETWORK, "network" },
-        { SrcType::MEMORY, "memory" }, { SrcType::BASE64, "base64" }, { SrcType::INTERNAL, "internal" },
-        { SrcType::RESOURCE, "resource" }, { SrcType::DATA_ABILITY, "dataAbility" },
-        { SrcType::DATA_ABILITY_DECODED, "dataAbilityDecoded" }, { SrcType::RESOURCE_ID, "resourceId" },
-        { SrcType::PIXMAP, "pixmap" }, { SrcType::ASTC, "astc" } };
-
-    auto iter = typeMap.find(srcType);
-    if (iter != typeMap.end()) {
-        return iter->second;
-    }
-
-    return "";
-}
-
 void ImagePattern::EnableAnalyzer(bool value)
 {
     isEnableAnalyzer_ = value;
@@ -2203,16 +1626,11 @@ void ImagePattern::EnableAnalyzer(bool value)
     if (!imageAnalyzerManager_) {
         imageAnalyzerManager_ = std::make_shared<ImageAnalyzerManager>(GetHost(), ImageAnalyzerHolder::IMAGE);
     }
-    RegisterVisibleAreaChange(true);
-}
-
-bool ImagePattern::IsEnableAnalyzer() const
-{
-    return isEnableAnalyzer_;
+    RegisterVisibleAreaChange(false);
 }
 
 // As an example
-void ImagePattern::SetImageAnalyzerConfig(const ImageAnalyzerConfig& config)
+void ImagePattern::SetImageAnalyzerConfig(const ImageAnalyzerConfig &config)
 {
     if (!isEnableAnalyzer_) {
         return;
@@ -2240,7 +1658,7 @@ bool ImagePattern::IsSupportImageAnalyzerFeature()
 {
     CHECK_NULL_RETURN(imageAnalyzerManager_, false);
     return isEnableAnalyzer_ && image_ && !loadingCtx_->GetSourceInfo().IsSvg() && loadingCtx_->GetFrameCount() <= 1 &&
-           imageAnalyzerManager_->IsSupportImageAnalyzerFeature();
+        imageAnalyzerManager_->IsSupportImageAnalyzerFeature();
 }
 
 void ImagePattern::CreateAnalyzerOverlay()
@@ -2316,10 +1734,9 @@ void ImagePattern::InitDefaultValue()
         interpolationDefault_ = ImageInterpolation::LOW;
     }
     auto container = Container::Current();
-    // If the default value is set to false, the SceneBoard memory increases.
-    // Therefore the default value is different in the SceneBoard.
-    if (container && container->IsSceneBoardWindow()) {
-        isSceneBoardWindow_ = true;
+    // If the default value is set to false, the ScenceBoard memory increases.
+    // Therefore the default value is different in the ScenceBoard.
+    if (container && container->IsScenceBoardWindow()) {
         autoResizeDefault_ = true;
         interpolationDefault_ = ImageInterpolation::NONE;
     }
@@ -2331,6 +1748,9 @@ bool ImagePattern::hasSceneChanged()
     CHECK_NULL_RETURN(imageLayoutProperty, false);
     auto src = imageLayoutProperty->GetImageSourceInfo().value_or(ImageSourceInfo(""));
     UpdateInternalResource(src);
+    if (loadingCtx_ && loadingCtx_->GetSourceInfo() == src && srcRect_ == dstRect_) {
+        return false;
+    }
     return true;
 }
 
@@ -2373,7 +1793,8 @@ void ImagePattern::SetShowingIndex(int32_t index)
     auto imageLayoutProperty = imageFrameNode->GetLayoutProperty<ImageLayoutProperty>();
     CHECK_NULL_VOID(imageLayoutProperty);
     if (index >= static_cast<int32_t>(images_.size())) {
-        TAG_LOGW(AceLogTag::ACE_IMAGE, "ImageAnimator InvalidIndex-%{public}d-%{public}zu", index, images_.size());
+        TAG_LOGW(AceLogTag::ACE_IMAGE, "ImageAnimator update index error, index: %{public}d, size: %{public}zu",
+            index, images_.size());
         return;
     }
     CHECK_NULL_VOID(images_[index].pixelMap);
@@ -2423,11 +1844,11 @@ void ImagePattern::UpdateShowingImageInfo(const RefPtr<FrameNode>& imageFrameNod
     imageLayoutProperty->UpdateImageSourceInfo(ImageSourceInfo(images_[index].pixelMap));
     SetColorFilter(imageFrameNode);
     SetImageFit(imageFrameNode);
-    // use the size of first pixelmap when no size is set
-    auto&& layoutConstraint = layoutProperty->GetCalcLayoutConstraint();
+    //use the size of first pixelmap when no size is set
+    auto &&layoutConstraint = layoutProperty->GetCalcLayoutConstraint();
     if (!layoutConstraint || !layoutConstraint->selfIdealSize.has_value()) {
-        CalcSize realSize = { CalcLength(images_[0].pixelMap->GetWidth()),
-            CalcLength(images_[0].pixelMap->GetHeight()) };
+        CalcSize realSize = {
+            CalcLength(images_[0].pixelMap->GetWidth()), CalcLength(images_[0].pixelMap->GetHeight()) };
         imageLayoutProperty->UpdateUserDefinedIdealSize(realSize);
         imageLayoutProperty->UpdateMeasureType(MeasureType::MATCH_CONTENT);
         imageFrameNode->MarkModifyDone();
@@ -2446,7 +1867,8 @@ void ImagePattern::UpdateShowingImageInfo(const RefPtr<FrameNode>& imageFrameNod
 void ImagePattern::UpdateCacheImageInfo(CacheImageStruct& cacheImage, int32_t index)
 {
     if (index >= static_cast<int32_t>(images_.size())) {
-        TAG_LOGW(AceLogTag::ACE_IMAGE, "index error: %{public}d-%{public}zu", index, images_.size());
+        TAG_LOGW(AceLogTag::ACE_IMAGE, "PrepareImageInfo index error, index: %{public}d, size: %{public}zu",
+            index, images_.size());
         return;
     }
     auto host = GetHost();
@@ -2468,11 +1890,11 @@ void ImagePattern::UpdateCacheImageInfo(CacheImageStruct& cacheImage, int32_t in
     }
     SetColorFilter(cacheImage.imageNode);
     SetImageFit(cacheImage.imageNode);
-    // use the size of first pixelmap when no size is set
-    auto&& layoutConstraint = layoutProperty->GetCalcLayoutConstraint();
+    //use the size of first pixelmap when no size is set
+    auto &&layoutConstraint = layoutProperty->GetCalcLayoutConstraint();
     if (!layoutConstraint || !layoutConstraint->selfIdealSize.has_value()) {
-        CalcSize realSize = { CalcLength(images_[0].pixelMap->GetWidth()),
-            CalcLength(images_[0].pixelMap->GetHeight()) };
+        CalcSize realSize = {
+            CalcLength(images_[0].pixelMap->GetWidth()), CalcLength(images_[0].pixelMap->GetHeight()) };
         imageLayoutProperty->UpdateUserDefinedIdealSize(realSize);
         cacheImage.imageNode->MarkModifyDone();
         return;
@@ -2532,7 +1954,8 @@ void ImagePattern::AdaptSelfSize()
     }
     CHECK_NULL_VOID(images_[0].pixelMap);
     hasSizeChanged = true;
-    CalcSize realSize = { CalcLength(images_[0].pixelMap->GetWidth()), CalcLength(images_[0].pixelMap->GetHeight()) };
+    CalcSize realSize = {
+        CalcLength(images_[0].pixelMap->GetWidth()), CalcLength(images_[0].pixelMap->GetHeight()) };
 
     const auto& layoutConstraint = layoutProperty->GetCalcLayoutConstraint();
     if (!layoutConstraint || !layoutConstraint->selfIdealSize) {
@@ -2577,7 +2000,7 @@ void ImagePattern::AddImageLoadSuccessEvent(const RefPtr<FrameNode>& imageFrameN
             }
             iter->isLoaded = true;
             if (pattern->nowImageIndex_ >= static_cast<int32_t>(pattern->images_.size())) {
-                TAG_LOGW(AceLogTag::ACE_IMAGE, "index is invalid");
+                TAG_LOGW(AceLogTag::ACE_IMAGE, "ImageAnimator showImage index is invalid");
                 return;
             }
             if (pattern->nowImageIndex_ == iter->index &&
@@ -2590,15 +2013,15 @@ void ImagePattern::AddImageLoadSuccessEvent(const RefPtr<FrameNode>& imageFrameN
 bool ImagePattern::IsShowingSrc(const RefPtr<FrameNode>& imageFrameNode, const RefPtr<PixelMap>& src)
 {
     auto imageLayoutProperty = imageFrameNode->GetLayoutProperty<ImageLayoutProperty>();
-    return imageLayoutProperty->HasImageSourceInfo() &&
-           imageLayoutProperty->GetImageSourceInfoValue().GetPixmap() == src;
+    return imageLayoutProperty->HasImageSourceInfo()
+        && imageLayoutProperty->GetImageSourceInfoValue().GetPixmap() == src;
 }
 
 bool ImagePattern::IsFormRender()
 {
     auto pipeline = PipelineBase::GetCurrentContext();
     CHECK_NULL_RETURN(pipeline, false);
-    return pipeline->IsFormRenderExceptDynamicComponent();
+    return pipeline->IsFormRender();
 }
 
 void ImagePattern::UpdateFormDurationByRemainder()
@@ -2714,19 +2137,15 @@ void ImagePattern::ResetImage()
 {
     image_ = nullptr;
     imageQuality_ = AIImageQuality::NONE;
-    isImageReloadNeeded_ = false;
+    isImageQualityChange_ = false;
     loadingCtx_.Reset();
     auto host = GetHost();
     CHECK_NULL_VOID(host);
     if (!altImage_) {
         auto rsRenderContext = host->GetRenderContext();
         CHECK_NULL_VOID(rsRenderContext);
-        TAG_LOGI(AceLogTag::ACE_IMAGE, "%{public}s, %{private}s ResetImage.",
-            imageDfxConfig_.ToStringWithoutSrc().c_str(), imageDfxConfig_.GetImageSrc().c_str());
-        rsRenderContext->RemoveContentModifier(contentMod_);
-        contentMod_ = nullptr;
+        rsRenderContext->ClearDrawCommands();
     }
-    host->SetTrimMemRecycle(false);
 }
 
 void ImagePattern::ResetAltImage()
@@ -2738,23 +2157,12 @@ void ImagePattern::ResetAltImage()
         CHECK_NULL_VOID(host);
         auto rsRenderContext = host->GetRenderContext();
         CHECK_NULL_VOID(rsRenderContext);
-        TAG_LOGI(AceLogTag::ACE_IMAGE, "%{public}s-%{private}s ResetAltImage",
-            imageDfxConfig_.ToStringWithoutSrc().c_str(), imageDfxConfig_.GetImageSrc().c_str());
-        rsRenderContext->RemoveContentModifier(contentMod_);
-        contentMod_ = nullptr;
+        rsRenderContext->ClearDrawCommands();
     }
 }
 
 void ImagePattern::ResetImageAndAlt()
 {
-    TAG_LOGD(AceLogTag::ACE_IMAGE, "%{public}s-%{private}s ResetImageAlt", imageDfxConfig_.ToStringWithoutSrc().c_str(),
-        imageDfxConfig_.GetImageSrc().c_str());
-    auto frameNode = GetHost();
-    CHECK_NULL_VOID(frameNode);
-    if (frameNode->IsInDestroying() && frameNode->IsOnMainTree()) {
-        isNeedReset_ = true;
-        return;
-    }
     image_ = nullptr;
     loadingCtx_ = nullptr;
     srcRect_.Reset();
@@ -2763,14 +2171,14 @@ void ImagePattern::ResetImageAndAlt()
     altImage_ = nullptr;
     altDstRect_.reset();
     altSrcRect_.reset();
+    auto frameNode = GetHost();
+    CHECK_NULL_VOID(frameNode);
     auto rsRenderContext = frameNode->GetRenderContext();
     CHECK_NULL_VOID(rsRenderContext);
-    rsRenderContext->RemoveContentModifier(contentMod_);
-    contentMod_ = nullptr;
+    rsRenderContext->ClearDrawCommands();
     CloseSelectOverlay();
     DestroyAnalyzerOverlay();
     frameNode->MarkDirtyNode(PROPERTY_UPDATE_RENDER);
-    frameNode->SetTrimMemRecycle(false);
 }
 
 void ImagePattern::ResetPictureSize()
@@ -2849,196 +2257,6 @@ void ImagePattern::TriggerVisibleAreaChangeForChild(const RefPtr<UINode>& node, 
             }
         }
         TriggerVisibleAreaChangeForChild(childNode, visible, ratio);
-    }
-}
-
-void ImagePattern::DumpInfo(std::unique_ptr<JsonValue>& json)
-{
-    DumpLayoutInfo(json);
-    DumpRenderInfo(json);
-    json->Put("syncLoad", syncLoad_);
-    if (loadingCtx_) {
-        auto currentLoadImageState = loadingCtx_->GetCurrentLoadingState();
-        json->Put("currentLoadImageState", currentLoadImageState.c_str());
-        json->Put("rawImageSize", loadingCtx_->GetImageSize().ToString().c_str());
-        json->Put("LoadErrorMsg", loadingCtx_->GetErrorMsg().c_str());
-    } else {
-        json->Put("imageLoadingContext", "null");
-    }
-
-    json->Put("draggable", enableDrag_);
-    json->Put("enableAnalyzer", isEnableAnalyzer_);
-}
-
-void ImagePattern::DumpLayoutInfo(std::unique_ptr<JsonValue>& json)
-{
-    auto layoutProp = GetLayoutProperty<ImageLayoutProperty>();
-    CHECK_NULL_VOID(layoutProp);
-    auto src = layoutProp->GetImageSourceInfo().value_or(ImageSourceInfo(""));
-    json->Put("url", src.ToString().c_str());
-    auto altSrc = layoutProp->GetAlt().value_or(ImageSourceInfo(""));
-    json->Put("altUrl", altSrc.ToString().c_str());
-    auto imageFit = layoutProp->GetImageFit().value_or(ImageFit::COVER);
-    json->Put("objectFit", GetImageFitStr(imageFit).c_str());
-    auto fitOriginalSize = layoutProp->GetFitOriginalSize().value_or(false);
-    json->Put("fitOriginalSize", fitOriginalSize);
-    const std::optional<SizeF>& sourceSize = layoutProp->GetSourceSize();
-    if (sourceSize.has_value()) {
-        json->Put("sourceSize", sourceSize.value().ToString().c_str());
-    }
-    bool autoResize = layoutProp->GetAutoResize().value_or(autoResizeDefault_);
-    json->Put("autoResize", autoResize);
-}
-
-void ImagePattern::DumpRenderInfo(std::unique_ptr<JsonValue>& json)
-{
-    auto renderProp = GetPaintProperty<ImageRenderProperty>();
-    CHECK_NULL_VOID(renderProp);
-    auto imageRenderMode = renderProp->GetImageRenderMode().value_or(ImageRenderMode::ORIGINAL);
-    json->Put("renderMode", (imageRenderMode == ImageRenderMode::ORIGINAL) ? "Original" : "Template");
-    auto imageRepeat = renderProp->GetImageRepeat().value_or(ImageRepeat::NO_REPEAT);
-    json->Put("objectRepeat", GetImageRepeatStr(imageRepeat).c_str());
-    auto imageColorFilter = renderProp->GetColorFilter();
-    if (imageColorFilter.has_value()) {
-        auto colorFilter = imageColorFilter.value();
-        json->Put("colorFilter", GetImageColorFilterStr(colorFilter).c_str());
-    }
-    auto fillColor = renderProp->GetSvgFillColor();
-    if (fillColor.has_value()) {
-        auto color = fillColor.value();
-        json->Put("fillColor", color.ColorToString().c_str());
-    }
-    DynamicRangeMode dynamicMode = DynamicRangeMode::STANDARD;
-    if (renderProp->HasDynamicMode()) {
-        dynamicMode = renderProp->GetDynamicMode().value_or(DynamicRangeMode::STANDARD);
-        json->Put("dynamicRangeMode", GetDynamicModeString(dynamicMode).c_str());
-    }
-    auto matchTextDirection = renderProp->GetMatchTextDirection().value_or(false);
-    json->Put("matchTextDirection", matchTextDirection);
-    auto smoothEdge = renderProp->GetSmoothEdge();
-    if (smoothEdge.has_value()) {
-        json->Put("edgeAntialiasing", smoothEdge.value());
-    }
-    auto needBorderRadius = renderProp->GetNeedBorderRadius().value_or(false);
-    json->Put("needBorderRadius", needBorderRadius);
-    if (renderProp && renderProp->HasImageResizableSlice() && renderProp->GetImageResizableSliceValue({}).Valid()) {
-        json->Put("resizable slice", renderProp->GetImageResizableSliceValue({}).ToString().c_str());
-    }
-    auto imageInterpolation = renderProp->GetImageInterpolation().value_or(interpolationDefault_);
-    json->Put("imageInterpolation", GetImageInterpolation(imageInterpolation).c_str());
-}
-
-void ImagePattern::DumpAdvanceInfo(std::unique_ptr<JsonValue>& json)
-{
-    auto layoutProp = GetLayoutProperty<ImageLayoutProperty>();
-    CHECK_NULL_VOID(layoutProp);
-    auto src = layoutProp->GetImageSourceInfo().value_or(ImageSourceInfo(""));
-    json->Put("url", src.ToString().c_str());
-    json->Put("syncLoad", syncLoad_);
-    if (loadingCtx_) {
-        auto currentLoadImageState = loadingCtx_->GetCurrentLoadingState();
-        json->Put("currentLoadImageState", currentLoadImageState.c_str());
-    }
-}
-
-void ImagePattern::AddPixelMapToUiManager()
-{
-    CHECK_NULL_VOID(image_);
-    auto pixmap = image_->GetPixelMap();
-    CHECK_NULL_VOID(pixmap);
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    auto pipeline = host->GetContext();
-    CHECK_NULL_VOID(pipeline);
-    pipeline->AddPixelMap(host->GetId(), pixmap);
-}
-
-FocusPattern ImagePattern::GetFocusPattern() const
-{
-    if (Container::GreatOrEqualAPITargetVersion(PlatformVersion::VERSION_FOURTEEN)) {
-        return { FocusType::NODE, false, FocusStyleType::OUTER_BORDER };
-    } else {
-        return { FocusType::NODE, false };
-    }
-}
-
-void ImagePattern::OnActive()
-{
-    if (status_ == AnimatorStatus::RUNNING && animator_->GetStatus() != Animator::Status::RUNNING) {
-        auto host = GetHost();
-        CHECK_NULL_VOID(host);
-        if (!animator_->HasScheduler()) {
-            auto context = host->GetContextRefPtr();
-            if (context) {
-                animator_->AttachScheduler(context);
-            } else {
-                TAG_LOGW(AceLogTag::ACE_IMAGE, "pipeline is null.");
-            }
-        }
-        animator_->Forward();
-    }
-}
-
-void ImagePattern::OnInActive()
-{
-    if (status_ == AnimatorStatus::RUNNING) {
-        animator_->Pause();
-    }
-}
-
-void ImagePattern::UpdateImageSourceinfo(const ImageSourceInfo& sourceInfo)
-{
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    auto pipelineContext = host->GetContext();
-    CHECK_NULL_VOID(pipelineContext);
-    if (pipelineContext->IsSystmColorChange()) {
-        auto imageLayoutProperty = GetLayoutProperty<ImageLayoutProperty>();
-        CHECK_NULL_VOID(imageLayoutProperty);
-        imageLayoutProperty->UpdateImageSourceInfo(sourceInfo);
-    }
-}
-
-void ImagePattern::UpdateImageFill(const Color& color)
-{
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    auto pipelineContext = host->GetContext();
-    CHECK_NULL_VOID(pipelineContext);
-    if (pipelineContext->IsSystmColorChange()) {
-        auto renderProperty = GetPaintProperty<ImageRenderProperty>();
-        CHECK_NULL_VOID(renderProperty);
-        renderProperty->UpdateSvgFillColor(color);
-        auto renderContext = host->GetRenderContext();
-        CHECK_NULL_VOID(renderContext);
-        renderContext->UpdateForegroundColor(color);
-        host->MarkDirtyNode(PROPERTY_UPDATE_RENDER);
-    }
-}
-
-void ImagePattern::UpdateImageAlt(const ImageSourceInfo& sourceInfo)
-{
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    auto pipelineContext = host->GetContext();
-    CHECK_NULL_VOID(pipelineContext);
-    if (pipelineContext->IsSystmColorChange()) {
-        auto imageLayoutProperty = GetLayoutProperty<ImageLayoutProperty>();
-        CHECK_NULL_VOID(imageLayoutProperty);
-        imageLayoutProperty->UpdateAlt(sourceInfo);
-    }
-}
-
-void ImagePattern::OnColorModeChange(uint32_t colorMode)
-{
-    Pattern::OnColorModeChange(colorMode);
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    auto pipelineContext = host->GetContext();
-    CHECK_NULL_VOID(pipelineContext);
-    if (host->GetRerenderable()) {
-        host->MarkModifyDone();
-        host->MarkDirtyNode(PROPERTY_UPDATE_MEASURE_SELF);
     }
 }
 } // namespace OHOS::Ace::NG

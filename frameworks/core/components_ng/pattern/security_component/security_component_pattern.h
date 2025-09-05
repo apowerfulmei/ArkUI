@@ -21,7 +21,6 @@
 #endif
 #include "core/components_ng/base/view_stack_processor.h"
 #include "core/components_ng/pattern/image/image_layout_property.h"
-#include "core/components_ng/pattern/image/image_render_property.h"
 #include "core/components_ng/pattern/security_component/security_component_accessibility_property.h"
 #include "core/components_ng/pattern/security_component/security_component_layout_algorithm.h"
 #include "core/components_ng/pattern/security_component/security_component_layout_property.h"
@@ -88,8 +87,6 @@ public:
     void OnWindowHide() override;
     void OnWindowShow() override;
 
-    void OnLanguageConfigurationUpdate() override;
-
     SecurityComponentRegisterStatus regStatus_ = SecurityComponentRegisterStatus::UNREGISTERED;
     std::timed_mutex regMutex_;
     int32_t scId_ = -1;
@@ -98,9 +95,7 @@ public:
 protected:
     void InitOnTouch(RefPtr<FrameNode>& secCompNode);
     void InitOnKeyEvent(RefPtr<FrameNode>& secCompNode);
-    void InitOnAccessibilityEvent(RefPtr<FrameNode>& secCompNode);
     bool OnKeyEvent(const KeyEvent& event);
-    bool OnAccessibilityEvent(const SecCompEnhanceEvent& event);
     void OnTouch(const TouchEventInfo& info);
     bool OnDirtyLayoutWrapperSwap(const RefPtr<LayoutWrapper>& dirty, const DirtySwapConfig& config) override;
     void OnModifyDone() override;
@@ -110,44 +105,33 @@ protected:
     void InitOnClick(RefPtr<FrameNode>& secCompNode, RefPtr<FrameNode>& icon,
         RefPtr<FrameNode>& text, RefPtr<FrameNode>& button);
     void InitAppearCallback(RefPtr<FrameNode>& frameNode);
-    void ToJsonValueBorderRadius(const std::optional<BorderRadiusProperty>& borderRadius,
-    const RefPtr<SecurityComponentTheme>& theme, std::unique_ptr<JsonValue>& borderRadiusJson) const;
     void ToJsonValueIconNode(std::unique_ptr<JsonValue>& json, const RefPtr<FrameNode>& iconNode,
-        const InspectorFilter& filter) const;
-    void ToJsonValueSymbolIconNode(std::unique_ptr<JsonValue>& json, const RefPtr<FrameNode>& symbolIconNode,
         const InspectorFilter& filter) const;
     void ToJsonValueTextNode(std::unique_ptr<JsonValue>& json, const RefPtr<FrameNode>& textNode,
         const InspectorFilter& filter) const;
     void ToJsonValue(std::unique_ptr<JsonValue>& json, const InspectorFilter& filter) const override;
-    void ToJsonValuePadding(const RefPtr<SecurityComponentTheme>& theme,
-        const RefPtr<SecurityComponentLayoutProperty>& layoutProperty, std::unique_ptr<JsonValue>& paddingJson) const;
     void ToJsonValueRect(std::unique_ptr<JsonValue>& json, const InspectorFilter& filter) const;
     bool IsParentMenu(RefPtr<FrameNode>& secCompNode);
 private:
     void HandleClickEventFromTouch(const TouchEventInfo& info);
     void UpdateIconProperty(RefPtr<FrameNode>& scNode, RefPtr<FrameNode>& iconNode);
-    void UpdateSymbolProperty(const RefPtr<FrameNode>& scNode, RefPtr<FrameNode>& symbolNode);
     void UpdateTextProperty(RefPtr<FrameNode>& scNode, RefPtr<FrameNode>& textNode);
     void UpdateButtonProperty(RefPtr<FrameNode>& scNode, RefPtr<FrameNode>& buttonNode);
-    void HandleEnabled();
 #ifdef SECURITY_COMPONENT_ENABLE
     void RegisterSecurityComponent();
     void RegisterSecurityComponentRetry();
     void UnregisterSecurityComponent();
-    int32_t ReportSecurityComponentClickEvent(GestureEvent& event, std::string& message);
+    int32_t ReportSecurityComponentClickEvent(GestureEvent& event);
     int32_t ReportSecurityComponentClickEvent(const KeyEvent& event);
-    int32_t ReportSecurityComponentClickEvent(const SecCompEnhanceEvent& event);
     void DoTriggerOnclick(int32_t result);
-    void DelayReleaseNode(uint64_t index);
+    void DelayReleaseNode(RefPtr<FrameNode>& node);
     std::function<int32_t(int32_t)> CreateFirstUseDialogCloseFunc(
         RefPtr<FrameNode>& frameNode, RefPtr<PipelineContext>& pipeline, const std::string& taskName);
-    void HandleReportSecCompClickEventResult(int32_t& code, std::string& message);
 #endif
     std::unique_ptr<Offset> lastTouchOffset_;
     RefPtr<ClickEvent> clickListener_;
     RefPtr<TouchEventImpl> onTouchListener_;
     bool isSetOnKeyEvent = false;
-    bool isSetOnAccessibilityEvent_ = false;
     bool isAppearCallback_ = false;
 #ifdef SECURITY_COMPONENT_ENABLE
     std::shared_ptr<AppExecFwk::EventHandler> uiEventHandler_ = nullptr;

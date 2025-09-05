@@ -15,6 +15,10 @@
 
 #include "frameworks/core/components_ng/svg/parse/svg_g.h"
 
+#include "include/pathops/SkPathOps.h"
+
+#include "frameworks/core/components/declaration/svg/svg_declaration.h"
+
 namespace OHOS::Ace::NG {
 
 SvgG::SvgG() : SvgGroup() {}
@@ -24,6 +28,17 @@ RefPtr<SvgNode> SvgG::Create()
     return AceType::MakeRefPtr<SvgG>();
 }
 
+#ifndef USE_ROSEN_DRAWING
+SkPath SvgG::AsPath(const Size& viewPort) const
+{
+    SkPath path;
+    for (auto child : children_) {
+        const SkPath childPath = child->AsPath(viewPort);
+        Op(path, childPath, kUnion_SkPathOp, &path);
+    }
+    return path;
+}
+#else
 RSRecordingPath SvgG::AsPath(const Size& viewPort) const
 {
     RSRecordingPath path;
@@ -33,34 +48,6 @@ RSRecordingPath SvgG::AsPath(const Size& viewPort) const
     }
     return path;
 }
-
-RSRecordingPath SvgG::AsPath(const SvgLengthScaleRule& lengthRule)
-{
-    RSRecordingPath path;
-    for (const auto& child : children_) {
-        auto childPath = child->AsPath(lengthRule);
-        path.Op(path, childPath, RSPathOp::UNION);
-    }
-    ApplyTransform(path, lengthRule);
-    return path;
-}
-
-void SvgG::ApplyOpacity(RSCanvas& canvas)
-{
-    if (!attributes_.hasOpacity) {
-        return;
-    }
-    RSBrush brush;
-    brush.SetAlphaF(attributes_.opacity);
-    RSSaveLayerOps slo(nullptr, &brush);
-    canvas.SaveLayer(slo);
-}
-
-void SvgG::OnDraw(RSCanvas& canvas, const SvgLengthScaleRule& lengthRule)
-{
-    ApplyOpacity(canvas);
-    SvgNode::OnDraw(canvas, lengthRule);
-    return;
-}
+#endif
 
 } // namespace OHOS::Ace::NG

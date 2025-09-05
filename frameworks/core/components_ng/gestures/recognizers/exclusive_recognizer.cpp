@@ -15,7 +15,19 @@
 
 #include "core/components_ng/gestures/recognizers/exclusive_recognizer.h"
 
+#include <vector>
+
+#include "base/geometry/offset.h"
+#include "base/log/log.h"
+#include "base/memory/ace_type.h"
+#include "base/memory/referenced.h"
+#include "base/utils/utils.h"
 #include "core/components_ng/base/frame_node.h"
+#include "core/components_ng/gestures/gesture_referee.h"
+#include "core/components_ng/gestures/recognizers/click_recognizer.h"
+#include "core/components_ng/gestures/recognizers/gesture_recognizer.h"
+#include "core/components_ng/gestures/recognizers/multi_fingers_recognizer.h"
+#include "core/components_ng/gestures/recognizers/recognizer_group.h"
 
 namespace OHOS::Ace::NG {
 
@@ -93,6 +105,10 @@ void ExclusiveRecognizer::OnBlocked()
 
 bool ExclusiveRecognizer::HandleEvent(const TouchEvent& point)
 {
+    if (point.type == TouchType::DOWN || point.type == TouchType::UP) {
+        TAG_LOGI(AceLogTag::ACE_INPUTKEYFLOW, "Id:%{public}d, exclusive %{public}d type: %{public}d",
+            point.touchEventId, point.id, static_cast<int32_t>(point.type));
+    }
     switch (point.type) {
         case TouchType::MOVE:
         case TouchType::DOWN: {
@@ -125,13 +141,11 @@ bool ExclusiveRecognizer::HandleEvent(const AxisEvent& event)
         case AxisAction::NONE: {
             if (activeRecognizer_) {
                 activeRecognizer_->HandleEvent(event);
-                AddGestureProcedure(event, activeRecognizer_);
             } else {
                 auto copyRecognizers = recognizers_;
                 for (const auto& recognizer : copyRecognizers) {
                     if (recognizer) {
                         recognizer->HandleEvent(event);
-                        AddGestureProcedure(event, activeRecognizer_);
                     }
                 }
             }
@@ -301,9 +315,8 @@ bool ExclusiveRecognizer::ReconcileFrom(const RefPtr<NGGestureRecognizer>& recog
 void ExclusiveRecognizer::CleanRecognizerState()
 {
     for (const auto& child : recognizers_) {
-        auto childRecognizer = AceType::DynamicCast<MultiFingersRecognizer>(child);
-        if (childRecognizer && childRecognizer->GetTouchPointsSize() <= 1) {
-            childRecognizer->CleanRecognizerState();
+        if (child) {
+            child->CleanRecognizerState();
         }
     }
     if ((refereeState_ == RefereeState::SUCCEED ||
@@ -393,27 +406,6 @@ void ExclusiveRecognizer::DispatchEventToAllRecognizers(const TouchEvent& point)
                     point.id, node ? node->GetTag().c_str() : "null");
             }
         }
-    }
-}
-
-void ExclusiveRecognizer::CheckAndSetRecognizerCleanFlag(const RefPtr<NGGestureRecognizer>& recognizer)
-{
-    if (activeRecognizer_ == recognizer) {
-        SetIsNeedResetRecognizer(true);
-    }
-}
-
-void ExclusiveRecognizer::CleanRecognizerStateVoluntarily()
-{
-    for (const auto& child : recognizers_) {
-        if (child && AceType::InstanceOf<RecognizerGroup>(child)) {
-            child->CleanRecognizerStateVoluntarily();
-        }
-    }
-    if (IsNeedResetRecognizerState()) {
-        activeRecognizer_ = nullptr;
-        refereeState_ = RefereeState::READY;
-        SetIsNeedResetRecognizer(false);
     }
 }
 } // namespace OHOS::Ace::NG

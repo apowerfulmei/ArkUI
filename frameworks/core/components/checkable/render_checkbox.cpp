@@ -16,7 +16,6 @@
 #include "core/components/checkable/render_checkbox.h"
 
 #include "base/log/event_report.h"
-#include "core/event/ace_event_helper.h"
 
 namespace OHOS::Ace {
 namespace {

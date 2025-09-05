@@ -45,7 +45,6 @@ class TestingSamplingOptions {
 public:
     TestingSamplingOptions() = default;
     TestingSamplingOptions(FilterMode fm, MipmapMode mm) {}
-    TestingSamplingOptions(FilterMode fm) {}
     TestingSamplingOptions(const TestingCubicResampler& c) {}
     ~TestingSamplingOptions() = default;
 };

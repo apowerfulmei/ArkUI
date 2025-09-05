@@ -83,14 +83,11 @@ private:
     void AnimateWithSandBox(const OffsetF& inNodeParentPos, bool inNodeParentHasScales,
         const std::function<void()>& propertyCallback, const AnimationOption& option);
     void SyncGeometryPropertiesAfterLayout(const RefPtr<FrameNode>& syncNode);
-    RefPtr<FrameNode> GetWindowBoundaryNode(const RefPtr<FrameNode>& node) const;
-    void HandleOcclusionScene(const RefPtr<FrameNode>& node, bool flag);
 
     static constexpr int32_t RESYNC_DURATION = 1;
     std::string id_;
     WeakPtr<FrameNode> inNode_;
     WeakPtr<FrameNode> outNode_;
-    WeakPtr<FrameNode> outWindowBoundaryNode_;
     State state_ = State::IDLE;
     bool hasInAnim_ = false;
     bool hasOutAnim_ = false;

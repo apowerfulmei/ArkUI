@@ -15,10 +15,16 @@
 
 #include "frameworks/bridge/declarative_frontend/declarative_frontend.h"
 
+#include <memory>
+
 #include "base/log/dump_log.h"
 #include "base/log/event_report.h"
-#include "bridge/js_frontend/engine/common/js_engine.h"
+#include "base/utils/utils.h"
+#include "core/common/ace_page.h"
+#include "core/common/container.h"
 #include "core/common/recorder/node_data_cache.h"
+#include "core/common/thread_checker.h"
+#include "core/components/navigator/navigator_component.h"
 #include "frameworks/bridge/card_frontend/form_frontend_delegate_declarative.h"
 #include "frameworks/bridge/declarative_frontend/ng/page_router_manager_factory.h"
 
@@ -160,7 +166,7 @@ void SwipeInfoToString(const BaseEventInfo& info, std::string& eventParam)
 
 DeclarativeFrontend::~DeclarativeFrontend() noexcept
 {
-    LOGI("DeclarativeFrontend destroyed");
+    LOG_DESTROY();
 }
 
 void DeclarativeFrontend::Destroy()
@@ -183,7 +189,7 @@ bool DeclarativeFrontend::Initialize(FrontendType type, const RefPtr<TaskExecuto
 {
     type_ = type;
     taskExecutor_ = taskExecutor;
-    ACE_DCHECK(type_ == FrontendType::DECLARATIVE_JS || type_ == FrontendType::STATIC_HYBRID_DYNAMIC);
+    ACE_DCHECK(type_ == FrontendType::DECLARATIVE_JS);
     InitializeFrontendDelegate(taskExecutor);
 
     bool needPostJsTask = true;
@@ -191,20 +197,6 @@ bool DeclarativeFrontend::Initialize(FrontendType type, const RefPtr<TaskExecuto
     if (container) {
         const auto& setting = container->GetSettings();
         needPostJsTask = !(setting.usePlatformAsUIThread && setting.useUIAsJSThread);
-    }
-
-    auto hybridType = Framework::JsEngineHybridType::NONE;
-    if (type_ == FrontendType::STATIC_HYBRID_DYNAMIC) {
-        needPostJsTask = false;
-        hybridType = Framework::JsEngineHybridType::STATIC_HYBRID_DYNAMIC;
-    } else if (type_ == FrontendType::DYNAMIC_HYBRID_STATIC) {
-        needPostJsTask = false;
-        hybridType = Framework::JsEngineHybridType::DYNAMIC_HYBRID_STATIC;
-    } else {
-        hybridType = Framework::JsEngineHybridType::NONE;
-    }
-    if (jsEngine_) {
-        jsEngine_->UpdateHybridType(hybridType);
     }
 
 #if defined(PREVIEW)
@@ -431,15 +423,6 @@ void DeclarativeFrontend::InitializeFrontendDelegate(const RefPtr<TaskExecutor>&
         jsEngine->DrawInspectorCallback(componentId);
     };
 
-    const auto& drawChildrenInspectorCallback = [weakEngine = WeakPtr<Framework::JsEngine>(jsEngine_)](
-                                                    const std::string& componentId) {
-        auto jsEngine = weakEngine.Upgrade();
-        if (!jsEngine) {
-            return;
-        }
-        jsEngine->DrawChildrenInspectorCallback(componentId);
-    };
-
     const auto& requestAnimationCallback = [weakEngine = WeakPtr<Framework::JsEngine>(jsEngine_)](
                                                const std::string& callbackId, uint64_t timeStamp) {
         auto jsEngine = weakEngine.Upgrade();
@@ -517,8 +500,7 @@ void DeclarativeFrontend::InitializeFrontendDelegate(const RefPtr<TaskExecutor>&
         delegate_ = AceType::MakeRefPtr<Framework::FormFrontendDelegateDeclarative>(taskExecutor, loadCallback,
             setPluginMessageTransferCallback, asyncEventCallback, syncEventCallback, updatePageCallback,
             resetStagingPageCallback, destroyPageCallback, destroyApplicationCallback, updateApplicationStateCallback,
-            timerCallback, mediaQueryCallback, layoutInspectorCallback, drawInspectorCallback,
-            drawChildrenInspectorCallback, requestAnimationCallback,
+            timerCallback, mediaQueryCallback, layoutInspectorCallback, drawInspectorCallback, requestAnimationCallback,
             jsCallback, onWindowDisplayModeChangedCallBack, onConfigurationUpdatedCallBack, onSaveAbilityStateCallBack,
             onRestoreAbilityStateCallBack, onNewWantCallBack, onMemoryLevelCallBack, onStartContinuationCallBack,
             onCompleteContinuationCallBack, onRemoteTerminatedCallBack, onSaveDataCallBack, onRestoreDataCallBack,
@@ -527,8 +509,7 @@ void DeclarativeFrontend::InitializeFrontendDelegate(const RefPtr<TaskExecutor>&
         delegate_ = AceType::MakeRefPtr<Framework::FrontendDelegateDeclarative>(taskExecutor, loadCallback,
             setPluginMessageTransferCallback, asyncEventCallback, syncEventCallback, updatePageCallback,
             resetStagingPageCallback, destroyPageCallback, destroyApplicationCallback, updateApplicationStateCallback,
-            timerCallback, mediaQueryCallback, layoutInspectorCallback, drawInspectorCallback,
-            drawChildrenInspectorCallback, requestAnimationCallback,
+            timerCallback, mediaQueryCallback, layoutInspectorCallback, drawInspectorCallback, requestAnimationCallback,
             jsCallback, onWindowDisplayModeChangedCallBack, onConfigurationUpdatedCallBack, onSaveAbilityStateCallBack,
             onRestoreAbilityStateCallBack, onNewWantCallBack, onMemoryLevelCallBack, onStartContinuationCallBack,
             onCompleteContinuationCallBack, onRemoteTerminatedCallBack, onSaveDataCallBack, onRestoreDataCallBack,
@@ -576,14 +557,6 @@ void DeclarativeFrontend::InitializeFrontendDelegate(const RefPtr<TaskExecutor>&
                 return false;
             }
             return jsEngine->UpdateRootComponent();
-        };
-        auto generateIntentPageCallback = [weakEngine = WeakPtr<Framework::JsEngine>(jsEngine_)](
-            const std::string& bundleName, const std::string& moduleName, const std::string& pagePath) {
-                auto jsEngine = weakEngine.Upgrade();
-                if (!jsEngine) {
-                    return false;
-                }
-                return jsEngine->GeneratePageByIntent(bundleName, moduleName, pagePath);
         };
         auto getFullPathInfoCallback =
             [weakEngine = WeakPtr<Framework::JsEngine>(jsEngine_)]() -> std::unique_ptr<JsonValue> {
@@ -640,7 +613,6 @@ void DeclarativeFrontend::InitializeFrontendDelegate(const RefPtr<TaskExecutor>&
         pageRouterManager->SetLoadJsByBufferCallback(std::move(loadPageByBufferCallback));
         pageRouterManager->SetLoadNamedRouterCallback(std::move(loadNamedRouterCallback));
         pageRouterManager->SetUpdateRootComponentCallback(std::move(updateRootComponentCallback));
-        pageRouterManager->SetGenerateIntentPageCallback(std::move(generateIntentPageCallback));
         pageRouterManager->SetGetFullPathInfoCallback(std::move(getFullPathInfoCallback));
         pageRouterManager->SetRestoreFullPathInfoCallback(std::move(restoreFullPathInfoCallback));
         pageRouterManager->SetGetNamedRouterInfoCallback(std::move(getNamedRouterInfoCallback));
@@ -748,33 +720,6 @@ UIContentErrorCode DeclarativeFrontend::RunPageByNamedRouter(const std::string& 
     }
 
     return UIContentErrorCode::NULL_POINTER;
-}
-
-UIContentErrorCode DeclarativeFrontend::RunIntentPage()
-{
-    if (delegate_) {
-        delegate_->RunIntentPage();
-        return UIContentErrorCode::NO_ERRORS;
-    }
-    return UIContentErrorCode::NULL_POINTER;
-}
-
-UIContentErrorCode DeclarativeFrontend::SetRouterIntentInfo(const std::string& intentInfoSerialized,
-    bool isColdStart, const std::function<void()>&& loadPageCallback)
-{
-    if (delegate_) {
-        delegate_->SetRouterIntentInfo(intentInfoSerialized, isColdStart, std::move(loadPageCallback));
-        return UIContentErrorCode::NO_ERRORS;
-    }
-    return UIContentErrorCode::NULL_POINTER;
-}
-
-std::string DeclarativeFrontend::GetTopNavDestinationInfo(bool onlyFullScreen, bool needParam)
-{
-    if (delegate_) {
-        return delegate_->GetTopNavDestinationInfo(onlyFullScreen, needParam);
-    }
-    return "{}";
 }
 
 void DeclarativeFrontend::ReplacePage(const std::string& url, const std::string& params)
@@ -907,14 +852,6 @@ napi_value DeclarativeFrontend::GetContextValue()
     return nullptr;
 }
 
-bool DeclarativeFrontend::BuilderNodeFunc(std::string functionName, const std::vector<int32_t>& nodeIds)
-{
-    if (jsEngine_) {
-        return jsEngine_->BuilderNodeFunc(functionName, nodeIds);
-    }
-    return false;
-}
-
 napi_value DeclarativeFrontend::GetFrameNodeValueByNodeId(int32_t nodeId)
 {
     if (jsEngine_) {
@@ -975,7 +912,8 @@ void DeclarativeFrontend::UpdateState(Frontend::State state)
     auto container = Container::Current();
     CHECK_NULL_VOID(container);
     const auto& setting = container->GetSettings();
-    needPostJsTask = !(setting.usePlatformAsUIThread && setting.useUIAsJSThread);
+    needPostJsTask = !(setting.usePlatformAsUIThread && setting.useUIAsJSThread)
+        && !taskExecutor_->WillRunOnCurrentThread(TaskExecutor::TaskType::JS);
     if (needPostJsTask) {
         delegate_->UpdateApplicationState(delegate_->GetAppID(), state);
         return;
@@ -1158,21 +1096,6 @@ void DeclarativeFrontend::OnDrawCompleted(const std::string& componentId)
     }
 }
 
-void DeclarativeFrontend::OnDrawChildrenCompleted(const std::string& componentId)
-{
-    if (delegate_) {
-        delegate_->OnDrawChildrenCompleted(componentId);
-    }
-}
-
-bool DeclarativeFrontend::IsDrawChildrenCallbackFuncExist(const std::string& componentId)
-{
-    if (delegate_) {
-        return delegate_->IsDrawChildrenCallbackFuncExist(componentId);
-    }
-    return false;
-}
-
 void DeclarativeFrontend::HotReload()
 {
     auto manager = GetPageRouterManager();
@@ -1266,14 +1189,6 @@ void DeclarativeFrontend::NotifyAppStorage(const std::string& key, const std::st
         return;
     }
     delegate_->NotifyAppStorage(jsEngine_, key, value);
-}
-
-std::string DeclarativeFrontend::GetPagePathByUrl(const std::string& url) const
-{
-    if (!delegate_) {
-        return "";
-    }
-    return delegate_->GetPagePathByUrl(url);
 }
 
 void DeclarativeEventHandler::HandleAsyncEvent(const EventMarker& eventMarker)

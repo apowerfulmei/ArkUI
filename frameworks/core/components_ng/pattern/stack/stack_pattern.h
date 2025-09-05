@@ -49,24 +49,15 @@ public:
         return { FocusType::SCOPE, true };
     }
 
+    bool IsNeedInitClickEventRecorder() const override
+    {
+        return true;
+    }
+
     ScopeFocusAlgorithm GetScopeFocusAlgorithm() override
     {
-        return ScopeFocusAlgorithm(ScopeFocusDirection::UNIVERSAL, false, true, ScopeType::OTHERS);
-    }
-
-    bool IsEnableMatchParent() override
-    {
-        return true;
-    }
-
-    bool IsEnableChildrenMatchParent() override
-    {
-        return true;
-    }
-
-    bool IsEnableFix() override
-    {
-        return true;
+        return ScopeFocusAlgorithm(ScopeFocusDirection::UNIVERSAL, false, true,
+            ScopeType::OTHERS);
     }
 };
 } // namespace OHOS::Ace::NG

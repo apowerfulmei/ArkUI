@@ -16,6 +16,8 @@
 #include "click_spring_effect.h"
 #include "render_transform.h"
 
+#include <unordered_map>
+
 namespace OHOS::Ace {
 namespace {
 

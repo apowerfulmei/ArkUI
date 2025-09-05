@@ -16,7 +16,6 @@
 #include "core/components/rating/render_rating.h"
 
 #include "core/components/rating/rating_component.h"
-#include "core/event/ace_event_helper.h"
 
 namespace OHOS::Ace {
 
@@ -429,9 +428,6 @@ void RenderRating::Initialize()
     touchDetector_->SetOnTouchDown([weak = WeakClaim(this)](const TouchEventInfo& info) {
         auto rating = weak.Upgrade();
         if (rating) {
-            if (info.GetTouches().empty()) {
-                return;
-            }
             auto localPosition = info.GetTouches().front().GetLocalLocation();
             rating->HandlePressDown(localPosition);
         }

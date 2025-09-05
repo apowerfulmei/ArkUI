@@ -16,21 +16,30 @@
 #include "bridge/cj_frontend/interfaces/cj_ffi/cj_image_span_ffi.h"
 
 #include "cj_lambda.h"
-
+#include "bridge/cj_frontend/interfaces/cj_ffi/utils.h"
+#include "core/common/container.h"
+#include "core/components/common/layout/constants.h"
 #include "core/components_ng/pattern/image/image_model.h"
-#include "core/components_ng/pattern/image/image_model_ng.h"
 #include "core/components_ng/pattern/text/image_span_view.h"
 
-#ifndef __NON_OHOS__
-#include "pixel_map_impl.h"
-#endif
 using namespace OHOS::Ace::Framework;
 using namespace OHOS::Ace;
 
-namespace {
-const std::vector<VerticalAlign> VERTICAL_ALIGNS = { VerticalAlign::TOP, VerticalAlign::CENTER, VerticalAlign::BOTTOM,
-    VerticalAlign::BASELINE };
-} // namespace
+const std::vector<ImageFit> IMAGE_FITS = {
+    ImageFit::FILL,
+    ImageFit::CONTAIN,
+    ImageFit::COVER,
+    ImageFit::NONE,
+    ImageFit::SCALE_DOWN,
+    ImageFit::FITWIDTH
+};
+
+const std::vector<VerticalAlign> VERTICAL_ALIGNS = {
+    VerticalAlign::TOP,
+    VerticalAlign::CENTER,
+    VerticalAlign::BOTTOM,
+    VerticalAlign::BASELINE
+};
 
 TextBackgroundStyle ParseTextBackgroundStyle(uint32_t color, double radiusDouble, int32_t unit)
 {
@@ -51,14 +60,17 @@ TextBackgroundStyle ParseTextBackgroundStyle(uint32_t color, CBorderRadiuses rad
 {
     TextBackgroundStyle textBackgroundStyle;
     Color colorVal = Color(color);
-    Dimension topLeftValue(radiusValue.topLeftRadiuses, static_cast<DimensionUnit>(radiusValue.topLeftUnit));
+    Dimension topLeftValue(radiusValue.topLeftRadiuses,
+        static_cast<DimensionUnit>(radiusValue.topLeftUnit));
     CalcDimension topLeft = CalcDimension(topLeftValue);
-    Dimension topRightValue(radiusValue.topRightRadiuses, static_cast<DimensionUnit>(radiusValue.topRightUnit));
+    Dimension topRightValue(radiusValue.topRightRadiuses,
+        static_cast<DimensionUnit>(radiusValue.topRightUnit));
     CalcDimension topRight = CalcDimension(topRightValue);
-    Dimension bottomLeftValue(radiusValue.bottomLeftRadiuses, static_cast<DimensionUnit>(radiusValue.bottomLeftUnit));
+    Dimension bottomLeftValue(radiusValue.bottomLeftRadiuses,
+        static_cast<DimensionUnit>(radiusValue.bottomLeftUnit));
     CalcDimension bottomLeft = CalcDimension(bottomLeftValue);
-    Dimension bottomRightValue(
-        radiusValue.bottomRightRadiuses, static_cast<DimensionUnit>(radiusValue.bottomRightUnit));
+    Dimension bottomRightValue(radiusValue.bottomRightRadiuses,
+        static_cast<DimensionUnit>(radiusValue.bottomRightUnit));
     CalcDimension bottomRight = CalcDimension(bottomRightValue);
     textBackgroundStyle.backgroundColor = colorVal;
     textBackgroundStyle.backgroundRadius = { topLeft, topRight, bottomRight, bottomLeft };
@@ -96,11 +108,11 @@ void FfiOHOSAceFrameworkImageSpanVerticalAlign(int32_t value)
 
 void FfiOHOSAceFrameworkImageSpanObjectFit(int32_t value)
 {
-    auto fit = static_cast<ImageFit>(value);
-    if (fit < ImageFit::FILL || fit > ImageFit::BOTTOM_END) {
-        fit = ImageFit::COVER;
+    if (!OHOS::Ace::Framework::Utils::CheckParamsValid(value, IMAGE_FITS.size())) {
+        LOGE("invalid value for image fit");
+        return;
     }
-    ImageModel::GetInstance()->SetImageFit(fit);
+    ImageModel::GetInstance()->SetImageFit(IMAGE_FITS[value]);
 }
 
 void FfiOHOSAceFrameworkImageSpanTextBackgroundStyle(uint32_t color, double radius, int32_t unit)
@@ -115,31 +127,16 @@ void FfiOHOSAceFrameworkImageSpanTextBackgroundStyleBorder(uint32_t color, CBord
     NG::ImageSpanView::SetPlaceHolderStyle(textBackgroundStyle);
 }
 
-void FfiOHOSAceFrameworkImageSpanAlt(int64_t pixelMapId)
-{
-#ifndef __NON_OHOS__
-    auto instance = OHOS::FFI::FFIData::GetData<OHOS::Media::PixelMapImpl>(pixelMapId);
-    if (!instance) {
-        LOGE("[PixelMap] instance not exist %{public}" PRId64, pixelMapId);
-        return;
-    }
-    std::shared_ptr<OHOS::Media::PixelMap> pixelMap = instance->GetRealPixelMap();
-    RefPtr<PixelMap> pixelMapRef = PixelMap::CreatePixelMap(&pixelMap);
-    auto srcInfo = ImageSourceInfo(pixelMapRef);
-    ImageModel::GetInstance()->SetAlt(srcInfo);
-#endif
-}
-
 void FfiOHOSAceFrameworkImageSpanSetColorFilter(void* vectorHandle)
 {
     const auto& matrix = *reinterpret_cast<std::vector<float>*>(vectorHandle);
     ImageModel::GetInstance()->SetColorFilterMatrix(matrix);
 }
 
-void FfiOHOSAceFrameworkImageSpanOnComplete(void (*callback)(CJImageCompleteV2 completeInfo))
+void FfiOHOSAceFrameworkImageSpanOnComplete(void (*callback)(CJImageComplete completeInfo))
 {
     auto onComplete = [ffiOnComplete = CJLambda::Create(callback)](const LoadImageSuccessEvent& newInfo) -> void {
-        CJImageCompleteV2 ffiCompleteInfo {};
+        CJImageComplete ffiCompleteInfo {};
         ffiCompleteInfo.width = newInfo.GetWidth();
         ffiCompleteInfo.height = newInfo.GetHeight();
         ffiCompleteInfo.componentWidth = newInfo.GetComponentWidth();
@@ -154,10 +151,10 @@ void FfiOHOSAceFrameworkImageSpanOnComplete(void (*callback)(CJImageCompleteV2 c
     ImageModel::GetInstance()->SetOnComplete(onComplete);
 }
 
-void FfiOHOSAceFrameworkImageSpanOnError(void (*callback)(CJImageErrorV2 errorInfo))
+void FfiOHOSAceFrameworkImageSpanOnError(void (*callback)(CJImageError errorInfo))
 {
     auto onError = [ffiOnError = CJLambda::Create(callback)](const LoadImageFailEvent& newInfo) -> void {
-        CJImageErrorV2 ffiErrorInfo {};
+        CJImageError ffiErrorInfo {};
         ffiErrorInfo.componentWidth = newInfo.GetComponentWidth();
         ffiErrorInfo.componentHeight = newInfo.GetComponentHeight();
         ffiErrorInfo.message = newInfo.GetErrorMessage().c_str();

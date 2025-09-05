@@ -21,15 +21,14 @@
 #include "core/components_ng/pattern/rating/rating_render_property.h"
 #include "core/components_ng/render/image_painter.h"
 #include "core/components_ng/render/node_paint_method.h"
-#include "core/components_ng/pattern/rating/rating_pattern.h"
 
 namespace OHOS::Ace::NG {
 class ACE_EXPORT RatingPaintMethod : public NodePaintMethod {
-    DECLARE_ACE_TYPE(RatingPaintMethod, NodePaintMethod);
+    DECLARE_ACE_TYPE(RatingPaintMethod, NodePaintMethod)
 public:
-    RatingPaintMethod(const WeakPtr<Pattern>& pattern, const RefPtr<RatingModifier>& ratingModifier, int32_t starNum,
+    RatingPaintMethod(const RefPtr<RatingModifier>& ratingModifier, int32_t starNum,
         RatingModifier::RatingAnimationType state, bool reverse)
-        : pattern_(pattern), ratingModifier_(ratingModifier), starNum_(starNum), state_(state), reverse_(reverse)
+        : ratingModifier_(ratingModifier), starNum_(starNum), state_(state), reverse_(reverse)
     {}
     ~RatingPaintMethod() override = default;
 
@@ -41,17 +40,12 @@ public:
 
     void UpdateContentModifier(PaintWrapper* paintWrapper) override
     {
-        auto ratingPattern = DynamicCast<RatingPattern>(pattern_.Upgrade());
-        CHECK_NULL_VOID(ratingPattern);
         CHECK_NULL_VOID(ratingModifier_);
-        auto host = ratingPattern->GetHost();
-        CHECK_NULL_VOID(host);
-        auto pipeline = host->GetContextRefPtr();
+        auto pipeline = PipelineBase::GetCurrentContext();
         CHECK_NULL_VOID(pipeline);
         auto ratingTheme = pipeline->GetTheme<RatingTheme>();
         CHECK_NULL_VOID(ratingTheme);
         auto paintProperty = DynamicCast<RatingRenderProperty>(paintWrapper->GetPaintProperty());
-        CHECK_NULL_VOID(paintProperty);
         ratingModifier_->SetContentOffset(paintWrapper->GetContentOffset());
         ratingModifier_->SetContentSize(paintWrapper->GetContentSize());
         ratingModifier_->SetStartNum(starNum_);
@@ -59,11 +53,10 @@ public:
             constexpr double DEFAULT_RATING_TOUCH_STAR_NUMBER = -1;
             ratingModifier_->SetDrawScore(isfocus_ ? focusRatingScore_ : paintProperty->GetRatingScoreValue(0.f));
             ratingModifier_->SetStepSize(paintProperty->GetStepSize().value_or(ratingTheme->GetStepSize()));
-            ratingModifier_->SetTouchStar(
-                paintProperty->GetTouchStar().value_or(DEFAULT_RATING_TOUCH_STAR_NUMBER), host);
+            ratingModifier_->SetTouchStar(paintProperty->GetTouchStar().value_or(DEFAULT_RATING_TOUCH_STAR_NUMBER));
         }
         ratingModifier_->SetReverse(reverse_);
-        ratingModifier_->SetHoverState(ratingPattern->GetRatingState(), host);
+        ratingModifier_->SetHoverState(state_);
     }
 
     void UpdateFocusState(bool isfocus, double focusRatingScore)
@@ -73,12 +66,11 @@ public:
     }
 
 private:
-    WeakPtr<Pattern> pattern_;
     RefPtr<RatingModifier> ratingModifier_;
     bool isfocus_ = false;
     double focusRatingScore_ = .0f;
     int32_t starNum_ = 0;
-    [[maybe_unused]] RatingModifier::RatingAnimationType state_;
+    RatingModifier::RatingAnimationType state_;
     bool reverse_ = false;
     ACE_DISALLOW_COPY_AND_MOVE(RatingPaintMethod);
 };

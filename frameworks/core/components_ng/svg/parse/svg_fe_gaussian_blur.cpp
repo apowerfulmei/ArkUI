@@ -15,7 +15,10 @@
 
 #include "frameworks/core/components_ng/svg/parse/svg_fe_gaussian_blur.h"
 
-#include "frameworks/core/components_ng/svg/parse/svg_constants.h"
+#include "include/effects/SkImageFilters.h"
+
+#include "base/utils/utils.h"
+#include "frameworks/core/components/declaration/svg/svg_fe_gaussianblur_declaration.h"
 
 namespace OHOS::Ace::NG {
 RefPtr<SvgNode> SvgFeGaussianBlur::Create()
@@ -27,30 +30,14 @@ SvgFeGaussianBlur::SvgFeGaussianBlur() : SvgFe() {}
 
 void SvgFeGaussianBlur::OnAsImageFilter(std::shared_ptr<RSImageFilter>& imageFilter,
     const SvgColorInterpolationType& srcColor, SvgColorInterpolationType& currentColor,
-    std::unordered_map<std::string, std::shared_ptr<RSImageFilter>>& resultHash, bool cropRect) const
+    std::unordered_map<std::string, std::shared_ptr<RSImageFilter>>& resultHash) const
 {
     imageFilter = MakeImageFilter(feAttr_.in, imageFilter, resultHash);
     RSRect filterRect(effectFilterArea_.Left(), effectFilterArea_.Top(),
         effectFilterArea_.Right(), effectFilterArea_.Bottom());
-    if (cropRect) {
-        float stdDeviationX = 0.0;
-        float stdDeviationY = 0.0;
-        auto filterContext = GetFilterContext();
-        auto primitiveRule = filterContext.GetPrimitiveRule();
-        if (primitiveRule.GetLengthScaleUnit() == SvgLengthScaleUnit::OBJECT_BOUNDING_BOX) {
-            stdDeviationX = gaussianBlurAttr_.stdDeviationX * primitiveRule.GetContainerRect().Width();
-            stdDeviationY = gaussianBlurAttr_.stdDeviationY * primitiveRule.GetContainerRect().Height();
-        } else {
-            stdDeviationX = gaussianBlurAttr_.stdDeviationX;
-            stdDeviationY = gaussianBlurAttr_.stdDeviationY;
-        }
-        imageFilter = RSRecordingImageFilter::CreateBlurImageFilter(
-            stdDeviationX, stdDeviationY, RSTileMode::DECAL, imageFilter, RSImageBlurType::GAUSS, filterRect);
-    } else {
-        imageFilter = RSRecordingImageFilter::CreateBlurImageFilter(
-            gaussianBlurAttr_.stdDeviationX, gaussianBlurAttr_.stdDeviationY,
-            RSTileMode::DECAL, imageFilter, RSImageBlurType::GAUSS, filterRect);
-    }
+    imageFilter = RSRecordingImageFilter::CreateBlurImageFilter(
+        gaussianBlurAttr_.stdDeviationX, gaussianBlurAttr_.stdDeviationY,
+        RSTileMode::DECAL, imageFilter, RSImageBlurType::GAUSS, filterRect);
     ConverImageFilterColor(imageFilter, srcColor, currentColor);
     RegisterResult(feAttr_.result, imageFilter, resultHash);
 }
@@ -58,7 +45,7 @@ void SvgFeGaussianBlur::OnAsImageFilter(std::shared_ptr<RSImageFilter>& imageFil
 bool SvgFeGaussianBlur::ParseAndSetSpecializedAttr(const std::string& name, const std::string& value)
 {
     static const LinearMapNode<void (*)(const std::string&, SvgFeGaussianBlurAttribute&)> attrs[] = {
-        { SVG_FE_EDGE_MODE, [](const std::string& val, SvgFeGaussianBlurAttribute& attr) {
+        { DOM_SVG_FE_EDGE_MODE, [](const std::string& val, SvgFeGaussianBlurAttribute& attr) { 
             static const LinearMapNode<SvgFeEdgeMode> EDGE_MODE_TABLE[] = {
                 { "duplicate", SvgFeEdgeMode::EDGE_DUPLICATE },
                 { "none", SvgFeEdgeMode::EDGE_NONE },
@@ -69,7 +56,7 @@ bool SvgFeGaussianBlur::ParseAndSetSpecializedAttr(const std::string& name, cons
                 attr.edgeMode = EDGE_MODE_TABLE[inIndex].value;
             }
         } },
-        { SVG_FE_STD_DEVIATION, [](const std::string& val, SvgFeGaussianBlurAttribute& attr) {
+        { DOM_SVG_FE_STD_DEVIATION, [](const std::string& val, SvgFeGaussianBlurAttribute& attr) {
             std::vector<float> vectorRes;
             if (!StringUtils::ParseStringToArray(val, vectorRes)) {
                 return;

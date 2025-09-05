@@ -15,6 +15,8 @@
 
 #include "bridge/cj_frontend/cppview/swiper_controller.h"
 
+#include <cinttypes>
+
 namespace OHOS::Ace::Framework {
 
 NativeSwiperController::NativeSwiperController() : FFIData()
@@ -59,11 +61,6 @@ void NativeSwiperController::FinishAnimationWithCallback(const std::function<voi
 void NativeSwiperController::SetController(const RefPtr<SwiperController>& controller)
 {
     controller_ = controller;
-}
-
-void NativeSwiperController::ChangeIndex(int32_t index, bool useAnimation)
-{
-    controller_->ChangeIndex(index, useAnimation);
 }
 
 } // namespace OHOS::Ace::Framework

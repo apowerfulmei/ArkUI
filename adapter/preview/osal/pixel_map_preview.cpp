@@ -20,14 +20,6 @@
 #include "base/utils/utils.h"
 
 namespace OHOS::Ace {
-
-#if defined(ACE_STATIC)
-RefPtr<PixelMap> PixelMap::Create(const InitializationOptions& opts)
-{
-    return nullptr;
-}
-#endif
-
 RefPtr<PixelMap> PixelMap::CreatePixelMap(void* rawPtr)
 {
     return nullptr;
@@ -134,10 +126,4 @@ void PixelMapPreview::Scale(float xAxis, float yAxis) {}
 
 void PixelMapPreview::Scale(float xAxis, float yAxis, const AceAntiAliasingOption &option) {}
 
-uint32_t PixelMapPreview::WritePixels(const WritePixelsOptions& opts)
-{
-    return 0;
-}
-
-void PixelMapPreview::SetMemoryName(std::string pixelMapName) const {}
 } // namespace OHOS::Ace

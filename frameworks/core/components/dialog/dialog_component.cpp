@@ -107,7 +107,7 @@ void DialogComponent::BuildChild(const RefPtr<ThemeManager>& themeManager)
             BuildDragBar(focusCollaboration);
         }
     }
-    if (deviceType_ == DeviceType::WATCH || deviceType_ == DeviceType::WEARABLE) {
+    if (deviceType_ == DeviceType::WATCH) {
         auto scroll = AceType::MakeRefPtr<ScrollComponent>(focusCollaboration);
         box->SetChild(scroll);
     } else {
@@ -124,16 +124,15 @@ RefPtr<BoxComponent> DialogComponent::BuildBox(bool& isLimit)
         isLimit = false;
         return box;
     }
-    if (deviceType_ != DeviceType::WEARABLE) {
-        box->NeedMaterial(true);
-    }
+
+    box->NeedMaterial(true);
     auto backDecoration = AceType::MakeRefPtr<Decoration>();
     backDecoration->SetBackgroundColor(backgroundColor_);
     Border border;
     border.SetBorderRadius(dialogTheme_->GetRadius());
     backDecoration->SetBorder(border);
 
-    if (deviceType_ == DeviceType::WATCH || deviceType_ == DeviceType::WEARABLE) {
+    if (deviceType_ == DeviceType::WATCH) {
         box->SetFlex(BoxFlex::FLEX_XY);
     } else {
         box->SetFlex(BoxFlex::FLEX_X);
@@ -281,7 +280,7 @@ void DialogComponent::BuildContent(const RefPtr<ColumnComponent>& column)
     }
     contentPadding->SetPadding(std::move(contentPadding_));
     RefPtr<FlexItemComponent> contentFlex;
-    if (deviceType_ == DeviceType::WATCH || deviceType_ == DeviceType::WEARABLE) {
+    if (deviceType_ == DeviceType::WATCH) {
         contentPadding->SetChild(content_);
         contentFlex = AceType::MakeRefPtr<FlexItemComponent>(0, 0, 0.0, contentPadding);
     } else {
@@ -315,7 +314,7 @@ void DialogComponent::BuildMenu(const RefPtr<ColumnComponent>& column)
 
 void DialogComponent::BuildActions(const RefPtr<ThemeManager>& themeManager, const RefPtr<ColumnComponent>& column)
 {
-    if (deviceType_ == DeviceType::WATCH || deviceType_ == DeviceType::WEARABLE) {
+    if (deviceType_ == DeviceType::WATCH) {
         BuildActionsForWatch(column);
         return;
     }
@@ -659,7 +658,7 @@ void DialogBuilder::BuildTitleAndContent(const RefPtr<DialogComponent>& dialog,
     const DialogProperties& dialogProperties, const RefPtr<DialogTheme>& dialogTheme, std::string& data)
 {
     auto deviceType = SystemProperties::GetDeviceType();
-    if ((deviceType != DeviceType::WATCH && deviceType != DeviceType::WEARABLE) && (!dialogProperties.title.empty())) {
+    if ((deviceType != DeviceType::WATCH) && (!dialogProperties.title.empty())) {
         auto titleComponent = AceType::MakeRefPtr<TextComponent>(dialogProperties.title);
         auto style = dialogTheme->GetTitleTextStyle();
         style.SetMaxLines(dialogTheme->GetTitleMaxLines());
@@ -673,7 +672,7 @@ void DialogBuilder::BuildTitleAndContent(const RefPtr<DialogComponent>& dialog,
     if (!dialogProperties.content.empty()) {
         auto contentComponent = AceType::MakeRefPtr<TextComponent>(dialogProperties.content);
         auto contentStyle = dialogTheme->GetContentTextStyle();
-        if (deviceType == DeviceType::WATCH || deviceType == DeviceType::WEARABLE) {
+        if (deviceType == DeviceType::WATCH) {
             std::vector<TextSizeGroup> preferTextSizeGroups;
             preferTextSizeGroups.push_back({ contentStyle.GetFontSize(), 1 });
             preferTextSizeGroups.push_back({ dialogTheme->GetContentMinFontSize(), UINT32_MAX, TextOverflow::NONE });
@@ -691,8 +690,7 @@ void DialogBuilder::BuildButtons(const RefPtr<ThemeManager>& themeManager, const
     const std::vector<ButtonInfo>& buttons, const RefPtr<DialogTheme>& dialogTheme,
     std::string& data)
 {
-    auto deviceType = SystemProperties::GetDeviceType();
-    if (deviceType == DeviceType::WATCH || deviceType == DeviceType::WEARABLE) {
+    if (SystemProperties::GetDeviceType() == DeviceType::WATCH) {
         BuildButtonsForWatch(themeManager, dialog, data);
         return;
     }
@@ -774,8 +772,6 @@ void DialogBuilder::BuildButtonsForWatch(
     }
     std::string buttonText;
     std::list<RefPtr<ButtonComponent>> buttonComponents;
-    auto isWearable = SystemProperties::GetDeviceType() == DeviceType::WEARABLE;
-    int32_t selectButtonIndex = isWearable ? 1 : 2;
     for (int32_t i = 1; i <= DIALOG_BUTTONS_COUNT_WATCH; ++i) {
         auto buttonPadding = AceType::MakeRefPtr<PaddingComponent>();
         buttonPadding->SetPadding(buttonTheme->GetMinCircleButtonPadding());
@@ -799,10 +795,8 @@ void DialogBuilder::BuildButtonsForWatch(
         buttonComponent->SetRectRadius(buttonTheme->GetMinCircleButtonDiameter() / 2.0);
         buttonComponent->SetBackgroundColor(buttonTheme->GetBgColor());
         buttonComponent->SetClickedColor(buttonTheme->GetClickedColor());
-        if (i == selectButtonIndex) {
-            auto selectButtonBgColor = isWearable ? dialogTheme->GetButtonClickedColor() :
-                dialogTheme->GetButtonBackgroundColor();
-            buttonComponent->SetBackgroundColor(selectButtonBgColor);
+        if (i == 2) {
+            buttonComponent->SetBackgroundColor(dialogTheme->GetButtonBackgroundColor());
             buttonComponent->SetClickedColor(dialogTheme->GetButtonClickedColor());
         }
         buttonComponent->SetFocusColor(buttonTheme->GetBgFocusColor());

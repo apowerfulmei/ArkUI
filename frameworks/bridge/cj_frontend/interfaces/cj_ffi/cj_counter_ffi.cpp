@@ -16,7 +16,8 @@
 #include "bridge/cj_frontend/interfaces/cj_ffi/cj_counter_ffi.h"
 
 #include "cj_lambda.h"
-
+#include "bridge/cj_frontend/interfaces/cj_ffi/cj_view_abstract_ffi.h"
+#include "core/components_ng/pattern/counter/counter_model.h"
 #include "core/components_ng/pattern/counter/counter_model_ng.h"
 
 using namespace OHOS::Ace;
@@ -25,11 +26,7 @@ using namespace OHOS::Ace::Framework;
 extern "C" {
 void FfiOHOSAceFrameworkCounterCreate()
 {
-    if (CounterModel::GetInstance() != nullptr) {
-        CounterModel::GetInstance()->Create();
-    } else {
-        LOGE("Counter Instance is null");
-    }
+    CounterModel::GetInstance()->Create();
 }
 
 void FfiOHOSAceFrameworkCounterSetWidth(double value, int32_t unit)
@@ -38,11 +35,7 @@ void FfiOHOSAceFrameworkCounterSetWidth(double value, int32_t unit)
     if (LessNotEqual(dValue.Value(), 0.0)) {
         dValue.SetValue(0.0);
     }
-    if (CounterModel::GetInstance() != nullptr) {
-        CounterModel::GetInstance()->SetWidth(dValue);
-    } else {
-        LOGE("Counter Instance is null");
-    }
+    CounterModel::GetInstance()->SetWidth(dValue);
 }
 
 void FfiOHOSAceFrameworkCounterSetHeight(double value, int32_t unit)
@@ -51,11 +44,7 @@ void FfiOHOSAceFrameworkCounterSetHeight(double value, int32_t unit)
     if (LessNotEqual(dValue.Value(), 0.0)) {
         dValue.SetValue(0.0);
     }
-    if (CounterModel::GetInstance() != nullptr) {
-        CounterModel::GetInstance()->SetHeight(dValue);
-    } else {
-        LOGE("Counter Instance is null");
-    }
+    CounterModel::GetInstance()->SetHeight(dValue);
 }
 
 void FfiOHOSAceFrameworkCounterSetSize(double width, int32_t widthUnit, double height, int32_t heightUnit)
@@ -70,64 +59,26 @@ void FfiOHOSAceFrameworkCounterSetControlWidth(double value, int32_t unit)
     if (LessNotEqual(dValue.Value(), 0.0)) {
         dValue.SetValue(0.0);
     }
-    if (CounterModel::GetInstance() != nullptr) {
-        CounterModel::GetInstance()->SetControlWidth(dValue);
-    } else {
-        LOGE("Counter Instance is null");
-    }
+    CounterModel::GetInstance()->SetControlWidth(dValue);
 }
 
 void FfiOHOSAceFrameworkCounterSetStateChange(bool state)
 {
-    if (CounterModel::GetInstance() != nullptr) {
-        CounterModel::GetInstance()->SetStateChange(state);
-    } else {
-        LOGE("Counter Instance is null");
-    }
+    CounterModel::GetInstance()->SetStateChange(state);
 }
 
 void FfiOHOSAceFrameworkCounterSetBackgroundColor(uint32_t color)
 {
-    if (CounterModel::GetInstance() != nullptr) {
-        CounterModel::GetInstance()->SetBackgroundColor(Color(color));
-    } else {
-        LOGE("Counter Instance is null");
-    }
-}
-
-void FfiOHOSAceFrameworkCounterEnableDec(bool enable)
-{
-    if (CounterModel::GetInstance() != nullptr) {
-        CounterModel::GetInstance()->SetEnableDec(enable);
-    } else {
-        LOGE("Counter Instance is null");
-    }
-}
-
-void FfiOHOSAceFrameworkCounterEnableInc(bool enable)
-{
-    if (CounterModel::GetInstance() != nullptr) {
-        CounterModel::GetInstance()->SetEnableInc(enable);
-    } else {
-        LOGE("Counter Instance is null");
-    }
+    CounterModel::GetInstance()->SetBackgroundColor(Color(color));
 }
 
 void FfiOHOSAceFrameworkCounterSetOnInc(void (*callback)())
 {
-    if (CounterModel::GetInstance() != nullptr) {
-        CounterModel::GetInstance()->SetOnInc(CJLambda::Create(callback));
-    } else {
-        LOGE("Counter Instance is null");
-    }
+    CounterModel::GetInstance()->SetOnInc(CJLambda::Create(callback));
 }
 
 void FfiOHOSAceFrameworkCounterSetOnDec(void (*callback)())
 {
-    if (CounterModel::GetInstance() != nullptr) {
-        CounterModel::GetInstance()->SetOnDec(CJLambda::Create(callback));
-    } else {
-        LOGE("Counter Instance is null");
-    }
+    CounterModel::GetInstance()->SetOnDec(CJLambda::Create(callback));
 }
 }

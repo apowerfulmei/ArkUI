@@ -16,7 +16,6 @@
 #include "core/components/button/render_button.h"
 
 #include "base/log/event_report.h"
-#include "core/event/ace_event_helper.h"
 
 namespace OHOS::Ace {
 namespace {
@@ -460,8 +459,7 @@ void RenderButton::Update(const RefPtr<Component>& component)
     clickedColor_ = AnimatableColor(button->GetClickedColor());
     backgroundColor_.SetValue(button->GetBackgroundColor().GetValue());
     stateEffect_ = button->GetStateEffect();
-    isWatch_ = (SystemProperties::GetDeviceType() == DeviceType::WATCH ||
-        SystemProperties::GetDeviceType() == DeviceType::WEARABLE);
+    isWatch_ = (SystemProperties::GetDeviceType() == DeviceType::WATCH);
     isTv_ = (SystemProperties::GetDeviceType() == DeviceType::TV);
     isPhone_ = (SystemProperties::GetDeviceType() == DeviceType::PHONE);
     isTablet_ = (SystemProperties::GetDeviceType() == DeviceType::TABLET ||
@@ -873,9 +871,6 @@ void RenderButton::OnStatusStyleChanged(const VisualState state)
             case ButtonStateAttribute::COLOR: {
                 auto colorState =
                     AceType::DynamicCast<StateAttributeValue<ButtonStateAttribute, AnimatableColor>>(attribute);
-                if (!colorState) {
-                    return;
-                }
                 if (state == VisualState::PRESSED) {
                     SetClickedColor(backgroundColor_);  // starting animation color
                     clickedColor_ = colorState->value_; // End color

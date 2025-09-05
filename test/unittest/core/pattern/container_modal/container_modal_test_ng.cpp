@@ -74,7 +74,6 @@ void ContainerModelTestNg::SetUpTestSuite()
 {
     MockPipelineContext::SetUp();
     TestNG::SetUpTestSuite();
-    MockPipelineContext::GetCurrent()->SetUseFlushUITasks(true);
     auto themeManager = AceType::MakeRefPtr<MockThemeManager>();
     MockPipelineContext::GetCurrent()->SetThemeManager(themeManager);
     auto themeConstants = CreateThemeConstants(THEME_PATTERN_CONTAINER_MODAL);
@@ -131,7 +130,7 @@ void ContainerModelTestNg::CreateContainerModal()
     auto frameNode = view.Create(content);
     ViewStackProcessor::GetInstance()->Push(frameNode);
     GetInstance();
-    FlushUITasks(frameNode_);
+    FlushLayoutTask(frameNode_);
 }
 
 void ContainerModelTestNg::Touch(TouchLocationInfo locationInfo)
@@ -299,6 +298,24 @@ HWTEST_F(ContainerModelTestNg, Test002, TestSize.Level1)
     EXPECT_FALSE(windowMaximize);
     EXPECT_FALSE(windowMinimize);
     EXPECT_FALSE(windowClose);
+
+    /**
+     * @tc.steps: step2. set callback
+     * @tc.expected: call is triggered
+     */
+    maximizeMode = MaximizeMode::MODE_FULL_FILL;
+    windowManager->SetCurrentWindowMaximizeMode(maximizeMode);
+    windowMode = WindowMode::WINDOW_MODE_SPLIT_PRIMARY;
+    CreateContainerModal();
+    pattern_->ShowTitle(true, true);
+    auto container_modal_control_buttons = AceType::DynamicCast<FrameNode>(frameNode_->GetChildAtIndex(2));
+    auto eventHub = container_modal_control_buttons->GetOrCreateGestureEventHub();
+    auto panEvents = eventHub->panEventActuator_->panEvents_;
+    GestureEvent info;
+    panEvents.front()->GetActionStartEventFunc()(info);
+    ClickBtn(1);
+    EXPECT_TRUE(isWindowStartMove);
+    EXPECT_FALSE(windowMaximize);
 }
 
 /**
@@ -320,7 +337,7 @@ HWTEST_F(ContainerModelTestNg, Test003, TestSize.Level1)
     GetHovertEvent(0)(false);
     mouseInfo.SetAction(MouseAction::MOVE);
     GetMouseEvent(0)(mouseInfo);
-    EXPECT_EQ(mouseInfo.GetAction(), MouseAction::MOVE);
+    SUCCEED();
 }
 
 /**
@@ -440,6 +457,41 @@ HWTEST_F(ContainerModelTestNg, Test004, TestSize.Level1)
     Mouse(Offset(0, titlePopupDistance));
     floatingLayoutProperty->UpdateVisibility(VisibleType::GONE);
 }
+
+/**
+ * @tc.name: Test005
+ * @tc.desc: WindowFocus.
+ * @tc.type: FUNC
+ */
+HWTEST_F(ContainerModelTestNg, Test005, TestSize.Level1)
+{
+    CreateContainerModal();
+
+    /**
+     * @tc.steps: step1. set foused true.
+     * @tc.expected: isFocus_ is true.
+     */
+    pattern_->OnWindowFocused();
+    EXPECT_TRUE(pattern_->isFocus_);
+
+    /**
+     * @tc.steps: step2. set foused false.
+     * @tc.expected: isFocus_ is false.
+     */
+    pattern_->OnWindowUnfocused();
+    EXPECT_FALSE(pattern_->isFocus_);
+
+    // coverage OnWindowForceUnfocused
+    pattern_->OnWindowForceUnfocused();
+
+    /**
+     * @tc.steps: step3. Alter maxId.
+     */
+    auto pipeline = MockPipelineContext::GetCurrent();
+    pipeline->windowManager_->SetCurrentWindowMaximizeMode(MaximizeMode::MODE_AVOID_SYSTEM_BAR);
+    pattern_->OnWindowFocused();
+    EXPECT_TRUE(pattern_->isFocus_);
+}
 /**
  * @tc.name: Test006
  * @tc.desc: CanShowFloatingTitle windowMode_.
@@ -451,6 +503,43 @@ HWTEST_F(ContainerModelTestNg, Test006, TestSize.Level1)
     pattern_->windowMode_ = WindowMode::WINDOW_MODE_FLOATING;
     bool bResult = pattern_->CanShowFloatingTitle();
     EXPECT_FALSE(bResult);
+}
+/**
+ * @tc.name: Test007
+ * @tc.desc: SetIsHoveredMenu GetIsHoveredMenu.
+ * @tc.type: FUNC
+ */
+HWTEST_F(ContainerModelTestNg, Test007, TestSize.Level1)
+{
+    CreateContainerModal();
+    pattern_->SetIsHoveredMenu(true);
+    bool bResult = pattern_->GetIsHoveredMenu();
+    EXPECT_TRUE(bResult);
+}
+/**
+ * @tc.name: Test008
+ * @tc.desc: SetContainerModalPattern.
+ * @tc.type: FUNC
+ */
+HWTEST_F(ContainerModelTestNg, Test008, TestSize.Level1)
+{
+    CreateContainerModal();
+    ContainerModalView::SetContainerModalPattern(pattern_);
+    EXPECT_EQ(ContainerModalView::containerModalPattern_, pattern_);
+}
+/**
+ * @tc.name: Test009
+ * @tc.desc: AddButtonStyleMouseEvent.
+ * @tc.type: FUNC
+ */
+HWTEST_F(ContainerModelTestNg, Test009, TestSize.Level1)
+{
+    CreateContainerModal();
+    auto buttonNode = FrameNode::CreateFrameNode(V2::BUTTON_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(),
+        AccessibilityManager::MakeRefPtr<ButtonPattern>());
+    auto imageIcon = FrameNode::CreateFrameNode(V2::IMAGE_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(),
+        AccessibilityManager::MakeRefPtr<ImagePattern>());
+    ContainerModalView::AddButtonStyleMouseEvent(buttonNode, imageIcon, false);
 }
 
 /**
@@ -472,9 +561,6 @@ HWTEST_F(ContainerModelTestNg, AccessibilityProperty001, TestSize.Level1)
 HWTEST_F(ContainerModelTestNg, VisibleTest009, TestSize.Level1)
 {
     CreateContainerModal();
-    auto frameNode = AceType::MakeRefPtr<FrameNode>(
-        "frameNode", ElementRegister::GetInstance()->MakeUniqueId(), AceType::MakeRefPtr<Pattern>());
-    pattern_->SetToolbarBuilder(frameNode, nullptr);
     auto customRow = pattern_->GetCustomTitleRow();
     ASSERT_NE(customRow, nullptr);
     auto customLayoutProperty = customRow->GetLayoutProperty();
@@ -567,7 +653,7 @@ HWTEST_F(ContainerModelTestNg, AccessibilityProperty002, TestSize.Level1)
     auto frameNode = view.Create(content);
     ViewStackProcessor::GetInstance()->Push(frameNode);
     GetInstance();
-    FlushUITasks(frameNode_);
+    FlushLayoutTask(frameNode_);
     pattern_->appLabel_ = "abc";
     EXPECT_EQ(accessibilityProperty_->GetText(), "abc");
 }
@@ -789,7 +875,6 @@ HWTEST_F(ContainerModelTestNg, InitColumnTouchTestFunc, TestSize.Level1)
 {
     bool result = true;
     CreateContainerModal();
-    pattern_->customTitleSettedShow_ = false;
     pattern_->InitColumnTouchTestFunc();
     auto column = pattern_->GetColumnNode();
     auto eventHub = column->GetOrCreateGestureEventHub();
@@ -811,7 +896,6 @@ HWTEST_F(ContainerModelTestNg, InitColumnTouchTestFunc2, TestSize.Level1)
 {
     bool result = true;
     CreateContainerModal();
-    pattern_->customTitleSettedShow_ = false;
     pattern_->InitColumnTouchTestFunc();
     auto column = pattern_->GetColumnNode();
     auto eventHub = column->GetOrCreateGestureEventHub();
@@ -832,7 +916,6 @@ HWTEST_F(ContainerModelTestNg, AddButtonHoverEvent, TestSize.Level1)
 {
     bool result = true;
     CreateContainerModal();
-    pattern_->customTitleSettedShow_ = false;
     pattern_->InitColumnTouchTestFunc();
     RefPtr<FrameNode> content = CreateContent();
     ContainerModalView view;
@@ -864,7 +947,6 @@ HWTEST_F(ContainerModelTestNg, AddButtonHoverEvent2, TestSize.Level1)
 {
     bool result = true;
     CreateContainerModal();
-    pattern_->customTitleSettedShow_ = false;
     pattern_->InitColumnTouchTestFunc();
     RefPtr<FrameNode> content = CreateContent();
     ContainerModalView view;
@@ -896,7 +978,6 @@ HWTEST_F(ContainerModelTestNg, AddButtonOnEvent, TestSize.Level1)
 {
     bool result = true;
     CreateContainerModal();
-    pattern_->customTitleSettedShow_ = false;
     pattern_->InitColumnTouchTestFunc();
     RefPtr<FrameNode> content = CreateContent();
     ContainerModalView view;
@@ -926,138 +1007,5 @@ HWTEST_F(ContainerModelTestNg, AddButtonOnEvent, TestSize.Level1)
         (*callback)(mouseInfo);
     }
     EXPECT_TRUE(result);
-}
-
-/**
- * @tc.name: ConfigCustomWindowMask
- * @tc.desc: Test ConfigCustomWindowMask.
- * @tc.type: FUNC
- */
-HWTEST_F(ContainerModelTestNg, ConfigCustomWindowMask, TestSize.Level1)
-{
-    auto pipeline = AceType::DynamicCast<PipelineContext>(MockPipelineContext::GetCurrent());
-    ASSERT_NE(pipeline, nullptr);
-    ASSERT_NE(pipeline->rootNode_, nullptr);
-    EXPECT_FALSE(ContainerModalView::ConfigCustomWindowMask(pipeline, true));
-    EXPECT_FALSE(ContainerModalView::ConfigCustomWindowMask(pipeline, false));
-    auto processor = ViewStackProcessor::GetInstance();
-    auto customWindowMaskNode = processor->GetCustomWindowMaskNode();
-    ASSERT_EQ(customWindowMaskNode, nullptr);
-    auto buttonNode = FrameNode::CreateFrameNode(V2::BUTTON_ETS_TAG, 100, AceType::MakeRefPtr<ButtonPattern>());
-    processor->SetCustomWindowMaskNode(buttonNode);
-    EXPECT_TRUE(ContainerModalView::ConfigCustomWindowMask(pipeline, true));
-    EXPECT_TRUE(ContainerModalView::ConfigCustomWindowMask(pipeline, false));
-}
-
-/**
- * @tc.name: SetToolbarBuilder
- * @tc.desc: Test SetToolbarBuilder.
- * @tc.type: FUNC
- */
-HWTEST_F(ContainerModelTestNg, SetToolbarBuilder, TestSize.Level1)
-{
-    CreateContainerModal();
-    ASSERT_NE(pattern_, nullptr);
-    auto frameNode = AceType::MakeRefPtr<FrameNode>("frameNode", 100, AceType::MakeRefPtr<Pattern>());
-    pattern_->SetToolbarBuilder(frameNode, nullptr);
-    ASSERT_NE(pattern_->titleMgr_, nullptr);
-    ASSERT_NE(pattern_->floatTitleMgr_, nullptr);
-    pattern_->SetToolbarBuilder(frameNode, nullptr);
-}
-
-/**
- * @tc.name: IsContainerModalTransparent
- * @tc.desc: Test IsContainerModalTransparent.
- * @tc.type: FUNC
- */
-HWTEST_F(ContainerModelTestNg, IsContainerModalTransparent, TestSize.Level1)
-{
-    CreateContainerModal();
-    ASSERT_NE(pattern_, nullptr);
-    auto ret = pattern_->IsContainerModalTransparent();
-    EXPECT_FALSE(ret);
-    pattern_->activeColor_ = Color::TRANSPARENT;
-    pattern_->inactiveColor_ = Color::TRANSPARENT;
-    pattern_->isCustomColor_ = true;
-    ret = pattern_->IsContainerModalTransparent();
-    EXPECT_TRUE(ret);
-}
-
-/**
- * @tc.name: SetWindowContainerColor
- * @tc.desc: Test SetWindowContainerColor.
- * @tc.type: FUNC
- */
-HWTEST_F(ContainerModelTestNg, SetWindowContainerColor, TestSize.Level1)
-{
-    CreateContainerModal();
-    auto title = pattern_->GetCustomTitleRow();
-    auto parentNode = FrameNode::CreateFrameNode("parentNode", 1, AceType::MakeRefPtr<Pattern>());
-    pattern_->SetToolbarBuilder(parentNode, nullptr);
-
-    pattern_->SetWindowContainerColor(Color::RED, Color::RED);
-    bool ret = pattern_->IsContainerModalTransparent();
-    EXPECT_FALSE(ret);
-
-    pattern_->SetWindowContainerColor(Color::TRANSPARENT, Color::TRANSPARENT);
-    ret = pattern_->IsContainerModalTransparent();
-    EXPECT_TRUE(ret);
-}
-
-/**
- * @tc.name: InitColumnTouchTestFunc3
- * @tc.desc: Test InitColumnTouchTestFunc.
- * @tc.type: FUNC
- */
-HWTEST_F(ContainerModelTestNg, InitColumnTouchTestFunc3, TestSize.Level1)
-{
-    CreateContainerModal();
-
-    /**
-     * @tc.steps: step1. Get column node and check it's not null
-     * @tc.expected: Column node is valid
-     */
-    auto column = pattern_->GetColumnNode();
-    ASSERT_NE(column, nullptr);
-
-    /**
-     * @tc.steps: step2. Get gesture event hub and check it's not null
-     * @tc.expected: Gesture event hub is valid
-     */
-    auto eventHub = column->GetOrCreateGestureEventHub();
-    ASSERT_NE(eventHub, nullptr);
-
-    /**
-     * @tc.steps: step3. Initialize touch test function
-     * @tc.expected: Touch test function is set
-     */
-    pattern_->InitColumnTouchTestFunc();
-    auto callback = eventHub->GetOnTouchTestFunc();
-    EXPECT_NE(callback, nullptr);
-
-    /**
-     * @tc.steps: step4. Create frame node and set toolbar builder
-     * @tc.expected: Frame node created and toolbar builder set
-     */
-    auto frameNode = AceType::MakeRefPtr<FrameNode>("frameNode", 100, AceType::MakeRefPtr<Pattern>());
-    pattern_->SetToolbarBuilder(frameNode, nullptr);
-    ASSERT_NE(pattern_->titleMgr_, nullptr);
-
-    /**
-     * @tc.steps: step5. Test different combinations of custom title and update target node
-     * @tc.expected: Touch test function set/unset based on conditions
-     */
-    std::vector<std::pair<bool, bool>> vec { { true, true }, { true, false }, { false, true }, { false, false } };
-    for (auto p : vec) {
-        pattern_->customTitleSettedShow_ = p.first;
-        pattern_->titleMgr_->isUpdateTargetNode_ = p.second;
-        pattern_->InitColumnTouchTestFunc();
-        callback = eventHub->GetOnTouchTestFunc();
-        if (p.first && p.second) {
-            EXPECT_EQ(callback, nullptr);
-        } else {
-            EXPECT_NE(callback, nullptr);
-        }
-    }
 }
 } // namespace OHOS::Ace::NG

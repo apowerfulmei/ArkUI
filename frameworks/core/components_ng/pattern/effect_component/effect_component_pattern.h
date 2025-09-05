@@ -23,17 +23,12 @@
 #include "core/components_ng/property/property.h"
 
 namespace OHOS::Ace::NG {
-enum class EffectLayer : int32_t { NONE = 0, CHARGE, TEXT };
-
 class ACE_EXPORT EffectComponentPattern : public Pattern {
     DECLARE_ACE_TYPE(EffectComponentPattern, Pattern);
 
 public:
     EffectComponentPattern() = default;
-    explicit EffectComponentPattern(EffectLayer effectLayer) : effectLayer_(effectLayer) {};
     ~EffectComponentPattern() override = default;
-
-    void AlwaysSnapshot(bool enable) const;
 
     bool IsAtomicNode() const override
     {
@@ -47,23 +42,10 @@ public:
 
     std::optional<RenderContext::ContextParam> GetContextParam() const override
     {
-        if (effectLayer_ != EffectLayer::NONE) {
-            return RenderContext::ContextParam { RenderContext::ContextType::COMPOSITE_COMPONENT };
-        }
-        return RenderContext::ContextParam { RenderContext::ContextType::EFFECT };
-    }
-
-    bool OnDirtyLayoutWrapperSwap(
-        const RefPtr<LayoutWrapper>& /*dirty*/, bool /*skipMeasure*/, bool /*skipLayout*/) override;
-
-    EffectLayer GetEffectLayer() const
-    {
-        return effectLayer_;
+        return RenderContext::ContextParam { RenderContext::ContextType::EFFECT};
     }
 
 private:
-    WeakPtr<UINode> parent_ = nullptr;
-    EffectLayer effectLayer_ = EffectLayer::NONE;
     ACE_DISALLOW_COPY_AND_MOVE(EffectComponentPattern);
 };
 } // namespace OHOS::Ace::NG

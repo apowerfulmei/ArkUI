@@ -15,32 +15,29 @@ import("//build/ohos.gni")
 import("//build/test.gni")
 import("//foundation/arkui/ace_engine/ace_config.gni")
 
-pattern_test_output_path = "ace_engine/ace_engine/components"
-event_test_output_path = "ace_engine/ace_engine/events"
-base_test_output_path = "ace_engine/ace_engine/base"
-image_test_output_path = "ace_engine/Component-Image"
-basic_test_output_path = "ace_engine/ace_engine/basic"
-interface_test_output_path = "ace_engine/ace_engine/interfaces"
-adapter_test_output_path = "ace_engine/ace_engine/adapter"
-svg_test_output_path = "ace_engine/ace_engine/svg"
-bridge_test_output_path = "ace_engine/ace_engine/bridge"
-frameworks_test_output_path = "ace_engine/ace_engine/frameworks"
+pattern_test_output_path = "ace_engine/components"
+event_test_output_path = "ace_engine/events"
+base_test_output_path = "ace_engine/base"
+image_test_output_path = "ace_engine/image"
+basic_test_output_path = "ace_engine/basic"
+interface_test_output_path = "ace_engine/interfaces"
+adapter_test_output_path = "ace_engine/adapter"
+svg_test_output_path = "ace_engine/svg"
+bridge_test_output_path = "ace_engine/bridge"
 
 template("ace_unittest") {
   forward_variables_from(invoker, "*")
 
   type = "components"
   module_output = "components"
-  module_name = "ace_engine"
   flutter_skia = false
   render = false
   ace_unittest_name = target_name
   ace_unittest_config = [ "$ace_root/test/unittest:ace_unittest_config" ]
-  ace_external_deps = [ "googletest:gmock" ]
+  ace_external_deps = []
   flutter_sources = []
   flutter_external_deps = []
-  ace_unittest_deps = []
-  include_dir = []
+  ace_unittest_deps = [ "//third_party/googletest:gmock" ]
 
   # temporary support
   if (defined(invoker.external_deps)) {
@@ -59,10 +56,6 @@ template("ace_unittest") {
     module_output = invoker.module_output
   }
 
-  if (defined(invoker.module_name)) {
-    module_name = invoker.module_name
-  }
-
   if (defined(invoker.flutter_skia)) {
     flutter_skia = invoker.flutter_skia
   }
@@ -71,16 +64,15 @@ template("ace_unittest") {
     ace_unittest_deps += invoker.extra_deps
   }
 
-  if (defined(invoker.include_dirs)) {
-    include_dir = invoker.include_dirs
-  }
-
   # ----------------------------  temporary support
   if (render) {
-    ace_external_deps += [
-      "graphic_2d:librender_service_base",
-      "graphic_2d:librender_service_client",
+    ace_unittest_deps += [
+      "$graphic_2d_path/rosen/modules/render_service_base:librender_service_base",
+      "$graphic_2d_path/rosen/modules/render_service_client:librender_service_client",
     ]
+    if (enable_graphic_text_gine) {
+      ace_external_deps += [ "graphic_2d:rosen_text" ]
+    }
   }
 
   if (flutter_skia) {
@@ -91,7 +83,7 @@ template("ace_unittest") {
 
   if (type == "components") {
     ohos_unittest(ace_unittest_name) {
-      module_out_path = "ace_engine/${module_name}/${module_output}"
+      module_out_path = "ace_engine/${module_output}"
 
       sources = []
       sources += invoker.sources
@@ -122,17 +114,11 @@ template("ace_unittest") {
     }
   } else if (type == "new") {
     ohos_unittest(ace_unittest_name) {
-      module_out_path = "ace_engine/${module_name}/${module_output}"
-      if (ace_unittest_name == "display_sync_manager_test_ng") {
-        module_out_path = "ace_engine/Graphic_2d_LTPO_DisplaySync/${module_output}"
-      } else if (ace_unittest_name == "window_scene_test") {
-        module_out_path = "ace_engine/window_manager/${module_output}"
-      }
+      module_out_path = "ace_engine/${module_output}"
       sources = []
       sources += invoker.sources
       sources += flutter_sources
-      include_dirs = []
-      include_dirs += include_dir
+
       deps = ace_unittest_deps
       deps += [
         "$ace_root/frameworks/core/components/theme:build_theme_code",
@@ -163,20 +149,16 @@ template("ace_unittest") {
       }
 
       external_deps = []
-      if (current_os == "ohos") {
-        external_deps = [ "c_utils:utils" ]
-      }
       external_deps += ace_external_deps
       external_deps += flutter_external_deps
     }
   } else if (type == "pipeline") {
     ohos_unittest(ace_unittest_name) {
-      module_out_path = "ace_engine/${module_name}/${module_output}"
+      module_out_path = "ace_engine/${module_output}"
       sources = []
       sources += invoker.sources
       sources += flutter_sources
-      include_dirs = []
-      include_dirs += include_dir
+
       deps = ace_unittest_deps
       deps += [
         "$ace_root/frameworks/core/components/theme:build_theme_code",

@@ -48,8 +48,6 @@ struct TouchPoint final {
     float y = 0.0f;
     float screenX = 0.0f;
     float screenY = 0.0f;
-    double globalDisplayX = 0.0;
-    double globalDisplayY = 0.0;
     TimeStamp downTime;
     double size = 0.0;
     float force = 0.0f;
@@ -70,8 +68,6 @@ public:
     float y = 0.0f;
     float screenX = 0.0f;
     float screenY = 0.0f;
-    double globalDisplayX = 0.0;
-    double globalDisplayY = 0.0;
     TouchType type = TouchType::UNKNOWN;
     TouchType pullType = TouchType::UNKNOWN;
     TimeStamp time;
@@ -115,7 +111,6 @@ public:
     static constexpr int32_t SOURCE_TYPE_TOUCHSCREEN = 2;
     static constexpr int32_t SOURCE_TYPE_TOUCHPAD = 3;
     static constexpr int32_t SOURCE_TYPE_JOYSTICK = 4;
-    static constexpr int32_t SOURCE_TYPE_CROWN = 5;
 
     // buttonId_
     static constexpr int32_t BUTTON_NONE = -1;

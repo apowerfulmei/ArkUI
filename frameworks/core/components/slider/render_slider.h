@@ -24,7 +24,6 @@
 #include "core/components/slider/render_block.h"
 #include "core/components/slider/slider_component.h"
 #include "core/components/text/render_text.h"
-#include "core/components/common/rotation/rotation_node.h"
 #include "core/components/text/text_component.h"
 #include "core/components/track/render_track.h"
 #include "core/gestures/click_recognizer.h"
@@ -79,8 +78,8 @@ private:
 };
 
 // The render node of slider component.
-class RenderSlider : public RenderNode, public RotationNode  {
-    DECLARE_ACE_TYPE(RenderSlider, RenderNode, RotationNode);
+class RenderSlider : public RenderNode {
+    DECLARE_ACE_TYPE(RenderSlider, RenderNode);
 
 public:
     RenderSlider();
@@ -209,8 +208,7 @@ public:
     }
 
     std::string ProvideRestoreInfo() override;
-    bool OnRotation(const RotationEvent& event) override;
-
+    
 protected:
     static TouchRegionPoint GetTopTouchRegion(const Vertex& center, double width, double height);
     static TouchRegionPoint GetBotTouchRegion(const Vertex& center, double width, double height);
@@ -299,8 +297,7 @@ protected:
     std::function<void(double, int32_t)> onChange_;
     RefPtr<RenderNode> block_ = AceType::MakeRefPtr<RenderBlock>();
     RefPtr<RenderNode> track_ = AceType::MakeRefPtr<RenderTrack>();
-    
-    double accumulatedValue_ = 0.0;
+
 private:
     void ApplyRestoreInfo();
 

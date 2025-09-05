@@ -19,11 +19,7 @@ class ArkDatePickerComponent extends ArkComponent implements DatePickerAttribute
     super(nativePtr, classType);
   }
   lunar(value: boolean): DatePickerAttribute {
-    modifierWithKey(this._modifiersWithKeys, DatePickerLunarModifier.identity, DatePickerLunarModifier, value);
-    return this;
-  }
-  digitalCrownSensitivity(value: Optional<CrownSensitivity>): DatePickerAttribute {
-    modifierWithKey(this._modifiersWithKeys, DatePickerDigitalCrownSensitivityModifier.identity, DatePickerDigitalCrownSensitivityModifier, value);
+    modifier(this._modifiers, DatePickerLunarModifier, isBoolean(value) ? value : false);
     return this;
   }
   disappearTextStyle(value: PickerTextStyle): DatePickerAttribute {
@@ -42,27 +38,18 @@ class ArkDatePickerComponent extends ArkComponent implements DatePickerAttribute
     return this;
   }
   onChange(callback: (value: DatePickerResult) => void): DatePickerAttribute {
-    modifierWithKey(this._modifiersWithKeys, DatePickerOnChangeModifier.identity, DatePickerOnChangeModifier, callback);
-    return this;
+    throw new Error('Method not implemented.');
   }
-  onDateChange(callback: Callback<Date>): this {
-    modifierWithKey(this._modifiersWithKeys, DatePickerOnDateChangeModifier.identity, DatePickerOnDateChangeModifier, callback);
-    return this;
+  onDateChange(callback: (value: Date) => void): DatePickerAttribute {
+    throw new Error('Method not implemented.');
   }
   backgroundColor(value: ResourceColor): this {
     modifierWithKey(this._modifiersWithKeys, DatePickerBackgroundColorModifier.identity, DatePickerBackgroundColorModifier, value);
     return this;
   }
-  enableHapticFeedback(value: boolean): this {
-    modifierWithKey(this._modifiersWithKeys, DatePickerEnableHapticFeedbackModifier.identity, DatePickerEnableHapticFeedbackModifier, value);
-    return this;
-  }
 }
 
-class DatePickerLunarModifier extends ModifierWithKey<boolean> {
-  constructor(value: boolean) {
-    super(value);
-  }
+class DatePickerLunarModifier extends Modifier<boolean> {
   static identity: Symbol = Symbol('lunar');
   applyPeer(node: KNode, reset: boolean) {
     if (reset) {
@@ -73,24 +60,7 @@ class DatePickerLunarModifier extends ModifierWithKey<boolean> {
   }
 }
 
-class DatePickerDigitalCrownSensitivityModifier extends ModifierWithKey<Optional<CrownSensitivity>> {
-  constructor(value: Optional<CrownSensitivity>) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('digitalCrownSensitivity');
-  applyPeer(node: KNode, reset: boolean) {
-    if (reset) {
-      getUINativeModule().datePicker.resetDigitalCrownSensitivity(node);
-    } else {
-      getUINativeModule().datePicker.setDigitalCrownSensitivity(node, this.value);
-    }
-  }
-}
-
 class DatePickerTextStyleModifier extends ModifierWithKey<PickerTextStyle> {
-  constructor(value: PickerTextStyle) {
-    super(value);
-  }
   static identity: Symbol = Symbol('textStyle');
   applyPeer(node: KNode, reset: boolean) {
     if (reset) {
@@ -117,9 +87,6 @@ class DatePickerTextStyleModifier extends ModifierWithKey<PickerTextStyle> {
 }
 
 class DatePickerSelectedTextStyleModifier extends ModifierWithKey<PickerTextStyle> {
-  constructor(value: PickerTextStyle) {
-    super(value);
-  }
   static identity: Symbol = Symbol('selectedTextStyle');
   applyPeer(node: KNode, reset: boolean) {
     if (reset) {
@@ -146,9 +113,6 @@ class DatePickerSelectedTextStyleModifier extends ModifierWithKey<PickerTextStyl
 }
 
 class DatePickerDisappearTextStyleModifier extends ModifierWithKey<PickerTextStyle> {
-  constructor(value: PickerTextStyle) {
-    super(value);
-  }
   static identity: Symbol = Symbol('disappearTextStyle');
   applyPeer(node: KNode, reset: boolean) {
     if (reset) {
@@ -173,32 +137,6 @@ class DatePickerDisappearTextStyleModifier extends ModifierWithKey<PickerTextSty
     }
   }
 }
-class DatePickerOnChangeModifier extends ModifierWithKey<(value: DatePickerResult) => void>{
-  constructor(value: (value: DatePickerResult) => void) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('datePickerOnChange');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().datePicker.resetDatePickerOnChange(node);
-    } else {
-      getUINativeModule().datePicker.setDatePickerOnChange(node, this.value);
-    }
-  }
-}
-class DatePickerOnDateChangeModifier extends ModifierWithKey<Callback<Date>>{
-  constructor(value: Callback<Date>) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('datePickerOnDateChange');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().datePicker.resetDatePickerOnDateChange(node);
-    } else {
-      getUINativeModule().datePicker.setDatePickerOnDateChange(node, this.value);
-    }
-  }
-}
 
 class DatePickerBackgroundColorModifier extends ModifierWithKey<ResourceColor> {
   constructor(value: ResourceColor) {
@@ -215,32 +153,6 @@ class DatePickerBackgroundColorModifier extends ModifierWithKey<ResourceColor> {
 
   checkObjectDiff(): boolean {
     return !isBaseOrResourceEqual(this.stageValue, this.value);
-  }
-}
-class DatePickerEnableHapticFeedbackModifier extends ModifierWithKey<boolean> {
-  constructor(value: boolean) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('datePickerEnableHapticFeedback');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().datePicker.resetEnableHapticFeedback(node);
-    } else {
-      getUINativeModule().datePicker.setEnableHapticFeedback(node, this.value);
-    }
-  }
-}
-class DatePickerCanLoopModifier extends ModifierWithKey<boolean> {
-  constructor(value: boolean) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('canLoop');
-  applyPeer(node: KNode, reset: boolean) {
-    if (reset) {
-      getUINativeModule().datePicker.resetCanLoop(node);
-    } else {
-      getUINativeModule().datePicker.setCanLoop(node, this.value);
-    }
   }
 }
 

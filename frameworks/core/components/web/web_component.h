@@ -143,28 +143,6 @@ public:
         return declaration_->GetPageFinishedEventId();
     }
 
-    void SetOnLoadStartedEventId(const EventMarker& onLoadStartedEventId)
-    {
-        CHECK_NULL_VOID(declaration_);
-        declaration_->SetOnLoadStartedEventId(onLoadStartedEventId);
-    }
-
-    const EventMarker& GetOnLoadStartedEventId() const
-    {
-        return declaration_->GetOnLoadStartedEventId();
-    }
-
-    void SetOnLoadFinishedEventId(const EventMarker& onLoadFinishedEventId)
-    {
-        CHECK_NULL_VOID(declaration_);
-        declaration_->SetOnLoadFinishedEventId(onLoadFinishedEventId);
-    }
-
-    const EventMarker& GetOnLoadFinishedEventId() const
-    {
-        return declaration_->GetOnLoadFinishedEventId();
-    }
-
     using OnProgressChangeImpl = std::function<void(const BaseEventInfo* info)>;
     void OnProgressChange(const BaseEventInfo* info) const
     {
@@ -361,17 +339,6 @@ public:
         }
     }
 
-    void SetActivateContentEventId(const EventMarker& activateContentEventId)
-    {
-        CHECK_NULL_VOID(declaration_);
-        declaration_->SetActivateContentEventId(activateContentEventId);
-    }
-
-    const EventMarker& GetActivateContentEventId() const
-    {
-        return declaration_->GetActivateContentEventId();
-    }
-
     void SetWindowExitEventId(const EventMarker& windowExitEventId)
     {
         CHECK_NULL_VOID(declaration_);
@@ -509,11 +476,6 @@ public:
         mixedContentMode_ = mixedModeNum;
     }
 
-    void SetBypassVsyncCondition(WebBypassVsyncCondition webBypassVsyncCondition)
-    {
-        webBypassVsyncCondition_ = webBypassVsyncCondition;
-    }
-
     bool GetZoomAccessEnabled() const
     {
         return isZoomAccessEnabled_;
@@ -602,18 +564,6 @@ public:
     void SetWebDebuggingAccessEnabled(bool isEnabled)
     {
         isWebDebuggingAccessEnabled_ = isEnabled;
-        webDebuggingPort_ = 0;
-    }
-
-    const std::tuple<bool, int32_t> GetWebDebuggingAccessEnabledAndPort() const
-    {
-        return std::make_tuple(isWebDebuggingAccessEnabled_, webDebuggingPort_);
-    }
-
-    void SetWebDebuggingAccessEnabledAndPort(bool isEnabled, int32_t port)
-    {
-        isWebDebuggingAccessEnabled_ = isEnabled;
-        webDebuggingPort_ = port;
     }
 
     bool GetPinchSmoothModeEnabled() const
@@ -698,9 +648,10 @@ public:
         isIntrinsicSize_ = isEnabled;
     }
 
-    void SetCssDisplayChangeEnabled(bool isEnabled)
+    void RegisterNativeEmbedRule(const std::string& tag, const std::string& type)
     {
-        isCssDisplayChangeEnabled_ = isEnabled;
+        tag_ = tag;
+        tag_type_ = type;
     }
 
     const std::tuple<bool, bool>& GetNativeVideoPlayerConfig() const
@@ -711,12 +662,6 @@ public:
     void SetNativeVideoPlayerConfig(bool enable, bool shouldOverlay)
     {
         native_video_player_config_ = std::make_tuple(enable, shouldOverlay);
-    }
-
-    void RegisterNativeEmbedRule(const std::string& tag, const std::string& type)
-    {
-        tag_ = tag;
-        tag_type_ = type;
     }
 
     using OnCommonDialogImpl = std::function<bool(const BaseEventInfo* info)>;
@@ -979,23 +924,6 @@ public:
         onInterceptRequestImpl_ = std::move(onInterceptRequestImpl);
     }
 
-    using OnOverrideErrorPageImpl = std::function<std::string(const BaseEventInfo* info)>;
-    std::string OnOverrideErrorPage(const BaseEventInfo* info) const
-    {
-        if (onOverrideErrorPageImpl_) {
-            return onOverrideErrorPageImpl_(info);
-        }
-        return "";
-    }
-    void SetOnOverrideErrorPage(OnOverrideErrorPageImpl&& onOverrideErrorPageImpl)
-    {
-        if (!onOverrideErrorPageImpl) {
-            return;
-        }
-
-        onOverrideErrorPageImpl_ = onOverrideErrorPageImpl;
-    }
-
     void SetOnMouseEventCallback(const OnMouseCallback& onMouseId)
     {
         onMouseEvent_ = onMouseId;
@@ -1234,7 +1162,6 @@ private:
     OnContextMenuImpl onContextMenuImpl_;
     OnContextMenuHideImpl onContextMenuHideImpl_;
     OnInterceptRequestImpl onInterceptRequestImpl_ = nullptr;
-    OnOverrideErrorPageImpl onOverrideErrorPageImpl_ = nullptr;
     OnProgressChangeImpl onProgressChangeImpl_ = nullptr;
     OnWindowNewImpl onWindowNewImpl_ = nullptr;
 
@@ -1250,7 +1177,6 @@ private:
     bool isDomStorageAccessEnabled_ = false;
     bool isImageAccessEnabled_ = true;
     MixedModeContent mixedContentMode_ = MixedModeContent::MIXED_CONTENT_NEVER_ALLOW;
-    WebBypassVsyncCondition webBypassVsyncCondition_ = WebBypassVsyncCondition::NONE;
     bool isZoomAccessEnabled_ = true;
     bool isGeolocationAccessEnabled_ = true;
     bool isOverviewModeAccessEnabled_ = true;
@@ -1259,7 +1185,6 @@ private:
     int32_t textZoomRatioNum_ = DEFAULT_TEXT_ZOOM_RATIO;
     WebCacheMode cacheMode_ = WebCacheMode::DEFAULT;
     bool isWebDebuggingAccessEnabled_ = false;
-    int32_t webDebuggingPort_ = 0;
     bool isMultiWindowAccessEnabled_ = false;
     bool isAllowWindowOpenMethod_ = false;
     OnMouseCallback onMouseEvent_;
@@ -1271,7 +1196,6 @@ private:
     bool isNeedGestureAccess_ = true;
     bool isNativeEmbedMode_ = false;
     bool isIntrinsicSize_ = false;
-    bool isCssDisplayChangeEnabled_ = false;
     std::string tag_;
     std::string tag_type_;
     OnDragFunc onDragStartId_;

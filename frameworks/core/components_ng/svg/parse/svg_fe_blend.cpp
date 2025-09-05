@@ -15,7 +15,7 @@
 
 #include "core/components_ng/svg/parse/svg_fe_blend.h"
 
-#include "frameworks/core/components_ng/svg/parse/svg_constants.h"
+#include "base/utils/utils.h"
 
 namespace OHOS::Ace::NG {
 
@@ -46,7 +46,7 @@ RSBlendMode SvgFeBlend::GetBlendMode(SvgFeBlendMode mode) const
 
 void SvgFeBlend::OnAsImageFilter(std::shared_ptr<RSImageFilter>& imageFilter,
     const SvgColorInterpolationType& srcColor, SvgColorInterpolationType& currentColor,
-    std::unordered_map<std::string, std::shared_ptr<RSImageFilter>>& resultHash, bool cropRect) const
+    std::unordered_map<std::string, std::shared_ptr<RSImageFilter>>& resultHash) const
 {
     auto blendMode = feBlendAttr_.blendMode;
 
@@ -54,15 +54,9 @@ void SvgFeBlend::OnAsImageFilter(std::shared_ptr<RSImageFilter>& imageFilter,
     auto foreImageFilter = MakeImageFilter(feAttr_.in, imageFilter, resultHash);
     ConverImageFilterColor(foreImageFilter, srcColor, currentColor);
     ConverImageFilterColor(backImageFilter, srcColor, currentColor);
-    RSRect filterRect(effectFilterArea_.Left(), effectFilterArea_.Top(),
-        effectFilterArea_.Right(), effectFilterArea_.Bottom());
-    if (cropRect) {
-        imageFilter = RSRecordingImageFilter::CreateBlendImageFilter(GetBlendMode(blendMode),
-            backImageFilter, foreImageFilter, filterRect);
-    } else {
-        imageFilter = RSRecordingImageFilter::CreateBlendImageFilter(GetBlendMode(blendMode),
-            backImageFilter, foreImageFilter);
-    }
+
+    imageFilter =
+        RSRecordingImageFilter::CreateBlendImageFilter(GetBlendMode(blendMode), backImageFilter, foreImageFilter);
     ConverImageFilterColor(imageFilter, srcColor, currentColor);
     RegisterResult(feAttr_.result, imageFilter, resultHash);
 }
@@ -70,7 +64,7 @@ void SvgFeBlend::OnAsImageFilter(std::shared_ptr<RSImageFilter>& imageFilter,
 bool SvgFeBlend::ParseAndSetSpecializedAttr(const std::string& name, const std::string& value)
 {
     static const LinearMapNode<void (*)(const std::string&, SvgFeBlendAttribute&)> attrs[] = {
-        { SVG_FE_IN2,
+        { DOM_SVG_FE_IN2,
             [](const std::string& val, SvgFeBlendAttribute& attr) {
                 static const LinearMapNode<SvgFeInType> IN_TABLE[] = {
                     { "BackgroundAlpha", SvgFeInType::BACKGROUND_ALPHA },
@@ -87,7 +81,7 @@ bool SvgFeBlend::ParseAndSetSpecializedAttr(const std::string& name, const std::
                     attr.in2.id = val;
                 }
             } },
-        { SVG_FE_MODE,
+        { DOM_SVG_FE_MODE,
             [](const std::string& val, SvgFeBlendAttribute& attr) {
                 static const LinearMapNode<SvgFeBlendMode> EDGE_MODE_TABLE[] = {
                     { "darken", SvgFeBlendMode::DARKEN },

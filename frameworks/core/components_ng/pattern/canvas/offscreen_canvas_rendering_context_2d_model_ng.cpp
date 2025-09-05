@@ -15,7 +15,11 @@
 
 #include "core/components_ng/pattern/canvas/offscreen_canvas_rendering_context_2d_model_ng.h"
 
+#include <cstring>
+
 #include "securec.h"
+
+#include "core/components/common/properties/paint_state.h"
 
 #ifdef PIXEL_MAP_SUPPORTED
 #include "pixel_map.h"
@@ -68,12 +72,6 @@ void OffscreenCanvasRenderingContext2DModelNG::SetFontSize(const Dimension& size
 {
     CHECK_NULL_VOID(pattern_);
     pattern_->SetFontSize(size);
-}
-
-void OffscreenCanvasRenderingContext2DModelNG::SetLetterSpacing(const Dimension& letterSpacing)
-{
-    CHECK_NULL_VOID(pattern_);
-    pattern_->SetLetterSpacing(letterSpacing);
 }
 
 std::vector<double> OffscreenCanvasRenderingContext2DModelNG::GetLineDash()
@@ -344,12 +342,6 @@ void OffscreenCanvasRenderingContext2DModelNG::AddRect(const Rect& rect)
     pattern_->AddRect(rect);
 }
 
-void OffscreenCanvasRenderingContext2DModelNG::AddRoundRect(const Rect& rect, const std::vector<double>& radii)
-{
-    CHECK_NULL_VOID(pattern_);
-    pattern_->AddRoundRect(rect, radii);
-}
-
 void OffscreenCanvasRenderingContext2DModelNG::BeginPath()
 {
     CHECK_NULL_VOID(pattern_);
@@ -547,13 +539,6 @@ void OffscreenCanvasRenderingContext2DModelNG::SetDensity(double density)
 {
     CHECK_NULL_VOID(pattern_);
     pattern_->SetDensity(density);
-}
-
-void OffscreenCanvasRenderingContext2DModelNG::SetTransform(
-    std::shared_ptr<Ace::Pattern> pattern, const TransformParam& transform)
-{
-    CHECK_NULL_VOID(pattern_);
-    pattern_->SetTransform(pattern, transform);
 }
 
 // All interfaces that only the 'OffscreenCanvasRenderingContext2D' has.

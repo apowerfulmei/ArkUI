@@ -20,7 +20,6 @@
 #include "gtest/gtest.h"
 
 #define private public
-#define protected public
 #include "test/mock/core/common/mock_container.h"
 #include "test/mock/core/common/mock_interaction_interface.h"
 #include "test/mock/core/pipeline/mock_pipeline_context.h"
@@ -48,8 +47,6 @@
 #include "core/components_ng/pattern/text/text_pattern.h"
 #include "core/components_v2/inspector/inspector_constants.h"
 #include "core/pipeline/base/render_node.h"
-#include "core/components_ng/manager/drag_drop/drag_drop_global_controller.h"
-#include "core/components_ng/manager/drag_drop/drag_drop_spring_loading/drag_drop_spring_loading_detector.h"
 
 namespace OHOS::Ace::NG {
 namespace {
@@ -70,15 +67,6 @@ const std::string ITEM_INFO_LEAVE("item info LEAVE");
 const std::string ITEM_INFO_MOVE("item info MOVE");
 const std::string ITEM_INFO_ENTER("item info ENTER");
 constexpr int32_t INVALID_CURRENT_ID = -1;
-constexpr int32_t INVALID_PULL_ID = -1;
-constexpr int32_t CURRENT_PULL_ID = 123;
-constexpr int32_t NEW_PULL_ID = 456;
-constexpr int32_t WINDOW_ID = 1;
-constexpr int32_t PARENT_NODE_ID = 2;
-constexpr float POINT_X1 = 10.0f;
-constexpr float POINT_Y1 = 20.0f;
-constexpr float POINT_X2 = 30.0f;
-constexpr float POINT_Y2 = 40.0f;
 // before testing CheckDragDropProxy, DragWindow has created 6 times
 constexpr int32_t VALID_CURRENT_ID = 6;
 const OffsetF FRAME_OFFSET(0.0f, 0.0f);
@@ -101,12 +89,6 @@ public:
 };
 
 class DragDropManagerTestNgCoverage : public testing::Test {
-public:
-    static void SetUpTestCase();
-    static void TearDownTestCase();
-};
-
-class DragDropManagerTestNgPlus : public testing::Test {
 public:
     static void SetUpTestCase();
     static void TearDownTestCase();

@@ -16,35 +16,6 @@
 #include "core/components_ng/render/adapter/txt_font_collection.h"
 
 namespace OHOS::Ace::NG {
-namespace {
-void OnLoadFontFinished(const Rosen::FontCollection* collection, const std::string& name)
-{
-    auto txtFontCollection = AceType::DynamicCast<TxtFontCollection>(FontCollection::Current());
-    if (!txtFontCollection || txtFontCollection->GetRawFontCollection().get() != collection) {
-        return;
-    }
-    auto loadFinishCallback = FontCollection::Current()->GetLoadFontFinishCallback();
-    for (const auto& callback : loadFinishCallback) {
-        if (callback) {
-            callback(name);
-        }
-    }
-}
-
-void OnUnLoadFontFinished(const Rosen::FontCollection* collection, const std::string& name)
-{
-    auto txtFontCollection = AceType::DynamicCast<TxtFontCollection>(FontCollection::Current());
-    if (!txtFontCollection || txtFontCollection->GetRawFontCollection().get() != collection) {
-        return;
-    }
-    auto unLoadFinishCallback = FontCollection::Current()->GetUnloadFontFinishCallback();
-    for (const auto& callback : unLoadFinishCallback) {
-        if (callback) {
-            callback(name);
-        }
-    }
-}
-}
 
 RefPtr<FontCollection> TxtFontCollection::GetInstance()
 {
@@ -59,6 +30,22 @@ RefPtr<FontCollection> FontCollection::Current()
 
 TxtFontCollection::TxtFontCollection()
 {
+#ifndef USE_GRAPHIC_TEXT_GINE
+    auto rosenCollection = RSFontCollection::GetInstance(false);
+    auto collectionTxtBase = rosenCollection->GetFontCollection();
+    auto collectionTxt = std::static_pointer_cast<rosen::FontCollectionTxt>(collectionTxtBase);
+    if (collectionTxt) {
+        collection_ = collectionTxt->GetFontCollection();
+    } else {
+        LOGE("Fail to get FontFollectionTxt!");
+    }
+    if (collection_) {
+        std::string emptyLocale;
+        // 0x4e2d is unicode for '中'.
+        collection_->MatchFallbackFont(0x4e2d, emptyLocale);
+        collection_->GetMinikinFontCollectionForFamilies({ "sans-serif" }, emptyLocale);
+    }
+#else
     collection_ = Rosen::FontCollection::Create();
     /* texgine not support
     dynamicFontManager_ = RosenFontCollection::GetInstance().GetDynamicFontManager();
@@ -69,11 +56,16 @@ TxtFontCollection::TxtFontCollection()
         collection_->GetMinikinFontCollectionForFamilies({ "sans-serif" }, emptyLocale);
     }
     */
-    Rosen::FontCollection::RegisterLoadFontFinishCallback(OnLoadFontFinished);
-    Rosen::FontCollection::RegisterUnloadFontFinishCallback(OnUnLoadFontFinished);
+#endif
 }
 
+#ifndef USE_GRAPHIC_TEXT_GINE
+TxtFontCollection::TxtFontCollection(const std::shared_ptr<txt::FontCollection>& fontCollection)
+    : collection_(fontCollection)
+{}
+#else
 TxtFontCollection::TxtFontCollection(const std::shared_ptr<Rosen::FontCollection>& fontCollection)
     : collection_(fontCollection)
 {}
+#endif
 } // namespace OHOS::Ace::NG

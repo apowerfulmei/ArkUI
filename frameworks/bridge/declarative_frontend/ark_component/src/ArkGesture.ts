@@ -42,21 +42,21 @@ class TapGestureHandler extends GestureHandler {
 
     constructor(options?: TapGestureHandlerOptions) {
         super(CommonGestureType.TAP_GESTURE);
-        if (options !== undefined && options !== null) {
+        if (options !== undefined) {
             this.fingers = options.fingers;
             this.count = options.count;
             this.limitFingerCount = options.isFingerCountLimited;
         }
     }
-    onAction(event: Callback<GestureEvent>): TapGestureHandler {
+    onAction(event: Callback<GestureEvent>) {
         this.onActionCallback = event;
         return this;
     }
-    tag(tag: string): TapGestureHandler {
+    tag(tag: string) {
         this.gestureTag = tag;
         return this;
     }
-    allowedTypes(types: Array<SourceTool>): TapGestureHandler {
+    allowedTypes(types: Array<SourceTool>) {
         this.allowedTypes = types;
         return this;
     }
@@ -71,10 +71,10 @@ class LongPressGestureHandler extends GestureHandler {
     allowedTypes?: Array<SourceTool>;
     onActionCallback?: Callback<GestureEvent>;
     onActionEndCallback?: Callback<GestureEvent>;
-    onActionCancelCallback?: Callback<GestureEvent>;
+    onActionCancelCallback?: Callback<void>;
     constructor(options?: LongPressGestureHandlerOptions) {
         super(CommonGestureType.LONG_PRESS_GESTURE);
-        if (options !== undefined && options !== null) {
+        if (options !== undefined) {
             this.fingers = options.fingers;
             this.repeat = options.repeat;
             this.duration = options.duration;
@@ -82,27 +82,27 @@ class LongPressGestureHandler extends GestureHandler {
         }
     }
 
-    onAction(event: Callback<GestureEvent>): LongPressGestureHandler {
+    onAction(event: Callback<GestureEvent>) {
         this.onActionCallback = event;
         return this;
     }
 
-    onActionEnd(event: Callback<GestureEvent>): LongPressGestureHandler {
+    onActionEnd(event: Callback<GestureEvent>) {
         this.onActionEndCallback = event;
         return this;
     }
 
-    onActionCancel(event: Callback<GestureEvent>): LongPressGestureHandler {
+    onActionCancel(event: Callback<void>) {
         this.onActionCancelCallback = event;
         return this;
     }
 
-    tag(tag: string): LongPressGestureHandler {
+    tag(tag: string) {
         this.gestureTag = tag;
         return this;
     }
 
-    allowedTypes(types: Array<SourceTool>): LongPressGestureHandler {
+    allowedTypes(types: Array<SourceTool>) {
         this.allowedTypes = types;
         return this;
     }
@@ -113,55 +113,48 @@ class PanGestureHandler extends GestureHandler {
     direction?: PanDirection;
     distance?: number;
     limitFingerCount?: boolean;
-    distanceMap?: Map<SourceTool, number>;
     gestureTag?: string;
     allowedTypes?: Array<SourceTool>;
     onActionStartCallback?: Callback<GestureEvent>;
     onActionUpdateCallback?: Callback<GestureEvent>;
     onActionEndCallback?: Callback<GestureEvent>;
-    onActionCancelCallback?: Callback<GestureEvent>;
+    onActionCancelCallback?: Callback<void>;
     constructor(options?: PanGestureHandlerOptions) {
         super(CommonGestureType.PAN_GESTURE);
-        if (options !== undefined && options !== null) {
+        if (options !== undefined) {
             this.fingers = options.fingers;
             this.direction = options.direction;
             this.distance = options.distance;
             this.limitFingerCount = options.isFingerCountLimited;
-            if (options.distanceMap !== undefined && options.distanceMap !== null) {
-                this.distanceMap = new Map();
-                options.distanceMap.forEach((value, key) => {
-                    this.distanceMap.set(key, value);
-                });
-            }
         }
     }
 
-    onActionStart(event: Callback<GestureEvent>): PanGestureHandler {
+    onActionStart(event: Callback<GestureEvent>) {
         this.onActionStartCallback = event;
         return this;
     }
 
-    onActionUpdate(event: Callback<GestureEvent>): PanGestureHandler {
+    onActionUpdate(event: Callback<GestureEvent>) {
         this.onActionUpdateCallback = event;
         return this;
     }
 
-    onActionEnd(event: Callback<GestureEvent>): PanGestureHandler {
+    onActionEnd(event: Callback<GestureEvent>) {
         this.onActionEndCallback = event;
         return this;
     }
 
-    onActionCancel(event: Callback<GestureEvent>): PanGestureHandler {
+    onActionCancel(event: Callback<void>) {
         this.onActionCancelCallback = event;
         return this;
     }
 
-    tag(tag: string): PanGestureHandler {
+    tag(tag: string) {
         this.gestureTag = tag;
         return this;
     }
 
-    allowedTypes(types: Array<SourceTool>): PanGestureHandler {
+    allowedTypes(types: Array<SourceTool>) {
         this.allowedTypes = types;
         return this;
     }
@@ -177,7 +170,7 @@ class SwipeGestureHandler extends GestureHandler {
     onActionCallback?: Callback<GestureEvent>;
     constructor(options?: SwipeGestureHandlerOptions) {
         super(CommonGestureType.PAN_GESTURE);
-        if (options !== undefined && options !== null) {
+        if (options !== undefined) {
             this.fingers = options.fingers;
             this.direction = options.direction;
             this.speed = options.speed;
@@ -185,17 +178,17 @@ class SwipeGestureHandler extends GestureHandler {
         }
     }
 
-    onAction(event: Callback<GestureEvent>): SwipeGestureHandler {
+    onAction(event: Callback<GestureEvent>) {
         this.onActionCallback = event;
         return this;
     }
 
-    tag(tag: string): SwipeGestureHandler {
+    tag(tag: string) {
         this.gestureTag = tag;
         return this;
     }
 
-    allowedTypes(types: Array<SourceTool>): SwipeGestureHandler {
+    allowedTypes(types: Array<SourceTool>) {
         this.allowedTypes = types;
         return this;
     }
@@ -210,42 +203,42 @@ class PinchGestureHandler extends GestureHandler {
     onActionStartCallback?: Callback<GestureEvent>;
     onActionUpdateCallback?: Callback<GestureEvent>;
     onActionEndCallback?: Callback<GestureEvent>;
-    onActionCancelCallback?: Callback<GestureEvent>;
+    onActionCancelCallback?: Callback<void>;
     constructor(options?: PinchGestureHandlerOptions) {
         super(CommonGestureType.PINCH_GESTURE);
-        if (options !== undefined && options !== null) {
+        if (options !== undefined) {
             this.fingers = options.fingers;
             this.distance = options.distance;
             this.limitFingerCount = options.isFingerCountLimited;
         }
     }
 
-    onActionStart(event: Callback<GestureEvent>): PinchGestureHandler {
+    onActionStart(event: Callback<GestureEvent>) {
         this.onActionStartCallback = event;
         return this;
     }
 
-    onActionUpdate(event: Callback<GestureEvent>): PinchGestureHandler {
+    onActionUpdate(event: Callback<GestureEvent>) {
         this.onActionUpdateCallback = event;
         return this;
     }
 
-    onActionEnd(event: Callback<GestureEvent>): PinchGestureHandler {
+    onActionEnd(event: Callback<GestureEvent>) {
         this.onActionEndCallback = event;
         return this;
     }
 
-    onActionCancel(event: Callback<GestureEvent>): PinchGestureHandler {
+    onActionCancel(event: Callback<void>) {
         this.onActionCancelCallback = event;
         return this;
     }
 
-    tag(tag: string): PinchGestureHandler {
+    tag(tag: string) {
         this.gestureTag = tag;
         return this;
     }
 
-    allowedTypes(types: Array<SourceTool>): PinchGestureHandler {
+    allowedTypes(types: Array<SourceTool>) {
         this.allowedTypes = types;
         return this;
     }
@@ -260,42 +253,42 @@ class RotationGestureHandler extends GestureHandler {
     onActionStartCallback?: Callback<GestureEvent>;
     onActionUpdateCallback?: Callback<GestureEvent>;
     onActionEndCallback?: Callback<GestureEvent>;
-    onActionCancelCallback?: Callback<GestureEvent>;
+    onActionCancelCallback?: Callback<void>;
     constructor(options?: RotationGestureHandlerOptions) {
         super(CommonGestureType.ROTATION_GESTURE);
-        if (options !== undefined && options !== null) {
+        if (options !== undefined) {
             this.fingers = options.fingers;
             this.angle = options.angle;
             this.limitFingerCount = options.isFingerCountLimited;
         }
     }
 
-    onActionStart(event: Callback<GestureEvent>): RotationGestureHandler {
+    onActionStart(event: Callback<GestureEvent>) {
         this.onActionStartCallback = event;
         return this;
     }
 
-    onActionUpdate(event: Callback<GestureEvent>): RotationGestureHandler {
+    onActionUpdate(event: Callback<GestureEvent>) {
         this.onActionUpdateCallback = event;
         return this;
     }
 
-    onActionEnd(event: Callback<GestureEvent>): RotationGestureHandler {
+    onActionEnd(event: Callback<GestureEvent>) {
         this.onActionEndCallback = event;
         return this;
     }
 
-    onActionCancel(event: Callback<GestureEvent>): RotationGestureHandler {
+    onActionCancel(event: Callback<void>) {
         this.onActionCancelCallback = event;
         return this;
     }
 
-    tag(tag: string): RotationGestureHandler {
+    tag(tag: string) {
         this.gestureTag = tag;
         return this;
     }
 
-    allowedTypes(types: Array<SourceTool>): RotationGestureHandler {
+    allowedTypes(types: Array<SourceTool>) {
         this.allowedTypes = types;
         return this;
     }
@@ -308,18 +301,18 @@ class GestureGroupHandler extends GestureHandler {
     onCancelCallback?: Callback<void>;
     constructor(options?: GestureGroupGestureHandlerOptions) {
         super(CommonGestureType.GESTURE_GROUP);
-        if (options !== undefined && options !== null) {
+        if (options !== undefined) {
             this.mode = options.mode;
             this.gestures = options.gestures;
         }
     }
 
-    onCancel(event: Callback<void>): GestureGroupHandler {
+    onCancel(event: Callback<void>) {
         this.onCancelCallback = event;
         return this;
     }
 
-    tag(tag: string): GestureGroupHandler {
+    tag(tag: string) {
         this.gestureTag = tag;
         return this;
     }

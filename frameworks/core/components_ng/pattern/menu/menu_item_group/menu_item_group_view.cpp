@@ -15,71 +15,30 @@
 
 #include "core/components_ng/pattern/menu/menu_item_group/menu_item_group_view.h"
 
-#include "core/common/resource/resource_parse_utils.h"
 #include "core/components/select/select_theme.h"
+#include "core/components_ng/base/frame_node.h"
+#include "core/components_ng/base/view_stack_processor.h"
 #include "core/components_ng/pattern/linear_layout/linear_layout_pattern.h"
 #include "core/components_ng/pattern/menu/menu_item_group/menu_item_group_pattern.h"
 #include "core/components_ng/pattern/text/text_pattern.h"
+#include "core/components_ng/property/calc_length.h"
+#include "core/components_v2/inspector/inspector_constants.h"
 
 namespace OHOS::Ace::NG {
 namespace {
 void UpdateRowPadding(const RefPtr<FrameNode>& row)
 {
-    CHECK_NULL_VOID(row);
-    auto pipeline = row->GetContext();
+    auto pipeline = PipelineBase::GetCurrentContext();
     CHECK_NULL_VOID(pipeline);
     auto theme = pipeline->GetTheme<SelectTheme>();
     CHECK_NULL_VOID(theme);
-    auto padding = CalcLength(theme->GetMenuItemHorIntervalPadding());
+    auto padding = CalcLength((theme->GetMenuIconPadding() - theme->GetOutPadding()));
 
     auto layoutProps = row->GetLayoutProperty();
     CHECK_NULL_VOID(layoutProps);
-    layoutProps->UpdatePadding(PaddingProperty { padding, padding, std::nullopt, std::nullopt, std::nullopt,
-        std::nullopt });
+    layoutProps->UpdatePadding(PaddingProperty { padding, padding, std::nullopt, std::nullopt });
 }
 } // namespace
-
-void MenuItemGroupView::CreateWithStringResourceObj(
-    const RefPtr<ResourceObject>& resObj, const MenuItemGroupStringType type)
-{
-    auto frameNode = ViewStackProcessor::GetInstance()->GetMainFrameNode();
-    CHECK_NULL_VOID(frameNode);
-    auto pattern = frameNode->GetPattern<MenuItemGroupPattern>();
-    CHECK_NULL_VOID(pattern);
-    std::string key = "MenuItemGroup" + StringTypeToString(type);
-    pattern->RemoveResObj(key);
-    CHECK_NULL_VOID(resObj);
-    auto&& updateFunc = [pattern, key, type](const RefPtr<ResourceObject>& resObj) {
-        std::string str = pattern->GetResCacheMapByKey(key);
-        if (str.empty()) {
-            CHECK_NE_VOID(ResourceParseUtils::ParseResString(resObj, str), true);
-            pattern->AddResCache(key, str);
-        }
-        if (type == MenuItemGroupStringType::HEADER) {
-            pattern->SetHeaderContent(str);
-        } else if (type == MenuItemGroupStringType::FOOTER) {
-            pattern->SetFooterContent(str);
-        }
-    };
-    pattern->AddResObj(key, resObj, std::move(updateFunc));
-}
-
-const std::string MenuItemGroupView::StringTypeToString(const MenuItemGroupStringType type)
-{
-    std::string rst;
-    switch (type) {
-        case MenuItemGroupStringType::HEADER:
-            rst = "Header";
-            break;
-        case MenuItemGroupStringType::FOOTER:
-            rst = "Footer";
-            break;
-        default:
-            rst = "Unknown";
-            break;
-    }
-    return rst;
-}
 
 void MenuItemGroupView::Create()
 {
@@ -95,7 +54,6 @@ void MenuItemGroupView::Create()
 
 void MenuItemGroupView::SetHeader(const RefPtr<UINode>& header)
 {
-    CHECK_NULL_VOID(header);
     auto frameNode = ViewStackProcessor::GetInstance()->GetMainFrameNode();
     CHECK_NULL_VOID(frameNode);
     auto pattern = frameNode->GetPattern<MenuItemGroupPattern>();
@@ -121,9 +79,8 @@ void MenuItemGroupView::SetHeader(const std::string& headerStr)
     UpdateRowPadding(row);
     content->MountToParent(row);
     auto layoutProps = content->GetLayoutProperty<TextLayoutProperty>();
-    CHECK_NULL_VOID(layoutProps);
     layoutProps->UpdateContent(headerStr);
-    auto pipeline = frameNode->GetContext();
+    auto pipeline = PipelineBase::GetCurrentContext();
     CHECK_NULL_VOID(pipeline);
     auto theme = pipeline->GetTheme<SelectTheme>();
     CHECK_NULL_VOID(theme);
@@ -143,7 +100,6 @@ void MenuItemGroupView::SetHeader(const std::string& headerStr)
 
 void MenuItemGroupView::SetFooter(const RefPtr<UINode>& footer)
 {
-    CHECK_NULL_VOID(footer);
     auto frameNode = ViewStackProcessor::GetInstance()->GetMainFrameNode();
     CHECK_NULL_VOID(frameNode);
     auto pattern = frameNode->GetPattern<MenuItemGroupPattern>();
@@ -169,9 +125,8 @@ void MenuItemGroupView::SetFooter(const std::string& footerStr)
     UpdateRowPadding(row);
     content->MountToParent(row);
     auto layoutProps = content->GetLayoutProperty<TextLayoutProperty>();
-    CHECK_NULL_VOID(layoutProps);
     layoutProps->UpdateContent(footerStr);
-    auto pipeline = frameNode->GetContext();
+    auto pipeline = PipelineBase::GetCurrentContext();
     CHECK_NULL_VOID(pipeline);
     auto theme = pipeline->GetTheme<SelectTheme>();
     CHECK_NULL_VOID(theme);

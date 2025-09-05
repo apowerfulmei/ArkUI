@@ -47,8 +47,6 @@ public:
     void AddText(const JSCallbackInfo& info);
     void DeleteText(const JSCallbackInfo& info);
     void GetSelection(const JSCallbackInfo& info);
-    void ClearPreviewText(const JSCallbackInfo& info);
-    void GetText(const JSCallbackInfo& info);
 
 private:
     WeakPtr<TextFieldControllerBase> controllerWeak_;

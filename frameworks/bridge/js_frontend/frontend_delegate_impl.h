@@ -45,8 +45,6 @@ using ResetStagingPageCallback = std::function<void()>;
 using MediaQueryCallback = std::function<void(const std::string& callbackId, const std::string& args)>;
 using LayoutInspectorCallback = std::function<void(const std::string& componedId)>;
 using DrawInspectorCallback = std::function<void(const std::string& componedId)>;
-using DrawChildrenInspectorCallback = std::function<void(const std::string& componedId)>;
-using IsDrawChildrenCallbackFuncExistCallback = std::function<bool(const std::string& componedId)>;
 using DestroyPageCallback = std::function<void(int32_t pageId)>;
 using DestroyApplicationCallback = std::function<void(const std::string& packageName)>;
 using UpdateApplicationStateCallback = std::function<void(const std::string& packageName, Frontend::State state)>;
@@ -219,8 +217,6 @@ public:
     void OnSurfaceChanged();
     void OnLayoutCompleted(const std::string& componentId);
     void OnDrawCompleted(const std::string& componentId);
-    void OnDrawChildrenCompleted(const std::string& componentId);
-    bool IsDrawChildrenCallbackFuncExist(const std::string& componentId);
     // JsEventHandler delegate functions.
     void FireAsyncEvent(const std::string& eventId, const std::string& param, const std::string& jsonArgs);
     bool FireSyncEvent(const std::string& eventId, const std::string& param, const std::string& jsonArgs);
@@ -261,20 +257,16 @@ public:
     double MeasureText(MeasureContext context) override;
     Size MeasureTextSize(MeasureContext context) override;
 
-    void ShowToast(const NG::ToastInfo& toastInfo, std::function<void(int32_t)>&& callback) override;
+    void ShowToast(const NG::ToastInfo& toastInfo) override;
     void ShowDialog(const std::string& title, const std::string& message, const std::vector<ButtonInfo>& buttons,
         bool autoCancel, std::function<void(int32_t, int32_t)>&& callback,
         const std::set<std::string>& callbacks) override;
-    void ShowDialog(const PromptDialogAttr& dialogAttr, const std::vector<ButtonInfo>& buttons,
-        std::function<void(int32_t, int32_t)>&& callback, const std::set<std::string>& callbacks) override;
 
     void EnableAlertBeforeBackPage(const std::string& message, std::function<void(int32_t)>&& callback) override;
 
     void DisableAlertBeforeBackPage() override;
 
     void ShowActionMenu(const std::string& title, const std::vector<ButtonInfo>& button,
-        std::function<void(int32_t, int32_t)>&& callback) override;
-    void ShowActionMenu(const PromptDialogAttr& dialogAttr, const std::vector<ButtonInfo>& buttons,
         std::function<void(int32_t, int32_t)>&& callback) override;
 
     Rect GetBoundingRectData(NodeId nodeId) override;

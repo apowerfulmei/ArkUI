@@ -16,8 +16,15 @@
 #include "adapter/ohos/entrance/form_utils_impl.h"
 
 #include "form_mgr.h"
+#include "want.h"
 
 #include "adapter/ohos/entrance/ace_container.h"
+#include "adapter/ohos/osal/want_wrap_ohos.h"
+#include "base/utils/utils.h"
+#include "core/common/container_scope.h"
+#include "core/common/form_manager.h"
+#include "frameworks/base/json/json_util.h"
+
 
 namespace OHOS::Ace {
 namespace {
@@ -90,12 +97,11 @@ int32_t FormUtilsImpl::RequestPublishFormEvent(const AAFwk::Want& want,
     std::vector<AppExecFwk::FormDataProxy> formDataProxies;
     int32_t ret = AppExecFwk::FormMgr::GetInstance().RequestPublishFormWithSnapshot(const_cast<Want&>(want),
         withFormBindingData, formBindingData, formId, formDataProxies);
-    int32_t externalErrorCode = ret;
     if (ret != ERR_OK) {
-        OHOS::AppExecFwk::FormMgr::GetInstance().GetExternalError(ret, externalErrorCode, errMsg);
+        errMsg = OHOS::AppExecFwk::FormMgr::GetInstance().GetErrorMessage(ret);
     }
     
-    return externalErrorCode;
+    return ret;
 }
 
 int32_t FormUtilsImpl::BackgroundEvent(

@@ -37,7 +37,6 @@ public:
     static void JsOnUninstall(const JSCallbackInfo& info);
     static void JsOnRouter(const JSCallbackInfo& info);
     static void JsOnLoad(const JSCallbackInfo& info);
-    static void JsOnUpdate(const JSCallbackInfo& info);
 };
 
 } // namespace OHOS::Ace::Framework

@@ -106,7 +106,7 @@ HWTEST_F(ScrollBarLayoutTestNg, DisplayMode001, TestSize.Level1)
     pattern_->controlDistanceChanged_ = true;
     pattern_->UpdateScrollBarDisplay();
     frameNode_->MarkModifyDone();
-    FlushUITasks();
+    FlushLayoutTask(stackNode_);
     EXPECT_EQ(scrollBarRenderContext->GetOpacityValue(), 1);
 
     /**
@@ -117,14 +117,14 @@ HWTEST_F(ScrollBarLayoutTestNg, DisplayMode001, TestSize.Level1)
     pattern_->controlDistanceChanged_ = true;
     pattern_->UpdateScrollBarDisplay();
     frameNode_->MarkModifyDone();
-    FlushUITasks();
+    FlushLayoutTask(stackNode_);
     EXPECT_EQ(scrollBarRenderContext->GetOpacityValue(), 0);
 
     layoutProperty_->UpdateDisplayMode(DisplayMode::AUTO);
     pattern_->controlDistanceChanged_ = true;
     pattern_->UpdateScrollBarDisplay();
     frameNode_->MarkModifyDone();
-    FlushUITasks();
+    FlushLayoutTask(stackNode_);
     EXPECT_EQ(scrollBarRenderContext->GetOpacityValue(), 0);
 
     /**
@@ -135,7 +135,7 @@ HWTEST_F(ScrollBarLayoutTestNg, DisplayMode001, TestSize.Level1)
     pattern_->controlDistanceChanged_ = true;
     pattern_->UpdateScrollBarDisplay();
     frameNode_->MarkModifyDone();
-    FlushUITasks();
+    FlushLayoutTask(stackNode_);
     EXPECT_EQ(scrollBarRenderContext->GetOpacityValue(), 0);
 
     /**
@@ -146,7 +146,7 @@ HWTEST_F(ScrollBarLayoutTestNg, DisplayMode001, TestSize.Level1)
     pattern_->controlDistanceChanged_ = true;
     pattern_->UpdateScrollBarDisplay();
     frameNode_->MarkModifyDone();
-    FlushUITasks();
+    FlushLayoutTask(stackNode_);
     EXPECT_EQ(scrollBarRenderContext->GetOpacityValue(), 1);
 }
 
@@ -183,7 +183,7 @@ HWTEST_F(ScrollBarLayoutTestNg, UpdateScrollBarOffset001, TestSize.Level1)
     CreateScroll();
     CreateScrollBar(true, true, Axis::VERTICAL, DisplayMode::ON);
     CreateDone();
-    FlushUITasks();
+    FlushLayoutTask(frameNode_);
     EXPECT_EQ(pattern_->scrollBarOverlayModifier_->GetOpacity(), UINT8_MAX);
 
     /**
@@ -215,7 +215,7 @@ HWTEST_F(ScrollBarLayoutTestNg, SetScrollBar001, TestSize.Level1)
     CreateScroll();
     CreateScrollBar(true, true, Axis::VERTICAL, DisplayMode::ON);
     CreateDone();
-    FlushUITasks();
+    FlushLayoutTask(frameNode_);
     EXPECT_NE(pattern_->scrollBar_, nullptr);
     EXPECT_EQ(pattern_->scrollBarOverlayModifier_->GetOpacity(), UINT8_MAX);
 
@@ -234,9 +234,9 @@ HWTEST_F(ScrollBarLayoutTestNg, SetScrollBar001, TestSize.Level1)
      */
     layoutProperty_->UpdateAxis(Axis::HORIZONTAL);
     frameNode_->MarkModifyDone();
-    FlushUITasks();
+    FlushLayoutTask(stackNode_);
     pattern_->SetScrollBar(DisplayMode::ON);
-    FlushUITasks();
+    FlushLayoutTask(frameNode_);
     EXPECT_EQ(pattern_->scrollBarOverlayModifier_->positionMode_, PositionMode::BOTTOM);
 
     Container::Current()->SetApiTargetVersion(apiTargetVersion);
@@ -259,12 +259,12 @@ HWTEST_F(ScrollBarLayoutTestNg, SetScrollBar002, TestSize.Level1)
     CreateScroll();
     CreateScrollBar(true, true, Axis::VERTICAL, DisplayMode::AUTO);
     CreateDone();
-    FlushUITasks();
+    FlushLayoutTask(frameNode_);
     EXPECT_NE(pattern_->scrollBar_, nullptr);
     EXPECT_EQ(pattern_->scrollBarOverlayModifier_->GetOpacity(), UINT8_MAX);
 
     pattern_->SetScrollBar(DisplayMode::ON);
-    FlushUITasks();
+    FlushLayoutTask(frameNode_);
     EXPECT_EQ(pattern_->scrollBarOverlayModifier_->GetOpacity(), UINT8_MAX);
 
     /**
@@ -272,44 +272,14 @@ HWTEST_F(ScrollBarLayoutTestNg, SetScrollBar002, TestSize.Level1)
      * @tc.expected: Still Hide scrollBar when unScrollable
      */
     pattern_->SetScrollBar(DisplayMode::AUTO);
-    FlushUITasks();
+    FlushLayoutTask(frameNode_);
     EXPECT_EQ(pattern_->scrollBarOverlayModifier_->GetOpacity(), 0);
 
     SetScrollContentMainSize(SCROLL_HEIGHT);
     EXPECT_FALSE(pattern_->scrollBar_->IsScrollable());
     pattern_->SetScrollBar(DisplayMode::ON);
-    FlushUITasks();
+    FlushLayoutTask(frameNode_);
     EXPECT_EQ(pattern_->scrollBarOverlayModifier_->GetOpacity(), 0);
     Container::Current()->SetApiTargetVersion(apiTargetVersion);
-}
-
-/**
- * @tc.name: LayoutPolicyTest001
- * @tc.desc: test the measure result when setting matchParent.
- * @tc.type: FUNC
- */
-HWTEST_F(ScrollBarLayoutTestNg, LayoutPolicyTest001, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. Create default ScrollBar
-     */
-    CreateStack();
-    CreateScroll(SCROLL_HEIGHT);
-    CreateScrollBar(true, true, Axis::VERTICAL, DisplayMode::ON);
-    ViewAbstractModelNG model1;
-    model1.UpdateLayoutPolicyProperty(LayoutCalPolicy::MATCH_PARENT, true);
-    model1.UpdateLayoutPolicyProperty(LayoutCalPolicy::MATCH_PARENT, false);
-    CreateScrollBarChild();
-    CreateDone();
-
-    auto geometryNode = frameNode_->GetGeometryNode();
-    ASSERT_NE(geometryNode, nullptr);
-    EXPECT_EQ(geometryNode->GetFrameSize(), SizeF(480.0f, 800.0f));
-
-    RefPtr<LayoutProperty> layoutProperty = frameNode_->GetLayoutProperty();
-    layoutProperty->UpdateLayoutPolicyProperty(LayoutCalPolicy::FIX_AT_IDEAL_SIZE, true);
-    layoutProperty->UpdateLayoutPolicyProperty(LayoutCalPolicy::FIX_AT_IDEAL_SIZE, false);
-    FlushUITasks();
-    EXPECT_EQ(geometryNode->GetFrameSize(), SizeF(20.0f, 800.0f));
 }
 } // namespace OHOS::Ace::NG

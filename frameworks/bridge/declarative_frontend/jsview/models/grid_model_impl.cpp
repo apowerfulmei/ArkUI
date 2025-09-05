@@ -20,7 +20,10 @@
 #include "bridge/declarative_frontend/jsview/js_container_base.h"
 #include "bridge/declarative_frontend/jsview/js_interactable_view.h"
 #include "bridge/declarative_frontend/jsview/js_utils.h"
+#include "bridge/declarative_frontend/jsview/js_view_abstract.h"
 #include "bridge/declarative_frontend/view_stack_processor.h"
+#include "core/common/ace_application_info.h"
+#include "core/components/common/layout/constants.h"
 #include "core/components_ng/base/view_abstract_model.h"
 
 namespace OHOS::Ace::Framework {
@@ -211,7 +214,7 @@ void GridModelImpl::SetSupportDragAnimation(bool value)
     grid->SetDragAnimation(value);
 }
 
-void GridModelImpl::SetEdgeEffect(EdgeEffect edgeEffect, bool alwaysEnabled, EffectEdge effectEdge)
+void GridModelImpl::SetEdgeEffect(EdgeEffect edgeEffect, bool alwaysEnabled)
 {
     auto component = ViewStackProcessor::GetInstance()->GetMainComponent();
     auto grid = AceType::DynamicCast<GridLayoutComponent>(component);

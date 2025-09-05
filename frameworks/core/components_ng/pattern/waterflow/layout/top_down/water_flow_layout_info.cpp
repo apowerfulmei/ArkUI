@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2023-2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -14,6 +14,10 @@
  */
 
 #include "core/components_ng/pattern/waterflow/layout/top_down/water_flow_layout_info.h"
+
+#include <algorithm>
+
+#include "core/components_ng/property/measure_property.h"
 
 constexpr float HALF = 0.5f;
 
@@ -34,7 +38,7 @@ int32_t WaterFlowLayoutInfo::GetCrossIndex(int32_t itemIndex) const
 
 void WaterFlowLayoutInfo::UpdateStartIndex()
 {
-    if (GetChildrenCount() == 0) {
+    if (childrenCount_ == 0) {
         return;
     }
     if (!itemInfos_.empty()) {
@@ -44,9 +48,6 @@ void WaterFlowLayoutInfo::UpdateStartIndex()
     auto mainHeight = GetMaxMainHeight();
     // need more items for currentOffset_
     if (LessOrEqual(currentOffset_ + mainHeight, 0.0f)) {
-        if (measureInNextFrame_) {
-            startIndex_ = endIndex_;
-        }
         return;
     }
 
@@ -260,11 +261,6 @@ void WaterFlowLayoutInfo::Reset()
     segmentCache_.clear();
 }
 
-void WaterFlowLayoutInfo::ResetFooter()
-{
-    footerIndex_ = -1;
-}
-
 void WaterFlowLayoutInfo::Reset(int32_t resetFrom)
 {
     TAG_LOGI(AceLogTag::ACE_WATERFLOW, "reset. updateIdx:%{public}d,endIndex:%{public}d", resetFrom, endIndex_);
@@ -320,13 +316,8 @@ void WaterFlowLayoutInfo::ClearCacheAfterIndex(int32_t currentIndex)
         }
     }
 
-	// to pass taint data detection by tools.
-    int32_t newIndex = currentIndex + 1;
-    if (newIndex >= 0) {
-        size_t newSize = static_cast<size_t>(newIndex);
-        if (newSize < itemInfos_.size()) {
-            itemInfos_.resize(newSize);
-        }
+    if (static_cast<size_t>(currentIndex + 1) < itemInfos_.size()) {
+        itemInfos_.resize(currentIndex + 1);
     }
 
     auto it = std::upper_bound(endPosArray_.begin(), endPosArray_.end(), currentIndex,
@@ -362,8 +353,7 @@ bool WaterFlowLayoutInfo::ReachEnd(float prevOffset, bool firstLayout) const
 
 int32_t WaterFlowLayoutInfo::FastSolveStartIndex() const
 {
-    if (NearZero(currentOffset_ + TopMargin()) && !endPosArray_.empty() &&
-        NearZero(endPosArray_[0].first - TopMargin())) {
+    if (NearZero(currentOffset_) && !endPosArray_.empty() && NearZero(endPosArray_[0].first)) {
         return endPosArray_[0].second;
     }
     auto it = std::upper_bound(endPosArray_.begin(), endPosArray_.end(), -currentOffset_,
@@ -431,35 +421,25 @@ void WaterFlowLayoutInfo::SetNextSegmentStartPos(int32_t itemIdx)
     }
 }
 
-void WaterFlowLayoutInfo::Sync(float mainSize, bool canOverScrollStart, bool canOverScrollEnd)
+void WaterFlowLayoutInfo::Sync(float mainSize, bool overScroll)
 {
     // adjust offset when it can't overScroll at top
-    if (!canOverScrollStart) {
-        currentOffset_ = std::min(currentOffset_, 0.0);
+    if (!overScroll) {
+        currentOffset_ = std::min(currentOffset_, 0.0f);
     }
-    endIndex_ = FastSolveEndIndex(mainSize + expandHeight_);
+    endIndex_ = FastSolveEndIndex(mainSize);
 
     maxHeight_ = GetMaxMainHeight();
 
     itemStart_ = GreatOrEqual(currentOffset_, 0.0f);
-    itemEnd_ = endIndex_ >= 0 && endIndex_ == GetChildrenCount() - 1;
+    itemEnd_ = endIndex_ >= 0 && endIndex_ == childrenCount_ - 1;
     offsetEnd_ = itemEnd_ && GreatOrEqual(mainSize - currentOffset_, maxHeight_);
     // adjust offset when it can't overScroll at bottom
-    if (offsetEnd_ && Negative(currentOffset_) && !canOverScrollEnd) {
+    if (offsetEnd_ && !overScroll) {
         currentOffset_ = std::min(-maxHeight_ + mainSize, 0.0f);
     }
 
     startIndex_ = FastSolveStartIndex();
-}
-
-bool WaterFlowLayoutInfo::IsAtTopWithDelta()
-{
-    return GreatOrEqual(currentOffset_, 0.0f);
-}
-
-bool WaterFlowLayoutInfo::IsAtBottomWithDelta()
-{
-    return itemEnd_ && GreatOrEqual(lastMainSize_ - currentOffset_, maxHeight_);
 }
 
 void WaterFlowLayoutInfo::InitSegments(const std::vector<WaterFlowSections::Section>& sections, int32_t start)
@@ -476,13 +456,9 @@ void WaterFlowLayoutInfo::InitSegments(const std::vector<WaterFlowSections::Sect
     }
 
     segmentCache_.clear();
-    // to pass taint data detection by tools.
-    if (start >= 0) {
-        size_t startSize = static_cast<size_t>(start);
-        if (startSize < segmentStartPos_.size()) {
-            segmentStartPos_.resize(startSize);
-            // startPos of next segment can only be determined after margins_ is reinitialized.
-        }
+    if (static_cast<size_t>(start) < segmentStartPos_.size()) {
+        segmentStartPos_.resize(start);
+        // startPos of next segment can only be determined after margins_ is reinitialized.
     }
 
     int32_t lastValidItem = (start > 0) ? segmentTails_[start - 1] : -1;
@@ -617,13 +593,13 @@ float WaterFlowLayoutInfo::CalcOverScroll(float mainSize, float delta) const
     return res;
 }
 
-float WaterFlowLayoutInfo::EstimateTotalHeight() const
+float WaterFlowLayoutInfo::EstimateContentHeight() const
 {
     auto childCount = 0;
     if (!itemInfos_.empty()) {
         // in segmented layout
         childCount = static_cast<int32_t>(itemInfos_.size());
-    } else if (itemEnd_ && repeatDifference_ == 0) {
+    } else if (maxHeight_) {
         // in original layout, already reach end.
         return maxHeight_;
     } else {
@@ -632,11 +608,10 @@ float WaterFlowLayoutInfo::EstimateTotalHeight() const
             childCount += static_cast<int32_t>(item.second.size());
         }
     }
-    auto totalChildrenCount = childrenCount_ + repeatDifference_;
     if (childCount == 0) {
         return 0;
     }
-    auto estimateHeight = GetMaxMainHeight() / childCount * totalChildrenCount;
+    auto estimateHeight = GetMaxMainHeight() / childCount * childrenCount_;
     return estimateHeight;
 }
 
@@ -653,17 +628,5 @@ int32_t WaterFlowLayoutInfo::GetLastItem() const
         res = std::max(res, map.second.rbegin()->first);
     }
     return res;
-}
-
-void WaterFlowLayoutInfo::UpdateItemStart(bool canOverScrollStart)
-{
-    if (currentOffset_ >= 0) {
-        if (!canOverScrollStart) {
-            currentOffset_ = 0;
-        }
-        itemStart_ = true;
-    } else {
-        itemStart_ = false;
-    }
 }
 } // namespace OHOS::Ace::NG

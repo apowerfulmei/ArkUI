@@ -18,7 +18,6 @@
 
 #include "base/memory/ace_type.h"
 #include "core/components_ng/layout/box_layout_algorithm.h"
-#include "core/components_ng/layout/layout_property.h"
 
 namespace OHOS::Ace::NG {
 class NavigationContentLayoutAlgorithm : public BoxLayoutAlgorithm {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2021 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -22,6 +22,7 @@
 #include "frameworks/bridge/declarative_frontend/engine/functions/js_click_function.h"
 #include "frameworks/bridge/declarative_frontend/engine/js_ref_ptr.h"
 #include "frameworks/bridge/declarative_frontend/jsview/js_view_common_def.h"
+#include "frameworks/bridge/declarative_frontend/ark_theme/theme_apply/js_counter_theme.h"
 #include "frameworks/core/components/counter/counter_theme.h"
 
 namespace OHOS::Ace {
@@ -124,22 +125,6 @@ void JSCounter::JsOnDec(const JSCallbackInfo& args)
     args.ReturnSelf();
 }
 
-static void UpdateLayoutPolicy(const JSCallbackInfo& args, bool isWidth)
-{
-    auto jsValue = args[0];
-    LayoutCalPolicy policy = LayoutCalPolicy::NO_MATCH;
-    if (jsValue->IsObject()) {
-        JSRef<JSObject> object = JSRef<JSObject>::Cast(jsValue);
-        CHECK_NULL_VOID(!object->IsEmpty());
-        JSRef<JSVal> layoutPolicy = object->GetProperty("id_");
-        CHECK_NULL_VOID(!layoutPolicy->IsEmpty());
-        if (layoutPolicy->IsString()) {
-            policy = JSContainerBase::ParseLayoutPolicy(layoutPolicy->ToString());
-        }
-    }
-    ViewAbstractModel::GetInstance()->UpdateLayoutPolicyProperty(policy, false);
-}
-
 void JSCounter::JSHeight(const JSCallbackInfo& args)
 {
     if (args.Length() < 1) {
@@ -147,30 +132,15 @@ void JSCounter::JSHeight(const JSCallbackInfo& args)
     }
 
     Dimension value;
-    RefPtr<ResourceObject> heightResObj;
-    if (SystemProperties::ConfigChangePerform()) {
-        bool state = ConvertFromJSValue(args[0], value, heightResObj);
-        CounterModel::GetInstance()->CreateWithResourceObj(JsCounterResourceType::Height, heightResObj);
-        if (!state) {
-            UpdateLayoutPolicy(args, false);
-            return;
-        }
-        if (LessNotEqual(value.Value(), 0.0)) {
-            return;
-        }
-        CounterModel::GetInstance()->SetHeight(value);
-        args.ReturnSelf();
-    } else {
-        if (!ConvertFromJSValue(args[0], value)) {
-            UpdateLayoutPolicy(args, false);
-            return;
-        }
-        if (LessNotEqual(value.Value(), 0.0)) {
-            return;
-        }
-        CounterModel::GetInstance()->SetHeight(value);
-        args.ReturnSelf();
+    if (!ConvertFromJSValue(args[0], value)) {
+        return;
     }
+
+    if (LessNotEqual(value.Value(), 0.0)) {
+        return;
+    }
+    CounterModel::GetInstance()->SetHeight(value);
+    args.ReturnSelf();
 }
 
 void JSCounter::JSWidth(const JSCallbackInfo& args)
@@ -180,67 +150,32 @@ void JSCounter::JSWidth(const JSCallbackInfo& args)
     }
 
     Dimension value;
-    RefPtr<ResourceObject> widthResObj;
-    if (SystemProperties::ConfigChangePerform()) {
-        bool state = ConvertFromJSValue(args[0], value, widthResObj);
-        CounterModel::GetInstance()->CreateWithResourceObj(JsCounterResourceType::Width, widthResObj);
-        if (!state) {
-            UpdateLayoutPolicy(args, true);
-            return;
-        }
-        if (LessNotEqual(value.Value(), 0.0)) {
-            return;
-        }
-        CounterModel::GetInstance()->SetWidth(value);
-        args.ReturnSelf();
-    } else {
-        if (!ConvertFromJSValue(args[0], value)) {
-            UpdateLayoutPolicy(args, true);
-            return;
-        }
-        if (LessNotEqual(value.Value(), 0.0)) {
-            return;
-        }
-        CounterModel::GetInstance()->SetWidth(value);
-        args.ReturnSelf();
+    if (!ConvertFromJSValue(args[0], value)) {
+        return;
     }
+
+    if (LessNotEqual(value.Value(), 0.0)) {
+        return;
+    }
+    CounterModel::GetInstance()->SetWidth(value);
+    args.ReturnSelf();
 }
 
 void JSCounter::SetSize(const JSCallbackInfo& args)
 {
-    if (args.Length() < 1 || !args[0]->IsObject()) {
-        args.ReturnSelf();
-        return;
-    }
-    JSRef<JSObject> obj = JSRef<JSObject>::Cast(args[0]);
+    if (args.Length() >= 1 && args[0]->IsObject()) {
+        JSRef<JSObject> obj = JSRef<JSObject>::Cast(args[0]);
 
-    Dimension height;
-    RefPtr<ResourceObject> heightResObj;
-    Dimension width;
-    RefPtr<ResourceObject> widthResObj;
-    if (SystemProperties::ConfigChangePerform()) {
-        bool heightState = ConvertFromJSValue(obj->GetProperty("height"), height, heightResObj);
-        CounterModel::GetInstance()->CreateWithResourceObj(JsCounterResourceType::Height, heightResObj);
-        if (heightState) {
-            if (height.IsValid() && GreatOrEqual(height.Value(), 0.0)) {
-                CounterModel::GetInstance()->SetHeight(height);
-            }
-        }
-        bool widthState = ConvertFromJSValue(obj->GetProperty("width"), width, widthResObj);
-        CounterModel::GetInstance()->CreateWithResourceObj(JsCounterResourceType::Width, widthResObj);
-        if (widthState) {
-            if (width.IsValid() && GreatOrEqual(width.Value(), 0.0)) {
-                CounterModel::GetInstance()->SetWidth(width);
-            }
-        }
-    } else {
+        Dimension height;
         if (ConvertFromJSValue(obj->GetProperty("height"), height) && height.IsValid()) {
-            if (height.IsValid() && GreatOrEqual(height.Value(), 0.0)) {
+            if (GreatOrEqual(height.Value(), 0.0)) {
                 CounterModel::GetInstance()->SetHeight(height);
             }
         }
+
+        Dimension width;
         if (ConvertFromJSValue(obj->GetProperty("width"), width) && width.IsValid()) {
-            if (width.IsValid() && GreatOrEqual(width.Value(), 0.0)) {
+            if (GreatOrEqual(width.Value(), 0.0)) {
                 CounterModel::GetInstance()->SetWidth(width);
             }
         }
@@ -274,21 +209,17 @@ void JSCounter::JsBackgroundColor(const JSCallbackInfo& args)
     }
 
     Color color;
-    RefPtr<ResourceObject> resObj;
-    if (ParseJsColor(args[0], color, resObj)) {
-        if (SystemProperties::ConfigChangePerform()) {
-            CounterModel::GetInstance()->CreateWithResourceObj(JsCounterResourceType::BackgroundColor, resObj);
-        }
-        CounterModel::GetInstance()->SetBackgroundColor(color);
-        args.ReturnSelf();
-    } else if (SystemProperties::ConfigChangePerform()) {
-        CounterModel::GetInstance()->CreateWithResourceObj(JsCounterResourceType::BackgroundColor, nullptr);
+    if (!ParseJsColor(args[0], color)) {
+        return;
     }
+    CounterModel::GetInstance()->SetBackgroundColor(color);
+    args.ReturnSelf();
 }
 
 void JSCounter::Create()
 {
     CounterModel::GetInstance()->Create();
+    JSCounterTheme::ApplyTheme();
 }
 
 } // namespace OHOS::Ace::Framework

@@ -39,19 +39,11 @@ public:
     {
         forbidSwipeToRight_ = forbidSwipeToRight;
     }
-    
-    void ResetDragOffset()
-    {
-        dragOffsetX_ = 0.0;
-        dragOffsetY_ = 0.0;
-    }
-    
-    void CheckNeedExitApp();
 
 private:
     void WatchDragToBack();
 
-    void HandleDragUpdate(const DragUpdateInfo& info);
+    void HandleDragUpdate(double deltaX);
 
     void HandleDragStart();
 
@@ -63,7 +55,6 @@ private:
     RefPtr<Animator> controllerOut_;
     RefPtr<DragRecognizer> dragDetector_;
     double dragOffsetX_ = 0.0;
-    double dragOffsetY_ = 0.0;
     double tickTime_ = 0.0;
     bool isRightToLeft_ = false;
     bool forbidSwipeToRight_ = false;

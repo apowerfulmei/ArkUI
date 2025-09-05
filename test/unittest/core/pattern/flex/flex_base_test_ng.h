@@ -36,7 +36,6 @@ public:
     void SetUp() override;
     void TearDown() override;
     RefPtr<FrameNode> CreateFlexRow(const std::function<void(FlexModelNG)>& callback);
-    RefPtr<FrameNode> CreateFlexWrapRow(const std::function<void(FlexModelNG)>& callback);
 };
 } // namespace OHOS::Ace::NG
 

@@ -14,37 +14,15 @@
  */
 
 #include "core/components_ng/pattern/node_container/node_container_layout_algorithm.h"
+#include <optional>
 
 #include "core/components_ng/layout/layout_wrapper.h"
-#include "core/components_ng/layout/layout_property.h"
-#include "core/components_ng/base/frame_node.h"
-#include "core/components_ng/pattern/pattern.h"
 
 namespace OHOS::Ace::NG {
 void NodeContainerLayoutAlgorithm::Measure(LayoutWrapper* layoutWrapper)
 {
-    auto layoutProp = layoutWrapper->GetLayoutProperty();
-    CHECK_NULL_VOID(layoutProp);
-    auto layoutConstraint = layoutProp->CreateChildConstraint();
-    auto host = layoutWrapper->GetHostNode();
-    CHECK_NULL_VOID(host);
-    auto pattern = host->GetPattern();
-    CHECK_NULL_VOID(pattern);
-    bool isEnabledChildrenMatchParent = pattern->IsEnableChildrenMatchParent();
-    
+    auto layoutConstraint = layoutWrapper->GetLayoutProperty()->CreateChildConstraint();
     for (auto&& child : layoutWrapper->GetAllChildrenWithBuild()) {
-        auto childLayoutProperty = child->GetLayoutProperty();
-        CHECK_NULL_CONTINUE(childLayoutProperty);
-        auto layoutPolicy = childLayoutProperty->GetLayoutPolicyProperty();
-        if (isEnabledChildrenMatchParent&&layoutPolicy.has_value()) {
-            auto widthLayoutPolicy = layoutPolicy.value().widthLayoutPolicy_;
-            auto heightLayoutPolicy = layoutPolicy.value().heightLayoutPolicy_;
-            if (widthLayoutPolicy.value_or(LayoutCalPolicy::NO_MATCH) != LayoutCalPolicy::NO_MATCH ||
-                heightLayoutPolicy.value_or(LayoutCalPolicy::NO_MATCH) != LayoutCalPolicy::NO_MATCH) {
-                layoutPolicyChildren_.emplace_back(child);
-                continue;
-            }
-        }
         if (child->GetHostTag() == "RenderNode") {
             child->Measure(std::nullopt);
         } else {
@@ -52,9 +30,5 @@ void NodeContainerLayoutAlgorithm::Measure(LayoutWrapper* layoutWrapper)
         }
     }
     PerformMeasureSelf(layoutWrapper);
-    if (isEnabledChildrenMatchParent) {
-        auto frameSize = layoutWrapper->GetGeometryNode()->GetFrameSize();
-        MeasureAdaptiveLayoutChildren(layoutWrapper, frameSize);
-    }
 }
 } // namespace OHOS::Ace::NG

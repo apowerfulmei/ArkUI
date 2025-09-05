@@ -126,7 +126,7 @@ public:
         const std::string& id, const std::string& target, const RefPtr<AccessibilityNode>& node) override;
     void HandleComponentPostBinding() override {}
     void OnDumpInfo(const std::vector<std::string>& params) override;
-    void OnDumpInfoNG(const std::vector<std::string>& params, uint32_t windowId, bool hasJson = false) override {}
+    void OnDumpInfoNG(const std::vector<std::string>& params, uint32_t windowId) override {}
     std::unique_ptr<JsonValue> DumpComposedElementsToJson() const;
     std::unique_ptr<JsonValue> DumpComposedElementToJson(NodeId nodeId);
     void SetCardViewParams(const std::string& key, bool focus) override;
@@ -180,10 +180,10 @@ protected:
     static const size_t EVENT_DUMP_PARAM_LENGTH_UPPER;
     static const size_t EVENT_DUMP_PARAM_LENGTH_LOWER;
     static const size_t PROPERTY_DUMP_PARAM_LENGTH;
-    static const size_t EVENT_DUMP_ORDER_INDEX;
-    static const size_t EVENT_DUMP_ID_INDEX;
-    static const size_t EVENT_DUMP_ACTION_INDEX;
-    static const size_t EVENT_DUMP_ACTION_PARAM_INDEX;
+    static const int32_t EVENT_DUMP_ORDER_INDEX;
+    static const int32_t EVENT_DUMP_ID_INDEX;
+    static const int32_t EVENT_DUMP_ACTION_INDEX;
+    static const int32_t EVENT_DUMP_ACTION_PARAM_INDEX;
 
 private:
     RefPtr<AccessibilityNode> CreateCommonAccessibilityNode(

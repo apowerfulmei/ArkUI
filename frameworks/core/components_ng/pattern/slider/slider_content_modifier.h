@@ -48,7 +48,7 @@ public:
         PointF backStart;
         PointF backEnd;
         PointF circleCenter;
-        Gradient selectGradientColor;
+        Color selectColor;
         Gradient trackBackgroundColor;
         Color blockColor;
     };
@@ -65,7 +65,7 @@ public:
     void DrawDefaultBlock(DrawingContext& context);
     void DrawHoverOrPress(DrawingContext& context);
     void DrawShadow(DrawingContext& context);
-    void AddStepPoint(float startX, float startY, float endX, float endY, RSCanvas& canvas);
+
     void UpdateThemeColor()
     {
         auto pipeline = PipelineBase::GetCurrentContext();
@@ -92,10 +92,10 @@ public:
         trackBackgroundColor_->Set(GradientArithmetic(color));
     }
 
-    void SetSelectColor(const Gradient& color)
+    void SetSelectColor(Color color)
     {
-        if (selectGradientColor_) {
-            selectGradientColor_->Set(GradientArithmetic(color));
+        if (selectColor_) {
+            selectColor_->Set(LinearColor(color));
         }
     }
 
@@ -106,7 +106,7 @@ public:
         }
     }
 
-    void SetBoardColor(const RefPtr<FrameNode>& host);
+    void SetBoardColor();
 
     void SetBackgroundSize(const PointF& start, const PointF& end)
     {
@@ -118,9 +118,9 @@ public:
         }
     }
 
-    void SetSelectSize(const PointF& start, const PointF& end, const RefPtr<FrameNode>& host);
+    void SetSelectSize(const PointF& start, const PointF& end);
 
-    void SetCircleCenter(const PointF& center, const RefPtr<FrameNode>& host);
+    void SetCircleCenter(const PointF& center);
 
     void SetStepRatio(float stepRatio)
     {
@@ -241,29 +241,6 @@ public:
         return { blockCenterX, blockCenterY };
     }
 
-    PointF GetBlockBackStart()
-    {
-        auto backStart = backStart_->Get();
-        return { backStart.GetX(), backStart.GetY() };
-    }
-
-    PointF GetBlockBackEnd()
-    {
-        auto backEnd = backEnd_->Get();
-        return { backEnd.GetX(), backEnd.GetY() };
-    }
-
-    PointF GetStepsLength()
-    {
-        return stepsLength_;
-    }
-
-    RSRect GetTrackRectPosition()
-    {
-        auto rect = GetTrackRect();
-        return rect;
-    }
-
     float GetTrackThickness() const
     {
         return trackThickness_->Get();
@@ -280,27 +257,6 @@ public:
         isVisible_ = isVisible;
     }
 
-    void SetIsPressed(bool isPressed)
-    {
-        if (isPressed_) {
-            isPressed_->Set(isPressed);
-        }
-    }
-
-    void SetIsHovered(bool isHovered)
-    {
-        if (isHovered_) {
-            isHovered_->Set(isHovered);
-        }
-    }
-
-    void SetIsFocused(bool isFocused)
-    {
-        if (isFocused_) {
-            isFocused_->Set(isFocused);
-        }
-    }
-
     bool GetVisible() const
     {
         return isVisible_;
@@ -315,46 +271,17 @@ public:
         }
     }
 
-    void SetHasPrefix(bool hasPrefix)
-    {
-        hasPrefix_ = hasPrefix;
-    }
-
-    void SetHasSuffix(bool hasSuffix)
-    {
-        hasSuffix_ = hasSuffix;
-    }
-
     const std::vector<PointF>& GetStepPointVec() const
     {
         return stepPointVec_;
     }
-    void SetHost(const WeakPtr<FrameNode>& host)
-    {
-        host_ = host;
-    }
 
-    void RegisterStepPointCallback(std::function<void()>&& callback)
-    {
-        StepPointCallback_ = std::move(callback);
-    }
-
-    std::function<void()>& GetStepPointCallback()
-    {
-        return StepPointCallback_;
-    }
-    void DrawStepPoint(float x, float y, int32_t index, RSCanvas& canvas, int32_t numberOfSteps);
-
-    void SetUpdateAccessibilityCallback(const std::function<void()>&& callback)
-    {
-        updateAccessibilityVirtualNode_ = std::move(callback);
-    }
 private:
     void InitializeShapeProperty();
     RSRect GetTrackRect();
     std::vector<GradientColor> GetTrackBackgroundColor() const;
     Gradient SortGradientColorsByOffset(const Gradient& gradient) const;
-    void DrawSelectColor(RSBrush& brush, RSRect& rect);
+
     void DrawBlock(DrawingContext& context);
     void DrawBlockShape(DrawingContext& context);
     void DrawBlockShapeCircle(DrawingContext& context, RefPtr<Circle>& circle);
@@ -363,15 +290,12 @@ private:
     void DrawBlockShapeRect(DrawingContext& context, RefPtr<ShapeRect>& rect);
     void SetShapeRectRadius(RSRoundRect& roundRect, float borderWidth);
     void SetBlockClip(DrawingContext& context);
-    void StopSelectAnimation(const RefPtr<FrameNode>& host);
-    void StopCircleCenterAnimation(const RefPtr<FrameNode>& host);
-    void UpdateSliderEndsPosition();
+    void StopSelectAnimation();
+    void StopCircleCenterAnimation();
 
 private:
     std::function<void(float)> updateImageCenterX_;
     std::function<void(float)> updateImageCenterY_;
-    std::function<void()> updateAccessibilityVirtualNode_;
-    WeakPtr<FrameNode> host_;
 
     // animatable property
     RefPtr<AnimatablePropertyOffsetF> selectStart_;
@@ -382,7 +306,7 @@ private:
     RefPtr<AnimatablePropertyFloat> blockCenterY_;
     RefPtr<AnimatablePropertyFloat> trackThickness_;
     RefPtr<AnimatablePropertyVectorColor> trackBackgroundColor_;
-    RefPtr<AnimatablePropertyVectorColor> selectGradientColor_;
+    RefPtr<AnimatablePropertyColor> selectColor_;
     RefPtr<AnimatablePropertyColor> blockColor_;
     RefPtr<AnimatablePropertyColor> boardColor_;
 
@@ -415,9 +339,6 @@ private:
     RefPtr<PropertyFloat> minResponse_;
     RefPtr<PropertyInt> blockType_;
     RefPtr<PropertyBool> useContentModifier_;
-    RefPtr<PropertyBool> isHovered_;
-    RefPtr<PropertyBool> isPressed_;
-    RefPtr<PropertyBool> isFocused_;
 
     // others
     struct MarkerPenAndPath {
@@ -426,14 +347,11 @@ private:
         RSPath path;
     } markerPenAndPath;
 
-    PointF stepsLength_;
     OffsetF targetSelectEnd_;
     PointF targetCenter_;
     bool isVisible_ = true;
     bool mouseHoverFlag_ = false;
     bool mousePressedFlag_ = false;
-    bool isEnlarge_ = false;
-    float scaleValue_ = 1.0f;
     bool reverse_ = false;
     SliderStatus animatorStatus_ = SliderStatus::DEFAULT; // Translate Animation on-off
     float hotCircleShadowWidth_ = 0.0f;
@@ -442,9 +360,6 @@ private:
     RefPtr<BasicShape> shape_;
     std::vector<PointF> stepPointVec_;
     ACE_DISALLOW_COPY_AND_MOVE(SliderContentModifier);
-    std::function<void()> StepPointCallback_;
-    bool hasPrefix_ = false;
-    bool hasSuffix_ = false;
 };
 
 } // namespace OHOS::Ace::NG

@@ -15,15 +15,6 @@
 
 #include "test/unittest/core/event/gesture_event_hub_test_ng.h"
 
-#include "test/mock/core/common/mock_container.h"
-#include "test/mock/core/common/mock_interaction_interface.h"
-
-#include "core/components_ng/base/view_abstract.h"
-#include "core/components_ng/pattern/grid/grid_item_pattern.h"
-#include "core/components_ng/pattern/grid/grid_pattern.h"
-#include "core/components_ng/pattern/image/image_pattern.h"
-#include "frameworks/core/components_ng/pattern/text/text_pattern.h"
-
 using namespace testing;
 using namespace testing::ext;
 
@@ -40,16 +31,16 @@ RefPtr<FrameNode> CreateGridNodeWithChild(size_t childCount, const GridItemStyle
 {
     auto frameNode = FrameNode::GetOrCreateFrameNode(V2::GRID_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(),
         []() {return AceType::MakeRefPtr<GridPattern>(); });
-    ViewAbstract::SetWidth(Referenced::RawPtr(frameNode), CalcLength(GRID_WIDTH));
-    ViewAbstract::SetHeight(Referenced::RawPtr(frameNode), CalcLength(GRID_HEIGHT));
+    ViewAbstract::SetWidth(frameNode.GetRawPtr(), CalcLength(GRID_WIDTH));
+    ViewAbstract::SetHeight(frameNode.GetRawPtr(), CalcLength(GRID_HEIGHT));
     std::list<RefPtr<FrameNode>> childNodes;
 
     for (size_t i = 0; i < childCount; ++i) {
         auto chidNodeId = ElementRegister::GetInstance()->MakeUniqueId();
         auto childNode = FrameNode::GetOrCreateFrameNode(V2::GRID_ITEM_ETS_TAG, chidNodeId,
             [itemStyle = gridItemStyle]() { return AceType::MakeRefPtr<GridItemPattern>(nullptr, itemStyle); });
-        ViewAbstract::SetWidth(Referenced::RawPtr(childNode), CalcLength(ITEM_WIDTH));
-        ViewAbstract::SetHeight(Referenced::RawPtr(childNode), CalcLength(ITEM_HEIGHT));
+        ViewAbstract::SetWidth(childNode.GetRawPtr(), CalcLength(ITEM_WIDTH));
+        ViewAbstract::SetHeight(childNode.GetRawPtr(), CalcLength(ITEM_HEIGHT));
         childNode->MountToParent(frameNode);
         childNodes.emplace_back(childNode);
     }
@@ -87,18 +78,6 @@ RefPtr<FrameNode> ProcessDragItemGroupScene()
         if (!childNode) {
             continue;
         }
-        auto itemGestureHub = childNode->GetOrCreateGestureEventHub();
-        if (!itemGestureHub) {
-            continue;
-        }
-        itemGestureHub->InitDragDropEvent();
-        auto itemActuator = itemGestureHub->GetDragEventActuator();
-        if (!itemActuator) {
-            continue;
-        }
-        itemActuator->isSelectedItemNode_ = true;
-        itemActuator->itemParentNode_ = gridNode;
-
         auto gridItemPattern = childNode->GetPattern<GridItemPattern>();
         if (!gridItemPattern) {
             continue;
@@ -109,7 +88,7 @@ RefPtr<FrameNode> ProcessDragItemGroupScene()
     CHECK_NULL_RETURN(gridItem, nullptr);
     auto pattern = gridNode->GetPattern<GridPattern>();
     CHECK_NULL_RETURN(pattern, nullptr);
-    pattern->info_.endIndex_ = DEFAULT_CHILD_COUNT;
+    pattern->gridLayoutInfo_.endIndex_ = DEFAULT_CHILD_COUNT;
 
     gestureEventHub->InitDragDropEvent();
     auto actuator = gestureEventHub->GetDragEventActuator();
@@ -143,7 +122,7 @@ HWTEST_F(GestureEventHubTestNg, GetHitTestModeStr001, TestSize.Level1)
      * @tc.steps: step1. Calling the GetHitTestModeStr interface
      * @tc.expected: EventHub ->GetHitTestModeStr() is not equal to nullptr
      */
-    EXPECT_TRUE(testModeStr != GestureEventHub::GetHitTestModeStr(EventHub));
+    EXPECT_TRUE(testModeStr != EventHub->GetHitTestModeStr());
 }
 
 /**
@@ -348,12 +327,6 @@ HWTEST_F(GestureEventHubTestNg, GestureEventHubTest032, TestSize.Level1)
     gestureEventHub->ProcessTouchTestHierarchy(
         COORDINATE_OFFSET, touchRestrict, innerTargets, finalResult, TOUCH_ID, nullptr, responseLinkResult);
     EXPECT_TRUE(finalResult.empty());
-
-    auto clickRecognizer = AceType::MakeRefPtr<ClickRecognizer>(FINGERS, 1);
-    innerTargets.emplace_back(clickRecognizer);
-
-    gestureEventHub->ProcessTouchTestHierarchy(
-        COORDINATE_OFFSET, touchRestrict, innerTargets, finalResult, TOUCH_ID, nullptr, responseLinkResult);
 }
 
 /**
@@ -554,8 +527,6 @@ HWTEST_F(GestureEventHubTestNg, GetDragDropInfo002, TestSize.Level1)
     RefPtr<OHOS::Ace::DragEvent> dragEvent = AceType::MakeRefPtr<OHOS::Ace::DragEvent>();
     gestureEventHub->InitDragDropEvent();
     ASSERT_NE(gestureEventHub->dragEventActuator_, nullptr);
-    gestureEventHub->SetTextDraggable(true);
-    info.SetInputEventType(InputEventType::MOUSE_BUTTON);
     auto dragDropInfo = gestureEventHub->GetDragDropInfo(info, frameNode, dragPreviewInfo, dragEvent);
     EXPECT_TRUE(dragDropInfo.customNode);
     EXPECT_EQ(dragDropInfo.extraInfo, "user set extraInfo");
@@ -579,7 +550,6 @@ HWTEST_F(GestureEventHubTestNg, GetUnifiedData001, TestSize.Level1)
     auto gestureEventHub = AceType::MakeRefPtr<GestureEventHub>(eventHub);
     EXPECT_TRUE(gestureEventHub);
 
-    gestureEventHub->InitDragDropEvent();
     /**
      * @tc.steps: step2. set OnDragStart for eventHub
      *            case: user not set onDragStart callback function
@@ -654,7 +624,6 @@ HWTEST_F(GestureEventHubTestNg, GetUnifiedData002, TestSize.Level1)
      *            case: user do not set unifiedData and extraInfo
      * @tc.expected: unifiedData is not null, extraInfo is not empty.
      */
-    gestureEventHub->InitDragDropEvent();
     DragDropInfo dragDropInfo;
     gestureEventHub->GetUnifiedData("", dragDropInfo, dragEvent);
     EXPECT_TRUE(dragEvent->GetData());
@@ -682,7 +651,7 @@ HWTEST_F(GestureEventHubTestNg, GetUnifiedData002, TestSize.Level1)
 
 /**
  * @tc.name: GestureEventHubNodeTest001
- * @tc.desc: Test SetFrameNodeCommonOnClick and ClearJSFrameNodeOnClick.
+ * @tc.desc: Test SetJSFrameNodeOnClick and ClearJSFrameNodeOnClick.
  * @tc.type: FUNC
  */
 HWTEST_F(GestureEventHubTestNg, GestureEventHubNodeTest001, TestSize.Level1)
@@ -697,19 +666,19 @@ HWTEST_F(GestureEventHubTestNg, GestureEventHubNodeTest001, TestSize.Level1)
     EXPECT_TRUE(gestureEventHub);
 
     /**
-     * @tc.steps: step2. Create GestureEventFunc and call SetFrameNodeCommonOnClick.
+     * @tc.steps: step2. Create GestureEventFunc and call SetJSFrameNodeOnClick.
      * @tc.expected: ClickEventActuator_ is not nullptr.
      */
     GestureEventFunc gestureEventFunc = [](GestureEvent& info) {};
-    gestureEventHub->SetFrameNodeCommonOnClick(std::move(gestureEventFunc));
+    gestureEventHub->SetJSFrameNodeOnClick(std::move(gestureEventFunc));
     EXPECT_NE(gestureEventHub->clickEventActuator_, nullptr);
 
     /**
-     * @tc.steps: step3. Set parallelCombineClick and call SetFrameNodeCommonOnClick.
+     * @tc.steps: step3. Set parallelCombineClick and call SetJSFrameNodeOnClick.
      * @tc.expected: userParallelClickEventActuator_ is not nullptr.
      */
     gestureEventHub->parallelCombineClick = true;
-    gestureEventHub->SetFrameNodeCommonOnClick(std::move(gestureEventFunc));
+    gestureEventHub->SetJSFrameNodeOnClick(std::move(gestureEventFunc));
     EXPECT_NE(gestureEventHub->userParallelClickEventActuator_, nullptr);
 
     /**
@@ -722,7 +691,7 @@ HWTEST_F(GestureEventHubTestNg, GestureEventHubNodeTest001, TestSize.Level1)
 
 /**
  * @tc.name: GestureEventHubNodeTest002
- * @tc.desc: Test SetOnTouchEvent, SetFrameNodeCommonOnTouchEvent and ClearJSFrameNodeOnClick.
+ * @tc.desc: Test SetOnTouchEvent, SetJSFrameNodeOnTouchEvent and ClearJSFrameNodeOnClick.
  * @tc.type: FUNC
  */
 HWTEST_F(GestureEventHubTestNg, GestureEventHubNodeTest002, TestSize.Level1)
@@ -742,7 +711,7 @@ HWTEST_F(GestureEventHubTestNg, GestureEventHubNodeTest002, TestSize.Level1)
      */
     TouchEventFunc touchEventFunc = [](TouchEventInfo& info) {};
     gestureEventHub->SetOnTouchEvent(std::move(touchEventFunc));
-    gestureEventHub->SetFrameNodeCommonOnTouchEvent(std::move(touchEventFunc));
+    gestureEventHub->SetJSFrameNodeOnTouchEvent(std::move(touchEventFunc));
     EXPECT_NE(gestureEventHub->touchEventActuator_, nullptr);
 
     /**
@@ -833,21 +802,25 @@ HWTEST_F(GestureEventHubTestNg, GestureEventHubModifierTest001, TestSize.Level1)
     /**
      * @tc.steps: step2. call AttachGesture
      *            case: recreateGesture_ is true & modifierGestures_.size() != gestureHierarchy_.size()
-     * @tc.expected: modifierGestures_ has one element & gestureHierarchy_ has zero element
+     * @tc.expected: recreateGesture_ = false
+     *               modifierGestures_ has one element & gestureHierarchy_ has one element
      */
     auto longPressGesture = AceType::MakeRefPtr<LongPressGesture>(FINGERS, false, 1);
     gestureEventHub->AttachGesture(longPressGesture);
+    EXPECT_FALSE(gestureEventHub->recreateGesture_);
     auto sizeModifierGestures = static_cast<int32_t>(gestureEventHub->modifierGestures_.size());
     auto sizeGestureHierarchy = static_cast<int32_t>(gestureEventHub->gestureHierarchy_.size());
     EXPECT_EQ(sizeModifierGestures, 1);
-    EXPECT_EQ(sizeGestureHierarchy, 0);
+    EXPECT_EQ(sizeGestureHierarchy, 1);
 
     /**
      * @tc.steps: step3. call RemoveGesture
      *            case: recreateGesture_ is true & modifierGestures_.size() != gestureHierarchy_.size()
-     * @tc.expected: modifierGestures_ has zero element & gestureHierarchy_ has zero element
+     * @tc.expected: recreateGesture_ = false
+     *               modifierGestures_ has zero element & gestureHierarchy_ has zero element
      */
     gestureEventHub->RemoveGesture(longPressGesture);
+    EXPECT_FALSE(gestureEventHub->recreateGesture_);
     sizeModifierGestures = static_cast<int32_t>(gestureEventHub->modifierGestures_.size());
     sizeGestureHierarchy = static_cast<int32_t>(gestureEventHub->gestureHierarchy_.size());
     EXPECT_EQ(sizeModifierGestures, 0);
@@ -856,15 +829,18 @@ HWTEST_F(GestureEventHubTestNg, GestureEventHubModifierTest001, TestSize.Level1)
     /**
      * @tc.steps: step4. call AttachGesture & ClearModifierGesture
      *            case: recreateGesture_ is true & gestures_.size() != gestureHierarchy_.size()
-     * @tc.expected: modifierGestures_ has cleared & gestureHierarchy_ has cleared
+     * @tc.expected: recreateGesture_ = false
+     *               modifierGestures_ has cleared & gestureHierarchy_ has cleared
      */
     gestureEventHub->AttachGesture(longPressGesture);
+    EXPECT_FALSE(gestureEventHub->recreateGesture_);
     sizeModifierGestures = static_cast<int32_t>(gestureEventHub->modifierGestures_.size());
     sizeGestureHierarchy = static_cast<int32_t>(gestureEventHub->gestureHierarchy_.size());
     EXPECT_EQ(sizeModifierGestures, 1);
-    EXPECT_EQ(sizeGestureHierarchy, 0);
+    EXPECT_EQ(sizeGestureHierarchy, 1);
 
     gestureEventHub->ClearModifierGesture();
+    EXPECT_FALSE(gestureEventHub->recreateGesture_);
     sizeModifierGestures = static_cast<int32_t>(gestureEventHub->modifierGestures_.size());
     sizeGestureHierarchy = static_cast<int32_t>(gestureEventHub->gestureHierarchy_.size());
     EXPECT_EQ(sizeModifierGestures, 0);
@@ -891,7 +867,8 @@ HWTEST_F(GestureEventHubTestNg, GestureEventHubModifierTest002, TestSize.Level1)
 
     /**
      * @tc.steps: step4. call RemoveGesturesByTag
-     * @tc.expected: modifierGestures_ one element & gestureHierarchy_ has zero element & group has one child
+     * @tc.expected: recreateGesture_ = false
+     *               modifierGestures_ one element & gestureHierarchy_ has one element & group has one child
      */
     std::vector<RefPtr<Gesture>> gestures;
     auto longPressGestureOne = AceType::MakeRefPtr<LongPressGesture>(FINGERS, false, 1);
@@ -901,16 +878,18 @@ HWTEST_F(GestureEventHubTestNg, GestureEventHubModifierTest002, TestSize.Level1)
     gestures.emplace_back(longPressGestureTwo);
     auto group = AceType::MakeRefPtr<GestureGroup>(GestureMode::Exclusive, gestures);
     gestureEventHub->AttachGesture(group);
+    EXPECT_FALSE(gestureEventHub->recreateGesture_);
     auto sizeModifierGestures = static_cast<int32_t>(gestureEventHub->modifierGestures_.size());
     auto sizeGestureHierarchy = static_cast<int32_t>(gestureEventHub->gestureHierarchy_.size());
     EXPECT_EQ(sizeModifierGestures, 1);
-    EXPECT_EQ(sizeGestureHierarchy, 0);
+    EXPECT_EQ(sizeGestureHierarchy, 1);
 
     gestureEventHub->RemoveGesturesByTag(CHECK_TAG_1);
+    EXPECT_FALSE(gestureEventHub->recreateGesture_);
     sizeModifierGestures = static_cast<int32_t>(gestureEventHub->modifierGestures_.size());
     sizeGestureHierarchy = static_cast<int32_t>(gestureEventHub->gestureHierarchy_.size());
     EXPECT_EQ(sizeModifierGestures, 1);
-    EXPECT_EQ(sizeGestureHierarchy, 0);
+    EXPECT_EQ(sizeGestureHierarchy, 1);
     EXPECT_EQ(group->gestures_.size(), 1);
 }
 
@@ -952,7 +931,7 @@ HWTEST_F(GestureEventHubTestNg, UpdateExtraInfoTest001, TestSize.Level1)
         AdaptiveColor::DEFAULT, {{2.0f, 2.0f}}}};
     std::optional<Shadow> shadowVal;
     std::optional<BorderRadiusProperty> borderRadiusVal;
-    OptionsAfterApplied optionTmp = {0, shadowVal, "test", true, borderRadiusVal, {bgBackEffect}};
+    OptionsAfterApplied optionTmp = {0, shadowVal, "test", borderRadiusVal, {bgBackEffect}};
     DragPreviewOption dragPreviewInfos;
     dragPreviewInfos.options = optionTmp;
     frameNode->SetDragPreviewOptions(dragPreviewInfos);
@@ -961,8 +940,7 @@ HWTEST_F(GestureEventHubTestNg, UpdateExtraInfoTest001, TestSize.Level1)
      * @tc.steps: step2. Test UpdateExtraInfo
     */
     auto arkExtraInfoJson = JsonUtil::Create(true);
-    PreparedInfoForDrag data;
-    guestureEventHub->UpdateExtraInfo(frameNode, arkExtraInfoJson, 1.0f, data);
+    guestureEventHub->UpdateExtraInfo(frameNode, arkExtraInfoJson, 1.0f);
     auto radiusJs = arkExtraInfoJson->GetDouble("blur_radius", -1);
     EXPECT_EQ(radiusJs, 2.0);
     /**
@@ -971,7 +949,7 @@ HWTEST_F(GestureEventHubTestNg, UpdateExtraInfoTest001, TestSize.Level1)
     dragPreviewInfos.options.blurbgEffect.backGroundEffect.radius.SetValue(0);
     frameNode->SetDragPreviewOptions(dragPreviewInfos);
     auto jsInfos = JsonUtil::Create(true);
-    guestureEventHub->UpdateExtraInfo(frameNode, jsInfos, 1.0f, data);
+    guestureEventHub->UpdateExtraInfo(frameNode, jsInfos, 1.0f);
     radiusJs = jsInfos->GetDouble("blur_radius", -1);
     EXPECT_EQ(radiusJs, -1);
 }
@@ -995,7 +973,7 @@ HWTEST_F(GestureEventHubTestNg, GestureEventHubAddGestureToGestureHierarchyTest0
      * @tc.steps: step2. Invoke AddGestureToGestureHierarchy.
      * @tc.expected: gesture is null.
      */
-    guestureEventHub->AddGestureToGestureHierarchy(nullptr, false);
+    guestureEventHub->AddGestureToGestureHierarchy(nullptr);
 }
 
 /**
@@ -1152,8 +1130,7 @@ HWTEST_F(GestureEventHubTestNg, GestureEventHubIsNeedSwitchToSubWindowTest001, T
     frameNode2->GetOrCreateFocusHub();
     auto focusHub = frameNode2->GetFocusHub();
     EXPECT_NE(focusHub, nullptr);
-    PreparedInfoForDrag data;
-    gestureEventHub->IsNeedSwitchToSubWindow(data);
+    gestureEventHub->IsNeedSwitchToSubWindow();
     EXPECT_FALSE(gestureEventHub->IsPixelMapNeedScale());
 }
 
@@ -1220,7 +1197,7 @@ HWTEST_F(GestureEventHubTestNg, GestureEventHubGetSelectItemSizeTest001, TestSiz
 
 /**
  * @tc.name: GestureEventHubNodeTest003
- * @tc.desc: Test SetOnTouchEvent, SetFrameNodeCommonOnTouchEvent and ClearJSFrameNodeOnTouch.
+ * @tc.desc: Test SetOnTouchEvent, SetJSFrameNodeOnTouchEvent and ClearJSFrameNodeOnTouch.
  * @tc.type: FUNC
  */
 HWTEST_F(GestureEventHubTestNg, GestureEventHubNodeTest003, TestSize.Level1)
@@ -1243,7 +1220,7 @@ HWTEST_F(GestureEventHubTestNg, GestureEventHubNodeTest003, TestSize.Level1)
     gestureEventHub->SetOnTouchEvent(std::move(touchEventFunc));
     gestureEventHub->touchEventActuator_ = nullptr;
     gestureEventHub->SetOnTouchEvent(std::move(touchEventFunc));
-    gestureEventHub->SetFrameNodeCommonOnTouchEvent(std::move(touchEventFunc));
+    gestureEventHub->SetJSFrameNodeOnTouchEvent(std::move(touchEventFunc));
     gestureEventHub->ClearJSFrameNodeOnTouch();
     EXPECT_NE(gestureEventHub->touchEventActuator_, nullptr);
 }
@@ -1335,8 +1312,7 @@ HWTEST_F(GestureEventHubTestNg, GestureEventHubGetPixelMapOffset001, TestSize.Le
     constexpr float PIXELMAP_HEIGHT_RATE = -0.2f;
     GestureEvent info = GestureEvent();
     auto size = SizeF(1, 1);
-    PreparedInfoForDrag data;
-    gestureEventHub->GetPixelMapOffset(info, size, data, 1.0f);
+    gestureEventHub->GetPixelMapOffset(info, size, 1.0f);
     auto frameNode2 = gestureEventHub->GetFrameNode();
     EXPECT_NE(frameNode2, nullptr);
     OffsetF result = OffsetF(size.Width() * PIXELMAP_WIDTH_RATE, size.Height() * PIXELMAP_HEIGHT_RATE);
@@ -1353,7 +1329,7 @@ HWTEST_F(GestureEventHubTestNg, GestureEventHubGetPixelMapOffset001, TestSize.Le
      * NearZero(size.Width()) is true.
      */
     size = SizeF(0, 0);
-    gestureEventHub->GetPixelMapOffset(info, size, data, 1.0f);
+    gestureEventHub->GetPixelMapOffset(info, size, 1.0f);
     result = OffsetF(size.Width() * PIXELMAP_WIDTH_RATE, size.Height() * PIXELMAP_HEIGHT_RATE);
     EXPECT_TRUE(NearZero(gestureEventHub->frameNodeSize_.Width()));
     EXPECT_TRUE(NearZero(size.Width()));
@@ -1369,7 +1345,7 @@ HWTEST_F(GestureEventHubTestNg, GestureEventHubGetPixelMapOffset001, TestSize.Le
      */
     size = SizeF(500, 600);
     gestureEventHub->frameNodeSize_ = SizeF(1, 1);
-    gestureEventHub->GetPixelMapOffset(info, size, data, 1.0f);
+    gestureEventHub->GetPixelMapOffset(info, size, 1.0f);
     result = OffsetF(size.Width() * PIXELMAP_WIDTH_RATE, size.Height() * PIXELMAP_HEIGHT_RATE);
     EXPECT_FALSE(NearZero(gestureEventHub->frameNodeSize_.Width()));
     EXPECT_FALSE(NearZero(size.Width()));
@@ -1381,7 +1357,7 @@ HWTEST_F(GestureEventHubTestNg, GestureEventHubGetPixelMapOffset001, TestSize.Le
      */
     size = SizeF(0, 0);
     gestureEventHub->frameNodeSize_ = SizeF(1, 1);
-    gestureEventHub->GetPixelMapOffset(info, size, data, 1.0f);
+    gestureEventHub->GetPixelMapOffset(info, size, 1.0f);
     result = OffsetF(size.Width() * PIXELMAP_WIDTH_RATE, size.Height() * PIXELMAP_HEIGHT_RATE);
     EXPECT_FALSE(NearZero(gestureEventHub->frameNodeSize_.Width()));
     EXPECT_TRUE(NearZero(size.Width()));
@@ -1412,8 +1388,7 @@ HWTEST_F(GestureEventHubTestNg, GestureEventHubGetPixelMapScaleTest002, TestSize
     int32_t width = 600;
     GestureEvent info = GestureEvent();
     auto size = SizeF(1, 1);
-    PreparedInfoForDrag data;
-    gestureEventHub->GetPixelMapOffset(info, size, data, 1.0f);
+    gestureEventHub->GetPixelMapOffset(info, size, 1.0f);
     auto frameNode2 = gestureEventHub->GetFrameNode();
     EXPECT_NE(frameNode2, nullptr);
     auto pipeline = PipelineContext::GetCurrentContext();
@@ -1591,7 +1566,7 @@ HWTEST_F(GestureEventHubTestNg, StartLongPressActionForWeb001, TestSize.Level1)
     auto taskExecutor = context->GetTaskExecutor();
     ASSERT_NE(taskExecutor, nullptr);
     gestureEventHub->StartLongPressActionForWeb();
-    EXPECT_NE(gestureEventHub->GetDragEventActuator(), nullptr);
+    ASSERT_NE(gestureEventHub->GetDragEventActuator(), nullptr);
 }
 
 /**
@@ -1621,7 +1596,7 @@ HWTEST_F(GestureEventHubTestNg, WebDragAction001, TestSize.Level1)
     auto dragEvent = AceType::MakeRefPtr<DragEvent>(
         std::move(dragActionStart), std::move(dragActionUpdate), std::move(dragActionEnd), std::move(dragActionCancel));
     gestureEventHub->SetCustomDragEvent(dragEvent, PAN_DIRECTION_ALL, FINGERS, DISTANCE);
-    gestureEventHub->HandleNotAllowDrag(GestureEvent());
+    gestureEventHub->HandleNotallowDrag(GestureEvent());
 
     /**
      * @tc.steps: step3. create taskExecutor to fire task callBack.
@@ -1635,7 +1610,7 @@ HWTEST_F(GestureEventHubTestNg, WebDragAction001, TestSize.Level1)
     gestureEventHub->StartDragTaskForWeb();
     gestureEventHub->CancelDragForWeb();
     gestureEventHub->ResetDragActionForWeb();
-    EXPECT_NE(gestureEventHub->GetDragEventActuator(), nullptr);
+    ASSERT_NE(gestureEventHub->GetDragEventActuator(), nullptr);
 }
 
 /**
@@ -1707,10 +1682,8 @@ HWTEST_F(GestureEventHubTestNg, RegisterCoordinationListener001, TestSize.Level1
     ASSERT_NE(taskExecutor, nullptr);
     auto mock = AceType::DynamicCast<MockInteractionInterface>(InteractionInterface::GetInstance());
     ASSERT_NE(mock, nullptr);
+    EXPECT_CALL(*mock, RegisterCoordinationListener(testing::_)).Times(1).WillOnce(Return(50));
     gestureEventHub->RegisterCoordinationListener(context);
-    if (mock->gDragOutCallback) {
-        mock->gDragOutCallback();
-    }
 }
 
 /**
@@ -1739,7 +1712,7 @@ HWTEST_F(GestureEventHubTestNg, GridNodeHandleOnDragUpdate001, TestSize.Level1)
     ASSERT_NE(gridItem, nullptr);
     auto pattern = gridNode->GetPattern<GridPattern>();
     ASSERT_NE(pattern, nullptr);
-    pattern->info_.endIndex_ = DEFAULT_CHILD_COUNT;
+    pattern->gridLayoutInfo_.endIndex_ = DEFAULT_CHILD_COUNT;
 
     /**
      * @tc.steps: step2. set all griditems are selected.
@@ -1763,7 +1736,7 @@ HWTEST_F(GestureEventHubTestNg, GridNodeHandleOnDragUpdate001, TestSize.Level1)
         gestureEventHub->HandleOnDragUpdate(info);
     }
     gestureEventHub->HandleOnDragEnd(info);
-    EXPECT_NE(gestureEventHub->gestureInfoForWeb_, nullptr);
+    ASSERT_NE(gestureEventHub->gestureInfoForWeb_, nullptr);
 }
 
 /**
@@ -1801,7 +1774,6 @@ HWTEST_F(GestureEventHubTestNg, GetDragCallback001, TestSize.Level1)
      * @tc.steps: step3. Invoke GetDragCallback to get function and fire this function.
      * @tc.expected: fire function success.
      */
-    MockContainer::SetUp();
     int32_t callbackInfo = 0;
     eventHub->SetOnDragEnd([&callbackInfo](const RefPtr<OHOS::Ace::DragEvent>& /*dragEvent*/) {
         callbackInfo = 1;
@@ -1813,7 +1785,6 @@ HWTEST_F(GestureEventHubTestNg, GetDragCallback001, TestSize.Level1)
     dragCallback(notifyMessage);
     EXPECT_FALSE(dragDropManager->IsDragged());
     EXPECT_EQ(callbackInfo, 1);
-    MockContainer::TearDown();
 }
 
 /**
@@ -1905,7 +1876,7 @@ HWTEST_F(GestureEventHubTestNg, SetDragGatherPixelMaps001, TestSize.Level1)
     GestureEvent info;
     info.SetInputEventType(InputEventType::MOUSE_BUTTON);
     gestureEventHub->SetDragGatherPixelMaps(info);
-    EXPECT_TRUE(dragDropManager->gatherPixelMaps_.empty());
+    EXPECT_FALSE(dragDropManager->gatherPixelMaps_.empty());
 }
 
 /**
@@ -1950,7 +1921,7 @@ HWTEST_F(GestureEventHubTestNg, SetDragGatherPixelMaps002, TestSize.Level1)
     GestureEvent info;
     info.SetInputEventType(InputEventType::TOUCH_SCREEN);
     gestureEventHub->SetDragGatherPixelMaps(info);
-    EXPECT_TRUE(dragDropManager->gatherPixelMaps_.empty());
+    EXPECT_FALSE(dragDropManager->gatherPixelMaps_.empty());
 }
 
 /**
@@ -1964,12 +1935,9 @@ HWTEST_F(GestureEventHubTestNg, GetSelectItemSize001, TestSize.Level1)
      * @tc.steps: step1. Create grid with gridItem frame node tree.
      * @tc.expected: instance is not null.
      */
-    SystemProperties::dragDropFrameworkStatus_ = 3;
     auto gridNode = ProcessDragItemGroupScene();
     ASSERT_NE(gridNode, nullptr);
-    auto gridItem = AceType::DynamicCast<FrameNode>(gridNode->GetChildByIndex(0));
-    ASSERT_NE(gridItem, nullptr);
-    auto gestureEventHub = gridItem->GetOrCreateGestureEventHub();
+    auto gestureEventHub = gridNode->GetOrCreateGestureEventHub();
     ASSERT_NE(gestureEventHub, nullptr);
 
     /**

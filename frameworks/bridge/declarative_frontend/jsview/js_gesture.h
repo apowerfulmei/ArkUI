@@ -80,7 +80,6 @@ public:
     void SetDistance(const JSCallbackInfo& args);
     void SetFingers(const JSCallbackInfo& args);
     void GetDirection(const JSCallbackInfo& args);
-    void GetDistance(const JSCallbackInfo& args);
 
     void SetPanGestureOption(const RefPtr<PanGestureOption>& panGestureOption)
     {
@@ -104,8 +103,6 @@ public:
     ~JSPanGesture() override = default;
 
     static void Create(const JSCallbackInfo& args);
-    static napi_value ParsePanDistanceMap(JSRef<JSVal> jsDistanceMap, PanDistanceMapDimension& distanceMap);
-    static void ParsePanDistance(const JSRef<JSObject>& obj, PanDistanceMapDimension& distanceMap);
 };
 
 class JSSwipeGesture : public JSGesture {
@@ -148,14 +145,14 @@ public:
 };
 
 class JSParallelGesture : public JSGesture {
-    DECLARE_ACE_TYPE(JSParallelGesture, JSGesture);
+    DECLARE_ACE_TYPE(JSParallelGesture, JSGesture)
 public:
     static void Create();
     static void JSBind(BindingTarget globalObj);
 };
 
 class JSTimeoutGesture : public JSGesture {
-    DECLARE_ACE_TYPE(JSTimeoutGesture, JSGesture);
+    DECLARE_ACE_TYPE(JSTimeoutGesture, JSGesture)
 public:
     static void Create(const JSCallbackInfo& args);
     static void Pop();
@@ -163,3 +160,4 @@ public:
 };
 } // namespace OHOS::Ace::Framework
 #endif // FOUNDATION_ACE_ACE_ENGINE_FRAMEWORKS_BRIDGE_DECLARATIVE_FRONTEND_JSVIEW_JS_GESTURE_H
+

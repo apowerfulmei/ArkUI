@@ -15,7 +15,6 @@
 
 #include "bridge/declarative_frontend/jsview/js_tabs_controller.h"
 
-#include "base/log/event_report.h"
 #include "bridge/common/utils/engine_helper.h"
 #include "bridge/declarative_frontend/engine/bindings.h"
 #include "bridge/declarative_frontend/engine/js_converter.h"
@@ -86,6 +85,7 @@ void ReturnPromise(const JSCallbackInfo& info, napi_value result)
 JSTabsController::JSTabsController()
 {
     controller_ = CreateController();
+    tabsController_ = MakeRefPtr<NG::TabsControllerNG>();
 }
 
 void JSTabsController::JSBind(BindingTarget globalObj)
@@ -124,17 +124,12 @@ RefPtr<TabController> JSTabsController::CreateController()
 void JSTabsController::ChangeIndex(int32_t index)
 {
     ContainerScope scope(instanceId_);
-    auto tabsController = tabsControllerWeak_.Upgrade();
-    if (tabsController) {
-        const auto& updateCubicCurveCallback = tabsController->GetUpdateCubicCurveCallback();
+    if (tabsController_) {
+        const auto& updateCubicCurveCallback = tabsController_->GetUpdateCubicCurveCallback();
         if (updateCubicCurveCallback != nullptr) {
             updateCubicCurveCallback();
         }
-        TAG_LOGI(AceLogTag::ACE_TABS, "changeIndex %{public}d", index);
-        tabsController->SwipeTo(index);
-    } else {
-        EventReport::ReportScrollableErrorEvent(
-            "Tabs", ScrollableErrorType::CONTROLLER_NOT_BIND, "changeIndex: Tabs controller not bind.");
+        tabsController_->SwipeTo(index);
     }
 
 #ifndef NG_BUILD
@@ -155,10 +150,7 @@ void JSTabsController::PreloadItems(const JSCallbackInfo& args)
     asyncContext->env = env;
     napi_value promise = nullptr;
     napi_create_promise(env, &asyncContext->deferred, &promise);
-    auto tabsController = tabsControllerWeak_.Upgrade();
-    if (!tabsController) {
-        EventReport::ReportScrollableErrorEvent(
-            "Tabs", ScrollableErrorType::CONTROLLER_NOT_BIND, "preloadItems: Tabs controller not bind.");
+    if (!tabsController_) {
         ReturnPromise(args, promise);
         return;
     }
@@ -179,21 +171,15 @@ void JSTabsController::PreloadItems(const JSCallbackInfo& args)
         CHECK_NULL_VOID(asyncContext);
         HandleDeferred(asyncContext, errorCode, message);
     };
-    tabsController->SetPreloadFinishCallback(onPreloadFinish);
-    tabsController->PreloadItems(indexSet);
+    tabsController_->SetPreloadFinishCallback(onPreloadFinish);
+    tabsController_->PreloadItems(indexSet);
     ReturnPromise(args, promise);
 }
 
 void JSTabsController::SetTabBarTranslate(const JSCallbackInfo& args)
 {
     ContainerScope scope(instanceId_);
-    auto tabsController = tabsControllerWeak_.Upgrade();
-    if (!tabsController) {
-        EventReport::ReportScrollableErrorEvent(
-            "Tabs", ScrollableErrorType::CONTROLLER_NOT_BIND, "setTabBarTranslate: Tabs controller not bind.");
-        return;
-    }
-
+    CHECK_NULL_VOID(tabsController_);
     if (args.Length() <= 0) {
         return;
     }
@@ -210,39 +196,33 @@ void JSTabsController::SetTabBarTranslate(const JSCallbackInfo& args)
             JSViewAbstract::ParseJsDimensionVp(jsObj->GetProperty(static_cast<int32_t>(ArkUIIndex::Y)), translateY);
             JSViewAbstract::ParseJsDimensionVp(jsObj->GetProperty(static_cast<int32_t>(ArkUIIndex::Z)), translateZ);
             auto options = NG::TranslateOptions(translateX, translateY, translateZ);
-            tabsController->SetTabBarTranslate(options);
+            tabsController_->SetTabBarTranslate(options);
             return;
         }
     }
     CalcDimension value;
     if (JSViewAbstract::ParseJsDimensionVp(translate, value)) {
         auto options = NG::TranslateOptions(value, value, value);
-        tabsController->SetTabBarTranslate(options);
+        tabsController_->SetTabBarTranslate(options);
     } else {
         auto options = NG::TranslateOptions(0.0f, 0.0f, 0.0f);
-        tabsController->SetTabBarTranslate(options);
+        tabsController_->SetTabBarTranslate(options);
     }
 }
 
 void JSTabsController::SetTabBarOpacity(const JSCallbackInfo& args)
 {
     ContainerScope scope(instanceId_);
-    auto tabsController = tabsControllerWeak_.Upgrade();
-    if (!tabsController) {
-        EventReport::ReportScrollableErrorEvent(
-            "Tabs", ScrollableErrorType::CONTROLLER_NOT_BIND, "setTabBarOpacity: Tabs controller not bind.");
-        return;
-    }
-
+    CHECK_NULL_VOID(tabsController_);
     if (args.Length() <= 0) {
         return;
     }
     double opacity = 0.0;
     if (JSViewAbstract::ParseJsDouble(args[0], opacity)) {
         opacity = std::clamp(opacity, 0.0, 1.0);
-        tabsController->SetTabBarOpacity(opacity);
+        tabsController_->SetTabBarOpacity(opacity);
     } else {
-        tabsController->SetTabBarOpacity(1.0f);
+        tabsController_->SetTabBarOpacity(1.0f);
     }
 }
 

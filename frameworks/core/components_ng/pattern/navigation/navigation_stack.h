@@ -29,7 +29,7 @@ namespace OHOS::Ace::NG {
 using NavPathList = std::vector<std::pair<std::string, RefPtr<UINode>>>;
 class NavDestinationContext;
 class RouteInfo : public virtual AceType {
-    DECLARE_ACE_TYPE(NG::RouteInfo, AceType);
+    DECLARE_ACE_TYPE(NG::RouteInfo, AceType)
 public:
     RouteInfo() = default;
     virtual ~RouteInfo() = default;
@@ -40,8 +40,8 @@ public:
     }
 };
 
-class ACE_FORCE_EXPORT NavigationStack : public virtual AceType {
-    DECLARE_ACE_TYPE(NG::NavigationStack, AceType);
+class NavigationStack : public virtual AceType {
+    DECLARE_ACE_TYPE(NG::NavigationStack, AceType)
 public:
     NavigationStack() = default;
     ~NavigationStack() override = default;
@@ -53,17 +53,11 @@ public:
         return navPathList_;
     }
 
-    NavPathList& GetPreNavPathList()
-    {
-        return preNavPathList_;
-    }
-
     virtual void SetOnStateChangedCallback(std::function<void()> callback) {}
 
     void SavePreNavList()
     {
         // same navdestination nodes before poped
-        isPreForceSetList_ = isCurForceSetList_;
         navPathListBeforePoped_.clear();
         for (auto iter: preNavPathList_) {
             navPathListBeforePoped_.emplace_back(std::make_pair(iter.first, WeakPtr<UINode>(iter.second)));
@@ -72,19 +66,11 @@ public:
 
     void SetNavPathList(const NavPathList& navPathList)
     {
+        // save pre nav path list when poped
+        SavePreNavList();
         preNavPathList_ = navPathList;
         //copy nav path
         navPathList_ = navPathList;
-    }
-
-    void SetIsCurForceSetList(bool isForce)
-    {
-        isCurForceSetList_ = isForce;
-    }
-
-    bool GetIsPreForceSetList() const
-    {
-        return isPreForceSetList_;
     }
 
     std::vector<std::pair<std::string, WeakPtr<UINode>>>& GetAllNavDestinationNodesPrev()
@@ -149,10 +135,10 @@ public:
     void Add(const std::string& name, const RefPtr<UINode>& navDestinationNode, NavRouteMode mode,
         const RefPtr<RouteInfo>& routeInfo = nullptr);
     RefPtr<UINode> Get();
+    RefPtr<UINode> Get(int32_t index);
+    std::string GetNavDesNameByIndex(int32_t index);
     bool Get(const std::string& name, RefPtr<UINode>& navDestinationNode, int32_t& index);
     bool GetFromPreBackup(const std::string& name, RefPtr<UINode>& navDestinationNode, int32_t& index);
-    std::string GetNavDesNameByIndex(int32_t index);
-    RefPtr<UINode> Get(int32_t index);
     RefPtr<UINode> GetPre(const std::string& name, const RefPtr<UINode>& navDestinationNode);
     virtual bool IsEmpty();
     virtual std::vector<std::string> GetAllPathName();
@@ -167,7 +153,7 @@ public:
     virtual void Clear();
     virtual void UpdateReplaceValue(int32_t replaceValue) const;
     virtual int32_t GetReplaceValue() const;
-    virtual bool CreateNodeByIndex(int32_t index, const WeakPtr<UINode>& customNode, RefPtr<UINode>& node);
+    virtual RefPtr<UINode> CreateNodeByIndex(int32_t index, const WeakPtr<UINode>& customNode);
     virtual RefPtr<UINode> CreateNodeByRouteInfo(const RefPtr<RouteInfo>& routeInfo, const WeakPtr<UINode>& node);
     virtual bool GetDisableAnimation() const
     {
@@ -194,6 +180,7 @@ public:
 
     virtual void OnAttachToParent(RefPtr<NavigationStack> parent) {}
     virtual void OnDetachFromParent() {}
+    virtual void ClearPreBuildNodeList() {}
 
     virtual std::vector<std::string> DumpStackInfo() const;
 
@@ -201,29 +188,10 @@ public:
     virtual void MoveIndexToTop(int32_t index) {}
 
     virtual std::string GetStringifyParamByIndex(int32_t index) const { return ""; }
-    virtual std::string GetSerializedParamSafely(int32_t index) const { return ""; }
     virtual void SetPathArray(const std::vector<NavdestinationRecoveryInfo>& navdestinationsInfo) {}
     virtual void SetFromRecovery(int32_t index, bool fromRecovery) {}
     virtual bool IsFromRecovery(int32_t index) { return false; }
     virtual int32_t GetRecoveredDestinationMode(int32_t index) { return false; }
-    virtual int32_t GetSize() const { return -1; }
-
-    virtual uint64_t GetNavDestinationIdInt(int32_t index) { return -1; }
-    virtual bool GetIsForceSet(int32_t index) { return false; }
-    virtual void ResetIsForceSetFlag(int32_t index) {}
-
-    // could be optimized...
-    virtual bool HasSingletonMoved()
-    {
-        return false;
-    }
-
-    virtual bool IsTopFromSingletonMoved()
-    {
-        return false;
-    }
-
-    virtual void ResetSingletonMoved() {}
 
     const WeakPtr<UINode>& GetNavigationNode()
     {
@@ -247,11 +215,6 @@ public:
     virtual void RecoveryNavigationStack() {}
     virtual bool NeedBuildNewInstance(int32_t index) { return false; }
     virtual void SetNeedBuildNewInstance(int32_t index, bool need) {}
-    virtual void SetRecoveryFromReplaceDestination(int32_t index, bool value) {}
-    virtual bool CheckIsReplacedDestination(int32_t index, std::string& replacedName, int32_t& replacedIndex)
-    {
-        return false;
-    }
 
     void UpdateRecoveryList()
     {
@@ -269,17 +232,6 @@ public:
     }
 
     virtual void SetIsEntryByIndex(int32_t index, bool isEntry) {}
-
-    virtual void RemoveByIndexes(const std::vector<int32_t>& indexes) {}
-
-    virtual void PushIntentNavDestination(const std::string& name, const std::string& params, bool needTransition) {}
-
-    virtual void CallPushDestinationInner(const NavdestinationRecoveryInfo& navdestinationsInfo) {}
-
-    virtual bool CreateHomeDestination(const WeakPtr<UINode>& customNode, RefPtr<UINode>& node)
-    {
-        return false;
-    }
 
 protected:
     void MoveToTop(const std::string& name, const RefPtr<UINode>& navDestinationNode);
@@ -301,8 +253,6 @@ protected:
     bool animated_ = true;
     WeakPtr<UINode> navigationNode_;
     std::vector<std::pair<std::string, WeakPtr<UINode>>> navPathListBeforePoped_;
-    bool isCurForceSetList_ = false;
-    bool isPreForceSetList_ = false;
 };
 } // namespace OHOS::Ace::NG
 #endif // FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_PATTERNS_NAVIGATION_NAVIGATION_STACK_H

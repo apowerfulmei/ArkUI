@@ -30,9 +30,7 @@ void UIExtensionModelNG::Create(const RefPtr<OHOS::Ace::WantWrap>& wantWrap, boo
 
 void UIExtensionModelNG::Create(const RefPtr<OHOS::Ace::WantWrap>& wantWrap, SessionType sessionType) {}
 
-void UIExtensionModelNG::CreateDynamicComponent(const UIExtensionConfig& config) {}
-
-void UIExtensionModelNG::CreateIsolatedComponent(const UIExtensionConfig& config) {}
+void UIExtensionModelNG::Create() {}
 
 void UIExtensionModelNG::InitializeDynamicComponent(const RefPtr<NG::FrameNode>& frameNode, const std::string& hapPath,
     const std::string& abcPath, const std::string& entryPoint, void* runtime)

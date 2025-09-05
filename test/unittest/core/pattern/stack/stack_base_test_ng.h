@@ -33,6 +33,7 @@ public:
     static void TearDownTestSuite();
     void SetUp() override;
     void TearDown() override;
+    RefPtr<FrameNode> CreateStack(const std::function<void(StackModelNG)>& callback);
 };
 } // namespace OHOS::Ace::NG
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024-2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -50,7 +50,6 @@ constexpr float CHILD_SIZE = 300.0f;
 constexpr float CHILD_SIZE_2 = 600.0f;
 constexpr float OFFSET = 200.0f;
 constexpr float OFFSET_2 = -100.0f;
-constexpr float AVOID_DISTANCE = 100000.0f;
 const SizeF CONTAINER_SIZE(FULL_SCREEN_WIDTH, FULL_SCREEN_HEIGHT);
 const SizeF FIRST_ITEM_SIZE(FIRST_ITEM_WIDTH, FIRST_ITEM_HEIGHT);
 const std::string TITLE = "title";
@@ -102,7 +101,7 @@ void DialogModelTestNg::TearDownTestCase()
 
 /**
  * @tc.name: DialogModelTestNg001
- * @tc.desc: Test DialogEventHub's GetOrCreateGestureEventHub.
+ * @tc.desc: Test DialogEventHub's GetOrCreateGestureEventHub
  * @tc.type: FUNC
  */
 HWTEST_F(DialogModelTestNg, DialogModelTestNg001, TestSize.Level1)
@@ -128,14 +127,14 @@ HWTEST_F(DialogModelTestNg, DialogModelTestNg001, TestSize.Level1)
     eventHub->MarkModifyDone();
     /**
      * @tc.steps: step3. Get EventHub's properties.
-     * @tc.expected: These properties are null when GetEventHub functions have not been invoked.
+     * @tc.expected: These properties are null when GetOrCreateEventHub functions have not been invoked.
      */
     EXPECT_EQ(eventHub->GetGestureEventHub(), nullptr);
     EXPECT_EQ(eventHub->GetInputEventHub(), nullptr);
     EXPECT_EQ(eventHub->GetOnDragStart(), nullptr);
 
     /**
-     * @tc.steps: step4. Invoke GetEventHub functions.
+     * @tc.steps: step4. Invoke GetOrCreateEventHub functions.
      * @tc.expected: These eventHub properties are not null.
      */
     eventHub->GetOrCreateGestureEventHub();
@@ -158,7 +157,7 @@ HWTEST_F(DialogModelTestNg, DialogModelTestNg002, TestSize.Level1)
      */
     AlertDialogModelNG alertDialogModelNg;
     DialogProperties properties;
-    std::function<void(int32_t, int32_t)> onWillDismiss = [](int32_t reason, int32_t instanceId) {};
+    std::function<void(int32_t)> onWillDismiss = [](int32_t reason) {};
 
     /**
      * @tc.steps: step2. Call SetOnWillDismiss.
@@ -180,7 +179,7 @@ HWTEST_F(DialogModelTestNg, DialogModelTestNg003, TestSize.Level1)
      */
     ActionSheetModelNG actionSheetModelNg;
     DialogProperties properties;
-    std::function<void(int32_t, int32_t)> onWillDismiss = [](int32_t reason, int32_t instanceId) {};
+    std::function<void(int32_t)> onWillDismiss = [](int32_t reason) {};
 
     /**
      * @tc.steps: step2. Call SetOnWillDismiss.
@@ -254,13 +253,11 @@ HWTEST_F(DialogModelTestNg, DialogModelTestNg006, TestSize.Level1)
      */
     props.isShowInSubWindow = true;
     alertDialogModelNg.SetShowDialog(props);
-    EXPECT_EQ(props.isModal, true);
     /**
      * @tc.steps: step2. Call SetShowDialog when isShowInSubWindow is false.
      */
     props.isShowInSubWindow = false;
     alertDialogModelNg.SetShowDialog(props);
-    EXPECT_EQ(props.isModal, true);
 }
 
 /**
@@ -316,14 +313,12 @@ HWTEST_F(DialogModelTestNg, DialogModelTestNg008, TestSize.Level1)
      * @tc.steps: step3. Call ShowActionSheet when isShowInSubWindow is true.
      */
     actionSheetModelNg.ShowActionSheet(props);
-    EXPECT_EQ(props.title, TITLE);
 
     /**
      * @tc.steps: step3. Call ShowActionSheet when isShowInSubWindow is false.
      */
     props.isShowInSubWindow = false;
     actionSheetModelNg.ShowActionSheet(props);
-    EXPECT_EQ(props.title, TITLE);
 }
 
 /**
@@ -642,7 +637,7 @@ HWTEST_F(DialogModelTestNg, DialogModelTestNg016, TestSize.Level1)
      * @tc.steps: step2. Call onWillDismiss and ShouldDismiss.
      * @tc.expected: return value is true.
      */
-    std::function<void(int32_t, int32_t)> onWillDismiss = [](int32_t info, int32_t instanceId) {};
+    std::function<void(int32_t)> onWillDismiss = [](int32_t info) {};
     pattern->SetOnWillDismiss(std::move(onWillDismiss));
     EXPECT_TRUE(pattern->ShouldDismiss());
 
@@ -684,14 +679,6 @@ HWTEST_F(DialogModelTestNg, DialogModelTestNg017, TestSize.Level1)
      * @tc.expected: Check the stageNode_.
      */
     pattern->OnDetachFromFrameNode(AceType::RawPtr(frameNode));
-    EXPECT_NE(stageManager->stageNode_, nullptr);
-    /**
-     * @tc.steps: step4. Call OnDetachFromFrameNode.
-     * @tc.expected: Check the stageNode_.
-     */
-    pattern->OnDetachFromFrameNode(AceType::RawPtr(frameNode));
-    pattern->UpdateFoldDisplayModeChangedCallbackId(1);
-    pattern->UpdateHoverModeChangedCallbackId(1);
     EXPECT_NE(stageManager->stageNode_, nullptr);
 }
 
@@ -811,7 +798,7 @@ HWTEST_F(DialogModelTestNg, DialogModelTestNg019, TestSize.Level1)
     /**
      * @tc.steps: step4. Test dialogNode's BuildChild.
      * @tc.expected: Check contentNodeMap_ value.
-     */
+    */
     pattern->BuildChild(props);
     EXPECT_TRUE(pattern->contentNodeMap_.size() > 0);
     pattern->customNode_ = dialogNode;
@@ -819,7 +806,7 @@ HWTEST_F(DialogModelTestNg, DialogModelTestNg019, TestSize.Level1)
     /**
      * @tc.steps: step5. Test dialogNode's ToJsonValue.
      * @tc.expected: Check value.
-     */
+    */
     auto json = JsonUtil::Create(true);
     pattern->ToJsonValue(json, filter);
     EXPECT_EQ(json->GetString("title"), TITLE);
@@ -829,7 +816,7 @@ HWTEST_F(DialogModelTestNg, DialogModelTestNg019, TestSize.Level1)
     /**
      * @tc.steps: step5. Test dialogNode's OnLanguageConfigurationUpdate.
      * @tc.expected: The result is set as expected.
-     */
+    */
     pattern->OnLanguageConfigurationUpdate();
     EXPECT_EQ(pattern->title_, TITLE);
     EXPECT_EQ(pattern->subtitle_, SUBTITLE);
@@ -1219,6 +1206,38 @@ HWTEST_F(DialogModelTestNg, DialogModelTestNg029, TestSize.Level1)
 }
 
 /**
+ * @tc.name: DialogModelTestNg030
+ * @tc.desc: Test DialogLayoutAlgorithm.ClipUIExtensionSubWindowContent function
+ * @tc.type: FUNC
+ */
+HWTEST_F(DialogModelTestNg, DialogModelTestNg030, TestSize.Level1)
+{
+    DialogProperties props;
+    auto dialog = DialogView::CreateDialogNode(props, nullptr);
+    ASSERT_NE(dialog, nullptr);
+    auto dialogPattern = dialog->GetPattern<DialogPattern>();
+    ASSERT_NE(dialogPattern, nullptr);
+    auto dialogContext = dialog->GetRenderContext();
+    ASSERT_NE(dialogContext, nullptr);
+
+    auto dialogLayoutAlgorithm = dialogPattern->CreateLayoutAlgorithm();
+    ASSERT_NE(dialogLayoutAlgorithm, nullptr);
+    RefPtr<DialogLayoutAlgorithm> layoutAlgorithm = AceType::MakeRefPtr<DialogLayoutAlgorithm>();
+    ASSERT_NE(layoutAlgorithm, nullptr);
+
+    layoutAlgorithm->ClipUIExtensionSubWindowContent(dialog, false);
+    EXPECT_FALSE(dialogContext->GetClipShape().value());
+
+    layoutAlgorithm->hostWindowRect_ = RectF(OffsetF(), SizeF(FULL_SCREEN_WIDTH, FULL_SCREEN_HEIGHT));
+    layoutAlgorithm->ClipUIExtensionSubWindowContent(dialog, true);
+    EXPECT_TRUE(dialogContext->GetClipShape().value());
+
+    layoutAlgorithm->expandDisplay_ = true;
+    layoutAlgorithm->ClipUIExtensionSubWindowContent(dialog, true);
+    EXPECT_TRUE(dialogContext->GetClipShape().value());
+}
+
+/**
  * @tc.name: DialogModelTestNg031
  * @tc.desc: Test DialogLayoutAlgorithm.AdjustChildPosition function
  * @tc.type: FUNC
@@ -1235,11 +1254,6 @@ HWTEST_F(DialogModelTestNg, DialogModelTestNg031, TestSize.Level1)
     auto dialogOffset = OffsetF();
     auto childSize = SizeF(CHILD_SIZE, CHILD_SIZE);
 
-    DialogProperties props;
-    auto dialog = DialogView::CreateDialogNode(props, nullptr);
-    ASSERT_NE(dialog, nullptr);
-    auto dialogProp = dialog->GetLayoutProperty<DialogLayoutProperty>();
-    ASSERT_NE(dialogProp, nullptr);
     auto offset = layoutAlgorithm->AdjustChildPosition(topLeftOffset, dialogOffset, childSize, true);
     EXPECT_EQ(offset.GetY(), OFFSET);
 
@@ -1255,12 +1269,6 @@ HWTEST_F(DialogModelTestNg, DialogModelTestNg031, TestSize.Level1)
     MockContainer::Current()->SetApiTargetVersion(static_cast<int32_t>(PlatformVersion::VERSION_TWELVE));
     offset = layoutAlgorithm->AdjustChildPosition(topLeftOffset, dialogOffset, childSize, true);
     EXPECT_EQ(offset.GetY(), 0.f);
-
-    topLeftOffset.SetY(0.f);
-    childSize.SetHeight(CHILD_SIZE_2);
-    layoutAlgorithm->keyboardAvoidDistance_ = Dimension(AVOID_DISTANCE, OHOS::Ace::DimensionUnit::VP);
-    layoutAlgorithm->AdjustChildPosition(topLeftOffset, dialogOffset, childSize, true);
-    EXPECT_EQ(layoutAlgorithm->dialogChildSize_.Height(), 0.f);
     MockContainer::Current()->SetApiTargetVersion(backupApiVersion);
 }
 
@@ -1288,7 +1296,7 @@ HWTEST_F(DialogModelTestNg, DialogModelTestNg032, TestSize.Level1)
     layoutAlgorithm->SetSubWindowHotarea(dialogProp, childSize, selfSize, dialog->GetId());
     auto maskRect = layoutAlgorithm->GetMaskRect(dialog);
     EXPECT_FALSE(maskRect.has_value());
- 
+
     auto offset = DimensionOffset(CalcDimension(0, DimensionUnit::VP), CalcDimension(0, DimensionUnit::VP));
     layoutAlgorithm->isUIExtensionSubWindow_ = true;
     layoutAlgorithm->SetSubWindowHotarea(dialogProp, childSize, selfSize, dialog->GetId());
@@ -1296,7 +1304,7 @@ HWTEST_F(DialogModelTestNg, DialogModelTestNg032, TestSize.Level1)
     EXPECT_EQ(maskRect.value().GetOffset(), offset);
     EXPECT_EQ(maskRect.value().GetWidth(), CalcDimension(1, DimensionUnit::PERCENT));
     EXPECT_EQ(maskRect.value().GetHeight(), CalcDimension(1, DimensionUnit::PERCENT));
- 
+
     layoutAlgorithm->expandDisplay_ = true;
     layoutAlgorithm->hostWindowRect_ = RectF(OffsetF(), SizeF(CHILD_SIZE, CHILD_SIZE));
     layoutAlgorithm->SetSubWindowHotarea(dialogProp, childSize, selfSize, dialog->GetId());
@@ -1320,12 +1328,12 @@ HWTEST_F(DialogModelTestNg, DialogModelTestNg033, TestSize.Level1)
     MockPipelineContext::GetCurrent()->SetMinPlatformVersion(static_cast<int32_t>(PlatformVersion::VERSION_THIRTEEN));
     auto dialogLayoutAlgorithm = AceType::MakeRefPtr<DialogLayoutAlgorithm>();
     ASSERT_NE(dialogLayoutAlgorithm, nullptr);
-
+    
     auto maxSize = CONTAINER_SIZE;
     SafeAreaInsets::Inset insetLeftAndRight = {};
     SafeAreaInsets::Inset insetTopAndBottom = { .end = 100.f };
-    SafeAreaInsets SYSTEM_SAFE_AREA_INSET = { insetLeftAndRight, insetTopAndBottom, insetLeftAndRight,
-        insetTopAndBottom };
+    SafeAreaInsets SYSTEM_SAFE_AREA_INSET = { insetLeftAndRight, insetTopAndBottom,
+        insetLeftAndRight, insetTopAndBottom };
     dialogLayoutAlgorithm->foldCreaseRect = FOLD_CREASE_RECT;
     dialogLayoutAlgorithm->safeAreaInsets_ = SYSTEM_SAFE_AREA_INSET;
     dialogLayoutAlgorithm->isHoverMode_ = false;
@@ -1363,7 +1371,7 @@ HWTEST_F(DialogModelTestNg, DialogModelTestNg034, TestSize.Level1)
     dialogLayoutAlgorithm->isHoverMode_ = true;
     dialogLayoutAlgorithm->foldCreaseRect = FOLD_CREASE_RECT;
     OffsetF topLeftPoint;
-
+    
     /**
      * @tc.steps: step2. call SetAlignmentSwitch function.
      * @tc.expected: the results are correct.
@@ -1376,728 +1384,5 @@ HWTEST_F(DialogModelTestNg, DialogModelTestNg034, TestSize.Level1)
     dialogLayoutAlgorithm->SetAlignmentSwitch(maxSize, childSize, topLeftPoint);
     dialogLayoutAlgorithm->AdjustChildPosition(topLeftPoint, topLeftPoint, childSize, true);
     EXPECT_EQ(topLeftPoint.GetY(), 0);
-}
-
-/**
- * @tc.name: DialogModelTestNg035
- * @tc.desc: Test CreateDialogNode with dialogTransition effect and maskTransition effect.
- * @tc.type: FUNC
- */
- HWTEST_F(DialogModelTestNg, DialogModelTestNg035, TestSize.Level1)
- {
-    auto rootNode = FrameNode::CreateFrameNode(V2::ROOT_ETS_TAG, 1, AceType::MakeRefPtr<RootPattern>());
-    CHECK_NULL_VOID(rootNode);
-    AnimationOption animationOption;
-    animationOption.SetDelay(10);
-
-    double opacity = 1.0;
-    auto appearOpacityTransition = AceType::MakeRefPtr<NG::ChainedOpacityEffect>(opacity);
-    NG::ScaleOptions scale(1.0f, 1.0f, 1.0f, 0.5_pct, 0.5_pct);
-    auto disappearScaleTransition = AceType::MakeRefPtr<NG::ChainedScaleEffect>(scale);
-    auto dialogTransitionEffect =
-        AceType::MakeRefPtr<NG::ChainedAsymmetricEffect>(appearOpacityTransition, disappearScaleTransition);
-    auto maskTransitionEffect =
-        AceType::MakeRefPtr<NG::ChainedAsymmetricEffect>(appearOpacityTransition, disappearScaleTransition);
- 
-    DialogProperties dialogProps {
-        .type = DialogType::ALERT_DIALOG,
-        .title = TITLE,
-        .content = MESSAGE,
-        .openAnimation = animationOption,
-        .dialogTransitionEffect = dialogTransitionEffect,
-        .maskTransitionEffect = maskTransitionEffect,
-    };
- 
-    ASSERT_NE(dialogProps.dialogTransitionEffect, nullptr);
-    ASSERT_NE(dialogProps.maskTransitionEffect, nullptr);
-    /**
-     * @tc.steps: step2. Create DialogNode.
-     * @tc.expected: DialogNode created successfully
-     */
-    CHECK_NULL_VOID(rootNode);
-    rootNode->GetRenderContext()->UpdateChainedTransition(dialogProps.dialogTransitionEffect);
-    ASSERT_NE(rootNode, nullptr);
-
-    CHECK_NULL_VOID(rootNode);
-    rootNode->GetRenderContext()->UpdateChainedTransition(dialogProps.maskTransitionEffect);
-    ASSERT_NE(rootNode, nullptr);
-}
- 
- /**
-  * @tc.name: DialogModelTestNg036
-  * @tc.desc: Test CreateDialogNode with no dialogTransition effect and maskTransition effect.
-  * @tc.type: FUNC
-  */
- HWTEST_F(DialogModelTestNg, DialogModelTestNg036, TestSize.Level1)
-{
-    auto rootNode = FrameNode::CreateFrameNode(V2::ROOT_ETS_TAG, 1, AceType::MakeRefPtr<RootPattern>());
-    CHECK_NULL_VOID(rootNode);
-    AnimationOption animationOption;
-    animationOption.SetDelay(10);
-
-    double opacity = 1.0;
-    auto appearOpacityTransition = AceType::MakeRefPtr<NG::ChainedOpacityEffect>(opacity);
-    NG::ScaleOptions scale(1.0f, 1.0f, 1.0f, 0.5_pct, 0.5_pct);
-    auto disappearScaleTransition = AceType::MakeRefPtr<NG::ChainedScaleEffect>(scale);
-    DialogProperties dialogProps {
-        .type = DialogType::ALERT_DIALOG,
-        .title = TITLE,
-        .content = MESSAGE,
-        .openAnimation = animationOption,
-        .dialogTransitionEffect = nullptr,
-        .maskTransitionEffect = nullptr,
-    };
- 
-    /**
-     * @tc.steps: step2. Create DialogNode.
-     * @tc.expected: DialogNode created successfully
-     */
-    auto overlayManager = AceType::MakeRefPtr<OverlayManager>(rootNode);
-    CHECK_NULL_VOID(overlayManager);
-    auto customDialog = DialogView::CreateDialogNode(dialogProps, nullptr);
-    ASSERT_NE(customDialog, nullptr);
-
-    auto customDialogPattern = customDialog->GetPattern<DialogPattern>();
-    CHECK_NULL_VOID(customDialogPattern);
-    ASSERT_NE(customDialogPattern, nullptr);
-    customDialogPattern->SetDialogProperties(dialogProps);
-
-    /**
-     * @tc.steps: step3. Call maskTransitionEffect from dialog.
-     * @tc.expected: transitionEffect is not nullptr.
-     */
-    auto dialogTransitionEffect = customDialogPattern->GetDialogProperties().dialogTransitionEffect;
-    ASSERT_EQ(dialogTransitionEffect, nullptr);
-    auto maskTransitionEffect = customDialogPattern->GetDialogProperties().maskTransitionEffect;
-    ASSERT_EQ(maskTransitionEffect, nullptr);
-}
-
-/**
- * @tc.name: DialogModelTestNg037
- * @tc.desc: Test ActionSheetModelNG's ShowActionSheet.
- * @tc.type: FUNC
- */
-HWTEST_F(DialogModelTestNg, DialogModelTestNg037, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1.Mock data.
-     */
-    bool onWillAppearFlag = false;
-    auto onWillAppearEvent = [&onWillAppearFlag]() { onWillAppearFlag = true; };
-    bool onDidAppearFlag = false;
-    auto onDidAppearEvent = [&onDidAppearFlag]() { onDidAppearFlag = true; };
-    bool onWillDisappearFlag = false;
-    auto onWillDisappearEvent = [&onWillDisappearFlag]() { onWillDisappearFlag = true; };
-    bool onDidDisappearFlag = false;
-    auto onDidDisappearEvent = [&onDidDisappearFlag]() { onDidDisappearFlag = true; };
-    ActionSheetModelNG actionSheetModelNg;
-    DialogProperties props {
-        .onWillAppear = std::move(onWillAppearEvent),
-        .onDidAppear = std::move(onDidAppearEvent),
-        .onWillDisappear = std::move(onWillDisappearEvent),
-        .onDidDisappear = std::move(onDidDisappearEvent),
-    };
- 
-    /**
-     * @tc.steps: step2. Call ShowActionSheet.
-     * @tc.expected: Check ShowActionSheet.
-     */
-    actionSheetModelNg.ShowActionSheet(props);
-    auto container = Container::Current();
-    auto pipelineContext = container->GetPipelineContext();
-    auto context = AceType::DynamicCast<NG::PipelineContext>(pipelineContext);
-    auto overlayManager = context->GetOverlayManager();
-    auto dialog = overlayManager->ShowDialog(props, nullptr, false);
-    auto dialogPattern = dialog->GetPattern<DialogPattern>();
- 
-    dialogPattern->CallDialogWillAppearCallback();
-    dialogPattern->CallDialogDidAppearCallback();
-    dialogPattern->CallDialogWillDisappearCallback();
-    dialogPattern->CallDialogDidDisappearCallback();
- 
-    EXPECT_EQ(onWillAppearFlag, true);
-    EXPECT_EQ(onDidAppearFlag, true);
-    EXPECT_EQ(onWillDisappearFlag, true);
-    EXPECT_EQ(onDidDisappearFlag, true);
-}
-  
-/**
- * @tc.name: DialogModelTestNg038
- * @tc.desc: Test AlertDialogModelNG's SetShowDialog.
- * @tc.type: FUNC
- */
-HWTEST_F(DialogModelTestNg, DialogModelTestNg038, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1.Mock data.
-     */
-    bool onWillAppearFlag = false;
-    auto onWillAppearEvent = [&onWillAppearFlag]() { onWillAppearFlag = true; };
-    bool onDidAppearFlag = false;
-    auto onDidAppearEvent = [&onDidAppearFlag]() { onDidAppearFlag = true; };
-    bool onWillDisappearFlag = false;
-    auto onWillDisappearEvent = [&onWillDisappearFlag]() { onWillDisappearFlag = true; };
-    bool onDidDisappearFlag = false;
-    auto onDidDisappearEvent = [&onDidDisappearFlag]() { onDidDisappearFlag = true; };
-    AlertDialogModelNG alertDialogModelNg;
-    DialogProperties props {
-        .onWillAppear = std::move(onWillAppearEvent),
-        .onDidAppear = std::move(onDidAppearEvent),
-        .onWillDisappear = std::move(onWillDisappearEvent),
-        .onDidDisappear = std::move(onDidDisappearEvent),
-    };
-  
-    /**
-     * @tc.steps: step2. Call SetShowDialog.
-     * @tc.expected: Check SetShowDialog.
-     */
-    alertDialogModelNg.SetShowDialog(props);
-    auto container = Container::Current();
-    auto pipelineContext = container->GetPipelineContext();
-    auto context = AceType::DynamicCast<NG::PipelineContext>(pipelineContext);
-    auto overlayManager = context->GetOverlayManager();
-    auto dialog = overlayManager->ShowDialog(props, nullptr, false);
-    auto dialogPattern = dialog->GetPattern<DialogPattern>();
- 
-    dialogPattern->CallDialogWillAppearCallback();
-    dialogPattern->CallDialogDidAppearCallback();
-    dialogPattern->CallDialogWillDisappearCallback();
-    dialogPattern->CallDialogDidDisappearCallback();
- 
-    EXPECT_EQ(onWillAppearFlag, true);
-    EXPECT_EQ(onDidAppearFlag, true);
-    EXPECT_EQ(onWillDisappearFlag, true);
-    EXPECT_EQ(onDidDisappearFlag, true);
-}
-  
-/**
- * @tc.name: DialogModelTestNg039
- * @tc.desc: Test CustomDialogControllerModelNG's SetOpenDialog.
- * @tc.type: FUNC
- */
-HWTEST_F(DialogModelTestNg, DialogModelTestNg039, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1.Mock data.
-     */
-    bool onWillAppearFlag = false;
-    auto onWillAppearEvent = [&onWillAppearFlag]() { onWillAppearFlag = true; };
-    bool onDidAppearFlag = false;
-    auto onDidAppearEvent = [&onDidAppearFlag]() { onDidAppearFlag = true; };
-    bool onWillDisappearFlag = false;
-    auto onWillDisappearEvent = [&onWillDisappearFlag]() { onWillDisappearFlag = true; };
-    bool onDidDisappearFlag = false;
-    auto onDidDisappearEvent = [&onDidDisappearFlag]() { onDidDisappearFlag = true; };
-    CustomDialogControllerModelNG controllerModel;
-    DialogProperties props {
-        .onWillAppear = std::move(onWillAppearEvent),
-        .onDidAppear = std::move(onDidAppearEvent),
-        .onWillDisappear = std::move(onWillDisappearEvent),
-        .onDidDisappear = std::move(onDidDisappearEvent),
-    };
-    WeakPtr<AceType> controller;
-    std::vector<WeakPtr<AceType>> dialogs;
-    bool pending;
-    bool isShown;
-    std::function<void()> cancelTask;
-    std::function<void()> buildFunc;
-    RefPtr<AceType> dialogComponent;
-    RefPtr<AceType> customDialog;
-    std::list<DialogOperation> dialogOperation;
-    bool hasBind = false;
-   
-    /**
-     * @tc.steps: step2. Call SetOpenDialog.
-     * @tc.expected: Check SetOpenDialog.
-     */
-    controllerModel.SetOpenDialog(props, controller, dialogs, pending,
-        isShown, std::move(cancelTask), std::move(buildFunc), dialogComponent, customDialog, dialogOperation, hasBind);
-    auto container = Container::Current();
-    auto pipelineContext = container->GetPipelineContext();
-    auto context = AceType::DynamicCast<NG::PipelineContext>(pipelineContext);
-    auto overlayManager = context->GetOverlayManager();
-    auto dialog = overlayManager->ShowDialog(props, nullptr, false);
-    auto dialogPattern = dialog->GetPattern<DialogPattern>();
-    dialogPattern->CallDialogWillAppearCallback();
-    dialogPattern->CallDialogDidAppearCallback();
-    dialogPattern->CallDialogWillDisappearCallback();
-    dialogPattern->CallDialogDidDisappearCallback();
-
-    EXPECT_EQ(onWillAppearFlag, true);
-    EXPECT_EQ(onDidAppearFlag, true);
-    EXPECT_EQ(onWillDisappearFlag, true);
-    EXPECT_EQ(onDidDisappearFlag, true);
-}
-
-/**
- * @tc.name: DialogModelTestNg040
- * @tc.desc: Test AlertDialogModelNG's SetOnWillDismissRelease.
- * @tc.type: FUNC
- */
-HWTEST_F(DialogModelTestNg, DialogModelTestNg040, TestSize.Level1)
-{
-    const std::function<void()> EMPTY_FUNC = nullptr;
-    /**
-     * @tc.steps: step1. Create DialogPattern instance
-     */
-    RefPtr<DialogTheme> dialogTheme;
-    RefPtr<UINode> customNode;
-    auto dialogPattern = AceType::MakeRefPtr<DialogPattern>(dialogTheme, customNode);
-
-    /**
-     * @tc.steps: step2. Call SetOnWillDismissRelease with empty function
-     * @tc.expected: The internal callback should be set to empty function
-     */
-    dialogPattern->SetOnWillDismissRelease(EMPTY_FUNC);
-    EXPECT_EQ(dialogPattern->onWillDismissRelease_, nullptr);
-}
-
-/**
- * @tc.name: DialogModelTestNg041
- * @tc.desc: Test AlertDialogModelNG's SetOnWillDismissRelease.
- * @tc.type: FUNC
- */
-HWTEST_F(DialogModelTestNg, DialogModelTestNg041, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. Create DialogPattern instance
-     */
-    RefPtr<DialogTheme> dialogTheme;
-    RefPtr<UINode> customNode;
-    auto dialogPattern = AceType::MakeRefPtr<DialogPattern>(dialogTheme, customNode);
-
-    /**
-     * @tc.steps: step2. Create a flag to check if callback is executed
-     */
-    bool isCalled = false;
-    auto callback = [&isCalled]() { isCalled = true; };
-
-    /**
-     * @tc.steps: step3. Call SetOnWillDismissRelease with non-empty function
-     * @tc.expected: The internal callback should be set properly
-     */
-    dialogPattern->SetOnWillDismissRelease(callback);
-    EXPECT_NE(dialogPattern->onWillDismissRelease_, nullptr);
-
-    /**
-     * @tc.steps: step4. Execute the callback and verify
-     * @tc.expected: The callback should be executed properly
-     */
-    if (dialogPattern->onWillDismissRelease_) {
-        dialogPattern->onWillDismissRelease_();
-    }
-    EXPECT_TRUE(isCalled);
-}
-
-/**
- * @tc.name: CustomDialogControllerGetStateTest1
- * @tc.desc: Test CustomDialogControllerModelNG's SetOpenDialog.
- * @tc.type: FUNC
- */
-HWTEST_F(DialogModelTestNg, CustomDialogControllerGetStateTest1, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. mock rootNode,Dialog and FrameNode
-     */
-    auto rootNode = FrameNode::CreateFrameNode(V2::ROOT_ETS_TAG, 1, AceType::MakeRefPtr<RootPattern>());
-    auto dialogProps = DialogProperties {
-        .title = "Test Title",
-        .content = "Test Content",
-        .controllerId = 1001
-    };
-
-    bool hasBind = false;
-    auto dialogTheme = AceType::MakeRefPtr<DialogTheme>();
-    auto dialogNode =
-        FrameNode::CreateFrameNode(V2::DIALOG_ETS_TAG, 2, AceType::MakeRefPtr<DialogPattern>(dialogTheme, nullptr));
-    auto dialogPattern = dialogNode->GetPattern<DialogPattern>();
-    ASSERT_NE(dialogPattern, nullptr);
-
-    dialogPattern->SetDialogProperties(dialogProps);
-    dialogPattern->SetState(PromptActionCommonState::APPEARING);
-    
-    std::vector<WeakPtr<AceType>> dialogs;
-    dialogs.emplace_back(WeakPtr<AceType>(dialogNode));
-
-    CustomDialogControllerModelNG controller;
-    PromptActionCommonState state = controller.GetState(dialogs, hasBind);
-    EXPECT_EQ(state, PromptActionCommonState::APPEARING);
-
-    dialogPattern->SetState(PromptActionCommonState::APPEARED);
-    state = controller.GetState(dialogs, hasBind);
-    EXPECT_EQ(state, PromptActionCommonState::APPEARED);
-}
-
-/**
- * @tc.name: CustomDialogControllerGetStateTest2
- * @tc.desc: Test CustomDialogControllerModelNG's SetOpenDialog.
- * @tc.type: FUNC
- */
-HWTEST_F(DialogModelTestNg, CustomDialogControllerGetStateTest2, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1.mock rootNode,Dialog and FrameNode
-     */
-    auto rootNode = FrameNode::CreateFrameNode(V2::ROOT_ETS_TAG, 1, AceType::MakeRefPtr<RootPattern>());
-    auto dialogProps = DialogProperties {
-        .title = "Test Title",
-        .content = "Test Content",
-        .controllerId = 1001
-    };
-    bool hasBind = true;
-    auto dialogTheme = AceType::MakeRefPtr<DialogTheme>();
-
-    auto dialogNode =
-        FrameNode::CreateFrameNode(V2::DIALOG_ETS_TAG, 2, AceType::MakeRefPtr<DialogPattern>(dialogTheme, nullptr));
-    auto dialogPattern = dialogNode->GetPattern<DialogPattern>();
-    ASSERT_NE(dialogPattern, nullptr);
-
-    dialogPattern->SetDialogProperties(dialogProps);
-    dialogPattern->SetState(PromptActionCommonState::DISAPPEARING);
-    
-    std::vector<WeakPtr<AceType>> dialogs;
-    dialogs.emplace_back(WeakPtr<AceType>(dialogNode));
-
-    CustomDialogControllerModelNG controller;
-    PromptActionCommonState state = controller.GetState(dialogs, hasBind);
-    EXPECT_EQ(state, PromptActionCommonState::DISAPPEARING);
-
-    dialogPattern->SetState(PromptActionCommonState::DISAPPEARED);
-    state = controller.GetState(dialogs, hasBind);
-    EXPECT_EQ(state, PromptActionCommonState::DISAPPEARED);
-}
-
-/**
- * @tc.name: ComputeInnerLayoutSizeParam001
- * @tc.desc: Test ComputeInnerLayoutSizeParam function
- * @tc.type: FUNC
- */
-HWTEST_F(DialogModelTestNg, ComputeInnerLayoutSizeParam001, TestSize.Level1)
-{
-    auto dialogLayoutAlgorithm = AceType::MakeRefPtr<DialogLayoutAlgorithm>();
-    DialogProperties props;
-    auto dialog = DialogView::CreateDialogNode(props, nullptr);
-    ASSERT_NE(dialog, nullptr);
-    auto layoutWrapper =
-        AceType::MakeRefPtr<LayoutWrapperNode>(dialog, dialog->GetGeometryNode(), dialog->GetLayoutProperty());
-    auto innerLayout = layoutWrapper->GetLayoutProperty()->CreateChildConstraint();
-    auto dialogProp = AceType::DynamicCast<DialogLayoutProperty>(layoutWrapper->GetLayoutProperty());
-    dialogLayoutAlgorithm->gridCount_ = 1;
-    EXPECT_EQ(dialogLayoutAlgorithm->ComputeInnerLayoutSizeParam(innerLayout, dialogProp), false);
-}
-
-/**
- * @tc.name: IsGetExpandDisplayValidHeight001
- * @tc.desc: Test IsGetExpandDisplayValidHeight function
- * @tc.type: FUNC
- */
-HWTEST_F(DialogModelTestNg, IsGetExpandDisplayValidHeight001, TestSize.Level1)
-{
-    auto dialogLayoutAlgorithm = AceType::MakeRefPtr<DialogLayoutAlgorithm>();
-    ASSERT_NE(dialogLayoutAlgorithm, nullptr);
-    dialogLayoutAlgorithm->expandDisplay_ = true;
-    dialogLayoutAlgorithm->isShowInSubWindow_ = true;
-    DialogProperties props;
-    auto dialog = DialogView::CreateDialogNode(props, nullptr);
-    ASSERT_NE(dialog, nullptr);
-    auto dialogProp = dialog->GetLayoutProperty<DialogLayoutProperty>();
-    ASSERT_NE(dialogProp, nullptr);
-    EXPECT_FALSE(dialogLayoutAlgorithm->IsGetExpandDisplayValidHeight(dialogProp));
-}
-
-/**
- * @tc.name: GetMaxWidthBasedOnGridType001
- * @tc.desc: Test GetMaxWidthBasedOnGridType function
- * @tc.type: FUNC
- */
-HWTEST_F(DialogModelTestNg, GetMaxWidthBasedOnGridType001, TestSize.Level1)
-{
-    auto dialogLayoutAlgorithm = AceType::MakeRefPtr<DialogLayoutAlgorithm>();
-
-    auto gridColumninfo = AceType::MakeRefPtr<GridColumnInfo>();
-    auto parent = AceType::MakeRefPtr<GridContainerInfo>();
-    parent->columns_ = 0;
-    gridColumninfo->parent_ = parent;
-    dialogLayoutAlgorithm->gridCount_ = 1;
-    auto type = GridSizeType::UNDEFINED;
-    auto deviceType = DeviceType::PHONE;
-    EXPECT_EQ(dialogLayoutAlgorithm->GetMaxWidthBasedOnGridType(gridColumninfo, type, deviceType), 0);
-}
-
-/**
- * @tc.name: IsDialogTouchingBoundary001
- * @tc.desc: Test IsDialogTouchingBoundary function
- * @tc.type: FUNC
- */
-HWTEST_F(DialogModelTestNg, IsDialogTouchingBoundary001, TestSize.Level1)
-{
-    auto dialogLayoutAlgorithm = AceType::MakeRefPtr<DialogLayoutAlgorithm>();
-    OffsetF topLeftPoint = OffsetF(100, -1);
-    SizeF childSize = SizeF(500.0f, -1.0f);
-    SizeF selfSize = SizeF(1.0f, 100.0f);
-    dialogLayoutAlgorithm->IsDialogTouchingBoundary(topLeftPoint, childSize, selfSize);
-    EXPECT_EQ(dialogLayoutAlgorithm->touchingBoundaryFlag_, TouchingBoundaryType::TouchRightBoundary);
-
-    topLeftPoint = OffsetF(-1, -1);
-    childSize = SizeF(-1.0f, -1.0f);
-    selfSize = SizeF(100.0f, 100.0f);
-    auto result = dialogLayoutAlgorithm->IsDialogTouchingBoundary(topLeftPoint, childSize, selfSize);
-    EXPECT_FALSE(result);
-}
-
-/**
- * @tc.name: SetOpenDialogWithNode001
- * @tc.desc: Test SetOpenDialogWithNode function
- * @tc.type: FUNC
- */
-HWTEST_F(DialogModelTestNg, SetOpenDialogWithNode001, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. Create dialogModel with theme.
-     */
-    CustomDialogControllerModelNG controllerModel;
-
-    DialogProperties props {
-        .type = DialogType::ACTION_SHEET,
-        .title = "dialog test",
-        .content = "dialog content test",
-    };
-    /**
-     * @tc.steps: step2.Build prerequisite conditions and operational parameters
-     */
-    controllerModel.SetOpenDialogWithNode(props, nullptr);
-    props.isShowInSubWindow = true;
-    props.isModal = true;
-    props.isSceneBoardDialog = true;
-    /**
-     * @tc.steps: step3. Call  SetOpenDialogWithNode.
-     * @tc.desc: Covering branch isSceneBoardDialog is true
-     * @tc.expected: running result(dialog) is nullptr.
-     */
-    auto result = controllerModel.SetOpenDialogWithNode(props, nullptr);
-    EXPECT_EQ(result, nullptr);
-    EXPECT_TRUE(props.isShowInSubWindow);
-    EXPECT_TRUE(props.isModal);
-}
-
-/**
- * @tc.name: DialogPatternTest032
- * @tc.desc: Test dialogPattern.BuildTitle
- * @tc.type: FUNC
- */
-HWTEST_F(DialogModelTestNg, DialogPatternTest032, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. mock PlatformVersion VERSION_ELEVEN.
-     * @tc.expected: mock successfully.
-     */
-    MockPipelineContext::GetCurrent()->SetMinPlatformVersion(static_cast<int32_t>(PlatformVersion::VERSION_ELEVEN));
-    /**
-     * @tc.steps: step2. create dialogTheme.
-     * @tc.expected: the dialogTheme created successfully.
-     */
-    auto dialogTheme = AceType::MakeRefPtr<DialogTheme>();
-    ASSERT_NE(dialogTheme, nullptr);
-    /**
-     * @tc.steps: step3. create dialogNode.
-     * @tc.expected: the dialogNode created successfully.
-     */
-    RefPtr<FrameNode> dialogNode =
-        FrameNode::CreateFrameNode(V2::DIALOG_ETS_TAG, 1, AceType::MakeRefPtr<DialogPattern>(dialogTheme, nullptr));
-    ASSERT_NE(dialogNode, nullptr);
-    /**
-     * @tc.steps: step4. create pattern.
-     * @tc.expected: the pattern created successfully.
-     */
-    auto pattern = dialogNode->GetPattern<DialogPattern>();
-    ASSERT_NE(pattern, nullptr);
-    /**
-     * @tc.steps: step5. execute UpdateContentRenderContext.
-     * @tc.expected: UpdateContentRenderContext successfully.
-     */
-    DialogProperties props;
-    props.isSysBlurStyle = true;
-    BlurStyleOption blurStyleOption;
-    blurStyleOption.policy = BlurStyleActivePolicy::FOLLOWS_WINDOW_ACTIVE_STATE;
-    blurStyleOption.blurStyle = BlurStyle::COMPONENT_ULTRA_THICK;
-    if (!props.blurStyleOption.has_value()) {
-        props.blurStyleOption.emplace();
-    }
-    props.blurStyleOption.value() = blurStyleOption;
-
-    pattern->UpdateContentRenderContext(dialogNode, props);
-    auto renderContext = pattern->contentRenderContext_;
-    ASSERT_NE(renderContext, nullptr);
-
-    EXPECT_FALSE(renderContext->GetBackgroundEffect().has_value());
-    EXPECT_TRUE(renderContext->GetBackBlurStyle().has_value());
-    EXPECT_EQ(renderContext->GetBackBlurStyle().value(), blurStyleOption);
-}
-
-/**
- * @tc.name: DialogPatternTest033
- * @tc.desc: Test dialogPattern.BuildTitle
- * @tc.type: FUNC
- */
-HWTEST_F(DialogModelTestNg, DialogPatternTest033, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. mock PlatformVersion VERSION_ELEVEN.
-     * @tc.expected: mock successfully.
-     */
-    MockPipelineContext::GetCurrent()->SetMinPlatformVersion(static_cast<int32_t>(PlatformVersion::VERSION_ELEVEN));
-    /**
-     * @tc.steps: step2. create dialogTheme.
-     * @tc.expected: the dialogTheme created successfully.
-     */
-    auto dialogTheme = AceType::MakeRefPtr<DialogTheme>();
-    ASSERT_NE(dialogTheme, nullptr);
-    /**
-     * @tc.steps: step3. create dialogNode.
-     * @tc.expected: the dialogNode created successfully.
-     */
-    RefPtr<FrameNode> dialogNode =
-        FrameNode::CreateFrameNode(V2::DIALOG_ETS_TAG, 1, AceType::MakeRefPtr<DialogPattern>(dialogTheme, nullptr));
-    ASSERT_NE(dialogNode, nullptr);
-    /**
-     * @tc.steps: step4. create pattern.
-     * @tc.expected: the pattern created successfully.
-     */
-    auto pattern = dialogNode->GetPattern<DialogPattern>();
-    ASSERT_NE(pattern, nullptr);
-    /**
-     * @tc.steps: step5. execute UpdateContentRenderContext.
-     * @tc.expected: UpdateContentRenderContext successfully.
-     */
-    DialogProperties props;
-    props.isSysBlurStyle = true;
-    EffectOption effectOption;
-    effectOption.policy = BlurStyleActivePolicy::FOLLOWS_WINDOW_ACTIVE_STATE;
-    if (!props.effectOption.has_value()) {
-        props.effectOption.emplace();
-    }
-    props.effectOption.value() = effectOption;
-
-    pattern->UpdateContentRenderContext(dialogNode, props);
-    auto renderContext = pattern->contentRenderContext_;
-    ASSERT_NE(renderContext, nullptr);
-
-    EXPECT_FALSE(renderContext->GetBackBlurStyle().has_value());
-    EXPECT_TRUE(renderContext->GetBackgroundEffect().has_value());
-    EXPECT_EQ(renderContext->GetBackgroundEffect().value(), effectOption);
-}
-
-/**
- * @tc.name: DialogPatternTest034
- * @tc.desc: Test dialogPattern.BuildTitle
- * @tc.type: FUNC
- */
-HWTEST_F(DialogModelTestNg, DialogPatternTest034, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. mock PlatformVersion VERSION_ELEVEN.
-     * @tc.expected: mock successfully.
-     */
-    MockPipelineContext::GetCurrent()->SetMinPlatformVersion(static_cast<int32_t>(PlatformVersion::VERSION_ELEVEN));
-    /**
-     * @tc.steps: step2. create dialogTheme.
-     * @tc.expected: the dialogTheme created successfully.
-     */
-    auto dialogTheme = AceType::MakeRefPtr<DialogTheme>();
-    ASSERT_NE(dialogTheme, nullptr);
-    /**
-     * @tc.steps: step3. create dialogNode.
-     * @tc.expected: the dialogNode created successfully.
-     */
-    RefPtr<FrameNode> dialogNode =
-        FrameNode::CreateFrameNode(V2::DIALOG_ETS_TAG, 1, AceType::MakeRefPtr<DialogPattern>(dialogTheme, nullptr));
-    ASSERT_NE(dialogNode, nullptr);
-    /**
-     * @tc.steps: step4. create pattern.
-     * @tc.expected: the pattern created successfully.
-     */
-    auto pattern = dialogNode->GetPattern<DialogPattern>();
-    ASSERT_NE(pattern, nullptr);
-    /**
-     * @tc.steps: step5. execute UpdateContentRenderContext.
-     * @tc.expected: UpdateContentRenderContext successfully.
-     */
-    DialogProperties props;
-    props.isSysBlurStyle = true;
-
-    BlurStyleOption blurStyleOption;
-    blurStyleOption.policy = BlurStyleActivePolicy::FOLLOWS_WINDOW_ACTIVE_STATE;
-    blurStyleOption.blurStyle = BlurStyle::COMPONENT_ULTRA_THICK;
-    if (!props.blurStyleOption.has_value()) {
-        props.blurStyleOption.emplace();
-    }
-    props.blurStyleOption.value() = blurStyleOption;
-
-    EffectOption effectOption;
-    effectOption.policy = BlurStyleActivePolicy::FOLLOWS_WINDOW_ACTIVE_STATE;
-    if (!props.effectOption.has_value()) {
-        props.effectOption.emplace();
-    }
-    props.effectOption.value() = effectOption;
-
-    pattern->UpdateContentRenderContext(dialogNode, props);
-    auto renderContext = pattern->contentRenderContext_;
-    ASSERT_NE(renderContext, nullptr);
-
-    EXPECT_FALSE(renderContext->GetBackBlurStyle().has_value());
-    EXPECT_TRUE(renderContext->GetBackgroundEffect().has_value());
-    EXPECT_EQ(renderContext->GetBackgroundEffect().value(), effectOption);
-}
-
-/**
- * @tc.name: DialogPatternTest035
- * @tc.desc: Test dialogPattern.BuildTitle
- * @tc.type: FUNC
- */
-HWTEST_F(DialogModelTestNg, DialogPatternTest035, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. mock PlatformVersion VERSION_ELEVEN.
-     * @tc.expected: mock successfully.
-     */
-    MockPipelineContext::GetCurrent()->SetMinPlatformVersion(static_cast<int32_t>(PlatformVersion::VERSION_ELEVEN));
-    /**
-     * @tc.steps: step2. create dialogTheme.
-     * @tc.expected: the dialogTheme created successfully.
-     */
-    auto dialogTheme = AceType::MakeRefPtr<DialogTheme>();
-    ASSERT_NE(dialogTheme, nullptr);
-    /**
-     * @tc.steps: step3. create dialogNode.
-     * @tc.expected: the dialogNode created successfully.
-     */
-    RefPtr<FrameNode> dialogNode =
-        FrameNode::CreateFrameNode(V2::DIALOG_ETS_TAG, 1, AceType::MakeRefPtr<DialogPattern>(dialogTheme, nullptr));
-    ASSERT_NE(dialogNode, nullptr);
-    /**
-     * @tc.steps: step4. create pattern.
-     * @tc.expected: the pattern created successfully.
-     */
-    auto pattern = dialogNode->GetPattern<DialogPattern>();
-    ASSERT_NE(pattern, nullptr);
-    /**
-     * @tc.steps: step5. execute UpdateContentRenderContext.
-     * @tc.expected: UpdateContentRenderContext successfully.
-     */
-    DialogProperties props;
-    props.isSysBlurStyle = true;
-    if (!props.backgroundBlurStyle.has_value()) {
-        props.backgroundBlurStyle.emplace();
-    }
-    auto backgroundBlurStyle = static_cast<int>(BlurStyle::THIN);
-    props.backgroundBlurStyle.value() = backgroundBlurStyle;
-
-    pattern->UpdateContentRenderContext(dialogNode, props);
-    auto renderContext = pattern->contentRenderContext_;
-    ASSERT_NE(renderContext, nullptr);
-
-    EXPECT_FALSE(renderContext->GetBackgroundEffect().has_value());
-    EXPECT_TRUE(renderContext->GetBackBlurStyle().has_value());
-    EXPECT_EQ(static_cast<int>(renderContext->GetBackBlurStyle().value().blurStyle), backgroundBlurStyle);
 }
 } // namespace OHOS::Ace::NG

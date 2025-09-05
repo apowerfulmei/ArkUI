@@ -84,7 +84,7 @@ public:
 namespace OHOS::Ace::NG {
 namespace {
 std::string TEST_CONTENT_STR = "testForFindByText";
-constexpr const char* INSTANCE_ID = "fake_instance_id";
+constexpr const char* INSTANCE_ID = "fakeInstanceId";
 constexpr int32_t MAX_TEST_PARAMETER = 20;
 constexpr int32_t MAX_TEST_ELEMENT_COUNT = 10;
 constexpr int32_t SEND_EVENT_FAILED = -1;
@@ -596,15 +596,6 @@ HWTEST_F(AccessibilityProviderTestNg, AccessibilityProviderTest004, TestSize.Lev
     ret = accessibilityProvider2.FindAccessibilityNodeInfosByText(
         elementId, text, requestId, infos);
     EXPECT_EQ(ret, AccessibilityProviderOperatorErrorCode::COPY_FAILED);
-
-    // register with instance
-    ArkUI_AccessibilityProviderCallbacksWithInstance callBacksWithInstance;
-    BuildMockCallBackWithInstance(callBacksWithInstance);
-    ret = accessibilityProvider.AccessibilityProviderRegisterCallbackWithInstance(INSTANCE_ID, &callBacksWithInstance);
-    EXPECT_EQ(ret, ARKUI_ACCESSIBILITY_NATIVE_RESULT_SUCCESSFUL);
-    ret = accessibilityProvider.FindAccessibilityNodeInfosByText(
-        elementId, text, requestId, infos);
-    EXPECT_EQ(ret, ARKUI_ACCESSIBILITY_NATIVE_RESULT_SUCCESSFUL);
 }
 
 /**
@@ -662,18 +653,6 @@ HWTEST_F(AccessibilityProviderTestNg, AccessibilityProviderTest005, TestSize.Lev
     EXPECT_EQ(g_providerMockResult.requestId_, requestId);
     EXPECT_EQ(g_providerMockResult.nextFocusElementInfo_.GetElementId(),
         elementInfo.GetElementId());
-
-    // register with instance
-    ArkUI_AccessibilityProviderCallbacksWithInstance callBacksWithInstance;
-    BuildMockCallBackWithInstance(callBacksWithInstance);
-    ret = accessibilityProvider.AccessibilityProviderRegisterCallbackWithInstance(INSTANCE_ID, &callBacksWithInstance);
-    EXPECT_EQ(ret, ARKUI_ACCESSIBILITY_NATIVE_RESULT_SUCCESSFUL);
-    ret = accessibilityProvider.FindFocusedAccessibilityNode(
-        elementId, focusType, requestId, elementInfo);
-    EXPECT_EQ(ret, ARKUI_ACCESSIBILITY_NATIVE_RESULT_SUCCESSFUL);
-    ret = accessibilityProvider.FindNextFocusAccessibilityNode(
-        elementId, direction, requestId, elementInfo);
-    EXPECT_EQ(ret, ARKUI_ACCESSIBILITY_NATIVE_RESULT_SUCCESSFUL);
 }
 
 /**
@@ -713,15 +692,6 @@ HWTEST_F(AccessibilityProviderTestNg, AccessibilityProviderTest006, TestSize.Lev
         elementId, action, requestId, actionArguments);
     EXPECT_EQ(ret, ARKUI_ACCESSIBILITY_NATIVE_RESULT_SUCCESSFUL);
     EXPECT_EQ(actionArguments, g_providerMockResult.resultActionArguments_);
-
-    // register with instance
-    ArkUI_AccessibilityProviderCallbacksWithInstance callBacksWithInstance;
-    BuildMockCallBackWithInstance(callBacksWithInstance);
-    ret = accessibilityProvider.AccessibilityProviderRegisterCallbackWithInstance(INSTANCE_ID, &callBacksWithInstance);
-    EXPECT_EQ(ret, ARKUI_ACCESSIBILITY_NATIVE_RESULT_SUCCESSFUL);
-    ret = accessibilityProvider.ExecuteAccessibilityAction(
-        elementId, action, requestId, actionArguments);
-    EXPECT_EQ(ret, ARKUI_ACCESSIBILITY_NATIVE_RESULT_SUCCESSFUL);
 }
 
 /**
@@ -749,13 +719,6 @@ HWTEST_F(AccessibilityProviderTestNg, AccessibilityProviderTest007, TestSize.Lev
     ret = accessibilityProvider.ClearFocusedAccessibilityNode();
     EXPECT_EQ(ret, ARKUI_ACCESSIBILITY_NATIVE_RESULT_SUCCESSFUL);
     EXPECT_EQ(g_providerMockResult.receiveClear_, true);
-
-    // register with instance
-    ArkUI_AccessibilityProviderCallbacksWithInstance callBacksWithInstance;
-    BuildMockCallBackWithInstance(callBacksWithInstance);
-    ret = accessibilityProvider.AccessibilityProviderRegisterCallbackWithInstance(INSTANCE_ID, &callBacksWithInstance);
-    EXPECT_EQ(ret, ARKUI_ACCESSIBILITY_NATIVE_RESULT_SUCCESSFUL);
-    accessibilityProvider.ClearFocusedAccessibilityNode();
 }
 
 /**
@@ -795,15 +758,6 @@ HWTEST_F(AccessibilityProviderTestNg, AccessibilityProviderTest008, TestSize.Lev
         elementId, requestId, cursorPosition);
     EXPECT_EQ(ret, ARKUI_ACCESSIBILITY_NATIVE_RESULT_SUCCESSFUL);
     EXPECT_EQ(cursorPosition, g_providerMockResult.cursorPosition_);
-
-    // register with instance
-    ArkUI_AccessibilityProviderCallbacksWithInstance callBacksWithInstance;
-    BuildMockCallBackWithInstance(callBacksWithInstance);
-    ret = accessibilityProvider.AccessibilityProviderRegisterCallbackWithInstance(INSTANCE_ID, &callBacksWithInstance);
-    EXPECT_EQ(ret, ARKUI_ACCESSIBILITY_NATIVE_RESULT_SUCCESSFUL);
-    ret = accessibilityProvider.GetAccessibilityNodeCursorPosition(
-        elementId, requestId, cursorPosition);
-    EXPECT_EQ(ret, ARKUI_ACCESSIBILITY_NATIVE_RESULT_SUCCESSFUL);
 }
 
 /**
@@ -930,7 +884,7 @@ HWTEST_F(AccessibilityProviderTestNg, AccessibilityProviderTest011, TestSize.Lev
     // register fail
     ret = accessibilityProvider.FindAccessibilityNodeInfosById(
         elementId, mode, requestId, infos);
-    EXPECT_EQ(ret, AccessibilityProviderOperatorErrorCode::NOT_REGISTERED);
+    EXPECT_EQ(ret, NOT_REGISTERED);
 
     // register success
     BuildMockCallBack(callBacks);

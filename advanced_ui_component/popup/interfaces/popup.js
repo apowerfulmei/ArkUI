@@ -20,15 +20,8 @@ if (!("finalizeConstruction" in ViewPU.prototype)) {
 const display = requireNapi('display');
 const mediaquery = requireNapi('mediaquery');
 const LengthMetrics = requireNapi('arkui.node').LengthMetrics;
-const SymbolGlyphModifier = requireNapi('arkui.modifier').SymbolGlyphModifier;
-const componentUtils = requireNapi('arkui.componentUtils');
-const Configuration = requireNapi('configuration');
-const SystemDateTime = requireNapi('systemDateTime');
 
-const o = 10003;
-const t = 10002;
-const u = 10007;
-export const a1 = {
+export const defaultTheme = {
     icon: {
         size: { width: 32, height: 32 },
         margin: {
@@ -38,14 +31,32 @@ export const a1 = {
             end: LengthMetrics.vp(12)
         },
         fillColor: '',
-        borderRadius: { "id": -1, "type": 10002, params: ['sys.float.ohos_id_corner_radius_default_s'], "bundleName": "__harDefaultBundleName__", "moduleName": "__harDefaultModuleName__" }
+        borderRadius: {
+            "id": -1,
+            "type": 10002,
+            params: ['sys.float.ohos_id_corner_radius_default_s'],
+            "bundleName": "__harDefaultBundleName__",
+            "moduleName": "__harDefaultModuleName__"
+        }
     },
     title: {
         margin: { bottom: LengthMetrics.vp(2) },
         minFontSize: 12,
         fontWeight: FontWeight.Medium,
-        fontSize: { "id": -1, "type": 10002, params: ['sys.float.ohos_id_text_size_sub_title2'], "bundleName": "__harDefaultBundleName__", "moduleName": "__harDefaultModuleName__" },
-        fontColor: { "id": -1, "type": 10001, params: ['sys.color.font_primary'], "bundleName": "__harDefaultBundleName__", "moduleName": "__harDefaultModuleName__" }
+        fontSize: {
+            "id": -1,
+            "type": 10002,
+            params: ['sys.float.ohos_id_text_size_sub_title2'],
+            "bundleName": "__harDefaultBundleName__",
+            "moduleName": "__harDefaultModuleName__"
+        },
+        fontColor: {
+            "id": -1,
+            "type": 10001,
+            params: ['sys.color.font_primary'],
+            "bundleName": "__harDefaultBundleName__",
+            "moduleName": "__harDefaultModuleName__"
+        }
     },
     button: {
         margin: {
@@ -60,9 +71,21 @@ export const a1 = {
             start: LengthMetrics.vp(4),
             end: LengthMetrics.vp(4)
         },
-        fontSize: { "id": -1, "type": 10002, params: ['sys.float.ohos_id_text_size_button2'], "bundleName": "__harDefaultBundleName__", "moduleName": "__harDefaultModuleName__" },
-        fontColor: { "id": -1, "type": 10001, params: ['sys.color.font_emphasize'], "bundleName": "__harDefaultBundleName__", "moduleName": "__harDefaultModuleName__" },
-        e2: {
+        fontSize: {
+            "id": -1,
+            "type": 10002,
+            params: ['sys.float.ohos_id_text_size_button2'],
+            "bundleName": "__harDefaultBundleName__",
+            "moduleName": "__harDefaultModuleName__"
+        },
+        fontColor: {
+            "id": -1,
+            "type": 10001,
+            params: ['sys.color.font_emphasize'],
+            "bundleName": "__harDefaultBundleName__",
+            "moduleName": "__harDefaultModuleName__"
+        },
+        textMargin: {
             top: LengthMetrics.vp(8),
             bottom: LengthMetrics.vp(8),
             start: LengthMetrics.vp(8),
@@ -70,16 +93,46 @@ export const a1 = {
         },
         minFontSize: 9,
         fontWeight: FontWeight.Medium,
-        f2: { "id": -1, "type": 10001, params: ['sys.color.ohos_id_color_hover'], "bundleName": "__harDefaultBundleName__", "moduleName": "__harDefaultModuleName__" },
-        backgroundColor: { "id": -1, "type": 10001, params: ['sys.color.ohos_id_color_background_transparent'], "bundleName": "__harDefaultBundleName__", "moduleName": "__harDefaultModuleName__" }
+        hoverColor: {
+            "id": -1,
+            "type": 10001,
+            params: ['sys.color.ohos_id_color_hover'],
+            "bundleName": "__harDefaultBundleName__",
+            "moduleName": "__harDefaultModuleName__"
+        },
+        backgroundColor: {
+            "id": -1,
+            "type": 10001,
+            params: ['sys.color.ohos_id_color_background_transparent'],
+            "bundleName": "__harDefaultBundleName__",
+            "moduleName": "__harDefaultModuleName__"
+        }
     },
     message: {
-        fontSize: { "id": -1, "type": 10002, params: ['sys.float.ohos_id_text_size_body2'], "bundleName": "__harDefaultBundleName__", "moduleName": "__harDefaultModuleName__" },
-        fontColor: { "id": -1, "type": 10001, params: ['sys.color.font_secondary'], "bundleName": "__harDefaultBundleName__", "moduleName": "__harDefaultModuleName__" },
+        fontSize: {
+            "id": -1,
+            "type": 10002,
+            params: ['sys.float.ohos_id_text_size_body2'],
+            "bundleName": "__harDefaultBundleName__",
+            "moduleName": "__harDefaultModuleName__"
+        },
+        fontColor: {
+            "id": -1,
+            "type": 10001,
+            params: ['sys.color.font_secondary'],
+            "bundleName": "__harDefaultBundleName__",
+            "moduleName": "__harDefaultModuleName__"
+        },
         fontWeight: FontWeight.Regular,
-        g2: { "id": -1, "type": 10001, params: ['sys.color.font_primary'], "bundleName": "__harDefaultBundleName__", "moduleName": "__harDefaultModuleName__" }
+        plainFontColor: {
+            "id": -1,
+            "type": 10001,
+            params: ['sys.color.font_primary'],
+            "bundleName": "__harDefaultBundleName__",
+            "moduleName": "__harDefaultModuleName__"
+        }
     },
-    h2: {
+    windows: {
         padding: {
             top: LengthMetrics.vp(12),
             bottom: LengthMetrics.vp(12),
@@ -87,8 +140,9 @@ export const a1 = {
             end: LengthMetrics.vp(12)
         },
     },
-    i2: {
+    closeButton: {
         size: { width: 22, height: 22 },
+        imageSize: { width: 18, height: 18 },
         padding: {
             top: LengthMetrics.vp(2),
             bottom: LengthMetrics.vp(2),
@@ -101,113 +155,96 @@ export const a1 = {
             start: LengthMetrics.vp(12),
             end: LengthMetrics.vp(12)
         },
-        symbolStyle: new SymbolGlyphModifier({ "id": -1, "type": 40000, params: ['sys.symbol.xmark'], "bundleName": "__harDefaultBundleName__", "moduleName": "__harDefaultModuleName__" }),
-        fillColor: { "id": -1, "type": 10001, params: ['sys.color.icon_secondary'], "bundleName": "__harDefaultBundleName__", "moduleName": "__harDefaultModuleName__" },
-        f2: { "id": -1, "type": 10001, params: ['sys.color.ohos_id_color_hover'], "bundleName": "__harDefaultBundleName__", "moduleName": "__harDefaultModuleName__" },
-        backgroundColor: { "id": -1, "type": 10001, params: ['sys.color.ohos_id_color_background_transparent'], "bundleName": "__harDefaultBundleName__", "moduleName": "__harDefaultModuleName__" },
-        j2: '18vp',
-        l2: { "id": -1, "type": 10003, params: ['sys.string.off_used_for_accessibility_text'], "bundleName": "__harDefaultBundleName__", "moduleName": "__harDefaultModuleName__" }
+        image: {
+            "id": -1,
+            "type": 20000,
+            params: ['sys.media.ohos_ic_public_cancel'],
+            "bundleName": "__harDefaultBundleName__",
+            "moduleName": "__harDefaultModuleName__"
+        },
+        fillColor: {
+            "id": -1,
+            "type": 10001,
+            params: ['sys.color.icon_secondary'],
+            "bundleName": "__harDefaultBundleName__",
+            "moduleName": "__harDefaultModuleName__"
+        },
+        hoverColor: {
+            "id": -1,
+            "type": 10001,
+            params: ['sys.color.ohos_id_color_hover'],
+            "bundleName": "__harDefaultBundleName__",
+            "moduleName": "__harDefaultModuleName__"
+        },
+        backgroundColor: {
+            "id": -1,
+            "type": 10001,
+            params: ['sys.color.ohos_id_color_background_transparent'],
+            "bundleName": "__harDefaultBundleName__",
+            "moduleName": "__harDefaultModuleName__"
+        }
     },
 };
-const b1 = () => {
+const noop = () => {
 };
-const c1 = 400;
-export function Popup(options, parent = null) {
-    const d2 = options;
+
+export function Popup(r29, s29 = null) {
+    const t29 = r29;
     {
-        (parent ? parent : this).observeComponentCreation2((elmtId, isInitialRender, options = d2) => {
-            if (isInitialRender) {
-                let componentCall = new d1(parent ? parent : this, {
-                    icon: options.icon,
-                    title: options.title,
-                    message: options.message,
-                    popupDirection: options.direction,
-                    showClose: options.showClose,
-                    onClose: options.onClose,
-                    buttons: options.buttons,
-                    maxWidth: options.maxWidth
-                }, undefined, elmtId, () => { }, { page: "library/src/main/ets/components/MainPage.ets", line: 210, m2: 3 });
-                ViewPU.create(componentCall);
-                let paramsLambda = () => {
+        (s29 ? s29 : this).observeComponentCreation2((v29, w29, x29 = t29) => {
+            if (w29) {
+                let y29 = new PopupComponent(typeof PUV2ViewBase !== "undefined" && s29 instanceof PUV2ViewBase ? s29 : this, {
+                    icon: x29.icon,
+                    title: x29.title,
+                    message: x29.message,
+                    popupDirection: x29.direction,
+                    showClose: x29.showClose,
+                    onClose: x29.onClose,
+                    buttons: x29.buttons
+                }, undefined, v29, () => {
+                }, { page: "library/src/main/ets/components/popup/popup.ets", line: 198, col: 3 });
+                ViewPU.create(y29);
+                let z29 = () => {
                     return {
-                        icon: options.icon,
-                        title: options.title,
-                        message: options.message,
-                        popupDirection: options.direction,
-                        showClose: options.showClose,
-                        onClose: options.onClose,
-                        buttons: options.buttons,
-                        maxWidth: options.maxWidth
+                        icon: x29.icon,
+                        title: x29.title,
+                        message: x29.message,
+                        popupDirection: x29.direction,
+                        showClose: x29.showClose,
+                        onClose: x29.onClose,
+                        buttons: x29.buttons
                     };
                 };
-                componentCall.paramsGenerator_ = paramsLambda;
+                y29.paramsGenerator_ = z29;
             }
             else {
-                (parent ? parent : this).updateStateVarsOfChildByElmtId(elmtId, {
-                    icon: options.icon,
-                    title: options.title,
-                    message: options.message,
-                    popupDirection: options.direction,
-                    showClose: options.showClose,
-                    buttons: options.buttons,
-                    maxWidth: options.maxWidth
+                (s29 ? s29 : this).updateStateVarsOfChildByElmtId(v29, {
+                    icon: x29.icon,
+                    title: x29.title,
+                    message: x29.message,
+                    popupDirection: x29.direction,
+                    showClose: x29.showClose,
+                    buttons: x29.buttons
                 });
             }
         }, { name: "PopupComponent" });
     }
 }
-function i(dimension, c2) {
-    const matches = dimension.match(c2);
-    if (!matches || matches.length < 3) {
-        return false;
-    }
-    const value = Number.parseFloat(matches[1]);
-    return value >= 0;
-}
-function j(dimension) {
-    return i(dimension, new RegExp('(-?\\d+(?:\\.\\d+)?)_?(fp|vp|px|lpx|%)?$', 'i'));
-}
-function m(context, value) {
-    const resourceManager = context?.resourceManager;
-    if (value === void (0) || value === null || resourceManager === void (0)) {
-        return false;
-    }
-    if (value.type !== o && value.type !== u &&
-        value.type !== t) {
-        return false;
-    }
-    if (value.type === u || value.type === t) {
-        if (resourceManager.getNumber(value.id) >= 0) {
-            return true;
+
+export class PopupComponent extends ViewPU {
+    constructor(l29, m29, n29, o29 = -1, p29 = undefined, q29) {
+        super(l29, n29, o29, q29);
+        if (typeof p29 === "function") {
+            this.paramsGenerator_ = p29;
         }
-        else {
-            return false;
-        }
-    }
-    if (value.type === o && !j(resourceManager.getStringSync(value.id))) {
-        return false;
-    }
-    else {
-        return true;
-    }
-}
-export class d1 extends ViewPU {
-    constructor(parent, params, __localStorage, elmtId = -1, paramsLambda = undefined, extraInfo) {
-        super(parent, __localStorage, elmtId, extraInfo);
-        if (typeof paramsLambda === "function") {
-            this.paramsGenerator_ = paramsLambda;
-        }
-        this.onClose = b1;
-        this.theme = a1;
-        this.applycontentKey = 'applyContent' + SystemDateTime.getTime(false);
-        this.__icon = new SynchedPropertyObjectOneWayPU(params.icon, this, "icon");
-        this.__maxWidth = new SynchedPropertyObjectOneWayPU(params.maxWidth, this, "maxWidth");
-        this.__messageMaxWidth = new SynchedPropertySimpleOneWayPU(params.messageMaxWidth, this, "messageMaxWidth");
-        this.__title = new SynchedPropertyObjectOneWayPU(params.title, this, "title");
-        this.__message = new SynchedPropertyObjectOneWayPU(params.message, this, "message");
-        this.__popupDirection = new SynchedPropertySimpleOneWayPU(params.popupDirection, this, "popupDirection");
-        this.__showClose = new SynchedPropertyObjectOneWayPU(params.showClose, this, "showClose");
-        this.__buttons = new SynchedPropertyObjectOneWayPU(params.buttons, this, "buttons");
+        this.onClose = noop;
+        this.theme = defaultTheme;
+        this.__icon = new SynchedPropertyObjectOneWayPU(m29.icon, this, "icon");
+        this.__title = new SynchedPropertyObjectOneWayPU(m29.title, this, "title");
+        this.__message = new SynchedPropertyObjectOneWayPU(m29.message, this, "message");
+        this.__popupDirection = new SynchedPropertySimpleOneWayPU(m29.popupDirection, this, "popupDirection");
+        this.__showClose = new SynchedPropertyObjectOneWayPU(m29.showClose, this, "showClose");
+        this.__buttons = new SynchedPropertyObjectOneWayPU(m29.buttons, this, "buttons");
         this.textHeight = 0;
         this.__titleHeight = new ObservedPropertySimplePU(0, this, "titleHeight");
         this.__applyHeight = new ObservedPropertySimplePU(0, this, "applyHeight");
@@ -216,120 +253,136 @@ export class d1 extends ViewPU {
         this.__beforeScreenStatus = new ObservedPropertySimplePU(undefined, this, "beforeScreenStatus");
         this.__currentScreenStatus = new ObservedPropertySimplePU(true, this, "currentScreenStatus");
         this.__applySizeOptions = new ObservedPropertyObjectPU(undefined, this, "applySizeOptions");
-        this.__closeButtonBackgroundColor = new ObservedPropertyObjectPU({ "id": -1, "type": 10001, params: ['sys.color.ohos_id_color_background_transparent'], "bundleName": "__harDefaultBundleName__", "moduleName": "__harDefaultModuleName__" }, this, "closeButtonBackgroundColor");
-        this.__firstButtonBackgroundColor = new ObservedPropertyObjectPU({ "id": -1, "type": 10001, params: ['sys.color.ohos_id_color_background_transparent'], "bundleName": "__harDefaultBundleName__", "moduleName": "__harDefaultModuleName__" }, this, "firstButtonBackgroundColor");
-        this.__secondButtonBackgroundColor = new ObservedPropertyObjectPU({ "id": -1, "type": 10001, params: ['sys.color.ohos_id_color_background_transparent'], "bundleName": "__harDefaultBundleName__", "moduleName": "__harDefaultModuleName__" }, this, "secondButtonBackgroundColor");
-        this.__closeButtonFillColorWithTheme = new ObservedPropertyObjectPU({ "id": -1, "type": 10001, params: ['sys.color.icon_secondary'], "bundleName": "__harDefaultBundleName__", "moduleName": "__harDefaultModuleName__" }, this, "closeButtonFillColorWithTheme");
+        this.__closeButtonBackgroundColor = new ObservedPropertyObjectPU({
+            "id": -1,
+            "type": 10001,
+            params: ['sys.color.ohos_id_color_background_transparent'],
+            "bundleName": "__harDefaultBundleName__",
+            "moduleName": "__harDefaultModuleName__"
+        }, this, "closeButtonBackgroundColor");
+        this.__firstButtonBackgroundColor = new ObservedPropertyObjectPU({
+            "id": -1,
+            "type": 10001,
+            params: ['sys.color.ohos_id_color_background_transparent'],
+            "bundleName": "__harDefaultBundleName__",
+            "moduleName": "__harDefaultModuleName__"
+        }, this, "firstButtonBackgroundColor");
+        this.__secondButtonBackgroundColor = new ObservedPropertyObjectPU({
+            "id": -1,
+            "type": 10001,
+            params: ['sys.color.ohos_id_color_background_transparent'],
+            "bundleName": "__harDefaultBundleName__",
+            "moduleName": "__harDefaultModuleName__"
+        }, this, "secondButtonBackgroundColor");
+        this.__closeButtonFillColorWithTheme = new ObservedPropertyObjectPU({
+            "id": -1,
+            "type": 10001,
+            params: ['sys.color.icon_secondary'],
+            "bundleName": "__harDefaultBundleName__",
+            "moduleName": "__harDefaultModuleName__"
+        }, this, "closeButtonFillColorWithTheme");
         this.listener = mediaquery.matchMediaSync('(orientation: landscape)');
-        this.setInitiallyProvidedValue(params);
+        this.setInitiallyProvidedValue(m29);
         this.finalizeConstruction();
     }
-    setInitiallyProvidedValue(params) {
-        if (params.onClose !== undefined) {
-            this.onClose = params.onClose;
+
+    setInitiallyProvidedValue(k29) {
+        if (k29.onClose !== undefined) {
+            this.onClose = k29.onClose;
         }
-        if (params.theme !== undefined) {
-            this.theme = params.theme;
+        if (k29.theme !== undefined) {
+            this.theme = k29.theme;
         }
-        if (params.applycontentKey !== undefined) {
-            this.applycontentKey = params.applycontentKey;
-        }
-        if (params.icon === undefined) {
+        if (k29.icon === undefined) {
             this.__icon.set({ image: '' });
         }
-        if (params.messageMaxWidth === undefined) {
-            this.__messageMaxWidth.set(0);
-        }
-        if (params.title === undefined) {
+        if (k29.title === undefined) {
             this.__title.set({ text: '' });
         }
-        if (params.message === undefined) {
+        if (k29.message === undefined) {
             this.__message.set({ text: '' });
         }
-        if (params.popupDirection === undefined) {
+        if (k29.popupDirection === undefined) {
             this.__popupDirection.set(Direction.Auto);
         }
-        if (params.showClose === undefined) {
+        if (k29.showClose === undefined) {
             this.__showClose.set(true);
         }
-        if (params.buttons === undefined) {
+        if (k29.buttons === undefined) {
             this.__buttons.set([{ text: '' }, { text: '' }]);
         }
-        if (params.textHeight !== undefined) {
-            this.textHeight = params.textHeight;
+        if (k29.textHeight !== undefined) {
+            this.textHeight = k29.textHeight;
         }
-        if (params.titleHeight !== undefined) {
-            this.titleHeight = params.titleHeight;
+        if (k29.titleHeight !== undefined) {
+            this.titleHeight = k29.titleHeight;
         }
-        if (params.applyHeight !== undefined) {
-            this.applyHeight = params.applyHeight;
+        if (k29.applyHeight !== undefined) {
+            this.applyHeight = k29.applyHeight;
         }
-        if (params.buttonHeight !== undefined) {
-            this.buttonHeight = params.buttonHeight;
+        if (k29.buttonHeight !== undefined) {
+            this.buttonHeight = k29.buttonHeight;
         }
-        if (params.messageMaxWeight !== undefined) {
-            this.messageMaxWeight = params.messageMaxWeight;
+        if (k29.messageMaxWeight !== undefined) {
+            this.messageMaxWeight = k29.messageMaxWeight;
         }
-        if (params.beforeScreenStatus !== undefined) {
-            this.beforeScreenStatus = params.beforeScreenStatus;
+        if (k29.beforeScreenStatus !== undefined) {
+            this.beforeScreenStatus = k29.beforeScreenStatus;
         }
-        if (params.currentScreenStatus !== undefined) {
-            this.currentScreenStatus = params.currentScreenStatus;
+        if (k29.currentScreenStatus !== undefined) {
+            this.currentScreenStatus = k29.currentScreenStatus;
         }
-        if (params.applySizeOptions !== undefined) {
-            this.applySizeOptions = params.applySizeOptions;
+        if (k29.applySizeOptions !== undefined) {
+            this.applySizeOptions = k29.applySizeOptions;
         }
-        if (params.closeButtonBackgroundColor !== undefined) {
-            this.closeButtonBackgroundColor = params.closeButtonBackgroundColor;
+        if (k29.closeButtonBackgroundColor !== undefined) {
+            this.closeButtonBackgroundColor = k29.closeButtonBackgroundColor;
         }
-        if (params.firstButtonBackgroundColor !== undefined) {
-            this.firstButtonBackgroundColor = params.firstButtonBackgroundColor;
+        if (k29.firstButtonBackgroundColor !== undefined) {
+            this.firstButtonBackgroundColor = k29.firstButtonBackgroundColor;
         }
-        if (params.secondButtonBackgroundColor !== undefined) {
-            this.secondButtonBackgroundColor = params.secondButtonBackgroundColor;
+        if (k29.secondButtonBackgroundColor !== undefined) {
+            this.secondButtonBackgroundColor = k29.secondButtonBackgroundColor;
         }
-        if (params.closeButtonFillColorWithTheme !== undefined) {
-            this.closeButtonFillColorWithTheme = params.closeButtonFillColorWithTheme;
+        if (k29.closeButtonFillColorWithTheme !== undefined) {
+            this.closeButtonFillColorWithTheme = k29.closeButtonFillColorWithTheme;
         }
-        if (params.listener !== undefined) {
-            this.listener = params.listener;
+        if (k29.listener !== undefined) {
+            this.listener = k29.listener;
         }
     }
-    updateStateVars(params) {
-        this.__icon.reset(params.icon);
-        this.__maxWidth.reset(params.maxWidth);
-        this.__messageMaxWidth.reset(params.messageMaxWidth);
-        this.__title.reset(params.title);
-        this.__message.reset(params.message);
-        this.__popupDirection.reset(params.popupDirection);
-        this.__showClose.reset(params.showClose);
-        this.__buttons.reset(params.buttons);
+
+    updateStateVars(j29) {
+        this.__icon.reset(j29.icon);
+        this.__title.reset(j29.title);
+        this.__message.reset(j29.message);
+        this.__popupDirection.reset(j29.popupDirection);
+        this.__showClose.reset(j29.showClose);
+        this.__buttons.reset(j29.buttons);
     }
-    purgeVariableDependenciesOnElmtId(rmElmtId) {
-        this.__icon.purgeDependencyOnElmtId(rmElmtId);
-        this.__maxWidth.purgeDependencyOnElmtId(rmElmtId);
-        this.__messageMaxWidth.purgeDependencyOnElmtId(rmElmtId);
-        this.__title.purgeDependencyOnElmtId(rmElmtId);
-        this.__message.purgeDependencyOnElmtId(rmElmtId);
-        this.__popupDirection.purgeDependencyOnElmtId(rmElmtId);
-        this.__showClose.purgeDependencyOnElmtId(rmElmtId);
-        this.__buttons.purgeDependencyOnElmtId(rmElmtId);
-        this.__titleHeight.purgeDependencyOnElmtId(rmElmtId);
-        this.__applyHeight.purgeDependencyOnElmtId(rmElmtId);
-        this.__buttonHeight.purgeDependencyOnElmtId(rmElmtId);
-        this.__messageMaxWeight.purgeDependencyOnElmtId(rmElmtId);
-        this.__beforeScreenStatus.purgeDependencyOnElmtId(rmElmtId);
-        this.__currentScreenStatus.purgeDependencyOnElmtId(rmElmtId);
-        this.__applySizeOptions.purgeDependencyOnElmtId(rmElmtId);
-        this.__closeButtonBackgroundColor.purgeDependencyOnElmtId(rmElmtId);
-        this.__firstButtonBackgroundColor.purgeDependencyOnElmtId(rmElmtId);
-        this.__secondButtonBackgroundColor.purgeDependencyOnElmtId(rmElmtId);
-        this.__closeButtonFillColorWithTheme.purgeDependencyOnElmtId(rmElmtId);
+
+    purgeVariableDependenciesOnElmtId(i29) {
+        this.__icon.purgeDependencyOnElmtId(i29);
+        this.__title.purgeDependencyOnElmtId(i29);
+        this.__message.purgeDependencyOnElmtId(i29);
+        this.__popupDirection.purgeDependencyOnElmtId(i29);
+        this.__showClose.purgeDependencyOnElmtId(i29);
+        this.__buttons.purgeDependencyOnElmtId(i29);
+        this.__titleHeight.purgeDependencyOnElmtId(i29);
+        this.__applyHeight.purgeDependencyOnElmtId(i29);
+        this.__buttonHeight.purgeDependencyOnElmtId(i29);
+        this.__messageMaxWeight.purgeDependencyOnElmtId(i29);
+        this.__beforeScreenStatus.purgeDependencyOnElmtId(i29);
+        this.__currentScreenStatus.purgeDependencyOnElmtId(i29);
+        this.__applySizeOptions.purgeDependencyOnElmtId(i29);
+        this.__closeButtonBackgroundColor.purgeDependencyOnElmtId(i29);
+        this.__firstButtonBackgroundColor.purgeDependencyOnElmtId(i29);
+        this.__secondButtonBackgroundColor.purgeDependencyOnElmtId(i29);
+        this.__closeButtonFillColorWithTheme.purgeDependencyOnElmtId(i29);
     }
+
     aboutToBeDeleted() {
         this.__icon.aboutToBeDeleted();
-        this.__maxWidth.aboutToBeDeleted();
-        this.__messageMaxWidth.aboutToBeDeleted();
         this.__title.aboutToBeDeleted();
         this.__message.aboutToBeDeleted();
         this.__popupDirection.aboutToBeDeleted();
@@ -349,510 +402,459 @@ export class d1 extends ViewPU {
         SubscriberManager.Get().delete(this.id__());
         this.aboutToBeDeletedInternal();
     }
+
     get icon() {
         return this.__icon.get();
     }
-    set icon(newValue) {
-        this.__icon.set(newValue);
+
+    set icon(h29) {
+        this.__icon.set(h29);
     }
-    get maxWidth() {
-        return this.__maxWidth.get();
-    }
-    set maxWidth(newValue) {
-        this.__maxWidth.set(newValue);
-    }
-    get messageMaxWidth() {
-        return this.__messageMaxWidth.get();
-    }
-    set messageMaxWidth(newValue) {
-        this.__messageMaxWidth.set(newValue);
-    }
+
     get title() {
         return this.__title.get();
     }
-    set title(newValue) {
-        this.__title.set(newValue);
+
+    set title(g29) {
+        this.__title.set(g29);
     }
+
     get message() {
         return this.__message.get();
     }
-    set message(newValue) {
-        this.__message.set(newValue);
+
+    set message(f29) {
+        this.__message.set(f29);
     }
+
     get popupDirection() {
         return this.__popupDirection.get();
     }
-    set popupDirection(newValue) {
-        this.__popupDirection.set(newValue);
+
+    set popupDirection(e29) {
+        this.__popupDirection.set(e29);
     }
+
     get showClose() {
         return this.__showClose.get();
     }
-    set showClose(newValue) {
-        this.__showClose.set(newValue);
+
+    set showClose(d29) {
+        this.__showClose.set(d29);
     }
+
     get buttons() {
         return this.__buttons.get();
     }
-    set buttons(newValue) {
-        this.__buttons.set(newValue);
+
+    set buttons(c29) {
+        this.__buttons.set(c29);
     }
+
     get titleHeight() {
         return this.__titleHeight.get();
     }
-    set titleHeight(newValue) {
-        this.__titleHeight.set(newValue);
+
+    set titleHeight(b29) {
+        this.__titleHeight.set(b29);
     }
+
     get applyHeight() {
         return this.__applyHeight.get();
     }
-    set applyHeight(newValue) {
-        this.__applyHeight.set(newValue);
+
+    set applyHeight(a29) {
+        this.__applyHeight.set(a29);
     }
+
     get buttonHeight() {
         return this.__buttonHeight.get();
     }
-    set buttonHeight(newValue) {
-        this.__buttonHeight.set(newValue);
+
+    set buttonHeight(z28) {
+        this.__buttonHeight.set(z28);
     }
+
     get messageMaxWeight() {
         return this.__messageMaxWeight.get();
     }
-    set messageMaxWeight(newValue) {
-        this.__messageMaxWeight.set(newValue);
+
+    set messageMaxWeight(y28) {
+        this.__messageMaxWeight.set(y28);
     }
+
     get beforeScreenStatus() {
         return this.__beforeScreenStatus.get();
     }
-    set beforeScreenStatus(newValue) {
-        this.__beforeScreenStatus.set(newValue);
+
+    set beforeScreenStatus(x28) {
+        this.__beforeScreenStatus.set(x28);
     }
+
     get currentScreenStatus() {
         return this.__currentScreenStatus.get();
     }
-    set currentScreenStatus(newValue) {
-        this.__currentScreenStatus.set(newValue);
+
+    set currentScreenStatus(w28) {
+        this.__currentScreenStatus.set(w28);
     }
+
     get applySizeOptions() {
         return this.__applySizeOptions.get();
     }
-    set applySizeOptions(newValue) {
-        this.__applySizeOptions.set(newValue);
+
+    set applySizeOptions(v28) {
+        this.__applySizeOptions.set(v28);
     }
+
     get closeButtonBackgroundColor() {
         return this.__closeButtonBackgroundColor.get();
     }
-    set closeButtonBackgroundColor(newValue) {
-        this.__closeButtonBackgroundColor.set(newValue);
+
+    set closeButtonBackgroundColor(u28) {
+        this.__closeButtonBackgroundColor.set(u28);
     }
+
     get firstButtonBackgroundColor() {
         return this.__firstButtonBackgroundColor.get();
     }
-    set firstButtonBackgroundColor(newValue) {
-        this.__firstButtonBackgroundColor.set(newValue);
+
+    set firstButtonBackgroundColor(t28) {
+        this.__firstButtonBackgroundColor.set(t28);
     }
+
     get secondButtonBackgroundColor() {
         return this.__secondButtonBackgroundColor.get();
     }
-    set secondButtonBackgroundColor(newValue) {
-        this.__secondButtonBackgroundColor.set(newValue);
+
+    set secondButtonBackgroundColor(s28) {
+        this.__secondButtonBackgroundColor.set(s28);
     }
+
     get closeButtonFillColorWithTheme() {
         return this.__closeButtonFillColorWithTheme.get();
     }
-    set closeButtonFillColorWithTheme(newValue) {
-        this.__closeButtonFillColorWithTheme.set(newValue);
+
+    set closeButtonFillColorWithTheme(r28) {
+        this.__closeButtonFillColorWithTheme.set(r28);
     }
+
     getIconWidth() {
         return this.icon?.width ?? this.theme.icon.size.width;
     }
+
     getIconHeight() {
         return this.icon?.height ?? this.theme.icon.size.height;
     }
+
     getIconFillColor() {
         return this.icon?.fillColor ?? this.theme.icon.fillColor;
     }
+
     getIconBorderRadius() {
         return this.icon?.borderRadius ?? this.theme.icon.borderRadius;
     }
+
     getIconMargin() {
         return {
             start: new LengthMetrics(this.theme.button.margin.start.value / 2, this.theme.button.margin.start.unit),
             end: new LengthMetrics(this.theme.icon.margin.start.value - (this.theme.button.margin.end.value / 2), this.theme.button.margin.start.unit)
         };
     }
+
     getIconImage() {
         return this.icon?.image;
     }
+
     getTitleText() {
         return this.title?.text;
     }
+
     getTitlePadding() {
         return {
             start: new LengthMetrics(this.theme.button.margin.start.value / 2, this.theme.button.margin.start.unit),
-            end: this.theme.i2.margin.end
+            end: this.theme.closeButton.margin.end
         };
     }
+
     getTitleMargin() {
         return this.theme.title.margin;
     }
+
     getTitleMinFontSize() {
         return this.theme.title.minFontSize;
     }
+
     getTitleFontWeight() {
         return this.title?.fontWeight ?? this.theme.title.fontWeight;
     }
+
     getTitleFontSize() {
         return this.title?.fontSize ?? this.theme.title.fontSize;
     }
+
     getTitleFontColor() {
         return this.title?.fontColor ?? this.theme.title.fontColor;
     }
+
     getCloseButtonWidth() {
-        return this.theme.i2.size.width;
+        return this.theme.closeButton.size.width;
     }
+
     getCloseButtonHeight() {
-        return this.theme.i2.size.height;
+        return this.theme.closeButton.size.height;
     }
+
+    getCloseButtonImage() {
+        return this.theme.closeButton.image;
+    }
+
     getCloseButtonFillColor() {
         return this.closeButtonFillColorWithTheme;
     }
+
     getCloseButtonHoverColor() {
-        return this.theme.i2.f2;
+        return this.theme.closeButton.hoverColor;
     }
+
     getCloseButtonBackgroundColor() {
-        return this.theme.i2.backgroundColor;
+        return this.theme.closeButton.backgroundColor;
     }
+
     getCloseButtonPadding() {
-        return this.theme.i2.padding;
+        return this.theme.closeButton.padding;
     }
-    getCloseButtonSymbolSize() {
-        return this.theme.i2.j2;
+
+    getCloseButtonImageWidth() {
+        return this.theme.closeButton.imageSize.width;
     }
+
+    getCloseButtonImageHeight() {
+        return this.theme.closeButton.imageSize.height;
+    }
+
     getMessageText() {
         return this.message.text;
     }
+
     getMessageFontSize() {
         return this.message.fontSize ?? this.theme.message.fontSize;
     }
+
     getMessageFontColor() {
-        let fontColor;
+        let q28;
         if (this.message.fontColor) {
-            fontColor = this.message.fontColor;
+            q28 = this.message.fontColor;
         }
         else {
             if (this.title.text !== '' && this.title.text !== void (0)) {
-                fontColor = this.theme.message.fontColor;
+                q28 = this.theme.message.fontColor;
             }
             else {
-                fontColor = this.theme.message.g2;
+                q28 = this.theme.message.plainFontColor;
             }
         }
-        return fontColor;
+        return q28;
     }
+
     getMessagePadding() {
-        let padding;
-            padding = {
+        let p28;
+        if (this.title.text !== '' && this.title.text !== void (0)) {
+            p28 = { start: LengthMetrics.vp(this.theme.button.margin.start.value / 2) };
+        }
+        else {
+            p28 = {
                 start: LengthMetrics.vp(this.theme.button.margin.start.value / 2),
-                end: LengthMetrics.vp(this.theme.i2.margin.end.value)
+                end: LengthMetrics.vp(this.theme.closeButton.margin.end.value)
             };
-        return padding;
+        }
+        return p28;
     }
+
     getMessageMaxWeight() {
-        let a2 = undefined;
-        let b2 = undefined;
-        try {
-            b2 = display.getDefaultDisplaySync();
-        }
-        catch (error) {
-            console.error(`Ace Popup getDefaultDisplaySync, error: ${error.toString()}`);
-            return a2 = 400;
-        }
+        let n28 = undefined;
+        let o28 = display.getDefaultDisplaySync();
         if (this.showClose || this.showClose === void (0)) {
-            if (this.messageMaxWidth != undefined) {
-                if (this.maxWidth != undefined && this.maxWidth > px2vp(b2.width)) {
-                    a2 = px2vp(b2.width);
-                }
-                else {
-                    a2 = this.messageMaxWidth;
-                }
+            if (px2vp(o28.width) > 400) {
+                n28 = 400;
             }
             else {
-                if (b2.width != 0) {
-                    a2 = px2vp(b2.width);
-                }
-                else {
-                    a2 = -1;
-                }
+                n28 = px2vp(o28.width) - 40 - 40;
             }
-            a2 -= (this.theme.h2.padding.start.value - (this.theme.button.margin.end.value / 2));
-            a2 -= this.theme.h2.padding.end.value;
-            a2 -= this.theme.button.margin.start.value / 2;
-            a2 -= this.theme.i2.margin.end.value;
-            a2 -= this.getCloseButtonWidth();
+            n28 -= (this.theme.windows.padding.start.value - (this.theme.button.margin.end.value / 2));
+            n28 -= this.theme.windows.padding.end.value;
+            n28 -= this.theme.button.margin.start.value / 2;
+            n28 -= this.getCloseButtonWidth();
         }
-        return a2;
+        return n28;
     }
+
     getMessageFontWeight() {
         return this.theme.message.fontWeight;
     }
+
     getButtonMargin() {
         return {
-            top: LengthMetrics.vp(this.theme.button.e2.top.value / 2 - 4),
-            bottom: LengthMetrics.vp(this.theme.button.e2.bottom.value / 2 - 4),
+            top: LengthMetrics.vp(this.theme.button.textMargin.top.value / 2 - 4),
+            bottom: LengthMetrics.vp(this.theme.button.textMargin.bottom.value / 2 - 4),
             start: LengthMetrics.vp(this.theme.button.margin.start.value / 2 - 4),
             end: LengthMetrics.vp(this.theme.button.margin.end.value / 2 - 4)
         };
     }
+
     getButtonTextMargin() {
-        return { top: LengthMetrics.vp(this.theme.button.e2.bottom.value) };
+        return { top: LengthMetrics.vp(this.theme.button.textMargin.bottom.value ) };
     }
+
     getButtonTextPadding() {
         return this.theme.button.padding;
     }
+
     getButtonHoverColor() {
-        return this.theme.button.f2;
+        return this.theme.button.hoverColor;
     }
+
     getButtonBackgroundColor() {
         return this.theme.button.backgroundColor;
     }
+
     getFirstButtonText() {
         return this.buttons?.[0]?.text;
     }
+
     getSecondButtonText() {
         return this.buttons?.[1]?.text;
     }
+
     getFirstButtonFontSize() {
         return this.buttons?.[0]?.fontSize ?? this.theme.button.fontSize;
     }
+
     getSecondButtonFontSize() {
         return this.buttons?.[1]?.fontSize ?? this.theme.button.fontSize;
     }
+
     getFirstButtonFontColor() {
         return this.buttons?.[0]?.fontColor ?? this.theme.button.fontColor;
     }
+
     getSecondButtonFontColor() {
         return this.buttons?.[1]?.fontColor ?? this.theme.button.fontColor;
     }
+
     getButtonMinFontSize() {
         return this.theme.button.minFontSize;
     }
+
     getButtonFontWeight() {
         return this.theme.button.fontWeight;
     }
+
     getWindowsPadding() {
-        let top = this.theme.h2.padding.top;
-        let bottom = LengthMetrics.vp(this.theme.h2.padding.bottom.value - (this.theme.button.e2.bottom.value / 2));
-        let start = LengthMetrics.vp(this.theme.h2.padding.start.value - (this.theme.button.margin.end.value / 2));
-        let end = this.theme.h2.padding.end;
-        let z1 = this.toVp(this.maxWidth);
-        if (z1 === 0) {
-            start = LengthMetrics.vp(0);
-            end = LengthMetrics.vp(0);
-        }
         return {
-            top: top,
-            bottom: bottom,
-            start: start,
-            end: end
+            top: this.theme.windows.padding.top,
+            bottom: LengthMetrics.vp(this.theme.windows.padding.bottom.value -
+                (this.theme.button.textMargin.bottom.value / 2)),
+            start: LengthMetrics.vp(this.theme.windows.padding.start.value -
+                (this.theme.button.margin.end.value / 2)),
+            end: this.theme.windows.padding.end
         };
     }
-    onWillApplyTheme(theme) {
-        this.theme.title.fontColor = theme.colors.fontPrimary;
-        this.theme.button.fontColor = theme.colors.fontEmphasize;
-        this.theme.message.fontColor = theme.colors.fontSecondary;
-        this.theme.message.g2 = theme.colors.fontPrimary;
-        this.closeButtonFillColorWithTheme = theme.colors.iconSecondary;
+
+    onWillApplyTheme(m28) {
+        this.theme.title.fontColor = m28.colors.fontPrimary;
+        this.theme.button.fontColor = m28.colors.fontEmphasize;
+        this.theme.message.fontColor = m28.colors.fontSecondary;
+        this.theme.message.plainFontColor = m28.colors.fontPrimary;
+        this.closeButtonFillColorWithTheme = m28.colors.iconSecondary;
     }
+
     aboutToAppear() {
-        this.listener.on("change", (w1) => {
-            this.currentScreenStatus = w1.matches;
+        this.listener.on("change", (l28) => {
+            this.currentScreenStatus = l28.matches;
         });
     }
+
     aboutToDisappear() {
         this.listener.off("change");
     }
+
     getScrollMaxHeight() {
-        let v1 = undefined;
+        let j28 = undefined;
         if (this.currentScreenStatus !== this.beforeScreenStatus) {
             this.applySizeOptions = this.getApplyMaxSize();
             this.beforeScreenStatus = this.currentScreenStatus;
-            return v1;
+            return j28;
         }
-        v1 = px2vp(componentUtils.getRectangleById(this.applycontentKey).size?.height);
-        v1 -= this.titleHeight;
-        v1 -= this.buttonHeight;
-        v1 -= this.theme.h2.padding.top.value;
-        v1 -= (this.theme.button.e2.bottom.value / 2);
-        v1 -= this.theme.title.margin.bottom.value;
-        v1 -= (this.theme.h2.padding.bottom.value -
-            (this.theme.button.e2.bottom.value / 2));
-        if (Math.floor(this.textHeight) > Math.floor(v1 + 1)) {
-            return v1;
+        j28 = this.applyHeight;
+        j28 -= this.titleHeight;
+        j28 -= this.buttonHeight;
+        j28 -= this.theme.windows.padding.top.value;
+        j28 -= (this.theme.button.textMargin.bottom.value / 2);
+        j28 -= this.theme.title.margin.bottom.value;
+        j28 -= (this.theme.windows.padding.bottom.value -
+            (this.theme.button.textMargin.bottom.value / 2));
+        if (Math.floor(this.textHeight) > Math.floor(j28 + 1)) {
+            return j28;
         }
         else {
-            v1 = undefined;
-            return v1;
+            j28 = undefined;
+            return j28;
         }
     }
+
     getLayoutWeight() {
-        let layoutWeight;
+        let i28;
         if ((this.icon.image !== '' && this.icon.image !== void (0)) ||
             (this.title.text !== '' && this.title.text !== void (0)) ||
             (this.buttons?.[0]?.text !== '' && this.buttons?.[0]?.text !== void (0)) ||
             (this.buttons?.[1]?.text !== '' && this.buttons?.[1]?.text !== void (0))) {
-            layoutWeight = 1;
+            i28 = 1;
         }
         else {
-            layoutWeight = 0;
+            i28 = 0;
         }
-        return layoutWeight;
+        return i28;
     }
-    resourceToVp(value) {
-        try {
-            if (value.id !== -1) {
-                return px2vp(getContext(this).resourceManager.getNumber(value.id));
-            }
-            else {
-                return px2vp(getContext(this)
-                    .resourceManager
-                    .getNumberByName((value.params[0]).split('.')[2]));
-            }
-        }
-        catch (error) {
-            return c1;
-        }
-    }
-    toVp(value) {
-        let s1 = undefined;
-        try {
-            s1 = display.getDefaultDisplaySync();
-        }
-        catch (error) {
-            console.error(`Ace Popup getDefaultDisplaySync, error: ${error.toString()}`);
-            return Number.NEGATIVE_INFINITY;
-        }
-        if (value === void (0)) {
-            return Number.NEGATIVE_INFINITY;
-        }
-        switch (typeof (value)) {
-            case 'number':
-                return value;
-            case 'object':
-                try {
-                    let u1 = this.resourceToVp(value);
-                    if (u1 === 0 &&
-                        !m(getContext(this), value)) {
-                        return Number.NEGATIVE_INFINITY;
-                    }
-                    return u1;
-                }
-                catch (error) {
-                    return Number.NEGATIVE_INFINITY;
-                }
-            case 'string':
-                let t1 = new RegExp('(-?\\d+(?:\\.\\d+)?)_?(fp|vp|px|lpx|%)?$', 'i');
-                let matches = value.match(t1);
-                if (!matches) {
-                    return Number.NEGATIVE_INFINITY;
-                }
-                let length = Number(matches?.[1] ?? 0);
-                let unit = matches?.[2] ?? 'vp';
-                switch (unit.toLowerCase()) {
-                    case 'px':
-                        length = px2vp(length);
-                        break;
-                    case 'fp':
-                        length = px2vp(fp2px(length));
-                        break;
-                    case 'lpx':
-                        length = px2vp(lpx2px(length));
-                        break;
-                    case '%':
-                        length = length / 100 * px2vp(s1.width);
-                        break;
-                    case 'vp':
-                        break;
-                    default:
-                        break;
-                }
-                return length;
-            default:
-                return Number.NEGATIVE_INFINITY;
-        }
-    }
+
     getApplyMaxSize() {
-        let m1 = undefined;
-        let n1 = undefined;
-        let o1 = undefined;
-        let p1 = undefined;
-        let q1 = 400;
-        try {
-            p1 = display.getDefaultDisplaySync();
-        }
-        catch (error) {
-            console.error(`Ace Popup getDefaultDisplaySync, error: ${error.toString()}`);
-            this.messageMaxWeight = 400;
-            return o1 = { maxWidth: 400, maxHeight: 480 };
-        }
-        if (this.maxWidth !== undefined) {
-            if (typeof this.maxWidth === 'number' && this.maxWidth >= 0) {
-                q1 = this.maxWidth;
-            }
-            else if (typeof this.maxWidth === 'number' && this.maxWidth < 0) {
-                q1 = c1;
-            }
-            else {
-                q1 = this.toVp(this.maxWidth);
-            }
-        }
-        if (px2vp(p1.width) > q1) {
-            m1 = q1;
+        let e28 = undefined;
+        let f28 = undefined;
+        let g28 = undefined;
+        let h28 = display.getDefaultDisplaySync();
+        if (px2vp(h28.width) > 400) {
+            e28 = 400;
         }
         else {
-            if (p1.width != 0) {
-                m1 = px2vp(p1.width);
-            }
-            else {
-                m1 = -1;
-            }
+            e28 = px2vp(h28.width) - 40 - 40;
         }
-        if (px2vp(p1.height) > 480) {
-            n1 = 480;
+        if (px2vp(h28.height) > 480) {
+            f28 = 480;
         }
         else {
-            n1 = px2vp(p1.height) - 40 - 40;
+            f28 = px2vp(h28.height) - 40 - 40;
         }
-        o1 = { maxWidth: m1, maxHeight: n1 };
-        this.messageMaxWidth = m1;
+        g28 = { maxWidth: e28, maxHeight: f28 };
         this.messageMaxWeight = this.getMessageMaxWeight();
-        return o1;
+        return g28;
     }
-    getTitleTextAlign() {
-        let k2 = TextAlign.Start;
-        if ((Configuration.getLocale().dir === 'rtl') && this.popupDirection === Direction.Auto) {
-            k2 = TextAlign.End;
-        }
-        return k2;
-    }
+
     initialRender() {
-        this.observeComponentCreation2((elmtId, isInitialRender) => {
+        this.observeComponentCreation2((z27, a28) => {
             Row.create();
             Row.direction(this.popupDirection);
             Row.alignItems(VerticalAlign.Top);
             Row.padding(this.getWindowsPadding());
             Row.constraintSize(ObservedObject.GetRawObject(this.applySizeOptions));
-            Row.constraintSize(this.getApplyMaxSize());
-            Row.key(this.applycontentKey);
-            Row.onAreaChange((k1, rect) => {
-                this.applyHeight = rect.height;
+            Row.onAreaChange((c28, d28) => {
+                this.applyHeight = d28.height;
             });
         }, Row);
-        this.observeComponentCreation2((elmtId, isInitialRender) => {
+        this.observeComponentCreation2((s27, t27) => {
             If.create();
             if (this.icon.image !== '' && this.icon.image !== void (0)) {
                 this.ifElseBranchUpdateFunction(0, () => {
-                    this.observeComponentCreation2((elmtId, isInitialRender) => {
+                    this.observeComponentCreation2((x27, y27) => {
                         Image.create(this.getIconImage());
                         Image.direction(this.popupDirection);
                         Image.width(this.getIconWidth());
@@ -860,7 +862,6 @@ export class d1 extends ViewPU {
                         Image.margin(this.getIconMargin());
                         Image.fillColor(this.getIconFillColor());
                         Image.borderRadius(this.getIconBorderRadius());
-                        Image.draggable(false);
                     }, Image);
                 });
             }
@@ -870,25 +871,25 @@ export class d1 extends ViewPU {
             }
         }, If);
         If.pop();
-        this.observeComponentCreation2((elmtId, isInitialRender) => {
+        this.observeComponentCreation2((m22, n22) => {
             If.create();
             if (this.title.text !== '' && this.title.text !== void (0)) {
                 this.ifElseBranchUpdateFunction(0, () => {
-                    this.observeComponentCreation2((elmtId, isInitialRender) => {
+                    this.observeComponentCreation2((q27, r27) => {
                         Column.create();
                         Column.direction(this.popupDirection);
                         Column.layoutWeight(this.getLayoutWeight());
                     }, Column);
-                    this.observeComponentCreation2((elmtId, isInitialRender) => {
+                    this.observeComponentCreation2((l27, m27) => {
                         Flex.create({ alignItems: ItemAlign.Start });
                         Flex.direction(this.popupDirection);
                         Flex.width("100%");
                         Flex.margin(this.getTitleMargin());
-                        Flex.onAreaChange((j1, rect) => {
-                            this.titleHeight = rect.height;
+                        Flex.onAreaChange((o27, p27) => {
+                            this.titleHeight = p27.height;
                         });
                     }, Flex);
-                    this.observeComponentCreation2((elmtId, isInitialRender) => {
+                    this.observeComponentCreation2((j27, k27) => {
                         Text.create(this.getTitleText());
                         Text.direction(this.popupDirection);
                         Text.flexGrow(1);
@@ -901,24 +902,21 @@ export class d1 extends ViewPU {
                         Text.fontSize(this.getTitleFontSize());
                         Text.fontColor(this.getTitleFontColor());
                         Text.constraintSize({ minHeight: this.getCloseButtonHeight() });
-                        Text.textAlign(this.getTitleTextAlign());
                     }, Text);
                     Text.pop();
-                    this.observeComponentCreation2((elmtId, isInitialRender) => {
+                    this.observeComponentCreation2((w26, x26) => {
                         If.create();
                         if (this.showClose || this.showClose === void (0)) {
                             this.ifElseBranchUpdateFunction(0, () => {
-                                this.observeComponentCreation2((elmtId, isInitialRender) => {
+                                this.observeComponentCreation2((e27, f27) => {
                                     Button.createWithChild();
                                     Button.direction(this.popupDirection);
                                     Button.width(this.getCloseButtonWidth());
                                     Button.height(this.getCloseButtonHeight());
                                     Button.padding(this.getCloseButtonPadding());
                                     Button.backgroundColor(ObservedObject.GetRawObject(this.closeButtonBackgroundColor));
-                                    Button.flexShrink(0);
-                                    Button.accessibilityText(this.theme.i2.l2);
-                                    Button.onHover((isHover) => {
-                                        if (isHover) {
+                                    Button.onHover((i27) => {
+                                        if (i27) {
                                             this.closeButtonBackgroundColor = this.getCloseButtonHoverColor();
                                         }
                                         else {
@@ -931,15 +929,14 @@ export class d1 extends ViewPU {
                                         }
                                     });
                                 }, Button);
-                                this.observeComponentCreation2((elmtId, isInitialRender) => {
-                                    SymbolGlyph.create();
-                                    SymbolGlyph.fontColor([this.getCloseButtonFillColor()]);
-                                    SymbolGlyph.fontSize(this.getCloseButtonSymbolSize());
-                                    SymbolGlyph.direction(this.popupDirection);
-                                    SymbolGlyph.attributeModifier.bind(this)(this.theme.i2.symbolStyle);
-                                    SymbolGlyph.focusable(true);
-                                    SymbolGlyph.draggable(false);
-                                }, SymbolGlyph);
+                                this.observeComponentCreation2((c27, d27) => {
+                                    Image.create(this.getCloseButtonImage());
+                                    Image.direction(this.popupDirection);
+                                    Image.focusable(true);
+                                    Image.width(this.getCloseButtonImageWidth());
+                                    Image.height(this.getCloseButtonImageHeight());
+                                    Image.fillColor(this.getCloseButtonFillColor());
+                                }, Image);
                                 Button.pop();
                             });
                         }
@@ -950,7 +947,7 @@ export class d1 extends ViewPU {
                     }, If);
                     If.pop();
                     Flex.pop();
-                    this.observeComponentCreation2((elmtId, isInitialRender) => {
+                    this.observeComponentCreation2((u26, v26) => {
                         Scroll.create();
                         Scroll.direction(this.popupDirection);
                         Scroll.width("100%");
@@ -959,50 +956,41 @@ export class d1 extends ViewPU {
                         Scroll.scrollBar(BarState.Auto);
                         Scroll.scrollable(ScrollDirection.Vertical);
                         Scroll.constraintSize({ maxHeight: this.getScrollMaxHeight() });
-                        Scroll.edgeEffect(EdgeEffect.Spring, { alwaysEnabled: false });
                     }, Scroll);
-                    this.observeComponentCreation2((elmtId, isInitialRender) => {
+                    this.observeComponentCreation2((p26, q26) => {
                         Text.create(this.getMessageText());
                         Text.direction(this.popupDirection);
                         Text.fontSize(this.getMessageFontSize());
                         Text.fontColor(this.getMessageFontColor());
                         Text.fontWeight(this.getMessageFontWeight());
                         Text.constraintSize({ minHeight: this.getCloseButtonHeight() });
-                        Text.onAreaChange((i1, rect) => {
-                            this.textHeight = rect.height;
+                        Text.onAreaChange((s26, t26) => {
+                            this.textHeight = t26.height;
                         });
                     }, Text);
                     Text.pop();
                     Scroll.pop();
-                    this.observeComponentCreation2((elmtId, isInitialRender) => {
+                    this.observeComponentCreation2((k26, l26) => {
                         Flex.create({ wrap: FlexWrap.Wrap });
                         Flex.direction(this.popupDirection);
                         Flex.margin(this.getButtonTextMargin());
                         Flex.flexGrow(1);
-                        Flex.onAreaChange((h1, rect) => {
-                            if ((this.buttons?.[0]?.text !== '' && this.buttons?.[0]?.text !== void (0)) ||
-                                (this.buttons?.[1]?.text !== '' && this.buttons?.[1]?.text !== void (0))) {
-                                this.buttonHeight = rect.height;
-                            }
-                            else {
-                                this.buttonHeight = 0;
-                            }
+                        Flex.onAreaChange((n26, o26) => {
+                            this.buttonHeight = o26.height;
                         });
                     }, Flex);
-                    this.observeComponentCreation2((elmtId, isInitialRender) => {
+                    this.observeComponentCreation2((x25, y25) => {
                         If.create();
                         if (this.buttons?.[0]?.text !== '' && this.buttons?.[0]?.text !== void (0)) {
                             this.ifElseBranchUpdateFunction(0, () => {
-                                this.observeComponentCreation2((elmtId, isInitialRender) => {
+                                this.observeComponentCreation2((f26, g26) => {
                                     Button.createWithChild();
-                                    Button.type(ButtonType.Normal);
-                                    Button.borderRadius({ "id": -1, "type": 10002, params: ['sys.float.popup_button_border_radius'], "bundleName": "__harDefaultBundleName__", "moduleName": "__harDefaultModuleName__" });
                                     Button.direction(this.popupDirection);
                                     Button.margin(this.getButtonMargin());
                                     Button.padding(this.getButtonTextPadding());
                                     Button.backgroundColor(ObservedObject.GetRawObject(this.firstButtonBackgroundColor));
-                                    Button.onHover((isHover) => {
-                                        if (isHover) {
+                                    Button.onHover((j26) => {
+                                        if (j26) {
                                             this.firstButtonBackgroundColor = this.getButtonHoverColor();
                                         }
                                         else {
@@ -1015,7 +1003,7 @@ export class d1 extends ViewPU {
                                         }
                                     });
                                 }, Button);
-                                this.observeComponentCreation2((elmtId, isInitialRender) => {
+                                this.observeComponentCreation2((d26, e26) => {
                                     Text.create(this.getFirstButtonText());
                                     Text.direction(this.popupDirection);
                                     Text.maxLines(2);
@@ -1036,20 +1024,18 @@ export class d1 extends ViewPU {
                         }
                     }, If);
                     If.pop();
-                    this.observeComponentCreation2((elmtId, isInitialRender) => {
+                    this.observeComponentCreation2((k25, l25) => {
                         If.create();
                         if (this.buttons?.[1]?.text !== '' && this.buttons?.[1]?.text !== void (0)) {
                             this.ifElseBranchUpdateFunction(0, () => {
-                                this.observeComponentCreation2((elmtId, isInitialRender) => {
+                                this.observeComponentCreation2((s25, t25) => {
                                     Button.createWithChild();
-                                    Button.type(ButtonType.Normal);
-                                    Button.borderRadius({ "id": -1, "type": 10002, params: ['sys.float.popup_button_border_radius'], "bundleName": "__harDefaultBundleName__", "moduleName": "__harDefaultModuleName__" });
                                     Button.direction(this.popupDirection);
                                     Button.margin(this.getButtonMargin());
                                     Button.padding(this.getButtonTextPadding());
                                     Button.backgroundColor(ObservedObject.GetRawObject(this.secondButtonBackgroundColor));
-                                    Button.onHover((isHover) => {
-                                        if (isHover) {
+                                    Button.onHover((w25) => {
+                                        if (w25) {
                                             this.secondButtonBackgroundColor = this.getButtonHoverColor();
                                         }
                                         else {
@@ -1062,7 +1048,7 @@ export class d1 extends ViewPU {
                                         }
                                     });
                                 }, Button);
-                                this.observeComponentCreation2((elmtId, isInitialRender) => {
+                                this.observeComponentCreation2((q25, r25) => {
                                     Text.create(this.getSecondButtonText());
                                     Text.direction(this.popupDirection);
                                     Text.maxLines(2);
@@ -1089,63 +1075,55 @@ export class d1 extends ViewPU {
             }
             else {
                 this.ifElseBranchUpdateFunction(1, () => {
-                    this.observeComponentCreation2((elmtId, isInitialRender) => {
+                    this.observeComponentCreation2((y24, z24) => {
                         Column.create();
                         Column.direction(this.popupDirection);
                         Column.layoutWeight(this.getLayoutWeight());
                     }, Column);
-                    this.observeComponentCreation2((elmtId, isInitialRender) => {
-                        Flex.create();
-                        Flex.height(0);
-                        Flex.onAreaChange((g1, rect) => {
-                            this.titleHeight = rect.height;
-                        });
-                    }, Flex);
-                    Flex.pop();
-                    this.observeComponentCreation2((elmtId, isInitialRender) => {
+                    this.observeComponentCreation2((w24, x24) => {
                         Row.create();
                         Row.direction(this.popupDirection);
                         Row.alignItems(VerticalAlign.Top);
                     }, Row);
-                    this.observeComponentCreation2((elmtId, isInitialRender) => {
+                    this.observeComponentCreation2((u24, v24) => {
                         Scroll.create();
                         Scroll.direction(this.popupDirection);
                         Scroll.layoutWeight(this.getLayoutWeight());
-                        Scroll.edgeEffect(EdgeEffect.Spring, { alwaysEnabled: false });
                         Scroll.align(Alignment.TopStart);
                         Scroll.padding(this.getMessagePadding());
                         Scroll.scrollBar(BarState.Auto);
                         Scroll.scrollable(ScrollDirection.Vertical);
                         Scroll.constraintSize({ maxHeight: this.getScrollMaxHeight() });
                     }, Scroll);
-                    this.observeComponentCreation2((elmtId, isInitialRender) => {
+                    this.observeComponentCreation2((p24, q24) => {
                         Text.create(this.getMessageText());
                         Text.direction(this.popupDirection);
                         Text.fontSize(this.getMessageFontSize());
                         Text.fontColor(this.getMessageFontColor());
                         Text.fontWeight(this.getMessageFontWeight());
-                        Text.constraintSize({ maxWidth: this.messageMaxWeight, minHeight: this.getCloseButtonHeight() });
-                        Text.onAreaChange((f1, rect) => {
-                            this.textHeight = rect.height;
+                        Text.constraintSize({
+                            maxWidth: this.messageMaxWeight,
+                            minHeight: this.getCloseButtonHeight()
+                        });
+                        Text.onAreaChange((s24, t24) => {
+                            this.textHeight = t24.height;
                         });
                     }, Text);
                     Text.pop();
                     Scroll.pop();
-                    this.observeComponentCreation2((elmtId, isInitialRender) => {
+                    this.observeComponentCreation2((c24, d24) => {
                         If.create();
                         if (this.showClose || this.showClose === void (0)) {
                             this.ifElseBranchUpdateFunction(0, () => {
-                                this.observeComponentCreation2((elmtId, isInitialRender) => {
+                                this.observeComponentCreation2((k24, l24) => {
                                     Button.createWithChild();
                                     Button.direction(this.popupDirection);
                                     Button.width(this.getCloseButtonWidth());
                                     Button.height(this.getCloseButtonHeight());
                                     Button.padding(this.getCloseButtonPadding());
                                     Button.backgroundColor(ObservedObject.GetRawObject(this.closeButtonBackgroundColor));
-                                    Button.flexShrink(0);
-                                    Button.accessibilityText(this.theme.i2.l2);
-                                    Button.onHover((isHover) => {
-                                        if (isHover) {
+                                    Button.onHover((o24) => {
+                                        if (o24) {
                                             this.closeButtonBackgroundColor = this.getCloseButtonHoverColor();
                                         }
                                         else {
@@ -1158,15 +1136,14 @@ export class d1 extends ViewPU {
                                         }
                                     });
                                 }, Button);
-                                this.observeComponentCreation2((elmtId, isInitialRender) => {
-                                    SymbolGlyph.create();
-                                    SymbolGlyph.fontColor([this.getCloseButtonFillColor()]);
-                                    SymbolGlyph.fontSize(this.getCloseButtonSymbolSize());
-                                    SymbolGlyph.direction(this.popupDirection);
-                                    SymbolGlyph.attributeModifier.bind(this)(this.theme.i2.symbolStyle);
-                                    SymbolGlyph.focusable(true);
-                                    SymbolGlyph.draggable(false);
-                                }, SymbolGlyph);
+                                this.observeComponentCreation2((i24, j24) => {
+                                    Image.create(this.getCloseButtonImage());
+                                    Image.direction(this.popupDirection);
+                                    Image.focusable(true);
+                                    Image.width(this.getCloseButtonImageWidth());
+                                    Image.height(this.getCloseButtonImageHeight());
+                                    Image.fillColor(this.getCloseButtonFillColor());
+                                }, Image);
                                 Button.pop();
                             });
                         }
@@ -1177,35 +1154,27 @@ export class d1 extends ViewPU {
                     }, If);
                     If.pop();
                     Row.pop();
-                    this.observeComponentCreation2((elmtId, isInitialRender) => {
+                    this.observeComponentCreation2((x23, y23) => {
                         Flex.create({ wrap: FlexWrap.Wrap });
                         Flex.direction(this.popupDirection);
                         Flex.margin(this.getButtonTextMargin());
                         Flex.flexGrow(1);
-                        Flex.onAreaChange((e1, rect) => {
-                            if ((this.buttons?.[0]?.text !== '' && this.buttons?.[0]?.text !== void (0)) ||
-                                (this.buttons?.[1]?.text !== '' && this.buttons?.[1]?.text !== void (0))) {
-                                this.buttonHeight = rect.height;
-                            }
-                            else {
-                                this.buttonHeight = 0;
-                            }
+                        Flex.onAreaChange((a24, b24) => {
+                            this.buttonHeight = b24.height;
                         });
                     }, Flex);
-                    this.observeComponentCreation2((elmtId, isInitialRender) => {
+                    this.observeComponentCreation2((k23, l23) => {
                         If.create();
                         if (this.buttons?.[0]?.text !== '' && this.buttons?.[0]?.text !== void (0)) {
                             this.ifElseBranchUpdateFunction(0, () => {
-                                this.observeComponentCreation2((elmtId, isInitialRender) => {
+                                this.observeComponentCreation2((s23, t23) => {
                                     Button.createWithChild();
-                                    Button.type(ButtonType.Normal);
-                                    Button.borderRadius({ "id": -1, "type": 10002, params: ['sys.float.popup_button_border_radius'], "bundleName": "__harDefaultBundleName__", "moduleName": "__harDefaultModuleName__" });
                                     Button.direction(this.popupDirection);
                                     Button.margin(this.getButtonMargin());
                                     Button.padding(this.getButtonTextPadding());
                                     Button.backgroundColor(ObservedObject.GetRawObject(this.firstButtonBackgroundColor));
-                                    Button.onHover((isHover) => {
-                                        if (isHover) {
+                                    Button.onHover((w23) => {
+                                        if (w23) {
                                             this.firstButtonBackgroundColor = this.getButtonHoverColor();
                                         }
                                         else {
@@ -1218,7 +1187,7 @@ export class d1 extends ViewPU {
                                         }
                                     });
                                 }, Button);
-                                this.observeComponentCreation2((elmtId, isInitialRender) => {
+                                this.observeComponentCreation2((q23, r23) => {
                                     Text.create(this.getFirstButtonText());
                                     Text.direction(this.popupDirection);
                                     Text.maxLines(2);
@@ -1239,20 +1208,18 @@ export class d1 extends ViewPU {
                         }
                     }, If);
                     If.pop();
-                    this.observeComponentCreation2((elmtId, isInitialRender) => {
+                    this.observeComponentCreation2((x22, y22) => {
                         If.create();
                         if (this.buttons?.[1]?.text !== '' && this.buttons?.[1]?.text !== void (0)) {
                             this.ifElseBranchUpdateFunction(0, () => {
-                                this.observeComponentCreation2((elmtId, isInitialRender) => {
+                                this.observeComponentCreation2((f23, g23) => {
                                     Button.createWithChild();
-                                    Button.type(ButtonType.Normal);
-                                    Button.borderRadius({ "id": -1, "type": 10002, params: ['sys.float.popup_button_border_radius'], "bundleName": "__harDefaultBundleName__", "moduleName": "__harDefaultModuleName__" });
                                     Button.direction(this.popupDirection);
                                     Button.margin(this.getButtonMargin());
                                     Button.padding(this.getButtonTextPadding());
                                     Button.backgroundColor(ObservedObject.GetRawObject(this.secondButtonBackgroundColor));
-                                    Button.onHover((isHover) => {
-                                        if (isHover) {
+                                    Button.onHover((j23) => {
+                                        if (j23) {
                                             this.secondButtonBackgroundColor = this.getButtonHoverColor();
                                         }
                                         else {
@@ -1265,7 +1232,7 @@ export class d1 extends ViewPU {
                                         }
                                     });
                                 }, Button);
-                                this.observeComponentCreation2((elmtId, isInitialRender) => {
+                                this.observeComponentCreation2((d23, e23) => {
                                     Text.create(this.getSecondButtonText());
                                     Text.direction(this.popupDirection);
                                     Text.maxLines(2);
@@ -1294,6 +1261,7 @@ export class d1 extends ViewPU {
         If.pop();
         Row.pop();
     }
+
     rerender() {
         this.updateDirtyElements();
     }

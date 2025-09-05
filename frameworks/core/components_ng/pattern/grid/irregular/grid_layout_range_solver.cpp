@@ -32,10 +32,9 @@ Result GridLayoutRangeSolver::FindStartingRow(float mainGap)
     if (info_->gridMatrix_.empty() || info_->lineHeightMap_.empty()) {
         return { 0, 0, 0.0f };
     }
-    if (NearZero(info_->currentOffset_)) {
-        return { info_->startMainLineIndex_, info_->startIndex_, 0.0f };
-    }
-    if (Negative(info_->currentOffset_)) {
+    // Negative offset implies scrolling down, so we can start from the previous startIndex_.
+    // Otherwise, we have to restart from Row 0 because of irregular items.
+    if (NonPositive(info_->currentOffset_)) {
         return SolveForward(mainGap, -info_->currentOffset_, info_->startMainLineIndex_);
     }
     return SolveBackward(mainGap, info_->currentOffset_, info_->startMainLineIndex_);

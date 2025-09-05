@@ -14,6 +14,8 @@
  */
 
 #include "core/components_ng/pattern/web/web_paint_method.h"
+#include "surface_utils.h"
+#include "render_service_client/core/ui/rs_surface_node.h"
 #include "core/components_ng/pattern/web/web_pattern.h"
 #include "core/components_ng/render/adapter/rosen_render_surface.h"
 namespace OHOS::Ace::NG {
@@ -34,8 +36,6 @@ CanvasDrawFunction WebPaintMethod::GetForegroundDrawFunction(PaintWrapper* paint
         CHECK_NULL_VOID(painter);
         auto surface = DynamicCast<NG::RosenRenderSurface>(painter->renderSuface_);
         if (surface) {
-            ACE_SCOPED_TRACE("WebPaintMethod::GetForegroundDrawFunction Web DrawBuffer (width %d, height %d)",
-                width, height);
             surface->DrawBuffer(width, height);
         }
     };

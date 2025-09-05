@@ -15,6 +15,8 @@
 
 #include "core/components_ng/syntax/for_each_model_ng.h"
 
+#include "base/utils/utils.h"
+#include "core/common/container.h"
 #include "core/components_ng/base/view_stack_processor.h"
 #include "core/components_ng/syntax/for_each_node.h"
 #include "core/components_ng/syntax/syntax_item.h"
@@ -89,16 +91,5 @@ void ForEachModelNG::OnMove(std::function<void(int32_t, int32_t)>&& onMove)
     auto node = AceType::DynamicCast<ForEachNode>(stack->GetMainElementNode());
     CHECK_NULL_VOID(node);
     node->SetOnMove(std::move(onMove));
-}
-
-void ForEachModelNG::SetItemDragHandler(std::function<void(int32_t)>&& onLongPress,
-    std::function<void(int32_t)>&& onDragStart, std::function<void(int32_t, int32_t)>&& onMoveThrough,
-    std::function<void(int32_t)>&& onDrop)
-{
-    auto* stack = ViewStackProcessor::GetInstance();
-    auto node = AceType::DynamicCast<ForEachNode>(stack->GetMainElementNode());
-    CHECK_NULL_VOID(node);
-    node->SetItemDragHandler(
-        std::move(onLongPress), std::move(onDragStart), std::move(onMoveThrough), std::move(onDrop));
 }
 } // namespace OHOS::Ace::NG

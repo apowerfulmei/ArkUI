@@ -15,6 +15,7 @@
 
 #include "core/components_ng/layout/layout_wrapper_builder.h"
 
+#include "base/utils/utils.h"
 #include "core/components_ng/layout/layout_wrapper.h"
 
 namespace OHOS::Ace::NG {

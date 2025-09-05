@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -26,7 +26,6 @@
 #include "base/geometry/axis.h"
 #include "base/geometry/dimension.h"
 #include "base/geometry/ng/size_t.h"
-#include "core/accessibility/accessibility_manager.h"
 #include "core/components/common/properties/color.h"
 #include "core/components_ng/base/ui_node.h"
 #include "core/components_ng/base/view_stack_processor.h"
@@ -51,7 +50,7 @@ const float LEFT = -20.0f;
 const float TOP = -30.0f;
 const int32_t COLUMN = 2;
 const int32_t ROW = 3;
-std::vector<float> MESH = { 1, 2, 4, 6, 4, 2, 1, 3, 5, 1, 3, 5, 6, 3, 2, 2, 4, 5, 5, 3, 2, 2, 2, 4 };
+std::vector<double> MESH = { 1, 2, 4, 6, 4, 2, 1, 3, 5, 1, 3, 5, 6, 3, 2, 2, 4, 5, 5, 3, 2, 2, 2, 4 };
 const float CONTAINER_WIDTH = 300.0f;
 const float CONTAINER_HEIGHT = 300.0f;
 const float FIRST_ITEM_WIDTH = 150.0f;
@@ -263,9 +262,6 @@ HWTEST_F(ShapePatternTestNg, MeasureContent001, TestSize.Level1)
     auto pattern = frameNode->GetPattern<ShapeContainerPattern>();
     RefPtr<GeometryNode> geometryNode = AceType::MakeRefPtr<GeometryNode>();
     EXPECT_TRUE(geometryNode);
-    /**
-     * @tc.desc: HasShapeViewBox() == FALSE && selfIdealSize.IsNull() == TRUE;
-     */
     RefPtr<LayoutWrapperNode> layoutWrapper =
         AceType::MakeRefPtr<LayoutWrapperNode>(frameNode, geometryNode, frameNode->GetLayoutProperty());
     LayoutConstraintF constrain;
@@ -370,70 +366,31 @@ HWTEST_F(ShapePatternTestNg, MeasureContent003, TestSize.Level1)
 }
 
 /**
- * @tc.name: MeasureContent005
- * @tc.desc: check ShapeContainerLayoutAlgorithm MeasureContent when layoutPolicy is vaild/invaild
+ * @tc.name: GetChildrenSize
+ * @tc.desc: check ShapeContainerLayoutAlgorithm GetChildrenSize
  * @tc.type: FUNC
  */
-HWTEST_F(ShapePatternTestNg, MeasureContent005, TestSize.Level1)
+
+HWTEST_F(ShapePatternTestNg, GetChildrenSize001, TestSize.Level1)
 {
     auto shapeModel = ShapeModelNG();
     shapeModel.Create();
     shapeModel.SetBitmapMesh(MESH, COLUMN, ROW);
     RefPtr<UINode> uiNode = ViewStackProcessor::GetInstance()->Finish();
     RefPtr<FrameNode> frameNode = AceType::DynamicCast<FrameNode>(uiNode);
-    ASSERT_TRUE(frameNode);
+    EXPECT_TRUE(frameNode);
     auto paintProperty = frameNode->GetPaintProperty<ShapeContainerPaintProperty>();
-    ASSERT_TRUE(paintProperty);
+    EXPECT_TRUE(paintProperty);
     auto pattern = frameNode->GetPattern<ShapeContainerPattern>();
-    ASSERT_TRUE(pattern);
-    auto layoutProperty = frameNode->GetLayoutProperty();
-    ASSERT_TRUE(layoutProperty);
     RefPtr<GeometryNode> geometryNode = AceType::MakeRefPtr<GeometryNode>();
+    EXPECT_TRUE(geometryNode);
     RefPtr<LayoutWrapperNode> layoutWrapper =
         AceType::MakeRefPtr<LayoutWrapperNode>(frameNode, geometryNode, frameNode->GetLayoutProperty());
     auto layoutAlgorithm = pattern->CreateLayoutAlgorithm();
-    ASSERT_TRUE(layoutAlgorithm);
-    /**
-     * @tc.steps1: Width is matchParent
-     * @tc.expected: the return value of MeasureContent is (300, 0)
-     */
-    LayoutConstraintF layoutConstraint;
-    layoutConstraint.maxSize = SizeF(1000.0f, 1000.0f);
-    layoutConstraint.parentIdealSize = OptionalSizeF(300.0f, 400.0f);
-    layoutProperty->UpdateLayoutPolicyProperty(LayoutCalPolicy::MATCH_PARENT, true);
-    layoutProperty->UpdateLayoutPolicyProperty(LayoutCalPolicy::NO_MATCH, false);
-    auto contentSize = layoutAlgorithm->MeasureContent(layoutConstraint, AccessibilityManager::RawPtr(layoutWrapper));
-    ASSERT_TRUE(contentSize.has_value());
-    EXPECT_EQ(contentSize.value(), SizeF(300, 0));
-
-    /**
-     * @tc.steps2: Height is matchParent
-     * @tc.expected: the return value of MeasureContent is (0, 400)
-     */
-    layoutProperty->UpdateLayoutPolicyProperty(LayoutCalPolicy::NO_MATCH, true);
-    layoutProperty->UpdateLayoutPolicyProperty(LayoutCalPolicy::MATCH_PARENT, false);
-    contentSize = layoutAlgorithm->MeasureContent(layoutConstraint, AccessibilityManager::RawPtr(layoutWrapper));
-    ASSERT_TRUE(contentSize.has_value());
-    EXPECT_EQ(contentSize.value(), SizeF(0, 400));
-
-    /**
-     * @tc.steps3: Width and Height is not matchParent
-     * @tc.expected: the return value of MeasureContent is (0, 0)
-     */
-    layoutProperty->UpdateLayoutPolicyProperty(LayoutCalPolicy::NO_MATCH, true);
-    layoutProperty->UpdateLayoutPolicyProperty(LayoutCalPolicy::NO_MATCH, false);
-    contentSize = layoutAlgorithm->MeasureContent(layoutConstraint, AccessibilityManager::RawPtr(layoutWrapper));
-    ASSERT_TRUE(contentSize.has_value());
-    EXPECT_EQ(contentSize.value(), SizeF(0, 0));
-
-    /**
-     * @tc.steps4: layoutPolicy has no value
-     * @tc.expected: the return value of MeasureContent is (0, 0)
-     */
-    layoutProperty->layoutPolicy_ = std::nullopt;
-    contentSize = layoutAlgorithm->MeasureContent(layoutConstraint, AccessibilityManager::RawPtr(layoutWrapper));
-    ASSERT_TRUE(contentSize.has_value());
-    EXPECT_EQ(contentSize.value(), SizeF(0, 0));
+    auto shapeContainerLayoutAlgorithm = AceType::DynamicCast<ShapeContainerLayoutAlgorithm>(layoutAlgorithm);
+    auto childFrame =
+        shapeContainerLayoutAlgorithm->GetChildrenSize(AccessibilityManager::RawPtr(layoutWrapper), SizeF(0, 0));
+    EXPECT_TRUE(childFrame.IsNonNegative());
 }
 
 /**
@@ -510,79 +467,5 @@ HWTEST_F(ShapePatternTestNg, GetChildrenSize002, TestSize.Level1)
     layoutWrapper.AppendChild(secondLayoutWrapper);
     auto childFrame = shapeContainerLayoutAlgorithm->GetChildrenSize(&layoutWrapper, SizeF(0, 0));
     EXPECT_TRUE(childFrame.IsNonNegative());
-}
-
-/**
- * @tc.name: IsEnableMatchParentTest
- * @tc.desc: check ShapePattern IsEnableMatchParent
- * @tc.type: FUNC
- */
-HWTEST_F(ShapePatternTestNg, IsEnableMatchParentTest, TestSize.Level1)
-{
-    /**
-     * @tc.steps1: initialize parameters.
-     * @tc.expected: All pointer is non-null.
-     */
-    auto frameNode = AceType::DynamicCast<FrameNode>(ViewStackProcessor::GetInstance()->GetMainElementNode());
-    ASSERT_TRUE(frameNode);
-    auto pattern = frameNode->GetPattern<ShapePattern>();
-    ASSERT_TRUE(pattern);
-
-    /**
-     * @tc.steps2: Check Function IsEnableMatchParent's return value.
-     * @tc.expected: Function IsEnableMatchParent returns true.
-     */
-    EXPECT_TRUE(pattern->IsEnableMatchParent());
-}
-
-/**
- * @tc.name: MeasureContent
- * @tc.desc: check ShapeLayoutAlgorithm MeasureContent
- * @tc.type: FUNC
- */
-HWTEST_F(ShapePatternTestNg, MeasureContent004, TestSize.Level1)
-{
-    /**
-     * @tc.steps1: initialize parameters.
-     * @tc.expected: All pointer is non-null.
-     */
-    auto shapeModel = ShapeModelNG();
-    shapeModel.Create();
-    shapeModel.SetBitmapMesh(MESH, COLUMN, ROW);
-    RefPtr<UINode> uiNode = ViewStackProcessor::GetInstance()->Finish();
-    RefPtr<FrameNode> frameNode = AceType::DynamicCast<FrameNode>(uiNode);
-    ASSERT_TRUE(frameNode);
-    auto layoutProperty = frameNode->GetLayoutProperty();
-    ASSERT_TRUE(layoutProperty);
-    RefPtr<GeometryNode> geometryNode = AceType::MakeRefPtr<GeometryNode>();
-    ASSERT_TRUE(geometryNode);
-    LayoutWrapperNode layoutWrapper = LayoutWrapperNode(frameNode, geometryNode, layoutProperty);
-    auto pattern = AceType::MakeRefPtr<ShapePattern>();
-    ASSERT_TRUE(pattern);
-    frameNode->pattern_ = pattern;
-    auto layoutAlgorithm = AceType::DynamicCast<ShapeLayoutAlgorithm>(pattern->CreateLayoutAlgorithm());
-    ASSERT_TRUE(layoutAlgorithm);
-
-    /**
-     * @tc.steps2: selfIdealSize is valid
-     * @tc.expected: the return value of MeasureContent is (300, 400)
-     */
-    LayoutConstraintF contentConstraint;
-    contentConstraint.minSize = SizeF(50, 50);
-    contentConstraint.selfIdealSize = OptionalSizeF(300, 400);
-    contentConstraint.percentReference = SizeF(500, 600);
-    auto size = layoutAlgorithm->MeasureContent(contentConstraint, &layoutWrapper);
-    ASSERT_TRUE(size.has_value());
-    EXPECT_EQ(size.value(), SizeF(300, 400));
-    contentConstraint.selfIdealSize.Reset();
-
-    /**
-     * @tc.steps3: measureType is MATCH_PARENT
-     * @tc.expected: the return value of MeasureContent is (500, 600)
-     */
-    layoutProperty->measureType_ = MeasureType::MATCH_PARENT;
-    size = layoutAlgorithm->MeasureContent(contentConstraint, &layoutWrapper);
-    ASSERT_TRUE(size.has_value());
-    EXPECT_EQ(size.value(), SizeF(500, 600));
 }
 } // namespace OHOS::Ace::NG

@@ -16,9 +16,7 @@
 #include "frameworks/bridge/declarative_frontend/jsview/js_gesture.h"
 
 #include "base/log/log_wrapper.h"
-#include "bridge/common/utils/engine_helper.h"
 #include "bridge/declarative_frontend/jsview/models/gesture_model_impl.h"
-#include "core/components_ng/base/view_stack_model.h"
 #include "core/components_ng/pattern/gesture/gesture_model_ng.h"
 #include "frameworks/base/log/ace_scoring_log.h"
 #include "frameworks/bridge/declarative_frontend/engine/functions/js_gesture_function.h"
@@ -244,7 +242,6 @@ constexpr char PAN_DIRECTION[] = "direction";
 constexpr char SWIPE_DIRECTION[] = "direction";
 constexpr char ROTATION_ANGLE[] = "angle";
 constexpr char LIMIT_FINGER_COUNT[] = "isFingerCountLimited";
-constexpr char GESTURE_DISTANCE_MAP[] = "distanceMap";
 } // namespace
 
 void JSGesture::Create(const JSCallbackInfo& info)
@@ -270,17 +267,11 @@ void JSGesture::Create(const JSCallbackInfo& info)
 
 void JSGesture::Finish()
 {
-    if (ViewStackModel::GetInstance()->IsPrebuilding()) {
-        return ViewStackModel::GetInstance()->PushPrebuildCompCmd("[JSGesture][pop]", &JSGesture::Finish);
-    }
     GestureModel::GetInstance()->Finish();
 }
 
 void JSGesture::Pop()
 {
-    if (ViewStackModel::GetInstance()->IsPrebuilding()) {
-        return ViewStackModel::GetInstance()->PushPrebuildCompCmd("[JSGesture][pop]", &JSGesture::Pop);
-    }
     GestureModel::GetInstance()->Pop();
 }
 
@@ -349,99 +340,14 @@ void JSLongPressGesture::Create(const JSCallbackInfo& args)
     LongPressGestureModel::GetInstance()->Create(fingersNum, repeatResult, durationNum, isLimitFingerCount);
 }
 
-napi_value GetIteratorNext(const napi_env env, napi_value iterator, napi_value func, bool *done)
-{
-    napi_value next = nullptr;
-    NAPI_CALL(env, napi_call_function(env, iterator, func, 0, nullptr, &next));
-    napi_value doneValue = nullptr;
-    NAPI_CALL(env, napi_get_named_property(env, next, "done", &doneValue));
-    NAPI_CALL(env, napi_get_value_bool(env, doneValue, done));
-    return next;
-}
-
-napi_value JSPanGesture::ParsePanDistanceMap(JSRef<JSVal> jsDistanceMap, PanDistanceMapDimension& distanceMap)
-{
-    napi_value emptyValue = nullptr;
-    auto engine = EngineHelper::GetCurrentEngine();
-    CHECK_NULL_RETURN(engine, emptyValue);
-    NativeEngine* nativeEngine = engine->GetNativeEngine();
-    CHECK_NULL_RETURN(nativeEngine, emptyValue);
-    auto env = reinterpret_cast<napi_env>(nativeEngine);
-
-    auto jsVal = JSRef<JSVal>::Cast(jsDistanceMap);
-    panda::Local<JsiValue> value = jsVal.Get().GetLocalHandle();
-    JSValueWrapper valueWrapper = value;
-    napi_value nativeValue = nativeEngine->ValueToNapiValue(valueWrapper);
-
-    // parse map object
-    napi_value entriesFunc = nullptr;
-    napi_value iterator = nullptr;
-    napi_value nextFunc = nullptr;
-    NAPI_CALL(env, napi_get_named_property(env, nativeValue, "entries", &entriesFunc));
-    NAPI_CALL(env, napi_call_function(env, nativeValue, entriesFunc, 0, nullptr, &iterator));
-    NAPI_CALL(env, napi_get_named_property(env, iterator, "next", &nextFunc));
-
-    bool done = false;
-    napi_value next = nullptr;
-    while ((next = GetIteratorNext(env, iterator, nextFunc, &done)) != nullptr && !done) {
-        napi_value entry = nullptr;
-        napi_value key = nullptr;
-        napi_value value = nullptr;
-        NAPI_CALL(env, napi_get_named_property(env, next, "value", &entry));
-        NAPI_CALL(env, napi_get_element(env, entry, 0, &key));
-        NAPI_CALL(env, napi_get_element(env, entry, 1, &value));
-        napi_valuetype kType = napi_undefined;
-        NAPI_CALL(env, napi_typeof(env, key, &kType));
-        napi_valuetype vType = napi_undefined;
-        NAPI_CALL(env, napi_typeof(env, value, &vType));
-        if (kType != napi_number || vType != napi_number) {
-            continue;
-        }
-        int32_t sourceTool = 0;
-        NAPI_CALL(env, napi_get_value_int32(env, key, &sourceTool));
-        double distance = 0.0;
-        NAPI_CALL(env, napi_get_value_double(env, value, &distance));
-        SourceTool st = static_cast<SourceTool>(sourceTool);
-        if (st >= SourceTool::UNKNOWN && st <= SourceTool::JOYSTICK && GreatOrEqual(distance, 0.0)) {
-            Dimension dimension = Dimension(distance, DimensionUnit::VP);
-            distanceMap[st] = dimension;
-        }
-    }
-    return next;
-}
-
-void JSPanGesture::ParsePanDistance(const JSRef<JSObject>& obj, PanDistanceMapDimension& distanceMap)
-{
-    JSRef<JSVal> distance = obj->GetProperty(GESTURE_DISTANCE);
-    JSRef<JSVal> jsDistanceMap = obj->GetProperty(GESTURE_DISTANCE_MAP);
-    if (jsDistanceMap->IsObject()) {
-        distanceMap = { { SourceTool::UNKNOWN, DEFAULT_PAN_DISTANCE }, {
-            SourceTool::PEN, DEFAULT_PEN_PAN_DISTANCE } };
-        ParsePanDistanceMap(jsDistanceMap, distanceMap);
-        return;
-    }
-    if (distance->IsNumber()) {
-        double distanceNumber = distance->ToNumber<double>();
-        if (!LessNotEqual(distanceNumber, 0.0)) {
-            Dimension dimension = Dimension(distanceNumber, DimensionUnit::VP);
-            distanceMap[SourceTool::UNKNOWN] = dimension;
-        } else {
-            distanceMap[SourceTool::PEN] = DEFAULT_PEN_PAN_DISTANCE;
-        }
-    } else {
-        distanceMap[SourceTool::PEN] = DEFAULT_PEN_PAN_DISTANCE;
-    }
-}
-
 void JSPanGesture::Create(const JSCallbackInfo& args)
 {
     int32_t fingersNum = DEFAULT_PAN_FINGER;
+    double distanceNum = DEFAULT_PAN_DISTANCE.ConvertToPx();
     bool isLimitFingerCount = false;
     PanDirection panDirection;
-    PanDistanceMapDimension distanceMap = { { SourceTool::UNKNOWN, DEFAULT_PAN_DISTANCE } };
     if (args.Length() <= 0 || !args[0]->IsObject()) {
-        distanceMap[SourceTool::PEN] = DEFAULT_PEN_PAN_DISTANCE;
-        PanGestureModel::GetInstance()->Create(fingersNum, panDirection, distanceMap, isLimitFingerCount);
+        PanGestureModel::GetInstance()->Create(fingersNum, panDirection, distanceNum, isLimitFingerCount);
         return;
     }
 
@@ -455,12 +361,19 @@ void JSPanGesture::Create(const JSCallbackInfo& args)
     }
 
     JSRef<JSVal> fingers = obj->GetProperty(GESTURE_FINGERS);
+    JSRef<JSVal> distance = obj->GetProperty(GESTURE_DISTANCE);
     JSRef<JSVal> directionNum = obj->GetProperty(PAN_DIRECTION);
     JSRef<JSVal> limitFingerCount = obj->GetProperty(LIMIT_FINGER_COUNT);
 
     if (fingers->IsNumber()) {
         int32_t fingersNumber = fingers->ToNumber<int32_t>();
         fingersNum = fingersNumber <= DEFAULT_PAN_FINGER ? DEFAULT_PAN_FINGER : fingersNumber;
+    }
+    if (distance->IsNumber()) {
+        double distanceNumber = distance->ToNumber<double>();
+        Dimension dimension =
+            LessNotEqual(distanceNumber, 0.0) ? DEFAULT_PAN_DISTANCE : Dimension(distanceNumber, DimensionUnit::VP);
+        distanceNum = dimension.ConvertToPx();
     }
     if (directionNum->IsNumber()) {
         uint32_t directNum = directionNum->ToNumber<uint32_t>();
@@ -470,10 +383,10 @@ void JSPanGesture::Create(const JSCallbackInfo& args)
         }
     }
     if (limitFingerCount->IsBoolean()) {
-        isLimitFingerCount = limitFingerCount->ToBoolean();
+            isLimitFingerCount = limitFingerCount->ToBoolean();
     }
-    ParsePanDistance(obj, distanceMap);
-    PanGestureModel::GetInstance()->Create(fingersNum, panDirection, distanceMap, isLimitFingerCount);
+
+    PanGestureModel::GetInstance()->Create(fingersNum, panDirection, distanceNum, isLimitFingerCount);
 }
 
 void JSSwipeGesture::Create(const JSCallbackInfo& args)
@@ -593,9 +506,9 @@ void JSGesture::JsHandlerOnGestureEvent(Ace::GestureEventAction action, const JS
     RefPtr<JsGestureFunction> handlerFunc = AceType::MakeRefPtr<JsGestureFunction>(JSRef<JSFunc>::Cast(args[0]));
 
     if (action == Ace::GestureEventAction::CANCEL) {
-        auto onActionCancelFunc = [execCtx = args.GetExecutionContext(), func = std::move(handlerFunc)](
-                                      GestureEvent& info) {
+        auto onActionCancelFunc = [execCtx = args.GetExecutionContext(), func = std::move(handlerFunc)]() {
             JAVASCRIPT_EXECUTION_SCOPE_WITH_CHECK(execCtx);
+            auto info = GestureEvent();
             ACE_SCORING_EVENT("Gesture.onCancel");
             func->Execute(info);
         };
@@ -684,14 +597,13 @@ void JSPanGestureOption::JSBind(BindingTarget globalObj)
     JSClass<JSPanGestureOption>::CustomMethod("setDistance", &JSPanGestureOption::SetDistance);
     JSClass<JSPanGestureOption>::CustomMethod("setFingers", &JSPanGestureOption::SetFingers);
     JSClass<JSPanGestureOption>::CustomMethod("getDirection", &JSPanGestureOption::GetDirection);
-    JSClass<JSPanGestureOption>::CustomMethod("getDistance", &JSPanGestureOption::GetDistance);
     JSClass<JSPanGestureOption>::Bind(globalObj, &JSPanGestureOption::Constructor, &JSPanGestureOption::Destructor);
 }
 
 void JSPanGestureOption::SetDirection(const JSCallbackInfo& args)
 {
     if (args.Length() > 0 && args[0]->IsNumber()) {
-        PanDirection direction = { static_cast<uint32_t>(args[0]->ToNumber<int32_t>()) };
+        PanDirection direction = { args[0]->ToNumber<int32_t>() };
         panGestureOption_->SetDirection(direction);
     } else {
         PanDirection directionAll = { PanDirection::ALL };
@@ -732,19 +644,6 @@ void JSPanGestureOption::GetDirection(const JSCallbackInfo& args)
     args.SetReturnValue(JSRef<JSVal>::Make(ToJSValue(static_cast<int32_t>(direction.type))));
 }
 
-void JSPanGestureOption::GetDistance(const JSCallbackInfo& args)
-{
-    double distance = 5;
-    double distance_new = distance;
-    if (panGestureOption_) {
-        distance = panGestureOption_->GetDistance();
-        auto context = PipelineContext::GetCurrentContextSafely();
-        CHECK_NULL_VOID(context);
-        distance_new = context->ConvertPxToVp(Dimension(distance, DimensionUnit::PX));
-    }
-    args.SetReturnValue(JSRef<JSVal>::Make(ToJSValue(RoundToMaxPrecision(distance_new))));
-}
-
 void JSPanGestureOption::Constructor(const JSCallbackInfo& args)
 {
     auto panGestureOption = Referenced::MakeRefPtr<JSPanGestureOption>();
@@ -752,10 +651,9 @@ void JSPanGestureOption::Constructor(const JSCallbackInfo& args)
     RefPtr<PanGestureOption> option = AceType::MakeRefPtr<PanGestureOption>();
 
     int32_t fingersNum = DEFAULT_PAN_FINGER;
+    double distanceNum = DEFAULT_PAN_DISTANCE.ConvertToPx();
     bool isLimitFingerCount = false;
     PanDirection panDirection;
-    PanDistanceMapDimension distanceMap;
-    distanceMap[SourceTool::UNKNOWN] = DEFAULT_PAN_DISTANCE;
 
     if (args.Length() > 0 && args[0]->IsObject()) {
         JSRef<JSObject> obj = JSRef<JSObject>::Cast(args[0]);
@@ -770,13 +668,9 @@ void JSPanGestureOption::Constructor(const JSCallbackInfo& args)
         }
         if (distance->IsNumber()) {
             double distanceNumber = distance->ToNumber<double>();
-            if (!LessNotEqual(distanceNumber, 0.0)) {
-                distanceMap[SourceTool::UNKNOWN] = Dimension(distanceNumber, DimensionUnit::VP);
-            } else {
-                distanceMap[SourceTool::PEN] = DEFAULT_PEN_PAN_DISTANCE;
-            }
-        } else {
-            distanceMap[SourceTool::PEN] = DEFAULT_PEN_PAN_DISTANCE;
+            Dimension dimension =
+                LessNotEqual(distanceNumber, 0.0) ? DEFAULT_PAN_DISTANCE : Dimension(distanceNumber, DimensionUnit::VP);
+            distanceNum = dimension.ConvertToPx();
         }
         if (directionNum->IsNumber()) {
             uint32_t directNum = directionNum->ToNumber<uint32_t>();
@@ -790,8 +684,7 @@ void JSPanGestureOption::Constructor(const JSCallbackInfo& args)
         }
     }
     option->SetDirection(panDirection);
-    option->SetDistanceMap(distanceMap);
-    option->SetDistance(distanceMap[SourceTool::UNKNOWN].ConvertToPx());
+    option->SetDistance(distanceNum);
     option->SetFingers(fingersNum);
     option->SetIsLimitFingerCount(isLimitFingerCount);
 

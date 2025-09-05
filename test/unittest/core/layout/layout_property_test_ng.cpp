@@ -28,7 +28,6 @@
 #include "core/components_ng/property/calc_length.h"
 #include "core/components_ng/property/measure_property.h"
 #include "core/components_ng/property/safe_area_insets.h"
-#include "core/components_ng/property/grid_property.h"
 #include "core/pipeline/base/element_register.h"
 
 
@@ -123,7 +122,7 @@ public:
  * @tc.desc: Test cast to LayoutPropertyTestNg
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutPropertyTestNg, ToJsonValue001, TestSize.Level0)
+HWTEST_F(LayoutPropertyTestNg, ToJsonValue001, TestSize.Level1)
 {
     /**
      * @tc.steps1 Create a layoutProperty and json.
@@ -170,7 +169,7 @@ HWTEST_F(LayoutPropertyTestNg, ToJsonValue001, TestSize.Level0)
  * @tc.desc: Test cast to LayoutPropertyTestNg
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutPropertyTestNg, ToJsonValue002, TestSize.Level0)
+HWTEST_F(LayoutPropertyTestNg, ToJsonValue002, TestSize.Level1)
 {
     /**
      * @tc.steps1 Create a layoutProperty and json.
@@ -216,7 +215,7 @@ HWTEST_F(LayoutPropertyTestNg, ToJsonValue002, TestSize.Level0)
  * @tc.desc: Test cast to LayoutPropertyTestNg
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutPropertyTestNg, UpdateCalcLayoutProperty001, TestSize.Level0)
+HWTEST_F(LayoutPropertyTestNg, UpdateCalcLayoutProperty001, TestSize.Level1)
 {
     /**
      * @tc.steps1 Create a layoutProperty and constraint.
@@ -246,7 +245,7 @@ HWTEST_F(LayoutPropertyTestNg, UpdateCalcLayoutProperty001, TestSize.Level0)
  * @tc.desc: Test cast to LayoutPropertyTestNg
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutPropertyTestNg, UpdateLayoutConstraint001, TestSize.Level0)
+HWTEST_F(LayoutPropertyTestNg, UpdateLayoutConstraint001, TestSize.Level1)
 {
     /**
      * @tc.steps1 Create a layoutProperty and constraint.
@@ -293,7 +292,7 @@ HWTEST_F(LayoutPropertyTestNg, UpdateLayoutConstraint001, TestSize.Level0)
  * @tc.desc: Test cast to LayoutPropertyTestNg
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutPropertyTestNg, CheckBorderAndPadding001, TestSize.Level0)
+HWTEST_F(LayoutPropertyTestNg, CheckBorderAndPadding001, TestSize.Level1)
 {
     /**
      * @tc.steps1 Create a layoutProperty.
@@ -336,7 +335,7 @@ HWTEST_F(LayoutPropertyTestNg, CheckBorderAndPadding001, TestSize.Level0)
  * @tc.desc: Test cast to LayoutPropertyTestNg
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutPropertyTestNg, CheckAspectRatio001, TestSize.Level0)
+HWTEST_F(LayoutPropertyTestNg, CheckAspectRatio001, TestSize.Level1)
 {
     /**
      * @tc.steps1 Create a layoutProperty.
@@ -350,7 +349,8 @@ HWTEST_F(LayoutPropertyTestNg, CheckAspectRatio001, TestSize.Level0)
      */
     layoutProperty->magicItemProperty_.UpdateAspectRatio(1.0);
     layoutProperty->CheckAspectRatio();
-    EXPECT_EQ(layoutProperty->layoutConstraint_, std::nullopt);
+    EXPECT_EQ(layoutProperty->layoutConstraint_->selfIdealSize.Width(), std::nullopt);
+    EXPECT_EQ(layoutProperty->layoutConstraint_->selfIdealSize.Height(), std::nullopt);
 
     /**
      * @tc.steps3: callback CheckAspectRatio.push layoutConstraint_ is not null.
@@ -361,9 +361,6 @@ HWTEST_F(LayoutPropertyTestNg, CheckAspectRatio001, TestSize.Level0)
     layoutConstraintF.selfIdealSize.SetWidth(WIDTH_OPT);
     layoutProperty->layoutConstraint_ = layoutConstraintF;
     layoutProperty->CheckAspectRatio();
-    EXPECT_TRUE(layoutProperty->layoutConstraint_.has_value());
-    EXPECT_TRUE(layoutProperty->layoutConstraint_->selfIdealSize.Width().has_value());
-    EXPECT_TRUE(layoutProperty->layoutConstraint_->selfIdealSize.Height().has_value());
     EXPECT_EQ(layoutProperty->layoutConstraint_->selfIdealSize.Width(), 2);
     EXPECT_EQ(layoutProperty->layoutConstraint_->selfIdealSize.Height(), 2);
 }
@@ -373,7 +370,7 @@ HWTEST_F(LayoutPropertyTestNg, CheckAspectRatio001, TestSize.Level0)
  * @tc.desc: Test cast to LayoutPropertyTestNg
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutPropertyTestNg, CheckAspectRatio002, TestSize.Level0)
+HWTEST_F(LayoutPropertyTestNg, CheckAspectRatio002, TestSize.Level1)
 {
     /**
      * @tc.steps1 Create a layoutProperty.
@@ -413,7 +410,7 @@ HWTEST_F(LayoutPropertyTestNg, CheckAspectRatio002, TestSize.Level0)
  * @tc.desc: Test cast to LayoutPropertyTestNg
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutPropertyTestNg, BuildGridProperty001, TestSize.Level0)
+HWTEST_F(LayoutPropertyTestNg, BuildGridProperty001, TestSize.Level1)
 {
     /**
      * @tc.steps1 Create a layoutProperty.
@@ -457,7 +454,7 @@ HWTEST_F(LayoutPropertyTestNg, BuildGridProperty001, TestSize.Level0)
  * @tc.desc: Test cast to LayoutPropertyTestNg
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutPropertyTestNg, UpdateGridProperty001, TestSize.Level0)
+HWTEST_F(LayoutPropertyTestNg, UpdateGridProperty001, TestSize.Level1)
 {
     /**
      * @tc.steps1 Create a layoutProperty.
@@ -493,7 +490,8 @@ HWTEST_F(LayoutPropertyTestNg, UpdateGridProperty001, TestSize.Level0)
      */
     layoutProperty->gridProperty_ = std::make_unique<GridProperty>();
     layoutProperty->UpdateGridProperty(DEFAULT_GRID_SPAN, DEFAULT_GRID_OFFSET, GridSizeType::UNDEFINED);
-    EXPECT_FALSE(layoutProperty->layoutConstraint_.has_value());
+    EXPECT_EQ(layoutProperty->layoutConstraint_->minSize.Width(), 0);
+    EXPECT_EQ(layoutProperty->layoutConstraint_->minSize.Height(), 0);
     EXPECT_EQ(layoutProperty->propertyChangeFlag_, PROPERTY_UPDATE_MEASURE);
 
     /**
@@ -513,7 +511,7 @@ HWTEST_F(LayoutPropertyTestNg, UpdateGridProperty001, TestSize.Level0)
  * @tc.desc: Test cast to LayoutPropertyTestNg
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutPropertyTestNg, UpdateGridProperty002, TestSize.Level0)
+HWTEST_F(LayoutPropertyTestNg, UpdateGridProperty002, TestSize.Level1)
 {
     /**
      * @tc.steps1 Create a layoutProperty.
@@ -545,7 +543,7 @@ HWTEST_F(LayoutPropertyTestNg, UpdateGridProperty002, TestSize.Level0)
  * @tc.desc: Test cast to LayoutPropertyTestNg
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutPropertyTestNg, CreatePaddingAndBorderWithDefault001, TestSize.Level0)
+HWTEST_F(LayoutPropertyTestNg, CreatePaddingAndBorderWithDefault001, TestSize.Level1)
 {
     /**
      * @tc.steps1 Create a layoutProperty.
@@ -596,7 +594,7 @@ HWTEST_F(LayoutPropertyTestNg, CreatePaddingAndBorderWithDefault001, TestSize.Le
  * @tc.desc: Test cast to LayoutPropertyTestNg
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutPropertyTestNg, OnVisibilityUpdate001, TestSize.Level0)
+HWTEST_F(LayoutPropertyTestNg, OnVisibilityUpdate001, TestSize.Level1)
 {
     /**
      * @tc.steps1 Create a layoutProperty.
@@ -645,7 +643,7 @@ HWTEST_F(LayoutPropertyTestNg, OnVisibilityUpdate001, TestSize.Level0)
  * @tc.desc: Test cast to LayoutPropertyTestNg
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutPropertyTestNg, CreateChildConstraint001, TestSize.Level0)
+HWTEST_F(LayoutPropertyTestNg, CreateChildConstraint001, TestSize.Level1)
 {
     /**
      * @tc.steps1 Create a layoutProperty.
@@ -689,7 +687,7 @@ HWTEST_F(LayoutPropertyTestNg, CreateChildConstraint001, TestSize.Level0)
  * @tc.desc: Test cast to LayoutPropertyTestNg
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutPropertyTestNg, UpdateContentConstraint001, TestSize.Level0)
+HWTEST_F(LayoutPropertyTestNg, UpdateContentConstraint001, TestSize.Level1)
 {
     /**
      * @tc.steps1 Create a layoutProperty.
@@ -732,7 +730,7 @@ HWTEST_F(LayoutPropertyTestNg, UpdateContentConstraint001, TestSize.Level0)
  * @tc.desc: Test cast to LayoutPropertyTestNg
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutPropertyTestNg, UpdateSafeAreaExpandOpts001, TestSize.Level0)
+HWTEST_F(LayoutPropertyTestNg, UpdateSafeAreaExpandOpts001, TestSize.Level1)
 {
     /**
      * @tc.steps1 Create a layoutProperty.
@@ -771,7 +769,7 @@ HWTEST_F(LayoutPropertyTestNg, UpdateSafeAreaExpandOpts001, TestSize.Level0)
  * @tc.desc: Test cast to ResetCalcMinSize
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutPropertyTestNg, ResetCalcMinSize001, TestSize.Level0)
+HWTEST_F(LayoutPropertyTestNg, ResetCalcMinSize001, TestSize.Level1)
 {
     /**
      * @tc.steps1 Create a layoutProperty.
@@ -808,7 +806,7 @@ HWTEST_F(LayoutPropertyTestNg, ResetCalcMinSize001, TestSize.Level0)
  * @tc.desc: Test cast to ResetCalcMinSize(bool resetWidth)
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutPropertyTestNg, ResetCalcMinSize002, TestSize.Level0)
+HWTEST_F(LayoutPropertyTestNg, ResetCalcMinSize002, TestSize.Level1)
 {
     /**
      * @tc.steps1 Create a layoutProperty.
@@ -852,7 +850,7 @@ HWTEST_F(LayoutPropertyTestNg, ResetCalcMinSize002, TestSize.Level0)
  * @tc.desc: Test cast to ResetCalcMaxSize
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutPropertyTestNg, ResetCalcMaxSize001, TestSize.Level0)
+HWTEST_F(LayoutPropertyTestNg, ResetCalcMaxSize001, TestSize.Level1)
 {
     /**
      * @tc.steps1 Create a layoutProperty.
@@ -886,7 +884,7 @@ HWTEST_F(LayoutPropertyTestNg, ResetCalcMaxSize001, TestSize.Level0)
  * @tc.desc: Test cast to ResetCalcMaxSize(bool resetWidth)
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutPropertyTestNg, ResetCalcMaxSize002, TestSize.Level0)
+HWTEST_F(LayoutPropertyTestNg, ResetCalcMaxSize002, TestSize.Level1)
 {
     /**
      * @tc.steps1 Create a layoutProperty.
@@ -930,7 +928,7 @@ HWTEST_F(LayoutPropertyTestNg, ResetCalcMaxSize002, TestSize.Level0)
  * @tc.desc: Test cast to UpdateFlexGrow
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutPropertyTestNg, UpdateFlexGrow001, TestSize.Level0)
+HWTEST_F(LayoutPropertyTestNg, UpdateFlexGrow001, TestSize.Level1)
 {
     /**
      * @tc.steps1 Create a layoutProperty.
@@ -948,7 +946,7 @@ HWTEST_F(LayoutPropertyTestNg, UpdateFlexGrow001, TestSize.Level0)
  * @tc.desc: Test cast to UpdateFlexGrow
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutPropertyTestNg, ResetFlexGrow001, TestSize.Level0)
+HWTEST_F(LayoutPropertyTestNg, ResetFlexGrow001, TestSize.Level1)
 {
     /**
      * @tc.steps1 Create a layoutProperty.
@@ -975,7 +973,7 @@ HWTEST_F(LayoutPropertyTestNg, ResetFlexGrow001, TestSize.Level0)
  * @tc.desc: Test cast to ResetFlexShrink
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutPropertyTestNg, ResetFlexShrink001, TestSize.Level0)
+HWTEST_F(LayoutPropertyTestNg, ResetFlexShrink001, TestSize.Level1)
 {
     /**
      * @tc.steps1 Create a layoutProperty.
@@ -1002,7 +1000,7 @@ HWTEST_F(LayoutPropertyTestNg, ResetFlexShrink001, TestSize.Level0)
  * @tc.desc: Test cast to UpdateFlexBasis
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutPropertyTestNg, UpdateFlexBasis001, TestSize.Level0)
+HWTEST_F(LayoutPropertyTestNg, UpdateFlexBasis001, TestSize.Level1)
 {
     /**
      * @tc.steps1 Create a layoutProperty.
@@ -1022,7 +1020,7 @@ HWTEST_F(LayoutPropertyTestNg, UpdateFlexBasis001, TestSize.Level0)
  * @tc.desc: Test cast to ResetAlignSelf
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutPropertyTestNg, ResetAlignSelf001, TestSize.Level0)
+HWTEST_F(LayoutPropertyTestNg, ResetAlignSelf001, TestSize.Level1)
 {
     /**
      * @tc.steps1 Create a layoutProperty.
@@ -1059,7 +1057,7 @@ HWTEST_F(LayoutPropertyTestNg, ResetAlignSelf001, TestSize.Level0)
  * @tc.desc: Test cast to UpdateDisplayIndex
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutPropertyTestNg, UpdateDisplayIndex001, TestSize.Level0)
+HWTEST_F(LayoutPropertyTestNg, UpdateDisplayIndex001, TestSize.Level1)
 {
     /**
      * @tc.steps1 Create a layoutProperty.
@@ -1087,7 +1085,7 @@ HWTEST_F(LayoutPropertyTestNg, UpdateDisplayIndex001, TestSize.Level0)
  * @tc.desc: Test cast to SetOverlayOffset
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutPropertyTestNg, SetOverlayOffset001, TestSize.Level0)
+HWTEST_F(LayoutPropertyTestNg, SetOverlayOffset001, TestSize.Level1)
 {
     /**
      * @tc.steps1 Create a layoutProperty.
@@ -1131,7 +1129,7 @@ HWTEST_F(LayoutPropertyTestNg, SetOverlayOffset001, TestSize.Level0)
  * @tc.desc: Test cast to UpdateAllGeometryTransition
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutPropertyTestNg, UpdateAllGeometryTransition001, TestSize.Level0)
+HWTEST_F(LayoutPropertyTestNg, UpdateAllGeometryTransition001, TestSize.Level1)
 {
     /**
      * @tc.steps1 Create a layoutProperty.
@@ -1152,7 +1150,7 @@ HWTEST_F(LayoutPropertyTestNg, UpdateAllGeometryTransition001, TestSize.Level0)
  * @tc.desc: Test cast to CreateMargin
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutPropertyTestNg, CreateMargin001, TestSize.Level0)
+HWTEST_F(LayoutPropertyTestNg, CreateMargin001, TestSize.Level1)
 {
     /**
      * @tc.steps1 Create a layoutProperty.
@@ -1188,7 +1186,7 @@ HWTEST_F(LayoutPropertyTestNg, CreateMargin001, TestSize.Level0)
  * @tc.desc: Test cast to GetAspectRatio
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutPropertyTestNg, GetAspectRatio001, TestSize.Level0)
+HWTEST_F(LayoutPropertyTestNg, GetAspectRatio001, TestSize.Level1)
 {
     /**
      * @tc.steps1 Create a layoutProperty.
@@ -1212,7 +1210,7 @@ HWTEST_F(LayoutPropertyTestNg, GetAspectRatio001, TestSize.Level0)
  * @tc.desc: Test cast to UpdateAspectRatio
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutPropertyTestNg, UpdateAspectRatio001, TestSize.Level0)
+HWTEST_F(LayoutPropertyTestNg, UpdateAspectRatio001, TestSize.Level1)
 {
     /**
      * @tc.steps1 Create a layoutProperty.
@@ -1237,7 +1235,7 @@ HWTEST_F(LayoutPropertyTestNg, UpdateAspectRatio001, TestSize.Level0)
  * @tc.desc: Test cast to UpdateAspectRatio
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutPropertyTestNg, UpdateAspectRatio002, TestSize.Level0)
+HWTEST_F(LayoutPropertyTestNg, UpdateAspectRatio002, TestSize.Level1)
 {
     /**
      * @tc.steps1 Create a layoutProperty.
@@ -1257,7 +1255,7 @@ HWTEST_F(LayoutPropertyTestNg, UpdateAspectRatio002, TestSize.Level0)
  * @tc.desc: Test cast to ResetAspectRatio
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutPropertyTestNg, ResetAspectRatio001, TestSize.Level0)
+HWTEST_F(LayoutPropertyTestNg, ResetAspectRatio001, TestSize.Level1)
 {
     /**
      * @tc.steps1 Create a layoutProperty.
@@ -1296,7 +1294,7 @@ HWTEST_F(LayoutPropertyTestNg, ResetAspectRatio001, TestSize.Level0)
  * @tc.desc: Test cast to UpdateAllGeometryTransition
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutPropertyTestNg, UpdateAllGeometryTransition002, TestSize.Level0)
+HWTEST_F(LayoutPropertyTestNg, UpdateAllGeometryTransition002, TestSize.Level1)
 {
     /**
      * @tc.steps1 Create a layoutProperty.
@@ -1335,7 +1333,7 @@ HWTEST_F(LayoutPropertyTestNg, UpdateAllGeometryTransition002, TestSize.Level0)
  * @tc.desc: Test cast to UpdateOuterBorderWidth
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutPropertyTestNg, UpdateOuterBorderWidth001, TestSize.Level0)
+HWTEST_F(LayoutPropertyTestNg, UpdateOuterBorderWidth001, TestSize.Level1)
 {
     /**
      * @tc.steps1 Create a layoutProperty.
@@ -1367,7 +1365,7 @@ HWTEST_F(LayoutPropertyTestNg, UpdateOuterBorderWidth001, TestSize.Level0)
  * @tc.desc: Test cast to ClearUserDefinedIdealSize
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutPropertyTestNg, ClearUserDefinedIdealSize001, TestSize.Level0)
+HWTEST_F(LayoutPropertyTestNg, ClearUserDefinedIdealSize001, TestSize.Level1)
 {
     /**
      * @tc.steps1 Create a layoutProperty.
@@ -1412,7 +1410,7 @@ HWTEST_F(LayoutPropertyTestNg, ClearUserDefinedIdealSize001, TestSize.Level0)
  * @tc.desc: Test cast to UpdateMarginSelfIdealSize
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutPropertyTestNg, UpdateMarginSelfIdealSize001, TestSize.Level0)
+HWTEST_F(LayoutPropertyTestNg, UpdateMarginSelfIdealSize001, TestSize.Level1)
 {
     /**
      * @tc.steps1 Create a layoutProperty.
@@ -1455,7 +1453,7 @@ HWTEST_F(LayoutPropertyTestNg, UpdateMarginSelfIdealSize001, TestSize.Level0)
  * @tc.desc: Test cast to ResetCalcMinSize
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutPropertyTestNg, ResetCalcMinSize003, TestSize.Level0)
+HWTEST_F(LayoutPropertyTestNg, ResetCalcMinSize003, TestSize.Level1)
 {
     /**
      * @tc.steps1 Create a layoutProperty.
@@ -1495,7 +1493,7 @@ HWTEST_F(LayoutPropertyTestNg, ResetCalcMinSize003, TestSize.Level0)
  * @tc.desc: Test cast to ResetCalcMaxSize
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutPropertyTestNg, ResetCalcMaxSize003, TestSize.Level0)
+HWTEST_F(LayoutPropertyTestNg, ResetCalcMaxSize003, TestSize.Level1)
 {
     /**
      * @tc.steps1 Create a layoutProperty.
@@ -1535,7 +1533,7 @@ HWTEST_F(LayoutPropertyTestNg, ResetCalcMaxSize003, TestSize.Level0)
  * @tc.desc: Test cast to UpdateFlexGrow
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutPropertyTestNg, UpdateFlexGrow002, TestSize.Level0)
+HWTEST_F(LayoutPropertyTestNg, UpdateFlexGrow002, TestSize.Level1)
 {
     /**
      * @tc.steps1 Create a layoutProperty.
@@ -1576,7 +1574,7 @@ HWTEST_F(LayoutPropertyTestNg, UpdateFlexGrow002, TestSize.Level0)
  * @tc.desc: Test cast to ResetFlexGrow
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutPropertyTestNg, ResetFlexGrow002, TestSize.Level0)
+HWTEST_F(LayoutPropertyTestNg, ResetFlexGrow002, TestSize.Level1)
 {
     /**
      * @tc.steps1 Create a layoutProperty.
@@ -1611,7 +1609,7 @@ HWTEST_F(LayoutPropertyTestNg, ResetFlexGrow002, TestSize.Level0)
  * @tc.desc: Test cast to UpdateFlexShrink
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutPropertyTestNg, UpdateFlexShrink001, TestSize.Level0)
+HWTEST_F(LayoutPropertyTestNg, UpdateFlexShrink001, TestSize.Level1)
 {
     /**
      * @tc.steps1 Create a layoutProperty.
@@ -1652,7 +1650,7 @@ HWTEST_F(LayoutPropertyTestNg, UpdateFlexShrink001, TestSize.Level0)
  * @tc.desc: Test cast to ResetFlexShrink
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutPropertyTestNg, ResetFlexShrink002, TestSize.Level0)
+HWTEST_F(LayoutPropertyTestNg, ResetFlexShrink002, TestSize.Level1)
 {
     /**
      * @tc.steps1 Create a layoutProperty.
@@ -1687,7 +1685,7 @@ HWTEST_F(LayoutPropertyTestNg, ResetFlexShrink002, TestSize.Level0)
  * @tc.desc: Test cast to UpdateFlexBasis
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutPropertyTestNg, UpdateFlexBasis002, TestSize.Level0)
+HWTEST_F(LayoutPropertyTestNg, UpdateFlexBasis002, TestSize.Level1)
 {
     /**
      * @tc.steps1 Create a layoutProperty.
@@ -1729,7 +1727,7 @@ HWTEST_F(LayoutPropertyTestNg, UpdateFlexBasis002, TestSize.Level0)
  * @tc.desc: Test cast to UpdateAlignRules
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutPropertyTestNg, UpdateAlignRules001, TestSize.Level0)
+HWTEST_F(LayoutPropertyTestNg, UpdateAlignRules001, TestSize.Level1)
 {
     /**
      * @tc.steps1 Create a layoutProperty.
@@ -1763,7 +1761,7 @@ HWTEST_F(LayoutPropertyTestNg, UpdateAlignRules001, TestSize.Level0)
  * @tc.desc: Test cast to GetPercentSensitive
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutPropertyTestNg, GetPercentSensitive001, TestSize.Level0)
+HWTEST_F(LayoutPropertyTestNg, GetPercentSensitive001, TestSize.Level1)
 {
     /**
      * @tc.steps1 Create a layoutProperty.
@@ -1816,7 +1814,7 @@ HWTEST_F(LayoutPropertyTestNg, GetPercentSensitive001, TestSize.Level0)
  * @tc.desc: Test cast to UpdatePercentSensitive
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutPropertyTestNg, UpdatePercentSensitive001, TestSize.Level0)
+HWTEST_F(LayoutPropertyTestNg, UpdatePercentSensitive001, TestSize.Level1)
 {
     /**
      * @tc.steps1 Create a layoutProperty.
@@ -1864,7 +1862,7 @@ HWTEST_F(LayoutPropertyTestNg, UpdatePercentSensitive001, TestSize.Level0)
  * @tc.desc: Test cast to ConstraintEqual
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutPropertyTestNg, ConstraintEqual001, TestSize.Level0)
+HWTEST_F(LayoutPropertyTestNg, ConstraintEqual001, TestSize.Level1)
 {
     /**
      * @tc.steps1 Create a layoutProperty.
@@ -1918,7 +1916,7 @@ HWTEST_F(LayoutPropertyTestNg, ConstraintEqual001, TestSize.Level0)
  * @tc.desc: Test cast to ConstraintEqual002
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutPropertyTestNg, ConstraintEqual002, TestSize.Level0)
+HWTEST_F(LayoutPropertyTestNg, ConstraintEqual002, TestSize.Level1)
 {
     /**
      * @tc.steps1 Create a layoutProperty.
@@ -1973,19 +1971,19 @@ HWTEST_F(LayoutPropertyTestNg, ConstraintEqual002, TestSize.Level0)
  * @tc.desc: Test cast to UpdateChainWeight001
  * @tc.type: FUNC
  */
-HWTEST_F(LayoutPropertyTestNg, UpdateChainWeight001, TestSize.Level0)
+HWTEST_F(LayoutPropertyTestNg, UpdateChainWeight001, TestSize.Level1)
 {
     /**
      * @tc.steps1 Create a layoutProperty.
      */
     auto layoutProperty = AceType::MakeRefPtr<LayoutProperty>();
 
-    ChainWeightPair chainWeightPair(0.0f, 0.0f);
+    LayoutWeightPair layoutWeightPair(0.0f, 0.0f);
     
     /**
      * @tc.steps2 Call UpdateChainWeight with chainWeightPair.
      */
-    layoutProperty->UpdateChainWeight(chainWeightPair);
+    layoutProperty->UpdateChainWeight(layoutWeightPair);
     EXPECT_NE(layoutProperty->flexItemProperty_, nullptr);
 }
 } // namespace OHOS::Ace::NG

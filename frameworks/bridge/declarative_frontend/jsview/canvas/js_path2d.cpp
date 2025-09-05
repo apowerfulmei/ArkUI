@@ -28,8 +28,7 @@ void JSPath2D::Constructor(const JSCallbackInfo& args)
     jsPath2d->IncRefCount();
     args.SetReturnValue(Referenced::RawPtr(jsPath2d));
     int32_t unit = 0;
-    if ((args.Length() >= 1 && args.GetInt32Arg(args.Length() - 1, unit)) &&
-        (static_cast<CanvasUnit>(unit) == CanvasUnit::PX)) {
+    if (args.GetInt32Arg(std::abs(args.Length() - 1), unit) && (static_cast<CanvasUnit>(unit) == CanvasUnit::PX)) {
         jsPath2d->SetUnit(CanvasUnit::PX);
     }
     jsPath2d->SetCanvasPath2d(JSCanvasRenderer::JsMakePath2D(args));
@@ -61,7 +60,6 @@ void JSPath2D::JSBind(BindingTarget globalObj)
     JSClass<JSPath2D>::CustomMethod("bezierCurveTo", &JSCanvasPath::JsPath2DBezierCurveTo);
     JSClass<JSPath2D>::CustomMethod("ellipse", &JSCanvasPath::JsPath2DEllipse);
     JSClass<JSPath2D>::CustomMethod("rect", &JSCanvasPath::JsPath2DRect);
-    JSClass<JSPath2D>::CustomMethod("roundRect", &JSCanvasPath::JsPath2DRoundRect);
     JSClass<JSPath2D>::CustomMethod("closePath", &JSCanvasPath::JsPath2DClosePath);
     JSClass<JSPath2D>::Bind(globalObj, JSPath2D::Constructor, JSPath2D::Destructor);
 }

@@ -22,24 +22,22 @@
 #include "base/memory/referenced.h"
 #include "base/utils/utils.h"
 #include "core/components/common/properties/color.h"
-#include "core/components/common/properties/text_style.h"
 #include "core/components/select/select_theme.h"
 #include "core/components/theme/icon_theme.h"
 #include "core/components_ng/base/frame_node.h"
 #include "core/components_ng/event/event_hub.h"
+#include "core/components_ng/pattern/option/option_paint_method.h"
+#include "core/components_ng/pattern/option/option_paint_property.h"
 #include "core/components_ng/pattern/pattern.h"
 #include "core/components_ng/pattern/select/select_accessibility_property.h"
 #include "core/components_ng/pattern/select/select_event_hub.h"
 #include "core/components_ng/pattern/select/select_layout_algorithm.h"
-#include "core/components_ng/pattern/select/select_layout_property.h"
 #include "core/components_ng/pattern/select/select_model.h"
-#include "core/components_ng/pattern/select/select_paint_property.h"
 #include "core/components_ng/pattern/text/text_layout_property.h"
 #include "core/components_ng/pattern/select/select_model_ng.h"
 
 namespace OHOS::Ace::NG {
 class InspectorFilter;
-class MenuItemPattern;
 
 class SelectPattern : public Pattern {
     DECLARE_ACE_TYPE(SelectPattern, Pattern);
@@ -47,16 +45,6 @@ class SelectPattern : public Pattern {
 public:
     SelectPattern() = default;
     ~SelectPattern() override = default;
-
-    bool IsEnableMatchParent() override
-    {
-        return true;
-    }
-
-    bool IsEnableFix() override
-    {
-        return true;
-    }
 
     bool IsAtomicNode() const override
     {
@@ -157,15 +145,7 @@ public:
 
     FocusPattern GetFocusPattern() const override
     {
-        FocusPattern focusPattern = { FocusType::NODE, true, FocusStyleType::INNER_BORDER };
-        auto pipelineContext = PipelineBase::GetCurrentContext();
-        CHECK_NULL_RETURN(pipelineContext, focusPattern);
-        auto selectTheme = pipelineContext->GetTheme<SelectTheme>();
-        CHECK_NULL_RETURN(selectTheme, focusPattern);
-        auto focusStyleType =
-            static_cast<FocusStyleType>(static_cast<int32_t>(selectTheme->GetSelectFocusStyleType_()));
-        focusPattern.SetStyleType(focusStyleType);
-        return focusPattern;
+        return { FocusType::NODE, true, FocusStyleType::INNER_BORDER };
     }
 
     // update selected option props
@@ -196,17 +176,11 @@ public:
         return isHover_;
     }
 
-    void SetShowInSubWindow(bool isShowInSubWindow);
-    void ResetShowInSubWindow();
-    void SetShowDefaultSelectedIcon(bool show);
-    void ResetShowDefaultSelectedIcon();
-
     void SetItemSelected(int index, const std::string& value);
     void PlayBgColorAnimation(bool isHoverChange = true);
     void SetSpace(const Dimension& value);
     void SetArrowPosition(const ArrowPosition value);
     void SetMenuAlign(const MenuAlign& menuAlign);
-    void SetAvoidance(AvoidanceMode mode);
 
     std::string GetValue();
     std::string ProvideRestoreInfo() override;
@@ -215,72 +189,23 @@ public:
     void OnLanguageConfigurationUpdate() override;
 
     Dimension GetFontSize();
+    void SetSelectDefaultTheme();
     void SetOptionWidth(const Dimension& value);
     void SetOptionHeight(const Dimension& value);
     void SetOptionWidthFitTrigger(bool isFitTrigger);
     void ShowSelectMenu();
-    void ShowSelectMenuInSubWindow();
     void SetHasOptionWidth(bool hasOptionWidth);
     void SetControlSize(const ControlSize& controlSize);
     void SetDivider(const SelectDivider& divider);
-    void SetDividerMode(const std::optional<DividerMode>& mode);
     ControlSize GetControlSize();
     void SetLayoutDirection(TextDirection value);
-    Dimension GetSelectLeftRightMargin() const;
-    bool OnThemeScopeUpdate(int32_t themeScopeId) override;
-    RefPtr<PaintProperty> CreatePaintProperty() override
-    {
-        return MakeRefPtr<SelectPaintProperty>();
-    }
-    RefPtr<LayoutProperty> CreateLayoutProperty() override
-    {
-        return MakeRefPtr<SelectLayoutProperty>();
-    }
-    void ResetFontColor();
-    void DumpInfo() override;
-    void SetTextModifierApply(const std::function<void(WeakPtr<NG::FrameNode>)>& textApply);
-    void SetArrowModifierApply(const std::function<void(WeakPtr<NG::FrameNode>)>& arrowApply);
-    void SetArrowColor(const Color& color);
-    void SetOptionTextModifier(const std::function<void(WeakPtr<NG::FrameNode>)>& optionApply);
-    void SetSelectedOptionTextModifier(const std::function<void(WeakPtr<NG::FrameNode>)>& optionSelectedApply);
-    std::function<void(WeakPtr<NG::FrameNode>)>& GetTextModifier();
-    std::function<void(WeakPtr<NG::FrameNode>)>& GetArrowModifier();
-    void ResetOptionToInitProps(
-        const RefPtr<MenuItemPattern>& optionPattern, const RefPtr<MenuItemPattern>& selectingOptionPattern = nullptr);
-    void ResetSelectedOptionToInitProps(const RefPtr<MenuItemPattern>& optionPattern);
-    void UpdateOptionCustomProperties(const RefPtr<MenuItemPattern>& optionPattern);
-    void UpdateSelectedOptionCustomProperties(const RefPtr<MenuItemPattern>& optionPattern);
-    void ResetLastSelectedOptionFlags(const RefPtr<MenuItemPattern>& optionPattern);
-    void UpdateOptionFontFromPattern(const RefPtr<MenuItemPattern>& optionPattern);
-    void UpdateSelectedOptionFontFromPattern(const RefPtr<MenuItemPattern>& optionPattern);
-    void SetMenuOutline(const MenuParam& menuParam);
-    void UpdateComponentColor(const Color& color, const SelectColorType selectColorType);
-    void SetColorByUser(const RefPtr<FrameNode>& host, const RefPtr<SelectTheme>& theme);
-    void UpdateMenuOption(int32_t index, const std::string& value, const SelectOptionType optionType);
-    void SetMenuBackgroundColorByUser(const Color& color, const RefPtr<SelectPaintProperty>& props);
-    void SetModifierByUser(const RefPtr<SelectTheme>& theme, const RefPtr<SelectPaintProperty>& props);
-    void SetOptionBgColorByUser(const Color& color, const RefPtr<SelectPaintProperty>& props);
 
 private:
     void OnAttachToFrameNode() override;
     void OnModifyDone() override;
     void OnAfterModifyDone() override;
     bool OnDirtyLayoutWrapperSwap(const RefPtr<LayoutWrapper>& dirty, const DirtySwapConfig& config) override;
-    void HandleFocusStyleTask();
-    void HandleBlurStyleTask();
-    void SetFocusStyle();
-    void ClearFocusStyle();
-    void ModFocusIconStyle(RefPtr<SelectTheme> selectTheme, bool focusedFlag);
-    void InitFocusEvent();
-    void AddIsFocusActiveUpdateEvent();
-    void RemoveIsFocusActiveUpdateEvent();
-    void UpdateMenuScrollColorConfiguration(const RefPtr<FrameNode>& menuNode);
-    void SetOptionTextModifierByUser(const RefPtr<SelectTheme>& theme, const RefPtr<SelectPaintProperty>& props);
-    void SetSelectedOptionTextModifierByUser(
-        const RefPtr<SelectTheme>& theme, const RefPtr<SelectPaintProperty>& props);
-    void SetArrowModifierByUser(const RefPtr<SelectTheme>& theme, const RefPtr<SelectPaintProperty>& props);
-    void SetSelectedOptionBgColorByUser(const RefPtr<SelectTheme>& theme, const RefPtr<SelectPaintProperty>& props,
-        const RefPtr<SelectLayoutProperty>& layoutProps);
+
     bool HasRowNode() const
     {
         return rowId_.has_value();
@@ -326,8 +251,6 @@ private:
     void RegisterOnHover();
     // add click event to show menu
     void RegisterOnClick();
-    void BindMenuTouch(FrameNode* targetNode, const RefPtr<GestureEventHub>& gestrueHub);
-    bool CheckSkipMenuShow(const RefPtr<FrameNode>& targetNode);
 
     void RegisterOnKeyEvent();
     bool OnKeyEvent(const KeyEvent& event);
@@ -340,15 +263,12 @@ private:
     // update text to selected option's text
     void UpdateText(int32_t index);
 
-    void InitTextProps(const RefPtr<TextLayoutProperty>& textProps);
+    void InitTextProps(const RefPtr<TextLayoutProperty>& textProps, const RefPtr<SelectTheme>& theme);
     void InitSpinner(
         const RefPtr<FrameNode>& spinner, const RefPtr<IconTheme>& iconTheme, const RefPtr<SelectTheme>& selectTheme);
     void InitSpinner(const RefPtr<FrameNode>& spinner, const RefPtr<SelectTheme>& selectTheme);
-    void ResetParams();
     void UpdateOptionsWidth(float selectWidth);
-    void UpdateTargetSize();
-    bool GetShadowFromTheme(ShadowStyle shadowStyle, Shadow& shadow);
-    void ShowScrollBar();
+    void ResetParams();
 
     std::vector<RefPtr<FrameNode>> options_;
     RefPtr<FrameNode> menuWrapper_ = nullptr;
@@ -371,16 +291,12 @@ private:
     std::optional<Color> selectedBgColor_;
     OptionFont optionFont_;
     std::optional<Color> optionBgColor_;
-    std::optional<Color> fontColor_;
 
     void ToJsonValue(std::unique_ptr<JsonValue>& json, const InspectorFilter& filter) const override;
-    void ToJsonSelectedOptionFontAndColor(std::unique_ptr<JsonValue>& json, const InspectorFilter& filter) const;
     void ToJsonArrowAndText(std::unique_ptr<JsonValue>& json, const InspectorFilter& filter) const;
     void ToJsonOptionAlign(std::unique_ptr<JsonValue>& json, const InspectorFilter& filter) const;
     void ToJsonMenuBackgroundStyle(std::unique_ptr<JsonValue>& json, const InspectorFilter& filter) const;
     void ToJsonDivider(std::unique_ptr<JsonValue>& json, const InspectorFilter& filter) const;
-    void ToJsonDividerMode(std::unique_ptr<JsonValue>& json) const;
-    void ToJsonOptionMaxlines(std::unique_ptr<JsonValue>& json, const InspectorFilter& filter) const;
     // XTS inspector helper functions
     std::string InspectorGetOptions() const;
     std::string InspectorGetSelectedFont() const;
@@ -395,19 +311,9 @@ private:
     MenuAlign menuAlign_;
     std::string selectValue_;
     bool isFitTrigger_ = false;
+    Color selectDefaultBgColor_ = Color::TRANSPARENT;
     ControlSize controlSize_ = ControlSize::NORMAL;
-    bool bgColorModify_ = false;
-    bool scaleModify_ = false;
-    bool shadowModify_ = false;
-    std::function<void(bool)> isFocusActiveUpdateEvent_;
-    bool focusEventInitialized_ = false;
-    bool focusTextColorModify_ = false;
     ACE_DISALLOW_COPY_AND_MOVE(SelectPattern);
-    std::function<void(WeakPtr<NG::FrameNode>)> arrowApply_ = nullptr;
-    std::function<void(WeakPtr<NG::FrameNode>)> textApply_ = nullptr;
-    std::function<void(WeakPtr<NG::FrameNode>)> textOptionApply_ = nullptr;
-    std::function<void(WeakPtr<NG::FrameNode>)> textSelectOptionApply_ = nullptr;
-    std::optional<Color> menuBackgroundColor_;
 };
 
 } // namespace OHOS::Ace::NG

@@ -17,7 +17,6 @@
 #include "ability_info.h"
 #include "context_impl.h"
 #include "gtest/gtest.h"
-#include "core/common/container_consts.h"
 #include "interfaces/inner_api/ace/ui_content.h"
 
 using namespace testing;
@@ -42,6 +41,25 @@ HWTEST_F(UiContentTest, DumpTest001, TestSize.Level1)
 }
 
 /**
+ * @tc.name: CreateUIContent001
+ * @tc.desc: test CreateUIContent001
+ * @tc.type: FUNC
+ */
+HWTEST_F(UiContentTest, CreateUIContent001, TestSize.Level1)
+{
+    OHOS::AbilityRuntime::Context* context = nullptr;
+    NativeEngine* runtime = nullptr;
+    bool isFormRender = false;
+    std::unique_ptr<UIContent> ret = UIContent::Create(context, runtime, isFormRender);
+    EXPECT_TRUE((ret.get() != nullptr));
+    std::unique_ptr<UIContent> ret2 = UIContent::Create(context, runtime);
+    EXPECT_TRUE((ret2.get() != nullptr));
+    OHOS::AppExecFwk::Ability* ability = nullptr;
+    std::unique_ptr<UIContent> ret3 = UIContent::Create(ability);
+    EXPECT_TRUE(ret3.get() != nullptr);
+}
+
+/**
  * @tc.name: GetUIContent001
  * @tc.desc: test GetCurrentUIStackInfo/GetUIContent
  * @tc.type: FUNC
@@ -53,17 +71,5 @@ HWTEST_F(UiContentTest, GetUIContent001, TestSize.Level1)
     EXPECT_TRUE(ret == nullptr);
     std::string ret2 = UIContent::GetCurrentUIStackInfo();
     EXPECT_TRUE(ret2 == std::string());
-}
-
-/**
- * @tc.name: GetUIContent002
- * @tc.desc: test GetUIContent
- * @tc.type: FUNC
- */
-HWTEST_F(UiContentTest, GetUIContent002, TestSize.Level1)
-{
-    int32_t instanceId = DC_CONTAINER * CONTAINER_ID_DIVIDE_SIZE;
-    UIContent* ret = UIContent::GetUIContent(instanceId);
-    EXPECT_TRUE(ret == nullptr);
 }
 } // namespace OHOS::Ace

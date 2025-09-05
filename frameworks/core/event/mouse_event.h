@@ -20,7 +20,6 @@
 #include "base/geometry/ng/offset_t.h"
 #include "base/geometry/offset.h"
 #include "base/mousestyle/mouse_style.h"
-#include "base/memory/ace_type.h"
 #include "core/event/key_event.h"
 #include "core/event/touch_event.h"
 #include "core/pipeline_ng/ui_task_scheduler.h"
@@ -100,7 +99,6 @@ struct MouseEvent final : public PointerEvent {
     float rawDeltaX = 0.0f;
     float rawDeltaY = 0.0f;
     std::vector<MouseButton> pressedButtonsArray;
-    bool mockFlushEvent = false;
     MouseAction action = MouseAction::NONE;
     MouseAction pullAction = MouseAction::NONE;
     MouseButton button = MouseButton::NONE_BUTTON;
@@ -109,24 +107,12 @@ struct MouseEvent final : public PointerEvent {
     int32_t targetDisplayId = 0;
     SourceType sourceType = SourceType::NONE;
     SourceTool sourceTool = SourceTool::UNKNOWN;
-    std::shared_ptr<const MMI::PointerEvent> pointerEvent;
+    std::shared_ptr<MMI::PointerEvent> pointerEvent;
     int32_t touchEventId = 0;
     int32_t originalId = 0;
     std::vector<KeyCode> pressedKeyCodes_;
-    std::vector<MouseEvent> history;
-    WeakPtr<NG::FrameNode> node;
     bool isInjected = false;
     bool isPrivacyMode = false;
-    bool isMockWindowTransFlag = false;
-    TimeStamp pressedTime;
-
-    int32_t GetEventIdentity() const
-    {
-        if (passThrough) {
-            return id;
-        }
-        return originalId;
-    }
 
     Offset GetOffset() const
     {
@@ -136,11 +122,6 @@ struct MouseEvent final : public PointerEvent {
     Offset GetScreenOffset() const
     {
         return Offset(screenX, screenY);
-    }
-
-    Offset GetGlobalDisplayOffset() const
-    {
-        return Offset(globalDisplayX, globalDisplayY);
     }
 
     int32_t GetId() const
@@ -158,11 +139,6 @@ struct MouseEvent final : public PointerEvent {
             return pressedButtons + MOUSE_BASE_ID + pointerId;
         }
         return static_cast<int32_t>(button) + MOUSE_BASE_ID + pointerId;
-    }
-
-    int32_t GetTargetDisplayId() const
-    {
-        return targetDisplayId;
     }
 
     MouseEvent CloneWith(float scale) const
@@ -183,8 +159,6 @@ struct MouseEvent final : public PointerEvent {
         mouseEvent.scrollZ = scrollZ / scale;
         mouseEvent.screenX = screenX / scale;
         mouseEvent.screenY = screenY / scale;
-        mouseEvent.globalDisplayX = globalDisplayX / scale;
-        mouseEvent.globalDisplayY = globalDisplayY / scale;
         mouseEvent.action = action;
         mouseEvent.pullAction = pullAction;
         mouseEvent.button = button;
@@ -199,16 +173,9 @@ struct MouseEvent final : public PointerEvent {
         mouseEvent.pressedKeyCodes_ = pressedKeyCodes_;
         mouseEvent.isInjected = isInjected;
         mouseEvent.isPrivacyMode = isPrivacyMode;
-        mouseEvent.mockFlushEvent = mockFlushEvent;
         mouseEvent.rawDeltaX = rawDeltaX;
         mouseEvent.rawDeltaY = rawDeltaY;
         mouseEvent.pressedButtonsArray = pressedButtonsArray;
-        mouseEvent.passThrough = passThrough;
-        mouseEvent.pressedTime = pressedTime;
-        // Only set postEventNodeId when the event supports passThrough
-        if (passThrough) {
-            mouseEvent.postEventNodeId = postEventNodeId;
-        }
         return mouseEvent;
     }
 
@@ -244,19 +211,18 @@ struct MouseEvent final : public PointerEvent {
             .y = y,
             .screenX = screenX,
             .screenY = screenY,
-            .globalDisplayX = globalDisplayX,
-            .globalDisplayY = globalDisplayY,
-            .downTime = pressedTime,
+            .downTime = time,
             .size = 0.0,
             .isPressed = (type == TouchType::DOWN),
             .originalId = pointOriginalId };
         TouchEvent event;
         event.SetId(pointId)
-            .SetX(x).SetY(y).SetScreenX(screenX).SetScreenY(screenY)
-            .SetGlobalDisplayX(globalDisplayX).SetGlobalDisplayY(globalDisplayY)
+            .SetX(x)
+            .SetY(y)
+            .SetScreenX(screenX)
+            .SetScreenY(screenY)
             .SetType(type)
             .SetTime(time)
-            .SetPressedTime(pressedTime)
             .SetSize(0.0)
             .SetDeviceId(deviceId)
             .SetTargetDisplayId(targetDisplayId)
@@ -269,15 +235,10 @@ struct MouseEvent final : public PointerEvent {
         event.isPrivacyMode = isPrivacyMode;
         event.pointers.emplace_back(std::move(point));
         event.pressedKeyCodes_ = pressedKeyCodes_;
-        event.passThrough = passThrough;
-        if (passThrough) {
-            event.postEventNodeId = postEventNodeId;
-        }
         return event;
     }
 
     MouseEvent operator-(const Offset& offset) const;
-    std::shared_ptr<MMI::PointerEvent> GetMouseEventPointerEvent() const;
 };
 
 class MouseInfo : public BaseEventInfo {
@@ -332,17 +293,6 @@ public:
     {
         screenLocation_ = screenLocation;
         return *this;
-    }
-
-    MouseInfo& SetGlobalDisplayLocation(const Offset& globalDisplayLocation)
-    {
-        globalDisplayLocation_ = globalDisplayLocation;
-        return *this;
-    }
-
-    const Offset& GetGlobalDisplayLocation() const
-    {
-        return globalDisplayLocation_;
     }
 
     const Offset& GetScreenLocation() const
@@ -406,8 +356,6 @@ private:
     // current node which has the recognizer.
     Offset localLocation_;
     Offset screenLocation_;
-    // The location where the touch point touches the screen when there are multiple screens.
-    Offset globalDisplayLocation_;
     float rawDeltaX_ = 0.0f;
     float rawDeltaY_ = 0.0f;
     std::vector<MouseButton> pressedButtonsArray_;
@@ -440,23 +388,6 @@ public:
         return *this;
     }
 
-    HoverInfo& SetMouseAction(MouseAction mouseAction)
-    {
-        mouseAction_ = mouseAction;
-        return *this;
-    }
-
-    HoverInfo& SetGlobalDisplayLocation(const Offset& globalDisplayLocation)
-    {
-        globalDisplayLocation_ = globalDisplayLocation;
-        return *this;
-    }
-
-    const Offset& GetGlobalDisplayLocation() const
-    {
-        return globalDisplayLocation_;
-    }
-
     const Offset& GetScreenLocation() const
     {
         return screenLocation_;
@@ -472,11 +403,6 @@ public:
         return globalLocation_;
     }
 
-    MouseAction GetMouseAction() const
-    {
-        return mouseAction_;
-    }
-
 private:
     // global position at which the touch point contacts the screen.
     Offset globalLocation_;
@@ -485,9 +411,6 @@ private:
     Offset localLocation_;
 
     Offset screenLocation_;
-    // The location where the touch point touches the screen when there are multiple screens.
-    Offset globalDisplayLocation_;
-    MouseAction mouseAction_ = MouseAction::NONE;
 };
 
 class AccessibilityHoverInfo : public BaseEventInfo {
@@ -512,17 +435,6 @@ public:
     {
         screenLocation_ = screenLocation;
         return *this;
-    }
-
-    AccessibilityHoverInfo& SetGlobalDisplayLocation(const Offset& globalDisplayLocation)
-    {
-        globalDisplayLocation_ = globalDisplayLocation;
-        return *this;
-    }
-    
-    const Offset& GetGlobalDisplayLocation() const
-    {
-        return globalDisplayLocation_;
     }
 
     const Offset& GetScreenLocation() const
@@ -559,8 +471,6 @@ private:
 
     Offset screenLocation_;
 
-    // The location where the touch point touches the screen when there are multiple screens.
-    Offset globalDisplayLocation_;
     // touch type
     AccessibilityHoverAction actionType_ = AccessibilityHoverAction::UNKNOWN;
 };
@@ -583,7 +493,36 @@ public:
         onMouseCallback_ = onMouseCallback;
     }
 
-    bool HandleMouseEvent(const MouseEvent& event);
+    bool HandleMouseEvent(const MouseEvent& event)
+    {
+        if (!onMouseCallback_) {
+            return false;
+        }
+        MouseInfo info;
+        info.SetPointerEvent(event.pointerEvent);
+        info.SetButton(event.button);
+        info.SetAction(event.action);
+        info.SetPullAction(event.pullAction);
+        info.SetGlobalLocation(event.GetOffset());
+        Offset localLocation = Offset(
+            event.GetOffset().GetX() - coordinateOffset_.GetX(), event.GetOffset().GetY() - coordinateOffset_.GetY());
+        info.SetLocalLocation(localLocation);
+        info.SetScreenLocation(event.GetScreenOffset());
+        info.SetTimeStamp(event.time);
+        info.SetDeviceId(event.deviceId);
+        info.SetTargetDisplayId(event.targetDisplayId);
+        info.SetSourceDevice(event.sourceType);
+        info.SetSourceTool(event.sourceTool);
+        info.SetTarget(GetEventTarget().value_or(EventTarget()));
+        info.SetPressedKeyCodes(event.pressedKeyCodes_);
+        info.SetRawDeltaX(event.rawDeltaX);
+        info.SetRawDeltaY(event.rawDeltaY);
+        info.SetPressedButtons(event.pressedButtonsArray);
+        // onMouseCallback_ may be overwritten in its invoke so we copy it first
+        auto onMouseCallback = onMouseCallback_;
+        onMouseCallback(info);
+        return info.IsStopPropagation();
+    }
 
     bool DispatchEvent(const TouchEvent& point) override
     {
@@ -678,13 +617,7 @@ public:
 
     AccessibilityHoverAction ConvertAccessibilityHoverAction(TouchType type);
 
-    std::optional<bool> GetLastHoverState() const
-    {
-        return lastHoverState_;
-    }
-
 private:
-    std::optional<bool> lastHoverState_;
     OnHoverEventFunc onHoverCallback_;
     OnHoverFunc onHoverEventCallback_;
     OnAccessibilityHoverFunc onAccessibilityHoverCallback_;
@@ -722,60 +655,8 @@ private:
     WeakPtr<NG::FrameNode> hoverNode_;
 };
 
-class ACE_EXPORT MouseEventResult : public AceType {
-    DECLARE_ACE_TYPE(MouseEventResult, AceType);
-
-public:
-    MouseEventResult() = default;
-    ~MouseEventResult() = default;
-
-    virtual void SetMouseEventResult(bool result, bool stopPropagation) = 0;
-};
-
-class NativeEmbeadMouseInfo : public BaseEventInfo {
-    DECLARE_RELATIONSHIP_OF_CLASSES(NativeEmbeadMouseInfo, BaseEventInfo);
-
-public:
-    NativeEmbeadMouseInfo(
-        const std::string& embedId, const MouseInfo& mouseInfo, const RefPtr<MouseEventResult>& result)
-        : BaseEventInfo("NativeEmbeadMouseInfo"), embedId_(embedId), mouseEvent_(mouseInfo), result_(result)
-    {}
-    ~NativeEmbeadMouseInfo() override = default;
-    const std::string& GetEmbedId() const;
-    const MouseInfo& GetMouseEventInfo() const;
-    const RefPtr<MouseEventResult>& GetResult() const;
-
-private:
-    std::string embedId_;
-    MouseInfo mouseEvent_;
-    RefPtr<MouseEventResult> result_;
-};
-
 using MouseTestResult = std::list<RefPtr<MouseEventTarget>>;
 using HoverTestResult = std::list<RefPtr<HoverEventTarget>>;
 
-struct PressMouseInfo {
-    int32_t id;
-    MouseButton mouseButton;
-
-    bool operator==(const PressMouseInfo& other) const noexcept
-    {
-        return id == other.id && mouseButton == other.mouseButton;
-    }
-
-    bool operator<(const PressMouseInfo& other) const noexcept
-    {
-        return id < other.id && mouseButton < other.mouseButton;
-    }
-};
-
-struct PressMouseInfoHashFunc {
-    size_t operator()(PressMouseInfo const& info) const noexcept
-    {
-        size_t h1 = std::hash<int32_t> {}(info.id);
-        size_t h2 = std::hash<int32_t> {}(static_cast<int32_t>(info.mouseButton));
-        return (h1 << 1) ^ h2;
-    }
-};
 } // namespace OHOS::Ace
 #endif // FOUNDATION_ACE_FRAMEWORKS_CORE_EVENT_MOUSE_EVENT_H

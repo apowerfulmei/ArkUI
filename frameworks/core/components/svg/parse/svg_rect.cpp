@@ -71,7 +71,11 @@ RefPtr<RenderNode> SvgRect::CreateRender(
     return renderBox;
 }
 
+#ifndef USE_ROSEN_DRAWING
+SkPath SvgRect::AsPath(const Size& viewPort) const
+#else
 RSPath SvgRect::AsPath(const Size& viewPort) const
+#endif
 {
     double rx = 0.0;
     if (GreatOrEqual(component_->GetRx().Value(), 0.0)) {
@@ -89,6 +93,16 @@ RSPath SvgRect::AsPath(const Size& viewPort) const
             ry = ConvertDimensionToPx(component_->GetRx(), viewPort, SvgLengthType::HORIZONTAL);
         }
     }
+#ifndef USE_ROSEN_DRAWING
+    SkRRect roundRect = SkRRect::MakeRectXY(
+        SkRect::MakeXYWH(ConvertDimensionToPx(component_->GetX(), viewPort, SvgLengthType::HORIZONTAL),
+            ConvertDimensionToPx(component_->GetY(), viewPort, SvgLengthType::VERTICAL),
+            ConvertDimensionToPx(component_->GetWidth(), viewPort, SvgLengthType::HORIZONTAL),
+            ConvertDimensionToPx(component_->GetHeight(), viewPort, SvgLengthType::VERTICAL)),
+        rx, ry);
+    SkPath path;
+    path.addRRect(roundRect);
+#else
     RSRoundRect roundRect(RSRect(ConvertDimensionToPx(component_->GetX(), viewPort, SvgLengthType::HORIZONTAL),
         ConvertDimensionToPx(component_->GetY(), viewPort, SvgLengthType::VERTICAL),
         ConvertDimensionToPx(component_->GetWidth() + component_->GetX(), viewPort, SvgLengthType::HORIZONTAL),
@@ -96,6 +110,7 @@ RSPath SvgRect::AsPath(const Size& viewPort) const
         rx, ry);
     RSPath path;
     path.AddRoundRect(roundRect);
+#endif
     return path;
 }
 

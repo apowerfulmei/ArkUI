@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2021-2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -15,14 +15,15 @@
 
 #include "adapter/ohos/entrance/ace_ability.h"
 
+#include <regex>
 #include <ui/rs_surface_node.h>
 
 #include "ability_process.h"
-#include "ability_loader.h"
 #include "dm/display_manager.h"
 #include "form_utils_impl.h"
 #include "ohos/init_data.h"
 #include "ipc_skeleton.h"
+#include "res_config.h"
 #include "resource_manager.h"
 #include "session_info.h"
 #include "string_wrapper.h"
@@ -37,7 +38,6 @@
 #include "adapter/ohos/entrance/ace_view_ohos.h"
 #include "adapter/ohos/entrance/capability_registry.h"
 #include "adapter/ohos/entrance/plugin_utils_impl.h"
-#include "adapter/ohos/entrance/rs_adapter.h"
 #include "adapter/ohos/entrance/utils.h"
 #include "base/geometry/rect.h"
 #include "base/subwindow/subwindow_manager.h"
@@ -51,7 +51,6 @@
 #include "core/common/plugin_manager.h"
 #include "core/common/plugin_utils.h"
 #include "core/image/image_file_cache.h"
-
 namespace OHOS {
 namespace Ace {
 namespace {
@@ -199,11 +198,10 @@ bool AceWindowListener::OnInputEvent(const std::shared_ptr<MMI::AxisEvent>& axis
     return callbackOwner_->OnInputEvent(axisEvent);
 }
 
-void AceWindowListener::OnAvoidAreaChanged(const OHOS::Rosen::AvoidArea avoidArea, OHOS::Rosen::AvoidAreaType type,
-    const sptr<OHOS::Rosen::OccupiedAreaChangeInfo>& info)
+void AceWindowListener::OnAvoidAreaChanged(const OHOS::Rosen::AvoidArea avoidArea, OHOS::Rosen::AvoidAreaType type)
 {
     CHECK_NULL_VOID(callbackOwner_);
-    return callbackOwner_->OnAvoidAreaChanged(avoidArea, type, info);
+    return callbackOwner_->OnAvoidAreaChanged(avoidArea, type);
 }
 
 AceAbility::AceAbility() = default;
@@ -221,15 +219,9 @@ void AceAbility::OnStart(const Want& want, sptr<AAFwk::SessionInfo> sessionInfo)
         CapabilityRegistry::Register();
         AceApplicationInfo::GetInstance().SetPackageName(abilityContext->GetBundleName());
         AceApplicationInfo::GetInstance().SetDataFileDirPath(abilityContext->GetFilesDir());
-        auto applicationInfo = abilityContext->GetApplicationInfo();
-        if (applicationInfo) {
-            AceApplicationInfo::GetInstance().SetApiTargetVersion(applicationInfo->apiTargetVersion);
-            AceApplicationInfo::GetInstance().SetAppVersionName(applicationInfo->versionName);
-            AceApplicationInfo::GetInstance().SetAppVersionCode(applicationInfo->versionCode);
-        } else {
-            LOGE("ability start set application info failed,it may cause exception");
-            return;
-        }
+        AceApplicationInfo::GetInstance().SetApiTargetVersion(abilityContext->GetApplicationInfo()->apiTargetVersion);
+        AceApplicationInfo::GetInstance().SetAppVersionName(abilityContext->GetApplicationInfo()->versionName);
+        AceApplicationInfo::GetInstance().SetAppVersionCode(abilityContext->GetApplicationInfo()->versionCode);
         AceApplicationInfo::GetInstance().SetUid(IPCSkeleton::GetCallingUid());
         AceApplicationInfo::GetInstance().SetPid(IPCSkeleton::GetCallingRealPid());
         ImageFileCache::GetInstance().SetImageCacheFilePath(cacheDir);
@@ -247,7 +239,6 @@ void AceAbility::OnStart(const Want& want, sptr<AAFwk::SessionInfo> sessionInfo)
          "and apiReleaseType: %{public}s, useNewPipe: %{public}d",
         apiCompatibleVersion, apiTargetVersion, apiReleaseType.c_str(), useNewPipe);
     OHOS::sptr<OHOS::Rosen::Window> window = Ability::GetWindow();
-    CHECK_NULL_VOID(window);
     std::shared_ptr<AceAbility> self = std::static_pointer_cast<AceAbility>(shared_from_this());
     OHOS::sptr<AceWindowListener> aceWindowListener = new AceWindowListener(self);
     // register surface change callback and window mode change callback
@@ -273,7 +264,7 @@ void AceAbility::OnStart(const Want& want, sptr<AAFwk::SessionInfo> sessionInfo)
             deviceHeight, density_);
     }
     SystemProperties::InitDeviceInfo(deviceWidth, deviceHeight, deviceHeight >= deviceWidth ? 0 : 1, density_, false);
-    ColorMode colorMode = ColorMode::LIGHT;
+    SystemProperties::SetColorMode(ColorMode::LIGHT);
 
     std::unique_ptr<Global::Resource::ResConfig> resConfig(Global::Resource::CreateResConfig());
     auto resourceManager = GetResourceManager();
@@ -292,10 +283,10 @@ void AceAbility::OnStart(const Want& want, sptr<AAFwk::SessionInfo> sessionInfo)
             AceApplicationInfo::GetInstance().SetLocale("", "", "", "");
         }
         if (resConfig->GetColorMode() == OHOS::Global::Resource::ColorMode::DARK) {
-            colorMode = ColorMode::DARK;
+            SystemProperties::SetColorMode(ColorMode::DARK);
             LOGI("UIContent set dark mode");
         } else {
-            colorMode = ColorMode::LIGHT;
+            SystemProperties::SetColorMode(ColorMode::LIGHT);
             LOGI("UIContent set light mode");
         }
         SystemProperties::SetDeviceAccess(
@@ -326,7 +317,11 @@ void AceAbility::OnStart(const Want& want, sptr<AAFwk::SessionInfo> sessionInfo)
     std::shared_ptr<OHOS::Rosen::RSUIDirector> rsUiDirector;
 #ifndef NG_BUILD
     if (SystemProperties::GetRosenBackendEnabled() && !useNewPipe) {
-        RsAdapter::RsUIDirectorInit(rsUiDirector, window, cacheDir);
+        rsUiDirector = OHOS::Rosen::RSUIDirector::Create();
+        auto surfaceNode = window->GetSurfaceNode();
+        rsUiDirector->SetRSSurfaceNode(surfaceNode);
+        rsUiDirector->SetCacheDir(cacheDir);
+        rsUiDirector->Init();
     }
 #endif
 #endif
@@ -382,13 +377,12 @@ void AceAbility::OnStart(const Want& want, sptr<AAFwk::SessionInfo> sessionInfo)
         false, useNewPipe);
     auto container = Platform::AceContainer::GetContainer(abilityId_);
     CHECK_NULL_VOID(container);
-    container->SetColorMode(colorMode);
     container->SetToken(token_);
     auto aceResCfg = container->GetResourceConfiguration();
     aceResCfg.SetOrientation(SystemProperties::GetDeviceOrientation());
     aceResCfg.SetDensity(SystemProperties::GetResolution());
     aceResCfg.SetDeviceType(SystemProperties::GetDeviceType());
-    aceResCfg.SetColorMode(container->GetColorMode());
+    aceResCfg.SetColorMode(SystemProperties::GetColorMode());
     aceResCfg.SetDeviceAccess(SystemProperties::GetDeviceAccess());
     container->SetResourceConfiguration(aceResCfg);
     container->SetPackagePathStr(resPath);
@@ -422,23 +416,13 @@ void AceAbility::OnStart(const Want& want, sptr<AAFwk::SessionInfo> sessionInfo)
         callback = [window, id = abilityId_, aceView, rsUiDirector](
                        const OHOS::Ace::RefPtr<OHOS::Ace::PipelineContext>& context) mutable {
             if (rsUiDirector) {
-                if (!SystemProperties::GetMultiInstanceEnabled()) {
-                    rsUiDirector->SetUITaskRunner(
-                        [taskExecutor = Platform::AceContainer::GetContainer(id)->GetTaskExecutor(), id](
-                            const std::function<void()>& task, uint32_t delay) {
-                            ContainerScope scope(id);
-                            taskExecutor->PostDelayedTask(
-                                task, TaskExecutor::TaskType::UI, delay, "ArkUIRenderServiceTask", PriorityType::HIGH);
-                        }, id);
-                } else {
-                    rsUiDirector->SetUITaskRunner(
-                        [taskExecutor = Platform::AceContainer::GetContainer(id)->GetTaskExecutor(), id](
-                            const std::function<void()>& task, uint32_t delay) {
-                            ContainerScope scope(id);
-                            taskExecutor->PostDelayedTask(
-                                task, TaskExecutor::TaskType::UI, delay, "ArkUIRenderServiceTask", PriorityType::HIGH);
-                        }, 0, true);
-                }
+                rsUiDirector->SetUITaskRunner(
+                    [taskExecutor = Platform::AceContainer::GetContainer(id)->GetTaskExecutor(), id](
+                        const std::function<void()>& task, uint32_t delay) {
+                        ContainerScope scope(id);
+                        taskExecutor->PostDelayedTask(
+                            task, TaskExecutor::TaskType::UI, delay, "ArkUIRenderServiceTask", PriorityType::HIGH);
+                    }, id);
                 if (context != nullptr) {
                     context->SetRSUIDirector(rsUiDirector);
                 }
@@ -486,14 +470,6 @@ void AceAbility::OnStart(const Want& want, sptr<AAFwk::SessionInfo> sessionInfo)
             CHECK_NULL_RETURN(window, rect);
             auto windowRect = window->GetRect();
             rect.SetRect(windowRect.posX_, windowRect.posY_, windowRect.width_, windowRect.height_);
-            return rect;
-        });
-        context->InitGetGlobalWindowRectCallback([window]() -> Rect {
-            Rect rect;
-            CHECK_NULL_RETURN(window, rect);
-            auto globalDisplayWindowRect = window->GetGlobalDisplayRect();
-            rect.SetRect(globalDisplayWindowRect.posX_, globalDisplayWindowRect.posY_, globalDisplayWindowRect.width_,
-                globalDisplayWindowRect.height_);
             return rect;
         });
         auto rsConfig = window->GetKeyboardAnimationConfig();
@@ -715,11 +691,11 @@ void AceAbility::OnSizeChange(const OHOS::Rosen::Rect& rect, OHOS::Rosen::Window
         pipelineContext->SetDisplayWindowRectInfo(
             Rect(Offset(rect.posX_, rect.posY_), Size(rect.width_, rect.height_)));
         pipelineContext->SetIsLayoutFullScreen(
-            Ability::GetWindow()->GetWindowMode() == Rosen::WindowMode::WINDOW_MODE_FULLSCREEN);
+            Ability::GetWindow()->GetMode() == Rosen::WindowMode::WINDOW_MODE_FULLSCREEN);
         auto isNeedAvoidWindowMode = SystemProperties::GetNeedAvoidWindow() &&
-            (Ability::GetWindow()->GetWindowMode() == Rosen::WindowMode::WINDOW_MODE_FLOATING ||
-            Ability::GetWindow()->GetWindowMode() == Rosen::WindowMode::WINDOW_MODE_SPLIT_PRIMARY ||
-            Ability::GetWindow()->GetWindowMode() == Rosen::WindowMode::WINDOW_MODE_SPLIT_SECONDARY);
+            (Ability::GetWindow()->GetMode() == Rosen::WindowMode::WINDOW_MODE_FLOATING ||
+            Ability::GetWindow()->GetMode() == Rosen::WindowMode::WINDOW_MODE_SPLIT_PRIMARY ||
+            Ability::GetWindow()->GetMode() == Rosen::WindowMode::WINDOW_MODE_SPLIT_SECONDARY);
         pipelineContext->SetIsNeedAvoidWindow(isNeedAvoidWindowMode);
     }
     auto taskExecutor = container->GetTaskExecutor();
@@ -891,8 +867,7 @@ uint32_t AceAbility::GetBackgroundColor()
     return bgColor;
 }
 
-void AceAbility::OnAvoidAreaChanged(const OHOS::Rosen::AvoidArea& avoidArea, OHOS::Rosen::AvoidAreaType type,
-    const sptr<OHOS::Rosen::OccupiedAreaChangeInfo>& info)
+void AceAbility::OnAvoidAreaChanged(const OHOS::Rosen::AvoidArea& avoidArea, OHOS::Rosen::AvoidAreaType type)
 {
     auto container = Platform::AceContainer::GetContainer((abilityId_));
     CHECK_NULL_VOID(container);

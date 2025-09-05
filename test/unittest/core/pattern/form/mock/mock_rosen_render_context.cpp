@@ -22,7 +22,4 @@ const std::shared_ptr<Rosen::RSNode>& RosenRenderContext::GetRSNode()
 {
     return rsNode_;
 }
-
-void RosenRenderContext::AddRsNodeForCapture() {}
-
 } // namespace OHOS::Ace::NG

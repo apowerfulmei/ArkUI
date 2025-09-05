@@ -49,10 +49,9 @@ void FrameRateManager::UpdateNodeRate(int32_t nodeId, int32_t rate)
     }
 }
 
-void FrameRateManager::SetAnimateRate(int32_t rate, bool hasFirstFrameAnimation)
+void FrameRateManager::SetAnimateRate(int32_t rate)
 {
-    if (animateRate_ != rate || hasFirstFrameAnimation_ != hasFirstFrameAnimation) {
-        hasFirstFrameAnimation_ = hasFirstFrameAnimation;
+    if (animateRate_ != rate) {
         animateRate_ = rate;
         isRateChanged_ = true;
     }
@@ -79,7 +78,7 @@ std::pair<int32_t, int32_t> FrameRateManager::GetExpectedRate()
         auto maxIter = std::max_element(
             nodeRateMap_.begin(), nodeRateMap_.end(), [](auto a, auto b) { return a.second < b.second; });
         expectedRate = maxIter->second;
-        rateType = dragScene_ == 1 ? DRAG_SCENE_FRAME_RATE_TYPE : ACE_COMPONENT_FRAME_RATE_TYPE;
+        rateType = ACE_COMPONENT_FRAME_RATE_TYPE;
     }
     if (displaySyncRate_ > expectedRate) {
         expectedRate = displaySyncRate_;
@@ -89,17 +88,6 @@ std::pair<int32_t, int32_t> FrameRateManager::GetExpectedRate()
         expectedRate = animateRate_;
         rateType = UI_ANIMATION_FRAME_RATE_TYPE;
     }
-    if (hasFirstFrameAnimation_) {
-        if (expectedRate == 0) {
-            rateType = UI_ANIMATION_FRAME_RATE_TYPE;
-        }
-        rateType |= ANIMATION_STATE_FIRST_FRAME;
-    }
     return {expectedRate, rateType};
-}
-
-void FrameRateManager::SetDragScene(int32_t status)
-{
-    dragScene_ = status;
 }
 } // namespace OHOS::Ace::NG

@@ -15,9 +15,18 @@
 
 #include "bridge/declarative_frontend/jsview/models/text_field_model_impl.h"
 
-#include "base/utils/utf_helper.h"
+#include "base/geometry/dimension.h"
+#include "base/memory/referenced.h"
+#include "base/utils/utils.h"
 #include "bridge/declarative_frontend/jsview/js_textfield.h"
 #include "bridge/declarative_frontend/jsview/js_view_common_def.h"
+#include "bridge/declarative_frontend/view_stack_processor.h"
+#include "core/components/common/layout/constants.h"
+#include "core/components/common/properties/text_style.h"
+#include "core/components/text_field/text_field_component.h"
+#include "core/components/text_field/textfield_theme.h"
+#include "core/components_ng/pattern/text_field/text_field_model.h"
+#include "core/pipeline/pipeline_context.h"
 
 namespace OHOS::Ace::Framework {
 namespace {
@@ -27,14 +36,14 @@ constexpr uint32_t TEXTAREA_MAXLENGTH_VALUE_DEFAULT = std::numeric_limits<uint32
 } // namespace
 
 RefPtr<TextFieldControllerBase> TextFieldModelImpl::CreateTextInput(
-    const std::optional<std::u16string>& placeholder, const std::optional<std::u16string>& value)
+    const std::optional<std::string>& placeholder, const std::optional<std::string>& value)
 {
     auto textInputComponent = AceType::MakeRefPtr<TextFieldComponent>();
     if (placeholder) {
-        textInputComponent->SetPlaceholder(UtfUtils::Str16DebugToStr8(placeholder.value()));
+        textInputComponent->SetPlaceholder(placeholder.value());
     }
     if (value) {
-        textInputComponent->SetValue(UtfUtils::Str16DebugToStr8(value.value()));
+        textInputComponent->SetValue(value.value());
     }
     ViewStackProcessor::GetInstance()->ClaimElementId(textInputComponent);
     textInputComponent->SetTextFieldController(AceType::MakeRefPtr<TextFieldController>());
@@ -121,7 +130,7 @@ void InitTextAreaDefaultStyle()
 }
 
 RefPtr<TextFieldControllerBase> TextFieldModelImpl::CreateTextArea(
-    const std::optional<std::u16string>& placeholder, const std::optional<std::u16string>& value)
+    const std::optional<std::string>& placeholder, const std::optional<std::string>& value)
 {
     RefPtr<TextFieldComponent> textAreaComponent = AceType::MakeRefPtr<TextFieldComponent>();
     textAreaComponent->SetTextFieldController(AceType::MakeRefPtr<TextFieldController>());
@@ -138,10 +147,10 @@ RefPtr<TextFieldControllerBase> TextFieldModelImpl::CreateTextArea(
         boxBorder = boxComponent->GetBackDecoration()->GetBorder();
     }
     if (value) {
-        textAreaComponent->SetValue(UtfUtils::Str16DebugToStr8(value.value()));
+        textAreaComponent->SetValue(value.value());
     }
     if (placeholder) {
-        textAreaComponent->SetPlaceholder(UtfUtils::Str16DebugToStr8(placeholder.value()));
+        textAreaComponent->SetPlaceholder(placeholder.value());
     }
     UpdateDecoration(boxComponent, textAreaComponent, boxBorder, theme);
 
@@ -326,10 +335,6 @@ void TextFieldModelImpl::SetFontWeight(FontWeight value)
     component->SetEditingStyle(textStyle);
 }
 
-void TextFieldModelImpl::SetMinFontScale(const float value) {}
-
-void TextFieldModelImpl::SetMaxFontScale(const float value) {}
-
 void TextFieldModelImpl::SetTextColor(const Color& value)
 {
     auto* stack = ViewStackProcessor::GetInstance();
@@ -361,17 +366,15 @@ void TextFieldModelImpl::SetFontFamily(const std::vector<std::string>& value)
 }
 
 void TextFieldModelImpl::SetInputFilter(
-    const std::string& value, const std::function<void(const std::u16string&)>&& func)
+    const std::string& value, const std::function<void(const std::string&)>& onError)
 {
     auto* stack = ViewStackProcessor::GetInstance();
     auto component = AceType::DynamicCast<OHOS::Ace::TextFieldComponent>(stack->GetMainComponent());
     CHECK_NULL_VOID(component);
     component->SetInputFilter(value);
-    if (func) {
-        auto onError = [func] (const std::string& value) {
-            func(UtfUtils::Str8DebugToStr16(value));
-        };
-        component->SetOnError(std::move(onError));
+
+    if (onError) {
+        component->SetOnError(onError);
     }
 }
 
@@ -413,43 +416,28 @@ void TextFieldModelImpl::SetOnChange(std::function<void(const ChangeValueInfo&)>
     component->SetOnChange(std::move(onChange));
 }
 
-void TextFieldModelImpl::SetOnCopy(std::function<void(const std::u16string&)>&& func)
+void TextFieldModelImpl::SetOnCopy(std::function<void(const std::string&)>&& func)
 {
     auto* stack = ViewStackProcessor::GetInstance();
     auto component = AceType::DynamicCast<OHOS::Ace::TextFieldComponent>(stack->GetMainComponent());
     CHECK_NULL_VOID(component);
-    auto onCopy = [func] (const std::string& value) {
-        if (func) {
-            func(UtfUtils::Str8DebugToStr16(value));
-        }
-    };
-    component->SetOnCopy(std::move(onCopy));
+    component->SetOnCopy(std::move(func));
 }
 
-void TextFieldModelImpl::SetOnCut(std::function<void(const std::u16string&)>&& func)
+void TextFieldModelImpl::SetOnCut(std::function<void(const std::string&)>&& func)
 {
     auto* stack = ViewStackProcessor::GetInstance();
     auto component = AceType::DynamicCast<OHOS::Ace::TextFieldComponent>(stack->GetMainComponent());
     CHECK_NULL_VOID(component);
-    auto onCut = [func] (const std::string& value) {
-        if (func) {
-            func(UtfUtils::Str8DebugToStr16(value));
-        }
-    };
-    component->SetOnCut(std::move(onCut));
+    component->SetOnCut(std::move(func));
 }
 
-void TextFieldModelImpl::SetOnPaste(std::function<void(const std::u16string&)>&& func)
+void TextFieldModelImpl::SetOnPaste(std::function<void(const std::string&)>&& func)
 {
     auto* stack = ViewStackProcessor::GetInstance();
     auto component = AceType::DynamicCast<OHOS::Ace::TextFieldComponent>(stack->GetMainComponent());
     CHECK_NULL_VOID(component);
-    auto onPaste = [func] (const std::string& value) {
-        if (func) {
-            func(UtfUtils::Str8DebugToStr16(value));
-        }
-    };
-    component->SetOnPaste(std::move(onPaste));
+    component->SetOnPaste(std::move(func));
 }
 
 void TextFieldModelImpl::SetCopyOption(CopyOptions copyOption)
@@ -476,7 +464,7 @@ void TextFieldModelImpl::SetHeight(const Dimension& value)
     textInputComponent->SetHeight(value);
 }
 
-void TextFieldModelImpl::SetPadding(const NG::PaddingProperty& newPadding, Edge oldPadding, bool tmp, bool hasRegist)
+void TextFieldModelImpl::SetPadding(const NG::PaddingProperty& newPadding, Edge oldPadding, bool tmp)
 {
     if (tmp) {
         return;

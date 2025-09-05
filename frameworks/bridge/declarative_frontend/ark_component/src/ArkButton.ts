@@ -41,7 +41,6 @@ class ArkButtonComponent extends ArkComponent implements ButtonAttribute {
   applyContent: WrappedBuilder<[ButtonConfiguration]>;
   constructor(nativePtr: KNode, classType?: ModifierType) {
     super(nativePtr, classType);
-    this._needDiff = false;
   }
   allowChildCount(): number {
     return 1;
@@ -160,14 +159,6 @@ class ArkButtonComponent extends ArkComponent implements ButtonAttribute {
     modifierWithKey(this._modifiersWithKeys, ButtonControlSizeModifier.identity, ButtonControlSizeModifier, value);
     return this;
   }
-  minFontScale(value: number | Resource): this {
-    modifierWithKey(this._modifiersWithKeys, ButtonMinFontScaleModifier.identity, ButtonMinFontScaleModifier, value);
-    return this;
-  }
-  maxFontScale(value: number | Resource): this {
-    modifierWithKey(this._modifiersWithKeys, ButtonMaxFontScaleModifier.identity, ButtonMaxFontScaleModifier, value);
-    return this;
-  }
 }
 class ButtonBackgroundColorModifier extends ModifierWithKey<ResourceColor> {
   constructor(value: ResourceColor) {
@@ -213,9 +204,6 @@ class ButtonFontStyleModifier extends ModifierWithKey<number> {
   }
 }
 class ButtonFontFamilyModifier extends ModifierWithKey<string | Resource> {
-  constructor(value: string | Resource) {
-    super(value);
-  }
   static identity: Symbol = Symbol('buttonFontFamily');
   applyPeer(node: KNode, reset: boolean): void {
     if (reset) {
@@ -229,9 +217,6 @@ class ButtonFontFamilyModifier extends ModifierWithKey<string | Resource> {
   }
 }
 class ButtonLabelStyleModifier extends ModifierWithKey<LabelStyle> {
-  constructor(value: LabelStyle) {
-    super(value);
-  }
   static identity: Symbol = Symbol('buttonLabelStyle');
   applyPeer(node: KNode, reset: boolean): void {
     if (reset) {
@@ -257,7 +242,9 @@ class ButtonLabelStyleModifier extends ModifierWithKey<LabelStyle> {
     }
   }
   checkObjectDiff(): boolean {
-     if (!isResource(this.stageValue) && !isResource(this.value)) {
+    if (isResource(this.stageValue) && isResource(this.value)) {
+      return !isResourceEqual(this.stageValue, this.value);
+    } else if (!isResource(this.stageValue) && !isResource(this.value)) {
       return !(this.value.overflow === this.stageValue.overflow &&
         this.value.maxLines === this.stageValue.maxLines &&
         this.value.minFontSize === this.stageValue.minFontSize &&
@@ -293,9 +280,6 @@ class ButtonTypeModifier extends ModifierWithKey<number> {
   }
 }
 class ButtonFontColorModifier extends ModifierWithKey<ResourceColor> {
-  constructor(value: ResourceColor) {
-    super(value);
-  }
   static identity: Symbol = Symbol('buttonFontColor');
   applyPeer(node: KNode, reset: boolean): void {
     if (reset) {
@@ -310,9 +294,6 @@ class ButtonFontColorModifier extends ModifierWithKey<ResourceColor> {
   }
 }
 class ButtonFontSizeModifier extends ModifierWithKey<Length> {
-  constructor(value: Length) {
-    super(value);
-  }
   static identity: Symbol = Symbol('buttonFontSize');
   applyPeer(node: KNode, reset: boolean): void {
     if (reset) {
@@ -362,7 +343,9 @@ class ButtonBorderRadiusModifier extends ModifierWithKey<Length | BorderRadiuses
   }
 
   checkObjectDiff(): boolean {
-    if (!isResource(this.stageValue) && !isResource(this.value)) {
+    if (isResource(this.stageValue) && isResource(this.value)) {
+      return !isResourceEqual(this.stageValue, this.value);
+    } else if (!isResource(this.stageValue) && !isResource(this.value)) {
       return !((this.stageValue as BorderRadiuses).topLeft === (this.value as BorderRadiuses).topLeft &&
         (this.stageValue as BorderRadiuses).topRight === (this.value as BorderRadiuses).topRight &&
         (this.stageValue as BorderRadiuses).bottomLeft === (this.value as BorderRadiuses).bottomLeft &&
@@ -618,46 +601,6 @@ class ButtonContentModifier extends ModifierWithKey<ContentModifier<ButtonConfig
   applyPeer(node: KNode, reset: boolean, component: ArkComponent) {
     let buttonComponent = component as ArkButtonComponent;
     buttonComponent.setContentModifier(this.value);
-  }
-}
-
-class ButtonMinFontScaleModifier extends ModifierWithKey<number | Resource> {
-  constructor(value: number | Resource) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('buttonMinFontScale');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().button.resetMinFontScale(node);
-    } else if (!isNumber(this.value) && !isResource(this.value)) {
-      getUINativeModule().button.resetMinFontScale(node);
-    } else {
-      getUINativeModule().button.setMinFontScale(node, this.value);
-    }
-  }
-
-  checkObjectDiff(): boolean {
-    return !isBaseOrResourceEqual(this.stageValue, this.value);
-  }
-}
-
-class ButtonMaxFontScaleModifier extends ModifierWithKey<number | Resource> {
-  constructor(value: number | Resource) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('buttonMaxFontScale');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().button.resetMaxFontScale(node);
-    } else if (!isNumber(this.value) && !isResource(this.value)) {
-      getUINativeModule().button.resetMaxFontScale(node);
-    } else {
-      getUINativeModule().button.setMaxFontScale(node, this.value);
-    }
-  }
-
-  checkObjectDiff(): boolean {
-    return !isBaseOrResourceEqual(this.stageValue, this.value);
   }
 }
 

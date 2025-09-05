@@ -15,6 +15,8 @@
 
 #include "core/components_ng/pattern/scrollable/scrollable_paint_property.h"
 
+#include "core/components/scroll/scroll_bar_theme.h"
+#include "core/components_ng/base/inspector_filter.h"
 #include "core/pipeline_ng/pipeline_context.h"
 
 namespace OHOS::Ace::NG {
@@ -48,14 +50,8 @@ void ScrollablePaintProperty::ToJsonValue(std::unique_ptr<JsonValue>& json, cons
     json->PutExtAttr("scrollBar", GetBarStateString().c_str(), filter);
     json->PutExtAttr("scrollBarColor", GetBarColor().ColorToString().c_str(), filter);
     json->PutExtAttr("scrollBarWidth", GetBarWidth().ToString().c_str(), filter);
-    json->PutExtAttr("scrollBarMargin",
-        propScrollBarProperty_
-            ? propScrollBarProperty_->propScrollBarMargin.value_or(ScrollBarMargin()).ToString().c_str()
-            : ScrollBarMargin().ToString().c_str(),
-        filter);
     json->PutExtAttr("fadingEdge",
         propFadingEdgeProperty_ ? propFadingEdgeProperty_->propFadingEdge.value_or(false) : false, filter);
-    json->PutExtAttr("defaultFadingEdge", false, filter);
     auto fadingEdgeOption = JsonUtil::Create(true);
     fadingEdgeOption->Put("fadingEdgeLength",
         propFadingEdgeProperty_
@@ -70,7 +66,7 @@ void ScrollablePaintProperty::ToJsonValue(std::unique_ptr<JsonValue>& json, cons
 
 Color ScrollablePaintProperty::GetBarColor() const
 {
-    auto context = PipelineContext::GetCurrentContextSafelyWithCheck();
+    auto context = PipelineContext::GetCurrentContext();
     CHECK_NULL_RETURN(context, Color::TRANSPARENT);
     auto themeManager = context->GetThemeManager();
     CHECK_NULL_RETURN(themeManager, Color::TRANSPARENT);
@@ -83,7 +79,7 @@ Color ScrollablePaintProperty::GetBarColor() const
 
 Dimension ScrollablePaintProperty::GetBarWidth() const
 {
-    auto context = PipelineContext::GetCurrentContextSafelyWithCheck();
+    auto context = PipelineContext::GetCurrentContext();
     CHECK_NULL_RETURN(context, Dimension());
     auto themeManager = context->GetThemeManager();
     CHECK_NULL_RETURN(themeManager, Dimension());

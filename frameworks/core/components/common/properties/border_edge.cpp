@@ -15,8 +15,6 @@
 
 #include "core/components/common/properties/border_edge.h"
 
-#include "core/pipeline/pipeline_context.h"
-
 namespace OHOS::Ace {
 
 BorderEdge::BorderEdge(const Color& color, const Dimension& width, BorderStyle style)
@@ -30,13 +28,6 @@ BorderEdge::BorderEdge(const Color& color, const Dimension& width, BorderStyle s
 bool BorderEdge::HasValue() const
 {
     return width_.Value() > 0.0;
-}
-
-void BorderEdge::SetContextAndCallback(
-    const WeakPtr<PipelineContext>& context, const RenderNodeAnimationCallback& callback)
-{
-    width_.SetContextAndCallback(context, callback);
-    color_.SetContextAndCallback(context, callback);
 }
 
 } // namespace OHOS::Ace

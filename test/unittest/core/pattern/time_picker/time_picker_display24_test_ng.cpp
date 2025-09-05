@@ -53,7 +53,7 @@
 #include "core/components_ng/pattern/time_picker/timepicker_dialog_view.h"
 #include "core/components_ng/pattern/time_picker/timepicker_model_ng.h"
 #include "core/components_ng/pattern/time_picker/timepicker_row_pattern.h"
-#include "core/components_ng/pattern/picker_utils/toss_animation_controller.h"
+#include "core/components_ng/pattern/time_picker/toss_animation_controller.h"
 #include "core/components_v2/inspector/inspector_constants.h"
 #include "core/event/key_event.h"
 #include "core/event/touch_event.h"
@@ -76,20 +76,6 @@ const std::string PM = "下午";
 const std::string COLON = ":";
 const std::string ZERO = "0";
 const PickerTime TIME_PICKED_PREFIXZERO = PickerTime(3, 3, 3);
-RefPtr<Theme> GetTheme(ThemeType type)
-{
-    if (type == IconTheme::TypeId()) {
-        return AceType::MakeRefPtr<IconTheme>();
-    } else if (type == DialogTheme::TypeId()) {
-        return AceType::MakeRefPtr<DialogTheme>();
-    } else if (type == PickerTheme::TypeId()) {
-        return MockThemeDefault::GetPickerTheme();
-    } else if (type == ButtonTheme::TypeId()) {
-        return AceType::MakeRefPtr<ButtonTheme>();
-    } else {
-        return nullptr;
-    }
-}
 } // namespace
 class TimePickerDisplay24TestNg : public testing::Test {
 public:
@@ -137,11 +123,18 @@ void TimePickerDisplay24TestNg::TearDownTestSuite()
 void TimePickerDisplay24TestNg::SetUp()
 {
     auto themeManager = AceType::MakeRefPtr<MockThemeManager>();
-    EXPECT_CALL(*themeManager, GetTheme(_)).WillRepeatedly([](ThemeType type) -> RefPtr<Theme> {
-        return GetTheme(type);
-    });
-    EXPECT_CALL(*themeManager, GetTheme(_, _))
-        .WillRepeatedly([](ThemeType type, int32_t themeScopeId) -> RefPtr<Theme> { return GetTheme(type); });
+    EXPECT_CALL(*themeManager, GetTheme(_))
+        .WillRepeatedly([](ThemeType type) -> RefPtr<Theme> {
+            if (type == IconTheme::TypeId()) {
+                return AceType::MakeRefPtr<IconTheme>();
+            } else if (type == DialogTheme::TypeId()) {
+                return AceType::MakeRefPtr<DialogTheme>();
+            } else if (type == PickerTheme::TypeId()) {
+                return MockThemeDefault::GetPickerTheme();
+            } else {
+                return nullptr;
+            }
+        });
     MockPipelineContext::GetCurrent()->SetThemeManager(themeManager);
 }
 

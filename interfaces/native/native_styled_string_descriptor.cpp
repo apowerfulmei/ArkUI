@@ -54,7 +54,7 @@ int32_t OH_ArkUI_MarshallStyledStringDescriptor(
 const char* OH_ArkUI_ConvertToHtml(ArkUI_StyledString_Descriptor* descriptor)
 {
     CHECK_NULL_RETURN(
-        OHOS::Ace::NodeModel::GetFullImpl() || OHOS::Ace::NodeModel::InitialFullImpl(), "");
+        OHOS::Ace::NodeModel::GetFullImpl() ||  OHOS::Ace::NodeModel::InitialFullImpl(), "");
     return OHOS::Ace::NodeModel::GetFullImpl()->getStyledStringAPI()->convertToHtml(descriptor);
 }
 

@@ -25,7 +25,6 @@ constexpr int NUM_0 = 0;
 constexpr int NUM_1 = 1;
 constexpr int NUM_2 = 2;
 constexpr int NUM_3 = 3;
-constexpr int PARAM_ARR_LENGTH_1 = 1;
 const char* NODEPTR_OF_UINODE = "nodePtr_";
 panda::Local<panda::JSValueRef> JsRatingChangeCallback(panda::JsiRuntimeCallInfo* runtimeCallInfo)
 {
@@ -113,35 +112,28 @@ ArkUINativeModuleValue RatingBridge::SetStarStyle(ArkUIRuntimeCallInfo* runtimeC
     Local<JSValueRef> foregroundUriArg = runtimeCallInfo->GetCallArgRef(NUM_2);
     Local<JSValueRef> secondaryUriArg = runtimeCallInfo->GetCallArgRef(NUM_3);
     auto nativeNode = nodePtr(nodeArg->ToNativePointer(vm)->Value());
-    ArkUIRatingStyleStruct resObj;
+
     std::string backgroundUri;
-    RefPtr<ResourceObject> backgroundResObj;
-    if (!ArkTSUtils::ParseJsMedia(vm, backgroundUriArg, backgroundUri, backgroundResObj)) {
-        ArkTSUtils::ParseJsString(vm, backgroundUriArg, backgroundUri, backgroundResObj);
+    if (backgroundUriArg->IsString(vm)) {
+        backgroundUri = backgroundUriArg->ToString(vm)->ToString(vm);
     }
-    resObj.backgroundResObj = AceType::RawPtr(backgroundResObj);
 
     std::string foregroundUri;
-    RefPtr<ResourceObject> foregroundResObj;
-    if (!ArkTSUtils::ParseJsMedia(vm, foregroundUriArg, foregroundUri, foregroundResObj)) {
-        ArkTSUtils::ParseJsString(vm, foregroundUriArg, foregroundUri, foregroundResObj);
+    if (foregroundUriArg->IsString(vm)) {
+        foregroundUri = foregroundUriArg->ToString(vm)->ToString(vm);
     }
-    resObj.foregroundResObj = AceType::RawPtr(foregroundResObj);
 
     std::string secondaryUri;
-    RefPtr<ResourceObject> secondaryResObj;
-    if (!ArkTSUtils::ParseJsMedia(vm, secondaryUriArg, secondaryUri, secondaryResObj)) {
-        ArkTSUtils::ParseJsString(vm, secondaryUriArg, secondaryUri, secondaryResObj);
+    if (secondaryUriArg->IsString(vm)) {
+        secondaryUri = secondaryUriArg->ToString(vm)->ToString(vm);
     }
-    resObj.secondaryResObj = AceType::RawPtr(secondaryResObj);
 
     if (secondaryUri.empty() && !backgroundUri.empty()) {
         secondaryUri = backgroundUri;
-        resObj.secondaryResObj = AceType::RawPtr(backgroundResObj);
     }
 
-    GetArkUINodeModifiers()->getRatingModifier()->setStarStylePtr(
-        nativeNode, backgroundUri.c_str(), foregroundUri.c_str(), secondaryUri.c_str(), resObj);
+    GetArkUINodeModifiers()->getRatingModifier()->setStarStyle(
+        nativeNode, backgroundUri.c_str(), foregroundUri.c_str(), secondaryUri.c_str());
     return panda::JSValueRef::Undefined(vm);
 }
 
@@ -202,76 +194,4 @@ ArkUINativeModuleValue RatingBridge::SetContentModifierBuilder(ArkUIRuntimeCallI
         });
     return panda::JSValueRef::Undefined(vm);
 }
-
-ArkUINativeModuleValue RatingBridge::SetRatingOptions(ArkUIRuntimeCallInfo* runtimeCallInfo)
-{
-    EcmaVM* vm = runtimeCallInfo->GetVM();
-    CHECK_NULL_RETURN(vm, panda::JSValueRef::Undefined(vm));
-    CHECK_EQUAL_RETURN(runtimeCallInfo->GetArgsNumber() != NUM_3, true, panda::JSValueRef::Undefined(vm));
-    Local<JSValueRef> nodeArg = runtimeCallInfo->GetCallArgRef(NUM_0);
-    Local<JSValueRef> ratingArg = runtimeCallInfo->GetCallArgRef(NUM_1);
-    Local<JSValueRef> indicatorArg = runtimeCallInfo->GetCallArgRef(NUM_2);
-    auto pointer = nodeArg->ToNativePointer(vm);
-    CHECK_EQUAL_RETURN(pointer.IsEmpty(), true, panda::JSValueRef::Undefined(vm));
-    auto nativeNode = nodePtr(pointer->Value());
-    CHECK_NULL_RETURN(nativeNode, panda::JSValueRef::Undefined(vm));
-
-    double rating = 0.0;
-    if (!ratingArg->IsNull() && ratingArg->IsNumber()) {
-        rating = ratingArg->ToNumber(vm)->Value();
-    }
-    if (LessNotEqual(rating, 0.0)) {
-        rating = 0.0;
-    }
-
-    int32_t indicator = 0;
-    if (!indicatorArg->IsNull() && indicatorArg->IsBoolean()) {
-        indicator = indicatorArg->ToBoolean(vm)->Value();
-    }
-    GetArkUINodeModifiers()->getRatingModifier()->setRatingOptions(
-        nativeNode, rating, indicator);
-    return panda::JSValueRef::Undefined(vm);
-}
-
-ArkUINativeModuleValue RatingBridge::SetOnChange(ArkUIRuntimeCallInfo* runtimeCallInfo)
-{
-    EcmaVM* vm = runtimeCallInfo->GetVM();
-    CHECK_NULL_RETURN(vm, panda::NativePointerRef::New(vm, nullptr));
-    uint32_t argsNumber = runtimeCallInfo->GetArgsNumber();
-    if (argsNumber != NUM_2) {
-        return panda::JSValueRef::Undefined(vm);
-    }
-    Local<JSValueRef> nativeNodeArg = runtimeCallInfo->GetCallArgRef(NUM_0);
-    Local<JSValueRef> callbackArg = runtimeCallInfo->GetCallArgRef(NUM_1);
-    auto nativeNode = nodePtr(nativeNodeArg->ToNativePointer(vm)->Value());
-    auto frameNode = reinterpret_cast<FrameNode*>(nativeNode);
-    CHECK_NULL_RETURN(frameNode, panda::NativePointerRef::New(vm, nullptr));
-    if (callbackArg->IsUndefined() || callbackArg->IsNull() || !callbackArg->IsFunction(vm)) {
-        GetArkUINodeModifiers()->getRatingModifier()->resetOnChange(nativeNode);
-        return panda::JSValueRef::Undefined(vm);
-    }
-    panda::Local<panda::FunctionRef> func = callbackArg->ToObject(vm);
-    std::function<void(const std::string&)> callback = [vm, frameNode, func = panda::CopyableGlobal(vm, func)](
-                                                           const std::string& star) {
-        panda::LocalScope pandaScope(vm);
-        panda::TryCatch trycatch(vm);
-        PipelineContext::SetCallBackNode(AceType::WeakClaim(frameNode));
-        panda::Local<panda::NumberRef> starParam = panda::NumberRef::New(vm, StringUtils::StringToDouble(star));
-        panda::Local<panda::JSValueRef> params[PARAM_ARR_LENGTH_1] = { starParam };
-        func->Call(vm, func.ToLocal(), params, PARAM_ARR_LENGTH_1);
-    };
-    GetArkUINodeModifiers()->getRatingModifier()->setOnChange(nativeNode, reinterpret_cast<void*>(&callback));
-    return panda::JSValueRef::Undefined(vm);
-}
-
-ArkUINativeModuleValue RatingBridge::ResetOnChange(ArkUIRuntimeCallInfo* runtimeCallInfo)
-{
-    EcmaVM* vm = runtimeCallInfo->GetVM();
-    CHECK_NULL_RETURN(vm, panda::NativePointerRef::New(vm, nullptr));
-    Local<JSValueRef> nativeNodeArg = runtimeCallInfo->GetCallArgRef(NUM_0);
-    auto nativeNode = nodePtr(nativeNodeArg->ToNativePointer(vm)->Value());
-    GetArkUINodeModifiers()->getRatingModifier()->resetOnChange(nativeNode);
-    return panda::JSValueRef::Undefined(vm);
-}
-
 } // namespace OHOS::Ace::NG

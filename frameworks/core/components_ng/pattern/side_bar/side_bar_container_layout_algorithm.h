@@ -183,21 +183,16 @@ private:
     void InitRealSideBarWidth(LayoutWrapper* layoutWrapper, float parentWidth);
     void AutoMode(const RefPtr<SideBarContainerLayoutProperty>& layoutProperty, float parentWidth);
     void AutoChangeSideBarWidth(const RefPtr<SideBarContainerLayoutProperty>& layoutProperty, float parentWidth);
-    void UpdateDefaultValueByVersion(LayoutWrapper* layoutWrapper);
+    void UpdateDefaultValueByVersion();
     SideBarPosition GetSideBarPositionWithRtl(const RefPtr<SideBarContainerLayoutProperty>& layoutProperty);
     void AdjustMinAndMaxSideBarWidth(LayoutWrapper* layoutWrapper);
     RefPtr<LayoutWrapper> GetSideBarLayoutWrapper(LayoutWrapper* layoutWrapper) const;
-    void GetAllPropertyValue(
-        const RefPtr<SideBarContainerLayoutProperty>& layoutProperty, LayoutWrapper* layoutWrapper, float parentWidth);
-    Dimension GetSideBarWidth(
-        const RefPtr<SideBarContainerLayoutProperty>& layoutProperty, LayoutWrapper* layoutWrapper);
+    void GetAllPropertyValue(const RefPtr<SideBarContainerLayoutProperty>& layoutProperty, float parentWidth);
     void InitSideBarWidth(float parentWidth);
     void MeasureRealSideBarWidth(float parentWidth);
     void MeasureTypeUpdateWidth();
     void MeasureRealPropertyValue(bool setMinSideBarWidth, bool setMaxSideBarWidth, bool setSideBarWidth,
         bool setMinContentWidth, float paretWidth);
-    void AddChildToIgnoreLayoutSafeBundle(LayoutWrapper* layoutWrapper);
-    void AdjustChildOffset(const RefPtr<LayoutWrapper>& layoutWrapper, OffsetF& offset);
 
     float currentOffset_ = 0.0f;
     float realSideBarWidth_ = -1.0f;

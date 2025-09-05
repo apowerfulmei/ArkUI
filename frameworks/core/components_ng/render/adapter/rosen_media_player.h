@@ -28,7 +28,7 @@
 
 namespace OHOS::Ace::NG {
 class RosenMediaPlayer : public MediaPlayer {
-    DECLARE_ACE_TYPE(RosenMediaPlayer, NG::MediaPlayer);
+    DECLARE_ACE_TYPE(RosenMediaPlayer, NG::MediaPlayer)
 public:
     RosenMediaPlayer() = default;
     ~RosenMediaPlayer() override;
@@ -43,7 +43,6 @@ public:
     void SetRenderSurface(const RefPtr<RenderSurface>& renderSurface) override;
     void RegisterMediaPlayerEvent(PositionUpdatedEvent&& positionUpdatedEvent, StateChangedEvent&& stateChangedEvent,
         CommonEvent&& errorEvent, CommonEvent&& resolutionChangeEvent, CommonEvent&& startRenderFrameEvent) override;
-    void RegisterMediaPlayerVideoErrorEvent(VideoErrorEvent&& errorEvent) override;
     void RegisterMediaPlayerSeekDoneEvent(SeekDoneEvent&& seekDoneEvent) override;
     int32_t GetDuration(int32_t& duration) override;
     int32_t GetVideoWidth() override;
@@ -51,7 +50,6 @@ public:
     int32_t SetLooping(bool loop) override;
     int32_t SetPlaybackSpeed(float speed) override;
     int32_t SetSurface() override;
-    int32_t SetRenderFirstFrame(bool display) override;
     int32_t PrepareAsync() override;
     bool IsPlaying() override;
     int32_t Play() override;
@@ -59,11 +57,7 @@ public:
     int32_t Stop() override;
     int32_t Seek(int32_t mSeconds, OHOS::Ace::SeekMode mode) override;
     int32_t SetPlayRange(int64_t startTime, int64_t endTime) override;
-    int32_t SetPlayRangeWithMode(int64_t startTime, int64_t endTime, OHOS::Ace::SeekMode mode) override;
-    int32_t SetPlayRangeUsWithMode(int64_t startTime, int64_t endTime, SeekMode mode) override;
     int32_t SetParameter(const std::string& key, int64_t value) override;
-    int32_t EnableCameraPostprocessing() override;
-    int32_t SetCameraPostprocessing(bool isOpen) override;
 
 private:
     // Interim programme

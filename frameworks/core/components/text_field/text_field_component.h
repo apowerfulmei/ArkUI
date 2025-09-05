@@ -268,9 +268,9 @@ public:
     void SetInputFilter(const std::string& inputFilter);
     const std::string& GetInputFilter() const;
 
-    void SetOnError(const std::function<void(const std::string&)>&& value)
+    void SetOnError(const std::function<void(const std::string&)>& value)
     {
-        OnError_ = std::move(value);
+        OnError_ = value;
     }
     const std::function<void(const std::string&)>& GetOnError() const
     {
@@ -291,7 +291,7 @@ public:
 
     ACE_DEFINE_COMPONENT_EVENT(OnClick, void(const ClickInfo& clickInfo));
 
-    ACE_DEFINE_COMPONENT_PROP(CopyOption, CopyOptions, CopyOptions::Local);
+    ACE_DEFINE_COMPONENT_PROP(CopyOption, CopyOptions, CopyOptions::Distributed);
 
 private:
     RefPtr<TextFieldDeclaration> declaration_;

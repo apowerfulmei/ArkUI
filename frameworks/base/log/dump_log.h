@@ -82,9 +82,9 @@ public:
         ostream_ = std::move(file);
     }
 
-    void SetUIExtFlag(bool isUIExt)
+    void SetSeparator(std::string separator)
     {
-        isUIExt_ = isUIExt;
+        separator_ = separator;
     }
 
     const std::unique_ptr<std::ostream>& GetDumpFile() const
@@ -99,24 +99,6 @@ public:
     bool OutPutBySize();
     void OutPutDefault();
     void Reset();
-    void PrintJson(const std::string& content);
-    void PrintEndDumpInfoNG(bool isElement = false);
-    std::string GetPrefix(int32_t depth);
-    std::string FormatDumpInfo(const std::string& str, int32_t depth);
-    void Append(const std::string& content)
-    {
-        result_.append(content);
-    }
-
-    int32_t GetDepth() const
-    {
-        return depth_;
-    }
-
-    void SetDepth(int32_t depth)
-    {
-        depth_ = depth;
-    }
 
     template<typename T>
     void AddDesc(const T&& t)
@@ -158,18 +140,12 @@ public:
     static void ShowDumpHelp(std::vector<std::string>& info);
 
     static const size_t MAX_DUMP_LENGTH = 100000;
-    static const size_t MIN_JSON_LENGTH = 4;
-    static const size_t END_POS_TWO = 2;
-    static const size_t END_POS_THREE = 3;
-    int CompressString(const char* in_str, size_t in_len, std::string& out_str, int level);
-    void OutPutByCompress();
 
 private:
     std::vector<std::string> description_;
     std::unique_ptr<std::ostream> ostream_ { nullptr };
     std::string result_;
-    bool isUIExt_ = false;
-    int32_t depth_ = -1;
+    std::string separator_ = "\n";
     ACE_DISALLOW_MOVE(DumpLog);
 };
 

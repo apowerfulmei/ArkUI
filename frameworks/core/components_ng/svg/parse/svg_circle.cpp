@@ -15,8 +15,9 @@
 
 #include "frameworks/core/components_ng/svg/parse/svg_circle.h"
 
+#include "base/utils/utils.h"
 #include "core/components_ng/svg/parse/svg_animation.h"
-#include "frameworks/core/components_ng/svg/parse/svg_constants.h"
+#include "frameworks/core/components/declaration/svg/svg_circle_declaration.h"
 
 namespace OHOS::Ace::NG {
 
@@ -27,6 +28,16 @@ RefPtr<SvgNode> SvgCircle::Create()
     return AceType::MakeRefPtr<SvgCircle>();
 }
 
+#ifndef USE_ROSEN_DRAWING
+SkPath SvgCircle::AsPath(const Size& viewPort) const
+{
+    SkPath path;
+    path.addCircle(ConvertDimensionToPx(circleAttr_.cx, viewPort, SvgLengthType::HORIZONTAL),
+        ConvertDimensionToPx(circleAttr_.cy, viewPort, SvgLengthType::VERTICAL),
+        ConvertDimensionToPx(circleAttr_.r, viewPort, SvgLengthType::OTHER));
+    return path;
+}
+#else
 RSRecordingPath SvgCircle::AsPath(const Size& viewPort) const
 {
     RSRecordingPath path;
@@ -35,34 +46,16 @@ RSRecordingPath SvgCircle::AsPath(const Size& viewPort) const
         ConvertDimensionToPx(circleAttr_.r, viewPort, SvgLengthType::OTHER));
     return path;
 }
-
-RSRecordingPath SvgCircle::AsPath(const SvgLengthScaleRule& lengthRule)
-{
-    /* re-generate the Path for pathTransform(true). AsPath come from clip-path */
-    if (path_.has_value() && lengthRule_ == lengthRule && !lengthRule.GetPathTransform()) {
-        return path_.value();
-    }
-    RSRecordingPath path;
-    auto cx = GetMeasuredPosition(circleAttr_.cx, lengthRule, SvgLengthType::HORIZONTAL);
-    auto cy = GetMeasuredPosition(circleAttr_.cy, lengthRule, SvgLengthType::VERTICAL);
-    path.AddCircle(cx, cy, GetMeasuredLength(circleAttr_.r, lengthRule, SvgLengthType::OTHER));
-    lengthRule_ = lengthRule;
-    path_ = path;
-    /* Apply path transform for clip-path only */
-    if (lengthRule.GetPathTransform()) {
-        ApplyTransform(path);
-    }
-    return path;
-}
+#endif
 
 void SvgCircle::PrepareAnimation(const RefPtr<SvgAnimation>& animate)
 {
     auto attr = animate->GetAttributeName();
-    if (attr == SVG_CX) {
+    if (attr == DOM_SVG_CX) {
         AnimateOnAttribute(animate, circleAttr_.cx);
-    } else if (attr == SVG_CY) {
+    } else if (attr == DOM_SVG_CY) {
         AnimateOnAttribute(animate, circleAttr_.cy);
-    } else if (attr == SVG_R) {
+    } else if (attr == DOM_SVG_R) {
         AnimateOnAttribute(animate, circleAttr_.r);
     } else {
         SvgNode::PrepareAnimation(animate);
@@ -72,15 +65,15 @@ void SvgCircle::PrepareAnimation(const RefPtr<SvgAnimation>& animate)
 bool SvgCircle::ParseAndSetSpecializedAttr(const std::string& name, const std::string& value)
 {
     static const LinearMapNode<void (*)(const std::string&, SvgCircleAttribute&)> attrs[] = {
-        { SVG_CX,
+        { DOM_SVG_CX,
             [](const std::string& val, SvgCircleAttribute& attr) {
                 attr.cx = SvgAttributesParser::ParseDimension(val);
             } },
-        { SVG_CY,
+        { DOM_SVG_CY,
             [](const std::string& val, SvgCircleAttribute& attr) {
                 attr.cy = SvgAttributesParser::ParseDimension(val);
             } },
-        { SVG_R,
+        { DOM_SVG_R,
             [](const std::string& val, SvgCircleAttribute& attr) {
                 attr.r = SvgAttributesParser::ParseDimension(val);
             } },

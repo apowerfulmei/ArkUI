@@ -32,15 +32,8 @@ public:
         const LayoutConstraintF& contentConstraint, LayoutWrapper* layoutWrapper) override;
     void Measure(LayoutWrapper* layoutWrapper) override;
     void Layout(LayoutWrapper* layoutWrapper) override;
-    void ChildMeasure(RefPtr<LayoutWrapper> layoutWrapper, SizeF contentSize,
-                     LayoutConstraintF layoutConstraint);
 
 private:
-    void MeasureInXmageMode(LayoutWrapper* layoutWrapper);
-    SizeF GetXmageLayoutOffset(LayoutWrapper* layoutWrapper);
-    void ChildMeasureInXmage(RefPtr<LayoutWrapper> childLayoutWrapper, SizeF contentSize, SizeF imageSize,
-        SizeF xmageRatio, LayoutConstraintF layoutConstraint);
-
     ACE_DISALLOW_COPY_AND_MOVE(MovingPhotoLayoutAlgorithm);
 };
 } // namespace OHOS::Ace::NG

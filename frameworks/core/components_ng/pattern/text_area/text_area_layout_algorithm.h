@@ -32,13 +32,8 @@ public:
         const LayoutConstraintF& contentConstraint, LayoutWrapper* layoutWrapper) override;
     void Layout(LayoutWrapper* layoutWrapper) override;
 protected:
-    bool CreateParagraphEx(const TextStyle& textStyle, const std::u16string& content,
+    bool CreateParagraphEx(const TextStyle& textStyle, const std::string& content,
         const LayoutConstraintF& contentConstraint, LayoutWrapper* layoutWrapper) override;
-private:
-    void CalcMeasureContentWithMinLines(
-        std::optional<SizeF>& size, LayoutWrapper* layoutWrapper, const LayoutConstraintF& contentConstraint);
-    std::optional<SizeF> ReMeasureContentForPlaceholder(const LayoutConstraintF& contentConstraint,
-        LayoutWrapper* layoutWrapper, TextStyle& textStyle, LayoutConstraintF& textFieldContentConstraint);
 };
 } // namespace OHOS::Ace::NG
 

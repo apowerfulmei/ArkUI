@@ -28,7 +28,6 @@
 namespace OHOS::Ace {
 struct MouseEvent;
 struct TouchEvent;
-class TouchEventInfo;
 
 namespace NG {
 class FrameNode;
@@ -42,32 +41,6 @@ struct AccessibilityHoverState {
     AccessibilityHoverEventType eventType = AccessibilityHoverEventType::MOVE;
 };
 
-struct HandleHoverEventParam {
-    NG::PointF point;
-    SourceType sourceType = SourceType::NONE;
-    AccessibilityHoverEventType eventType = AccessibilityHoverEventType::MOVE;
-    TimeStamp time;
-    bool ignoreTransparent = false;
-};
-
-enum class HandleHoverRet : int32_t {
-    HOVER_HIT = 0,
-    HOVER_FAIL,
-    NO_MATCH_NODE,
-    ILLEGAL_PARAM,
-    TIMEOUT,
-    IN_TIME_LIMIT,
-};
-
-class AccessibilityHoverStateManager {
-public:
-    AccessibilityHoverState& GetHoverState(int64_t accessibilityId);
-    void ResetHoverState(AccessibilityHoverState& hoverState);
-
-private:
-    std::unordered_map<int64_t, AccessibilityHoverState> hoverStateMap_;
-};
-
 class AccessibilityManagerNG final: public AceType {
     DECLARE_ACE_TYPE(AccessibilityManagerNG, AceType);
 
@@ -78,10 +51,6 @@ public:
         int32_t sourceType, int32_t eventType, int64_t timeMs);
     void HoverTestDebug(const RefPtr<FrameNode>& root, const PointF& point,
         std::string& summary, std::string& detail) const;
-
-    HandleHoverRet HandleAccessibilityHoverEventBySurfaceId(
-        const std::string& surfaceId,
-        HandleHoverEventParam& param);
 
     /*
     * Convert coordinates of point relative to ancestor (x_ances, y_ances) to
@@ -94,45 +63,34 @@ public:
         const PointF& pointAncestor, PointF& pointNode);
 
 private:
-    struct HandleTransparentCallbackParam {
-        int32_t currentHoveringId = 0;
-        int32_t lastHoveringId = 0;
-    };
-
     /*
     * Compute components which are hovered in accessibility mode.
     * And send hover enter/exit events to accessibility framework;
     * param: {root} should be not-null.
     */
-    HandleHoverRet HandleAccessibilityHoverEventInner(
+    void HandleAccessibilityHoverEventInner(
         const RefPtr<FrameNode>& root,
-        const HandleHoverEventParam& param,
-        const TouchEvent& event);
+        const PointF& point,
+        SourceType sourceType,
+        AccessibilityHoverEventType eventType,
+        TimeStamp time);
+    bool DeliverAccessibilityHoverEvent(const RefPtr<FrameNode>& root, const PointF& point);
 
+    void ResetHoverState();
     bool IgnoreCurrentHoveringNode(const RefPtr<FrameNode> &node);
-    static bool NotifyHoverEventToNodeSession(
+    static void NotifyHoverEventToNodeSession(
         const RefPtr<FrameNode>& node,
         const RefPtr<FrameNode>& rootNode, const PointF& pointRoot,
         SourceType sourceType, AccessibilityHoverEventType eventType, TimeStamp time);
 
-    bool IsEventTypeChangeDirectHandleHover(
-        AccessibilityHoverEventType eventType,
-        AccessibilityHoverEventType prevEventType);
-    bool IsHandlePipelineAccessibilityHoverEnter(const RefPtr<NG::FrameNode>& root);
+    bool IsEventTypeChangeDirectHandleHover(AccessibilityHoverEventType eventType) const;
+    bool IsHandlePipelineAccessibilityHoverEnter(const RefPtr<NG::FrameNode>& root) const;
     void HandlePipelineAccessibilityHoverEnter(
         const RefPtr<NG::FrameNode>& root,
         TouchEvent& event,
         int32_t eventType);
 
-    bool HandleAccessibilityHoverTransparentCallback(bool transform,
-        const RefPtr<FrameNode>& root,
-        const HandleTransparentCallbackParam& param,
-        const PointF& point,
-        const TouchEvent& event);
-    bool ExecuteChildNodeHoverTransparentCallback(const RefPtr<FrameNode>& root,  const PointF& point,
-        const TouchEvent& event);
-
-    AccessibilityHoverStateManager hoverStateManager_;
+    AccessibilityHoverState hoverState_;
 };
 } // namespace NG
 } // namespace OHOS::Ace

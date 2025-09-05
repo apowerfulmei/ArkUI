@@ -15,6 +15,7 @@
 
 #include "core/components_ng/pattern/waterflow/water_flow_accessibility_property.h"
 
+#include "base/utils/utils.h"
 #include "core/components_ng/base/frame_node.h"
 #include "core/components_ng/pattern/waterflow/water_flow_layout_property.h"
 #include "core/components_ng/pattern/waterflow/water_flow_pattern.h"

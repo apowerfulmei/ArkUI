@@ -20,29 +20,24 @@
 
 namespace OHOS::Ace::NG {
 void ModifierAdapter::RemoveModifier(int32_t modifierId) {}
-template<typename T, typename S>
-void NodeAnimatableProperty<T, S>::AnimateWithVelocity(
-    const AnimationOption& option, T value, T velocity, const FinishCallback& finishCallback)
+template<>
+void NodeAnimatableProperty<float, AnimatablePropertyFloat>::AnimateWithVelocity(
+    const AnimationOption& option, float value, float velocity, const FinishCallback& finishCallback)
 {
 #ifdef ENHANCED_ANIMATION
     if (!MockAnimationManager::Enabled()) {
         return;
     }
-    MockAnimationManager::GetInstance().SetParams(option, { finishCallback, nullptr });
+    MockAnimationManager::GetInstance().SetParams(option.GetDuration(), { finishCallback, nullptr });
     MockAnimationManager::GetInstance().OpenAnimation();
     Set(value);
     MockAnimationManager::GetInstance().CloseAnimation();
 #endif
 }
-
-template<typename T, typename S>
-void NodeAnimatableProperty<T, S>::SetThresholdType(ThresholdType type)
+template<>
+void NodeAnimatableProperty<float, AnimatablePropertyFloat>::SetThresholdType(ThresholdType type)
 {}
-template<typename T, typename S>
-void NodeAnimatableProperty<T, S>::SetPropertyUnit(PropertyUnit unit)
+template<>
+void NodeAnimatableProperty<float, AnimatablePropertyFloat>::SetPropertyUnit(PropertyUnit unit)
 {}
-
-// Explicit template instantiations
-template class NodeAnimatableProperty<float, AnimatablePropertyFloat>;
-template class NodeAnimatableProperty<OffsetF, AnimatablePropertyOffsetF>;
 } // namespace OHOS::Ace::NG

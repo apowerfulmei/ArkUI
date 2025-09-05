@@ -15,6 +15,9 @@
 
 #include "text_input_base.h"
 
+#include "core/components_ng/pattern/indexer/indexer_layout_property.h"
+#include "core/components_ng/pattern/stage/page_pattern.h"
+
 namespace OHOS::Ace::NG {
 
 namespace {} // namespace
@@ -41,6 +44,41 @@ HWTEST_F(TextFieldPatternTestFour, UltralimitShake001, TestSize.Level0)
     layoutProperty->UpdateNumberOfLines(1024);
 
     pattern->UltralimitShake();
+}
+
+/**
+ * @tc.name: UpdateCounterMargin001
+ * @tc.desc: test testInput text UpdateCounterMargin
+ * @tc.type: FUNC
+ */
+HWTEST_F(TextFieldPatternTestFour, UpdateCounterMargin001, TestSize.Level0)
+{
+    auto textFieldNode = FrameNode::GetOrCreateFrameNode(V2::TEXTINPUT_ETS_TAG,
+        ElementRegister::GetInstance()->MakeUniqueId(), []() { return AceType::MakeRefPtr<TextFieldPattern>(); });
+    ASSERT_NE(textFieldNode, nullptr);
+    auto pattern = textFieldNode->GetPattern<TextFieldPattern>();
+    ASSERT_NE(pattern, nullptr);
+
+    auto layoutProperty = textFieldNode->GetLayoutProperty<TextFieldLayoutProperty>();
+    ASSERT_NE(layoutProperty, nullptr);
+    layoutProperty->UpdateMaxLines(0);
+    layoutProperty->UpdateShowCounter(true);
+    layoutProperty->UpdateMaxLength(1024);
+    layoutProperty->UpdateShowUnderline(true);
+
+    layoutProperty->UpdateSetCounter(0);
+    pattern->UpdateCounterMargin();
+
+    layoutProperty->UpdateShowHighlightBorder(false);
+    pattern->UpdateCounterMargin();
+
+    layoutProperty->UpdateSetCounter(1);
+    pattern->UpdateCounterMargin();
+
+    MarginProperty mp;
+    mp.SetEdges(CalcLength(0.0f), CalcLength(0.0f), CalcLength(0.0f), CalcLength(0.0f));
+    layoutProperty->UpdateMargin(mp);
+    pattern->UpdateCounterMargin();
 }
 
 /**
@@ -189,8 +227,6 @@ HWTEST_F(TextFieldPatternTestFour, UpdateInputFilterErrorText001, TestSize.Level
     ASSERT_NE(textFieldNode, nullptr);
     RefPtr<TextFieldPattern> pattern = textFieldNode->GetPattern<TextFieldPattern>();
     ASSERT_NE(pattern, nullptr);
-    pattern->UpdateInputFilterErrorText(u"");
-    pattern->UpdateInputFilterErrorText(u"Error123456");
 }
 
 /**
@@ -216,7 +252,7 @@ HWTEST_F(TextFieldPatternTestFour, ProcessFocusIndexAction001, TestSize.Level0)
 
     layoutProperty->UpdateTextInputType(TextInputType::VISIBLE_PASSWORD);
     layoutProperty->UpdateShowPasswordIcon(true);
-    EXPECT_TRUE(pattern->ProcessFocusIndexAction());
+    EXPECT_FALSE(pattern->ProcessFocusIndexAction());
 
     pattern->focusIndex_ = FocuseIndex::UNIT;
     EXPECT_FALSE(pattern->ProcessFocusIndexAction());
@@ -261,11 +297,11 @@ HWTEST_F(TextFieldPatternTestFour, WordLength001, TestSize.Level0)
         ElementRegister::GetInstance()->MakeUniqueId(), []() { return AceType::MakeRefPtr<TextFieldPattern>(); });
     auto textInputLayoutAlgorithm =
         AceType::DynamicCast<TextInputLayoutAlgorithm>(pattern_->CreateLayoutAlgorithm());
-    std::vector<std::u16string> strVec = { u"0", u"1", u"2" };
+    std::vector<std::string> strVec = { "0", "1", "2" };
     TextStyle textStyle;
     textStyle.SetTextOverflow(OVERFLOW_ELLIPSIS);
     auto paragraphData = CreateParagraphData { true, textStyle.GetFontSize().ConvertToPx() };
-    textInputLayoutAlgorithm->CreateParagraph(textStyle, strVec, u"content", true, paragraphData);
+    textInputLayoutAlgorithm->CreateParagraph(textStyle, strVec, "content", true, paragraphData);
     DirtySwapConfig config;
     auto layoutWrapper = AceType::MakeRefPtr<LayoutWrapperNode>(
         textFieldNode, AceType::MakeRefPtr<GeometryNode>(), textFieldNode->GetLayoutProperty());
@@ -276,17 +312,17 @@ HWTEST_F(TextFieldPatternTestFour, WordLength001, TestSize.Level0)
     ASSERT_NE(textDragNode0, nullptr);
     pattern_->dragNode_ = textDragNode0;
     EXPECT_EQ(pattern_->OnDirtyLayoutWrapperSwap(layoutWrapper, config), true);
-    pattern_->contentController_->content_ = u" T e s t ";
+    pattern_->contentController_->content_ = " T e s t ";
     pattern_->GetWordLength(0, 2);
     pattern_->GetWordLength(1, 2);
     pattern_->GetWordLength(0, 1);
     pattern_->GetWordLength(1, 1);
-    pattern_->contentController_->content_ = u"       ";
+    pattern_->contentController_->content_ = "       ";
     pattern_->GetWordLength(0, 2);
     pattern_->GetWordLength(1, 2);
     pattern_->GetWordLength(0, 1);
     pattern_->GetWordLength(1, 1);
-    pattern_->contentController_->content_ = u"T\ne\ns\nt\n";
+    pattern_->contentController_->content_ = "T\ne\ns\nt\n";
     pattern_->GetLineBeginPosition(0, true);
     pattern_->GetLineBeginPosition(0, false);
     pattern_->GetLineBeginPosition(1, true);
@@ -295,7 +331,7 @@ HWTEST_F(TextFieldPatternTestFour, WordLength001, TestSize.Level0)
     pattern_->GetLineEndPosition(0, false);
     pattern_->GetLineEndPosition(1, true);
     pattern_->GetLineEndPosition(1, false);
-    pattern_->contentController_->content_ = u"\n\n\n\n\n";
+    pattern_->contentController_->content_ = "\n\n\n\n\n";
     pattern_->GetLineBeginPosition(0, true);
     pattern_->GetLineBeginPosition(0, false);
     pattern_->GetLineBeginPosition(1, true);
@@ -328,7 +364,7 @@ HWTEST_F(TextFieldPatternTestFour, CursorMove001, TestSize.Level0)
     pattern->CursorMoveToParagraphBegin();
     pattern->CursorMoveLineEnd();
     pattern->CursorMoveToParagraphEnd();
-    pattern->contentController_->content_  = u" T e s t ";
+    pattern->contentController_->content_  = " T e s t ";
     pattern->selectController_->caretInfo_.index = -1;
     pattern->CursorMoveLeftWord();
     pattern->CursorMoveLineBegin();
@@ -406,11 +442,10 @@ HWTEST_F(TextFieldPatternTestFour, PerformAction001, TestSize.Level0)
     ASSERT_NE(eventHub, nullptr);
     auto paintProperty = textFieldNode->GetPaintProperty<TextFieldPaintProperty>();
     ASSERT_NE(paintProperty, nullptr);
-    pattern->GetFocusHub()->currentFocus_ = true;
     pattern->focusIndex_ = FocuseIndex::TEXT;
-    auto index = static_cast<int32_t>(Recorder::EventCategory::CATEGORY_COMPONENT);
-    Recorder::EventRecorder::Get().eventSwitch_[index] = true;
-    Recorder::EventRecorder::Get().globalSwitch_[index] = true;
+    Recorder::EventSwitch es;
+    es.componentEnable = true;
+    Recorder::EventRecorder::Get().UpdateEventSwitch(es);
     pattern->PerformAction(TextInputAction::DONE);
     eventHub->SetOnSubmit([](int32_t, NG::TextFieldCommonEvent& event) {
         event.SetKeepEditable(false);
@@ -446,9 +481,9 @@ HWTEST_F(TextFieldPatternTestFour, RecordSubmitEvent001, TestSize.Level0)
     ASSERT_NE(layoutProperty, nullptr);
     auto eventHub = textFieldNode->GetEventHub<TextFieldEventHub>();
     ASSERT_NE(eventHub, nullptr);
-    auto index = static_cast<int32_t>(Recorder::EventCategory::CATEGORY_COMPONENT);
-    Recorder::EventRecorder::Get().eventSwitch_[index] = true;
-    Recorder::EventRecorder::Get().globalSwitch_[index] = true;
+    Recorder::EventSwitch es;
+    es.componentEnable = true;
+    Recorder::EventRecorder::Get().UpdateEventSwitch(es);
     pattern->RecordSubmitEvent();
     layoutProperty->UpdateTextInputType(TextInputType::TEXT);
     pattern->RecordSubmitEvent();
@@ -501,103 +536,5 @@ HWTEST_F(TextFieldPatternTestFour, IsModalCovered001, TestSize.Level0)
     ASSERT_NE(pattern, nullptr);
 
     pattern->IsModalCovered();
-}
-
-/**
- * @tc.name: CursorMoveUpTest001
- * @tc.desc: Test the cursor move up
- * @tc.type: FUNC
- */
-HWTEST_F(TextFieldPatternTestFour, CursorMoveUpTest001, TestSize.Level0)
-{
-    /**
-     * @tc.steps: Move up and down in a single-line text
-     * @tc.expected: In single-line text, there is no up and down movement
-     */
-    CreateTextField(DEFAULT_TEXT);
-    GetFocus();
-    auto ret = pattern_->CursorMoveUp();
-    EXPECT_TRUE(ret);
-    ret = pattern_->CursorMoveDown();
-    EXPECT_TRUE(ret);
-}
-
-/**
- * @tc.name: CursorMoveToParagraphEndTest001
- * @tc.desc: Test the cursor move to pragraph to the end
- * @tc.type: FUNC
- */
-HWTEST_F(TextFieldPatternTestFour, CursorMoveToParagraphEndTest001, TestSize.Level0)
-{
-    /**
-     * @tc.steps: Initialize text and move to the pargraph of the line
-     */
-    CreateTextField(DEFAULT_TEXT);
-    GetFocus();
-    auto ret = pattern_->CursorMoveToParagraphEnd();
-    EXPECT_TRUE(ret);
-
-    /**
-     * @tc.expected: Moving to the paragraph end and check if cursor is on pargraph end
-     */
-    ret = pattern_->CursorMoveLeft();
-    ret = pattern_->CursorMoveToParagraphEnd();
-    EXPECT_TRUE(ret);
-    EXPECT_EQ(pattern_->GetCaretIndex(), DEFAULT_TEXT.length())
-        << "Text is " + pattern_->GetTextValue() + ", CaretIndex is " + std::to_string(pattern_->GetCaretIndex());
-}
-
-/**
- * @tc.name: StrokeTest001
- * @tc.desc: Test attrs about stroke
- * @tc.type: FUNC
- */
-HWTEST_F(TextFieldPatternTestFour, StrokeTest001, TestSize.Level0)
-{
-    /**
-     * @tc.steps: Create Text filed node with default attrs
-     */
-    CreateTextField(DEFAULT_TEXT, "", [](TextFieldModelNG model) {
-        model.SetWidthAuto(true);
-        model.SetType(TextInputType::TEXT);
-        model.SetFontSize(DEFAULT_FONT_SIZE);
-        model.SetTextColor(DEFAULT_TEXT_COLOR);
-        model.SetStrokeWidth(Dimension(5, DimensionUnit::VP));
-        model.SetStrokeColor(DEFAULT_TEXT_COLOR);
-    });
-
-    /**
-     * @tc.expected: Check if all set properties are displayed in the corresponding JSON
-     */
-    auto json = JsonUtil::Create(true);
-    pattern_->ToJsonValue(json, filter);
-    EXPECT_EQ(json->GetString("strokeWidth"), "5.00vp");
-    EXPECT_EQ(json->GetString("strokeColor"), "#FF000000");
-}
-
-/**
- * @tc.name: TextAreaMinLinesTest001
- * @tc.desc: Test attrs about stroke
- * @tc.type: FUNC
- */
-HWTEST_F(TextFieldPatternTestFour, TextAreaMinLinesTest001, TestSize.Level0)
-{
-    /**
-     * @tc.steps: Create Text filed node with default attrs
-     */
-    CreateTextField(DEFAULT_TEXT, "", [](TextFieldModelNG model) {
-        model.SetWidthAuto(true);
-        model.SetType(TextInputType::TEXT);
-        model.SetFontSize(DEFAULT_FONT_SIZE);
-        model.SetTextColor(DEFAULT_TEXT_COLOR);
-        model.SetMinLines(1);
-    });
-
-    /**
-     * @tc.expected: Check if all set properties are displayed in the corresponding JSON
-     */
-    auto json = JsonUtil::Create(true);
-    pattern_->ToJsonValue(json, filter);
-    EXPECT_EQ(json->GetString("minLines"), "1");
 }
 }

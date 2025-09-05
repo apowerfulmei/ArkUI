@@ -22,7 +22,7 @@
 #include "core/components_ng/render/render_context.h"
 #include "frameworks/base/geometry/ng/point_t.h"
 #include "frameworks/bridge/js_frontend/engine/common/js_constants.h"
-#include "frameworks/core/components_ng/render/adapter/matrix_util.h"
+#include "frameworks/core/components_ng/render/adapter/matrix2d.h"
 
 namespace OHOS::Ace::Framework {
 
@@ -306,7 +306,7 @@ shared_ptr<JsValue> SetPolyToPoly(const shared_ptr<JsRuntime>& runtime, const sh
     for (int i = dstIndex; i < dstLastIndex; i++) {
         totalPoint.push_back(dstPoint[i]);
     }
-    Matrix4 ret = OHOS::Ace::NG::MatrixUtil::SetMatrixPolyToPoly(matrix, totalPoint);
+    Matrix4 ret = OHOS::Ace::NG::SetMatrixPolyToPoly(matrix, totalPoint);
     thisObj->SetProperty(runtime, MATRIX_4X4, ConvertToJSValue(runtime, ret));
     return thisObj;
 }
@@ -316,15 +316,24 @@ shared_ptr<JsValue> Copy(const shared_ptr<JsRuntime>& runtime, const shared_ptr<
 
 void AddCommonMatrixProperties(const shared_ptr<JsRuntime>& runtime, const shared_ptr<JsValue>& obj)
 {
-    obj->SetProperty(runtime, MATRIX_COPY, runtime->NewFunction(Copy));
-    obj->SetProperty(runtime, MATRIX_COMBINE, runtime->NewFunction(Combine));
-    obj->SetProperty(runtime, MATRIX_INVERT, runtime->NewFunction(Invert));
-    obj->SetProperty(runtime, MATRIX_TRANSLATE, runtime->NewFunction(Translate));
-    obj->SetProperty(runtime, MATRIX_SCALE, runtime->NewFunction(Scale));
-    obj->SetProperty(runtime, MATRIX_SKEW, runtime->NewFunction(Skew));
-    obj->SetProperty(runtime, MATRIX_ROTATE, runtime->NewFunction(Rotate));
-    obj->SetProperty(runtime, MATRIX_TRANSFORM_POINT, runtime->NewFunction(TransformPoint));
-    obj->SetProperty(runtime, MATRIX_SET_POLY_TO_POLY, runtime->NewFunction(SetPolyToPoly));
+    static auto jsCopy = runtime->NewFunction(Copy);
+    static auto jsCombine = runtime->NewFunction(Combine);
+    static auto jsInvert = runtime->NewFunction(Invert);
+    static auto jsTranslate = runtime->NewFunction(Translate);
+    static auto jsScale = runtime->NewFunction(Scale);
+    static auto jsSkew = runtime->NewFunction(Skew);
+    static auto jsRotate = runtime->NewFunction(Rotate);
+    static auto jsTransformPoint = runtime->NewFunction(TransformPoint);
+    static auto jsSetPolyToPoly = runtime->NewFunction(SetPolyToPoly);
+    obj->SetProperty(runtime, MATRIX_COPY, jsCopy);
+    obj->SetProperty(runtime, MATRIX_COMBINE, jsCombine);
+    obj->SetProperty(runtime, MATRIX_INVERT, jsInvert);
+    obj->SetProperty(runtime, MATRIX_TRANSLATE, jsTranslate);
+    obj->SetProperty(runtime, MATRIX_SCALE, jsScale);
+    obj->SetProperty(runtime, MATRIX_SKEW, jsSkew);
+    obj->SetProperty(runtime, MATRIX_ROTATE, jsRotate);
+    obj->SetProperty(runtime, MATRIX_TRANSFORM_POINT, jsTransformPoint);
+    obj->SetProperty(runtime, MATRIX_SET_POLY_TO_POLY, jsSetPolyToPoly);
 }
 
 shared_ptr<JsValue> Copy(const shared_ptr<JsRuntime>& runtime, const shared_ptr<JsValue>& thisObj,

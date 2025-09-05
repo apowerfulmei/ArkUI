@@ -13,7 +13,6 @@
  * limitations under the License.
  */
 #include "bridge/declarative_frontend/engine/jsi/nativeModule/arkts_native_radio_bridge.h"
-#include "bridge/declarative_frontend/engine/jsi/nativeModule/arkts_native_common_bridge.h"
 #include "bridge/declarative_frontend/engine/jsi/nativeModule/arkts_utils.h"
 #include "core/components/checkable/checkable_theme.h"
 #include "core/components_ng/base/frame_node.h"
@@ -24,8 +23,6 @@ constexpr int NUM_0 = 0;
 constexpr int NUM_1 = 1;
 constexpr int NUM_2 = 2;
 constexpr int NUM_3 = 3;
-constexpr int NUM_4 = 4;
-constexpr int PARAM_ARR_LENGTH_1 = 1;
 const char* RADIO_BUILDER_NODEPTR_OF_UINODE = "nodePtr_";
 panda::Local<panda::JSValueRef> JsRadioChangeCallback(panda::JsiRuntimeCallInfo* runtimeCallInfo)
 {
@@ -88,49 +85,23 @@ ArkUINativeModuleValue RadioBridge::SetRadioStyle(ArkUIRuntimeCallInfo* runtimeC
     CHECK_NULL_RETURN(radioTheme, panda::NativePointerRef::New(vm, nullptr));
 
     Color checkedBackgroundColorVal;
-    RefPtr<ResourceObject> backgroundColorResObj;
-    RefPtr<ResourceObject> unBorderColorResObj;
-    RefPtr<ResourceObject> indicatorColorResObj;
-    ArkUIRadioColorStruct resObjStru;
-    bool jsBgColorSetByUser = false;
-    bool jsUnBorderColorSetByUser = false;
-    bool jsIndicatorColorSetByUser = false;
-    auto nodeInfo = ArkTSUtils::MakeNativeNodeInfo(nativeNode);
-
     if (checkedBackgroundColor->IsNull() || checkedBackgroundColor->IsUndefined() ||
-        !ArkTSUtils::ParseJsColorAlpha(vm, checkedBackgroundColor, checkedBackgroundColorVal, backgroundColorResObj,
-        nodeInfo)) {
+        !ArkTSUtils::ParseJsColorAlpha(vm, checkedBackgroundColor, checkedBackgroundColorVal)) {
         checkedBackgroundColorVal = radioTheme->GetActiveColor();
-        resObjStru.checkedBackgroundColor = nullptr;
-    } else {
-        jsBgColorSetByUser = true;
-        resObjStru.checkedBackgroundColor = AceType::RawPtr(backgroundColorResObj);
     }
     Color uncheckedBorderColorVal;
     if (uncheckedBorderColor->IsNull() || uncheckedBorderColor->IsUndefined() ||
-        !ArkTSUtils::ParseJsColorAlpha(vm, uncheckedBorderColor, uncheckedBorderColorVal,
-        unBorderColorResObj, nodeInfo)) {
+        !ArkTSUtils::ParseJsColorAlpha(vm, uncheckedBorderColor, uncheckedBorderColorVal)) {
         uncheckedBorderColorVal = radioTheme->GetInactiveColor();
-        resObjStru.uncheckedBorderColor = nullptr;
-    } else {
-        jsUnBorderColorSetByUser = true;
-        resObjStru.uncheckedBorderColor = AceType::RawPtr(unBorderColorResObj);
     }
     Color indicatorColorVal;
     if (indicatorColor->IsNull() || indicatorColor->IsUndefined() ||
-        !ArkTSUtils::ParseJsColorAlpha(vm, indicatorColor, indicatorColorVal, indicatorColorResObj, nodeInfo)) {
+        !ArkTSUtils::ParseJsColorAlpha(vm, indicatorColor, indicatorColorVal)) {
         indicatorColorVal = radioTheme->GetPointColor();
-        resObjStru.indicatorColor = nullptr;
-    } else {
-        jsIndicatorColorSetByUser = true;
-        resObjStru.indicatorColor = AceType::RawPtr(indicatorColorResObj);
     }
 
-    GetArkUINodeModifiers()->getRadioModifier()->setRadioColorSetByUser(
-        nativeNode, jsBgColorSetByUser, jsUnBorderColorSetByUser, jsIndicatorColorSetByUser);
-    GetArkUINodeModifiers()->getRadioModifier()->setRadioStylePtr(nativeNode,
-        checkedBackgroundColorVal.GetValue(), uncheckedBorderColorVal.GetValue(),
-        indicatorColorVal.GetValue(), resObjStru);
+    GetArkUINodeModifiers()->getRadioModifier()->setRadioStyle(nativeNode,
+        checkedBackgroundColorVal.GetValue(), uncheckedBorderColorVal.GetValue(), indicatorColorVal.GetValue());
     return panda::JSValueRef::Undefined(vm);
 }
 
@@ -288,10 +259,10 @@ ArkUINativeModuleValue RadioBridge::SetRadioPadding(ArkUIRuntimeCallInfo *runtim
     Local<JSValueRef> leftArg = runtimeCallInfo->GetCallArgRef(4);   //4 is left arguments
     auto nativeNode = nodePtr(nodeArg->ToNativePointer(vm)->Value());
 
-    struct ArkUISizeType top = { 0.0, static_cast<int8_t>(DimensionUnit::VP), nullptr };
-    struct ArkUISizeType right = { 0.0, static_cast<int8_t>(DimensionUnit::VP), nullptr };
-    struct ArkUISizeType bottom = { 0.0, static_cast<int8_t>(DimensionUnit::VP), nullptr };
-    struct ArkUISizeType left = { 0.0, static_cast<int8_t>(DimensionUnit::VP), nullptr };
+    struct ArkUISizeType top = { 0.0, static_cast<int8_t>(DimensionUnit::VP) };
+    struct ArkUISizeType right = { 0.0, static_cast<int8_t>(DimensionUnit::VP) };
+    struct ArkUISizeType bottom = { 0.0, static_cast<int8_t>(DimensionUnit::VP) };
+    struct ArkUISizeType left = { 0.0, static_cast<int8_t>(DimensionUnit::VP) };
 
     CalcDimension topDimen(0, DimensionUnit::VP);
     CalcDimension rightDimen(0, DimensionUnit::VP);
@@ -390,106 +361,6 @@ ArkUINativeModuleValue RadioBridge::SetContentModifierBuilder(ArkUIRuntimeCallIn
             CHECK_NULL_RETURN(frameNode, nullptr);
             return AceType::Claim(frameNode);
         });
-    return panda::JSValueRef::Undefined(vm);
-}
-
-ArkUINativeModuleValue RadioBridge::SetRadioOptions(ArkUIRuntimeCallInfo* runtimeCallInfo)
-{
-    EcmaVM* vm = runtimeCallInfo->GetVM();
-    CHECK_NULL_RETURN(vm, panda::JSValueRef::Undefined(vm));
-    CHECK_EQUAL_RETURN(runtimeCallInfo->GetArgsNumber() != NUM_4, true, panda::JSValueRef::Undefined(vm));
-    Local<JSValueRef> firstArg = runtimeCallInfo->GetCallArgRef(NUM_0);
-    Local<JSValueRef> valueArg = runtimeCallInfo->GetCallArgRef(NUM_1);
-    Local<JSValueRef> groupArg = runtimeCallInfo->GetCallArgRef(NUM_2);
-    Local<JSValueRef> indicatorTypeArg = runtimeCallInfo->GetCallArgRef(NUM_3);
-    std::string value;
-    std::string group;
-    auto indicatorType = RadioIndicatorType::TICK;
-
-    if (!valueArg.IsNull() && valueArg->IsString(vm)) {
-        value = valueArg->ToString(vm)->ToString(vm);
-    }
-    if (!groupArg.IsNull() && groupArg->IsString(vm)) {
-        group = groupArg->ToString(vm)->ToString(vm);
-    }
-    if (!indicatorTypeArg.IsNull() && indicatorTypeArg->IsNumber()) {
-        indicatorType = static_cast<RadioIndicatorType>(indicatorTypeArg->Int32Value(vm));
-        if (indicatorType == RadioIndicatorType::CUSTOM) {
-            indicatorType = RadioIndicatorType::TICK;
-        }
-    }
-    if (!firstArg.IsNull() && !firstArg->IsUndefined()) {
-        auto pointer = firstArg->ToNativePointer(vm);
-        CHECK_EQUAL_RETURN(pointer.IsEmpty(), true, panda::JSValueRef::Undefined(vm));
-        auto nativeNode = nodePtr(pointer->Value());
-        CHECK_NULL_RETURN(nativeNode, panda::JSValueRef::Undefined(vm));
-        GetArkUINodeModifiers()->getRadioModifier()->setRadioOptions(
-            nativeNode, value.c_str(), group.c_str(), static_cast<int32_t>(indicatorType));
-    }
-    return panda::JSValueRef::Undefined(vm);
-}
-
-ArkUINativeModuleValue RadioBridge::ResetRadioOnChange(ArkUIRuntimeCallInfo* runtimeCallInfo)
-{
-    EcmaVM* vm = runtimeCallInfo->GetVM();
-    CHECK_NULL_RETURN(vm, panda::NativePointerRef::New(vm, nullptr));
-    Local<JSValueRef> nativeNodeArg = runtimeCallInfo->GetCallArgRef(NUM_0);
-    auto nativeNode = nodePtr(nativeNodeArg->ToNativePointer(vm)->Value());
-    GetArkUINodeModifiers()->getRadioModifier()->resetRadioOnChange(nativeNode);
-    return panda::JSValueRef::Undefined(vm);
-}
-
-ArkUINativeModuleValue RadioBridge::SetRadioOnChange(ArkUIRuntimeCallInfo* runtimeCallInfo)
-{
-    EcmaVM* vm = runtimeCallInfo->GetVM();
-    CHECK_NULL_RETURN(vm, panda::NativePointerRef::New(vm, nullptr));
-    uint32_t argsNumber = runtimeCallInfo->GetArgsNumber();
-    if (argsNumber != NUM_2) {
-        return panda::JSValueRef::Undefined(vm);
-    }
-    Local<JSValueRef> nativeNodeArg = runtimeCallInfo->GetCallArgRef(NUM_0);
-    Local<JSValueRef> callbackArg = runtimeCallInfo->GetCallArgRef(NUM_1);
-    auto nativeNode = nodePtr(nativeNodeArg->ToNativePointer(vm)->Value());
-    auto frameNode = reinterpret_cast<FrameNode*>(nativeNode);
-    CHECK_NULL_RETURN(frameNode, panda::NativePointerRef::New(vm, nullptr));
-    if (callbackArg->IsUndefined() || callbackArg->IsNull() || !callbackArg->IsFunction(vm)) {
-        GetArkUINodeModifiers()->getRadioModifier()->resetRadioOnChange(nativeNode);
-        return panda::JSValueRef::Undefined(vm);
-    }
-    panda::Local<panda::FunctionRef> func = callbackArg->ToObject(vm);
-    std::function<void(bool)> callback = [vm, frameNode, func = panda::CopyableGlobal(vm, func)](bool isOnchange) {
-        panda::LocalScope pandaScope(vm);
-        panda::TryCatch trycatch(vm);
-        PipelineContext::SetCallBackNode(AceType::WeakClaim(frameNode));
-        panda::Local<panda::JSValueRef> params[PARAM_ARR_LENGTH_1] = { panda::BooleanRef::New(vm, isOnchange) };
-        func->Call(vm, func.ToLocal(), params, PARAM_ARR_LENGTH_1);
-    };
-    GetArkUINodeModifiers()->getRadioModifier()->setRadioOnChange(nativeNode, reinterpret_cast<void*>(&callback));
-    return panda::JSValueRef::Undefined(vm);
-}
-
-ArkUINativeModuleValue RadioBridge::SetMargin(ArkUIRuntimeCallInfo* runtimeCallInfo)
-{
-    EcmaVM* vm = runtimeCallInfo->GetVM();
-    CHECK_NULL_RETURN(vm, panda::JSValueRef::Undefined(vm));
-    Local<JSValueRef> firstArg = runtimeCallInfo->GetCallArgRef(0);
-    CHECK_NULL_RETURN(firstArg->IsNativePointer(vm), panda::JSValueRef::Undefined(vm));
-    CommonBridge::SetMargin(runtimeCallInfo);
-    auto nativeNode = nodePtr(firstArg->ToNativePointer(vm)->Value());
-    CHECK_NULL_RETURN(nativeNode, panda::JSValueRef::Undefined(vm));
-    GetArkUINodeModifiers()->getRadioModifier()->setIsUserSetMargin(nativeNode);
-    return panda::JSValueRef::Undefined(vm);
-}
-
-ArkUINativeModuleValue RadioBridge::ResetMargin(ArkUIRuntimeCallInfo* runtimeCallInfo)
-{
-    EcmaVM* vm = runtimeCallInfo->GetVM();
-    CHECK_NULL_RETURN(vm, panda::JSValueRef::Undefined(vm));
-    Local<JSValueRef> firstArg = runtimeCallInfo->GetCallArgRef(0);
-    CHECK_NULL_RETURN(firstArg->IsNativePointer(vm), panda::JSValueRef::Undefined(vm));
-    CommonBridge::ResetMargin(runtimeCallInfo);
-    auto nativeNode = nodePtr(firstArg->ToNativePointer(vm)->Value());
-    GetArkUINodeModifiers()->getRadioModifier()->setIsUserSetMargin(nativeNode);
     return panda::JSValueRef::Undefined(vm);
 }
 }

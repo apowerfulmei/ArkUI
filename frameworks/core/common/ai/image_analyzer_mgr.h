@@ -19,23 +19,18 @@
 #include "image_analyzer_loader.h"
 
 #include "base/utils/macros.h"
-#include "core/event/key_event.h"
 
 namespace OHOS::Ace {
 
-class ACE_FORCE_EXPORT ImageAnalyzerMgr final : public ImageAnalyzerInterface {
+class ACE_EXPORT ImageAnalyzerMgr final : public ImageAnalyzerInterface {
 public:
     static ImageAnalyzerMgr& GetInstance();
 
     bool IsImageAnalyzerSupported() override;
     void BuildNodeFunc(void* pixelMap, void* config,
         ImageAnalyzerInnerConfig* uiConfig, void** overlayData) override;
-    void BuildNodeFunc(std::string uri, void* pixelMap, int frameTimestamp, void* config,
-        ImageAnalyzerInnerConfig* uiConfig, void** overlayData) override;
     void UpdateImage(void** overlayData,  void* pixelMap, void* config,
         ImageAnalyzerInnerConfig* uiConfig) override;
-    void UpdateImage(void** overlayData, std::string uri, void* pixelMap, int frameTimestamp,
-        void* config, ImageAnalyzerInnerConfig* uiConfig) override;
     void UpdateConfig(void** overlayData, void* config) override;
     void UpdateInnerConfig(void** overlayData, ImageAnalyzerInnerConfig* config) override;
     void Release(void** overlayData) override;
@@ -43,7 +38,6 @@ public:
     void UpdateOverlayStatus(void** overlayData, ImageAnalyzerInnerConfig* config) override;
     void UpdateOverlayActiveStatus(void** overlayData, bool status) override;
     void UpdateAIButtonConfig(void** overlayData, AIButtonConfig* config) override;
-    void UpdateKeyEvent(void** overlayData, void* keyEvent) override;
 
 private:
     ImageAnalyzerMgr();

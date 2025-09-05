@@ -19,7 +19,6 @@
 #endif
 
 #include "bridge/common/utils/utils.h"
-#include "bridge/declarative_frontend/engine/functions/js_common_utils.h"
 #include "core/common/container.h"
 #include "core/components/common/properties/text_style.h"
 #include "core/components_ng/base/view_abstract_model.h"
@@ -30,11 +29,10 @@ using OHOS::Ace::NG::LocationButtonModelNG;
 using OHOS::Ace::NG::SecurityComponentTheme;
 
 namespace OHOS::Ace::Framework {
-using namespace OHOS::Ace::Framework::CommonUtils;
 bool JSLocationButton::ParseComponentStyle(const JSCallbackInfo& info,
     LocationButtonLocationDescription& text, LocationButtonIconStyle& icon, int32_t& bg)
 {
-    if ((info.Length() < 1) || (!info[0]->IsObject())) {
+    if (!info[0]->IsObject()) {
         return false;
     }
 
@@ -69,10 +67,8 @@ bool JSLocationButton::ParseComponentStyle(const JSCallbackInfo& info,
     value = paramObject->GetProperty("buttonType");
     if (value->IsNumber()) {
         bg = value->ToNumber<int32_t>();
-        if ((bg != static_cast<int32_t>(ButtonType::NORMAL)) &&
-            (bg != static_cast<int32_t>(ButtonType::CIRCLE)) &&
-            (bg != static_cast<int32_t>(ButtonType::CAPSULE)) &&
-            (bg != static_cast<int32_t>(ButtonType::ROUNDED_RECTANGLE))) {
+        if ((bg < static_cast<int32_t>(ButtonType::NORMAL)) ||
+            (bg > static_cast<int32_t>(ButtonType::CIRCLE))) {
             return false;
         }
     } else {
@@ -102,15 +98,10 @@ void JsLocationButtonClickFunction::Execute(GestureEvent& info)
     JSRef<JSObject> clickEventParam = JSRef<JSObject>::New();
     Offset globalOffset = info.GetGlobalLocation();
     Offset localOffset = info.GetLocalLocation();
-    Offset globalDisplayOffset = info.GetGlobalDisplayLocation();
     clickEventParam->SetProperty<double>("screenX", PipelineBase::Px2VpWithCurrentDensity(globalOffset.GetX()));
     clickEventParam->SetProperty<double>("screenY", PipelineBase::Px2VpWithCurrentDensity(globalOffset.GetY()));
     clickEventParam->SetProperty<double>("x", PipelineBase::Px2VpWithCurrentDensity(localOffset.GetX()));
     clickEventParam->SetProperty<double>("y", PipelineBase::Px2VpWithCurrentDensity(localOffset.GetY()));
-    clickEventParam->SetProperty<double>(
-        "globalDisplayX", PipelineBase::Px2VpWithCurrentDensity(globalDisplayOffset.GetX()));
-    clickEventParam->SetProperty<double>(
-        "globalDisplayY", PipelineBase::Px2VpWithCurrentDensity(globalDisplayOffset.GetY()));
     clickEventParam->SetProperty<double>("timestamp",
         static_cast<double>(info.GetTimeStamp().time_since_epoch().count()));
     clickEventParam->SetProperty<double>("source", static_cast<int32_t>(info.GetSourceDevice()));
@@ -122,30 +113,23 @@ void JsLocationButtonClickFunction::Execute(GestureEvent& info)
     clickEventParam->SetPropertyObject("target", target);
 
     int32_t res = static_cast<int32_t>(SecurityComponentHandleResult::CLICK_GRANT_FAILED);
-    JSRef<JSObject> errorMessage = JSRef<JSObject>::New();
 #ifdef SECURITY_COMPONENT_ENABLE
     auto secEventValue = info.GetSecCompHandleEvent();
     if (secEventValue != nullptr) {
         res = secEventValue->GetInt("handleRes", res);
-        int32_t code = static_cast<int32_t>(SecurityComponentErrorCode::SUCCESS);
-        std::string message;
         if (res == static_cast<int32_t>(SecurityComponentHandleResult::DROP_CLICK)) {
             return;
         }
-        code = secEventValue->GetInt("code", code);
-        errorMessage->SetProperty<int32_t>("code", code);
-        message = secEventValue->GetString("message", message);
-        errorMessage->SetProperty<std::string>("message", message);
     }
 #endif
     JSRef<JSVal> errorParam = JSRef<JSVal>::Make(ToJSValue(res));
-    JSRef<JSVal> params[] = { clickEventParam, errorParam, errorMessage };
-    JsFunction::ExecuteJS(3, params); // 3 means three params.
+    JSRef<JSVal> params[] = { clickEventParam, errorParam };
+    JsFunction::ExecuteJS(2, params);
 }
 
 void JSLocationButton::JsOnClick(const JSCallbackInfo& info)
 {
-    if ((info.Length() < 1) || (!info[0]->IsFunction())) {
+    if (!info[0]->IsFunction()) {
         return;
     }
     auto jsOnClickFunc = AceType::MakeRefPtr<JsLocationButtonClickFunction>(JSRef<JSFunc>::Cast(info[0]));
@@ -202,13 +186,6 @@ void JSLocationButton::JSBind(BindingTarget globalObj)
     JSClass<JSLocationButton>::StaticMethod("alignRules", &JSViewAbstract::JsAlignRules);
     JSClass<JSLocationButton>::StaticMethod("id", &JSViewAbstract::JsId);
     JSClass<JSLocationButton>::StaticMethod("chainMode", &JSViewAbstract::JsChainMode);
-    JSClass<JSLocationButton>::StaticMethod("maxFontScale", &JSSecButtonBase::SetMaxFontScale);
-    JSClass<JSLocationButton>::StaticMethod("minFontScale", &JSSecButtonBase::SetMinFontScale);
-    JSClass<JSLocationButton>::StaticMethod("maxLines", &JSSecButtonBase::SetMaxLines);
-    JSClass<JSLocationButton>::StaticMethod("maxFontSize", &JSSecButtonBase::SetMaxFontSize);
-    JSClass<JSLocationButton>::StaticMethod("minFontSize", &JSSecButtonBase::SetMinFontSize);
-    JSClass<JSLocationButton>::StaticMethod("heightAdaptivePolicy", &JSSecButtonBase::SetHeightAdaptivePolicy);
-    JSClass<JSLocationButton>::StaticMethod("enabled", &JSViewAbstract::JsEnabled);
     JSClass<JSLocationButton>::Bind<>(globalObj);
 }
 } // namespace OHOS::Ace::Framework

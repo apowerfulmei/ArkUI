@@ -104,8 +104,6 @@ public:
 
     void ModalInteractiveDismiss();
 
-    void BeforeCreateLayoutWrapper() override;
-
     void UpdateOnDisappear(std::function<void()>&& onDisappear) {
         onDisappear_ = std::move(onDisappear);
         isExecuteOnDisappear_ = false;
@@ -123,7 +121,12 @@ public:
         onWillDisappear_ = std::move(onWillDisappear);
     }
 
-    void OnWillDisappear();
+    void OnWillDisappear()
+    {
+        if (onWillDisappear_) {
+            onWillDisappear_();
+        }
+    }
 
     void UpdateOnAppear(std::function<void()>&& onAppear)
     {
@@ -194,25 +197,7 @@ public:
         return !isUIExtension_;
     }
 
-    void RegisterModalBgColorResFunc(const RefPtr<NG::FrameNode>& modalNode,
-        NG::ModalStyle& modalStyle);
-
     bool TriggerAutoSaveWhenInvisible() override
-    {
-        return true;
-    }
-
-    void SetEnableSafeArea(bool enableSafeArea)
-    {
-        enableSafeArea_ = enableSafeArea;
-    }
-
-    bool GetEnableSafeArea() const
-    {
-        return enableSafeArea_;
-    }
-
-    bool IsEnableChildrenMatchParent() override
     {
         return true;
     }
@@ -231,7 +216,6 @@ private:
     std::function<void()> onWillDisappear_;
     std::function<void()> onAppear_;
     bool isExecuteOnDisappear_ = false;
-    bool enableSafeArea_ = false;
 
     ACE_DISALLOW_COPY_AND_MOVE(ModalPresentationPattern);
 };

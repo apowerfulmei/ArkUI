@@ -25,7 +25,6 @@
 #include "core/common/container.h"
 #include "core/common/container_scope.h"
 #include "core/components/common/properties/animation_option.h"
-#include "core/components/common/properties/state_attributes.h"
 #include "core/components_ng/base/frame_node.h"
 #include "core/components_ng/base/ui_node.h"
 #include "core/components_ng/event/state_style_manager.h"
@@ -177,29 +176,9 @@
     } while (false)
 
 namespace OHOS::Ace::NG {
-using PrebuildFunc = std::function<void()>;
-
-enum class PrebuildCompCmdType {
-    FRONT = 0,
-    BACK,
-};
-
-struct PrebuildCompCmd {
-    PrebuildCompCmdType commandType;
-    const char* commandName = "";
-    PrebuildFunc prebuildFunc;
-
-    PrebuildCompCmd(PrebuildCompCmdType commandType) : commandType(commandType) {}
-    PrebuildCompCmd(PrebuildCompCmdType commandType, const char* commandName,
-        PrebuildFunc& prebuildFunc) : commandType(commandType), commandName(commandName), prebuildFunc(prebuildFunc) {}
-};
-
 class ACE_EXPORT ViewStackProcessor final {
 public:
     friend class ScopedViewStackProcessor;
-#ifdef ACE_STATIC
-    friend class InteropViewStackProcessor;
-#endif
 
     ACE_FORCE_EXPORT static ViewStackProcessor* GetInstance();
     ~ViewStackProcessor() = default;
@@ -273,13 +252,10 @@ public:
 
    // Get main component include composed component created by js view.
     const RefPtr<UINode>& GetMainElementNode() const;
-    void ApplyParentThemeScopeId(const RefPtr<UINode>& element);
+    
     // create wrappingComponentsMap and the component to map and then Push
     // the map to the render component stack.
     ACE_FORCE_EXPORT void Push(const RefPtr<UINode>& element, bool isCustomView = false);
-#ifdef ACE_STATIC
-    ACE_FORCE_EXPORT void PushPtr(int64_t elementPtr);
-#endif
 
     // Wrap the components map for the stack top and then pop the stack.
     // Add the wrapped component has child of the new stack top's main component.
@@ -464,36 +440,6 @@ public:
         return customTitleNode_;
     }
 
-    void SetCustomWindowMaskNode(const RefPtr<UINode>& customWindowMaskNode)
-    {
-        customWindowMaskNode_ = customWindowMaskNode;
-    }
-
-    const RefPtr<UINode> GetCustomWindowMaskNode() const
-    {
-        return customWindowMaskNode_;
-    }
-
-    void SetCustomButtonNode(const RefPtr<UINode>& customButtonNode)
-    {
-        customButtonNode_ = customButtonNode;
-    }
-
-    const RefPtr<UINode> GetCustomButtonNode() const
-    {
-        return customButtonNode_;
-    }
-
-    void SetCustomAppBarNode(const RefPtr<UINode>& customNode)
-    {
-        customAppBarNode_ = customNode;
-    }
-
-    const RefPtr<UINode> GetCustomAppBarNode() const
-    {
-        return customAppBarNode_;
-    }
-
     void SetIsBuilderNode(bool isBuilderNode)
     {
         isBuilderNode_ = isBuilderNode;
@@ -523,39 +469,6 @@ public:
     {
         return elementsStack_.empty();
     }
-
-    void SetIsPrebuilding(bool isPrebuilding)
-    {
-        isPrebuilding_ = isPrebuilding;
-    }
-
-    bool CheckIsPrebuildTimeout()
-    {
-        if (!isPrebuildTimeout_) {
-            isPrebuildTimeout_ = prebuildDeadline_ > 0 && GetSysTimestamp() > prebuildDeadline_;
-        }
-        return isPrebuildTimeout_;
-    }
-
-    bool IsPrebuilding() const
-    {
-        return isPrebuilding_;
-    }
-
-    std::queue<PrebuildCompCmd>& GetPrebuildComponentCmds()
-    {
-        return PrebuildCompCmds_;
-    }
-
-    void PushPrebuildCompCmd()
-    {
-        PrebuildCompCmds_.emplace(PrebuildCompCmdType::FRONT);
-    }
-
-    void PushPrebuildCompCmd(const char* commandName, PrebuildFunc prebuildFunc)
-    {
-        PrebuildCompCmds_.emplace(PrebuildCompCmdType::BACK, commandName, prebuildFunc);
-    }
 private:
     ViewStackProcessor();
 
@@ -570,9 +483,6 @@ private:
     RefPtr<FrameNode> currentPage_;
 
     RefPtr<UINode> customTitleNode_;
-    RefPtr<UINode> customButtonNode_;
-    RefPtr<UINode> customAppBarNode_;
-    RefPtr<UINode> customWindowMaskNode_;
 
     RefPtr<GestureProcessor> gestureStack_;
 
@@ -584,10 +494,6 @@ private:
     std::optional<UIState> visualState_ = std::nullopt;
     bool isBuilderNode_ = false;
     bool isExportTexture_ = false;
-    bool isPrebuilding_ = false;
-    bool isPrebuildTimeout_ = false;
-    int64_t prebuildDeadline_ = 0;
-    std::queue<PrebuildCompCmd> PrebuildCompCmds_;
     int32_t containerId_ = OHOS::Ace::INSTANCE_ID_UNDEFINED;
     int32_t restoreInstanceId_ = OHOS::Ace::INSTANCE_ID_UNDEFINED;
 
@@ -606,20 +512,12 @@ private:
 class ACE_FORCE_EXPORT ScopedViewStackProcessor final {
 public:
     ScopedViewStackProcessor(int32_t containerId = OHOS::Ace::INSTANCE_ID_UNDEFINED);
-    ScopedViewStackProcessor(std::unique_ptr<ViewStackProcessor>& instance,
-        int32_t containerId = OHOS::Ace::INSTANCE_ID_UNDEFINED);
     ~ScopedViewStackProcessor();
-    void SwapViewStackProcessor(std::unique_ptr<ViewStackProcessor>& instance);
 
 private:
-    void Init(int32_t containerId);
     std::unique_ptr<ViewStackProcessor> instance_;
 
     ACE_DISALLOW_COPY_AND_MOVE(ScopedViewStackProcessor);
 };
-
-#ifdef ACE_STATIC
-class InteropViewStackProcessor;
-#endif
 } // namespace OHOS::Ace::NG
 #endif // FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_BASE_VIEW_STACK_PROCESSOR_H

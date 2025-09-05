@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024-2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -18,6 +18,7 @@
 
 #include "core/components_ng/pattern/waterflow/layout/top_down/water_flow_layout_info.h"
 #include "core/components_ng/pattern/waterflow/layout/water_flow_layout_algorithm_base.h"
+#include "core/components_ng/pattern/waterflow/water_flow_layout_property.h"
 
 namespace OHOS::Ace::NG {
 // inherited by SegmentedLayout and SWLayout
@@ -25,12 +26,6 @@ class WaterFlowSegmentLayoutBase : public WaterFlowLayoutBase {
     DECLARE_ACE_TYPE(WaterFlowSegmentLayoutBase, WaterFlowLayoutBase);
 
 protected:
-    void InitEnv(LayoutWrapper* host)
-    {
-        wrapper_ = host;
-        props_ = DynamicCast<WaterFlowLayoutProperty>(host->GetLayoutProperty());
-    }
-
     /**
      * @brief init member variables for segmented WaterFlow with section info.
      *
@@ -46,18 +41,7 @@ protected:
      */
     static bool IsSectionValid(const RefPtr<WaterFlowLayoutInfoBase>& info, int32_t childrenCnt);
 
-    /**
-     * @return true if the item is a cache item outside viewport.
-     */
-    inline bool IsCache(const RefPtr<WaterFlowLayoutInfoBase>& info, int32_t itemIdx) const
-    {
-        return !props_->GetShowCachedItemsValue(false) && (itemIdx < info->startIndex_ || itemIdx > info->endIndex_);
-    }
-
-    virtual void MeasureRemainingLazyChild(int32_t startIdx, int32_t endIdx, bool forward) = 0;
-
     LayoutWrapper* wrapper_ {};
-    RefPtr<WaterFlowLayoutProperty> props_;
     Axis axis_ = Axis::VERTICAL;
     // [segmentIdx, [crossIdx, item's width]]
     std::vector<std::vector<float>> itemsCrossSize_;
@@ -78,12 +62,12 @@ public:
 
     void Layout(LayoutWrapper* layoutWrapper) override;
 
-    bool PreloadItem(LayoutWrapper* host, int32_t itemIdx, int64_t deadline) override;
-
-    bool MeasureInNextFrame() const override
+    void SetCanOverScroll(bool value) override
     {
-        return info_->measureInNextFrame_;
+        overScroll_ = value;
     }
+
+    bool PreloadItem(LayoutWrapper* host, int32_t itemIdx, int64_t deadline) override;
 
 private:
     /**
@@ -141,13 +125,14 @@ private:
     /**
      * @brief Helper to measure a single FlowItems.
      *
+     * @param props LayoutProps.
      * @param idx index of the FlowItem.
      * @param crossIdx column (when vertical) index of the target FlowItem.
      * @param userDefMainSize user-defined main-axis size of the FlowItem.
      * @return LayoutWrapper of the FlowItem.
      */
-    RefPtr<LayoutWrapper> MeasureItem(
-        int32_t idx, std::pair<int32_t, float> position, float userDefMainSize, bool isCache) const;
+    RefPtr<LayoutWrapper> MeasureItem(const RefPtr<WaterFlowLayoutProperty>& props, int32_t idx, int32_t crossIdx,
+        float userDefMainSize, bool isCache) const;
 
     /**
      * @brief Layout a FlowItem at [idx].
@@ -178,21 +163,18 @@ private:
 
     void SyncPreloadItem(LayoutWrapper* host, int32_t itemIdx) override;
 
-    void MeasureRemainingLazyChild(int32_t startIdx, int32_t endIdx, bool forward = true) override;
-
-    void MeasureLazyChild(int32_t startIdx, int32_t endIdx);
-
-    bool IsForWard() const;
-
     RefPtr<WaterFlowSections> sections_;
 
     // WaterFlow node's main-axis length
     float mainSize_ = 0.0f;
 
     // offset to apply after a ResetAndJump
-    mutable std::optional<float> postJumpOffset_;
+    std::optional<float> postJumpOffset_;
 
     RefPtr<WaterFlowLayoutInfo> info_;
+
+    // true if WaterFlow can be overScrolled
+    bool overScroll_ = false;
 
     ACE_DISALLOW_COPY_AND_MOVE(WaterFlowSegmentedLayout);
 };

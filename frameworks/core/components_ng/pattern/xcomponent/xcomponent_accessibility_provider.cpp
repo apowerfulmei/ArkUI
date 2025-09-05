@@ -24,12 +24,15 @@ namespace OHOS::Ace::NG {
 namespace {
 constexpr int32_t SEND_EVENT_FAILED = -1;
 
-ArkUI_AccessibilityProvider* GetAccessbilityProvider(
+std::shared_ptr<ArkUI_AccessibilityProvider> GetAccessbilityProvider(
     const WeakPtr<XComponentPattern>& weakPattern)
 {
     auto pattern = weakPattern.Upgrade();
     CHECK_NULL_RETURN(pattern, nullptr);
-    return pattern->GetNativeProvider();
+    auto pair = pattern->GetNativeXComponent();
+    auto nativeXComponentImpl = pair.first;
+    CHECK_NULL_RETURN(nativeXComponentImpl, nullptr);
+    return nativeXComponentImpl->GetAccessbilityProvider();
 }
 }
 int32_t XComponentAccessibilityProvider::FindAccessibilityNodeInfosById(
@@ -41,7 +44,9 @@ int32_t XComponentAccessibilityProvider::FindAccessibilityNodeInfosById(
     CHECK_NULL_RETURN(accessbilityProvider, errorCode);
     int32_t ret = accessbilityProvider->FindAccessibilityNodeInfosById(
         elementId, mode, requestId, infos);
-    CHECK_EQUAL_RETURN(ret, AccessibilityProviderOperatorErrorCode::NOT_REGISTERED, errorCode);
+    if (ret == AccessibilityProviderOperatorErrorCode::NOT_REGISTERED) {
+        return errorCode;
+    }
     return ret;
 }
 
@@ -54,7 +59,9 @@ int32_t XComponentAccessibilityProvider::FindAccessibilityNodeInfosByText(
     CHECK_NULL_RETURN(accessbilityProvider, errorCode);
     int32_t ret = accessbilityProvider->FindAccessibilityNodeInfosByText(
         elementId, text, requestId, infos);
-    CHECK_EQUAL_RETURN(ret, AccessibilityProviderOperatorErrorCode::NOT_REGISTERED, errorCode);
+    if (ret == AccessibilityProviderOperatorErrorCode::NOT_REGISTERED) {
+        return errorCode;
+    }
     return ret;
 }
 
@@ -67,7 +74,9 @@ int32_t XComponentAccessibilityProvider::FindFocusedAccessibilityNode(
     CHECK_NULL_RETURN(accessbilityProvider, errorCode);
     int32_t ret = accessbilityProvider->FindFocusedAccessibilityNode(
         elementId, focusType, requestId, info);
-    CHECK_EQUAL_RETURN(ret, AccessibilityProviderOperatorErrorCode::NOT_REGISTERED, errorCode);
+    if (ret == AccessibilityProviderOperatorErrorCode::NOT_REGISTERED) {
+        return errorCode;
+    }
     return ret;
 }
 
@@ -80,7 +89,9 @@ int32_t XComponentAccessibilityProvider::FindNextFocusAccessibilityNode(
     CHECK_NULL_RETURN(accessbilityProvider, errorCode);
     int32_t ret = accessbilityProvider->FindNextFocusAccessibilityNode(
         elementId, direction, requestId, info);
-    CHECK_EQUAL_RETURN(ret, AccessibilityProviderOperatorErrorCode::NOT_REGISTERED, errorCode);
+    if (ret == AccessibilityProviderOperatorErrorCode::NOT_REGISTERED) {
+        return errorCode;
+    }
     return ret;
 }
 
@@ -93,7 +104,9 @@ int32_t XComponentAccessibilityProvider::ExecuteAccessibilityAction(
     CHECK_NULL_RETURN(accessbilityProvider, errorCode);
     int32_t ret = accessbilityProvider->ExecuteAccessibilityAction(
         elementId, action, requestId, actionArguments);
-    CHECK_EQUAL_RETURN(ret, AccessibilityProviderOperatorErrorCode::NOT_REGISTERED, errorCode);
+    if (ret == AccessibilityProviderOperatorErrorCode::NOT_REGISTERED) {
+        return errorCode;
+    }
     return ret;
 }
 
@@ -103,7 +116,9 @@ int32_t XComponentAccessibilityProvider::ClearFocusedAccessibilityNode()
     auto accessbilityProvider = GetAccessbilityProvider(weakPattern_);
     CHECK_NULL_RETURN(accessbilityProvider, errorCode);
     int32_t ret = accessbilityProvider->ClearFocusedAccessibilityNode();
-    CHECK_EQUAL_RETURN(ret, AccessibilityProviderOperatorErrorCode::NOT_REGISTERED, errorCode);
+    if (ret == AccessibilityProviderOperatorErrorCode::NOT_REGISTERED) {
+        return errorCode;
+    }
     return ret;
 }
 
@@ -115,7 +130,9 @@ int32_t XComponentAccessibilityProvider::GetAccessibilityNodeCursorPosition(
     CHECK_NULL_RETURN(accessbilityProvider, errorCode);
     int32_t ret = accessbilityProvider->GetAccessibilityNodeCursorPosition(
         elementId, requestId, cursorPosition);
-    CHECK_EQUAL_RETURN(ret, AccessibilityProviderOperatorErrorCode::NOT_REGISTERED, errorCode);
+    if (ret == AccessibilityProviderOperatorErrorCode::NOT_REGISTERED) {
+        return errorCode;
+    }
     return ret;
 }
 

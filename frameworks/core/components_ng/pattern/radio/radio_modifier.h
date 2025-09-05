@@ -44,7 +44,6 @@ enum class TouchHoverAnimationType {
     PRESS,
     HOVER_TO_PRESS,
     PRESS_TO_HOVER,
-    FOCUS,
 };
 
 class RadioModifier : public ContentModifier {
@@ -67,16 +66,14 @@ public:
         }
     }
 
-    void UpdateAnimatableProperty(const RefPtr<FrameNode>& host);
-    void UpdateTotalScaleOnAnimatable(bool isCheck, const AnimationOption& delayOption,
-        const AnimationOption& halfDurationOption, const RefPtr<FrameNode>& host);
-    void UpdateIsOnAnimatableProperty(bool isCheck, const RefPtr<FrameNode>& host);
-    void UpdateIndicatorAnimation(bool isCheck, const RefPtr<FrameNode>& host);
-    void SetBoardColor(
-        LinearColor color, int32_t duration, const RefPtr<CubicCurve>& curve, const RefPtr<FrameNode>& host);
+    void UpdateAnimatableProperty();
+    void UpdateTotalScaleOnAnimatable(
+        bool isCheck, const AnimationOption& delayOption, const AnimationOption& halfDurationOption);
+    void UpdateIsOnAnimatableProperty(bool isCheck);
+    void UpdateIndicatorAnimation(bool isCheck);
+    void SetBoardColor(LinearColor color, int32_t duratuion, const RefPtr<CubicCurve>& curve);
     void InitializeParam();
     void PaintRadio(RSCanvas& canvas, bool checked, const SizeF& contentSize, const OffsetF& contentOffset) const;
-    void DrawFocusBoard(RSCanvas& canvas, const SizeF& contentSize, const OffsetF& contentOffset) const;
     void PaintIndicator(RSCanvas& canvas, bool checked, const SizeF& contentSize, const OffsetF& contentOffset) const;
     void PaintUnselectedIndicator(RSCanvas& canvas, float outCircleRadius, float centerX, float centerY) const;
     void DrawTouchAndHoverBoard(RSCanvas& canvas, const SizeF& contentSize, const OffsetF& contentOffset) const;
@@ -203,20 +200,6 @@ public:
         }
     }
 
-    void SetIsFocused(bool isFocused)
-    {
-        if (isFocused_) {
-            isFocused_->Set(isFocused);
-        }
-    }
-
-    void SetIsUserSetUncheckBorderColor(bool isUserSet)
-    {
-        if (isUserSetUncheckedBorderColor_) {
-            isUserSetUncheckedBorderColor_->Set(isUserSet);
-        }
-    }
-
 private:
     float shadowWidth_ = 1.5f;
     float borderWidth_ = 1.5f;
@@ -224,11 +207,6 @@ private:
     Color shadowColor_;
     Color clickEffectColor_;
     Color hoverColor_;
-    Color focusedBgUnchecked_;
-    Color focusedRingUnchecked_;
-    Color focusedBgColor_;
-    Dimension sizeFocused_;
-    Dimension sizeHover_;
     Dimension hotZoneHorizontalPadding_;
     Dimension defaultPadding_;
     float hoverDuration_ = 0.0f;
@@ -241,7 +219,6 @@ private:
     RefPtr<PropertyBool> enabled_;
     RefPtr<PropertyBool> isCheck_;
     RefPtr<PropertyInt> uiStatus_;
-    RefPtr<PropertyBool> isFocused_;
     RefPtr<PropertyBool> useContentModifier_;
 
     RefPtr<AnimatablePropertyColor> pointColor_;
@@ -257,7 +234,6 @@ private:
     RefPtr<AnimatablePropertyFloat> ringPointScale_;
     RefPtr<AnimatablePropertyColor> animateTouchHoverColor_;
     TouchHoverAnimationType touchHoverType_ = TouchHoverAnimationType::NONE;
-    RefPtr<PropertyBool> isUserSetUncheckedBorderColor_;
 
     ACE_DISALLOW_COPY_AND_MOVE(RadioModifier);
 };

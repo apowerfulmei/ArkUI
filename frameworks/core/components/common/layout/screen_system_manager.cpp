@@ -14,7 +14,6 @@
  */
 
 #include "core/components/common/layout/screen_system_manager.h"
-#include "core/pipeline/pipeline_base.h"
 
 namespace OHOS::Ace {
 namespace {
@@ -24,10 +23,8 @@ namespace {
     constexpr Dimension MAX_SCREEN_WIDTH_XL = 1024.0_vp;
 } // namespace
 
-std::mutex ScreenSystemManager::lock;
 void ScreenSystemManager::OnSurfaceChanged(double width)
 {
-    std::lock_guard<std::mutex> guard(lock);
     screenWidth_ = width;
     if (width < MAX_SCREEN_WIDTH_SM.Value() * density_) {
         currentSize_ = ScreenSizeType::XS;
@@ -44,34 +41,21 @@ void ScreenSystemManager::OnSurfaceChanged(double width)
 
 ScreenSizeType ScreenSystemManager::GetSize(double width) const
 {
-    std::lock_guard<std::mutex> guard(lock);
     ScreenSizeType size = ScreenSizeType::UNDEFINED;
     auto context = PipelineBase::GetCurrentContext();
     CHECK_NULL_RETURN(context, size);
-    double density = context->GetCurrentDensity();
-    auto finalBreakpoints = SystemProperties::GetWidthLayoutBreakpoints();
-    if (finalBreakpoints.widthVPXS_ < 0 || GreatNotEqual(finalBreakpoints.widthVPXS_ * density, width)) {
+    auto dipScale = context->GetDipScale();
+    if (width < MAX_SCREEN_WIDTH_SM.Value() * dipScale) {
         size = ScreenSizeType::XS;
-    } else if (finalBreakpoints.widthVPSM_ < 0 || GreatNotEqual(finalBreakpoints.widthVPSM_ * density, width)) {
+    } else if (width < MAX_SCREEN_WIDTH_MD.Value() * dipScale) {
         size = ScreenSizeType::SM;
-    } else if (finalBreakpoints.widthVPMD_ < 0 || GreatNotEqual(finalBreakpoints.widthVPMD_ * density, width)) {
+    } else if (width < MAX_SCREEN_WIDTH_LG.Value() * dipScale) {
         size = ScreenSizeType::MD;
-    } else if (finalBreakpoints.widthVPLG_ < 0 || GreatNotEqual(finalBreakpoints.widthVPLG_ * density, width)) {
+    } else if (width < MAX_SCREEN_WIDTH_XL.Value() * dipScale) {
         size = ScreenSizeType::LG;
-    } else if (finalBreakpoints.widthVPXL_ < 0 || GreatNotEqual(finalBreakpoints.widthVPXL_ * density, width)) {
-        size = ScreenSizeType::XL;
     } else {
         size = ScreenSizeType::XL;
     }
     return size;
-}
-
-double ScreenSystemManager::GetScreenWidth(const RefPtr<PipelineBase>& pipeline) const
-{
-    std::lock_guard<std::mutex> guard(lock);
-    if (pipeline) {
-        return pipeline->GetRootWidth();
-    }
-    return screenWidth_;
 }
 } // namespace OHOS::Ace

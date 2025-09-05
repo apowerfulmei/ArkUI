@@ -19,35 +19,22 @@
 #include "base/geometry/ng/offset_t.h"
 #include "base/memory/ace_type.h"
 #include "core/components_ng/base/frame_node.h"
-#include "core/event/key_event.h"
 #include "interfaces/inner_api/ace/ai/image_analyzer.h"
 
 namespace OHOS::Ace {
 class ImageAnalyzerAdapter;
 }
 
-struct ACE_FORCE_EXPORT MovingPhotoAnalyzerInfo {
-    std::string uri = "";
-    int64_t frameTimestamp = 0;
-    float contentWidth = 0.0f;
-    float contentHeight = 0.0f;
-};
-
 namespace OHOS::Ace {
-class ACE_FORCE_EXPORT ImageAnalyzerManager : public AceType {
+class ImageAnalyzerManager : public AceType {
     DECLARE_ACE_TYPE(ImageAnalyzerManager, AceType);
 public:
     ImageAnalyzerManager(const RefPtr<NG::FrameNode>& frameNode, ImageAnalyzerHolder holder);
-    ~ImageAnalyzerManager()
-    {
-        ReleaseImageAnalyzer();
-    }
+    ~ImageAnalyzerManager() = default;
     
     bool IsSupportImageAnalyzerFeature();
     void CreateAnalyzerOverlay(const RefPtr<OHOS::Ace::PixelMap>& pixelMap, const NG::OffsetF& offset = { 0.0f, 0.0f });
-    void CreateMovingPhotoAnalyzerOverlay(const RefPtr<OHOS::Ace::PixelMap>& pixelMap, MovingPhotoAnalyzerInfo info);
     void UpdateAnalyzerOverlay(const RefPtr<OHOS::Ace::PixelMap>& pixelMap, const NG::OffsetF& offset = { 0.0f, 0.0f });
-    void UpdateMovingPhotoAnalyzerOverlay(const RefPtr<OHOS::Ace::PixelMap>& pixelMap, MovingPhotoAnalyzerInfo info);
     void UpdateAnalyzerOverlayLayout();
     void UpdateAnalyzerUIConfig(const RefPtr<NG::GeometryNode>& geometryNode, const PixelMapInfo& info = {});
     void DestroyAnalyzerOverlay();
@@ -61,14 +48,11 @@ public:
     void UpdateOverlayTouchInfo(int touchPointX, int touchPointY, TouchType touchType);
     void UpdateOverlayStatus(bool status, int offsetX, int offsetY, int rectWidth, int rectHeight);
     void UpdateAIButtonConfig(AIButtonConfig config);
-    virtual void UpdateKeyEvent(KeyEvent keyEvent);
     void UpdateOverlayActiveStatus(bool status);
     void SetNotifySelectedCallback(OnNotifySelectedStatusCallback&& callback);
-    void SetOnCanPlayCallback(OnCanPlayCallback&& callback);
 
 private:
     bool UpdateVideoConfig(const PixelMapInfo& info);
-    bool NeedUpdateOverlayOffset();
 
     WeakPtr<NG::FrameNode> frameNode_;
     ImageAnalyzerHolder holder_;

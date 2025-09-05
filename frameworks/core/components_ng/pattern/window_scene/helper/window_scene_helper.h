@@ -21,23 +21,13 @@
 #include "core/components_ng/base/ui_node.h"
 #include "core/components_ng/base/frame_node.h"
 
-namespace OHOS {
-template<typename T>
-class sptr;
-} // namespace OHOS
-
 namespace OHOS::Rosen {
 class Session;
-class RSNode;
-class RSTransaction;
-class RSTransactionHandler;
-class RSUIContext;
-} // namespace OHOS::Rosen
-
+}
 namespace OHOS::MMI {
 class KeyEvent;
 class PointerEvent;
-} // namespace OHOS::MMI
+}
 
 namespace OHOS::Ace::NG {
 enum class WindowPatternType : uint32_t {
@@ -71,11 +61,10 @@ public:
 
     static void IsCloseKeyboard(const RefPtr<FrameNode>& frameNode);
 
+    static bool GetNeedKeyboardOnFocusFlag(const RefPtr<FrameNode> frameNode);
+
     static void InjectPointerEvent(const RefPtr<FrameNode>& node,
         const std::shared_ptr<OHOS::MMI::PointerEvent>& pointerEvent);
-
-    // this method only for window scene inject cancel event, can't be used in other event.
-    static void InjectPointerEventForActionCancel(const std::shared_ptr<OHOS::MMI::PointerEvent>& pointerEvent);
 
     static bool InjectKeyEvent(const std::shared_ptr<OHOS::MMI::KeyEvent>& keyEvent, bool isPreIme = false);
 
@@ -92,20 +81,6 @@ public:
     static bool IsPanelScene(uint32_t type);
 
     static bool IsScreenScene(uint32_t type);
-
-    static bool IsNodeInKeyGuardWindow(const RefPtr<FrameNode>& node);
-
-    static std::shared_ptr<Rosen::RSUIContext> GetRSUIContext(const RefPtr<FrameNode>& frameNode);
-
-    static std::shared_ptr<Rosen::RSTransaction> GetRSTransaction(const sptr<Rosen::Session>& session);
-
-    static std::shared_ptr<Rosen::RSTransactionHandler> GetRSTransactionHandler(const RefPtr<FrameNode>& frameNode);
-
-    static void FlushImplicitTransaction(const RefPtr<FrameNode>& frameNode);
-
-    static std::string RSNodeToStr(const std::shared_ptr<Rosen::RSNode>& rsNode);
-
-    static std::string RSUIContextToStr(const std::shared_ptr<Rosen::RSUIContext>& rsUIContext);
 };
 } // namespace OHOS::Ace::NG
 #endif // FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_PATTERN_WINDOW_SCENE_HELPER_H

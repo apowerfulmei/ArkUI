@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2022-2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -14,39 +14,38 @@
  */
 #include "core/components_ng/base/ui_node.h"
 
+#include <memory>
+
+#include "base/geometry/ng/point_t.h"
 #include "base/log/ace_checker.h"
+#include "base/log/ace_performance_check.h"
+#include "base/log/ace_trace.h"
 #include "base/log/dump_log.h"
-#include "base/utils/feature_param.h"
+#include "base/memory/referenced.h"
+#include "base/utils/system_properties.h"
+#include "base/utils/utils.h"
 #include "bridge/common/utils/engine_helper.h"
-#include "core/common/builder_util.h"
-#include "core/common/multi_thread_build_manager.h"
-#include "core/components_ng/base/ui_node_gc.h"
+#include "core/common/container.h"
+#include "core/components_ng/base/view_stack_processor.h"
 #include "core/components_ng/pattern/text/text_layout_property.h"
-#include "core/components_ng/token_theme/token_theme_storage.h"
-#include "core/components_ng/pattern/navigation/navigation_group_node.h"
-#include "frameworks/core/pipeline/base/element_register_multi_thread.h"
+#include "core/components_ng/property/layout_constraint.h"
+#include "core/components_v2/inspector/inspector_constants.h"
+#include "core/pipeline/base/element_register.h"
+#include "core/pipeline_ng/pipeline_context.h"
 
 namespace OHOS::Ace::NG {
 
-std::atomic<int64_t> currentAccessibilityId_ = 0;
-const std::set<std::string> UINode::layoutTags_ = { "Flex", "Stack", "Row", "Column", "WindowScene", "root",
-    "__Common__", "Swiper", "Grid", "GridItem", "page", "stage", "FormComponent", "Tabs", "TabContent" };
+thread_local int64_t currentAccessibilityId_ = 0;
 
 UINode::UINode(const std::string& tag, int32_t nodeId, bool isRoot)
     : tag_(tag), nodeId_(nodeId), accessibilityId_(currentAccessibilityId_++), isRoot_(isRoot)
 {
-    if (MultiThreadBuildManager::IsThreadSafeNodeScope()) {
-        isThreadSafeNode_ = true;
-        isFree_ = true;
-    }
     if (AceChecker::IsPerformanceCheckEnabled()) {
         auto pos = EngineHelper::GetPositionOnJsCode();
         nodeInfo_ = std::make_unique<PerformanceCheckNode>();
-        nodeInfo_->codeRow = std::get<1>(pos);
-        nodeInfo_->codeCol = std::get<2>(pos);
-        nodeInfo_->pagePath = std::get<0>(pos);
+        nodeInfo_->codeRow = pos.first;
+        nodeInfo_->codeCol = pos.second;
     }
-    apiVersion_ = Container::GetCurrentApiTargetVersion();
 #ifdef UICAST_COMPONENT_SUPPORTED
     do {
         auto container = Container::Current();
@@ -59,11 +58,6 @@ UINode::UINode(const std::string& tag, int32_t nodeId, bool isRoot)
     instanceId_ = Container::CurrentId();
     nodeStatus_ = ViewStackProcessor::GetInstance()->IsBuilderNode() ? NodeStatus::BUILDER_NODE_OFF_MAINTREE
                                                                      : NodeStatus::NORMAL_NODE;
-    if (SystemProperties::ConfigChangePerform()) {
-        auto currentContainer = Container::GetContainer(instanceId_);
-        isDarkMode_ = currentContainer ? (currentContainer->GetColorMode() == ColorMode::DARK) : false;
-    }
-    uiNodeGcEnable_ = FeatureParam::IsUINodeGcEnabled();
 }
 
 UINode::~UINode()
@@ -85,9 +79,6 @@ UINode::~UINode()
     } else {
         ElementRegister::GetInstance()->RemoveItemSilently(nodeId_);
     }
-    if (isThreadSafeNode_) {
-        ElementRegisterMultiThread::GetInstance()->RemoveThreadSafeNode(nodeId_);
-    }
     if (propInspectorId_.has_value()) {
         ElementRegister::GetInstance()->RemoveFrameNodeByInspectorId(propInspectorId_.value_or(""), nodeId_);
     }
@@ -101,33 +92,6 @@ UINode::~UINode()
     if (nodeStatus_ == NodeStatus::BUILDER_NODE_ON_MAINTREE) {
         nodeStatus_ = NodeStatus::BUILDER_NODE_OFF_MAINTREE;
     }
-}
-
-bool UINode::MaybeRelease()
-{
-    if (!isThreadSafeNode_ || MultiThreadBuildManager::IsOnUIThread()) {
-        if (uiNodeGcEnable_) {
-            UiNodeGc::OnReleaseFunc(this);
-            return false;
-        }
-        return true;
-    }
-    auto pipeline = GetContext();
-    CHECK_NULL_RETURN(pipeline, true);
-    auto executor = pipeline->GetTaskExecutor();
-    CHECK_NULL_RETURN(executor, true);
-    return !executor->PostTask([this] { delete this; }, TaskExecutor::TaskType::UI, "ArkUIDestroyUINode");
-}
-
-void UINode::RegisterReleaseFunc(bool enableRegister)
-{
-    uiNodeGcEnable_ = enableRegister;
-}
-
-void UINode::OnDelete()
-{
-    disappearingChildren_.clear();
-    children_.clear();
 }
 
 void UINode::AttachContext(PipelineContext* context, bool recursive)
@@ -163,76 +127,36 @@ void UINode::AddChild(const RefPtr<UINode>& child, int32_t slot,
     bool silently, bool addDefaultTransition, bool addModalUiextension)
 {
     CHECK_NULL_VOID(child);
-    if (child->GetAncestor() == this) {
-        auto it = std::find(children_.begin(), children_.end(), child);
-        if (it != children_.end()) {
-            return;
-        }
+    if (!addModalUiextension && modalUiextensionCount_ > 0) {
+        LOGW("Current Node(id: %{public}d) is prohibited add child(tag %{public}s, id: %{public}d), "
+            "Current modalUiextension count is : %{public}d",
+            GetId(), child->GetTag().c_str(), child->GetId(), modalUiextensionCount_);
+        return;
+    }
+
+    auto it = std::find(children_.begin(), children_.end(), child);
+    if (it != children_.end()) {
+        return;
     }
 
     // remove from disappearing children
     RemoveDisappearingChild(child);
-    auto it = children_.begin();
+    it = children_.begin();
     std::advance(it, slot);
-    if (!addModalUiextension && modalUiextensionCount_ > 0) {
-        bool canAddChild = CanAddChildWhenTopNodeIsModalUec(it);
-        if (!canAddChild) {
-            LOGW("Current Node(id: %{public}d) is prohibited add child(tag %{public}s, id: %{public}d), "
-                "Current modalUiextension count is : %{public}d",
-                nodeId_, child->GetTag().c_str(), child->GetId(), modalUiextensionCount_);
-            return;
-        } else {
-            LOGI("Child(tag %{public}s, id: %{public}d) must under modalUec, which count is: %{public}d",
-                child->GetTag().c_str(), child->GetId(), modalUiextensionCount_);
-        }
-    }
     DoAddChild(it, child, silently, addDefaultTransition);
-}
-
-bool UINode::CanAddChildWhenTopNodeIsModalUec(std::list<RefPtr<UINode>>::iterator& curIter)
-{
-    if (children_.empty()) {
-        return true;
-    }
-
-    auto preIter = curIter;
-    preIter--;
-    // Gernerally, uiContent instance is allowwd to have multiple modalUecs.
-    // Therefore, need to check all modalUec's isAllowAddChildBelowModalUec.
-    while (preIter != children_.begin()) {
-        if (preIter == children_.end()) {
-            break;
-        }
-
-        if ((*preIter)->GetTag() != V2::MODAL_PAGE_TAG) {
-            break;
-        }
-
-        if (!(*preIter)->IsAllowAddChildBelowModalUec()) {
-            return false;
-        }
-
-        curIter--;
-        preIter--;
-    }
-
-    return true;
 }
 
 void UINode::AddChildAfter(const RefPtr<UINode>& child, const RefPtr<UINode>& siblingNode)
 {
     CHECK_NULL_VOID(child);
     CHECK_NULL_VOID(siblingNode);
-    if (child->GetAncestor() == this) {
-        auto it = std::find(children_.begin(), children_.end(), child);
-        if (it != children_.end()) {
-            LOGW("Child node already exists. Existing child nodeId %{public}d, add %{public}s child nodeId nodeId "
-                "%{public}d",
-                (*it)->GetId(), child->GetTag().c_str(), child->GetId());
-            return;
-        }
+    auto it = std::find(children_.begin(), children_.end(), child);
+    if (it != children_.end()) {
+        LOGW("Child node already exists. Existing child nodeId %{public}d, add %{public}s child nodeId nodeId "
+             "%{public}d",
+            (*it)->GetId(), child->GetTag().c_str(), child->GetId());
+        return;
     }
-
     // remove from disappearing children
     RemoveDisappearingChild(child);
     auto siblingNodeIter = std::find(children_.begin(), children_.end(), siblingNode);
@@ -240,7 +164,7 @@ void UINode::AddChildAfter(const RefPtr<UINode>& child, const RefPtr<UINode>& si
         DoAddChild(++siblingNodeIter, child, false);
         return;
     }
-    auto it = children_.begin();
+    it = children_.begin();
     std::advance(it, -1);
     DoAddChild(it, child, false);
 }
@@ -249,14 +173,12 @@ void UINode::AddChildBefore(const RefPtr<UINode>& child, const RefPtr<UINode>& s
 {
     CHECK_NULL_VOID(child);
     CHECK_NULL_VOID(siblingNode);
-    if (child->GetAncestor() == this) {
-        auto it = std::find(children_.begin(), children_.end(), child);
-        if (it != children_.end()) {
-            LOGW("Child node already exists. Existing child nodeId %{public}d, add %{public}s child nodeId nodeId "
-                "%{public}d",
-                (*it)->GetId(), child->GetTag().c_str(), child->GetId());
-            return;
-        }
+    auto it = std::find(children_.begin(), children_.end(), child);
+    if (it != children_.end()) {
+        LOGW("Child node already exists. Existing child nodeId %{public}d, add %{public}s child nodeId nodeId "
+             "%{public}d",
+            (*it)->GetId(), child->GetTag().c_str(), child->GetId());
+        return;
     }
     // remove from disappearing children
     RemoveDisappearingChild(child);
@@ -265,39 +187,27 @@ void UINode::AddChildBefore(const RefPtr<UINode>& child, const RefPtr<UINode>& s
         DoAddChild(siblingNodeIter, child, false);
         return;
     }
-    auto it = children_.begin();
+    it = children_.begin();
     std::advance(it, -1);
     DoAddChild(it, child, false);
 }
 
 void UINode::TraversingCheck(RefPtr<UINode> node, bool withAbort)
 {
-    if (!isTraversing_) {
-        return;
-    }
-
-    if (withAbort) {
+    if (isTraversing_) {
         if (node) {
-            LOGF_ABORT("Try to remove the child([%{public}s][%{public}d]) of "
-                "node [%{public}s][%{public}d] when its children is traversing",
-                node->GetTag().c_str(), node->GetId(), tag_.c_str(), nodeId_);
+            LOGF("Try to remove the child([%{public}s][%{public}d]) of node [%{public}s][%{public}d] when its children "
+                "is traversing", node->GetTag().c_str(), node->GetId(), GetTag().c_str(), GetId());
         } else {
-            LOGF_ABORT("Try to remove all the children of "
-                "node [%{public}s][%{public}d] when its children is traversing",
-                tag_.c_str(), nodeId_);
+            LOGF("Try to remove all the children of node [%{public}s][%{public}d] when its children is traversing",
+                GetTag().c_str(), GetId());
+        }
+        OHOS::Ace::LogBacktrace();
+
+        if (withAbort) {
+            abort();
         }
     }
-
-    if (node) {
-        LOGE("Try to remove the child([%{public}s][%{public}d]) of "
-            "node [%{public}s][%{public}d] when its children is traversing",
-            node->GetTag().c_str(), node->GetId(), tag_.c_str(), nodeId_);
-    } else {
-        LOGE("Try to remove all the children of "
-            "node [%{public}s][%{public}d] when its children is traversing",
-            tag_.c_str(), nodeId_);
-    }
-    LogBacktrace();
 }
 
 std::list<RefPtr<UINode>>::iterator UINode::RemoveChild(const RefPtr<UINode>& child, bool allowTransition)
@@ -306,12 +216,6 @@ std::list<RefPtr<UINode>>::iterator UINode::RemoveChild(const RefPtr<UINode>& ch
 
     auto iter = std::find(children_.begin(), children_.end(), child);
     if (iter == children_.end()) {
-        return children_.end();
-    }
-
-    // the node set isInDestroying state when destroying in pop animation
-    // when in isInDestroying state node should not DetachFromMainTree preventing pop page from being white
-    if (IsDestroyingState() && context_ && !context_->IsDestroyed()) {
         return children_.end();
     }
     // If the child is undergoing a disappearing transition, rather than simply removing it, we should move it to the
@@ -332,20 +236,8 @@ std::list<RefPtr<UINode>>::iterator UINode::RemoveChild(const RefPtr<UINode>& ch
         return children_.end();
     }
     TraversingCheck(*iter);
-    (*iter)->SetAncestor(nullptr);
     auto result = children_.erase(iter);
     return result;
-}
-
-bool UINode::RemoveChildSilently(const RefPtr<UINode>& child)
-{
-    CHECK_NULL_RETURN(child, false);
-    auto iter = std::find(children_.begin(), children_.end(), child);
-    if (IsDestroyingState() || iter == children_.end()) {
-        return false;
-    }
-    children_.erase(iter);
-    return true;
 }
 
 int32_t UINode::RemoveChildAndReturnIndex(const RefPtr<UINode>& child)
@@ -407,7 +299,6 @@ void UINode::ReplaceChild(const RefPtr<UINode>& oldNode, const RefPtr<UINode>& n
 void UINode::Clean(bool cleanDirectly, bool allowTransition, int32_t branchId)
 {
     bool needSyncRenderTree = false;
-    bool isNotV2IfNode = (tag_ != V2::JS_IF_ELSE_ETS_TAG);
     int32_t index = 0;
 
     auto children = GetChildren();
@@ -428,13 +319,9 @@ void UINode::Clean(bool cleanDirectly, bool allowTransition, int32_t branchId)
             // else move child into disappearing children, skip syncing render tree
             AddDisappearingChild(child, index, branchId);
         }
-        if (isNotV2IfNode) {
-            child->SetAncestor(nullptr);
-        }
         ++index;
     }
-
-    if (isNotV2IfNode) {
+    if (tag_ != V2::JS_IF_ELSE_ETS_TAG) {
         children_.clear();
     }
     MarkNeedSyncRenderTree(true);
@@ -445,32 +332,6 @@ void UINode::MountToParent(const RefPtr<UINode>& parent,
 {
     CHECK_NULL_VOID(parent);
     parent->AddChild(AceType::Claim(this), slot, silently, addDefaultTransition, addModalUiextension);
-    if (parent->IsInDestroying()) {
-        parent->SetChildrenInDestroying();
-    }
-    if (parent->GetPageId() != 0) {
-        SetHostPageId(parent->GetPageId());
-    }
-    AfterMountToParent();
-}
-
-void UINode::MountToParentAfter(const RefPtr<UINode>& parent, const RefPtr<UINode>& siblingNode)
-{
-    CHECK_NULL_VOID(parent);
-    parent->AddChildAfter(AceType::Claim(this), siblingNode);
-    if (parent->IsInDestroying()) {
-        parent->SetChildrenInDestroying();
-    }
-    if (parent->GetPageId() != 0) {
-        SetHostPageId(parent->GetPageId());
-    }
-    AfterMountToParent();
-}
-
-void UINode::MountToParentBefore(const RefPtr<UINode>& parent, const RefPtr<UINode>& siblingNode)
-{
-    CHECK_NULL_VOID(parent);
-    parent->AddChildBefore(AceType::Claim(this), siblingNode);
     if (parent->IsInDestroying()) {
         parent->SetChildrenInDestroying();
     }
@@ -506,9 +367,6 @@ void UINode::UpdateConfigurationUpdate(const ConfigurationChange& configurationC
 
 bool UINode::OnRemoveFromParent(bool allowTransition)
 {
-    if (IsDestroyingState() && context_ && !context_->IsDestroyed()) {
-        return false;
-    }
     // The recursive flag will used by RenderContext, if recursive flag is false,
     // it may trigger transition
     DetachFromMainTree(!allowTransition);
@@ -521,10 +379,8 @@ bool UINode::OnRemoveFromParent(bool allowTransition)
 
 void UINode::ResetParent()
 {
-    ancestor_.Reset();
     parent_.Reset();
     depth_ = -1;
-    UpdateThemeScopeId(0);
 }
 
 namespace {
@@ -554,6 +410,9 @@ void LoopDetected(const RefPtr<UINode>& child, const RefPtr<UINode>& current)
     static_assert(totalLengthLimit > childLengthLimit, "totalLengthLimit too small");
     constexpr size_t currentLengthLimit = totalLengthLimit - childLengthLimit;
 
+    LOGF("Detected loop: child[%{public}.*s] vs current[%{public}.*s]",
+        (int)childLengthLimit, childNode.c_str(), (int)currentLengthLimit, currentNode.c_str());
+
     // log full childNode info in case of hilog length limit reached
     if (childNode.length() > childLengthLimit) {
         auto s = childNode.c_str();
@@ -571,11 +430,8 @@ void LoopDetected(const RefPtr<UINode>& child, const RefPtr<UINode>& current)
     }
 
     if (SystemProperties::GetLayoutDetectEnabled()) {
-        LOGF_ABORT("LoopDetected: child[%{public}.*s] vs current[%{public}.*s]",
-            (int)childLengthLimit, childNode.c_str(), (int)currentLengthLimit, currentNode.c_str());
+        abort();
     } else {
-        LOGE("LoopDetected: child[%{public}.*s] vs current[%{public}.*s]",
-            (int)childLengthLimit, childNode.c_str(), (int)currentLengthLimit, currentNode.c_str());
         LogBacktrace();
     }
 }
@@ -610,14 +466,8 @@ void UINode::DoAddChild(
         }
     }
 
-    UpdateDrawChildObserver(child);
-
-    child->SetParent(WeakClaim(this), false);
-    auto themeScopeId = GetThemeScopeId();
-    if (child->IsAllowUseParentTheme() && child->GetThemeScopeId() != themeScopeId) {
-        child->UpdateThemeScopeId(themeScopeId);
-    }
-    child->SetDepth(depth_ + 1);
+    child->SetParent(Claim(this));
+    child->SetDepth(GetDepth() + 1);
     if (nodeStatus_ != NodeStatus::NORMAL_NODE) {
         child->UpdateNodeStatus(nodeStatus_);
     }
@@ -626,19 +476,6 @@ void UINode::DoAddChild(
         child->AttachToMainTree(!addDefaultTransition, context_);
     }
     MarkNeedSyncRenderTree(true);
-    ProcessIsInDestroyingForReuseableNode(child);
-    // Forced update colormode when builderNode attach to main tree.
-    if (SystemProperties::ConfigChangePerform() && child->nodeStatus_ == NodeStatus::BUILDER_NODE_ON_MAINTREE &&
-        context_) {
-        auto colorMode = static_cast<int32_t>(context_->GetColorMode());
-        if (child->CheckIsDarkMode() != colorMode) {
-            context_->SetIsSystemColorChange(true);
-            SetRerenderable(true);
-            SetMeasureAnyway(true);
-            SetShouldClearCache(true);
-            NotifyColorModeChange(colorMode);
-        }
-    }
 }
 
 void UINode::GetBestBreakPoint(RefPtr<UINode>& breakPointChild, RefPtr<UINode>& breakPointParent)
@@ -673,7 +510,6 @@ void UINode::RemoveFromParentCleanly(const RefPtr<UINode>& child, const RefPtr<U
         auto iter = std::find(children.begin(), children.end(), child);
         if (iter != children.end()) {
             parent->TraversingCheck(*iter);
-            (*iter)->SetAncestor(nullptr);
             children.erase(iter);
         }
     }
@@ -740,30 +576,6 @@ RefPtr<FrameNode> UINode::GetFocusParent() const
     return nullptr;
 }
 
-RefPtr<FrameNode> UINode::GetFocusParentWithBoundary() const
-{
-    auto parentUi = GetParent();
-    while (parentUi) {
-        if (parentUi->GetTag() == V2::SCREEN_ETS_TAG) {
-            return nullptr;
-        }
-        auto parentFrame = AceType::DynamicCast<FrameNode>(parentUi);
-        if (!parentFrame) {
-            parentUi = parentUi->GetParent();
-            continue;
-        }
-        auto type = parentFrame->GetFocusType();
-        if (type == FocusType::SCOPE) {
-            return parentFrame;
-        }
-        if (type == FocusType::NODE) {
-            return nullptr;
-        }
-        parentUi = parentUi->GetParent();
-    }
-    return nullptr;
-}
-
 RefPtr<FocusHub> UINode::GetFirstFocusHubChild() const
 {
     const auto* frameNode = AceType::DynamicCast<FrameNode>(this);
@@ -798,7 +610,7 @@ void UINode::GetFocusChildren(std::list<RefPtr<FrameNode>>& children) const
 void UINode::GetCurrentChildrenFocusHub(std::list<RefPtr<FocusHub>>& focusNodes)
 {
     for (const auto& uiChild : children_) {
-        auto frameChild = AceType::DynamicCast<FrameNode>(Referenced::RawPtr(uiChild));
+        auto frameChild = AceType::DynamicCast<FrameNode>(uiChild.GetRawPtr());
         if (frameChild && frameChild->GetFocusType() != FocusType::DISABLE) {
             const auto focusHub = frameChild->GetFocusHub();
             if (focusHub) {
@@ -815,9 +627,6 @@ void UINode::AttachToMainTree(bool recursive, PipelineContext* context)
     if (onMainTree_) {
         return;
     }
-    if (context) {
-        context->SetIsTransFlag(true);
-    }
     // the context should not be nullptr.
     AttachContext(context, false);
     onMainTree_ = true;
@@ -825,11 +634,6 @@ void UINode::AttachToMainTree(bool recursive, PipelineContext* context)
         nodeStatus_ = NodeStatus::BUILDER_NODE_ON_MAINTREE;
     }
     isRemoving_ = false;
-    if (isThreadSafeNode_) {
-        isFree_ = false;
-        ElementRegister::GetInstance()->AddUINode(Claim(this));
-        ExecuteAfterAttachMainTreeTasks();
-    }
     OnAttachToMainTree(recursive);
     // if recursive = false, recursively call AttachToMainTree(false), until we reach the first FrameNode.
     bool isRecursive = recursive || AceType::InstanceOf<FrameNode>(this);
@@ -861,26 +665,9 @@ void UINode::AttachToMainTree(bool recursive, PipelineContext* context)
     }
 }
 
-bool UINode::CheckThreadSafeNodeTree(bool needCheck)
-{
-    bool needCheckChild = needCheck;
-    if (needCheck && !isThreadSafeNode_) {
-        // Remind developers that it is unsafe to operate node trees containing unsafe nodes on non UI threads.
-        TAG_LOGW(AceLogTag::ACE_NATIVE_NODE,
-            "CheckIsThreadSafeNodeTree failed. thread safe node tree contains unsafe node: %{public}d", GetId());
-        needCheckChild = false;
-    } else if (isThreadSafeNode_) {
-        needCheckChild = true;
-    }
-    return needCheckChild;
-}
-
-void UINode::DetachFromMainTree(bool recursive, bool needCheckThreadSafeNodeTree)
+void UINode::DetachFromMainTree(bool recursive)
 {
     if (!onMainTree_) {
-        return;
-    }
-    if (IsDestroyingState() && context_ && !context_->IsDestroyed()) {
         return;
     }
     onMainTree_ = false;
@@ -890,62 +677,35 @@ void UINode::DetachFromMainTree(bool recursive, bool needCheckThreadSafeNodeTree
     isRemoving_ = true;
     auto context = context_;
     DetachContext(false);
-    if (isNodeAdapter_) {
-        std::list<RefPtr<UINode>> nodes;
-        RefPtr<UINode> uiNode = AceType::Claim<UINode>(this);
-        BuilderUtils::GetBuilderNodes(uiNode, nodes);
-        BuilderUtils::RemoveBuilderFromParent(GetParent(), nodes);
-    }
     OnDetachFromMainTree(recursive, context);
     // if recursive = false, recursively call DetachFromMainTree(false), until we reach the first FrameNode.
     bool isRecursive = recursive || AceType::InstanceOf<FrameNode>(this);
     isTraversing_ = true;
     std::list<RefPtr<UINode>> children = GetChildren();
-    bool needCheckChild = CheckThreadSafeNodeTree(needCheckThreadSafeNodeTree);
     for (const auto& child : children) {
-        child->DetachFromMainTree(isRecursive, needCheckChild);
-    }
-    if (isThreadSafeNode_) {
-        ElementRegister::GetInstance()->RemoveItemSilently(GetId());
-        isFree_ = true;
+        child->DetachFromMainTree(isRecursive);
     }
     isTraversing_ = false;
 }
 
-void UINode::SetUserFreeze(bool isUserFreeze)
-{
-    userFreeze_ = isUserFreeze;
-}
-
-bool UINode::IsUserFreeze()
-{
-    return userFreeze_.has_value() && userFreeze_.value();
-}
-
-void UINode::SetFreeze(bool isFreeze, bool isForceUpdateFreezeVaule, bool isUserFreeze)
+void UINode::SetFreeze(bool isFreeze)
 {
     auto context = GetContext();
     CHECK_NULL_VOID(context);
-    if (isUserFreeze) {
-        SetUserFreeze(isUserFreeze);
-    } else if (IsUserFreeze()) {
-        return;
-    }
-
-    auto isNeedUpdateFreezeVaule = context->IsOpenInvisibleFreeze() || isForceUpdateFreezeVaule;
-    if (isNeedUpdateFreezeVaule && isFreeze_ != isFreeze) {
+    auto isOpenInvisibleFreeze = context->IsOpenInvisibleFreeze();
+    if (isOpenInvisibleFreeze && isFreeze_ != isFreeze) {
         isFreeze_ = isFreeze;
         OnFreezeStateChange();
-        UpdateChildrenFreezeState(isFreeze_, isForceUpdateFreezeVaule);
+        UpdateChildrenFreezeState(isFreeze_);
     }
 }
 
-void UINode::UpdateChildrenFreezeState(bool isFreeze, bool isForceUpdateFreezeVaule)
+void UINode::UpdateChildrenFreezeState(bool isFreeze)
 {
     const auto& children = GetChildren(true);
     for (const auto& child : children) {
         if (child) {
-            child->SetFreeze(isFreeze, isForceUpdateFreezeVaule);
+            child->SetFreeze(isFreeze);
         }
     }
 }
@@ -1054,12 +814,6 @@ void UINode::OnDetachFromMainTree(bool, PipelineContext*) {}
 void UINode::OnAttachToMainTree(bool)
 {
     useOffscreenProcess_ = false;
-    if (isNodeAdapter_) {
-        std::list<RefPtr<UINode>> nodes;
-        RefPtr<UINode> uiNode = AceType::Claim<UINode>(this);
-        BuilderUtils::GetBuilderNodes(uiNode, nodes);
-        BuilderUtils::AddBuilderToParent(GetParent(), nodes);
-    }
 }
 
 void UINode::UpdateGeometryTransition()
@@ -1073,7 +827,7 @@ void UINode::UpdateGeometryTransition()
 bool UINode::IsAutoFillContainerNode()
 {
     return tag_ == V2::PAGE_ETS_TAG || tag_ == V2::NAVDESTINATION_VIEW_ETS_TAG || tag_ == V2::DIALOG_ETS_TAG
-        || tag_ == V2::SHEET_PAGE_TAG || tag_ == V2::MODAL_PAGE_TAG || tag_ == V2::POPUP_ETS_TAG;
+        || tag_ == V2::SHEET_PAGE_TAG || tag_ == V2::MODAL_PAGE_TAG;
 }
 
 void UINode::DumpViewDataPageNodes(
@@ -1118,178 +872,82 @@ bool UINode::NeedRequestAutoSave()
     return false;
 }
 
-void UINode::DumpTree(int32_t depth, bool hasJson)
+void UINode::DumpTree(int32_t depth)
 {
-    if (hasJson) {
-        std::unique_ptr<JsonValue> json = JsonUtil::Create(true);
-        std::unique_ptr<JsonValue> children = JsonUtil::Create(true);
-        children->Put("childSize", static_cast<int32_t>(GetChildren().size()));
-        children->Put("ID", nodeId_);
-        children->Put("Depth", depth_);
-        children->Put("InstanceId", instanceId_);
-        children->Put("AccessibilityId", accessibilityId_);
+    if (DumpLog::GetInstance().GetDumpFile()) {
+        DumpLog::GetInstance().AddDesc("ID: " + std::to_string(nodeId_));
+        DumpLog::GetInstance().AddDesc(std::string("Depth: ").append(std::to_string(GetDepth())));
+        DumpLog::GetInstance().AddDesc("AccessibilityId: " + std::to_string(accessibilityId_));
         if (IsDisappearing()) {
-            children->Put("IsDisappearing", IsDisappearing());
+            DumpLog::GetInstance().AddDesc(std::string("IsDisappearing: ").append(std::to_string(IsDisappearing())));
         }
-        DumpInfo(children);
-        std::string key = isRoot_ ? tag_ : tag_ + "_" + std::to_string(nodeId_);
-        json->Put(key.c_str(), children);
-        std::string jsonstr = DumpLog::GetInstance().FormatDumpInfo(json->ToString(), depth);
-        auto prefix = DumpLog::GetInstance().GetPrefix(depth);
-        DumpLog::GetInstance().Append(prefix + jsonstr);
-    } else {
-        if (DumpLog::GetInstance().GetDumpFile()) {
-            DumpLog::GetInstance().AddDesc("ID: " + std::to_string(nodeId_));
-            DumpLog::GetInstance().AddDesc(std::string("Depth: ").append(std::to_string(depth_)));
-            DumpLog::GetInstance().AddDesc("InstanceId: " + std::to_string(instanceId_));
-            DumpLog::GetInstance().AddDesc("AccessibilityId: " + std::to_string(accessibilityId_));
-            if (IsDisappearing()) {
-                DumpLog::GetInstance().AddDesc(
-                    std::string("IsDisappearing: ").append(std::to_string(IsDisappearing())));
-            }
-            DumpInfo();
-            DumpLog::GetInstance().Append(depth, tag_, static_cast<int32_t>(GetChildren().size()));
-        }
-    }
-    if (!CheckVisibleOrActive()) {
-        return;
-    }
-    if (GetTag() == V2::JS_LAZY_FOR_EACH_ETS_TAG || GetTag() == V2::JS_REPEAT_ETS_TAG) {
-        for (const auto& item : GetChildrenForInspector(true)) {
-            CHECK_NULL_CONTINUE(item);
-            item->DumpTree(depth + 1, hasJson);
-        }
+        DumpInfo();
+        DumpLog::GetInstance().Append(depth, tag_, static_cast<int32_t>(GetChildren().size()));
     }
     for (const auto& item : GetChildren()) {
-        item->DumpTree(depth + 1, hasJson);
+        item->DumpTree(depth + 1);
     }
     for (const auto& [item, index, branch] : disappearingChildren_) {
-        item->DumpTree(depth + 1, hasJson);
+        item->DumpTree(depth + 1);
     }
     auto frameNode = AceType::DynamicCast<FrameNode>(this);
     if (frameNode && frameNode->GetOverlayNode()) {
-        frameNode->GetOverlayNode()->DumpTree(depth + 1, hasJson);
+        frameNode->GetOverlayNode()->DumpTree(depth + 1);
     }
 }
 
-bool UINode::DumpTreeByComponentName(const std::string& name)
+void UINode::DumpSimplifyTree(int32_t depth, std::unique_ptr<JsonValue>& current)
 {
-    if (auto customNode = DynamicCast<CustomNode>(this)) {
-        const std::string& tag = customNode->GetCustomTag();
-        if (tag.size() >= name.size() && StringUtils::StartWith(tag, name)) {
-            DumpTree(0);
-            return true;
-        }
-    }
-    for (const auto& item : GetChildren()) {
-        if (item->DumpTreeByComponentName(name)) {
-            return true;
-        }
-    }
-    for (const auto& [item, index, branch] : disappearingChildren_) {
-        if (item->DumpTreeByComponentName(name)) {
-            return true;
-        }
-    }
-    return false;
-}
-
-void UINode::DumpTreeJsonForDiff(std::unique_ptr<JsonValue>& json)
-{
-    auto currentNode = JsonUtil::Create(true);
-    auto childrenNodeArray = JsonUtil::CreateArray(true);
-    auto children = GetChildren();
-    currentNode->Put("childSize", static_cast<int32_t>(children.size()));
-    currentNode->Put("ID", nodeId_);
-    currentNode->Put("Depth", depth_);
-    currentNode->Put("InstanceId", instanceId_);
-    currentNode->Put("AccessibilityId", accessibilityId_);
-    if (IsDisappearing()) {
-        currentNode->Put("IsDisappearing", IsDisappearing());
-    }
-    DumpInfo(currentNode);
-    for (auto& child : children) {
-        auto frameNode = AceType::DynamicCast<NG::FrameNode>(child);
-        if (frameNode && layoutTags_.find(frameNode->GetTag()) != layoutTags_.end() && !frameNode->IsActive()) {
-            continue;
-        }
-        auto childNode = JsonUtil::Create(true);
-        child->DumpTreeJsonForDiff(childNode);
-        childrenNodeArray->PutRef(std::move(childNode));
-    }
-    currentNode->PutRef("children", std::move(childrenNodeArray));
-    std::string key = isRoot_ ? tag_ : tag_ + "_" + std::to_string(nodeId_);
-    json->PutRef(key.c_str(), std::move(currentNode));
-}
-
-void UINode::DumpSimplifyTree(int32_t depth, std::shared_ptr<JsonValue>& current)
-{
-    current->Put("$type", tag_.c_str());
-    current->Put("$ID", nodeId_);
-    if (InstanceOf<CustomNode>(this)) {
-        current->Put("type", "custom");
-    } else {
-        current->Put("type", "build-in");
-    }
+    current->Put("ID", nodeId_);
+    current->Put("Type", tag_.c_str());
     auto nodeChildren = GetChildren();
     DumpSimplifyInfo(current);
-    if (!CheckVisibleOrActive()) {
-        return;
-    }
     bool hasChildren = !nodeChildren.empty() || !disappearingChildren_.empty();
     if (hasChildren) {
+        current->Put("ChildrenSize", static_cast<int32_t>(nodeChildren.size()));
         auto array = JsonUtil::CreateArray();
         if (!nodeChildren.empty()) {
             for (const auto& item : nodeChildren) {
-                auto child = JsonUtil::CreateSharedPtrJson();
+                auto child = JsonUtil::Create();
                 item->DumpSimplifyTree(depth + 1, child);
                 array->PutRef(std::move(child));
             }
         }
         if (!disappearingChildren_.empty()) {
             for (const auto& [item, index, branch] : disappearingChildren_) {
-                auto child = JsonUtil::CreateSharedPtrJson();
+                auto child = JsonUtil::Create();
                 item->DumpSimplifyTree(depth + 1, child);
                 array->PutRef(std::move(child));
             }
         }
-        current->PutRef("$children", std::move(array));
+        current->PutRef("Children", std::move(array));
+    }
+    auto frameNode = AceType::DynamicCast<FrameNode>(this);
+    if (frameNode && frameNode->GetOverlayNode()) {
+        auto overlay = JsonUtil::Create();
+        frameNode->GetOverlayNode()->DumpSimplifyTree(depth + 1, overlay);
+        current->PutRef("Overlay", std::move(overlay));
     }
 }
 
-bool UINode::DumpTreeById(int32_t depth, const std::string& id, bool hasJson)
+bool UINode::DumpTreeById(int32_t depth, const std::string& id)
 {
-    if (hasJson) {
-        if ((id == propInspectorId_.value_or("") || id == std::to_string(nodeId_))) {
-            std::unique_ptr<JsonValue> json = JsonUtil::Create(true);
-            std::unique_ptr<JsonValue> children = JsonUtil::Create(true);
-            children->Put("childSize", static_cast<int32_t>(GetChildren().size()));
-            children->Put("ID", nodeId_);
-            children->Put("Depth", depth_);
-            children->Put("IsDisappearing", IsDisappearing());
-            DumpAdvanceInfo(children);
-            json->Put(tag_.c_str(), children);
-            DumpLog::GetInstance().PrintJson(json->ToString());
-            return true;
-        }
-    } else {
-        if (DumpLog::GetInstance().GetDumpFile() &&
-            (id == propInspectorId_.value_or("") || id == std::to_string(nodeId_))) {
-            DumpLog::GetInstance().AddDesc("ID: " + std::to_string(nodeId_));
-            DumpLog::GetInstance().AddDesc(std::string("Depth: ").append(std::to_string(depth_)));
-            DumpLog::GetInstance().AddDesc(std::string("IsDisappearing: ").append(std::to_string(IsDisappearing())));
-            DumpAdvanceInfo();
-            DumpLog::GetInstance().Print(depth, tag_, static_cast<int32_t>(GetChildren().size()));
-            return true;
-        }
+    if (DumpLog::GetInstance().GetDumpFile() &&
+        (id == propInspectorId_.value_or("") || id == std::to_string(nodeId_))) {
+        DumpLog::GetInstance().AddDesc("ID: " + std::to_string(nodeId_));
+        DumpLog::GetInstance().AddDesc(std::string("Depth: ").append(std::to_string(GetDepth())));
+        DumpLog::GetInstance().AddDesc(std::string("IsDisappearing: ").append(std::to_string(IsDisappearing())));
+        DumpAdvanceInfo();
+        DumpLog::GetInstance().Print(depth, tag_, static_cast<int32_t>(GetChildren().size()));
+        return true;
     }
     for (const auto& item : GetChildren()) {
-        if (item->DumpTreeById(depth + 1, id, hasJson)) {
+        if (item->DumpTreeById(depth + 1, id)) {
             return true;
         }
     }
     for (const auto& [item, index, branch] : disappearingChildren_) {
-        if (item->DumpTreeById(depth + 1, id, hasJson)) {
+        if (item->DumpTreeById(depth + 1, id)) {
             return true;
         }
     }
@@ -1332,7 +990,6 @@ void UINode::GenerateOneDepthVisibleFrameWithTransition(std::list<RefPtr<FrameNo
             std::advance(insertIter, index);
             allChildren.insert(insertIter, disappearingChild);
         }
-        disappearingChild->SetAncestor(WeakClaim(this));
     }
     for (const auto& child : allChildren) {
         child->OnGenerateOneDepthVisibleFrameWithTransition(visibleList);
@@ -1360,7 +1017,6 @@ void UINode::GenerateOneDepthVisibleFrameWithOffset(
             std::advance(insertIter, index);
             allChildren.insert(insertIter, disappearingChild);
         }
-        disappearingChild->SetAncestor(WeakClaim(this));
     }
     for (const auto& child : allChildren) {
         child->OnGenerateOneDepthVisibleFrameWithOffset(visibleList, offset);
@@ -1535,7 +1191,7 @@ bool UINode::RenderCustomChild(int64_t deadline)
 
 void UINode::Build(std::shared_ptr<std::list<ExtraInfo>> extraInfos)
 {
-    ACE_LAYOUT_TRACE_BEGIN("Build[%s][self:%d][parent:%d][key:%s]", tag_.c_str(), nodeId_,
+    ACE_LAYOUT_TRACE_BEGIN("Build[%s][self:%d][parent:%d][key:%s]", GetTag().c_str(), GetId(),
         GetParent() ? GetParent()->GetId() : 0, GetInspectorIdValue("").c_str());
     std::vector<RefPtr<UINode>> children;
     children.reserve(GetChildren().size());
@@ -1581,7 +1237,7 @@ void UINode::SetActive(bool active, bool needRebuildRenderContext)
     }
 }
 
-void UINode::SetJSViewActive(bool active, bool isLazyForEachNode, bool isReuse)
+void UINode::SetJSViewActive(bool active, bool isLazyForEachNode)
 {
     for (const auto& child : GetChildren()) {
         auto customNode = AceType::DynamicCast<CustomNode>(child);
@@ -1590,10 +1246,10 @@ void UINode::SetJSViewActive(bool active, bool isLazyForEachNode, bool isReuse)
             return;
         }
         if (customNode) {
-            customNode->SetJSViewActive(active, isLazyForEachNode, isReuse);
+            customNode->SetJSViewActive(active);
             continue;
         }
-        child->SetJSViewActive(active, isLazyForEachNode, isReuse);
+        child->SetJSViewActive(active);
     }
 }
 
@@ -1616,30 +1272,6 @@ void UINode::OnRecycle()
     }
 }
 
-void UINode::NotifyColorModeChange(uint32_t colorMode)
-{
-    if (CheckShouldClearCache()) {
-        auto customNode = DynamicCast<CustomNode>(this);
-        if (customNode) {
-            ContainerScope scope(instanceId_);
-            ACE_LAYOUT_TRACE_BEGIN("UINode %d %s is customnode %d",
-                nodeId_, tag_.c_str(), customNode ? true : false);
-            customNode->FireClearAllRecycleFunc();
-            SetShouldClearCache(false);
-            ACE_LAYOUT_TRACE_END()
-        }
-    }
-    for (const auto& child : GetChildren()) {
-        child->SetShouldClearCache(CheckShouldClearCache());
-        child->SetRerenderable(GetRerenderable());
-        child->SetMeasureAnyway(CheckMeasureAnyway());
-        if (!AceType::DynamicCast<FrameNode>(child)) {
-            child->SetDarkMode(CheckIsDarkMode());
-        }
-        child->NotifyColorModeChange(colorMode);
-    }
-}
-
 void UINode::OnReuse()
 {
     for (const auto& child : GetChildren()) {
@@ -1649,7 +1281,7 @@ void UINode::OnReuse()
 
 std::pair<bool, int32_t> UINode::GetChildFlatIndex(int32_t id)
 {
-    if (nodeId_ == id) {
+    if (GetId() == id) {
         return { true, 0 };
     }
 
@@ -1658,7 +1290,7 @@ std::pair<bool, int32_t> UINode::GetChildFlatIndex(int32_t id)
         return { false, 0 };
     }
 
-    if (node && (node->GetTag() == tag_)) {
+    if (node && (node->GetTag() == GetTag())) {
         return { false, 1 };
     }
 
@@ -1713,16 +1345,13 @@ void UINode::AddDisappearingChild(const RefPtr<UINode>& child, uint32_t index, i
         // mark child as disappearing before adding to disappearingChildren_
         child->isDisappearing_ = true;
     }
-    if (DetectLoop(child, Claim(this))) {
-        return;
-    }
     disappearingChildren_.emplace_back(child, index, branchId);
 }
 
 bool UINode::RemoveDisappearingChild(const RefPtr<UINode>& child)
 {
     // quick reject
-    if (!child || !child->isDisappearing_) {
+    if (!child->isDisappearing_) {
         return false;
     }
     auto it = std::find_if(disappearingChildren_.begin(), disappearingChildren_.end(),
@@ -1787,7 +1416,7 @@ void UINode::GetPerformanceCheckData(PerformanceCheckNodeMap& nodeMap)
     nodeInfo_->pageDepth = depth_;
     nodeInfo_->childrenSize = children.size();
     if (isBuildByJS_) {
-        nodeMap.insert({ nodeId_, *(nodeInfo_) });
+        nodeMap.insert({ GetId(), *(nodeInfo_) });
     }
     for (const auto& child : children) {
         // Recursively traverse the child nodes of each node
@@ -1944,11 +1573,6 @@ void UINode::UpdateNodeStatus(NodeStatus nodeStatus)
 void UINode::SetIsRootBuilderNode(bool isRootBuilderNode)
 {
     isRootBuilderNode_ = isRootBuilderNode;
-    if (isRootBuilderNode) {
-        jsBuilderNodeId_ = nodeId_;
-    } else {
-        jsBuilderNodeId_ = -1;
-    }
 }
 
 bool UINode::GetIsRootBuilderNode() const
@@ -1957,52 +1581,11 @@ bool UINode::GetIsRootBuilderNode() const
 }
 
 // Collects  all the child elements of "children" in a recursive manner
-// Fills the "removedElmtId" list and the "reservedElmtId" list with the collected child elements
-void UINode::CollectCleanedChildren(const std::list<RefPtr<UINode>>& children, std::list<int32_t>& removedElmtId,
-    std::list<int32_t>& reservedElmtId, bool isEntry)
-{
-    auto greatOrEqualApi13 = GreatOrEqualAPITargetVersion(PlatformVersion::VERSION_THIRTEEN);
-    for (auto const& child : children) {
-        bool needByTransition = child->IsDisappearing();
-        if (greatOrEqualApi13) {
-            needByTransition = isEntry && child->IsDisappearing() && child->GetInspectorIdValue("") != "";
-        }
-
-        if (!needByTransition && child->GetTag() != V2::RECYCLE_VIEW_ETS_TAG && !child->GetIsRootBuilderNode()) {
-            removedElmtId.emplace_back(child->GetId());
-            if (child->GetTag() != V2::JS_VIEW_ETS_TAG) {
-                CollectCleanedChildren(child->GetChildren(), removedElmtId, reservedElmtId, false);
-            }
-        } else if (needByTransition && greatOrEqualApi13) {
-            child->CollectReservedChildren(reservedElmtId);
-        }
-        if (isEntry) {
-            child->SetAncestor(nullptr);
-        }
-    }
-    if (isEntry) {
-        children_.clear();
-    }
-}
-
-void UINode::CollectReservedChildren(std::list<int32_t>& reservedElmtId)
-{
-    reservedElmtId.emplace_back(nodeId_);
-    if (tag_ == V2::JS_VIEW_ETS_TAG) {
-        SetJSViewActive(false);
-    } else {
-        for (auto const& child : GetChildren()) {
-            child->CollectReservedChildren(reservedElmtId);
-        }
-    }
-}
-
-// Collects  all the child elements of "children" in a recursive manner
 // Fills the "removedElmtId" list with the collected child elements
 void UINode::CollectRemovedChildren(const std::list<RefPtr<UINode>>& children,
     std::list<int32_t>& removedElmtId, bool isEntry)
 {
-    auto greatOrEqualApi13 = GreatOrEqualAPITargetVersion(PlatformVersion::VERSION_THIRTEEN);
+    auto greatOrEqualApi13 = Container::GreatOrEqualAPITargetVersion(PlatformVersion::VERSION_THIRTEEN);
     for (auto const& child : children) {
         bool needByTransition = child->IsDisappearing();
         if (greatOrEqualApi13) {
@@ -2010,9 +1593,6 @@ void UINode::CollectRemovedChildren(const std::list<RefPtr<UINode>>& children,
         }
         if (!needByTransition && child->GetTag() != V2::RECYCLE_VIEW_ETS_TAG && !child->GetIsRootBuilderNode()) {
             CollectRemovedChild(child, removedElmtId);
-        }
-        if (isEntry) {
-            child->SetAncestor(nullptr);
         }
     }
     if (isEntry) {
@@ -2023,7 +1603,6 @@ void UINode::CollectRemovedChildren(const std::list<RefPtr<UINode>>& children,
 void UINode::CollectRemovedChild(const RefPtr<UINode>& child, std::list<int32_t>& removedElmtId)
 {
     removedElmtId.emplace_back(child->GetId());
-    child->OnCollectRemoved();
     // Fetch all the child elementIDs recursively
     if (child->GetTag() != V2::JS_VIEW_ETS_TAG) {
         // add CustomNode but do not recurse into its children
@@ -2042,7 +1621,6 @@ void UINode::PaintDebugBoundaryTreeAll(bool flag)
 
 void UINode::GetPageNodeCountAndDepth(int32_t* count, int32_t* depth)
 {
-    ACE_SCOPED_TRACE("GetPageNodeCountAndDepth");
     auto children = GetChildren();
     if (*depth < depth_) {
         *depth = depth_;
@@ -2058,6 +1636,7 @@ void UINode::GetPageNodeCountAndDepth(int32_t* count, int32_t* depth)
 
 void UINode::DFSAllChild(const RefPtr<UINode>& root, std::vector<RefPtr<UINode>>& res)
 {
+    CHECK_NULL_VOID(root);
     if (root->GetChildren().empty()) {
         res.emplace_back(root);
     }
@@ -2097,7 +1676,7 @@ void UINode::NotifyWebPattern(bool isRegister)
     }
 }
 
-void UINode::GetContainerComponentText(std::u16string& text)
+void UINode::GetContainerComponentText(std::string& text)
 {
     for (const auto& child : GetChildren()) {
         if (InstanceOf<FrameNode>(child) && child->GetTag() == V2::TEXT_ETS_TAG) {
@@ -2106,7 +1685,7 @@ void UINode::GetContainerComponentText(std::u16string& text)
             CHECK_NULL_VOID(pattern);
             auto layoutProperty = pattern->GetLayoutProperty<TextLayoutProperty>();
             CHECK_NULL_VOID(layoutProperty);
-            text = layoutProperty->GetContent().value_or(u"");
+            text = layoutProperty->GetContent().value_or("");
             break;
         }
         child->GetContainerComponentText(text);
@@ -2130,215 +1709,10 @@ int32_t UINode::CalcAbsPosition(int32_t changeIdx, int64_t id) const
 void UINode::NotifyChange(int32_t changeIdx, int32_t count, int64_t id, NotificationType notificationType)
 {
     int32_t updateFrom = CalcAbsPosition(changeIdx, id);
-    auto accessibilityId = accessibilityId_;
+    auto accessibilityId = GetAccessibilityId();
     auto parent = GetParent();
     if (parent) {
         parent->NotifyChange(updateFrom, count, accessibilityId, notificationType);
-    }
-}
-
-void UINode::SetParent(const WeakPtr<UINode>& parent, bool needDetect)
-{
-    auto current = parent.Upgrade();
-    CHECK_NULL_VOID(current);
-    if (needDetect && DetectLoop(Claim(this), current)) {
-        return;
-    }
-    parent_ = parent;
-    ancestor_ = parent;
-}
-
-int32_t UINode::GetThemeScopeId() const
-{
-    return themeScopeId_;
-}
-
-void UINode::SetThemeScopeId(int32_t themeScopeId)
-{
-    LOGD("WithTheme SetThemeScopeId %{public}d", themeScopeId);
-    themeScopeId_ = themeScopeId;
-    auto children = GetChildren();
-    for (const auto& child : children) {
-        if (!child) {
-            continue;
-        }
-        child->SetThemeScopeId(themeScopeId);
-    }
-}
-
-void UINode::UpdateThemeScopeId(int32_t themeScopeId)
-{
-    if (GetThemeScopeId() == themeScopeId) {
-        return;
-    }
-    LOGD("WithTheme UpdateThemeScopeId old:%{public}d new:%{public}d", GetThemeScopeId(), themeScopeId);
-    themeScopeId_ = themeScopeId;
-    OnThemeScopeUpdate(themeScopeId);
-    auto children = GetChildren();
-    for (const auto& child : children) {
-        if (!child) {
-            continue;
-        }
-        child->UpdateThemeScopeId(themeScopeId);
-    }
-}
-
-void UINode::UpdateThemeScopeUpdate(int32_t themeScopeId)
-{
-    if (GetThemeScopeId() != themeScopeId) {
-        return;
-    }
-    OnThemeScopeUpdate(themeScopeId);
-    if (needCallChildrenUpdate_) {
-        auto children = GetChildren();
-        for (const auto& child : children) {
-            if (!child) {
-                continue;
-            }
-            child->UpdateThemeScopeUpdate(themeScopeId);
-        }
-    }
-}
-
-void UINode::AllowUseParentTheme(bool isAllow)
-{
-    isAllowUseParentTheme_ = isAllow;
-}
-
-bool UINode::IsAllowUseParentTheme() const
-{
-    return isAllowUseParentTheme_;
-}
-
-ColorMode UINode::GetLocalColorMode() const
-{
-    auto theme = TokenThemeStorage::GetInstance()->GetTheme(GetThemeScopeId());
-    return theme ? theme->GetColorMode() : ColorMode::COLOR_MODE_UNDEFINED;
-}
-
-void UINode::SetAllowReusableV2Descendant(bool allow)
-{
-    allowReusableV2Descendant_ = allow;
-}
-
-bool UINode::IsAllowReusableV2Descendant() const
-{
-    return allowReusableV2Descendant_;
-}
-
-void UINode::SetDestroying(bool isDestroying, bool cleanStatus)
-{
-    if (isInDestroying_ == isDestroying) {
-        return;
-    }
-
-    isInDestroying_ = isDestroying;
-    for (const auto& child : GetChildren()) {
-        if (child->IsReusableNode()) {
-            child->SetDestroying(isDestroying, false);
-        } else {
-            child->SetDestroying(isDestroying, cleanStatus);
-        }
-    }
-    // add customnode to pipiline when state change, destroy them next vsync
-    OnDestroyingStateChange(isDestroying, cleanStatus);
-}
-
-bool UINode::HasSkipNode()
-{
-    for (const auto& child : children_) {
-        if (child->GetTag() == V2::WEB_ETS_TAG) {
-            return true;
-        }
-
-        if (child->HasSkipNode()) {
-            return true;
-        }
-    }
-    return false;
-}
-
-void UINode::ProcessIsInDestroyingForReuseableNode(const RefPtr<UINode>& child)
-{
-    if (!child || !child->IsReusableNode()) {
-        return;
-    }
-    if (!IsInDestroying() && child->IsInDestroying()) {
-        child->SetDestroying(false, false);
-    }
-}
-
-bool UINode::GreatOrEqualAPITargetVersion(PlatformVersion version) const
-{
-    if (!context_ || context_->GetApiTargetVersion() == 0) {
-        return apiVersion_ >= static_cast<int32_t>(version);
-    }
-    return context_->GreatOrEqualAPITargetVersion(version);
-}
-
-bool UINode::LessThanAPITargetVersion(PlatformVersion version) const
-{
-    if (!context_ || context_->GetApiTargetVersion() == 0) {
-        return apiVersion_ < static_cast<int32_t>(version);
-    }
-    return context_->LessThanAPITargetVersion(version);
-}
-
-void UINode::UpdateDrawChildObserver(const RefPtr<UINode>& child)
-{
-    if (GetInspectorId().has_value()) {
-        auto pipeline = GetContextRefPtr();
-        CHECK_NULL_VOID(pipeline);
-        auto front = pipeline->GetFrontend();
-        if (front) {
-            auto hasDrawChildCallback = front->IsDrawChildrenCallbackFuncExist(GetInspectorId().value_or(""));
-            if (hasDrawChildCallback) {
-                child->SetObserverParentForDrawChildren(Claim(this));
-            }
-        }
-    }
-    if (IsObservedByDrawChildren()) {
-        auto parentForObserverDrawChildren = GetObserverParentForDrawChildren();
-        if (parentForObserverDrawChildren) {
-            child->SetObserverParentForDrawChildren(parentForObserverDrawChildren);
-        }
-    }
-}
-
-void UINode::SetObserverParentForDrawChildren(const RefPtr<UINode>& parent)
-{
-    CHECK_NULL_VOID(parent);
-    isObservedByDrawChildren_ = true;
-    drawChildrenParent_ = parent;
-    for (const auto& child : GetChildren()) {
-        child->SetObserverParentForDrawChildren(parent);
-    }
-}
-
-RefPtr<UINode> UINode::GetAncestor() const
-{
-    return ancestor_.Upgrade();
-}
-
-void UINode::SetAncestor(const WeakPtr<UINode>& parent)
-{
-    ancestor_ = parent;
-}
-
-void UINode::FindTopNavDestination(RefPtr<FrameNode>& result)
-{
-    auto currentNode = AceType::DynamicCast<FrameNode>(this);
-    if (currentNode && currentNode->GetTag() == V2::NAVIGATION_VIEW_ETS_TAG) {
-        auto navigationGroupNode = AceType::DynamicCast<NG::NavigationGroupNode>(currentNode);
-        CHECK_NULL_VOID(navigationGroupNode);
-        result = navigationGroupNode->GetTopDestination();
-        return;
-    }
-    for (const auto& item : GetChildren()) {
-        item->FindTopNavDestination(result);
-        if (result) {
-            return;
-        }
     }
 }
 } // namespace OHOS::Ace::NG

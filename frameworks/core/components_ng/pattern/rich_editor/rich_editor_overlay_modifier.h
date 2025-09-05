@@ -24,20 +24,16 @@
 
 namespace OHOS::Ace::NG {
 class RichEditorOverlayModifier : public TextOverlayModifier {
-    DECLARE_ACE_TYPE(RichEditorOverlayModifier, TextOverlayModifier);
+    DECLARE_ACE_TYPE(RichEditorOverlayModifier, TextOverlayModifier)
 
 public:
     RichEditorOverlayModifier(const WeakPtr<OHOS::Ace::NG::Pattern>& pattern,
         const WeakPtr<ScrollBarOverlayModifier>& scrollbarOverlayModifier, WeakPtr<ScrollEdgeEffect>&& edgeEffect);
     void SetCaretOffsetAndHeight(const OffsetF& cursorOffset, float height);
-    void SetFloatingCaretOffset(const OffsetF& cursorOffset);
     void SetCaretColor(uint32_t caretColor);
-    void SetOriginCaretColor(uint32_t caretColor);
+    void SetSelectedBackgroundColor(uint32_t selectedBackgroundColor);
     void SetCaretWidth(float width);
     void SetCaretVisible(bool value);
-    void SetOriginCaretVisible(bool value);
-    void SetFloatingCaretVisible(bool value);
-    void SetFloatCaretLanding(bool caretLanding);
     void SetScrollOffset(float value);
     void SetScrollBarOpacityType(int32_t type);
     void SetTextHeight(float value);
@@ -49,26 +45,20 @@ public:
     float GetCaretHeight() const;
     float GetCaretWidth() const;
     OffsetF GetCaretOffset() const;
-    bool GetFloatCaretLanding() const;
     void onDraw(DrawingContext& drawingContext) override;
     void UpdateScrollBar(PaintWrapper* paintWrapper);
-    void StartFloatingCaretLand(const OffsetF& originCaretOffset);
 private:
     void PaintPreviewTextDecoration(DrawingContext& drawingContext) const;
     void PaintCaret(DrawingContext& drawingContext) const;
-    void PaintFloatingCaret(DrawingContext& drawingContext) const;
     void PaintScrollBar(DrawingContext& context);
     void PaintEdgeEffect(const SizeF& frameSize, RSCanvas& canvas);
 
     RefPtr<PropertyBool> caretVisible_;
-    RefPtr<PropertyBool> originCaretVisible_;
-    RefPtr<PropertyBool> floatingCaretVisible_;
     RefPtr<PropertyOffsetF> caretOffset_;
-    RefPtr<AnimatablePropertyOffsetF> floatingCaretOffset_;
     RefPtr<PropertyFloat> caretHeight_;
     RefPtr<PropertyFloat> caretWidth_;
     RefPtr<PropertyInt> caretColor_;
-    RefPtr<PropertyInt> originCaretColor_;
+    RefPtr<PropertyInt> selectedBackgroundColor_;
     RefPtr<PropertyFloat> scrollOffset_;
     RefPtr<PropertyInt> scrollBarOpacityType_;
     RefPtr<PropertyFloat> textHeight_;
@@ -80,7 +70,6 @@ private:
     RefPtr<PropertyFloat> previewTextUnderlineWidth_;
     RefPtr<PropertyBool> showPreviewTextDecoration_;
     PreviewTextStyle previewTextStyle_;
-    bool caretLanding_ = false;
     ACE_DISALLOW_COPY_AND_MOVE(RichEditorOverlayModifier);
 };
 } // namespace OHOS::Ace::NG

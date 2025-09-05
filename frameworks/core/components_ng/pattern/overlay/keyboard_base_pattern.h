@@ -41,8 +41,6 @@ public:
         return targetId_;
     }
     void DumpInfo() override;
-    void DumpSimplifyInfo(std::shared_ptr<JsonValue>& json) override {}
-    void DumpInfo(std::unique_ptr<JsonValue>& json) override;
     void OnModifyDone() override;
     void OnAreaChangedInner() override;
     void SetKeyboardAreaChange(bool keyboardAvoidance = false);

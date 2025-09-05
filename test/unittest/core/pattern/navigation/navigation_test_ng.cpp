@@ -27,7 +27,6 @@
 #include "core/components_ng/base/ui_node.h"
 #include "core/components_ng/pattern/button/button_pattern.h"
 #include "core/components_ng/pattern/navigation/navigation_content_layout_algorithm.h"
-#include "core/components_ng/pattern/navigation/navigation_content_pattern.h"
 #include "core/components_ng/pattern/navigation/navigation_layout_property.h"
 #include "core/components_ng/pattern/navigation/navigation_model_ng.h"
 #include "core/components_ng/pattern/navigation/navigation_pattern.h"
@@ -62,7 +61,6 @@ void NavigationTestNg::SetUpTestSuite()
 {
     MockPipelineContext::SetUp();
     MockContainer::SetUp();
-    MockContainer::Current()->SetNavigationRoute(AceType::MakeRefPtr<MockNavigationRoute>(""));
     auto context = MockPipelineContext::GetCurrent();
     if (context) {
         context->stageManager_ = nullptr;
@@ -94,7 +92,6 @@ void NavigationTestNg::MockPipelineContextGetTheme()
     auto themeManager = AceType::MakeRefPtr<MockThemeManager>();
     MockPipelineContext::GetCurrent()->SetThemeManager(themeManager);
     EXPECT_CALL(*themeManager, GetTheme(_)).WillRepeatedly(Return(AceType::MakeRefPtr<NavigationBarTheme>()));
-    EXPECT_CALL(*themeManager, GetTheme(_, _)).WillRepeatedly(Return(AceType::MakeRefPtr<NavigationBarTheme>()));
 }
 
 RefPtr<NavDestinationGroupNode> NavigationTestNg::CreateDestination(const std::string name)
@@ -347,9 +344,7 @@ HWTEST_F(NavigationTestNg, NavigationModelNG0013, TestSize.Level1)
      */
     auto navigation = NavigationGroupNode::GetOrCreateGroupNode(
         "navigation", 120, []() { return AceType::MakeRefPtr<NavigationPattern>(); });
-    ASSERT_NE(navigation, nullptr);
     auto navigationStack = AceType::MakeRefPtr<NavigationStack>();
-    ASSERT_NE(navigationStack, nullptr);
     navigation->GetPattern<NavigationPattern>()->SetNavigationStack(std::move(navigationStack));
     auto layoutWrapper = navigation->CreateLayoutWrapper();
 
@@ -776,8 +771,7 @@ HWTEST_F(NavigationTestNg, NavigationModelNG0022, TestSize.Level1)
     calcLayoutConstraint->selfIdealSize = CalcSize(std::nullopt, len);
     navigationLayoutProperty->calcLayoutConstraint_ = std::move(calcLayoutConstraint);
     algorithm->MeasureContentChild(AceType::RawPtr(layoutWrapper), navigation, navigationLayoutProperty, SizeF());
-    algorithm->MeasureNavBarOrHomeDestination(
-        AceType::RawPtr(layoutWrapper), navigation, navigationLayoutProperty, SizeF());
+    algorithm->MeasureNavBar(AceType::RawPtr(layoutWrapper), navigation, navigationLayoutProperty, SizeF());
     LayoutConstraintF constraint;
     constraint.selfIdealSize = OptionalSizeF(20, 20);
     navigationLayoutProperty->layoutConstraint_ = LayoutConstraintF();
@@ -888,7 +882,6 @@ HWTEST_F(NavigationTestNg, NavigationStackTest001, TestSize.Level1)
      * @tc.steps: step2.add page A
      */
     auto* viewStack = ViewStackProcessor::GetInstance();
-    ASSERT_NE(viewStack, nullptr);
     // navDestination node
     int32_t nodeId = viewStack->ClaimNodeId();
     auto frameNode = NavDestinationGroupNode::GetOrCreateGroupNode(
@@ -924,17 +917,17 @@ HWTEST_F(NavigationTestNg, NavigationStackTest002, TestSize.Level1)
      */
     NavigationModelNG navigationModel;
     navigationModel.Create();
+    navigationModel.SetNavigationStack();
     navigationModel.SetTitle("navigationModel", false);
     RefPtr<NavigationGroupNode> navigationNode =
         AceType::DynamicCast<NavigationGroupNode>(ViewStackProcessor::GetInstance()->Finish());
     ASSERT_NE(navigationNode, nullptr);
-    auto pattern = navigationNode->GetPattern<NavigationPattern>();
-    ASSERT_NE(pattern, nullptr);
-    pattern->SetNavigationStack(AceType::MakeRefPtr<MockNavigationStack>());
+
     /**
      * @tc.steps: step2.add page A
      */
-    RefPtr<FrameNode> frameNode = FrameNode::CreateFrameNode("temp", 245, AceType::MakeRefPtr<NavDestinationPattern>());
+    RefPtr<FrameNode> frameNode = FrameNode::CreateFrameNode("temp", 245, AceType::MakeRefPtr<ButtonPattern>());
+    auto pattern = AceType::DynamicCast<NavigationPattern>(navigationNode->GetPattern());
     auto stack = pattern->GetNavigationStack();
     stack->Add("A", frameNode);
     auto navigationPattern = AceType::DynamicCast<NavigationPattern>(navigationNode->GetPattern());
@@ -946,8 +939,7 @@ HWTEST_F(NavigationTestNg, NavigationStackTest002, TestSize.Level1)
     /**
      * @tc.steps: step3. replace pageA
      */
-    RefPtr<FrameNode> replaceNode = FrameNode::CreateFrameNode("temp", 245,
-        AceType::MakeRefPtr<NavDestinationPattern>());
+    RefPtr<FrameNode> replaceNode = FrameNode::CreateFrameNode("temp", 245, AceType::MakeRefPtr<ButtonPattern>());
     stack->Remove();
     stack->Add("B", replaceNode);
     navigationPattern->OnModifyDone();
@@ -1697,171 +1689,5 @@ HWTEST_F(NavigationTestNg, NavigationInterceptionTest004, TestSize.Level1)
     navigationPattern->MarkNeedSyncWithJsStack();
     MockPipelineContext::GetCurrent()->GetNavigationManager()->FireNavigationUpdateCallback();
     EXPECT_EQ(times, 0);
-}
-
-/**
- * @tc.name: NavigationCommonTitleTest001
- * @tc.desc: Test Navigation CommonTitle.
- * @tc.type: FUNC
- */
-HWTEST_F(NavigationTestNg, NavigationCommonTitleTest001, TestSize.Level1)
-{
-    MockPipelineContextGetTheme();
-    NavigationModelNG navigationModel;
-    navigationModel.Create();
-    navigationModel.SetNavigationStack();
-    navigationModel.SetTitle("Title", true);
-    navigationModel.SetSubtitle("subTitle");
-    auto frameNode = AceType::Claim(ViewStackProcessor::GetInstance()->GetMainFrameNode());
-    ASSERT_NE(frameNode, nullptr);
-    auto navigationGroupNode = AceType::DynamicCast<NavigationGroupNode>(frameNode);
-    ASSERT_NE(navigationGroupNode, nullptr);
-    auto navBarNode = AceType::DynamicCast<NavBarNode>(navigationGroupNode->GetNavBarNode());
-    ASSERT_NE(navBarNode, nullptr);
-}
-
-/**
- * @tc.name: CreatePrimaryContentIfNeeded001
- * @tc.desc: Branch: if (!manager->IsForceSplitSupported()) { => true
- * @tc.type: FUNC
- */
-HWTEST_F(NavigationTestNg, CreatePrimaryContentIfNeeded001, TestSize.Level1)
-{
-    MockPipelineContextGetTheme();
-    auto context = PipelineContext::GetCurrentContext();
-    ASSERT_NE(context, nullptr);
-    auto manager = context->GetNavigationManager();
-    ASSERT_NE(manager, nullptr);
-    NavigationModelNG navigationModel;
-    auto navNode = NavigationGroupNode::GetOrCreateGroupNode(
-        V2::NAVIGATION_VIEW_ETS_TAG, 1, []() { return AceType::MakeRefPtr<NavigationPattern>(); });
-    ASSERT_NE(navNode, nullptr);
-    auto pattern = navNode->GetPattern<NavigationPattern>();
-    ASSERT_NE(pattern, nullptr);
-    auto navigationStack = AceType::MakeRefPtr<NavigationStack>();
-    ASSERT_NE(navigationStack, nullptr);
-    pattern->SetNavigationStack(navigationStack);
-
-    manager->isForceSplitSupported_ = false;
-    ASSERT_TRUE(navigationModel.CreatePrimaryContentIfNeeded(navNode));
-}
-
-/**
- * @tc.name: CreatePrimaryContentIfNeeded002
- * @tc.desc: Branch: if (!manager->IsForceSplitSupported()) { => false
- *                   if (navigationGroupNode->GetPrimaryContentNode()) { => true
- * @tc.type: FUNC
- */
-HWTEST_F(NavigationTestNg, CreatePrimaryContentIfNeeded002, TestSize.Level1)
-{
-    MockPipelineContextGetTheme();
-    auto context = PipelineContext::GetCurrentContext();
-    ASSERT_NE(context, nullptr);
-    auto manager = context->GetNavigationManager();
-    ASSERT_NE(manager, nullptr);
-    NavigationModelNG navigationModel;
-    auto navNode = NavigationGroupNode::GetOrCreateGroupNode(
-        V2::NAVIGATION_VIEW_ETS_TAG, 1, []() { return AceType::MakeRefPtr<NavigationPattern>(); });
-    ASSERT_NE(navNode, nullptr);
-    auto pattern = navNode->GetPattern<NavigationPattern>();
-    ASSERT_NE(pattern, nullptr);
-    auto navigationStack = AceType::MakeRefPtr<NavigationStack>();
-    ASSERT_NE(navigationStack, nullptr);
-    pattern->SetNavigationStack(navigationStack);
-    auto contentNode = FrameNode::GetOrCreateFrameNode(
-        V2::PRIMARY_CONTENT_NODE_ETS_TAG, 2, []() { return AceType::MakeRefPtr<NavigationContentPattern>(); });
-    ASSERT_NE(contentNode, nullptr);
-
-    manager->isForceSplitSupported_ = true;
-    navNode->primaryContentNode_ = contentNode;
-    ASSERT_TRUE(navigationModel.CreatePrimaryContentIfNeeded(navNode));
-}
-
-/**
- * @tc.name: CreatePrimaryContentIfNeeded003
- * @tc.desc: Branch: if (!manager->IsForceSplitSupported()) { => false
- *                   if (navigationGroupNode->GetPrimaryContentNode()) { => false
- * @tc.type: FUNC
- */
-HWTEST_F(NavigationTestNg, CreatePrimaryContentIfNeeded003, TestSize.Level1)
-{
-    MockPipelineContextGetTheme();
-    auto context = PipelineContext::GetCurrentContext();
-    ASSERT_NE(context, nullptr);
-    auto manager = context->GetNavigationManager();
-    ASSERT_NE(manager, nullptr);
-    NavigationModelNG navigationModel;
-    auto navNode = NavigationGroupNode::GetOrCreateGroupNode(
-        V2::NAVIGATION_VIEW_ETS_TAG, 1, []() { return AceType::MakeRefPtr<NavigationPattern>(); });
-    ASSERT_NE(navNode, nullptr);
-    auto pattern = navNode->GetPattern<NavigationPattern>();
-    ASSERT_NE(pattern, nullptr);
-    auto navigationStack = AceType::MakeRefPtr<NavigationStack>();
-    ASSERT_NE(navigationStack, nullptr);
-    pattern->SetNavigationStack(navigationStack);
-
-    manager->isForceSplitSupported_ = true;
-    navNode->primaryContentNode_ = nullptr;
-    ASSERT_TRUE(navigationModel.CreatePrimaryContentIfNeeded(navNode));
-}
-
-/**
- * @tc.name: SizeCalculationSplit001
- * @tc.desc: Branch: if (pattern->IsForceSplitSuccess() && pattern->IsForceSplitUseNavBar()) { => true
- * @tc.type: FUNC
- */
-HWTEST_F(NavigationTestNg, SizeCalculationSplit001, TestSize.Level1)
-{
-    NavigationModelNG model;
-    model.Create();
-    model.SetNavigationStack();
-    auto navigation =
-        AceType::DynamicCast<NavigationGroupNode>(ViewStackProcessor::GetInstance()->GetMainElementNode());
-    ASSERT_NE(navigation, nullptr);
-    auto pattern = navigation->GetPattern<NavigationPattern>();
-    ASSERT_NE(pattern, nullptr);
-    pattern->forceSplitSuccess_ = true;
-    pattern->forceSplitUseNavBar_ = true;
-
-    const float navWidth = 400.0f;
-    const float navHeight = 300.0f;
-    const float dividerWidthInPx = DIVIDER_WIDTH.ConvertToPx();
-    float halfWidth = (navWidth - dividerWidthInPx) / 2.0f;
-
-    auto algorithm = AceType::MakeRefPtr<NavigationLayoutAlgorithm>();
-    auto property = AceType::MakeRefPtr<NavigationLayoutProperty>();
-    property->layoutConstraint_ = LayoutConstraintF();
-    algorithm->SizeCalculationSplit(navigation, property, SizeF(navWidth, navHeight));
-
-    EXPECT_TRUE(NearEqual(algorithm->navBarSize_.Width(), halfWidth));
-    EXPECT_TRUE(NearEqual(algorithm->realNavBarWidth_, halfWidth));
-    EXPECT_TRUE(NearEqual(algorithm->realContentWidth_, halfWidth));
-}
-
-/**
- * @tc.name: SetEnableSwipeBackTest001
- * @tc.desc: Branch: if (device == wearable && !enableSwipeBack) = true
- *           Expected: onBackPress will return true
- * @tc.type: FUNC
- */
-HWTEST_F(NavigationTestNg, SetEnableSwipeBackTest001, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. get pipeline and mock SystemProperties::deviceType_
-     */
-    auto preDeviceType_ = SystemProperties::deviceType_;
-    SystemProperties::deviceType_ = DeviceType::WEARABLE;
-    auto context = MockPipelineContext::GetCurrent();
-    ASSERT_NE(context, nullptr);
-    ASSERT_TRUE(context->enableSwipeBack_);
-    /**
-     * @tc.steps: step2. call SetEnableSwipeBack and do test. then reset mocked properties.
-     */
-    context->SetEnableSwipeBack(false);
-    ASSERT_FALSE(context->enableSwipeBack_);
-    ASSERT_TRUE(context->OnBackPressed());
-    context->SetEnableSwipeBack(true);
-    ASSERT_TRUE(context->enableSwipeBack_);
-    SystemProperties::deviceType_ = preDeviceType_;
 }
 } // namespace OHOS::Ace::NG

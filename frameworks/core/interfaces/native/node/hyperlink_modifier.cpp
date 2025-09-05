@@ -15,8 +15,10 @@
 
 #include "core/interfaces/native/node/hyperlink_modifier.h"
 #include "core/components/hyperlink/hyperlink_theme.h"
+#include "core/components_ng/base/frame_node.h"
 #include "core/components_ng/pattern/hyperlink/hyperlink_model_ng.h"
 #include "core/pipeline_ng/pipeline_context.h"
+#include "core/components/theme/theme_manager.h"
 
 namespace OHOS::Ace::NG {
 namespace {
@@ -26,19 +28,11 @@ constexpr int NUM_2 = 2;
 constexpr int NUM_3 = 3;
 constexpr int NUM_4 = 4;
 } // namespace
-void SetHyperlinkColor(ArkUINodeHandle node, uint32_t color, void* colorRawPtr)
+void SetHyperlinkColor(ArkUINodeHandle node, uint32_t color)
 {
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
     HyperlinkModelNG::SetColor(frameNode, Color(color));
-    auto pattern = frameNode->GetPattern();
-    CHECK_NULL_VOID(pattern);
-    if (SystemProperties::ConfigChangePerform() && colorRawPtr) {
-        auto resObj = AceType::Claim(reinterpret_cast<ResourceObject*>(colorRawPtr));
-        pattern->RegisterResource<Color>("Color", resObj, Color(color));
-    } else {
-        pattern->UnRegisterResource("Color");
-    }
 }
 
 void ResetHyperlinkColor(ArkUINodeHandle node)
@@ -51,9 +45,7 @@ void ResetHyperlinkColor(ArkUINodeHandle node)
     CHECK_NULL_VOID(themeManager);
     auto hyperlinkTheme = themeManager->GetTheme<HyperlinkTheme>();
     CHECK_NULL_VOID(hyperlinkTheme);
-    auto pattern = frameNode->GetPattern();
-    CHECK_NULL_VOID(pattern);
-    pattern->UnRegisterResource("Color");
+
     HyperlinkModelNG::SetColor(frameNode, Color(hyperlinkTheme->GetTextColor()));
 }
 
@@ -111,30 +103,16 @@ void ResetHyperlinkResponseRegion(ArkUINodeHandle node)
 namespace NodeModifier {
 const ArkUIHyperlinkModifier* GetHyperlinkModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
-    static const ArkUIHyperlinkModifier modifier = {
-        .setHyperlinkColor = SetHyperlinkColor,
-        .resetHyperlinkColor = ResetHyperlinkColor,
-        .setHyperlinkDraggable = SetHyperlinkDraggable,
-        .resetHyperlinkDraggable = ResetHyperlinkDraggable,
-        .setHyperlinkResponseRegion = SetHyperlinkResponseRegion,
-        .resetHyperlinkResponseRegion = ResetHyperlinkResponseRegion,
-    };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
+    static const ArkUIHyperlinkModifier modifier = { SetHyperlinkColor, ResetHyperlinkColor, SetHyperlinkDraggable,
+        ResetHyperlinkDraggable, SetHyperlinkResponseRegion, ResetHyperlinkResponseRegion };
 
     return &modifier;
 }
 
 const CJUIHyperlinkModifier* GetCJUIHyperlinkModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
-    static const CJUIHyperlinkModifier modifier = {
-        .setHyperlinkColor = SetHyperlinkColor,
-        .resetHyperlinkColor = ResetHyperlinkColor,
-        .setHyperlinkDraggable = SetHyperlinkDraggable,
-        .resetHyperlinkDraggable = ResetHyperlinkDraggable,
-    };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
+    static const CJUIHyperlinkModifier modifier = { SetHyperlinkColor, ResetHyperlinkColor, SetHyperlinkDraggable,
+        ResetHyperlinkDraggable };
 
     return &modifier;
 }

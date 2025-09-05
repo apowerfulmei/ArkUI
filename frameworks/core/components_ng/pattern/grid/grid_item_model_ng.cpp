@@ -15,9 +15,12 @@
 
 #include "core/components_ng/pattern/grid/grid_item_model_ng.h"
 
-#include "base/utils/multi_thread.h"
+#include "core/components_ng/base/view_stack_processor.h"
+#include "core/components_ng/pattern/grid/grid_item_layout_property.h"
 #include "core/components_ng/pattern/grid/grid_item_pattern.h"
 #include "core/components_ng/pattern/scrollable/scrollable_item.h"
+#include "core/components_ng/pattern/scrollable/scrollable_item_pool.h"
+#include "core/components_v2/inspector/inspector_constants.h"
 
 namespace OHOS::Ace::NG {
 
@@ -55,18 +58,9 @@ void GridItemModelNG::Create(std::function<void(int32_t)>&& deepRenderFunc, bool
 
 RefPtr<FrameNode> GridItemModelNG::CreateFrameNode(int32_t nodeId)
 {
-    // call CreateFrameNodeMultiThread by multi thread
-    THREAD_SAFE_NODE_SCOPE_CHECK(CreateFrameNode, nodeId);
     auto frameNode = ScrollableItemPool::GetInstance().Allocate(V2::GRID_ITEM_ETS_TAG, nodeId,
         [itemStyle = GridItemStyle::NONE]() { return AceType::MakeRefPtr<GridItemPattern>(nullptr, itemStyle); });
 
-    return frameNode;
-}
-
-RefPtr<FrameNode> GridItemModelNG::CreateGridItem(int32_t nodeId)
-{
-    auto frameNode = FrameNode::GetOrCreateFrameNode(
-        V2::GRID_ITEM_ETS_TAG, nodeId, []() { return AceType::MakeRefPtr<GridItemPattern>(nullptr); });
     return frameNode;
 }
 
@@ -138,14 +132,6 @@ void GridItemModelNG::SetOnSelect(SelectFunc&& onSelect)
     eventHub->SetOnSelect(std::move(onSelect));
 }
 
-void GridItemModelNG::SetForceRebuild(FrameNode* frameNode, bool value)
-{
-    CHECK_NULL_VOID(frameNode);
-    auto pattern = frameNode->GetPattern<GridItemPattern>();
-    CHECK_NULL_VOID(pattern);
-    pattern->SetForceRebuild(value);
-}
-
 void GridItemModelNG::SetSelectable(FrameNode* frameNode, bool selectable)
 {
     CHECK_NULL_VOID(frameNode);
@@ -191,21 +177,5 @@ void GridItemModelNG::SetGridItemStyle(FrameNode* frameNode, GridItemStyle gridI
     auto pattern = frameNode->GetPatternPtr<GridItemPattern>();
     CHECK_NULL_VOID(pattern);
     pattern->UpdateGridItemStyle(gridItemStyle);
-}
-
-void GridItemModelNG::SetOnSelect(FrameNode* frameNode, SelectFunc&& onSelect)
-{
-    CHECK_NULL_VOID(frameNode);
-    auto eventHub = frameNode->GetEventHub<GridItemEventHub>();
-    CHECK_NULL_VOID(eventHub);
-    eventHub->SetOnSelect(std::move(onSelect));
-}
-
-void GridItemModelNG::SetSelectChangeEvent(FrameNode* frameNode, SelectFunc&& changeEvent)
-{
-    CHECK_NULL_VOID(frameNode);
-    auto eventHub = frameNode->GetEventHub<GridItemEventHub>();
-    CHECK_NULL_VOID(eventHub);
-    eventHub->SetSelectChangeEvent(std::move(changeEvent));
 }
 } // namespace OHOS::Ace::NG

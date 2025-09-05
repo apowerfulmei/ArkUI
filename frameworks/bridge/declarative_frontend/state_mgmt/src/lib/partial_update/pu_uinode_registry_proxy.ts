@@ -46,17 +46,15 @@ Flow B:
 
 type RemovedElementInfo = { elmtId : number, tag : string };
 // defined a globle function to clean up the removeItems when idle
-function uiNodeCleanUpIdleTask(maxTimeInMs: number): void {
-    stateMgmtConsole.debug(`UINodeRegisterProxy. static uiNodeCleanUpIdleTask(${maxTimeInMs}):`);
-    const deadline = Date.now() + maxTimeInMs;
+function uiNodeCleanUpIdleTask(): void {
+    stateMgmtConsole.debug(`UINodeRegisterProxy. static uiNodeCleanUpIdleTask:`);
     UINodeRegisterProxy.obtainDeletedElmtIds();
     UINodeRegisterProxy.unregisterElmtIdsFromIViews();
-    ObserveV2.getObserve().runIdleTasks(deadline);
 }
 
 class UINodeRegisterProxy {
     public static readonly notRecordingDependencies : number = -1;
-    public static readonly monitorIllegalV1V2StateAccess : number = -2;
+    public static readonly monitorIllegalV2V3StateAccess : number = -2;
 
     public static obtainDeletedElmtIds(): void {
         stateMgmtConsole.debug(`UINodeRegisterProxy. static obtainDeletedElmtIds:`);
@@ -103,9 +101,9 @@ class UINodeRegisterProxy {
             stateMgmtConsole.debug(`${this.removeElementsInfo_.length} elmtIds needs to purgeDelete. } .`);
             return;
         }
-        let owningView : ViewBuildNodeBase | undefined;
+        let owningView : IView | undefined;
         this.removeElementsInfo_.forEach((elmtId: number) => {
-            const owningViewPUWeak : WeakRef<ViewBuildNodeBase> | undefined = UINodeRegisterProxy.ElementIdToOwningViewPU_.get(elmtId);
+            const owningViewPUWeak : WeakRef<IView> | undefined = UINodeRegisterProxy.ElementIdToOwningViewPU_.get(elmtId);
             if (owningViewPUWeak !== undefined) {
                 owningView = owningViewPUWeak.deref();
                 if (owningView) {
@@ -117,48 +115,19 @@ class UINodeRegisterProxy {
                 stateMgmtConsole.debug(`elmtIds ${elmtId} cannot find its owning ViewPU, maybe this ViewPu has already been aboutToBeDeleted. Internal error!`);
             }
 
+            // FIXME: only do this if app uses V3
             ObserveV2.getObserve().clearBinding(elmtId);
-            delete ObserveV2.getObserve().id2cmp_[elmtId];
         })
 
         this.removeElementsInfo_.length = 0;
     }
 
-    /**
-     * Retrieves the ViewBuildNodeBase instance that owns the element identified by the given elmtId
-     * @param elmtId - Unique ID of the element
-     * @returns The owning view (ViewPU/ViewV2) or undefined if not found
-     */
-    public static GetView(elmtId: number): ViewBuildNodeBase | undefined {
-        const viewWeakRef = this.ElementIdToOwningViewPU_.get(elmtId);
-        if (viewWeakRef) {
-            const view = viewWeakRef.deref();
-            if (view && ((view instanceof ViewPU || view instanceof ViewV2))) {
-                return view;
-            }
-        }
-        stateMgmtConsole.warn(`fail to get view for elmtIds ${elmtId}`);
-        return undefined;
-    }
-
-    /**
-     * Retrieves the ViewBuildNodeBase instance that owns the element identified by the given elmtId
-     * @param elmtId - Unique ID of the element
-     * @returns The owning ViewBuildNodeBase or undefined if not found
-     */
-    public static GetViewBuildNodeBase(elmtId: number): ViewBuildNodeBase | undefined {
-        const viewWeakRef = this.ElementIdToOwningViewPU_.get(elmtId);
-        if (viewWeakRef && 'deref' in viewWeakRef) {
-            const view = viewWeakRef.deref();
-            if (view) {
-                return view;
-            }
-        }
-        stateMgmtConsole.warn(`fail to get view for elmtIds ${elmtId}`);
-        return undefined;
+    public static cleanUpDeadReferences(): void {
+        stateMgmtConsole.debug('UINodeRegisterProxy.cleanUpDeadReferences');
+        ObserveV2.getObserve().cleanUpDeadReferences();
     }
 
     public static instance_: UINodeRegisterProxy = new UINodeRegisterProxy();
     public removeElementsInfo_: Array<number> = new Array<number>();
-    public static ElementIdToOwningViewPU_: Map<number, WeakRef<ViewBuildNodeBase>> = new Map<number, WeakRef<ViewBuildNodeBase>>();
+    public static ElementIdToOwningViewPU_: Map<number, WeakRef<IView>> = new Map<number, WeakRef<IView>>();
 }

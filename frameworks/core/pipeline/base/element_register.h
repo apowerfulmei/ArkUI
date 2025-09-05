@@ -16,13 +16,11 @@
 #ifndef FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_BASE_ELEMENT_REGISTER_H
 #define FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_BASE_ELEMENT_REGISTER_H
 
-#include <functional>
-#include <inttypes.h>
-#include <list>
 #include <mutex>
 #include <unordered_map>
 #include <unordered_set>
-
+#include <list>
+#include <functional>
 #include "base/memory/referenced.h"
 #include "frameworks/base/memory/ace_type.h"
 #include "frameworks/core/components_ng/animation/geometry_transition.h"
@@ -65,7 +63,7 @@ public:
     bool AddElementProxy(const WeakPtr<V2::ElementProxy>& element);
     bool AddElement(const RefPtr<Element>& element);
 
-    ACE_FORCE_EXPORT RefPtr<NG::UINode> GetUINodeById(ElementIdType elementId);
+    RefPtr<NG::UINode> GetUINodeById(ElementIdType elementId);
     NG::FrameNode* GetFrameNodePtrById(ElementIdType elementId);
 
     ACE_FORCE_EXPORT bool AddUINode(const RefPtr<NG::UINode>& node);
@@ -101,7 +99,10 @@ public:
      */
     void Clear();
 
-    ACE_FORCE_EXPORT ElementIdType MakeUniqueId();
+    ACE_FORCE_EXPORT ElementIdType MakeUniqueId()
+    {
+        return nextUniqueElementId_++;
+    }
 
     RefPtr<NG::GeometryTransition> GetOrCreateGeometryTransition(
         const std::string& id, bool followWithoutTransition = false, bool doRegisterSharedTransition = true);
@@ -113,14 +114,13 @@ public:
     void AddPendingRemoveNode(const RefPtr<NG::UINode>& node);
     void ClearPendingRemoveNodes();
 
-    void RegisterJSCleanUpIdleTaskFunc(const std::function<void(int64_t)>& jsCallback) {
+    void RegisterJSCleanUpIdleTaskFunc(const std::function<void(void)>& jsCallback) {
         jsCleanUpIdleTaskCallback_ = std::move(jsCallback);
     }
 
-    void CallJSCleanUpIdleTaskFunc(int64_t maxTimeInNs) {
+    void CallJSCleanUpIdleTaskFunc() {
         if (jsCleanUpIdleTaskCallback_) {
-            ACE_SCOPED_TRACE_COMMERCIAL("OnIdle CallJSCleanUpIdleTaskFunc:%" PRId64 "", maxTimeInNs);
-            jsCleanUpIdleTaskCallback_(maxTimeInNs);
+            jsCleanUpIdleTaskCallback_();
         }
     }
 
@@ -134,21 +134,11 @@ public:
         return lastestElementId_;
     }
 
-    RefPtr<NG::FrameNode> GetAttachedFrameNodeById(const std::string& key, bool willGetAll = false);
+    RefPtr<NG::FrameNode> GetAttachedFrameNodeById(const std::string& key);
 
     void AddFrameNodeByInspectorId(const std::string& key, const WeakPtr<NG::FrameNode>& node);
 
     void RemoveFrameNodeByInspectorId(const std::string& key, int32_t nodeId);
-
-    void RegisterEmbedNode(const uint64_t surfaceId, const WeakPtr<NG::FrameNode>& node);
-
-    void UnregisterEmbedNode(const uint64_t surfaceId, const WeakPtr<NG::FrameNode>& node);
-
-    WeakPtr<NG::FrameNode> GetEmbedNodeBySurfaceId(const uint64_t surfaceId);
-
-    bool IsEmbedNode(NG::FrameNode* node);
-
-    uint64_t GetSurfaceIdByEmbedNode(NG::FrameNode* node);
 
 private:
     // private constructor
@@ -162,7 +152,7 @@ private:
 
     // ElementID assigned during initial render
     // first to Component, then synced to Element
-    static std::atomic<ElementIdType> nextUniqueElementId_;
+    ElementIdType nextUniqueElementId_ = 0;
 
     ElementIdType lastestElementId_ = 0;
 
@@ -178,13 +168,9 @@ private:
 
     std::list<RefPtr<NG::UINode>> pendingRemoveNodes_;
 
-    std::function<void(int64_t)> jsCleanUpIdleTaskCallback_;
+    std::function<void(void)> jsCleanUpIdleTaskCallback_;
 
     ACE_DISALLOW_COPY_AND_MOVE(ElementRegister);
-
-    std::unordered_map<uint64_t, WeakPtr<NG::FrameNode>> surfaceIdEmbedNodeMap_;
-
-    std::unordered_map<NG::FrameNode*, uint64_t> embedNodeSurfaceIdMap_;
 };
 } // namespace OHOS::Ace
 #endif

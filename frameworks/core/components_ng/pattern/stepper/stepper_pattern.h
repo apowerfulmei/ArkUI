@@ -40,21 +40,6 @@ public:
     {
         return false;
     }
-    
-    bool IsEnableMatchParent() override
-    {
-        return true;
-    }
-
-    bool IsEnableFix() override
-    {
-        return true;
-    }
-
-    bool IsEnableChildrenMatchParent() override
-    {
-        return true;
-    }
 
     bool UsResRegion() override
     {
@@ -88,9 +73,14 @@ public:
 
     static RefPtr<StepperTheme> GetTheme()
     {
-        auto pipeline = PipelineContext::GetCurrentContextSafely();
-        CHECK_NULL_RETURN(pipeline, nullptr);
-        return pipeline->GetTheme<StepperTheme>();
+        static RefPtr<StepperTheme> stepperTheme;
+        if (!stepperTheme) {
+            auto pipeline = PipelineContext::GetCurrentContext();
+            CHECK_NULL_RETURN(pipeline, nullptr);
+            stepperTheme = pipeline->GetTheme<StepperTheme>();
+            CHECK_NULL_RETURN(stepperTheme, nullptr);
+        }
+        return stepperTheme;
     }
 
     bool GetIsLoadingButton() const

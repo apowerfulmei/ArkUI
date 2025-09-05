@@ -15,7 +15,10 @@
 
 #include "frameworks/core/components_ng/svg/parse/svg_fe_composite.h"
 
-#include "frameworks/core/components_ng/svg/parse/svg_constants.h"
+#include "include/effects/SkImageFilters.h"
+
+#include "base/utils/utils.h"
+#include "core/components/common/properties/blend_mode.h"
 
 namespace OHOS::Ace::NG {
 namespace {
@@ -88,35 +91,23 @@ RSBlendMode SvgFeComposite::BlendModeForOperator(SvgFeOperatorType op) const
 
 void SvgFeComposite::OnAsImageFilter(std::shared_ptr<RSImageFilter>& imageFilter,
     const SvgColorInterpolationType& srcColor, SvgColorInterpolationType& currentColor,
-    std::unordered_map<std::string, std::shared_ptr<RSImageFilter>>& resultHash, bool cropRect) const
+    std::unordered_map<std::string, std::shared_ptr<RSImageFilter>>& resultHash) const
 {
     auto mode = feCompositeAttr_.operatorType;
     auto foreImageFilter = MakeImageFilter(feAttr_.in, imageFilter, resultHash);
     auto backImageFilter = MakeImageFilter(feCompositeAttr_.in2, imageFilter, resultHash);
-    RSRect filterRect(effectFilterArea_.Left(), effectFilterArea_.Top(),
-                      effectFilterArea_.Right(), effectFilterArea_.Bottom());
     ConverImageFilterColor(foreImageFilter, srcColor, currentColor);
     ConverImageFilterColor(backImageFilter, srcColor, currentColor);
     if (mode != SvgFeOperatorType::FE_ARITHMETIC) {
-        if (cropRect) {
-            imageFilter = RSRecordingImageFilter::CreateBlendImageFilter(BlendModeForOperator(mode),
-                backImageFilter, foreImageFilter, filterRect);
-        } else {
-            imageFilter = RSRecordingImageFilter::CreateBlendImageFilter(BlendModeForOperator(mode),
-                backImageFilter, foreImageFilter);
-        }
+        imageFilter = RSRecordingImageFilter::CreateBlendImageFilter(
+            BlendModeForOperator(mode), backImageFilter, foreImageFilter);
         ConverImageFilterColor(imageFilter, srcColor, currentColor);
         return;
     }
     std::vector<RSScalar> coefficients = { feCompositeAttr_.k1, feCompositeAttr_.k2, feCompositeAttr_.k3,
         feCompositeAttr_.k4 };
-    if (cropRect) {
-        imageFilter = RSRecordingImageFilter::CreateArithmeticImageFilter(coefficients, true, backImageFilter,
-            foreImageFilter, filterRect);
-    } else {
-        imageFilter = RSRecordingImageFilter::CreateArithmeticImageFilter(coefficients, true, backImageFilter,
-            foreImageFilter);
-    }
+    imageFilter =
+        RSRecordingImageFilter::CreateArithmeticImageFilter(coefficients, true, backImageFilter, foreImageFilter);
     ConverImageFilterColor(imageFilter, srcColor, currentColor);
     RegisterResult(feAttr_.result, imageFilter, resultHash);
 }
@@ -124,7 +115,7 @@ void SvgFeComposite::OnAsImageFilter(std::shared_ptr<RSImageFilter>& imageFilter
 bool SvgFeComposite::ParseAndSetSpecializedAttr(const std::string& name, const std::string& value)
 {
     static const LinearMapNode<void (*)(const std::string&, SvgFeCompositeAttribute&)> attrs[] = {
-        { SVG_FE_IN2,
+        { DOM_SVG_FE_IN2,
             [](const std::string& val, SvgFeCompositeAttribute& attribute) {
                 SvgFeInType type = SvgFeInType::PRIMITIVE;
                 bool res = ConvertStrToSvgFeInType(val, type);
@@ -134,23 +125,23 @@ bool SvgFeComposite::ParseAndSetSpecializedAttr(const std::string& name, const s
                     attribute.in2.id = val;
                 }
             } },
-        { SVG_FE_K1,
+        { DOM_SVG_FE_K1,
             [](const std::string& val, SvgFeCompositeAttribute& attr) {
                 attr.k1 = SvgAttributesParser::ParseDouble(val);
             } },
-        { SVG_FE_K2,
+        { DOM_SVG_FE_K2,
             [](const std::string& val, SvgFeCompositeAttribute& attr) {
                 attr.k2 = SvgAttributesParser::ParseDouble(val);
             } },
-        { SVG_FE_K3,
+        { DOM_SVG_FE_K3,
             [](const std::string& val, SvgFeCompositeAttribute& attr) {
                 attr.k3 = SvgAttributesParser::ParseDouble(val);
             } },
-        { SVG_FE_K4,
+        { DOM_SVG_FE_K4,
             [](const std::string& val, SvgFeCompositeAttribute& attr) {
                 attr.k4 = SvgAttributesParser::ParseDouble(val);
             } },
-        { SVG_FE_OPERATOR_TYPE,
+        { DOM_SVG_FE_OPERATOR_TYPE,
             [](const std::string& val, SvgFeCompositeAttribute& attr) {
                 SvgFeOperatorType type = SvgFeOperatorType::FE_OVER;
                 bool res = ConvertStrToSvgFeOperatorType(val, type);

@@ -29,14 +29,17 @@
 #include "core/components_ng/layout/box_layout_algorithm.h"
 #include "core/components_ng/property/geometry_property.h"
 #include "core/components_ng/property/layout_constraint.h"
+#include "core/components_ng/property/magic_layout_property.h"
 #include "core/components_ng/property/measure_property.h"
+#include "core/components_ng/property/measure_utils.h"
+#include "core/components_ng/property/position_property.h"
 
 namespace OHOS::Ace::NG {
 class InspectorFilter;
 using ExpandEdges = PaddingPropertyF;
 // GeometryNode acts as a physical property of the size and position of the component
-class ACE_FORCE_EXPORT GeometryNode : public AceType {
-    DECLARE_ACE_TYPE(GeometryNode, AceType);
+class ACE_EXPORT GeometryNode : public AceType {
+    DECLARE_ACE_TYPE(GeometryNode, AceType)
 public:
     GeometryNode() = default;
     ~GeometryNode() override = default;
@@ -52,21 +55,80 @@ public:
 
     RefPtr<GeometryNode> Clone() const;
 
-    SizeF GetMarginFrameSize(bool withSafeArea = false) const;
+    SizeF GetMarginFrameSize(bool withSafeArea = false) const
+    {
+        auto size = frame_.rect_.GetSize();
+        if (withSafeArea) {
+            size += selfAdjust_.GetSize();
+        }
+        if (margin_) {
+            AddPaddingToSize(*margin_, size);
+        }
+        return size;
+    }
 
-    SizeF GetMarginPreFrameSize(bool withSafeArea = false) const;
+    OffsetF GetMarginFrameOffset(bool withSafeArea = false) const
+    {
+        auto offset = frame_.rect_.GetOffset();
+        if (withSafeArea) {
+            offset += selfAdjust_.GetOffset();
+        }
+        if (margin_) {
+            offset -= OffsetF(margin_->left.value_or(0), margin_->top.value_or(0));
+        }
+        return offset;
+    }
 
-    OffsetF GetMarginFrameOffset(bool withSafeArea = false) const;
+    RectF GetMarginFrameRect(bool withSafeArea = false) const
+    {
+        auto offset = frame_.rect_.GetOffset();
+        auto size = frame_.rect_.GetSize();
+        if (withSafeArea) {
+            offset += selfAdjust_.GetOffset();
+            size += selfAdjust_.GetSize();
+        }
+        if (margin_) {
+            offset -= OffsetF(margin_->left.value_or(0), margin_->top.value_or(0));
+            AddPaddingToSize(*margin_, size);
+        }
+        return RectF(offset, size);
+    }
 
-    RectF GetMarginFrameRect(bool withSafeArea = false) const;
+    void SetMarginFrameOffset(const OffsetF& translate)
+    {
+        OffsetF offset;
+        if (margin_) {
+            offset += OffsetF(margin_->left.value_or(0), margin_->top.value_or(0));
+        }
+        frame_.rect_.SetOffset(translate + offset);
+    }
 
-    void SetMarginFrameOffset(const OffsetF& translate);
+    RectF GetFrameRect(bool withSafeArea = false) const
+    {
+        auto result = frame_.rect_;
+        if (withSafeArea) {
+            result += selfAdjust_;
+        }
+        return result;
+    }
 
-    RectF GetFrameRect(bool withSafeArea = false) const;
+    SizeF GetFrameSize(bool withSafeArea = false) const
+    {
+        auto result = frame_.rect_.GetSize();
+        if (withSafeArea) {
+            result += selfAdjust_.GetSize();
+        }
+        return result;
+    }
 
-    SizeF GetFrameSize(bool withSafeArea = false) const;
-
-    OffsetF GetFrameOffset(bool withSafeArea = false) const;
+    OffsetF GetFrameOffset(bool withSafeArea = false) const
+    {
+        auto result = frame_.rect_.GetOffset();
+        if (withSafeArea) {
+            result += selfAdjust_.GetOffset();
+        }
+        return result;
+    }
 
     void SetFrameOffset(const OffsetF& offset)
     {
@@ -78,29 +140,90 @@ public:
         frame_.rect_.SetSize(size);
     }
 
-    void SetFrameWidth(int32_t width)
-    {
-        frame_.rect_.SetWidth(width);
-    }
-
-    void SetFrameHeight(int32_t height)
+    void SetFrameHeight(const float height)
     {
         frame_.rect_.SetHeight(height);
     }
 
-    void SetMarginFrameOffsetX(int32_t offsetX);
+    void SetFrameWidth(const float width)
+    {
+        frame_.rect_.SetWidth(width);
+    }
 
-    void SetMarginFrameOffsetY(int32_t offsetY);
+    void SetMarginFrameOffsetX(int32_t offsetX)
+    {
+        float offset = offsetX;
+        if (margin_) {
+            offset += margin_->left.value_or(0);
+        }
+        frame_.rect_.SetLeft(offset);
+    }
 
-    SizeF GetPaddingSize(bool withSafeArea = false) const;
+    void SetMarginFrameOffsetY(int32_t offsetY)
+    {
+        float offset = offsetY;
+        if (margin_) {
+            offset += margin_->top.value_or(0);
+        }
+        frame_.rect_.SetTop(offset);
+    }
 
-    OffsetF GetPaddingOffset(bool withSafeArea = false) const;
+    SizeF GetPaddingSize(bool withSafeArea = false) const
+    {
+        auto size = frame_.rect_.GetSize();
+        if (withSafeArea) {
+            size += selfAdjust_.GetSize();
+        }
+        if (padding_) {
+            MinusPaddingToSize(*padding_, size);
+        }
+        return size;
+    }
 
-    RectF GetPaddingRect(bool withSafeArea = false) const;
+    OffsetF GetPaddingOffset(bool withSafeArea = false) const
+    {
+        auto offset = frame_.rect_.GetOffset();
+        if (withSafeArea) {
+            offset += selfAdjust_.GetOffset();
+        }
+        if (padding_) {
+            offset += OffsetF(padding_->left.value_or(0), padding_->top.value_or(0));
+        }
+        return offset;
+    }
 
-    void SetContentSize(const SizeF& size);
+    RectF GetPaddingRect(bool withSafeArea = false) const
+    {
+        auto rect = frame_.rect_;
+        if (withSafeArea) {
+            rect += selfAdjust_;
+        }
+        if (padding_) {
+            auto size = rect.GetSize();
+            MinusPaddingToSize(*padding_, size);
+            rect.SetSize(size);
+            auto offset = rect.GetOffset();
+            offset += OffsetF(padding_->left.value_or(0), padding_->top.value_or(0));
+            rect.SetOffset(offset);
+        }
+        return rect;
+    }
 
-    void SetContentOffset(const OffsetF& translate);
+    void SetContentSize(const SizeF& size)
+    {
+        if (!content_) {
+            content_ = std::make_unique<GeometryProperty>();
+        }
+        content_->rect_.SetSize(size);
+    }
+
+    void SetContentOffset(const OffsetF& translate)
+    {
+        if (!content_) {
+            content_ = std::make_unique<GeometryProperty>();
+        }
+        content_->rect_.SetOffset(translate);
+    }
 
     RectF GetContentRect() const
     {
@@ -143,9 +266,47 @@ public:
         return padding_;
     }
 
-    void UpdateMargin(const MarginPropertyF& margin);
+    void UpdateMargin(const MarginPropertyF& margin)
+    {
+        if (!margin_) {
+            margin_ = std::make_unique<MarginPropertyF>(margin);
+            return;
+        }
+        margin_->Reset();
+        if (margin.left) {
+            margin_->left = margin.left;
+        }
+        if (margin.right) {
+            margin_->right = margin.right;
+        }
+        if (margin.top) {
+            margin_->top = margin.top;
+        }
+        if (margin.bottom) {
+            margin_->bottom = margin.bottom;
+        }
+    }
 
-    void UpdatePaddingWithBorder(const PaddingPropertyF& padding);
+    void UpdatePaddingWithBorder(const PaddingPropertyF& padding)
+    {
+        if (!padding_) {
+            padding_ = std::make_unique<PaddingPropertyF>(padding);
+            return;
+        }
+        padding_->Reset();
+        if (padding.left) {
+            padding_->left = padding.left;
+        }
+        if (padding.right) {
+            padding_->right = padding.right;
+        }
+        if (padding.top) {
+            padding_->top = padding.top;
+        }
+        if (padding.bottom) {
+            padding_->bottom = padding.bottom;
+        }
+    }
 
     const OffsetF& GetParentGlobalOffset() const
     {
@@ -172,11 +333,6 @@ public:
         return pixelGridRoundSize_;
     }
 
-    const SizeF& GetPreFrameSize() const
-    {
-        return preFrameSize_;
-    }
-
     RectF GetPixelGridRoundRect() const
     {
         return RectF(pixelGridRoundOffset_, pixelGridRoundSize_);
@@ -185,11 +341,6 @@ public:
     void SetPixelGridRoundSize(const SizeF& pixelGridRoundSize)
     {
         pixelGridRoundSize_ = pixelGridRoundSize;
-    }
-
-    void SetPreFrameSize(const SizeF& preFrameSize)
-    {
-        preFrameSize_ = preFrameSize;
     }
 
     const OffsetF& GetParentAbsoluteOffset() const
@@ -227,11 +378,6 @@ public:
         return baselineDistance_.value_or(frame_.rect_.GetY());
     }
 
-    void ResetContent()
-    {
-        content_.reset();
-    }
-
     void SetAccumulatedSafeAreaEdges(const ExpandEdges& safeAreaPadding);
     const std::unique_ptr<ExpandEdges>& GetAccumulatedSafeAreaExpand() const;
     std::optional<RectF> ConvertExpandCacheToAdjustRect() const;
@@ -245,10 +391,6 @@ public:
     void SetParentAdjust(RectF parentAdjust);
     RectF GetSelfAdjust() const;
     void SetSelfAdjust(RectF selfAdjust);
-    OffsetF GetIgnoreAdjust() const;
-    void SetIgnoreAdjust(const OffsetF& ignoreAdjust);
-    RectF GetFrameRectWithoutSafeArea() const;
-    RectF GetFrameRectWithSafeArea() const;
 
     void ToJsonValue(std::unique_ptr<JsonValue>& json, const InspectorFilter& filter) const;
 
@@ -273,13 +415,11 @@ private:
 
     RectF parentAdjust_;
     RectF selfAdjust_;
-    OffsetF ignoreAdjust_;
 
     OffsetF parentGlobalOffset_;
     OffsetF parentAbsoluteOffset_;
     OffsetF pixelGridRoundOffset_;
     SizeF pixelGridRoundSize_;
-    SizeF preFrameSize_;
 };
 } // namespace OHOS::Ace::NG
 

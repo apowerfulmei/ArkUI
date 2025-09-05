@@ -524,10 +524,9 @@ void RenderListItemGroup::InitAccessibilityEventListener()
 
 void RenderListItemGroup::InitialImage()
 {
-    bool isWatchOrWearable = SystemProperties::GetDeviceType() == DeviceType::WATCH ||
-                             SystemProperties::GetDeviceType() == DeviceType::WEARABLE;
-    InternalResource::ResourceId resourceId = isWatchOrWearable ? InternalResource::ResourceId::WATCH_DOWN_ARROW_SVG
-                                                                : InternalResource::ResourceId::DOWN_ARROW_SVG;
+    InternalResource::ResourceId resourceId = SystemProperties::GetDeviceType() == DeviceType::WATCH
+                                                  ? InternalResource::ResourceId::WATCH_DOWN_ARROW_SVG
+                                                  : InternalResource::ResourceId::DOWN_ARROW_SVG;
     double rotateAngle = GetRotateAngle(expand_);
     auto imageComponent = AceType::MakeRefPtr<ImageComponent>(resourceId);
     imageComponent->SetWidth(imageSize_);

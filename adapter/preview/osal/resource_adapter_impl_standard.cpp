@@ -15,15 +15,12 @@
 
 #include "adapter/preview/osal/resource_adapter_impl_standard.h"
 
-#include "adapter/preview/entrance/ace_container.h"
 #include "adapter/ohos/osal/resource_theme_style.h"
 #include "adapter/preview/entrance/ace_application_info.h"
 #include "adapter/preview/osal/resource_convertor.h"
 #include "base/log/log.h"
 #include "core/common/container.h"
 #include "core/components/theme/theme_attributes.h"
-#include "core/pipeline_ng/pipeline_context.h"
-#include "frameworks/simulator/ability_simulator/include/ability_context.h"
 
 namespace OHOS::Ace {
 
@@ -71,8 +68,6 @@ const char* PATTERN_MAP[] = {
     THEME_PATTERN_IMAGE,
     THEME_PATTERN_LIST,
     THEME_PATTERN_LIST_ITEM,
-    THEME_PATTERN_ARC_LIST,
-    THEME_PATTERN_ARC_LIST_ITEM,
     THEME_PATTERN_MARQUEE,
     THEME_PATTERN_NAVIGATION_BAR,
     THEME_PATTERN_PICKER,
@@ -104,8 +99,7 @@ const char* PATTERN_MAP[] = {
     THEME_BLUR_STYLE_COMMON,
     THEME_PATTERN_SHADOW,
     THEME_PATTERN_RICH_EDITOR,
-    THEME_PATTERN_CONTAINER_MODAL,
-    THEME_PATTERN_APP
+    THEME_PATTERN_CONTAINER_MODAL
 };
 } // namespace
 
@@ -165,41 +159,14 @@ void ResourceAdapterImpl::Init(const ResourceInfo& resourceInfo)
     packagePathStr_ = appResPath;
 }
 
-void ResourceAdapterImpl::SetAppHasDarkRes(bool hasDarkRes)
-{
-    appHasDarkRes_ = hasDarkRes;
-}
-
 RefPtr<ResourceAdapter> ResourceAdapter::CreateNewResourceAdapter(
     const std::string& bundleName, const std::string& moduleName)
 {
-    auto container = Container::CurrentSafely();
-    CHECK_NULL_RETURN(container, nullptr);
-    auto aceContainer = AceType::DynamicCast<Platform::AceContainer>(container);
-    CHECK_NULL_RETURN(aceContainer, nullptr);
-    
-    RefPtr<ResourceAdapter> newResourceAdapter = nullptr;
-    auto context = aceContainer->GetAbilityContextByModule(bundleName, moduleName);
-    if (context) {
-        auto resourceManager = context->GetResourceManager();
-        auto resourceAdapterImpl = AceType::MakeRefPtr<ResourceAdapterImpl>(resourceManager);
-        resourceAdapterImpl->SetAppHasDarkRes(aceContainer->GetResourceConfiguration().GetAppHasDarkRes());
-        newResourceAdapter = resourceAdapterImpl;
-    } else {
-        newResourceAdapter = ResourceAdapter::Create();
-        auto resourceInfo = aceContainer->GetResourceInfo();
-        newResourceAdapter->Init(resourceInfo);
-    }
-
-    auto resConfig = aceContainer->GetResourceConfiguration();
-    auto pipelineContext = NG::PipelineContext::GetCurrentContext();
-    if (pipelineContext && pipelineContext->GetLocalColorMode() != ColorMode::COLOR_MODE_UNDEFINED) {
-        auto localColorMode = pipelineContext->GetLocalColorMode();
-        resConfig.SetColorMode(localColorMode);
-    }
-    newResourceAdapter->UpdateConfig(resConfig);
-
-    return newResourceAdapter;
+    TAG_LOGW(AceLogTag::ACE_RESOURCE,
+        "Cannot preview the component from the %{public}s module, because it contains a resource reference. Preview it "
+        "in the %{public}s module instead.",
+        moduleName.c_str(), moduleName.c_str());
+    return nullptr;
 }
 
 void ResourceAdapterImpl::UpdateConfig(const ResourceConfiguration& config, bool themeFlag)
@@ -436,7 +403,7 @@ std::vector<uint32_t> ResourceAdapterImpl::GetIntArray(uint32_t resId) const
             TAG_LOGW(AceLogTag::ACE_RESOURCE, "GetIntArray error, id=%{public}u", resId);
         }
     }
-    std::vector<uint32_t> result(intVectorResult.size());
+    std::vector<uint32_t> result;
     std::transform(
         intVectorResult.begin(), intVectorResult.end(), result.begin(), [](int x) { return static_cast<uint32_t>(x); });
     return result;
@@ -454,7 +421,7 @@ std::vector<uint32_t> ResourceAdapterImpl::GetIntArrayByName(const std::string& 
         }
     }
 
-    std::vector<uint32_t> result(intVectorResult.size());
+    std::vector<uint32_t> result;
     std::transform(
         intVectorResult.begin(), intVectorResult.end(), result.begin(), [](int x) { return static_cast<uint32_t>(x); });
     return result;
@@ -557,9 +524,7 @@ std::string ResourceAdapterImpl::GetActualResourceName(const std::string& resNam
 uint32_t ResourceAdapterImpl::GetSymbolById(uint32_t resId) const
 {
     uint32_t result = 0;
-    if (resourceManager_) {
-        resourceManager_->GetSymbolById(resId, result);
-    }
+    resourceManager_->GetSymbolById(resId, result);
     return result;
 }
 

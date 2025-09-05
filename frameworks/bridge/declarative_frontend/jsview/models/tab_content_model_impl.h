@@ -29,18 +29,12 @@ public:
     void SetTabBar(const std::optional<std::string>& text, const std::optional<std::string>& icon,
         const std::optional<TabBarSymbol>& tabBarSymbol, std::function<void()>&& builder,
         bool useContentOnly) override;
-    void SetTabBarWithContent(const RefPtr<NG::UINode>& content) override {}
     void SetTabBarStyle(TabBarStyle tabBarStyle) override {}
     void SetIndicator(const IndicatorStyle& indicator) override {}
-    void SetIndicatorColorByUser(bool isByUser) override {};
     void SetBoard(const BoardStyle& board) override {}
     void SetSelectedMode(SelectedMode selectedMode) override {}
     void SetLabelStyle(const LabelStyle& labelStyle) override {}
-    void SetLabelUnselectedColorByUser(bool isByUser) override {};
-    void SetLabelSelectedColorByUser(bool isByUser) override {};
     void SetIconStyle(const IconStyle& iconStyle) override {}
-    void SetIconUnselectedColorByUser(bool isByUser) override {};
-    void SetIconSelectedColorByUser(bool isByUser) override {};
     void SetPadding(const NG::PaddingProperty& padding) override {}
     void SetUseLocalizedPadding(bool useLocalizedPadding) override {}
     void SetLayoutMode(LayoutMode layoutMode) override {}

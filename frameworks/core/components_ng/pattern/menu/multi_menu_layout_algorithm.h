@@ -21,7 +21,7 @@
 
 namespace OHOS::Ace::NG {
 class ACE_EXPORT MultiMenuLayoutAlgorithm : public MenuLayoutAlgorithm {
-    DECLARE_ACE_TYPE(MultiMenuLayoutAlgorithm, MenuLayoutAlgorithm);
+    DECLARE_ACE_TYPE(MultiMenuLayoutAlgorithm, MenuLayoutAlgorithm)
 public:
     MultiMenuLayoutAlgorithm() = default;
     ~MultiMenuLayoutAlgorithm() override = default;
@@ -34,9 +34,6 @@ public:
         const RefPtr<LayoutWrapper>& child, const LayoutConstraintF& layoutConstraint);
 
 private:
-    void RemoveParentRestrictionsForFixIdeal(const LayoutWrapper* layoutWrapper, LayoutConstraintF& childConstraint);
-    void UpdateEmbeddedPercentReference(LayoutWrapper* layoutWrapper, LayoutConstraintF& childConstraint,
-        std::optional<LayoutConstraintF>& layoutConstraint);
     void UpdateSelfSize(LayoutWrapper* layoutWrapper, LayoutConstraintF& childConstraint,
         std::optional<LayoutConstraintF>& layoutConstraint);
     void UpdateConstraintBaseOnMenuItems(LayoutWrapper* layoutWrapper, LayoutConstraintF& constraint);
@@ -44,13 +41,7 @@ private:
     void UpdateMenuDefaultConstraintByDevice(const RefPtr<MenuPattern>& pattern,
         LayoutConstraintF& childConstraint, float paddingWidth, std::optional<LayoutConstraintF>& layoutConstraint,
         bool idealSizeHasVal);
-    void MarkChildForDelayedMeasurement(LayoutWrapper* layoutWrapper);
-    void MeasureAdaptiveLayoutChildren(LayoutWrapper* layoutWrapper, const LayoutConstraintF& childConstraint);
-    bool UpdateSelectOverlayMenuMinWidth(const RefPtr<MenuPattern>& pattern, const RefPtr<GridColumnInfo>& columnInfo);
-    void UpdateChildPositionWidthIgnoreLayoutSafeArea(
-        const RefPtr<LayoutWrapper>& childLayoutWrapper, OffsetF& originOffset, bool isEmbed, OffsetF& embedCorrect);
-    float userHeight_ = 0.0f;
-    
+
     ACE_DISALLOW_COPY_AND_MOVE(MultiMenuLayoutAlgorithm);
 };
 } // namespace OHOS::Ace::NG

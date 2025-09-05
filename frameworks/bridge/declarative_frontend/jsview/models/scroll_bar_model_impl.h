@@ -23,10 +23,8 @@ class ScrollBarModelImpl : public OHOS::Ace::ScrollBarModel {
 public:
     RefPtr<ScrollProxy> GetScrollBarProxy(const RefPtr<ScrollProxy>& scrollProxy) override;
     void Create(const RefPtr<ScrollProxy>& proxy, bool infoflag, bool proxyFlag,
-        int directionValue, int stateValue, bool isCreateArc = false) override;
-    void SetEnableNestedScroll(bool enableNestedSroll) override {};
-    void SetScrollBarColor(const Color& color) override {};
-    void ResetScrollBarColor() override {};
+        int directionValue, int stateValue) override;
+    void SetEnableNestedScroll(bool enableNestedSroll) override{};
 };
 } // namespace OHOS::Ace::Framework
 #endif // FRAMEWORKS_BRIDGE_DECLARATIVE_FRONTEND_JS_VIEW_MODELS_SCROLL_BAR_MODEL_IMPL_H

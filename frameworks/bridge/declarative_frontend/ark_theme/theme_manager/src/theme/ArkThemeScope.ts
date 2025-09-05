@@ -15,12 +15,9 @@
 
 class ArkThemeScopeItem {
     elmtId: number;
-    ownerId: number;
-    owner: ViewPuInternal;
+    owner: number;
     name: string;
     isInWhiteList?: boolean = undefined;
-    // the CustomComponent with same elmtId, receives onWillApplyTheme callback
-    listener?: ViewPuInternal | undefined = undefined;
 }
 
 class ArkThemeScopeArray extends Array<ArkThemeScopeItem> {
@@ -74,7 +71,7 @@ class ArkThemeScope {
     /**
      * Theme instance associated with this Theme Scope
      */
-    private theme: ArkThemeBase;
+    private theme: ThemeInternal;
 
     /**
      * Initialize Theme Scope
@@ -84,7 +81,7 @@ class ArkThemeScope {
      * @param withThemeOptions WithTheme container options
      * @param theme Theme instance associated with this Theme Scope
      */
-    constructor(ownerComponentId: number, withThemeId: number, withThemeOptions: WithThemeOptions, theme: ArkThemeBase) {
+    constructor(ownerComponentId: number, withThemeId: number, withThemeOptions: WithThemeOptions, theme: ThemeInternal) {
         this.ownerComponentId = ownerComponentId;
         this.withThemeId = withThemeId;
         this.withThemeOptions = withThemeOptions;
@@ -114,40 +111,17 @@ class ArkThemeScope {
      * Add component to the current theme scope by elmtId
      *
      * @param elmtId elmtId as number
-     * @param owner component owner
+     * @param owner component owner id
      * @param componentName component name
      */
-    addComponentToScope(elmtId: number, owner: ViewPuInternal, componentName: string) {
+    addComponentToScope(elmtId: number, owner: number, componentName: string) {
         if (this.isComponentInScope(elmtId)) {
             return;
         }
         if (!this.components) {
             this.components = new ArkThemeScopeArray();
         }
-        this.components.push({ elmtId: elmtId, ownerId: owner.id__(), owner: owner, name: componentName });
-    }
-
-    /**
-     * Add Custom component to the component items of this scope as listener.
-     *
-     * @param listener the Custom component
-     */
-    addCustomListenerInScope(listener: ViewPuInternal) {
-        const len = this.components ? this.components.length : -1;
-        if (len <= 0) {
-            return;
-        }
-        const listenerId = listener.id__();
-        // the last ThemeScopeItem probably corresponds to Custom component
-        let themeScopeItem = this.components[len - 1];
-        if (themeScopeItem.elmtId === listenerId) {
-            themeScopeItem.listener = listener;
-            return;
-        }
-        themeScopeItem = this.components.find((item) => item.elmtId === listenerId);
-        if (themeScopeItem) {
-            themeScopeItem.listener = listener;
-        }
+        this.components.push({ elmtId: elmtId, owner: owner, name: componentName });
     }
 
     /**
@@ -206,7 +180,7 @@ class ArkThemeScope {
      *
      * @returns theme instance
      */
-    getTheme(): ArkThemeBase {
+    getTheme(): ThemeInternal {
         return this.theme;
     }
 
@@ -225,13 +199,10 @@ class ArkThemeScope {
      * @param options WithThemeOptions instance
      * @param theme Theme instance associated with this Theme Scope
      */
-    updateWithThemeOptions(options: WithThemeOptions, theme: ArkThemeBase) {
+    updateWithThemeOptions(options: WithThemeOptions, theme: ThemeInternal) {
         this.prevColorMode = this.colorMode();
         this.withThemeOptions = options;
-        if (this.theme !== theme) {
-            this.theme?.unbindFromScope(this.getWithThemeId());
-            this.theme = theme;
-        }
+        this.theme = theme;
     }
 
     /**

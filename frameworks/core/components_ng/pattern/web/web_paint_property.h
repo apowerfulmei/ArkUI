@@ -21,7 +21,7 @@
 
 namespace OHOS::Ace::NG {
 class WebPaintProperty : public PaintProperty {
-    DECLARE_ACE_TYPE(WebPaintProperty, PaintProperty);
+    DECLARE_ACE_TYPE(WebPaintProperty, PaintProperty)
 
 public:
     WebPaintProperty() = default;
@@ -43,12 +43,6 @@ public:
     {
         PaintProperty::ToJsonValue(json, filter);
         json->PutFixedAttr("content", webPaintData_.value_or("null").c_str(), filter, FIXED_ATTR_CONTENT);
-    }
-
-    void ToTreeJson(std::unique_ptr<JsonValue>& json, const InspectorConfig& config) const override
-    {
-        PaintProperty::ToTreeJson(json, config);
-        json->Put(TreeKey::CONTENT, webPaintData_.value_or("null").c_str());
     }
 
     void SetWebPaintData(const std::string& webData)

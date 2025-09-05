@@ -16,16 +16,14 @@
 /// <reference path='./import.ts' />
 /// <reference path="./ArkCommonShape.ts" />
 class ShapeViewPortModifier extends ModifierWithKey<{
-  x?: Length | undefined;
-  y?: Length | undefined;
-  width?: Length | undefined;
-  height?: Length | undefined;
+  x?: string | number |
+  undefined; y?: string | number | undefined; width?: string | number |
+  undefined; height?: string | number | undefined;
 }> {
   constructor(value: {
-    x?: Length | undefined;
-    y?: Length | undefined;
-    width?: Length | undefined;
-    height?: Length | undefined;
+    x?: string | number | undefined; y?: string |
+    number | undefined; width?: string | number | undefined;
+    height?: string | number | undefined;
   }) {
     super(value);
   }
@@ -38,7 +36,8 @@ class ShapeViewPortModifier extends ModifierWithKey<{
     }
   }
   checkObjectDiff(): boolean {
-    return !isBaseOrResourceEqual(this.stageValue, this.value);
+    return !(this.stageValue.x === this.value.x && this.stageValue.y === this.value.y &&
+      this.stageValue.width === this.value.width && this.stageValue.height === this.value.height);
   }
 }
 class ShapeMeshModifier extends ModifierWithKey<ArkMesh> {
@@ -89,29 +88,14 @@ class ShapeWidthModifier extends ModifierWithKey<Length> {
     return !isBaseOrResourceEqual(this.stageValue, this.value);
   }
 }
-class ShapeInitializeModifier extends ModifierWithKey<PixelMap> {
-  constructor(value: PixelMap) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('shapeInitialize');
-
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().shape.resetShapeInitialize(node);
-    } else {
-      getUINativeModule().shape.setShapeInitialize(node, this.value);
-    }
-  }
-}
 class ArkShapeComponent extends ArkCommonShapeComponent implements ShapeAttribute {
   constructor(nativePtr: KNode, classType?: ModifierType) {
     super(nativePtr, classType);
   }
   viewPort(value: {
-    x?: Length | undefined;
-    y?: Length | undefined;
-    width?: Length | undefined;
-    height?: Length | undefined;
+    x?: string | number | undefined;
+    y?: string | number | undefined; width?: string | number | undefined;
+    height?: string | number | undefined;
   }): this {
     if (value === null) {
       value = undefined;
@@ -135,16 +119,6 @@ class ArkShapeComponent extends ArkCommonShapeComponent implements ShapeAttribut
   }
   width(value: Length): this {
     modifierWithKey(this._modifiersWithKeys, ShapeWidthModifier.identity, ShapeWidthModifier, value);
-    return this;
-  }
-  initialize(value: Object[]): this {
-    if (!isUndefined(value[0]) && !isNull(value[0])) {
-      modifierWithKey(this._modifiersWithKeys, ShapeInitializeModifier.identity,
-        ShapeInitializeModifier, value[0] as PixelMap);
-    } else {
-      modifierWithKey(this._modifiersWithKeys, ShapeInitializeModifier.identity,
-        ShapeInitializeModifier, undefined);
-    }
     return this;
   }
 }

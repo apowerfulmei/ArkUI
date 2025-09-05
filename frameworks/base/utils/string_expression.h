@@ -31,10 +31,9 @@ bool CheckCalcIsValid(const std::string& formula);
 
 void ReplaceSignNumber(std::string& formula);
 
-void ConvertDal2Rpn(std::string formula, std::vector<std::string> &result);
+std::vector<std::string> ConvertDal2Rpn(std::string formula);
 
-double CalculateExp(const std::string& expression, const std::function<double(const Dimension&)>& calcFunc,
-    const std::vector<std::string>& lengthString = std::vector<std::string>());
+double CalculateExp(const std::string& expression, const std::function<double(const Dimension&)>& calcFunc);
 
 #ifdef ACE_UNITTEST
 bool PushOpStack(const std::string& formula, std::string& curNum, std::vector<std::string>& result,

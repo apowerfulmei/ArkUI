@@ -18,6 +18,7 @@
 
 #include <cstdint>
 #include <functional>
+#include "base/geometry/ng/offset_t.h"
 
 #include "base/geometry/dimension.h"
 #include "base/geometry/matrix4.h"
@@ -25,22 +26,20 @@
 #include "base/geometry/ng/rect_t.h"
 #include "base/geometry/ng/vector.h"
 #include "base/memory/ace_type.h"
-#include "base/memory/referenced.h"
 #include "base/utils/noncopyable.h"
 #include "core/animation/page_transition_common.h"
 #include "core/components/common/layout/constants.h"
 #include "core/components/common/layout/position_param.h"
 #include "core/components/common/properties/color.h"
-#include "core/components/common/properties/effect_option.h"
+#include "core/components/common/properties/shared_transition_option.h"
 #include "core/components_ng/base/modifier.h"
 #include "core/components_ng/pattern/render_node/render_node_properties.h"
-#include "core/components_ng/property/attraction_effect.h"
 #include "core/components_ng/property/border_property.h"
 #include "core/components_ng/property/overlay_property.h"
 #include "core/components_ng/property/particle_property.h"
-#include "core/components_ng/property/particle_property_animation.h"
 #include "core/components_ng/property/progress_mask_property.h"
 #include "core/components_ng/property/property.h"
+#include "core/components_ng/property/particle_property_animation.h"
 #include "core/components_ng/property/transition_property.h"
 #include "core/components_ng/render/animation_utils.h"
 #include "core/components_ng/render/drawing_forward.h"
@@ -51,15 +50,7 @@ class DrawCmdList;
 class VisualEffect;
 class Filter;
 enum class Gravity;
-class Blender;
-} // namespace OHOS::Rosen
-
-namespace OHOS::Ace {
-struct SharedTransitionOption;
-}
-
-namespace OHOS::Ace::Kit {
-class Modifier;
+class BrightnessBlender;
 }
 
 namespace OHOS::Ace::NG {
@@ -77,17 +68,6 @@ class RenderPropertyNode;
 class FrameNode;
 class InspectorFilter;
 class Modifier;
-class PipelineContext;
-
-struct PaintFocusExtraInfo final {
-    PaintFocusExtraInfo() = default;
-    PaintFocusExtraInfo(bool isAccessibilityFocus, bool isFocusBoxGlow)
-        : isAccessibilityFocus(isAccessibilityFocus), isFocusBoxGlow(isFocusBoxGlow)
-    {}
-    ~PaintFocusExtraInfo() = default;
-    bool isAccessibilityFocus { false };
-    bool isFocusBoxGlow { false };
-};
 
 using CanvasDrawFunction = std::function<void(RSCanvas& canvas)>;
 using TransitionFinishCallback = std::function<void(bool)>;
@@ -96,7 +76,7 @@ inline constexpr int32_t ZINDEX_DEFAULT_VALUE = 0;
 
 // RenderContext is used for render node to paint.
 class ACE_FORCE_EXPORT RenderContext : public virtual AceType {
-    DECLARE_ACE_TYPE(NG::RenderContext, AceType);
+    DECLARE_ACE_TYPE(NG::RenderContext, AceType)
 
 public:
     ~RenderContext() override = default;
@@ -108,6 +88,7 @@ public:
 
     virtual void SetHostNode(const WeakPtr<FrameNode>& host);
     RefPtr<FrameNode> GetHost() const;
+    FrameNode* GetUnsafeHost() const;
 
     virtual void SetNeedDebugBoundary(bool flag) {}
     virtual bool NeedDebugBoundary() const
@@ -122,7 +103,6 @@ public:
     virtual void FlushOverlayDrawFunction(CanvasDrawFunction&& overlayDraw) {}
 
     virtual void FlushContentModifier(const RefPtr<Modifier>& modifier) {}
-    virtual void FlushKitContentModifier(const RefPtr<Kit::Modifier>& modifier) {}
     virtual void FlushForegroundModifier(const RefPtr<Modifier>& modifier) {}
     virtual void FlushOverlayModifier(const RefPtr<Modifier>& modifier) {}
 
@@ -171,7 +151,7 @@ public:
 
     virtual void SetFrameWithoutAnimation(const RectF& paintRect) {};
 
-    virtual void RegisterSharedTransition(const RefPtr<RenderContext>& other, const bool isInSameWindow) {}
+    virtual void RegisterSharedTransition(const RefPtr<RenderContext>& other) {}
     virtual void UnregisterSharedTransition(const RefPtr<RenderContext>& other) {}
 
     virtual void OnModifyDone() {}
@@ -184,7 +164,6 @@ public:
         EXTERNAL,
         INCREMENTAL_CANVAS,
         HARDWARE_SURFACE,
-        COMPOSITE_COMPONENT,
 #ifdef RENDER_EXTRACT_SUPPORTED
         HARDWARE_TEXTURE,
 #endif
@@ -193,7 +172,6 @@ public:
     enum class PatternType : int8_t {
         DEFAULT,
         VIDEO,
-        XCOM,
 #ifdef PLATFORM_VIEW_SUPPORTED
         PLATFORM_VIEW,
 #endif
@@ -230,25 +208,21 @@ public:
 
     virtual void BlendBorderColor(const Color& color) {}
 
-    virtual void SetRSUIContext(PipelineContext* context) {}
-
     // Paint focus state by component's setting. It will paint along the paintRect
     virtual void PaintFocusState(const RoundRect& paintRect, const Color& paintColor, const Dimension& paintWidth,
-        bool isAccessibilityFocus = false, bool isFocusBoxGlow = false)
+        bool isAccessibilityFocus = false)
     {}
     // Paint focus state by component's setting. It will paint along the frameRect(padding: focusPaddingVp)
     virtual void PaintFocusState(const RoundRect& paintRect, const Dimension& focusPaddingVp, const Color& paintColor,
-        const Dimension& paintWidth, const PaintFocusExtraInfo& paintFocusExtraInfo)
+        const Dimension& paintWidth, bool isAccessibilityFocus = false)
     {}
     // Paint focus state by default. It will paint along the component rect(padding: focusPaddingVp)
-    virtual void PaintFocusState(const Dimension& focusPaddingVp, const Color& paintColor, const Dimension& paintWidth,
-        bool isFocusBoxGlow = false)
+    virtual void PaintFocusState(const Dimension& focusPaddingVp, const Color& paintColor, const Dimension& paintWidth)
     {}
 
     virtual void ClearFocusState() {}
 
     virtual void CreateBackgroundPixelMap(const RefPtr<FrameNode>& value) {}
-    virtual uint32_t GetCurrentBackgroundTaskId() const { return 0; }
 
     virtual void UpdateBorderWidthF(const BorderWidthPropertyF& value) {}
 
@@ -295,8 +269,14 @@ public:
         return isSynced_;
     }
 
+    virtual bool TriggerPageTransition(PageTransitionType type, const std::function<void()>& onFinish)
+    {
+        return false;
+    }
+
     virtual void SetSharedTranslate(float xTranslate, float yTranslate) {}
     virtual void ResetSharedTranslate() {}
+    virtual void ResetPageTransitionEffect() {}
 
     virtual void AddChild(const RefPtr<RenderContext>& renderContext, int index) {}
     virtual void RemoveChild(const RefPtr<RenderContext>& renderContext) {}
@@ -304,30 +284,15 @@ public:
     virtual void SetBounds(float positionX, float positionY, float width, float height) {}
     virtual void SetContentRectToFrame(RectF rect) {}
     virtual void SetSecurityLayer(bool isSecure) {}
-    virtual void SetHDRBrightness(float hdrBrightness) {}
-    virtual void SetImageHDRBrightness(float hdrBrightness) {}
-    virtual void SetImageHDRPresent(bool hdrPresent) {}
-    virtual void SetTransparentLayer(bool isTransparentLayer) {}
-    virtual void SetScreenId(uint64_t screenId) {}
-    virtual void SetAlwaysSnapshot(bool enable) {}
+
     virtual void UpdateBackBlurRadius(const Dimension& radius) {}
-    virtual void UpdateBackBlurStyle(
-        const std::optional<BlurStyleOption>& bgBlurStyle, const SysOptions& sysOptions = SysOptions())
-    {}
-    virtual void UpdateBackgroundEffect(
-        const std::optional<EffectOption>& effectOption, const SysOptions& sysOptions = SysOptions())
-    {}
-    virtual void UpdateBackBlur(
-        const Dimension& radius, const BlurOption& blurOption, const SysOptions& sysOptions = SysOptions())
-    {}
+    virtual void UpdateBackBlurStyle(const std::optional<BlurStyleOption>& bgBlurStyle) {}
+    virtual void UpdateBackgroundEffect(const std::optional<EffectOption>& effectOption) {}
+    virtual void UpdateBackBlur(const Dimension& radius, const BlurOption& blurOption) {}
     virtual void UpdateNodeBackBlur(const Dimension& radius, const BlurOption& blurOption) {}
     virtual void UpdateMotionBlur(const MotionBlurOption& motionBlurOption) {}
-    virtual void UpdateFrontBlur(
-        const Dimension& radius, const BlurOption& blurOption, const SysOptions& sysOptions = SysOptions())
-    {}
-    virtual void UpdateFrontBlurStyle(
-        const std::optional<BlurStyleOption>& fgBlurStyle, const SysOptions& sysOptions = SysOptions())
-    {}
+    virtual void UpdateFrontBlur(const Dimension& radius, const BlurOption& blurOption) {}
+    virtual void UpdateFrontBlurStyle(const std::optional<BlurStyleOption>& fgBlurStyle) {}
     virtual void UpdateFrontBlurRadius(const Dimension& radius) {}
     virtual void ResetBackBlurStyle() {}
     virtual void ClipWithRect(const RectF& rectF) {}
@@ -337,20 +302,18 @@ public:
     virtual void ClipWithRRect(const RectF& rectF, const RadiusF& radiusF) {}
     virtual void RemoveClipWithRRect() {}
     virtual void UpdateWindowFocusState(bool isFocused) {}
-    virtual void UpdateWindowActiveState(bool isActive) {}
     /**
      * @brief Only clip the content & foreground layer by @c rect.
      * @param rect - offset of @c rect is relative to FrameRect.
      */
     virtual void SetContentClip(const std::variant<RectF, RefPtr<ShapeRect>>& rect) {}
-    virtual void ResetContentClip() {}
 
     // visual
     virtual void UpdateVisualEffect(const OHOS::Rosen::VisualEffect* visualEffect) {}
     virtual void UpdateBackgroundFilter(const OHOS::Rosen::Filter* backgroundFilter) {}
     virtual void UpdateForegroundFilter(const OHOS::Rosen::Filter* foregroundFilter) {}
     virtual void UpdateCompositingFilter(const OHOS::Rosen::Filter* compositingFilter) {}
-    virtual void UpdateBlender(const OHOS::Rosen::Blender* blender) {}
+    virtual void UpdateBrightnessBlender(const OHOS::Rosen::BrightnessBlender* brightnessBlender) {}
 
     virtual void OpacityAnimation(const AnimationOption& option, double begin, double end) {}
     virtual void ScaleAnimation(const AnimationOption& option, double begin, double end) {}
@@ -369,8 +332,6 @@ public:
     virtual void SetShadowElevation(float elevation) {}
     virtual void SetShadowRadius(float radius) {}
     virtual void SetScale(float scaleX, float scaleY) {}
-    virtual void SetScrollScale(float scale) {}
-    virtual void ResetScrollScale() {}
     virtual void SetBackgroundColor(uint32_t colorValue) {}
     virtual void SetRenderPivot(float pivotX, float pivotY) {}
     virtual void SetFrame(float positionX, float positionY, float width, float height) {}
@@ -388,7 +349,7 @@ public:
     {
         return {};
     }
-    virtual int32_t GetRotateDegree() { return 0; }
+
     virtual void SavePaintRect(bool isRound = true, uint16_t flag = 0) {}
     virtual void SyncPartialRsProperties() {}
     virtual void UpdatePaintRect(const RectF& paintRect) {}
@@ -407,21 +368,16 @@ public:
 
     virtual void GetPointWithTransform(PointF& point) {}
 
-    virtual void GetPointTransform(PointF& point) {}
-
-    virtual void GetPointTransformRotate(PointF& point) {}
-
     virtual Matrix4 GetMatrixWithTransformRotate()
     {
         return {};
     }
 
-    virtual RectF GetPaintRectWithoutTransform()
-    {
-        return {};
-    }
+    virtual void GetPointTransform(PointF& point) {}
 
-    virtual RectF GetPaintRectWithTransformWithoutDegree()
+    virtual void GetPointTransformRotate(PointF& point) {}
+
+    virtual RectF GetPaintRectWithoutTransform()
     {
         return {};
     }
@@ -460,14 +416,9 @@ public:
 
     virtual void ClearDrawCommands() {}
 
-    virtual void RemoveOverlayModifier(const RefPtr<OverlayModifier>& modifier) {}
-    virtual void RemoveContentModifier(const RefPtr<ContentModifier>& ContentModifier) {}
-
     virtual void DumpInfo() {}
-    virtual void DumpInfo(std::unique_ptr<JsonValue>& json) {}
-    virtual void DumpSimplifyInfo(std::shared_ptr<JsonValue>& json) {}
+    virtual void DumpSimplifyInfo(std::unique_ptr<JsonValue>& json) {}
     virtual void DumpAdvanceInfo() {}
-    virtual void DumpAdvanceInfo(std::unique_ptr<JsonValue>& json) {}
 
     void ObscuredToJsonValue(std::unique_ptr<JsonValue>& json, const InspectorFilter& filter) const;
 
@@ -538,7 +489,6 @@ public:
     virtual void OnBackgroundColorUpdate(const Color& value) {}
     virtual void OnOpacityUpdate(double opacity) {}
     virtual void OnDynamicRangeModeUpdate(DynamicRangeMode dynamicRangeMode) {}
-    virtual void SetColorGamut(uint32_t colorGamut) {}
     virtual void SetAlphaOffscreen(bool isOffScreen) {}
     virtual void OnSphericalEffectUpdate(double radio) {}
     virtual void OnPixelStretchEffectUpdate(const PixStretchEffectOption& option) {}
@@ -557,7 +507,7 @@ public:
     ACE_DEFINE_PROPERTY_ITEM_FUNC_WITHOUT_GROUP(DynamicDimDegree, float);
     ACE_DEFINE_PROPERTY_ITEM_FUNC_WITHOUT_GROUP(ParticleOptionArray, std::list<ParticleOption>);
     ACE_DEFINE_PROPERTY_ITEM_FUNC_WITHOUT_GROUP(ClickEffectLevel, ClickEffectInfo);
-    virtual RefPtr<PixelMap> GetThumbnailPixelMap(bool needScale = false, bool isOffline = true)
+    virtual RefPtr<PixelMap> GetThumbnailPixelMap(bool needScale = false)
     {
         return nullptr;
     }
@@ -575,7 +525,6 @@ public:
     virtual void PaintDebugBoundary(bool flag) {}
     // transform matrix
     ACE_DEFINE_PROPERTY_ITEM_FUNC_WITHOUT_GROUP(TransformMatrix, Matrix4);
-    ACE_DEFINE_PROPERTY_ITEM_FUNC_WITHOUT_GROUP(Transform3DMatrix, Matrix4);
 
     // Transform
     ACE_DEFINE_PROPERTY_GROUP(Transform, TransformProperty);
@@ -583,7 +532,6 @@ public:
     ACE_DEFINE_PROPERTY_FUNC_WITH_GROUP(Transform, TransformCenter, DimensionOffset);
     ACE_DEFINE_PROPERTY_FUNC_WITH_GROUP(Transform, TransformTranslate, TranslateOptions);
     ACE_DEFINE_PROPERTY_FUNC_WITH_GROUP(Transform, TransformRotate, Vector5F);
-    ACE_DEFINE_PROPERTY_FUNC_WITH_GROUP(Transform, TransformRotateAngle, Vector4F);
 
     // Foreground
     ACE_DEFINE_PROPERTY_GROUP(Foreground, ForegroundProperty);
@@ -593,7 +541,6 @@ public:
     ACE_DEFINE_PROPERTY_GROUP(Background, BackgroundProperty);
     ACE_DEFINE_PROPERTY_FUNC_WITH_GROUP(Background, BackgroundImage, ImageSourceInfo);
     ACE_DEFINE_PROPERTY_FUNC_WITH_GROUP(Background, BackgroundImageRepeat, ImageRepeat);
-    ACE_DEFINE_PROPERTY_FUNC_WITH_GROUP(Background, BackgroundImageSyncMode, bool);
     ACE_DEFINE_PROPERTY_FUNC_WITH_GROUP(Background, BackgroundImageSize, BackgroundImageSize);
     ACE_DEFINE_PROPERTY_FUNC_WITH_GROUP(Background, BackgroundImagePosition, BackgroundImagePosition);
     ACE_DEFINE_PROPERTY_FUNC_WITH_GROUP(Background, BackgroundImageResizableSlice, ImageResizableSlice);
@@ -623,9 +570,6 @@ public:
     ACE_DEFINE_PROPERTY_GROUP(CustomBackground, CustomBackgroundProperty);
     ACE_DEFINE_PROPERTY_FUNC_WITH_GROUP(CustomBackground, BackgroundPixelMap, RefPtr<PixelMap>);
     ACE_DEFINE_PROPERTY_FUNC_WITH_GROUP(CustomBackground, BackgroundAlign, Alignment);
-    ACE_DEFINE_PROPERTY_FUNC_WITH_GROUP(CustomBackground, CustomBackgroundColor, Color);
-    ACE_DEFINE_PROPERTY_FUNC_WITH_GROUP(CustomBackground, IsTransitionBackground, bool);
-    ACE_DEFINE_PROPERTY_FUNC_WITH_GROUP(CustomBackground, BuilderBackgroundFlag, bool);
 
     // Graphics
     ACE_DEFINE_PROPERTY_GROUP(Graphics, GraphicsProperty);
@@ -732,9 +676,6 @@ public:
     // renderFit
     ACE_DEFINE_PROPERTY_ITEM_FUNC_WITHOUT_GROUP(RenderFit, RenderFit);
 
-    // AttractionEffect
-    ACE_DEFINE_PROPERTY_ITEM_FUNC_WITHOUT_GROUP(AttractionEffect, AttractionEffect);
-
     virtual void SetUsingContentRectForRenderFrame(bool value, bool adjustRSFrameByContentRect = false) {}
     virtual void SetFrameGravity(OHOS::Rosen::Gravity gravity) {}
 
@@ -760,6 +701,7 @@ public:
     }
 
     virtual void SetSurfaceRotation(bool isLock) {}
+    virtual void SuggestOpIncNode(bool isOpincNode, bool isNeedCalculate) {}
 
     void SetHandleChildBounds(bool value) {
         handleChildBounds_ = value;
@@ -769,8 +711,6 @@ public:
     {
         return Matrix4();
     }
-
-    virtual void SuggestOpIncNode(bool isOpincNode, bool isNeedCalculate) {}
 
     // The additional opacity will be multiplied with the base opacity.
     virtual void SetOpacityMultiplier(float opacity) {}
@@ -792,53 +732,7 @@ public:
 
     virtual void SetRenderFit(RenderFit renderFit) {}
 
-    virtual OffsetF GetBaseTransalteInXY() const
-    {
-        return OffsetF{0.0f, 0.0f};
-    }
-    virtual void SetBaseTranslateInXY(const OffsetF& offset) {}
-    virtual float GetBaseRotateInZ() const
-    {
-        return 0.0f;
-    }
-    virtual void SetBaseRotateInZ(float degree) {}
-
     virtual void UpdateWindowBlur() {}
-    virtual size_t GetAnimationsCount() const
-    {
-        return 0;
-    }
-    virtual void MarkUiFirstNode(bool isUiFirstNode) {}
-
-    virtual bool AddNodeToRsTree()
-    {
-        return false;
-    }
-
-    virtual void SetDrawNode() {}
-
-    static void SetNeedCallbackNodeChange(bool needCallback);
-
-    virtual void UpdateOcclusionCullingStatus(bool enable) {}
-
-    virtual void SetAnimationPropertyValue(AnimationPropertyType property, const std::vector<float>& value) {}
-
-    virtual void CancelPropertyAnimation(AnimationPropertyType property) {}
-
-    virtual std::vector<float> GetRenderNodePropertyValue(AnimationPropertyType property)
-    {
-        return {};
-    }
-
-    virtual void SyncRSPropertyToRenderContext(AnimationPropertyType property) {}
-
-    virtual void RemoveFromTree() {}
-
-    virtual void SetNeedUseCmdlistDrawRegion(bool needUseCmdlistDrawRegion) {}
-
-    virtual void UpdateCustomBackground() {}
-
-    virtual void UpdateOverlayText() {}
 
 protected:
     RenderContext() = default;
@@ -852,7 +746,6 @@ protected:
 
     virtual void OnBackgroundImageUpdate(const ImageSourceInfo& imageSourceInfo) {}
     virtual void OnBackgroundImageRepeatUpdate(const ImageRepeat& imageRepeat) {}
-    virtual void OnBackgroundImageSyncModeUpdate(bool syncMode) {}
     virtual void OnBackgroundImageSizeUpdate(const BackgroundImageSize& bgImgSize) {}
     virtual void OnBackgroundImagePositionUpdate(const BackgroundImagePosition& bgImgPosition) {}
     virtual void OnBackgroundImageResizableSliceUpdate(const ImageResizableSlice& slice) {}
@@ -863,9 +756,6 @@ protected:
 
     virtual void OnBackgroundPixelMapUpdate(const RefPtr<PixelMap>& value) {}
     virtual void OnBackgroundAlignUpdate(const Alignment& align) {}
-    virtual void OnCustomBackgroundColorUpdate(const Color& color) {}
-    virtual void OnIsTransitionBackgroundUpdate(bool isTransitionBackground) {}
-    virtual void OnBuilderBackgroundFlagUpdate(bool isBuilderBackground) {}
 
     virtual void OnBorderImageUpdate(const RefPtr<BorderImage>& borderImage) {}
     virtual void OnBorderImageSourceUpdate(const ImageSourceInfo& borderImageSourceInfo) {}
@@ -896,9 +786,7 @@ protected:
     virtual void OnBloomUpdate(const float value) {}
 
     virtual void OnTransformRotateUpdate(const Vector5F& value) {}
-    virtual void OnTransformRotateAngleUpdate(const Vector4F& value) {}
     virtual void OnTransformMatrixUpdate(const Matrix4& matrix) {}
-    virtual void OnTransform3DMatrixUpdate(const Matrix4& matrix) {}
 
     virtual void OnAnchorUpdate(const OffsetT<Dimension>& value) {}
 
@@ -940,12 +828,9 @@ protected:
     virtual void OnUseShadowBatchingUpdate(bool useShadowBatching) {}
     virtual void OnFreezeUpdate(bool isFreezed) {}
     virtual void OnObscuredUpdate(const std::vector<ObscuredReasons>& reasons) {}
-    virtual void OnAttractionEffectUpdate(const AttractionEffect& effect) {}
 
 private:
-    void RequestNextFrameMultiThread() const;
     friend class ViewAbstract;
-    friend class ViewAbstractModelStatic;
     std::function<void()> requestFrame_;
     WeakPtr<FrameNode> host_;
     RefPtr<OneCenterTransitionOptionType> oneCenterTransition_;

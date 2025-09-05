@@ -14,11 +14,19 @@
  */
 #include "node_extened.h"
 
+#include <cstdint>
+#include <unordered_map>
 
+#include "event_converter.h"
 #include "node_model.h"
+#include "style_modifier.h"
 
 #include "base/error/error_code.h"
+#include "base/log/log_wrapper.h"
+#include "base/utils/utils.h"
 #include "core/components_ng/base/ui_node.h"
+#include "core/components_ng/property/property.h"
+#include "core/interfaces/arkoala/arkoala_api.h"
 
 namespace OHOS::Ace::NodeModel {
 
@@ -79,14 +87,6 @@ int32_t RegisterNodeCustomEvent(ArkUI_NodeHandle node, ArkUI_NodeCustomEventType
         NodeAddExtraData(node, ARKUI_NODE_CUSTOM_EVENT_ON_DRAW, targetId, userData);
     }
 
-    if (eventType & ARKUI_NODE_CUSTOM_EVENT_ON_DRAW_FRONT) {
-        NodeAddExtraData(node, ARKUI_NODE_CUSTOM_EVENT_ON_DRAW_FRONT, targetId, userData);
-    }
-
-    if (eventType & ARKUI_NODE_CUSTOM_EVENT_ON_DRAW_BEHIND) {
-        NodeAddExtraData(node, ARKUI_NODE_CUSTOM_EVENT_ON_DRAW_BEHIND, targetId, userData);
-    }
-
     if (eventType & ARKUI_NODE_CUSTOM_EVENT_ON_FOREGROUND_DRAW) {
         NodeAddExtraData(node, ARKUI_NODE_CUSTOM_EVENT_ON_FOREGROUND_DRAW, targetId, userData);
     }
@@ -144,14 +144,6 @@ void UnregisterNodeCustomEvent(ArkUI_NodeHandle node, ArkUI_NodeCustomEventType 
 
     if (eventType & ARKUI_NODE_CUSTOM_EVENT_ON_DRAW) {
         NodeRemoveExtraData(node, ARKUI_NODE_CUSTOM_EVENT_ON_DRAW);
-    }
-
-    if (eventType & ARKUI_NODE_CUSTOM_EVENT_ON_DRAW_FRONT) {
-        NodeRemoveExtraData(node, ARKUI_NODE_CUSTOM_EVENT_ON_DRAW_FRONT);
-    }
-
-    if (eventType & ARKUI_NODE_CUSTOM_EVENT_ON_DRAW_BEHIND) {
-        NodeRemoveExtraData(node, ARKUI_NODE_CUSTOM_EVENT_ON_DRAW_BEHIND);
     }
 
     if (eventType & ARKUI_NODE_CUSTOM_EVENT_ON_FOREGROUND_DRAW) {

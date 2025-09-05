@@ -30,7 +30,7 @@ using SurfaceChangedEvent = std::function<void(const std::string&, const RectF&)
 using SurfaceDestroyedEvent = std::function<void(const std::string&, const std::string&)>;
 
 class XComponentEventHub : public EventHub {
-    DECLARE_ACE_TYPE(XComponentEventHub, EventHub);
+    DECLARE_ACE_TYPE(XComponentEventHub, EventHub)
 
 public:
     XComponentEventHub() = default;
@@ -43,9 +43,9 @@ public:
 
     void FireLoadEvent(const std::string& xcomponentId) const
     {
-        ACE_SCOPED_TRACE("XComponent[%s] FireLoadEvent[%d]", xcomponentId.c_str(), !!loadEvent_);
-        CHECK_NULL_VOID(loadEvent_);
-        loadEvent_(xcomponentId);
+        if (loadEvent_) {
+            loadEvent_(xcomponentId);
+        }
     }
 
     void SetOnDestroy(DestroyEvent&& destroyEvent)
@@ -55,9 +55,9 @@ public:
 
     void FireDestroyEvent(const std::string& xcomponentId) const
     {
-        ACE_SCOPED_TRACE("XComponent[%s] FireDestroyEvent[%d]", xcomponentId.c_str(), !!destroyEvent_);
-        CHECK_NULL_VOID(destroyEvent_);
-        destroyEvent_(xcomponentId);
+        if (destroyEvent_) {
+            destroyEvent_(xcomponentId);
+        }
     }
 
     void SetOnSurfaceInitEvent(ExternalEvent&& surfaceInitEvent)
@@ -67,8 +67,9 @@ public:
 
     void FireSurfaceInitEvent(const std::string& componentId, const uint32_t nodeId) const
     {
-        CHECK_NULL_VOID(surfaceInitEvent_);
-        surfaceInitEvent_(componentId, nodeId, false);
+        if (surfaceInitEvent_) {
+            surfaceInitEvent_(componentId, nodeId, false);
+        }
     }
 
     void SetDetachEvent(DetachEvent&& detachEvent)
@@ -78,8 +79,9 @@ public:
 
     void FireDetachEvent(const std::string& componentId)
     {
-        CHECK_NULL_VOID(detachEvent_);
-        detachEvent_(componentId);
+        if (detachEvent_) {
+            detachEvent_(componentId);
+        }
     }
 
     void SetControllerCreatedEvent(SurfaceCreatedEvent&& controllerCreatedEvent)
@@ -89,10 +91,9 @@ public:
 
     void FireControllerCreatedEvent(const std::string& surfaceId, const std::string& xcomponentId) const
     {
-        ACE_SCOPED_TRACE(
-            "XComponent[%s] FireControllerCreatedEvent[%d]", xcomponentId.c_str(), !!controllerCreatedEvent_);
-        CHECK_NULL_VOID(controllerCreatedEvent_);
-        controllerCreatedEvent_(surfaceId, xcomponentId);
+        if (controllerCreatedEvent_) {
+            controllerCreatedEvent_(surfaceId, xcomponentId);
+        }
     }
 
     void SetControllerChangedEvent(SurfaceChangedEvent&& controllerChangedEvent)
@@ -100,13 +101,11 @@ public:
         controllerChangedEvent_ = std::move(controllerChangedEvent);
     }
 
-    void FireControllerChangedEvent(
-        const std::string& surfaceId, const RectF& rect, const std::string& xcomponentId) const
+    void FireControllerChangedEvent(const std::string& surfaceId, const RectF& rect) const
     {
-        ACE_SCOPED_TRACE("XComponent[%s] FireControllerChangedEvent[w:%f,h:%f][%d]", xcomponentId.c_str(), rect.Width(),
-            rect.Height(), !!controllerChangedEvent_);
-        CHECK_NULL_VOID(controllerChangedEvent_);
-        controllerChangedEvent_(surfaceId, rect);
+        if (controllerChangedEvent_) {
+            controllerChangedEvent_(surfaceId, rect);
+        }
     }
 
     void SetControllerDestroyedEvent(SurfaceDestroyedEvent&& controllerDestroyedEvent)
@@ -116,10 +115,9 @@ public:
 
     void FireControllerDestroyedEvent(const std::string& surfaceId, const std::string& xcomponentId) const
     {
-        ACE_SCOPED_TRACE(
-            "XComponent[%s] FireControllerDestroyedEvent[%d]", xcomponentId.c_str(), !!controllerDestroyedEvent_);
-        CHECK_NULL_VOID(controllerDestroyedEvent_);
-        controllerDestroyedEvent_(surfaceId, xcomponentId);
+        if (controllerDestroyedEvent_) {
+            controllerDestroyedEvent_(surfaceId, xcomponentId);
+        }
     }
 
 private:

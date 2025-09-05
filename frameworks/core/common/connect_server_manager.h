@@ -35,7 +35,8 @@ public:
         int32_t instanceId, const std::string& language = "", const std::string& instanceName = "PandaDebugger");
     void SendInspector(const std::string& jsonTreeStr, const std::string& jsonSnapshotStr);
     void RemoveInstance(int32_t instanceId);
-    void SetLayoutInspectorCallback(const std::function<void(int32_t)>& createLayoutInfo);
+    void SetLayoutInspectorCallback(
+        const std::function<void(int32_t)>& createLayoutInfo, const std::function<void(bool)>& setStatus);
     std::function<void(int32_t)> GetLayoutInspectorCallback();
     void StartConnectServerWithSocketPair(int32_t socketFd);
     void StopConnectServer();
@@ -55,6 +56,7 @@ private:
     std::string packageName_;
     std::unordered_map<int32_t, std::string> instanceMap_;
     std::function<void(int32_t)> createLayoutInfo_;
+    std::function<void(int32_t)> setStatus_;
     ACE_DISALLOW_COPY_AND_MOVE(ConnectServerManager);
 };
 

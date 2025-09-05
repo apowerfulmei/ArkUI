@@ -38,7 +38,7 @@ public:
 
         RefPtr<FocusAnimationTheme> Build(const RefPtr<ThemeConstants>& themeConstants) const
         {
-            RefPtr<FocusAnimationTheme> theme = AceType::MakeRefPtr<FocusAnimationTheme>();
+            RefPtr<FocusAnimationTheme> theme = AceType::Claim(new FocusAnimationTheme());
             if (!themeConstants) {
                 return theme;
             }

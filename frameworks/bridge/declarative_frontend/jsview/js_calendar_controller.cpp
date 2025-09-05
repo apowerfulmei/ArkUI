@@ -21,22 +21,24 @@
 
 namespace OHOS::Ace {
 std::unique_ptr<CalendarControllerModel> CalendarControllerModel::instance_ = nullptr;
-std::once_flag CalendarControllerModel::onceFlag_;
+std::mutex CalendarControllerModel::mutex_;
 
 CalendarControllerModel* CalendarControllerModel::GetInstance()
 {
-    std::call_once(onceFlag_, []() {
+    if (!instance_) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (!instance_) {
 #ifdef NG_BUILD
-        instance_.reset(new NG::CalendarControllerModelNG());
-#else
-        if (Container::IsCurrentUseNewPipeline()) {
             instance_.reset(new NG::CalendarControllerModelNG());
-        } else {
-            instance_.reset(new Framework::CalendarControllerModelImpl());
-        }
+#else
+            if (Container::IsCurrentUseNewPipeline()) {
+                instance_.reset(new NG::CalendarControllerModelNG());
+            } else {
+                instance_.reset(new Framework::CalendarControllerModelImpl());
+            }
 #endif
-    });
-
+        }
+    }
     return instance_.get();
 }
 } // namespace OHOS::Ace

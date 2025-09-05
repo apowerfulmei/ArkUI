@@ -25,7 +25,6 @@
 
 namespace OHOS::Ace {
 using VideoEventFunc = std::function<void(const std::string&)>;
-using VideoErrorEventFunc = std::function<void(int32_t code, const std::string& message)>;
 class ACE_FORCE_EXPORT VideoModel {
 public:
     static VideoModel* GetInstance();
@@ -33,7 +32,6 @@ public:
 
     virtual void Create(const RefPtr<VideoControllerV2>& videoController) = 0;
     virtual void SetSrc(const std::string& src, const std::string& bundleName, const std::string& moduleName) = 0;
-    virtual void SetShowFirstFrame(bool showFirstFrame) {}
     virtual void SetProgressRate(double progressRate) = 0;
     virtual void SetPosterSourceInfo(const std::string& posterUrl, const std::string &bundleName,
         const std::string &moduleName) = 0;
@@ -59,6 +57,10 @@ public:
     virtual void EnableAnalyzer(bool enable) {}
     virtual void SetImageAnalyzerConfig(void* config) {}
     virtual void SetImageAIOptions(void* options) {}
+private:
+    static std::unique_ptr<VideoModel> instance_;
+    static std::mutex mutex_;
 };
+
 } // namespace OHOS::Ace
 #endif // FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_PATTERN_VIDEO_VIDEO_MODEL_H

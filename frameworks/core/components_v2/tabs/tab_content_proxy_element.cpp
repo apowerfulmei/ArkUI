@@ -15,6 +15,7 @@
 
 #include "core/components_v2/tabs/tab_content_proxy_element.h"
 
+#include "core/components/tab_bar/render_tab_content.h"
 #include "core/components_v2/tabs/tabs_helper.h"
 
 namespace OHOS::Ace::V2 {

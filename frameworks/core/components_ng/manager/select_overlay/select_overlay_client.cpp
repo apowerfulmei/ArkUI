@@ -15,7 +15,13 @@
 
 #include "core/components_ng/manager/select_overlay/select_overlay_client.h"
 
+#include "base/memory/ace_type.h"
+#include "base/utils/utils.h"
+#include "core/components_ng/base/frame_node.h"
+#include "core/components_ng/pattern/scrollable/nestable_scroll_container.h"
 #include "core/components_ng/pattern/scrollable/scrollable_pattern.h"
+#include "core/components_v2/inspector/inspector_constants.h"
+#include "core/pipeline_ng/pipeline_context.h"
 
 namespace OHOS::Ace::NG {
 void SelectOverlayClient::InitSelectOverlay()
@@ -73,16 +79,6 @@ void SelectOverlayClient::InitMenuCallback()
         auto client = weak.Upgrade();
         CHECK_NULL_VOID(client);
         client->OnSelectOverlayMenuClicked(SelectOverlayMenuId::TRANSLATE);
-    };
-    selectOverlayInfo_.menuCallback.onSearch = [weak = WeakClaim(this)]() {
-        auto client = weak.Upgrade();
-        CHECK_NULL_VOID(client);
-        client->OnSelectOverlayMenuClicked(SelectOverlayMenuId::SEARCH);
-    };
-    selectOverlayInfo_.menuCallback.onShare = [weak = WeakClaim(this)]() {
-        auto client = weak.Upgrade();
-        CHECK_NULL_VOID(client);
-        client->OnSelectOverlayMenuClicked(SelectOverlayMenuId::SHARE);
     };
     selectOverlayInfo_.menuCallback.onCameraInput = [weak = WeakClaim(this)]() {
         auto client = weak.Upgrade();

@@ -16,7 +16,6 @@
 #include "bridge/declarative_frontend/jsview/js_view_stack_processor.h"
 
 #include "bridge/declarative_frontend/engine/bindings.h"
-#include "bridge/declarative_frontend/engine/js_execution_scope_defines.h"
 #include "bridge/declarative_frontend/engine/js_types.h"
 #include "bridge/declarative_frontend/jsview/models/view_stack_model_impl.h"
 #include "bridge/declarative_frontend/view_stack_processor.h"
@@ -24,9 +23,8 @@
 #include "core/components_ng/base/view_stack_model.h"
 #include "core/components_ng/base/view_stack_model_ng.h"
 #include "core/components_ng/base/view_stack_processor.h"
-#include "foundation/arkui/ace_engine/frameworks/core/common/ace_application_info.h"
-#include "frameworks/core/common/layout_inspector.h"
 #include "frameworks/core/pipeline/base/element_register.h"
+#include "foundation/arkui/ace_engine/frameworks/core/common/ace_application_info.h"
 
 namespace OHOS::Ace {
 
@@ -85,17 +83,6 @@ void JSViewStackProcessor::JSBind(BindingTarget globalObj)
     JSClass<JSViewStackProcessor>::StaticMethod("getApiVersion", &JSViewStackProcessor::JsGetApiVersion, opt);
     JSClass<JSViewStackProcessor>::StaticMethod("GetAndPushFrameNode", &JSViewStackProcessor::JsGetAndPushFrameNode);
     JSClass<JSViewStackProcessor>::StaticMethod("moveDeletedElmtIds", &JSViewStackProcessor::JsMoveDeletedElmtIds);
-    JSClass<JSViewStackProcessor>::StaticMethod(
-        "scheduleUpdateOnNextVSync", &JSViewStackProcessor::JSScheduleUpdateOnNextVSync);
-    JSClass<JSViewStackProcessor>::StaticMethod("PushPrebuildCompCmd",
-        &JSViewStackProcessor::JsPushPrebuildCompCmd, opt);
-    JSClass<JSViewStackProcessor>::StaticMethod("CheckIsPrebuildTimeout",
-        &JSViewStackProcessor::JsCheckIsPrebuildTimeout, opt);
-    JSClass<JSViewStackProcessor>::StaticMethod("sendStateInfo", &JSViewStackProcessor::JsSendStateInfo);
-#ifdef ACE_STATIC
-    JSClass<JSViewStackProcessor>::StaticMethod("push", &JSViewStackProcessor::JsPush, opt);
-    JSClass<JSViewStackProcessor>::StaticMethod("pop", &JSViewStackProcessor::JsPop, opt);
-#endif
     JSClass<JSViewStackProcessor>::Bind<>(globalObj);
 }
 
@@ -169,74 +156,6 @@ void JSViewStackProcessor::JsMoveDeletedElmtIds(const JSCallbackInfo& info)
     }
 }
 
-// Initiates a frame request to RosenWindow and handles the callback from the Vsync request
-void JSViewStackProcessor::JSScheduleUpdateOnNextVSync(const JSCallbackInfo& info)
-{
-    // Get the correct container
-    int32_t containerId = -1;
-    if (info.Length() > 1 && info[1]->IsNumber()) {
-        containerId = info[1]->ToNumber<int32_t>();
-    } else {
-        LOGE("ERROR: JSScheduleUpdateOnNextVSync() no containerId provided.");
-        return;
-    }
-
-    if (containerId < 0) {
-        LOGE("ERROR: JSScheduleUpdateOnNextVSync() invalid containerId.");
-        return;
-    }
-
-    auto container = Container::GetContainer(containerId);
-    if (!container) {
-        LOGE("JSScheduleUpdateOnNextVSync container is null");
-        return;
-    }
-    auto context = container->GetPipelineContext();
-    if (!context) {
-        LOGE("JSScheduleUpdateOnNextVSync context is null");
-        return;
-    }
-
-    if (info[0]->IsFunction()) {
-        auto flushTSFunc = [execCtx = info.GetExecutionContext(),
-            func = JSRef<JSFunc>::Cast(info[0])](int32_t containerId) -> bool {
-            JAVASCRIPT_EXECUTION_SCOPE_WITH_CHECK(execCtx, false);
-            JSRef<JSVal> jsId = JSRef<JSVal>::Make(ToJSValue(containerId));
-            JSRef<JSVal> retVal = func->Call(JSRef<JSObject>(), 1, &jsId);
-            if (!retVal->IsBoolean()) {
-                LOGE("JSScheduleUpdateOnNextVSync: flushTSFunc retVal is not boolean.");
-                return false;
-            }
-            return retVal->ToBoolean();
-        };
-        context->SetFlushTSUpdates(std::move(flushTSFunc));
-    } else {
-        context->SetFlushTSUpdates(nullptr);
-    }
-}
-
-void JSViewStackProcessor::JsSendStateInfo(const std::string& stateInfo)
-{
-#if defined(PREVIEW) || !defined(OHOS_PLATFORM)
-    return;
-#else
-    if (!LayoutInspector::GetStateProfilerStatus()) {
-        return;
-    }
-    auto container = Container::CurrentSafely();
-    CHECK_NULL_VOID(container);
-    auto pipeline = container->GetPipelineContext();
-    CHECK_NULL_VOID(pipeline);
-    auto info = JsonUtil::ParseJsonString(stateInfo);
-    info->Put("timeStamp", GetCurrentTimestampMicroSecond());
-    info->Put("vsyncID", (int32_t)pipeline->GetFrameCount());
-    info->Put("processID", getpid());
-    info->Put("windowID", (int32_t)pipeline->GetWindowId());
-    TAG_LOGD(AceLogTag::ACE_STATE_MGMT, "ArkUI SendStateInfo %{public}s", info->ToString().c_str());
-    LayoutInspector::SendMessage(info->ToString());
-#endif
-}
-
 /**
  * return true of current Container uses new Pipeline
  */
@@ -265,32 +184,4 @@ void JSViewStackProcessor::JsGetAndPushFrameNode(const JSCallbackInfo& info)
     ViewStackModel::GetInstance()->GetAndPushFrameNode(info[0]->ToString(), info[1]->ToNumber<int32_t>());
 }
 
-void JSViewStackProcessor::JsPushPrebuildCompCmd(const JSCallbackInfo& info)
-{
-    ViewStackModel::GetInstance()->PushPrebuildCompCmd();
-}
-
-bool JSViewStackProcessor::JsCheckIsPrebuildTimeout()
-{
-    return ViewStackModel::GetInstance()->CheckIsPrebuildTimeout();
-}
-
-#ifdef ACE_STATIC
-void JSViewStackProcessor::JsPush(const JSCallbackInfo &info)
-{
-    if (info.Length() < 1) {
-        return;
-    }
-    if (!info[0]->IsNumber()) {
-        return;
-    }
-
-    return ViewStackModel::GetInstance()->PushPtr(info[0]->ToNumber<int64_t>());
-}
-
-void JSViewStackProcessor::JsPop()
-{
-    return ViewStackModel::GetInstance()->Pop();
-}
-#endif
 } // namespace OHOS::Ace::Framework

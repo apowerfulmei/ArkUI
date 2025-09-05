@@ -300,7 +300,7 @@ bool WebPattern::IsImageDrag()
 
 void WebPattern::InitFocusEvent(const RefPtr<FocusHub>& focusHub)
 {
-    auto focusTask = [weak = WeakClaim(this)](FocusReason reason) {
+    auto focusTask = [weak = WeakClaim(this)]() {
         auto pattern = weak.Upgrade();
         CHECK_NULL_VOID(pattern);
         pattern->HandleFocusEvent();
@@ -439,15 +439,6 @@ void WebPattern::OnAreaChangedInner()
     if (webOffset_ == offset) {
         return;
     }
-    auto pipeline = PipelineContext::GetCurrentContext();
-    CHECK_NULL_VOID(pipeline);
-    const double SCREEN_CENTER_POSITION = pipeline->GetRootWidth() / 2.f;
-    if (offset.GetX() == webOffset_.GetX() + SCREEN_CENTER_POSITION) {
-        auto pageOutOffset = Offset(webOffset_.GetX() + drawSize_.Width(), offset.GetY());
-        TAG_LOGI(AceLogTag::ACE_WEB, "Set offset to pageOutOffset");
-        delegate_->SetBoundsOrResize(drawSize_, pageOutOffset);
-        return;
-    }
     webOffset_ = offset;
     if (isInWindowDrag_)
         return;
@@ -574,13 +565,6 @@ void WebPattern::OnAudioExclusiveUpdate(bool audioExclusive)
     }
 }
 
-void WebPattern::OnAudioSessionTypeUpdate(WebAudioSessionType value)
-{
-    if (delegate_) {
-        delegate_->UpdateAudioSessionType(value);
-    }
-}
-
 void WebPattern::OnOverviewModeAccessEnabledUpdate(bool value)
 {
     if (delegate_) {
@@ -609,12 +593,10 @@ void WebPattern::OnTextZoomRatioUpdate(int32_t value)
     }
 }
 
-void WebPattern::OnWebDebuggingAccessEnabledAndPortUpdate(
-    const WebPatternProperty::WebDebuggingConfigType& enabled_and_port)
+void WebPattern::OnWebDebuggingAccessEnabledUpdate(bool value)
 {
     if (delegate_) {
-        bool enabled = std::get<0>(enabled_and_port);
-        delegate_->UpdateWebDebuggingAccess(enabled);
+        delegate_->UpdateWebDebuggingAccess(value);
     }
 }
 
@@ -765,7 +747,7 @@ void WebPattern::RegistVirtualKeyBoardListener()
     auto pipelineContext = PipelineContext::GetCurrentContext();
     CHECK_NULL_VOID(pipelineContext);
     pipelineContext->SetVirtualKeyBoardCallback(
-        [weak = AceType::WeakClaim(this)](int32_t width, int32_t height, double keyboard, bool isCustomKeyboard) {
+        [weak = AceType::WeakClaim(this)](int32_t width, int32_t height, double keyboard) {
             auto webPattern = weak.Upgrade();
             CHECK_NULL_RETURN(webPattern, false);
             return webPattern->ProcessVirtualKeyBoard(width, height, keyboard);
@@ -863,16 +845,11 @@ void WebPattern::OnModifyDone()
         delegate_->UpdateForceDarkAccess(GetForceDarkAccessValue(false));
         delegate_->UpdateAudioResumeInterval(GetAudioResumeIntervalValue(-1));
         delegate_->UpdateAudioExclusive(GetAudioExclusiveValue(true));
-        delegate_->UpdateAudioSessionType(GetAudioSessionTypeValue(WebAudioSessionType::AUTO));
         delegate_->UpdateOverviewModeEnabled(GetOverviewModeAccessEnabledValue(true));
         delegate_->UpdateFileFromUrlEnabled(GetFileFromUrlAccessEnabledValue(false));
         delegate_->UpdateDatabaseEnabled(GetDatabaseAccessEnabledValue(false));
         delegate_->UpdateTextZoomRatio(GetTextZoomRatioValue(DEFAULT_TEXT_ZOOM_RATIO));
-        auto webDebugingConfig = GetWebDebuggingAccessEnabledAndPort();
-        if (webDebugingConfig) {
-            bool enabled = std::get<0>(webDebugingConfig.value());
-            delegate_->UpdateWebDebuggingAccess(enabled);
-        }
+        delegate_->UpdateWebDebuggingAccess(GetWebDebuggingAccessEnabledValue(false));
         delegate_->UpdateMediaPlayGestureAccess(GetMediaPlayGestureAccessValue(true));
         delegate_->UpdatePinchSmoothModeEnabled(GetPinchSmoothModeEnabledValue(false));
         delegate_->UpdateMultiWindowAccess(GetMultiWindowAccessEnabledValue(false));
@@ -1061,7 +1038,7 @@ void WebPattern::ExitFullScreen()
 std::optional<OffsetF> WebPattern::GetCoordinatePoint()
 {
     auto frameNode = GetHost();
-    CHECK_NULL_RETURN(frameNode, OffsetF());
+    CHECK_NULL_RETURN(frameNode, std::nullopt);
     return frameNode->GetTransformRelativeOffset();
 }
 
@@ -1197,6 +1174,11 @@ void WebPattern::UpdateBackgroundColorRightNow(int32_t color)
     auto renderContext = host->GetRenderContext();
     CHECK_NULL_VOID(renderContext);
     renderContext->UpdateBackgroundColor(Color(static_cast<uint32_t>(color)));
+}
+
+void WebPattern::OnSmoothDragResizeEnabledUpdate(bool value)
+{
+    // cross platform is not support now;
 }
 
 void WebPattern::OnRootLayerChanged(int width, int height)
@@ -1343,11 +1325,6 @@ void WebPattern::OnIntrinsicSizeEnabledUpdate(bool value)
     // cross platform is not support now;
 }
 
-void WebPattern::OnCssDisplayChangeEnabledUpdate(bool value)
-{
-    // cross platform is not support now;
-}
-
 void WebPattern::OnNativeEmbedRuleTagUpdate(const std::string& tag)
 {
     // cross platform is not support now;
@@ -1370,22 +1347,12 @@ void WebPattern::OnKeyboardAvoidModeUpdate(const WebKeyboardAvoidMode& mode)
 
 
 void WebPattern::UpdateEditMenuOptions(const NG::OnCreateMenuCallback&& onCreateMenuCallback,
-    const NG::OnMenuItemClickCallback&& onMenuItemClick, const NG::OnPrepareMenuCallback&& onPrepareMenuCallback)
-{
-    // cross platform is not support now;
-}
-
-void WebPattern::UpdateDataDetectorConfig(const TextDetectConfig& config)
+    const NG::OnMenuItemClickCallback&& onMenuItemClick)
 {
     // cross platform is not support now;
 }
 
 void WebPattern::OnEnabledHapticFeedbackUpdate(bool enable)
-{
-    // cross platform is not support now;
-}
-
-void WebPattern::OnBypassVsyncConditionUpdate(WebBypassVsyncCondition condition)
 {
     // cross platform is not support now;
 }
@@ -1434,38 +1401,12 @@ void WebPattern::UpdateImagePreviewParam()
     // cross platform is not support now;
 }
 
-bool WebPattern::RunJavascriptAsync(const std::string& jsCode, std::function<void(const std::string&)>&& callback)
-{
-    // cross platform is not support now;
-    return false;
-}
-
 void WebPattern::OnOptimizeParserBudgetEnabledUpdate(bool value)
 {
     // cross platform is not support now;
 }
 
-void WebPattern::OnWebMediaAVSessionEnabledUpdate(bool value)
-{
-    // cross platform is not support now;
-}
-
-void WebPattern::OnEnableDataDetectorUpdate(bool enable)
-{
-    // cross platform is not support now;
-}
-
-void WebPattern::OnEnableFollowSystemFontWeightUpdate(bool value)
-{
-    // cross platform is not support now;
-}
-
 void WebPattern::SetDefaultBackgroundColor()
-{
-    // cross platform is not support now;
-}
-
-void WebPattern::OnGestureFocusModeUpdate(GestureFocusMode mode)
 {
     // cross platform is not support now;
 }

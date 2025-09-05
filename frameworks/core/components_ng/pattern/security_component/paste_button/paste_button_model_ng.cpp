@@ -15,7 +15,12 @@
 
 #include "core/components_ng/pattern/security_component/paste_button/paste_button_model_ng.h"
 
+#include "base/log/ace_scoring_log.h"
+#include "base/resource/internal_resource.h"
+#include "core/components_ng/pattern/security_component/paste_button/paste_button_common.h"
 #include "core/components_ng/pattern/security_component/security_component_pattern.h"
+#include "core/components_v2/inspector/inspector_constants.h"
+#include "core/pipeline/base/element_register.h"
 
 namespace OHOS::Ace::NG {
 std::unique_ptr<PasteButtonModelNG> PasteButtonModelNG::instance_ = nullptr;
@@ -44,13 +49,12 @@ void PasteButtonModelNG::Create(int32_t text, int32_t icon,
 }
 
 RefPtr<FrameNode> PasteButtonModelNG::CreateNode(int32_t text, int32_t icon,
-    int32_t backgroundType, bool isArkuiComponent, uint32_t symbolIcon)
+    int32_t backgroundType, bool isArkuiComponent)
 {
     SecurityComponentElementStyle style = {
         .text = text,
         .icon = icon,
-        .backgroundType = backgroundType,
-        .symbolIcon = symbolIcon
+        .backgroundType = backgroundType
     };
     return SecurityComponentModelNG::CreateNode(V2::PASTE_BUTTON_ETS_TAG,
         ElementRegister::GetInstance()->MakeUniqueId(),
@@ -74,57 +78,5 @@ bool PasteButtonModelNG::GetTextResource(int32_t textStyle, std::string& text)
     }
     text = theme->GetPasteDescriptions(textStyle);
     return true;
-}
-
-bool PasteButtonModelNG::GetIconResourceStatic(int32_t iconStyle, InternalResource::ResourceId& id)
-{
-    if ((iconStyle < 0) || (static_cast<uint32_t>(iconStyle) >= ICON_RESOURCE_TABLE.size())) {
-        return false;
-    }
-    id = static_cast<InternalResource::ResourceId>(ICON_RESOURCE_TABLE[iconStyle]);
-    return true;
-}
-
-bool PasteButtonModelNG::GetTextResourceStatic(int32_t textStyle, std::string& text)
-{
-    auto theme = GetTheme();
-    if (theme == nullptr) {
-        return false;
-    }
-    text = theme->GetPasteDescriptions(textStyle);
-    return true;
-}
-
-RefPtr<FrameNode> PasteButtonModelNG::CreateFrameNode(int32_t nodeId)
-{
-    auto frameNode = FrameNode::GetOrCreateFrameNode(
-        V2::PASTE_BUTTON_ETS_TAG, nodeId, []() { return AceType::MakeRefPtr<SecurityComponentPattern>(); });
-
-    return frameNode;
-}
-
-bool PasteButtonModelNG::InitPasteButton(FrameNode* frameNode,
-    const PasteButtonStyle& style, bool isArkuiComponent)
-{
-    CHECK_NULL_RETURN(frameNode, false);
-
-    auto text = style.text.value_or(PasteButtonPasteDescription::TEXT_NULL);
-    auto icon = style.icon.value_or(PasteButtonIconStyle::ICON_NULL);
-    auto backgroundType = style.backgroundType.value_or(ButtonType::CAPSULE);
-
-    if ((text == PasteButtonPasteDescription::TEXT_NULL) && (icon == PasteButtonIconStyle::ICON_NULL)) {
-        // set default values
-        text = PasteButtonStyle::DEFAULT_TEXT;
-        icon = PasteButtonStyle::DEFAULT_ICON;
-        backgroundType = PasteButtonStyle::DEFAULT_BACKGROUND_TYPE;
-    }
-
-    SecurityComponentElementStyle secCompStyle = {
-        .text = static_cast<int32_t>(text),
-        .icon = static_cast<int32_t>(icon),
-        .backgroundType = static_cast<int32_t>(backgroundType)
-    };
-    return SecurityComponentModelNG::InitSecurityComponent(frameNode, secCompStyle, isArkuiComponent,
-        PasteButtonModelNG::GetIconResourceStatic, PasteButtonModelNG::GetTextResourceStatic);
 }
 } // namespace OHOS::Ace::NG

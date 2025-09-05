@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2022-2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -67,11 +67,8 @@ public:
 
     static const int32_t LAST_ITEM = -1;
 
-    ListItemGroupLayoutAlgorithm(int32_t headerIndex, int32_t footerIndex, int32_t itemStartIndex,
-        int32_t footerCount = 0)
-        : headerIndex_(headerIndex), footerIndex_(footerIndex), itemStartIndex_(itemStartIndex),
-          footerCount_(footerCount)
-    {}
+    ListItemGroupLayoutAlgorithm(int32_t headerIndex, int32_t footerIndex, int32_t itemStartIndex)
+        :headerIndex_(headerIndex), footerIndex_(footerIndex), itemStartIndex_(itemStartIndex) {}
 
     void Measure(LayoutWrapper* layoutWrapper) override;
 
@@ -135,11 +132,6 @@ public:
         return lanes_;
     }
 
-    void SetLanes(int32_t lanes)
-    {
-        lanes_ = lanes;
-    }
-
     float GetLaneGutter() const
     {
         return laneGutter_;
@@ -170,11 +162,6 @@ public:
         prevContentMainSize_ = prevContentSize;
     }
 
-    float GetListContentSize() const
-    {
-        return endPos_ - startPos_;
-    }
-
     void ModifyReferencePos(int32_t index, float pos);
 
     void SetNeedAdjustRefPos(bool needAdjust)
@@ -182,10 +169,9 @@ public:
         needAdjustRefPos_ = needAdjust;
     }
 
-    void SetNeedCheckOffset(bool needCheckOffset, float averageHeight)
+    void SetNeedCheckOffset(bool needCheckOffset)
     {
         isNeedCheckOffset_ = needCheckOffset;
-        groupItemAverageHeight_ = averageHeight;
     }
 
     float GetRefPos() const
@@ -282,11 +268,6 @@ public:
     {
         return totalItemCount_;
     }
-    
-    int32_t GetFooterIndex() const
-    {
-        return footerIndex_;
-    }
 
     float GetChildMaxCrossSize(LayoutWrapper* layoutWrapper, Axis axis);
 
@@ -373,33 +354,13 @@ public:
         isNeedMeasureFormLastItem_ = needMeasureFormLastItem;
     }
 
-    void SetNeedSyncLoad(bool value)
-    {
-        isNeedSyncLoad_ = value;
-    }
-
-    void SetPrevMeasureBreak(bool value)
-    {
-        prevMeasureBreak_ = value;
-    }
-
-    bool GroupMeasureInNextFrame() const
-    {
-        return measureInNextFrame_;
-    }
-
-    bool ReachResponseDeadline(LayoutWrapper* layoutWrapper) const
-    {
-        return !itemPosition_.empty() && !isNeedSyncLoad_ && layoutWrapper->ReachResponseDeadline();
-    }
-
     ListItemGroupLayoutInfo GetLayoutInfo() const;
 
     float GetAdjustReferenceDelta() const
     {
         return adjustReferenceDelta_;
     }
-    
+
     float GetAdjustTotalSize() const
     {
         return adjustTotalSize_;
@@ -421,31 +382,8 @@ public:
         return static_cast<int32_t>(itemPosition_.size());
     }
 
-    void SetPrevTotalItemCount(int32_t prevTotalItemCount)
-    {
-        prevTotalItemCount_ = prevTotalItemCount;
-    }
-
-    void SetPrevTotalMainSize(float prevTotalMainSize)
-    {
-        prevTotalMainSize_ = prevTotalMainSize;
-    }
-
-    bool GetStackFromEnd() const
-    {
-        return isStackFromEnd_;
-    }
-
-    void ReverseItemPosition(ListItemGroupLayoutAlgorithm::PositionMap &itemPosition, int32_t totalItemCount,
-        float mainSize);
-
-    void ReverseLayoutedItemInfo(int32_t totalItemCount, float mainSize);
-
-    void ResetLayoutItem(LayoutWrapper* layoutWrapper);
-
 private:
     float CalculateLaneCrossOffset(float crossSize, float childCrossSize);
-    void UpdateRecycledItems();
     void UpdateListItemConstraint(const OptionalSizeF& selfIdealSize, LayoutConstraintF& contentConstraint);
     void LayoutListItem(LayoutWrapper* layoutWrapper, const OffsetF& paddingOffset, float crossSize);
     void LayoutListItemAll(LayoutWrapper* layoutWrapper, const LayoutConstraintF& layoutConstraint, float startPos);
@@ -454,14 +392,9 @@ private:
     void UpdateZIndex(const RefPtr<LayoutWrapper>& layoutWrapper);
     void LayoutIndex(const RefPtr<LayoutWrapper>& wrapper, const OffsetF& paddingOffset,
         float crossSize, float startPos);
-    RefPtr<LayoutWrapper> GetListItem(LayoutWrapper *layoutWrapper, int32_t index, bool addToRenderTree = true,
-                                      bool isCache = false) const
+    inline RefPtr<LayoutWrapper> GetListItem(LayoutWrapper* layoutWrapper, int32_t index) const
     {
-        index = !isStackFromEnd_ ? index : totalItemCount_ - index - 1;
-        if (index < 0) {
-            return nullptr;
-        }
-        return layoutWrapper->GetOrCreateChildByIndex(index + itemStartIndex_, addToRenderTree, isCache);
+        return layoutWrapper->GetOrCreateChildByIndex(index + itemStartIndex_);
     }
     void CalculateLanes(const RefPtr<ListLayoutProperty>& layoutProperty,
         const LayoutConstraintF& layoutConstraint, std::optional<float> crossSizeOptional, Axis axis);
@@ -475,8 +408,8 @@ private:
         int32_t currentIndex);
     int32_t MeasureALineAuto(LayoutWrapper* layoutWrapper, const LayoutConstraintF& layoutConstraint,
         int32_t currentIndex);
-    bool CheckJumpForwardForBigOffset(int32_t& startIndex, float& startPos);
-    bool CheckJumpBackwardForBigOffset(int32_t& endIndex, float& endPos);
+    void CheckJumpForwardForBigOffset(int32_t& startIndex, float& startPos);
+    void CheckJumpBackwardForBigOffset(int32_t& endIndex, float& endPos);
     void MeasureForward(LayoutWrapper* layoutWrapper, const LayoutConstraintF& layoutConstraint,
         int32_t startIndex, float startPos);
     void MeasureBackward(LayoutWrapper* layoutWrapper, const LayoutConstraintF& layoutConstraint,
@@ -496,8 +429,7 @@ private:
     static void SetListItemIndex(const LayoutWrapper* groupLayoutWrapper,
         const RefPtr<LayoutWrapper>& itemLayoutWrapper, int32_t indexInGroup);
     bool IsCardStyleForListItemGroup(const LayoutWrapper* groupLayoutWrapper);
-    void UpdateListItemGroupMaxWidth(const OptionalSizeF& parentIdealSize, RefPtr<LayoutProperty> layoutProperty,
-        OptionalSizeF& contentIdealSize);
+    float GetListItemGroupMaxWidth(const OptionalSizeF& parentIdealSize, RefPtr<LayoutProperty> layoutProperty);
     void AdjustItemPosition();
     bool CheckNeedMeasure(const RefPtr<LayoutWrapper>& layoutWrapper) const;
     void MeasureCacheItem(LayoutWrapper* layoutWrapper);
@@ -507,14 +439,11 @@ private:
     void CheckUpdateGroupAndItemPos(LayoutWrapper* layoutWrapper, const OffsetF& paddingOffset, float crossSize);
     void UpdateCachedItemPosition(int32_t cacheCount);
     void UpdateLayoutedItemInfo();
-    void ReportGetChildError(const std::string& funcName, int32_t index) const;
-    bool IsRoundingMode(LayoutWrapper* layoutWrapper);
 
     bool isCardStyle_ = false;
     int32_t headerIndex_;
     int32_t footerIndex_;
     int32_t itemStartIndex_;
-    int32_t footerCount_;
     RefPtr<ListLayoutProperty> listLayoutProperty_;
     float paddingBeforeContent_ = 0.0f;
     float paddingAfterContent_ = 0.0f;
@@ -534,11 +463,9 @@ private:
     std::optional<int32_t> targetIndex_;
     ScrollAlign scrollAlign_ = ScrollAlign::NONE;
     int32_t totalItemCount_ = 0;
-    int32_t prevTotalItemCount_ = 0;
     int32_t forwardCachedIndex_ = -1;
     int32_t backwardCachedIndex_ = INT_MAX;
     float totalMainSize_ = 0.0f;
-    float prevTotalMainSize_ = 0.0f;
     float headerMainSize_ = 0.0f;
     float footerMainSize_ = 0.0f;
     float startPos_ = 0.0f;
@@ -554,16 +481,11 @@ private:
     float prevContentMainSize_ = 0.0f;
     float contentStartOffset_ = 0.0f;
     float contentEndOffset_ = 0.0f;
-    float groupItemAverageHeight_ = 0.0f;
     bool forwardLayout_ = true;
     bool needAllLayout_ = false;
     bool needAdjustRefPos_ = false;
     bool isNeedCheckOffset_ = false;
     bool isNeedMeasureFormLastItem_ = false;
-    bool isNeedSyncLoad_ = false;
-    bool measureInNextFrame_ = false;
-    bool prevMeasureBreak_ = false;
-    int32_t pauseMeasureCacheItem_ = -1;
 
     std::optional<LayoutedItemInfo> layoutedItemInfo_;
     LayoutConstraintF childLayoutConstraint_;
@@ -571,10 +493,6 @@ private:
 
     std::optional<ListItemGroupCacheParam> cacheParam_;
     PositionMap cachedItemPosition_;
-    PositionMap recycledItemPosition_;
-
-    bool isStackFromEnd_ = false;
-    bool isLayouted_ = true;
 };
 } // namespace OHOS::Ace::NG
 

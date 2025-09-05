@@ -15,7 +15,17 @@
 
 #include "core/components_ng/pattern/radio/radio_layout_algorithm.h"
 
+#include "base/geometry/axis.h"
+#include "base/geometry/ng/offset_t.h"
+#include "base/geometry/ng/size_t.h"
+#include "base/log/ace_trace.h"
+#include "base/utils/utils.h"
+#include "core/components/checkable/checkable_theme.h"
+#include "core/components_ng/base/frame_node.h"
+#include "core/components_ng/layout/layout_algorithm.h"
 #include "core/components_ng/pattern/radio/radio_pattern.h"
+#include "core/components_ng/property/layout_constraint.h"
+#include "core/components_ng/property/measure_property.h"
 #include "core/components_ng/property/measure_utils.h"
 #include "core/pipeline_ng/pipeline_context.h"
 
@@ -33,25 +43,14 @@ std::optional<SizeF> RadioLayoutAlgorithm::MeasureContent(
     auto pattern = host->GetPattern<RadioPattern>();
     CHECK_NULL_RETURN(pattern, std::nullopt);
     if (pattern->UseContentModifier()) {
-        if (host->GreatOrEqualAPITargetVersion(PlatformVersion::VERSION_EIGHTEEN)) {
-            host->GetGeometryNode()->ResetContent();
-        } else {
-            host->GetGeometryNode()->Reset();
-        }
+        host->GetGeometryNode()->Reset();
         return std::nullopt;
     }
-    InitializeParam(host);
-    auto layoutPolicy = GetLayoutPolicy(layoutWrapper);
-
-    if (layoutPolicy.has_value() && layoutPolicy->IsMatch()) {
-        realSize_ = LayoutPolicyIsMatchParent(contentConstraint, layoutPolicy, layoutWrapper);
-        return realSize_;
-    }
-
+    InitializeParam();
     // Case 1: Width and height are set in the front end.
     if (contentConstraint.selfIdealSize.IsValid() && contentConstraint.selfIdealSize.IsNonNegative()) {
-        auto height = contentConstraint.selfIdealSize.Height().value_or(0.0f);
-        auto width = contentConstraint.selfIdealSize.Width().value_or(0.0f);
+        auto height = contentConstraint.selfIdealSize.Height().value();
+        auto width = contentConstraint.selfIdealSize.Width().value();
         auto length = std::min(width, height);
         return SizeF(length, length);
     }
@@ -101,26 +100,20 @@ void RadioLayoutAlgorithm::Measure(LayoutWrapper* layoutWrapper)
         childConstraint.percentReference.SetSizeT(contentSize);
     }
     for (auto &&child : layoutWrapper->GetAllChildrenWithBuild()) {
-        auto layoutPolicy = GetLayoutPolicy(layoutWrapper);
-        if (layoutPolicy.has_value() && layoutPolicy->IsMatch() && realSize_) {
-            childConstraint.selfIdealSize.SetWidth(realSize_->Width() * DEFAULT_RADIO_IMAGE_SCALE);
-            childConstraint.selfIdealSize.SetHeight(realSize_->Height() * DEFAULT_RADIO_IMAGE_SCALE);
-        }
         child->Measure(childConstraint);
     }
     PerformMeasureSelf(layoutWrapper);
 }
 
-void RadioLayoutAlgorithm::InitializeParam(const RefPtr<FrameNode>& host)
+void RadioLayoutAlgorithm::InitializeParam()
 {
-    CHECK_NULL_VOID(host);
-    auto pipeline = host->GetContext();
+    auto pipeline = PipelineBase::GetCurrentContext();
     CHECK_NULL_VOID(pipeline);
     auto radioTheme = pipeline->GetTheme<RadioTheme>();
     CHECK_NULL_VOID(radioTheme);
     defaultWidth_ = radioTheme->GetWidth().ConvertToPx();
     defaultHeight_ = radioTheme->GetHeight().ConvertToPx();
-    if (host->GreatOrEqualAPITargetVersion(PlatformVersion::VERSION_TWELVE)) {
+    if (Container::GreatOrEqualAPITargetVersion(PlatformVersion::VERSION_TWELVE)) {
         horizontalPadding_ = radioTheme->GetDefaultPaddingSize().ConvertToPx();
         verticalPadding_ = radioTheme->GetDefaultPaddingSize().ConvertToPx();
     } else {
@@ -157,40 +150,5 @@ void RadioLayoutAlgorithm::Layout(LayoutWrapper* layoutWrapper)
         auto translate = offset + paddingOffset;
         content->SetOffset(translate);
     }
-}
-
-std::optional<SizeF> RadioLayoutAlgorithm::LayoutPolicyIsMatchParent(const LayoutConstraintF& contentConstraint,
-    std::optional<NG::LayoutPolicyProperty> layoutPolicy, LayoutWrapper* layoutWrapper)
-{
-    auto height = contentConstraint.parentIdealSize.Height().value_or(0.0f);
-    auto width = contentConstraint.parentIdealSize.Width().value_or(0.0f);
-    auto selfHeight = contentConstraint.selfIdealSize.Height().value_or(0.0f);
-    auto selfWidth = contentConstraint.selfIdealSize.Width().value_or(0.0f);
-    if (layoutPolicy->IsAllMatch()) {
-        auto length = std::min(width, height);
-        return SizeF(length, length);
-    } else if (layoutPolicy->IsWidthMatch()) {
-        auto realSize = std::min(width, selfHeight);
-        if (!contentConstraint.selfIdealSize.Height().has_value()) {
-            realSize = width;
-        }
-        return SizeF(realSize, realSize);
-    } else if (layoutPolicy->IsHeightMatch()) {
-        auto realSize = std::min(height, selfWidth);
-        if (!contentConstraint.selfIdealSize.Width().has_value()) {
-            realSize = height;
-        }
-        return SizeF(realSize, realSize);
-    }
-    return SizeF();
-}
-
-std::optional<NG::LayoutPolicyProperty> RadioLayoutAlgorithm::GetLayoutPolicy(LayoutWrapper* layoutWrapper)
-{
-    auto layoutProperty = layoutWrapper->GetLayoutProperty();
-    CHECK_NULL_RETURN(layoutProperty, NG::LayoutPolicyProperty());
-    auto layoutPolicy = layoutProperty->GetLayoutPolicyProperty();
-    CHECK_NULL_RETURN(layoutPolicy, NG::LayoutPolicyProperty());
-    return layoutPolicy;
 }
 } // namespace OHOS::Ace::NG

@@ -15,6 +15,12 @@
 
 #include "core/components_ng/pattern/toggle/switch_layout_algorithm.h"
 
+#include "base/geometry/ng/size_t.h"
+#include "core/common/container.h"
+#include "core/components/checkable/checkable_theme.h"
+#include "core/components_ng/base/frame_node.h"
+#include "core/pipeline/base/constants.h"
+#include "core/pipeline/pipeline_base.h"
 #include "core/components_ng/pattern/toggle/switch_pattern.h"
 
 namespace OHOS::Ace::NG {
@@ -23,16 +29,12 @@ std::optional<SizeF> SwitchLayoutAlgorithm::MeasureContent(
 {
     auto frameNode = layoutWrapper->GetHostNode();
     CHECK_NULL_RETURN(frameNode, std::nullopt);
-    auto pipeline = frameNode->GetContext();
+    auto pipeline = PipelineBase::GetCurrentContext();
     CHECK_NULL_RETURN(pipeline, std::nullopt);
     auto pattern = frameNode->GetPattern<SwitchPattern>();
     CHECK_NULL_RETURN(pattern, std::nullopt);
     if (pattern->UseContentModifier()) {
-        if (frameNode->GreatOrEqualAPITargetVersion(PlatformVersion::VERSION_EIGHTEEN)) {
-            frameNode->GetGeometryNode()->ResetContent();
-        } else {
-            frameNode->GetGeometryNode()->Reset();
-        }
+        frameNode->GetGeometryNode()->Reset();
         return std::nullopt;
     }
     const auto& layoutProperty = layoutWrapper->GetLayoutProperty();
@@ -46,7 +48,7 @@ std::optional<SizeF> SwitchLayoutAlgorithm::MeasureContent(
         frameWidth = contentConstraint.selfIdealSize.Width().value();
     } else {
         auto width = (switchTheme->GetWidth() - switchTheme->GetHotZoneHorizontalPadding() * 2).ConvertToPx();
-        frameWidth = static_cast<float>(width) - padding.left.value_or(0.0f) - padding.right.value_or(0.0f);
+        frameWidth = static_cast<float>(width) - padding.left.value() - padding.right.value();
         if (frameWidth > contentConstraint.maxSize.Width()) {
             frameWidth = contentConstraint.maxSize.Width();
         }
@@ -55,20 +57,14 @@ std::optional<SizeF> SwitchLayoutAlgorithm::MeasureContent(
         frameHeight = contentConstraint.selfIdealSize.Height().value();
     } else {
         auto height = (switchTheme->GetHeight() - switchTheme->GetHotZoneVerticalPadding() * 2).ConvertToPx();
-        frameHeight = static_cast<float>(height) - padding.top.value_or(0.0f) - padding.bottom.value_or(0.0f);
+        frameHeight = static_cast<float>(height) - padding.top.value() - padding.bottom.value();
         if (frameHeight > contentConstraint.maxSize.Height()) {
             frameHeight = contentConstraint.maxSize.Height();
         }
     }
-
-    auto layoutPolicy = layoutProperty->GetLayoutPolicyProperty();
-
-    if (layoutPolicy.has_value() && layoutPolicy->IsMatch()) {
-        LayoutPolicyIsMatchParent(contentConstraint, layoutPolicy, frameWidth, frameHeight);
-    }
     float width = 0.0f;
     float height = 0.0f;
-    CalcHeightAndWidth(frameNode, height, width, frameHeight, frameWidth);
+    CalcHeightAndWidth(height, width, frameHeight, frameWidth);
 
     width_ = width;
     height_ = height;
@@ -108,15 +104,13 @@ void SwitchLayoutAlgorithm::Measure(LayoutWrapper* layoutWrapper)
     }
 }
 
-void SwitchLayoutAlgorithm::CalcHeightAndWidth(
-    const RefPtr<FrameNode>& host, float& height, float& width, float frameHeight, float frameWidth)
+void SwitchLayoutAlgorithm::CalcHeightAndWidth(float& height, float& width, float frameHeight, float frameWidth)
 {
-    CHECK_NULL_VOID(host);
-    auto pipeline = host->GetContext();
+    auto pipeline = PipelineBase::GetCurrentContext();
     CHECK_NULL_VOID(pipeline);
     auto switchTheme = pipeline->GetTheme<SwitchTheme>();
     CHECK_NULL_VOID(switchTheme);
-    if (host->GreatOrEqualAPITargetVersion(PlatformVersion::VERSION_TWELVE)) {
+    if (Container::GreatOrEqualAPITargetVersion(PlatformVersion::VERSION_TWELVE)) {
         width = frameWidth;
         height = frameHeight;
     } else {
@@ -134,21 +128,6 @@ void SwitchLayoutAlgorithm::CalcHeightAndWidth(
         } else {
             height = frameHeight;
             width = frameWidth;
-        }
-    }
-}
-
-void SwitchLayoutAlgorithm::LayoutPolicyIsMatchParent(const LayoutConstraintF& contentConstraint,
-    std::optional<NG::LayoutPolicyProperty> layoutPolicy, float& frameWidth, float& frameHeight)
-{
-    if (layoutPolicy->IsWidthMatch()) {
-        if (contentConstraint.parentIdealSize.Width().has_value()) {
-            frameWidth = contentConstraint.parentIdealSize.Width().value();
-        }
-    }
-    if (layoutPolicy->IsHeightMatch()) {
-        if (contentConstraint.parentIdealSize.Height().has_value()) {
-            frameHeight = contentConstraint.parentIdealSize.Height().value();
         }
     }
 }

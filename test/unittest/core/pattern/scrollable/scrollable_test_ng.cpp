@@ -17,52 +17,15 @@
 
 #include "test/mock/base/mock_task_executor.h"
 #include "test/mock/core/common/mock_container.h"
-#include "test/mock/core/common/mock_theme_manager.h"
 #include "test/mock/core/pattern/mock_nestable_scroll_container.h"
 #include "test/mock/core/pipeline/mock_pipeline_context.h"
 #include "test/unittest/core/pattern/scrollable/mock_scrollable.h"
 #define protected public
 #define private public
 #include "core/components_ng/pattern/refresh/refresh_pattern.h"
-#include "core/components_ng/pattern/scrollable/scrollable_model_ng.h"
 #include "core/components_ng/pattern/scrollable/scrollable_properties.h"
-#include "core/components_ng/pattern/scrollable/axis/axis_animator.h"
 
 namespace OHOS::Ace::NG {
-#ifdef SUPPORT_DIGITAL_CROWN
-constexpr float TEST_ANGULAR_VELOCITY_SLOW = 70.f;
-constexpr float TEST_ANGULAR_VELOCITY_MEDIUM = 200.f;
-constexpr float TEST_ANGULAR_VELOCITY_FAST = 540.f;
-constexpr float TEST_ANGULAR_VELOCITY_VERY_FAST = 850.f;
-constexpr float TEST_DISPLAY_CONTROL_RATIO_VERY_SLOW = 0.85f;
-constexpr float TEST_DISPLAY_CONTROL_RATIO_SLOW = 1.85f;
-constexpr float TEST_DISPLAY_CONTROL_RATIO_MEDIUM = 2.15f;
-constexpr float TEST_DISPLAY_CONTROL_RATIO_FAST = 1.35f;
-constexpr float TEST_CROWN_SENSITIVITY_LOW = 0.8f;
-constexpr float TEST_CROWN_SENSITIVITY_MEDIUM = 1.0f;
-constexpr float TEST_CROWN_SENSITIVITY_HIGH = 1.2f;
-constexpr int32_t TEST_CROWN_EVENT_NUN_THRESH = 29;
-constexpr float TEST_CROWN_VELOCITY = 10.f;
-#endif
-
-void ScrollableTestNg::SetUpTestSuite()
-{
-    MockPipelineContext::SetUp();
-    MockContainer::SetUp();
-    auto themeManager = AceType::MakeRefPtr<MockThemeManager>();
-    MockPipelineContext::GetCurrent()->SetThemeManager(themeManager);
-    auto scrollableThemeConstants = CreateThemeConstants(THEME_PATTERN_SCROLLABLE);
-    auto scrollableTheme = ScrollableTheme::Builder().Build(scrollableThemeConstants);
-    EXPECT_CALL(*themeManager, GetTheme(_)).WillRepeatedly(Return(scrollableTheme));
-    MockContainer::Current()->taskExecutor_ = AceType::MakeRefPtr<MockTaskExecutor>();
-    MockPipelineContext::GetCurrent()->SetUseFlushUITasks(true);
-}
-
-void ScrollableTestNg::TearDownTestSuite()
-{
-    MockPipelineContext::TearDown();
-    MockContainer::TearDown();
-}
 
 void ScrollableTestNg::SetUp()
 {
@@ -499,10 +462,10 @@ HWTEST_F(ScrollableTestNg, SelectWithScroll003, TestSize.Level1)
     scrollPn->SetAxis(Axis::VERTICAL);
     Offset localLocation;
     localLocation.SetX(-1.0f);
-    localLocation.SetY(0.0f);
+    localLocation.SetY(-0.0f);
     scrollPn->lastMouseMove_.SetLocalLocation(localLocation);
     scrollPn->SelectWithScroll();
-    EXPECT_EQ(scrollPn->lastMouseMove_.GetLocalLocation().GetY(), 0.0f);
+    EXPECT_EQ(scrollPn->lastMouseMove_.GetLocalLocation().GetY(), -0.0f);
 }
 
 /**
@@ -815,9 +778,9 @@ HWTEST_F(ScrollableTestNg, ShouldSelectScrollBeStopped001, TestSize.Level1)
      * @tc.expected: The result is true
      */
     scrollPn->SetAxis(Axis::VERTICAL);
-    localLocation.SetY(0.0f);
+    localLocation.SetY(-0.0f);
     scrollPn->lastMouseMove_.SetLocalLocation(localLocation);
-    EXPECT_EQ(scrollPn->lastMouseMove_.GetLocalLocation().GetY(), 0.0f);
+    EXPECT_EQ(scrollPn->lastMouseMove_.GetLocalLocation().GetY(), -0.0f);
     result = scrollPn->ShouldSelectScrollBeStopped();
     EXPECT_TRUE(result);
 }
@@ -871,6 +834,56 @@ HWTEST_F(ScrollableTestNg, ShouldSelectScrollBeStopped003, TestSize.Level1)
 }
 
 /**
+ * @tc.name: UpdateMouseStart001
+ * @tc.desc: Test nested UpdateMouseStart
+ * @tc.type: FUNC
+ */
+HWTEST_F(ScrollableTestNg, UpdateMouseStart001, TestSize.Level1)
+{
+    /**
+     * @tc.steps: step1. Initialize ScrollablePattern type pointer
+     * @tc.expected: Pointer is not nullptr.
+     */
+    auto scrollPn = scroll_->GetPattern<PartiallyMockedScrollable>();
+    auto mockPn = mockScroll_->GetPattern<MockNestableScrollContainer>();
+    scrollPn->parent_ = mockPn;
+
+    /**
+     * @tc.steps: step2. Call the UpdateMouseStart method
+     * @tc.expected: The GetY is 0.1
+     */
+    scrollPn->SetAxis(Axis::VERTICAL);
+    float offset = 0.1f;
+    scrollPn->UpdateMouseStart(offset);
+    EXPECT_EQ(scrollPn->mouseStartOffset_.GetY(), 0.1f);
+}
+
+/**
+ * @tc.name: UpdateMouseStart002
+ * @tc.desc: Test nested UpdateMouseStart
+ * @tc.type: FUNC
+ */
+HWTEST_F(ScrollableTestNg, UpdateMouseStart002, TestSize.Level1)
+{
+    /**
+     * @tc.steps: step1. Initialize ScrollablePattern type pointer
+     * @tc.expected: Pointer is not nullptr.
+     */
+    auto scrollPn = scroll_->GetPattern<PartiallyMockedScrollable>();
+    auto mockPn = mockScroll_->GetPattern<MockNestableScrollContainer>();
+    scrollPn->parent_ = mockPn;
+
+    /**
+     * @tc.steps: step2. Call the UpdateMouseStart method
+     * @tc.expected: The GetX is 0.1
+     */
+    scrollPn->SetAxis(Axis::HORIZONTAL);
+    float offset = 0.2f;
+    scrollPn->UpdateMouseStart(offset);
+    EXPECT_EQ(scrollPn->mouseStartOffset_.GetX(), 0.2f);
+}
+
+/**
  * @tc.name: GetOffsetWithLimit001
  * @tc.desc: Test nested GetOffsetWithLimit
  * @tc.type: FUNC
@@ -915,7 +928,7 @@ HWTEST_F(ScrollableTestNg, GetOffsetWithLimit002, TestSize.Level1)
      */
     float offset = -0.1f;
     auto result = scrollPn->GetOffsetWithLimit(offset);
-    EXPECT_EQ(result, 0.0f);
+    EXPECT_EQ(result, -0.0f);
 }
 
 /**
@@ -965,7 +978,7 @@ HWTEST_F(ScrollableTestNg, OnScrollStop001, TestSize.Level1)
     scrollPn->SetScrollAbort(true);
     bool isStopTrigger = false;
     OnScrollStopEvent stopEvent = [&isStopTrigger]() { isStopTrigger = true; };
-    scrollPn->OnScrollStop(stopEvent, nullptr);
+    scrollPn->OnScrollStop(stopEvent);
     EXPECT_FALSE(scrollPn->scrollStop_);
 }
 
@@ -1203,8 +1216,8 @@ HWTEST_F(ScrollableTestNg, Fling001, TestSize.Level1)
      * @tc.steps: step1. Initialize ScrollablePattern type pointer
      * @tc.expected: Pointer is not nullptr
      */
-    auto scrollPn = scroll_->GetPattern<PartiallyMockedScrollable>();
 
+    auto scrollPn = scroll_->GetPattern<PartiallyMockedScrollable>();
     /**
      * @tc.steps: step2. Call the Fling method and the flingVelocity is 3000
      * @tc.expected: The values of finalPosition_ and finalPosition are the same
@@ -1215,37 +1228,10 @@ HWTEST_F(ScrollableTestNg, Fling001, TestSize.Level1)
     float finalPosition = correctVelocity / (friction * -frictionScale);
     auto scrollableEvent = scrollPn->GetScrollableEvent();
     auto scrollable = scrollableEvent->GetScrollable();
-    scrollable->SetUnstaticFriction(friction);
+    scrollable->SetFriction(friction);
     scrollPn->Fling(correctVelocity);
-    float finalPosition_ = scrollable->finalPosition_;
+    float finalPosition_= scrollable->finalPosition_;
     EXPECT_EQ(finalPosition_, finalPosition);
-}
-
-/**
- * @tc.name: FadingEdge001
- * @tc.desc: Test SetFadingEdge
- * @tc.type: FUNC
- */
-HWTEST_F(ScrollableTestNg, FadingEdge001, TestSize.Level1)
-{
-    /**
-     * @tc.cases: SetFadingEdge false
-     * @tc.expected: FadingEdge false
-     */
-    auto scrollPn = scroll_->GetPattern<PartiallyMockedScrollable>();
-    auto paintProperty = scrollPn->GetPaintProperty<ScrollablePaintProperty>();
-    NG::ScrollableModelNG::SetFadingEdge(Referenced::RawPtr(scroll_), false);
-    EXPECT_FALSE(paintProperty->GetFadingEdge().value_or(false));
-    /**
-     * @tc.cases: SetFadingEdge true and SetFadingEdgeLength
-     * @tc.expected: FadingEdge true and FadingEdgeLength is the same as SetFadingEdgeLength
-     */
-    NG::ScrollableModelNG::SetFadingEdge(Referenced::RawPtr(scroll_), true);
-    EXPECT_TRUE(paintProperty->GetFadingEdge().value_or(false));
-    EXPECT_EQ(paintProperty->GetFadingEdgeLength().value(), Dimension(32.0f, DimensionUnit::VP)); // default value;
-    NG::ScrollableModelNG::SetFadingEdge(Referenced::RawPtr(scroll_), true, Dimension(50.0f, DimensionUnit::PERCENT));
-    EXPECT_TRUE(paintProperty->GetFadingEdge().value_or(false));
-    EXPECT_EQ(paintProperty->GetFadingEdgeLength().value(), Dimension(50.0f, DimensionUnit::PERCENT));
 }
 
 /**
@@ -1263,7 +1249,7 @@ HWTEST_F(ScrollableTestNg, SetEdgeEffect001, TestSize.Level1)
     scrollPn->SetEdgeEffect(EdgeEffect::SPRING);
     auto scrollableEvent = scrollPn->GetScrollableEvent();
     auto scrollable = scrollableEvent->GetScrollable();
-    scrollable->state_ = Scrollable::AnimationState::SPRING;
+    scrollable->isSpringAnimationStop_ = false;
     EXPECT_TRUE(scrollable->IsSpringMotionRunning());
 
     /**
@@ -1279,47 +1265,6 @@ HWTEST_F(ScrollableTestNg, SetEdgeEffect001, TestSize.Level1)
      */
     scrollPn->SetEdgeEffect(EdgeEffect::NONE);
     EXPECT_FALSE(scrollable->IsSpringMotionRunning());
-}
-
-/**
- * @tc.name: ScrollTo001
- * @tc.desc: Test ScrollTo
- * @tc.type: FUNC
- */
-HWTEST_F(ScrollableTestNg, ScrollTo001, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. Initialize ScrollablePattern type pointer and set EdgeEffect to Spring.
-     * @tc.expected: isOverScroll_ is true.
-     */
-    auto scrollPn = scroll_->GetPattern<PartiallyMockedScrollable>();
-    ASSERT_NE(scrollPn, nullptr);
-    scrollPn->SetCanStayOverScroll(true);
-    scrollPn->ScrollTo(1.0f);
-    EXPECT_TRUE(scrollPn->GetIsOverScroll());
-}
-
-/**
- * @tc.name: HandleOverScroll001
- * @tc.desc: Test HandleOverScroll001
- * @tc.type: FUNC
- */
-HWTEST_F(ScrollableTestNg, HandleOverScroll001, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. Initialize ScrollablePattern type pointer and set EdgeEffect to Spring.
-     * @tc.expected: isOverScroll_ is true.
-     */
-    auto scrollPn = scroll_->GetPattern<PartiallyMockedScrollable>();
-    ASSERT_NE(scrollPn, nullptr);
-    scrollPn->SetIsOverScroll(true);
-    auto scrollableEvent = scrollPn->GetScrollableEvent();
-    auto scrollable = scrollableEvent->GetScrollable();
-    GestureEvent info;
-    info.inputEventType_ = InputEventType::AXIS;
-    info.sourceTool_ = SourceTool::TOUCHPAD;
-    scrollable->HandleDragEnd(info);
-    EXPECT_FALSE(scrollPn->GetIsOverScroll());
 }
 
 /**
@@ -1432,8 +1377,7 @@ HWTEST_F(ScrollableTestNg, InitMouseEvent001, TestSize.Level1)
     MouseInfo info;
     info.SetAction(MouseAction::PRESS);
     info.SetButton(MouseButton::LEFT_BUTTON);
-    auto& inputEvents = scrollPn->GetEventHub<EventHub>()
-        ->GetOrCreateInputEventHub()->mouseEventActuator_->inputEvents_;
+    auto& inputEvents = scrollPn->GetEventHub<EventHub>()->GetInputEventHub()->mouseEventActuator_->inputEvents_;
     EXPECT_EQ(inputEvents.size(), 1);
     for (const auto& callback : inputEvents) {
         if (callback) {
@@ -1451,457 +1395,4 @@ HWTEST_F(ScrollableTestNg, InitMouseEvent001, TestSize.Level1)
     };
     EXPECT_FALSE(scrollPn->isMousePressed_);
 }
-
-/**
- * @tc.name: InitMouseEvent002
- * @tc.desc: Test multiSelectable event and mouse scroll event
- * @tc.type: FUNC
- */
-HWTEST_F(ScrollableTestNg, InitMouseEvent002, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. create FullyMockedScrollable, PartiallyMockedScrollable.
-     * @tc.expected: create PartiallyMockedScrollable successfully.
-     */
-    auto mockPn = AceType::MakeRefPtr<FullyMockedScrollable>();
-    mockScroll_->pattern_ = mockPn;
-    ASSERT_NE(scroll_, nullptr);
-    auto scrollPn = scroll_->GetPattern<PartiallyMockedScrollable>();
-    ASSERT_NE(scrollPn, nullptr);
-    auto gestureHub = scroll_->GetOrCreateGestureEventHub();
-    ASSERT_NE(gestureHub, nullptr);
-    EXPECT_EQ(gestureHub->panEventActuator_, nullptr);
-
-    /**
-     * @tc.steps: step2. execute the InitMouseEbent.
-     * @tc.expected: the isExcludedAxis_ of panEventActuator_ is true.
-     */
-    scrollPn->InitMouseEvent();
-    gestureHub = scroll_->GetOrCreateGestureEventHub();
-    ASSERT_NE(gestureHub, nullptr);
-    ASSERT_NE(gestureHub->panEventActuator_, nullptr);
-    EXPECT_TRUE(gestureHub->panEventActuator_->isExcludedAxis_);
-}
-
-/**
- * @tc.name: OnTouchTestDone001
- * @tc.desc: Test OnTouchTestDone
- * @tc.type: FUNC
- */
-HWTEST_F(ScrollableTestNg, OnTouchTestDone001, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. Initialize baseGestureEvent and activeRecognizers.
-     */
-    auto baseGestureEvent = std::make_shared<BaseGestureEvent>();
-    baseGestureEvent->SetSourceDevice(SourceType::TOUCH);
-    std::list<FingerInfo> fingerInfos;
-    FingerInfo fingerInfo;
-    fingerInfos.emplace_back(fingerInfo);
-    baseGestureEvent->SetFingerList(fingerInfos);
-    std::list<RefPtr<NGGestureRecognizer>> activeRecognizers;
-    RefPtr<NGGestureRecognizer> clickRecognizer = AceType::MakeRefPtr<ClickRecognizer>();
-    clickRecognizer->AttachFrameNode(AceType::WeakClaim(AceType::RawPtr(mockScroll_)));
-    clickRecognizer->SetRecognizerType(GestureTypeName::CLICK);
-    activeRecognizers.emplace_back(clickRecognizer);
-    RefPtr<LongPressRecognizer> longPressRecognizer = AceType::MakeRefPtr<LongPressRecognizer>(false, false);
-    longPressRecognizer->AttachFrameNode(AceType::WeakClaim(AceType::RawPtr(mockScroll_)));
-    longPressRecognizer->SetRecognizerType(GestureTypeName::LONG_PRESS_GESTURE);
-    activeRecognizers.emplace_back(longPressRecognizer);
-    RefPtr<NGGestureRecognizer> tapRecognizer = AceType::MakeRefPtr<ClickRecognizer>();
-    tapRecognizer->AttachFrameNode(AceType::WeakClaim(AceType::RawPtr(mockScroll_)));
-    tapRecognizer->SetRecognizerType(GestureTypeName::TAP_GESTURE);
-    activeRecognizers.emplace_back(tapRecognizer);
-    PanDirection panDirection;
-    panDirection.type = PanDirection::VERTICAL;
-    RefPtr<PanRecognizer> panRecognizer = AceType::MakeRefPtr<PanRecognizer>(1, panDirection, 5, false);
-    panRecognizer->AttachFrameNode(AceType::WeakClaim(AceType::RawPtr(mockScroll_)));
-    panRecognizer->SetRecognizerType(GestureTypeName::PAN_GESTURE);
-    activeRecognizers.emplace_back(panRecognizer);
-
-    /**
-     * @tc.steps: step2. currentVelocity_ is less than 200 and state_ is IDLE.
-     * @tc.expected: isHitTestBlock_ is false.
-     */
-    auto scrollablePattern = scroll_->GetPattern<PartiallyMockedScrollable>();
-    scrollablePattern->OnTouchTestDone(baseGestureEvent, activeRecognizers);
-    EXPECT_FALSE(scrollablePattern->isHitTestBlock_);
-    EXPECT_FALSE(clickRecognizer->IsPreventBegin());
-    EXPECT_FALSE(longPressRecognizer->IsPreventBegin());
-    EXPECT_FALSE(tapRecognizer->IsPreventBegin());
-    EXPECT_FALSE(panRecognizer->IsPreventBegin());
-
-    /**
-     * @tc.steps: step3. currentVelocity_ is greater than 200 and state_ is SPRING.
-     * @tc.expected: isHitTestBlock_ is true.
-     */
-    RefPtr<Scrollable> scrollable = scrollablePattern->GetScrollable();
-    EXPECT_NE(scrollable, nullptr);
-    scrollable->currentVelocity_ = 300;
-    scrollable->state_ = Scrollable::AnimationState::SPRING;
-    scrollablePattern->OnTouchTestDone(baseGestureEvent, activeRecognizers);
-    EXPECT_TRUE(scrollablePattern->isHitTestBlock_);
-    EXPECT_TRUE(clickRecognizer->IsPreventBegin());
-    EXPECT_TRUE(longPressRecognizer->IsPreventBegin());
-    EXPECT_TRUE(tapRecognizer->IsPreventBegin());
-    EXPECT_FALSE(panRecognizer->IsPreventBegin());
-}
-
-/**
- * @tc.name: onScrollerAreaChangeEventTest001
- * @tc.desc: Test onScrollerAreaChangeEvent
- * @tc.type: FUNC
- */
-HWTEST_F(ScrollableTestNg, onScrollerAreaChangeEventTest001, TestSize.Level1)
-{
-    auto scrollPn = scroll_->GetPattern<PartiallyMockedScrollable>();
-    auto mockPn = mockScroll_->GetPattern<MockNestableScrollContainer>();
-    scrollPn->parent_ = mockPn;
-
-    bool isChange = false;
-    OnScrollerAreaChangeEvent onScrollerAreaChange = [&isChange](Dimension dimension, ScrollSource state,
-        bool isAtTop, bool isAtBottom) {
-        isChange = true;
-    };
-    ScrollerObserver obs;
-    obs.onScrollerAreaChangeEvent = onScrollerAreaChange;
-    auto obserserMgr = AceType::MakeRefPtr<Ace::ScrollerObserverManager>();
-    ASSERT_NE(obserserMgr, nullptr);
-    obserserMgr->AddObserver(obs, 0);
-    auto positionController = AceType::MakeRefPtr<NG::ScrollableController>();
-    ASSERT_NE(positionController, nullptr);
-    positionController->SetObserverManager(obserserMgr);
-    scrollPn->SetPositionController(positionController);
-    scrollPn->FireObserverOnScrollerAreaChange(0.0);
-    EXPECT_EQ(isChange, true);
-}
-
-#ifdef SUPPORT_DIGITAL_CROWN
-/**
- * @tc.name: ListenDigitalCrownEvent001
- * @tc.desc: Test ListenDigitalCrownEvent
- * @tc.type: FUNC
- */
-HWTEST_F(ScrollableTestNg, ListenDigitalCrownEvent001, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. Initialize ScrollablePattern type pointer and Scrollable.
-     * @tc.expected: Pointer is not nullptr.
-     */
-    auto scrollPn = scroll_->GetPattern<PartiallyMockedScrollable>();
-    ASSERT_NE(scrollPn, nullptr);
-    ASSERT_NE(scrollPn->scrollableEvent_, nullptr);
-    auto scrollable = scrollPn->scrollableEvent_->GetScrollable();
-    ASSERT_NE(scrollable, nullptr);
-
-    scrollable->ListenDigitalCrownEvent(nullptr);
-    scrollable->ListenDigitalCrownEvent(scrollable->weakHost_.Upgrade());
-    EXPECT_NE(scrollable->weakHost_.Upgrade(), nullptr);
-}
-
-/**
- * @tc.name: GetCrownRotatePx001
- * @tc.desc: Test GetCrownRotatePx
- * @tc.type: FUNC
- */
-HWTEST_F(ScrollableTestNg, GetCrownRotatePx001, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. Initialize ScrollablePattern type pointer and Scrollable.
-     * @tc.expected: Pointer is not nullptr.
-     */
-    auto scrollPn = scroll_->GetPattern<PartiallyMockedScrollable>();
-    ASSERT_NE(scrollPn, nullptr);
-    ASSERT_NE(scrollPn->scrollableEvent_, nullptr);
-    auto scrollable = scrollPn->scrollableEvent_->GetScrollable();
-    ASSERT_NE(scrollable, nullptr);
-
-    CrownEvent event = {};
-    event.degree = 1.f;
-    
-    /**
-     * @tc.steps: step2. Very slow rotation speed test.
-     * @tc.expected: Rotating pixel points with specific row values.
-     */
-    event.angularVelocity = TEST_ANGULAR_VELOCITY_SLOW;
-    scrollable->SetDigitalCrownSensitivity(CrownSensitivity::LOW);
-    double resPx = scrollable->GetCrownRotatePx(event);
-    double px = Dimension(TEST_DISPLAY_CONTROL_RATIO_VERY_SLOW, DimensionUnit::VP).ConvertToPx();
-    EXPECT_EQ(resPx, px*TEST_CROWN_SENSITIVITY_LOW);
-
-    /**
-     * @tc.steps: step3. Medium rotation speed test.
-     * @tc.expected: Rotating pixel points with specific row values.
-     */
-    event.angularVelocity = TEST_ANGULAR_VELOCITY_MEDIUM;
-    scrollable->SetDigitalCrownSensitivity(CrownSensitivity::MEDIUM);
-    resPx = scrollable->GetCrownRotatePx(event);
-    px = Dimension(TEST_DISPLAY_CONTROL_RATIO_SLOW, DimensionUnit::VP).ConvertToPx();
-    EXPECT_EQ(resPx, px*TEST_CROWN_SENSITIVITY_MEDIUM);
-
-    /**
-     * @tc.steps: step4. Fast rotation speed test.
-     * @tc.expected: Rotating pixel points with specific row values.
-     */
-    event.angularVelocity = TEST_ANGULAR_VELOCITY_FAST;
-    scrollable->SetDigitalCrownSensitivity(CrownSensitivity::HIGH);
-    resPx = scrollable->GetCrownRotatePx(event);
-    px = Dimension(TEST_DISPLAY_CONTROL_RATIO_MEDIUM, DimensionUnit::VP).ConvertToPx();
-    EXPECT_EQ(resPx, px*TEST_CROWN_SENSITIVITY_HIGH);
-
-    /**
-     * @tc.steps: step5. Other rotation speed test.
-     * @tc.expected: Rotating pixel points with specific row values.
-     */
-    event.angularVelocity = TEST_ANGULAR_VELOCITY_VERY_FAST;
-    scrollable->SetDigitalCrownSensitivity((CrownSensitivity)-1);
-    resPx = scrollable->GetCrownRotatePx(event);
-    px = Dimension(TEST_DISPLAY_CONTROL_RATIO_FAST, DimensionUnit::VP).ConvertToPx();
-    EXPECT_EQ(resPx, TEST_DISPLAY_CONTROL_RATIO_FAST);
-}
-
-/**
- * @tc.name: UpdateCrownVelocity001
- * @tc.desc: Test UpdateCrownVelocity
- * @tc.type: FUNC
- */
-HWTEST_F(ScrollableTestNg, UpdateCrownVelocity001, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. Initialize ScrollablePattern type pointer and Scrollable.
-     * @tc.expected: Pointer is not nullptr.
-     */
-    auto scrollPn = scroll_->GetPattern<PartiallyMockedScrollable>();
-    ASSERT_NE(scrollPn, nullptr);
-    ASSERT_NE(scrollPn->scrollableEvent_, nullptr);
-    auto scrollable = scrollPn->scrollableEvent_->GetScrollable();
-    ASSERT_NE(scrollable, nullptr);
-
-    TimeStamp ts = std::chrono::high_resolution_clock::now();
-
-    /**
-     * @tc.steps: step2. vertical axis test.
-     * @tc.expected: Return the correct value after successful setting.
-     */
-    scrollable->SetAxis(Axis::VERTICAL);
-    auto accumulativeCrownPx = scrollable->accumulativeCrownPx_;
-    scrollable->UpdateCrownVelocity(ts, TEST_CROWN_VELOCITY, false);
-    EXPECT_EQ(scrollable->accumulativeCrownPx_, accumulativeCrownPx+Offset(0, TEST_CROWN_VELOCITY));
-
-    /**
-     * @tc.steps: step3. horizontal axis test.
-     * @tc.expected: Return the correct value after successful setting.
-     */
-    scrollable->SetAxis(Axis::HORIZONTAL);
-    accumulativeCrownPx = scrollable->accumulativeCrownPx_;
-    scrollable->UpdateCrownVelocity(ts, TEST_CROWN_VELOCITY, true);
-    EXPECT_EQ(scrollable->accumulativeCrownPx_, accumulativeCrownPx+Offset(TEST_CROWN_VELOCITY, 0));
-}
-
-/**
- * @tc.name: HandleCrownEvent001
- * @tc.desc: Test HandleCrownEvent
- * @tc.type: FUNC
- */
-HWTEST_F(ScrollableTestNg, HandleCrownEvent001, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. Initialize ScrollablePattern type pointer and Scrollable.
-     * @tc.expected: Pointer is not nullptr.
-     */
-    auto scrollPn = scroll_->GetPattern<PartiallyMockedScrollable>();
-    ASSERT_NE(scrollPn, nullptr);
-    ASSERT_NE(scrollPn->scrollableEvent_, nullptr);
-    auto scrollable = scrollPn->scrollableEvent_->GetScrollable();
-    ASSERT_NE(scrollable, nullptr);
-
-    /**
-     * @tc.steps: step2. Initialize test parameters.
-     * @tc.expected: Parameter setting successful.
-     */
-    CrownEvent event = {};
-    event.timeStamp = std::chrono::high_resolution_clock::now();
-    event.degree = 1.f;
-    event.angularVelocity = TEST_ANGULAR_VELOCITY_SLOW;
-    scrollable->SetDigitalCrownSensitivity(CrownSensitivity::LOW);
-    double px = Dimension(TEST_DISPLAY_CONTROL_RATIO_VERY_SLOW, DimensionUnit::VP).ConvertToPx();
-    px *= TEST_CROWN_SENSITIVITY_LOW;
-    OffsetF oft = OffsetF(100.f, 100.f);
-    auto fun = [oft](const GestureEvent& info) {
-        EXPECT_EQ(oft.GetX(), 100.f);
-    };
-    scrollable->AddPanActionEndEvent(std::move(fun));
-
-    /**
-     * @tc.steps: step3. Begin action test.
-     * @tc.expected: Rotating pixel points with specific row values.
-     */
-    bool dragging = scrollable->GetCrownEventDragging();
-    if (dragging) {
-        scrollable->SetCrownEventDragging(false);
-    }
-    event.action = CrownAction::BEGIN;
-    scrollable->SetReachBoundary(false);
-    scrollable->crownEventNum_ = TEST_CROWN_EVENT_NUN_THRESH;
-    scrollable->HandleCrownEvent(event, oft);
-    EXPECT_TRUE(scrollable->GetIsDragging());
-
-    /**
-     * @tc.steps: step4. Begin action test.
-     * @tc.expected: Rotating pixel points with specific row values.
-     */
-    event.action = CrownAction::BEGIN;
-    scrollable->SetReachBoundary(true);
-    scrollable->HandleCrownEvent(event, oft);
-    EXPECT_TRUE(scrollable->GetIsDragging());
-
-    /**
-     * @tc.steps: step5. Update action test.
-     * @tc.expected: Rotating pixel points with specific row values.
-     */
-    auto accumulativeCrownPx = scrollable->accumulativeCrownPx_;
-    event.action = CrownAction::UPDATE;
-    scrollable->SetAxis(Axis::VERTICAL);
-    scrollable->SetCrownEventDragging(!scrollable->GetCrownEventDragging());
-    scrollable->HandleCrownEvent(event, oft);
-    EXPECT_EQ(scrollable->accumulativeCrownPx_, accumulativeCrownPx+Offset(0, px));
-
-    /**
-     * @tc.steps: step6. Unknown action test 01.
-     * @tc.expected: Rotating pixel points is 0.
-     */
-    event.action = CrownAction::UNKNOWN;
-    accumulativeCrownPx = scrollable->accumulativeCrownPx_;
-    scrollable->HandleCrownEvent(event, oft);
-    EXPECT_EQ(scrollable->accumulativeCrownPx_, accumulativeCrownPx);
-}
-
-/**
- * @tc.name: HandleCrownEvent002
- * @tc.desc: Test HandleCrownEvent
- * @tc.type: FUNC
- */
-HWTEST_F(ScrollableTestNg, HandleCrownEvent002, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. Initialize ScrollablePattern type pointer and Scrollable.
-     * @tc.expected: Pointer is not nullptr.
-     */
-    auto scrollPn = scroll_->GetPattern<PartiallyMockedScrollable>();
-    ASSERT_NE(scrollPn, nullptr);
-    ASSERT_NE(scrollPn->scrollableEvent_, nullptr);
-    auto scrollable = scrollPn->scrollableEvent_->GetScrollable();
-    ASSERT_NE(scrollable, nullptr);
-
-    /**
-     * @tc.steps: step2. Initialize test parameters.
-     * @tc.expected: Parameter setting successful.
-     */
-    CrownEvent event = {};
-    event.timeStamp = std::chrono::high_resolution_clock::now();
-    event.degree = 1.f;
-    event.angularVelocity = TEST_ANGULAR_VELOCITY_SLOW;
-    scrollable->SetDigitalCrownSensitivity(CrownSensitivity::LOW);
-    double px = Dimension(TEST_DISPLAY_CONTROL_RATIO_VERY_SLOW, DimensionUnit::VP).ConvertToPx();
-    px *= TEST_CROWN_SENSITIVITY_LOW;
-    OffsetF oft = OffsetF(100.f, 100.f);
-    auto fun = [oft](const GestureEvent& info) {
-        EXPECT_EQ(oft.GetX(), 100.f);
-    };
-    scrollable->AddPanActionEndEvent(std::move(fun));
-
-    /**
-     * @tc.steps: step3. End action test 01.
-     * @tc.expected: isDragging change to false.
-     */
-    event.action = CrownAction::END;
-    scrollable->HandleCrownEvent(event, oft);
-    EXPECT_FALSE(scrollable->GetIsDragging());
-
-    /**
-     * @tc.steps: step4. End action test 02.
-     * @tc.expected: isDragging change to false.
-     */
-    auto accumulativeCrownPx = scrollable->accumulativeCrownPx_;
-    event.angularVelocity = 0.f;
-    event.degree = 0.f;
-    scrollable->SetAxis(Axis::HORIZONTAL);
-    scrollable->HandleCrownEvent(event, oft);
-    EXPECT_EQ(scrollable->accumulativeCrownPx_, accumulativeCrownPx);
-
-    /**
-     * @tc.steps: step5. Unknown action test 02.
-     * @tc.expected: Rotating pixel points is 0.
-     */
-    event.action = CrownAction::UNKNOWN;
-    accumulativeCrownPx = scrollable->accumulativeCrownPx_;
-    scrollable->SetDragCancelCallback(nullptr);
-    scrollable->HandleCrownEvent(event, oft);
-    EXPECT_EQ(scrollable->accumulativeCrownPx_, accumulativeCrownPx);
-
-    /**
-     * @tc.steps: step6. Unknown action test 03.
-     * @tc.expected: Rotating pixel points is 0.
-     */
-    event.action = CrownAction::UNKNOWN;
-    scrollable->SetDragCancelCallback([&]() {
-        EXPECT_EQ(event.degree, 0.f);
-    });
-    accumulativeCrownPx = scrollable->accumulativeCrownPx_;
-    scrollable->panRecognizerNG_ = nullptr;
-    scrollable->HandleCrownEvent(event, oft);
-    scrollable->panRecognizerNG_ = nullptr;
-    scrollable->SetAxis(Axis::NONE);
-    EXPECT_EQ(scrollable->accumulativeCrownPx_, accumulativeCrownPx);
-}
-
-/**
- * @tc.name: SetVelocityScale001
- * @tc.desc: Test SetVelocityScale
- * @tc.type: FUNC
- */
-HWTEST_F(ScrollableTestNg, SetVelocityScale001, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. Initialize ScrollablePattern type pointer and Scrollable.
-     * @tc.expected: Pointer is not nullptr.
-     */
-    auto scrollPn = scroll_->GetPattern<PartiallyMockedScrollable>();
-    ASSERT_NE(scrollPn, nullptr);
-    ASSERT_NE(scrollPn->scrollableEvent_, nullptr);
-    auto scrollable = scrollPn->scrollableEvent_->GetScrollable();
-    ASSERT_NE(scrollable, nullptr);
-
-    scrollPn->SetVelocityScale(0);
-    EXPECT_EQ(scrollPn->velocityScale_, 1);
-
-    scrollPn->scrollableEvent_ = nullptr;
-    scrollPn->SetVelocityScale(1);
-    EXPECT_EQ(scrollPn->velocityScale_, 1);
-}
-
-/**
- * @tc.name: OnTouchDown001
- * @tc.desc: Test OnTouchDown
- * @tc.type: FUNC
- */
-HWTEST_F(ScrollableTestNg, OnTouchDown001, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. Initialize ScrollablePattern type pointer and Scrollable.
-     * @tc.expected: Pointer is not nullptr.
-     */
-    auto scrollPn = scroll_->GetPattern<PartiallyMockedScrollable>();
-    ASSERT_NE(scrollPn, nullptr);
-
-    /**
-     * @tc.steps: step2. ScrollablePattern OnTouchDown
-     * @tc.expected: Click animation stop
-     */
-    TouchEventInfo touchEvent = TouchEventInfo("unknown");
-    scrollPn->nestedScrollVelocity_ = 0;
-    scrollPn->OnTouchDown(touchEvent);
-    EXPECT_FALSE(scrollPn->isClickAnimationStop_);
-}
-#endif
 } // namespace OHOS::Ace::NG

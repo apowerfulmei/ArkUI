@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022-2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -21,12 +21,10 @@
 
 #include "base/geometry/axis.h"
 #include "base/geometry/dimension.h"
-#include "core/common/resource/resource_object.h"
 #include "core/components/common/layout/constants.h"
 #include "core/components_ng/pattern/list/list_children_main_size.h"
 #include "core/components_ng/pattern/list/list_event_hub.h"
 #include "core/components_v2/list/list_properties.h"
-#include "core/common/resource/resource_object.h"
 
 namespace OHOS::Ace {
 
@@ -35,7 +33,7 @@ public:
     static ListModel* GetInstance();
     virtual ~ListModel() = default;
 
-    virtual void Create(bool isCreateArc = false) = 0;
+    virtual void Create() = 0;
     virtual void SetSpace(const Dimension& space) = 0;
     virtual void SetInitialIndex(int32_t initialIndex) = 0;
     virtual RefPtr<ScrollControllerBase> CreateScrollController() = 0;
@@ -44,10 +42,9 @@ public:
     virtual void SetScrollBar(DisplayMode scrollBar) = 0;
     virtual void SetScrollBarColor(const std::string& value) = 0;
     virtual void SetScrollBarWidth(const std::string& value) = 0;
-    virtual void SetEdgeEffect(EdgeEffect edgeEffect, bool alwaysEnabled, EffectEdge effectEdge = EffectEdge::ALL) = 0;
+    virtual void SetEdgeEffect(EdgeEffect edgeEffect, bool alwaysEnabled) = 0;
     virtual void SetEditMode(bool editMode) = 0;
     virtual void SetDivider(const V2::ItemDivider& divider) = 0;
-    virtual void SetDividerColorByUser(bool isByUser) = 0;
     virtual void SetChainAnimation(bool enableChainAnimation) = 0;
     virtual void SetChainAnimationOptions(const ChainAnimationOptions& options) = 0;
     virtual void SetLanes(int32_t lanes) = 0;
@@ -66,10 +63,7 @@ public:
     virtual void SetNestedScroll(const NestedScrollOptions& nestedOpt) = 0;
     virtual void SetScrollEnabled(bool scrollEnabled) = 0;
     virtual void SetFriction(double friction) = 0;
-    virtual void SetFocusWrapMode(FocusWrapMode focusWrapMode) = 0;
     virtual void SetMaintainVisibleContentPosition(bool enabled) = 0;
-    virtual void SetStackFromEnd(bool enabled) = 0;
-    virtual void SetSyncLoad(bool enabled) = 0;
     virtual void SetOnScroll(OnScrollEvent&& onScroll) = 0;
     virtual void SetOnScrollBegin(OnScrollBeginEvent&& onScrollBegin) = 0;
     virtual void SetOnScrollFrameBegin(OnScrollFrameBeginEvent&& onScrollFrameBegin) = 0;
@@ -86,27 +80,14 @@ public:
     virtual void SetOnItemDragLeave(OnItemDragLeaveFunc&& onItemDragLeave) = 0;
     virtual void SetOnItemDragMove(OnItemDragMoveFunc&& onItemDragMove) = 0;
     virtual void SetOnItemDrop(OnItemDropFunc&& onItemDrop) = 0;
-    virtual void SetScrollSnapAlign(ScrollSnapAlign scrollSnapAlign) {};
+    virtual void SetScrollSnapAlign(V2::ScrollSnapAlign scrollSnapAlign) {};
     virtual RefPtr<NG::ListChildrenMainSize> GetOrCreateListChildrenMainSize()
     {
         return nullptr;
     }
 
     virtual DisplayMode GetDisplayMode() const = 0;
-    virtual void SetHeader(const RefPtr<NG::FrameNode>& headerNode) {}
-    virtual void ParseResObjDividerStrokeWidth(const RefPtr<ResourceObject>& resObj) {};
-    virtual void ParseResObjDividerColor(const RefPtr<ResourceObject>& resObj) {};
-    virtual void ParseResObjDividerStartMargin(const RefPtr<ResourceObject>& resObj) {};
-    virtual void ParseResObjDividerEndMargin(const RefPtr<ResourceObject>& resObj) {};
-    virtual void CreateWithResourceObjFriction(const RefPtr<ResourceObject>& resObj) {};
-    virtual void CreateWithResourceObjLaneGutter(const RefPtr<ResourceObject>& resObj) {};
-    virtual void CreateWithResourceObjLaneConstrain(
-        const RefPtr<ResourceObject>& resObjMinLengthValue, const RefPtr<ResourceObject>& resObjMaxLengthValue) {};
-    virtual void CreateWithResourceObjScrollBarColor(const RefPtr<ResourceObject>& resObj) {};
-#ifdef SUPPORT_DIGITAL_CROWN
-    virtual void SetDigitalCrownSensitivity(CrownSensitivity sensitivity) {}
-#endif
-    virtual void ResetListChildrenMainSize() {}
+
 private:
     static std::unique_ptr<ListModel> instance_;
     static std::mutex mutex_;

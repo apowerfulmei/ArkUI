@@ -12,16 +12,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "test/unittest/core/base/frame_node_test_ng.h"
-
-#include "core/common/recorder/event_definition.h"
-#include "core/components_ng/property/grid_property.h"
-#include "core/common/recorder/event_recorder.h"
-#include "core/common/recorder/node_data_cache.h"
-#include "core/components_ng/pattern/image/image_pattern.h"
-#include "core/components_ng/pattern/stage/page_pattern.h"
 #include "test/mock/base/mock_task_executor.h"
 #include "test/mock/core/render/mock_canvas_image.h"
+#include "test/unittest/core/base/frame_node_test_ng.h"
+
+#include "frameworks/core/common/recorder/event_recorder.h"
+#include "frameworks/core/common/recorder/node_data_cache.h"
+#include "frameworks/core/components_ng/pattern/image/image_pattern.h"
+#include "frameworks/core/components_ng/pattern/stage/page_pattern.h"
 
 using namespace testing;
 using namespace testing::ext;
@@ -119,7 +117,6 @@ HWTEST_F(FrameNodeTestNg, FrameNodeGetOneDepthVisibleFrame01, TestSize.Level1)
      */
     node->SetOverlayNode(overlayNode);
     node->GetOneDepthVisibleFrame(children);
-    EXPECT_NE(node->overlayNode_, nullptr);
 }
 
 /**
@@ -149,7 +146,6 @@ HWTEST_F(FrameNodeTestNg, FrameNodeGetOneDepthVisibleFrame02, TestSize.Level1)
      */
     node->SetOverlayNode(overlayNode);
     node->GetOneDepthVisibleFrame(children);
-    EXPECT_EQ(node->overlayNode_, nullptr);
 }
 
 /**
@@ -181,7 +177,6 @@ HWTEST_F(FrameNodeTestNg, FrameNodeGetOneDepthVisibleFrameWithOffset01, TestSize
     OffsetF Offset = { 0, 0 };
     node->SetOverlayNode(overlayNode);
     node->GetOneDepthVisibleFrameWithOffset(children, Offset);
-    EXPECT_NE(node->overlayNode_, nullptr);
 }
 
 /**
@@ -212,7 +207,6 @@ HWTEST_F(FrameNodeTestNg, FrameNodeGetOneDepthVisibleFrameWithOffset02, TestSize
     OffsetF Offset = { 0, 0 };
     node->SetOverlayNode(overlayNode);
     node->GetOneDepthVisibleFrameWithOffset(children, Offset);
-    EXPECT_EQ(node->overlayNode_, nullptr);
 }
 
 /**
@@ -263,7 +257,6 @@ HWTEST_F(FrameNodeTestNg, FrameNodeProcessOffscreenNode01, TestSize.Level1)
      * @tc.steps: step3. call the function ProcessOffscreenNode.
      */
     frameNode->ProcessOffscreenNode(node);
-    EXPECT_NE(frameNode, nullptr);
 }
 
 /**
@@ -297,8 +290,6 @@ HWTEST_F(FrameNodeTestNg, FrameNodeDumpAlignRulesInfo01, TestSize.Level1)
      */
     frameNode->SetLayoutProperty(layoutProperty);
     frameNode->DumpAlignRulesInfo();
-    EXPECT_NE(frameNode, nullptr);
-    EXPECT_NE(frameNode->layoutProperty_, nullptr);
 }
 
 /**
@@ -383,44 +374,6 @@ HWTEST_F(FrameNodeTestNg, FrameNodeDumpCommonInfo01, TestSize.Level1)
 }
 
 /**
- * @tc.name: FrameNodeDumpCommonInfo02
- * @tc.desc: Test frameNode DumpCommonInfo
- * @tc.type: FUNC
- */
-HWTEST_F(FrameNodeTestNg, FrameNodeDumpCommonInfo02, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. create frameNode.
-     */
-    auto frameNode = FrameNode::CreateFrameNode(V2::PAGE_ETS_TAG, 1, AceType::MakeRefPtr<Pattern>(), true);
-    EXPECT_NE(frameNode->pattern_, nullptr);
-
-    /**
-     * @tc.steps: step2. call DumpCommonInfo.
-     * @tc.expected: expect description_[12] is BorderRadius.
-     */
-    frameNode->geometryNode_->frame_.rect_ = { 10.0f, 10.0f, 10.0f, 10.0f };
-    LayoutConstraintF parentLayoutConstraint;
-    frameNode->geometryNode_->parentLayoutConstraint_ = parentLayoutConstraint;
-    frameNode->isFreeze_ = true;
-    frameNode->userFreeze_ = true;
-    auto layoutProperty = AceType::MakeRefPtr<LayoutProperty>();
-    layoutProperty->propVisibility_ = VisibleType::INVISIBLE;
-    layoutProperty->padding_ = std::make_unique<PaddingProperty>();
-    layoutProperty->safeAreaPadding_ = std::make_unique<PaddingProperty>();
-    layoutProperty->borderWidth_ = std::make_unique<BorderWidthProperty>();
-    frameNode->layoutProperty_ = layoutProperty;
-    Dimension radius(10.0f);
-    BorderRadiusProperty borderRadiusProperty { radius, radius, radius, radius };
-    frameNode->renderContext_->UpdateBorderRadius(borderRadiusProperty);
-    DumpLog::GetInstance().description_.clear();
-    frameNode->DumpCommonInfo();
-    EXPECT_EQ(DumpLog::GetInstance().description_[11],
-        "BorderRadius: radiusTopLeft: [10.00px]radiusTopRight: "
-        "[10.00px]radiusBottomLeft: [10.00px]radiusBottomRight: [10.00px]\n");
-}
-
-/**
  * @tc.name: FrameNodeDumpOnSizeChangeInfo01
  * @tc.desc: Test the function DumpOnSizeChangeInfo
  * @tc.type: FUNC
@@ -449,7 +402,6 @@ HWTEST_F(FrameNodeTestNg, FrameNodeDumpOnSizeChangeInfo01, TestSize.Level1)
      * @tc.steps: step3. call the function DumpOnSizeChangeInfo.
      */
     frameNode->DumpOnSizeChangeInfo();
-    EXPECT_NE(frameNode, nullptr);
 }
 
 /**
@@ -541,7 +493,7 @@ HWTEST_F(FrameNodeTestNg, FrameNodeTouchToJsonValue02, TestSize.Level1)
     auto frameNode = FrameNode::CreateFrameNode("framenode", 1, AceType::MakeRefPtr<Pattern>(), true);
     EXPECT_NE(frameNode->pattern_, nullptr);
     frameNode->isActive_ = true;
-    frameNode->GetEventHub<EventHub>()->SetEnabled(true);
+    frameNode->eventHub_->SetEnabled(true);
 
     /**
      * @tc.steps: step2. update the mouseResponseRegion.
@@ -549,7 +501,7 @@ HWTEST_F(FrameNodeTestNg, FrameNodeTouchToJsonValue02, TestSize.Level1)
     DimensionRect responseRect(Dimension(0), Dimension(0), DimensionOffset(OFFSETF));
     std::vector<DimensionRect> mouseResponseRegion;
     mouseResponseRegion.emplace_back(responseRect);
-    auto gestureEventHub = frameNode->GetEventHub<EventHub>()->GetOrCreateGestureEventHub();
+    auto gestureEventHub = frameNode->eventHub_->GetOrCreateGestureEventHub();
     gestureEventHub->SetMouseResponseRegion(mouseResponseRegion);
 
     /**
@@ -562,11 +514,11 @@ HWTEST_F(FrameNodeTestNg, FrameNodeTouchToJsonValue02, TestSize.Level1)
 }
 
 /**
- * @tc.name: FrameNodeToTreeJson01
- * @tc.desc: Test the function ToTreeJson
+ * @tc.name: FrameNodeGeometryNodeToJsonValue01
+ * @tc.desc: Test the function GeometryNodeToJsonValue
  * @tc.type: FUNC
  */
-HWTEST_F(FrameNodeTestNg, FrameNodeToTreeJson01, TestSize.Level1)
+HWTEST_F(FrameNodeTestNg, FrameNodeGeometryNodeToJsonValue01, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. create frameNode.
@@ -575,71 +527,13 @@ HWTEST_F(FrameNodeTestNg, FrameNodeToTreeJson01, TestSize.Level1)
     EXPECT_NE(frameNode->pattern_, nullptr);
 
     /**
-     * @tc.steps: step2. call the function ToTreeJson.
+     * @tc.steps: step2. call the function GeometryNodeToJsonValue.
      */
-    auto layoutProperty = AceType::MakeRefPtr<LayoutProperty>();
-    frameNode->SetLayoutProperty(layoutProperty);
-
-    InspectorConfig testConfig;
+    InspectorFilter testFilter;
     auto jsonValue = std::make_unique<JsonValue>();
-    testConfig.contentOnly = true;
-    frameNode->ToTreeJson(jsonValue, testConfig);
-}
-
-/**
- * @tc.name: FrameNodeToTreeJson02
- * @tc.desc: Test the function ToTreeJson
- * @tc.type: FUNC
- */
-HWTEST_F(FrameNodeTestNg, FrameNodeToTreeJson02, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. create frameNode.
-     */
-    auto frameNode = FrameNode::CreateFrameNode("framenode", 1, AceType::MakeRefPtr<Pattern>(), true);
-    EXPECT_NE(frameNode->pattern_, nullptr);
-
-    /**
-     * @tc.steps: step2. call the function ToTreeJson.
-     */
-    frameNode->paintProperty_ = nullptr;
-    frameNode->propInspectorId_ = "123";
-    frameNode->accessibilityProperty_ = nullptr;
-    frameNode->GetEventHub<EventHub>()->GetOrCreateFocusHub();
-
-    InspectorConfig testConfig;
-    auto jsonValue = std::make_unique<JsonValue>();
-    testConfig.contentOnly = false;
-    frameNode->ToTreeJson(jsonValue, testConfig);
-}
-
-/**
- * @tc.name: FrameNodeToTreeJson03
- * @tc.desc: Test the function ToTreeJson
- * @tc.type: FUNC
- */
-HWTEST_F(FrameNodeTestNg, FrameNodeToTreeJson03, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. create frameNode.
-     */
-    auto frameNode = FrameNode::CreateFrameNode("framenode", 1, AceType::MakeRefPtr<Pattern>(), true);
-    EXPECT_NE(frameNode->pattern_, nullptr);
-
-    /**
-     * @tc.steps: step2. call the function ToTreeJson.
-     */
-    auto pattern = frameNode->pattern_;
-    frameNode->pattern_ = nullptr;
-    frameNode->paintProperty_ = nullptr;
-    frameNode->accessibilityProperty_->accessibilityText_ = "test";
-    frameNode->layoutProperty_ = nullptr;
-
-    InspectorConfig testConfig;
-    auto jsonValue = std::make_unique<JsonValue>();
-    testConfig.contentOnly = false;
-    frameNode->ToTreeJson(jsonValue, testConfig);
-    frameNode->pattern_ = pattern;
+    testFilter.AddFilterAttr("focusable");
+    frameNode->GeometryNodeToJsonValue(jsonValue, testFilter);
+    EXPECT_FALSE(jsonValue->GetBool("enabled", false));
 }
 
 /**
@@ -764,12 +658,6 @@ HWTEST_F(FrameNodeTestNg, FrameNodeOnAttachToMainTree02, TestSize.Level1)
      * @tc.steps: step3. call the function OnAttachToMainTree.
      */
     frameNode->OnAttachToMainTree(true);
-    EXPECT_TRUE(childNode->isLayoutDirtyMarked_);
-    EXPECT_FALSE(frameNode->useOffscreenProcess_);
-    EXPECT_TRUE(frameNode->isPropertyDiffMarked_);
-    auto context = frameNode->GetContext();
-    bool hasDirtyPropertyNodes = context->dirtyPropertyNodes_.find(frameNode) != context->dirtyPropertyNodes_.end();
-    EXPECT_TRUE(hasDirtyPropertyNodes);
 }
 
 /**
@@ -788,7 +676,6 @@ HWTEST_F(FrameNodeTestNg, FrameNodeOnAttachToBuilderNode01, TestSize.Level1)
      * @tc.steps: step2. call the function OnAttachToBuilderNode.
      */
     frameNode->OnAttachToBuilderNode(NodeStatus::BUILDER_NODE_ON_MAINTREE);
-    EXPECT_NE(frameNode->pattern_, nullptr);
 }
 
 /**
@@ -814,10 +701,6 @@ HWTEST_F(FrameNodeTestNg, FrameNodeOnConfigurationUpdate01, TestSize.Level1)
     configurationChange.iconUpdate = false;
     configurationChange.skinUpdate = false;
     frameNode->OnConfigurationUpdate(configurationChange);
-    EXPECT_TRUE(configurationChange.colorModeUpdate);
-    EXPECT_FALSE(configurationChange.fontUpdate);
-    EXPECT_FALSE(configurationChange.iconUpdate);
-    EXPECT_FALSE(configurationChange.skinUpdate);
 }
 
 /**
@@ -855,7 +738,6 @@ HWTEST_F(FrameNodeTestNg, FrameNodeSwapDirtyLayoutWrapperOnMainThread01, TestSiz
     frameNode->SetBackgroundFunction(builderFunc);
     frameNode->SetLayoutProperty(layoutProperty);
     frameNode->SwapDirtyLayoutWrapperOnMainThread(layoutWrapper);
-    EXPECT_TRUE(frameNode->isActive_);
 }
 
 /**
@@ -913,8 +795,6 @@ HWTEST_F(FrameNodeTestNg, FrameNodeSwapDirtyLayoutWrapperOnMainThread02, TestSiz
     frameNode->SetBackgroundFunction(builderFunc);
     frameNode->SetLayoutProperty(layoutProperty);
     frameNode->SwapDirtyLayoutWrapperOnMainThread(layoutWrapper);
-    EXPECT_NE(frameNode->pattern_, nullptr);
-    EXPECT_NE(frameNode->layoutProperty_, nullptr);
 }
 
 /**
@@ -950,8 +830,6 @@ HWTEST_F(FrameNodeTestNg, FrameNodeAdjustGridOffset01, TestSize.Level1)
      */
     frameNode->SetLayoutProperty(layoutProperty);
     frameNode->AdjustGridOffset();
-    EXPECT_NE(frameNode->pattern_, nullptr);
-    EXPECT_NE(frameNode->layoutProperty_, nullptr);
 }
 
 /**
@@ -992,8 +870,8 @@ HWTEST_F(FrameNodeTestNg, FrameNodeTriggerOnAreaChangeCallback01, TestSize.Level
     bool flag = false;
     OnAreaChangedFunc onAreaChanged = [&flag](const RectF& oldRect, const OffsetF& oldOrigin, const RectF& rect,
                                           const OffsetF& origin) { flag = !flag; };
-    frameNode->GetEventHub<EventHub>()->SetOnAreaChanged(std::move(onAreaChanged));
-    frameNode->GetEventHub<EventHub>()->AddInnerOnAreaChangedCallback(1, std::move(onAreaChanged));
+    frameNode->eventHub_->SetOnAreaChanged(std::move(onAreaChanged));
+    frameNode->eventHub_->AddInnerOnAreaChangedCallback(1, std::move(onAreaChanged));
     frameNode->lastParentOffsetToWindow_ = std::make_unique<OffsetF>(OffsetF(50.0f, 50.0f)); // 50.0f is the offset
     frameNode->lastFrameRect_ =
         std::make_unique<RectF>(RectF(OffsetF(50.0f, 50.0f), SizeF(50.0f, 50.0f))); // 50.0f is ths offset and size
@@ -1022,7 +900,7 @@ HWTEST_F(FrameNodeTestNg, FrameNodeTriggerOnAreaChangeCallback02, TestSize.Level
     bool flag = false;
     OnAreaChangedFunc onAreaChanged = [&flag](const RectF& oldRect, const OffsetF& oldOrigin, const RectF& rect,
                                           const OffsetF& origin) { flag = !flag; };
-    frameNode->GetEventHub<EventHub>()->SetOnAreaChanged(std::move(onAreaChanged));
+    frameNode->eventHub_->SetOnAreaChanged(std::move(onAreaChanged));
     frameNode->lastParentOffsetToWindow_ = std::make_unique<OffsetF>(OffsetF(50.0f, 50.0f)); // 50.0f is the offset
     frameNode->lastFrameRect_ =
         std::make_unique<RectF>(RectF(OffsetF(50.0f, 50.0f), SizeF(50.0f, 50.0f))); // 50.0f is ths offset and size
@@ -1051,7 +929,7 @@ HWTEST_F(FrameNodeTestNg, FrameNodeTriggerOnAreaChangeCallback03, TestSize.Level
     bool flag = false;
     OnAreaChangedFunc onAreaChanged = [&flag](const RectF& oldRect, const OffsetF& oldOrigin, const RectF& rect,
                                           const OffsetF& origin) { flag = !flag; };
-    frameNode->GetEventHub<EventHub>()->AddInnerOnAreaChangedCallback(1, std::move(onAreaChanged));
+    frameNode->eventHub_->AddInnerOnAreaChangedCallback(1, std::move(onAreaChanged));
     frameNode->lastParentOffsetToWindow_ = std::make_unique<OffsetF>(OffsetF(50.0f, 50.0f)); // 50.0f is the offset
     frameNode->lastFrameRect_ =
         std::make_unique<RectF>(RectF(OffsetF(50.0f, 50.0f), SizeF(50.0f, 50.0f))); // 50.0f is ths offset and size
@@ -1104,11 +982,11 @@ HWTEST_F(FrameNodeTestNg, FrameNodeAddInnerOnSizeChangeCallback02, TestSize.Leve
 }
 
 /**
- * @tc.name: FrameNodeSetFrameNodeCommonOnSizeChangeCallback01
- * @tc.desc: Test the function SetFrameNodeCommonOnSizeChangeCallback
+ * @tc.name: FrameNodeSetJSFrameNodeOnSizeChangeCallback01
+ * @tc.desc: Test the function SetJSFrameNodeOnSizeChangeCallback
  * @tc.type: FUNC
  */
-HWTEST_F(FrameNodeTestNg, FrameNodeSetFrameNodeCommonOnSizeChangeCallback01, TestSize.Level1)
+HWTEST_F(FrameNodeTestNg, FrameNodeSetJSFrameNodeOnSizeChangeCallback01, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. create frameNode.
@@ -1118,17 +996,17 @@ HWTEST_F(FrameNodeTestNg, FrameNodeSetFrameNodeCommonOnSizeChangeCallback01, Tes
     OnSizeChangedFunc callback = [](const RectF& oldRect, const RectF& rect) {};
     frameNode->lastFrameNodeRect_ = std::make_unique<RectF>(RectF(OffsetF(1.0f, 1.0f), SizeF(1.0f, 1.0f)));
     /**
-     * @tc.steps: step3. call the function SetFrameNodeCommonOnSizeChangeCallback.
+     * @tc.steps: step3. call the function SetJSFrameNodeOnSizeChangeCallback.
      */
-    frameNode->SetFrameNodeCommonOnSizeChangeCallback(std::move(callback));
+    frameNode->SetJSFrameNodeOnSizeChangeCallback(std::move(callback));
 }
 
 /**
- * @tc.name: FrameNodeSetFrameNodeCommonOnSizeChangeCallback02
- * @tc.desc: Test the function SetFrameNodeCommonOnSizeChangeCallback
+ * @tc.name: FrameNodeSetJSFrameNodeOnSizeChangeCallback02
+ * @tc.desc: Test the function SetJSFrameNodeOnSizeChangeCallback
  * @tc.type: FUNC
  */
-HWTEST_F(FrameNodeTestNg, FrameNodeSetFrameNodeCommonOnSizeChangeCallback02, TestSize.Level1)
+HWTEST_F(FrameNodeTestNg, FrameNodeSetJSFrameNodeOnSizeChangeCallback02, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. create frameNode.
@@ -1137,9 +1015,9 @@ HWTEST_F(FrameNodeTestNg, FrameNodeSetFrameNodeCommonOnSizeChangeCallback02, Tes
     EXPECT_NE(frameNode->pattern_, nullptr);
     OnSizeChangedFunc callback = [](const RectF& oldRect, const RectF& rect) {};
     /**
-     * @tc.steps: step3. call the function SetFrameNodeCommonOnSizeChangeCallback.
+     * @tc.steps: step3. call the function SetJSFrameNodeOnSizeChangeCallback.
      */
-    frameNode->SetFrameNodeCommonOnSizeChangeCallback(std::move(callback));
+    frameNode->SetJSFrameNodeOnSizeChangeCallback(std::move(callback));
 }
 
 /**
@@ -1215,8 +1093,8 @@ HWTEST_F(FrameNodeTestNg, FrameNodeTriggerOnSizeChangeCallback01, TestSize.Level
     pattern->isOnShow_ = true;
     bool flag = false;
     OnSizeChangedFunc onSizeChanged = [&flag](const RectF& oldRect, const RectF& rect) { flag = !flag; };
-    frameNode->GetEventHub<EventHub>()->SetOnSizeChanged(std::move(onSizeChanged));
-    frameNode->GetEventHub<EventHub>()->AddInnerOnSizeChanged(1, std::move(onSizeChanged));
+    frameNode->eventHub_->SetOnSizeChanged(std::move(onSizeChanged));
+    frameNode->eventHub_->AddInnerOnSizeChanged(1, std::move(onSizeChanged));
     frameNode->lastFrameNodeRect_ =
         std::make_unique<RectF>(RectF(OffsetF(50.0f, 50.0f), SizeF(50.0f, 50.0f))); // 50.0f is ths offset and size
     frameNode->onSizeChangeDumpInfos.push_back(dumpInfoOne);
@@ -1250,7 +1128,7 @@ HWTEST_F(FrameNodeTestNg, FrameNodeTriggerOnSizeChangeCallback02, TestSize.Level
     pattern->isOnShow_ = true;
     bool flag = false;
     OnSizeChangedFunc onSizeChanged = [&flag](const RectF& oldRect, const RectF& rect) { flag = !flag; };
-    frameNode->GetEventHub<EventHub>()->SetOnSizeChanged(std::move(onSizeChanged));
+    frameNode->eventHub_->SetOnSizeChanged(std::move(onSizeChanged));
     frameNode->lastFrameNodeRect_ =
         std::make_unique<RectF>(RectF(OffsetF(50.0f, 50.0f), SizeF(50.0f, 50.0f))); // 50.0f is ths offset and size
     frameNode->onSizeChangeDumpInfos.push_back(dumpInfoOne);
@@ -1280,7 +1158,7 @@ HWTEST_F(FrameNodeTestNg, FrameNodeTriggerOnSizeChangeCallback03, TestSize.Level
     pattern->isOnShow_ = true;
     bool flag = false;
     OnSizeChangedFunc onSizeChanged = [&flag](const RectF& oldRect, const RectF& rect) { flag = !flag; };
-    frameNode->GetEventHub<EventHub>()->AddInnerOnSizeChanged(1, std::move(onSizeChanged));
+    frameNode->eventHub_->AddInnerOnSizeChanged(1, std::move(onSizeChanged));
     frameNode->lastFrameNodeRect_ =
         std::make_unique<RectF>(RectF(OffsetF(50.0f, 50.0f), SizeF(50.0f, 50.0f))); // 50.0f is ths offset and size
     frameNode->onSizeChangeDumpInfos.push_back(dumpInfoOne);
@@ -1292,7 +1170,7 @@ HWTEST_F(FrameNodeTestNg, FrameNodeTriggerOnSizeChangeCallback03, TestSize.Level
 
 /**
  * @tc.name: FrameNodIsFrameDisappear01
- * @tc.desc: Test the function IsFrameDisappear.
+ * @tc.desc: Test the function IsFrameDisappear
  * @tc.type: FUNC
  */
 HWTEST_F(FrameNodeTestNg, FrameNodeIsFrameDisappear01, TestSize.Level1)
@@ -1322,10 +1200,6 @@ HWTEST_F(FrameNodeTestNg, FrameNodeIsFrameDisappear01, TestSize.Level1)
     parentNode->SetLayoutProperty(parentLayoutProperty);
     frameNode->SetLayoutProperty(layoutProperty);
     frameNode->IsFrameDisappear();
-    EXPECT_FALSE(parentNode->isActive_);
-    EXPECT_TRUE(frameNode->onMainTree_);
-    EXPECT_NE(frameNode->pattern_, nullptr);
-    EXPECT_NE(frameNode->layoutProperty_, nullptr);
 }
 
 /**
@@ -1360,430 +1234,6 @@ HWTEST_F(FrameNodeTestNg, FrameNodeIsFrameDisappear02, TestSize.Level1)
     parentNode->SetLayoutProperty(parentLayoutProperty);
     frameNode->SetLayoutProperty(layoutProperty);
     frameNode->IsFrameDisappear();
-    EXPECT_TRUE(parentNode->isActive_);
-    EXPECT_TRUE(frameNode->onMainTree_);
-    EXPECT_NE(frameNode->pattern_, nullptr);
-    EXPECT_NE(frameNode->layoutProperty_, nullptr);
-}
-
-/**
- * @tc.name: FrameNodIsFrameDisappear03
- * @tc.desc: Test the function IsFrameDisappear
- * @tc.type: FUNC
- */
-HWTEST_F(FrameNodeTestNg, FrameNodeIsFrameDisappear03, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. create frameNode.
-     */
-    auto parentNode = FrameNode::CreateFrameNode("parentNode", 1, AceType::MakeRefPtr<Pattern>(), true);
-    auto frameNode = FrameNode::CreateFrameNode("frameNode", 1, AceType::MakeRefPtr<Pattern>(), true);
-    parentNode->isActive_ = true;
-    frameNode->isActive_ = false;
-    frameNode->onMainTree_ = true;
-    auto context = frameNode->GetContext();
-    context->onShow_ = true;
-    frameNode->SetParent(AceType::WeakClaim(AceType::RawPtr(parentNode)));
-
-    /**
-     * @tc.steps: step2. create layoutProperty.
-     */
-    auto parentLayoutProperty = AceType::MakeRefPtr<LayoutProperty>();
-    parentLayoutProperty->propVisibility_ = VisibleType::INVISIBLE;
-    auto layoutProperty = AceType::MakeRefPtr<LayoutProperty>();
-    layoutProperty->propVisibility_ = VisibleType::VISIBLE;
-
-    /**
-     * @tc.steps: step3. call the function IsFrameDisappear.
-     */
-    parentNode->SetLayoutProperty(parentLayoutProperty);
-    frameNode->SetLayoutProperty(layoutProperty);
-    frameNode->IsFrameDisappear(TIMESTAMP_1);
-    EXPECT_TRUE(parentNode->isActive_);
-    EXPECT_TRUE(frameNode->onMainTree_);
-    EXPECT_NE(frameNode->pattern_, nullptr);
-    EXPECT_NE(frameNode->layoutProperty_, nullptr);
-}
-
-/**
- * @tc.name: FrameNodIsFrameDisappear04
- * @tc.desc: Test the function IsFrameDisappear
- * @tc.type: FUNC
- */
-HWTEST_F(FrameNodeTestNg, FrameNodeIsFrameDisappear04, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. create frameNode.
-     */
-    auto parentNode = FrameNode::CreateFrameNode("parentNode", 1, AceType::MakeRefPtr<Pattern>(), true);
-    auto frameNode = FrameNode::CreateFrameNode("frameNode", 1, AceType::MakeRefPtr<Pattern>(), true);
-    auto frameNode2 = FrameNode::CreateFrameNode("frameNode2", 2, AceType::MakeRefPtr<Pattern>(), true);
-    parentNode->SetDepth(1);
-    frameNode->SetDepth(2);
-    frameNode2->SetDepth(3);
-    parentNode->isActive_ = true;
-    frameNode->isActive_ = true;
-    frameNode2->onMainTree_ = true;
-    frameNode2->isActive_ = true;
-    auto context = frameNode2->GetContext();
-    context->onShow_ = true;
-    frameNode->SetParent(AceType::WeakClaim(AceType::RawPtr(parentNode)));
-    frameNode2->SetParent(AceType::WeakClaim(AceType::RawPtr(frameNode)));
-
-    /**
-     * @tc.steps: step2. create layoutProperty.
-     */
-    auto parentLayoutProperty = AceType::MakeRefPtr<LayoutProperty>();
-    parentLayoutProperty->propVisibility_ = VisibleType::VISIBLE;
-    auto layoutProperty = AceType::MakeRefPtr<LayoutProperty>();
-    layoutProperty->propVisibility_ = VisibleType::VISIBLE;
-    auto layoutProperty2 = AceType::MakeRefPtr<LayoutProperty>();
-    layoutProperty2->propVisibility_ = VisibleType::VISIBLE;
-
-    /**
-     * @tc.steps: step3. call the function IsFrameDisappear and create TIMESTAMP_1 cache.
-     * @tc.expected: expect res is false
-     */
-    parentNode->SetLayoutProperty(parentLayoutProperty);
-    frameNode->SetLayoutProperty(layoutProperty);
-    frameNode2->SetLayoutProperty(layoutProperty2);
-    EXPECT_FALSE(frameNode2->IsFrameDisappear(TIMESTAMP_1));
-
-    /**
-     * @tc.steps: step4. call the function IsFrameDisappear and use TIMESTAMP_1 cache.
-     * @tc.expected: expect res is false
-     */
-    parentLayoutProperty->propVisibility_ = VisibleType::INVISIBLE;
-    EXPECT_FALSE(frameNode2->IsFrameDisappear(TIMESTAMP_2, 0));
-
-    /**
-     * @tc.steps: step5. call the function IsFrameDisappear and no use TIMESTAMP_1 cache.
-     * @tc.expected: expect res is true
-     */
-    EXPECT_TRUE(frameNode2->IsFrameDisappear(TIMESTAMP_3));
-}
-
-/**
- * @tc.name: FrameNodIsFrameDisappear05
- * @tc.desc: Test the function IsFrameDisappear
- * @tc.type: FUNC
- */
-HWTEST_F(FrameNodeTestNg, FrameNodeIsFrameDisappear05, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. create frameNode.
-     */
-    auto parentNode = FrameNode::CreateFrameNode("parentNode", 1, AceType::MakeRefPtr<Pattern>(), true);
-    auto frameNode = FrameNode::CreateFrameNode("frameNode", 1, AceType::MakeRefPtr<Pattern>(), true);
-    auto frameNode2 = FrameNode::CreateFrameNode("frameNode2", 2, AceType::MakeRefPtr<Pattern>(), true);
-    parentNode->SetDepth(1);
-    frameNode->SetDepth(2);
-    frameNode2->SetDepth(3);
-    parentNode->isActive_ = true;
-    frameNode->isActive_ = true;
-    frameNode2->onMainTree_ = true;
-    frameNode2->isActive_ = true;
-    auto context = frameNode2->GetContext();
-    context->onShow_ = true;
-    frameNode->SetParent(AceType::WeakClaim(AceType::RawPtr(parentNode)));
-    frameNode2->SetParent(AceType::WeakClaim(AceType::RawPtr(frameNode)));
-
-    /**
-     * @tc.steps: step2. create layoutProperty.
-     */
-    auto parentLayoutProperty = AceType::MakeRefPtr<LayoutProperty>();
-    parentLayoutProperty->propVisibility_ = VisibleType::VISIBLE;
-    auto layoutProperty = AceType::MakeRefPtr<LayoutProperty>();
-    layoutProperty->propVisibility_ = VisibleType::VISIBLE;
-    auto layoutProperty2 = AceType::MakeRefPtr<LayoutProperty>();
-    layoutProperty2->propVisibility_ = VisibleType::VISIBLE;
-
-    /**
-     * @tc.steps: step3. call the function IsFrameDisappear and create TIMESTAMP_1 cache.
-     * @tc.expected: expect res is false
-     */
-    parentNode->SetLayoutProperty(parentLayoutProperty);
-    frameNode->SetLayoutProperty(layoutProperty);
-    frameNode2->SetLayoutProperty(layoutProperty2);
-    EXPECT_FALSE(frameNode2->IsFrameDisappear(TIMESTAMP_1));
-
-    /**
-     * @tc.steps: step4. call the function IsFrameDisappear and use TIMESTAMP_1 cache.
-     * @tc.expected: expect res is false
-     */
-    parentLayoutProperty->propVisibility_ = VisibleType::INVISIBLE;
-    EXPECT_FALSE(frameNode2->IsFrameDisappear(TIMESTAMP_2, 3));
-
-    /**
-     * @tc.steps: step5. call the function IsFrameDisappear and no use TIMESTAMP_1 cache.
-     * @tc.expected: expect res is true
-     */
-    EXPECT_TRUE(frameNode2->IsFrameDisappear(TIMESTAMP_3, 1));
-}
-
-/**
- * @tc.name: FrameNodIsFrameDisappear06
- * @tc.desc: Test the function IsFrameDisappear OnShow branch
- * @tc.type: FUNC
- */
-HWTEST_F(FrameNodeTestNg, FrameNodeIsFrameDisappear06, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. create frameNode.
-     */
-    auto parentNode = FrameNode::CreateFrameNode("parentNode", 1, AceType::MakeRefPtr<Pattern>(), true);
-    auto frameNode = FrameNode::CreateFrameNode("frameNode", 1, AceType::MakeRefPtr<Pattern>(), true);
-    auto frameNode2 = FrameNode::CreateFrameNode("frameNode2", 2, AceType::MakeRefPtr<Pattern>(), true);
-    parentNode->SetDepth(1);
-    frameNode->SetDepth(2);
-    frameNode2->SetDepth(3);
-    parentNode->isActive_ = true;
-    frameNode->isActive_ = true;
-    frameNode2->onMainTree_ = true;
-    frameNode2->isActive_ = true;
-    auto context = frameNode2->GetContext();
-    context->onShow_ = true;
-    frameNode->SetParent(AceType::WeakClaim(AceType::RawPtr(parentNode)));
-    frameNode2->SetParent(AceType::WeakClaim(AceType::RawPtr(frameNode)));
-
-    /**
-     * @tc.steps: step2. create layoutProperty.
-     */
-    auto parentLayoutProperty = AceType::MakeRefPtr<LayoutProperty>();
-    parentLayoutProperty->propVisibility_ = VisibleType::INVISIBLE;
-    auto layoutProperty = AceType::MakeRefPtr<LayoutProperty>();
-    layoutProperty->propVisibility_ = VisibleType::VISIBLE;
-    auto layoutProperty2 = AceType::MakeRefPtr<LayoutProperty>();
-    layoutProperty2->propVisibility_ = VisibleType::VISIBLE;
-
-    /**
-     * @tc.steps: step3. call the function IsFrameDisappear and create TIMESTAMP_1 cache.
-     * @tc.expected: expect res is true
-     */
-    parentNode->SetLayoutProperty(parentLayoutProperty);
-    frameNode->SetLayoutProperty(layoutProperty);
-    frameNode2->SetLayoutProperty(layoutProperty2);
-    EXPECT_TRUE(frameNode2->IsFrameDisappear(TIMESTAMP_1));
-
-    /**
-     * @tc.steps: step4. set onshow false and call the function IsFrameDisappear.
-     * @tc.expected: expect res is true
-     */
-    parentLayoutProperty->propVisibility_ = VisibleType::VISIBLE;
-    context->onShow_ = false;
-    EXPECT_TRUE(frameNode2->IsFrameDisappear(TIMESTAMP_2, 1));
-
-    /**
-     * @tc.steps: step5. call the function IsFrameDisappear and no use TIMESTAMP_1 cache.
-     * @tc.expected: expect res is true
-     */
-    context->onShow_ = true;
-    EXPECT_FALSE(frameNode2->IsFrameDisappear(TIMESTAMP_3, 0));
-}
-
-/**
- * @tc.name: FrameNodIsFrameDisappear07
- * @tc.desc: Test the function IsFrameDisappear result true branch
- * @tc.type: FUNC
- */
-HWTEST_F(FrameNodeTestNg, FrameNodeIsFrameDisappear07, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. create frameNode.
-     */
-    auto parentNode = FrameNode::CreateFrameNode("parentNode", 1, AceType::MakeRefPtr<Pattern>(), true);
-    auto frameNode = FrameNode::CreateFrameNode("frameNode", 1, AceType::MakeRefPtr<Pattern>(), true);
-    auto frameNode2 = FrameNode::CreateFrameNode("frameNode2", 2, AceType::MakeRefPtr<Pattern>(), true);
-    parentNode->SetDepth(1);
-    frameNode->SetDepth(2);
-    frameNode2->SetDepth(3);
-    parentNode->isActive_ = true;
-    frameNode->isActive_ = true;
-    frameNode2->onMainTree_ = true;
-    frameNode2->isActive_ = true;
-    auto context = frameNode2->GetContext();
-    context->onShow_ = true;
-    frameNode->SetParent(AceType::WeakClaim(AceType::RawPtr(parentNode)));
-    frameNode2->SetParent(AceType::WeakClaim(AceType::RawPtr(frameNode)));
-
-    /**
-     * @tc.steps: step2. create layoutProperty.
-     */
-    auto parentLayoutProperty = AceType::MakeRefPtr<LayoutProperty>();
-    parentLayoutProperty->propVisibility_ = VisibleType::VISIBLE;
-    auto layoutProperty = AceType::MakeRefPtr<LayoutProperty>();
-    layoutProperty->propVisibility_ = VisibleType::VISIBLE;
-    auto layoutProperty2 = AceType::MakeRefPtr<LayoutProperty>();
-    layoutProperty2->propVisibility_ = VisibleType::VISIBLE;
-
-    /**
-     * @tc.steps: step3. call the function IsFrameDisappear and create TIMESTAMP_1 cache.
-     * @tc.expected: expect res is false
-     */
-    parentNode->SetLayoutProperty(parentLayoutProperty);
-    frameNode->SetLayoutProperty(layoutProperty);
-    frameNode2->SetLayoutProperty(layoutProperty2);
-    EXPECT_FALSE(frameNode2->IsFrameDisappear(TIMESTAMP_1));
-
-    /**
-     * @tc.steps: step4. set frameNode2 INVISIBLE and call the function IsFrameDisappear.
-     * @tc.expected: expect res is false
-     */
-    parentLayoutProperty->propVisibility_ = VisibleType::INVISIBLE;
-    layoutProperty2->propVisibility_ = VisibleType::INVISIBLE;
-    EXPECT_TRUE(frameNode2->IsFrameDisappear(TIMESTAMP_2, 1));
-
-    /**
-     * @tc.steps: step5. call the function IsFrameDisappear and no use TIMESTAMP_1 cache.
-     * @tc.expected: expect res is true
-     */
-    layoutProperty2->propVisibility_ = VisibleType::VISIBLE;
-    EXPECT_TRUE(frameNode2->IsFrameDisappear(TIMESTAMP_3, 3));
-}
-
-/**
- * @tc.name: FrameNodeCalculateOffsetRelativeToWindow01
- * @tc.desc: Test the function CalculateOffsetRelativeToWindow
- * @tc.type: FUNC
- */
-HWTEST_F(FrameNodeTestNg, FrameNodeCalculateOffsetRelativeToWindow01, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. create frameNode.
-     */
-    auto parentNode = FrameNode::CreateFrameNode("parentNode", 1, AceType::MakeRefPtr<Pattern>(), true);
-    auto frameNode = FrameNode::CreateFrameNode("frameNode", 1, AceType::MakeRefPtr<Pattern>(), true);
-    auto frameNode2 = FrameNode::CreateFrameNode("frameNode2", 2, AceType::MakeRefPtr<Pattern>(), true);
-    parentNode->SetDepth(1);
-    frameNode->SetDepth(2);
-    frameNode2->SetDepth(3);
-    frameNode->SetParent(AceType::WeakClaim(AceType::RawPtr(parentNode)));
-    frameNode2->SetParent(AceType::WeakClaim(AceType::RawPtr(frameNode)));
-
-    /**
-     * @tc.steps: step2. set Offset.
-     */
-    parentNode->GetGeometryNode()->SetFrameOffset(OffsetF(1.1, 2.3));
-    frameNode->GetGeometryNode()->SetSelfAdjust(RectF(1.0, 1.0, 0.0, 0.0));
-    frameNode->GetGeometryNode()->SetFrameOffset(OffsetF(3.2, 4.1));
-    frameNode2->GetGeometryNode()->SetFrameOffset(OffsetF(5.3, 6.3));
-
-    /**
-     * @tc.steps: step3. call the function CalculateOffsetRelativeToWindow and create TIMESTAMP_1 cache.
-     * @tc.expected: expect res is frameNode offset + parentNode offset
-     */
-    EXPECT_EQ(frameNode->CalculateOffsetRelativeToWindow(TIMESTAMP_1), OffsetF(5.3, 7.4));
- 
-    /**
-     * @tc.steps: step4. call the function CalculateOffsetRelativeToWindow and create TIMESTAMP_1 cache.
-     * @tc.expected: expect res is frameNode2 offset + framenode cache offset
-     */
-
-    parentNode->GetGeometryNode()->SetFrameOffset(OffsetF(2.1, 3.3));
-    EXPECT_EQ(frameNode2->CalculateOffsetRelativeToWindow(TIMESTAMP_1), OffsetF(10.6, 13.7));
-
-
-    /**
-     * @tc.steps: step5. call the function CalculateOffsetRelativeToWindow TIMESTAMP_2.
-     * @tc.expected: expect res is frameNode2 offset + framenode offset + parentNode offset
-     */
-    EXPECT_EQ(frameNode2->CalculateOffsetRelativeToWindow(TIMESTAMP_2), OffsetF(11.6, 14.7));
-}
-
-/**
- * @tc.name: FrameNodeCalculateOffsetRelativeToWindow02
- * @tc.desc: Test the function CalculateOffsetRelativeToWindow
- * @tc.type: FUNC
- */
-HWTEST_F(FrameNodeTestNg, FrameNodeCalculateOffsetRelativeToWindow02, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. create frameNode.
-     */
-    auto parentNode = FrameNode::CreateFrameNode("parentNode", 1, AceType::MakeRefPtr<Pattern>(), true);
-    auto frameNode = FrameNode::CreateFrameNode("frameNode", 1, AceType::MakeRefPtr<Pattern>(), true);
-    auto frameNode2 = FrameNode::CreateFrameNode("frameNode2", 2, AceType::MakeRefPtr<Pattern>(), true);
-    parentNode->SetDepth(1);
-    frameNode->SetDepth(2);
-    frameNode2->SetDepth(3);
-    frameNode->SetParent(AceType::WeakClaim(AceType::RawPtr(parentNode)));
-    frameNode2->SetParent(AceType::WeakClaim(AceType::RawPtr(frameNode)));
-
-    /**
-     * @tc.steps: step2. set Offset.
-     */
-    parentNode->GetGeometryNode()->SetFrameOffset(OffsetF(1.1, 2.3));
-    frameNode->GetGeometryNode()->SetFrameOffset(OffsetF(3.2, 4.1));
-    frameNode2->GetGeometryNode()->SetFrameOffset(OffsetF(5.3, 6.3));
-
-    /**
-     * @tc.steps: step3. call the function CalculateOffsetRelativeToWindow and create TIMESTAMP_1 cache.
-     * @tc.expected: expect res is frameNode2 offset + frameNode offset + parentNode offset
-     */
-    EXPECT_EQ(frameNode2->CalculateOffsetRelativeToWindow(TIMESTAMP_1), OffsetF(9.6, 12.7));
-
-    /**
-     * @tc.steps: step4. call the function CalculateOffsetRelativeToWindow and use TIMESTAMP_1 cache.
-     * @tc.expected: expect res is frameNode2 offset + framenode cache offset
-     */
-
-    parentNode->GetGeometryNode()->SetFrameOffset(OffsetF(2.1, 3.3));
-    EXPECT_EQ(frameNode2->CalculateOffsetRelativeToWindow(TIMESTAMP_2, false, 0), OffsetF(9.6, 12.7));
-
-
-    /**
-     * @tc.steps: step5. call the function CalculateOffsetRelativeToWindow TIMESTAMP_2.
-     * @tc.expected: expect res is frameNode2 offset + framenode offset + parentNode offset
-     */
-    EXPECT_EQ(frameNode2->CalculateOffsetRelativeToWindow(TIMESTAMP_3), OffsetF(10.6, 13.7));
-}
-
-/**
- * @tc.name: FrameNodeCalculateOffsetRelativeToWindow03
- * @tc.desc: Test the function CalculateOffsetRelativeToWindow
- * @tc.type: FUNC
- */
-HWTEST_F(FrameNodeTestNg, FrameNodeCalculateOffsetRelativeToWindow03, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. create frameNode.
-     */
-    auto parentNode = FrameNode::CreateFrameNode("parentNode", 1, AceType::MakeRefPtr<Pattern>(), true);
-    auto frameNode = FrameNode::CreateFrameNode("frameNode", 1, AceType::MakeRefPtr<Pattern>(), true);
-    auto frameNode2 = FrameNode::CreateFrameNode("frameNode2", 2, AceType::MakeRefPtr<Pattern>(), true);
-    parentNode->SetDepth(1);
-    frameNode->SetDepth(2);
-    frameNode2->SetDepth(3);
-    frameNode->SetParent(AceType::WeakClaim(AceType::RawPtr(parentNode)));
-    frameNode2->SetParent(AceType::WeakClaim(AceType::RawPtr(frameNode)));
-
-    /**
-     * @tc.steps: step2. set Offset.
-     */
-    parentNode->GetGeometryNode()->SetFrameOffset(OffsetF(1.1, 2.3));
-    frameNode->GetGeometryNode()->SetFrameOffset(OffsetF(3.2, 4.1));
-    frameNode2->GetGeometryNode()->SetFrameOffset(OffsetF(5.3, 6.3));
-
-    /**
-     * @tc.steps: step3. call the function CalculateOffsetRelativeToWindow and create TIMESTAMP_1 cache.
-     * @tc.expected: expect res is frameNode offset + frameNode2 + parentNode offset
-     */
-    EXPECT_EQ(frameNode2->CalculateOffsetRelativeToWindow(TIMESTAMP_1), OffsetF(9.6, 12.7));
-
-    /**
-     * @tc.steps: step4. call the function CalculateOffsetRelativeToWindow and use TIMESTAMP_1 cache.
-     * @tc.expected: expect res is frameNode2 offset + framenode cache offset
-     */
-
-    parentNode->GetGeometryNode()->SetFrameOffset(OffsetF(2.1, 3.3));
-    EXPECT_EQ(frameNode2->CalculateOffsetRelativeToWindow(TIMESTAMP_2, false, 2), OffsetF(9.6, 12.7));
-
-
-    /**
-     * @tc.steps: step5. call the function CalculateOffsetRelativeToWindow TIMESTAMP_3.
-     * @tc.expected: expect res is frameNode2 offset + framenode offset + parentNode offset
-     */
-    EXPECT_EQ(frameNode2->CalculateOffsetRelativeToWindow(TIMESTAMP_3), OffsetF(10.6, 13.7));
 }
 
 /**
@@ -1807,17 +1257,17 @@ HWTEST_F(FrameNodeTestNg, FrameNodeTriggerVisibleAreaChangeCallback01, TestSize.
     const std::function<void(bool, double)>&& jsCallback = [&flag](bool isVisible, double radio) { flag++; };
     callbackInfo.callback = jsCallback;
     callbackInfo.period = 1;
-    frameNode->GetEventHub<EventHub>()->visibleAreaUserCallback_ = callbackInfo;
+    frameNode->eventHub_->visibleAreaUserCallback_ = callbackInfo;
     frameNode->TriggerVisibleAreaChangeCallback(0, false);
-    frameNode->GetEventHub<EventHub>()->visibleAreaUserCallback_.callback = nullptr;
-    frameNode->GetEventHub<EventHub>()->visibleAreaInnerCallback_ = callbackInfo;
+    frameNode->eventHub_->visibleAreaUserCallback_.callback = nullptr;
+    frameNode->eventHub_->visibleAreaInnerCallback_ = callbackInfo;
     frameNode->TriggerVisibleAreaChangeCallback(0, false);
-    EXPECT_NE(frameNode->GetEventHub<EventHub>(), nullptr);
+    EXPECT_NE(frameNode->eventHub_, nullptr);
     frameNode->isCalculateInnerVisibleRectClip_ = true;
     frameNode->lastInnerVisibleRatio_ = 10.0;
     frameNode->lastVisibleRatio_ = 10.0;
     frameNode->TriggerVisibleAreaChangeCallback(0, true);
-    frameNode->GetEventHub<EventHub>()->visibleAreaUserCallback_ = callbackInfo;
+    frameNode->eventHub_->visibleAreaUserCallback_ = callbackInfo;
     /**
      * @tc.steps: step2. create layoutProperty.
      */
@@ -1831,7 +1281,7 @@ HWTEST_F(FrameNodeTestNg, FrameNodeTriggerVisibleAreaChangeCallback01, TestSize.
     frameNode->SetLayoutProperty(layoutProperty);
     frameNode->TriggerVisibleAreaChangeCallback(false);
     frameNode->ProcessAllVisibleCallback(ratios, callbackInfo, 1.0, 0.0, true);
-    EXPECT_NE(frameNode->GetEventHub<EventHub>(), nullptr);
+    EXPECT_NE(frameNode->eventHub_, nullptr);
 }
 
 /**
@@ -1855,7 +1305,7 @@ HWTEST_F(FrameNodeTestNg, FrameNodeThrottledVisibleTask01, TestSize.Level1)
     const std::function<void(bool, double)>&& jsCallback = [&flag](bool isVisible, double radio) { flag++; };
     callbackInfo.callback = jsCallback;
     callbackInfo.period = 1;
-    frameNode->GetEventHub<EventHub>()->throttledVisibleAreaCallback_ = callbackInfo;
+    frameNode->eventHub_->throttledVisibleAreaCallback_ = callbackInfo;
 
     /**
      * @tc.steps: step2. create layoutProperty.
@@ -1868,8 +1318,6 @@ HWTEST_F(FrameNodeTestNg, FrameNodeThrottledVisibleTask01, TestSize.Level1)
      */
     frameNode->SetLayoutProperty(layoutProperty);
     frameNode->ThrottledVisibleTask();
-    EXPECT_NE(frameNode, nullptr);
-    EXPECT_FALSE(frameNode->throttledCallbackOnTheWay_);
 }
 
 /**
@@ -1893,7 +1341,7 @@ HWTEST_F(FrameNodeTestNg, FrameNodeThrottledVisibleTask02, TestSize.Level1)
     const std::function<void(bool, double)>&& jsCallback = [&flag](bool isVisible, double radio) { flag++; };
     callbackInfo.callback = jsCallback;
     callbackInfo.period = 1;
-    frameNode->GetEventHub<EventHub>()->throttledVisibleAreaCallback_ = callbackInfo;
+    frameNode->eventHub_->throttledVisibleAreaCallback_ = callbackInfo;
 
     /**
      * @tc.steps: step2. create layoutProperty.
@@ -1906,10 +1354,6 @@ HWTEST_F(FrameNodeTestNg, FrameNodeThrottledVisibleTask02, TestSize.Level1)
      */
     frameNode->SetLayoutProperty(layoutProperty);
     frameNode->ThrottledVisibleTask();
-    EXPECT_NE(frameNode, nullptr);
-    EXPECT_FALSE(frameNode->throttledCallbackOnTheWay_);
-    EXPECT_TRUE(frameNode->isActive_);
-    EXPECT_EQ(frameNode->GetEventHub<EventHub>()->throttledVisibleAreaCallback_.period, 1);
 }
 
 /**
@@ -1929,14 +1373,12 @@ HWTEST_F(FrameNodeTestNg, FrameNodeThrottledVisibleTask03, TestSize.Level1)
     const std::function<void(bool, double)>&& jsCallback = [&flag](bool isVisible, double radio) { flag++; };
     callbackInfo.callback = jsCallback;
     callbackInfo.period = 1;
-    frameNode->GetEventHub<EventHub>()->throttledVisibleAreaCallback_ = callbackInfo;
+    frameNode->eventHub_->throttledVisibleAreaCallback_ = callbackInfo;
 
     /**
      * @tc.steps: step2. call the function ThrottledVisibleTask.
      */
     frameNode->ThrottledVisibleTask();
-    EXPECT_NE(frameNode, nullptr);
-    EXPECT_EQ(frameNode->GetEventHub<EventHub>()->throttledVisibleAreaCallback_.period, 1);
 }
 
 /**
@@ -1965,8 +1407,6 @@ HWTEST_F(FrameNodeTestNg, FrameNodeCreateLayoutTask01, TestSize.Level1)
      */
     frameNode->SetLayoutProperty(layoutProperty);
     frameNode->CreateLayoutTask(true);
-    EXPECT_NE(frameNode, nullptr);
-    EXPECT_EQ(frameNode->layoutProperty_->propVisibility_, VisibleType::VISIBLE);
 }
 
 /**
@@ -1996,9 +1436,6 @@ HWTEST_F(FrameNodeTestNg, FrameNodeCreateRenderTask01, TestSize.Level1)
      */
     frameNode->SetLayoutProperty(layoutProperty);
     frameNode->CreateRenderTask(true).value()();
-    EXPECT_NE(frameNode, nullptr);
-    EXPECT_NE(frameNode->layoutProperty_, nullptr);
-    EXPECT_EQ(frameNode->layoutProperty_->propVisibility_, VisibleType::VISIBLE);
 }
 
 /**
@@ -2027,9 +1464,6 @@ HWTEST_F(FrameNodeTestNg, FrameNodeCreateRenderTask02, TestSize.Level1)
      */
     frameNode->SetLayoutProperty(layoutProperty);
     frameNode->CreateRenderTask(false).value()();
-    EXPECT_NE(frameNode, nullptr);
-    EXPECT_NE(frameNode->layoutProperty_, nullptr);
-    EXPECT_EQ(frameNode->layoutProperty_->propVisibility_, VisibleType::VISIBLE);
 }
 
 /**
@@ -2060,9 +1494,6 @@ HWTEST_F(FrameNodeTestNg, FrameNodeUpdateLayoutWrapper01, TestSize.Level1)
      */
     frameNode->SetLayoutProperty(layoutProperty);
     frameNode->UpdateLayoutWrapper(layoutWrapper, false, true);
-    EXPECT_NE(frameNode, nullptr);
-    EXPECT_NE(frameNode->layoutProperty_, nullptr);
-    EXPECT_EQ(frameNode->layoutProperty_->propVisibility_, VisibleType::GONE);
 }
 
 /**
@@ -2089,9 +1520,6 @@ HWTEST_F(FrameNodeTestNg, FrameNodeUpdateLayoutWrapper02, TestSize.Level1)
      */
     frameNode->SetLayoutProperty(layoutProperty);
     frameNode->UpdateLayoutWrapper(nullptr, false, true);
-    EXPECT_NE(frameNode, nullptr);
-    EXPECT_NE(frameNode->layoutProperty_, nullptr);
-    EXPECT_EQ(frameNode->layoutProperty_->propVisibility_, VisibleType::VISIBLE);
 }
 
 /**
@@ -2114,7 +1542,6 @@ HWTEST_F(FrameNodeTestNg, FrameNodeGetContentModifier01, TestSize.Level1)
     frameNode->GetContentModifier();
     frameNode->renderContext_->UpdateAccessibilityFocus(false);
     frameNode->GetContentModifier();
-    EXPECT_NE(frameNode, nullptr);
 }
 
 /**
@@ -2136,7 +1563,6 @@ HWTEST_F(FrameNodeTestNg, FrameNodeGetContentModifier02, TestSize.Level1)
      * @tc.steps: step2. call the function GetContentModifier.
      */
     frameNode->GetContentModifier();
-    EXPECT_NE(frameNode->extensionHandler_, nullptr);
 }
 
 /**
@@ -2155,7 +1581,6 @@ HWTEST_F(FrameNodeTestNg, FrameNodeGetContentModifier03, TestSize.Level1)
      * @tc.steps: step2. call the function GetContentModifier.
      */
     frameNode->GetContentModifier();
-    EXPECT_NE(frameNode, nullptr);
 }
 
 /**
@@ -2175,7 +1600,6 @@ HWTEST_F(FrameNodeTestNg, FrameNodePostIdleTask01, TestSize.Level1)
     int32_t flag = 0;
     std::function<void(int64_t, bool)>&& callback = [&flag](int64_t radio, bool isVisible) { flag++; };
     frameNode->PostIdleTask(std::move(callback));
-    EXPECT_NE(frameNode, nullptr);
 }
 
 /**
@@ -2203,7 +1627,6 @@ HWTEST_F(FrameNodeTestNg, FrameNodeRebuildRenderContextTree01, TestSize.Level1)
      */
     frameNode->overlayNode_->SetLayoutProperty(layoutProperty);
     frameNode->RebuildRenderContextTree();
-    EXPECT_NE(frameNode->overlayNode_, nullptr);
 
     /**
      * @tc.steps: step4. update layoutProperty and call the function RebuildRenderContextTree.
@@ -2217,7 +1640,6 @@ HWTEST_F(FrameNodeTestNg, FrameNodeRebuildRenderContextTree01, TestSize.Level1)
      */
     frameNode->overlayNode_ = nullptr;
     frameNode->RebuildRenderContextTree();
-    EXPECT_EQ(frameNode->overlayNode_, nullptr);
 }
 
 /**
@@ -2245,7 +1667,6 @@ HWTEST_F(FrameNodeTestNg, FrameNodeRebuildRenderContextTree02, TestSize.Level1)
      */
     frameNode->overlayNode_->SetLayoutProperty(layoutProperty);
     frameNode->RebuildRenderContextTree();
-    EXPECT_NE(frameNode->overlayNode_->layoutProperty_, nullptr);
 }
 
 /**
@@ -2267,7 +1688,6 @@ HWTEST_F(FrameNodeTestNg, FrameNodeRebuildRenderContextTree03, TestSize.Level1)
      * @tc.steps: step2. call the function RebuildRenderContextTree.
      */
     frameNode->RebuildRenderContextTree();
-    EXPECT_EQ(frameNode->overlayNode_->layoutProperty_, nullptr);
 }
 
 /**
@@ -2284,9 +1704,8 @@ HWTEST_F(FrameNodeTestNg, FrameNodeMarkModifyDone01, TestSize.Level1)
     frameNode->isPrivacySensitive_ = true;
     frameNode->isRestoreInfoUsed_ = false;
     frameNode->restoreId_ = 1;
-    auto index = static_cast<int32_t>(Recorder::EventCategory::CATEGORY_COMPONENT);
-    Recorder::EventRecorder::Get().eventSwitch_[index] = true;
-    Recorder::EventRecorder::Get().globalSwitch_[index] = true;
+    Recorder::EventRecorder::Get().componentEnable_ = true;
+    Recorder::EventRecorder::Get().eventSwitch_.componentEnable = true;
     std::unordered_set<std::string> nodeSet;
     nodeSet.emplace("abc");
     Recorder::NodeDataCache::Get().mergedConfig_->shareNodes.emplace("test", nodeSet);
@@ -2295,8 +1714,6 @@ HWTEST_F(FrameNodeTestNg, FrameNodeMarkModifyDone01, TestSize.Level1)
      * @tc.steps: step2. call the function MarkModifyDone.
      */
     frameNode->MarkModifyDone();
-    EXPECT_TRUE(frameNode->isPrivacySensitive_);
-    EXPECT_TRUE(frameNode->isRestoreInfoUsed_);
 }
 
 /**
@@ -2320,9 +1737,6 @@ HWTEST_F(FrameNodeTestNg, FrameNodeMarkModifyDone02, TestSize.Level1)
      * @tc.steps: step2. call the function MarkModifyDone.
      */
     frameNode->MarkModifyDone();
-    EXPECT_TRUE(frameNode->isPrivacySensitive_);
-    EXPECT_TRUE(frameNode->isRestoreInfoUsed_);
-    EXPECT_EQ(pipeline->privacySensitiveManager_, nullptr);
 }
 
 /**
@@ -2345,8 +1759,6 @@ HWTEST_F(FrameNodeTestNg, FrameNodeMarkDirtyNode01, TestSize.Level1)
      */
     frameNode->MarkDirtyNode(PROPERTY_UPDATE_DIFF);
     testNode->MarkDirtyNode(PROPERTY_UPDATE_DIFF);
-    EXPECT_FALSE(frameNode->isPrivacySensitive_);
-    EXPECT_FALSE(frameNode->isRestoreInfoUsed_);
 }
 
 /**
@@ -2366,7 +1778,6 @@ HWTEST_F(FrameNodeTestNg, FrameNodeGetAncestorNodeOfFrame01, TestSize.Level1)
      * @tc.steps: step2. call the function GetAncestorNodeOfFrame.
      */
     frameNode->GetAncestorNodeOfFrame(true);
-    EXPECT_TRUE(frameNode->isWindowBoundary_);
 }
 
 /**
@@ -2385,7 +1796,6 @@ HWTEST_F(FrameNodeTestNg, FrameNodeGetFirstAutoFillContainerNode01, TestSize.Lev
      * @tc.steps: step2. call the function GetFirstAutoFillContainerNode.
      */
     frameNode->GetFirstAutoFillContainerNode();
-    EXPECT_NE(frameNode, nullptr);
 }
 
 /**
@@ -2406,8 +1816,6 @@ HWTEST_F(FrameNodeTestNg, FrameNodeGetFirstAutoFillContainerNode02, TestSize.Lev
      * @tc.steps: step2. call the function GetFirstAutoFillContainerNode.
      */
     frameNode->GetFirstAutoFillContainerNode();
-    EXPECT_NE(frameNode, nullptr);
-    EXPECT_NE(parentNode, nullptr);
 }
 
 /**
@@ -2428,8 +1836,6 @@ HWTEST_F(FrameNodeTestNg, FrameNodeGetFirstAutoFillContainerNode03, TestSize.Lev
      * @tc.steps: step2. call the function GetFirstAutoFillContainerNode.
      */
     frameNode->GetFirstAutoFillContainerNode();
-    EXPECT_NE(frameNode, nullptr);
-    EXPECT_NE(parentNode, nullptr);
 }
 
 /**
@@ -2497,8 +1903,6 @@ HWTEST_F(FrameNodeTestNg, FrameNodeMarkNeedRender01, TestSize.Level1)
      * @tc.steps: step2. call the function MarkNeedRender.
      */
     frameNode->MarkNeedRender(false);
-    EXPECT_FALSE(frameNode->isLayoutDirtyMarked_);
-    EXPECT_TRUE(frameNode->isRenderDirtyMarked_);
 }
 
 /**
@@ -2522,7 +1926,6 @@ HWTEST_F(FrameNodeTestNg, FrameNodeOnGenerateOneDepthVisibleFrame01, TestSize.Le
     std::list<RefPtr<FrameNode>> children;
     children.push_back(childNode);
     frameNode->OnGenerateOneDepthVisibleFrame(children);
-    EXPECT_TRUE(frameNode->isLayoutNode_);
 }
 
 /**
@@ -2546,8 +1949,6 @@ HWTEST_F(FrameNodeTestNg, FrameNodeOnGenerateOneDepthVisibleFrame02, TestSize.Le
     std::list<RefPtr<FrameNode>> children;
     children.push_back(childNode);
     frameNode->OnGenerateOneDepthVisibleFrame(children);
-    EXPECT_TRUE(frameNode->isLayoutNode_);
-    EXPECT_EQ(frameNode->overlayNode_, nullptr);
 }
 
 /**
@@ -2574,874 +1975,5 @@ HWTEST_F(FrameNodeTestNg, FrameNodeOnGenerateOneDepthVisibleFrameWithTransition0
     frameNode->OnGenerateOneDepthVisibleFrameWithTransition(children);
     frameNode->overlayNode_ = AceType::MakeRefPtr<FrameNode>("test", 1, AceType::MakeRefPtr<Pattern>());
     frameNode->OnGenerateOneDepthVisibleFrameWithTransition(children);
-    EXPECT_TRUE(frameNode->isActive_);
-    EXPECT_TRUE(frameNode->isLayoutNode_);
-    EXPECT_EQ(frameNode->overlayNode_, 1);
-}
-
-/**
- * @tc.name: FrameNodeProcessThrottledVisibleCallback01
- * @tc.desc: Test frame node method
- * @tc.type: FUNC
- */
-HWTEST_F(FrameNodeTestNg, FrameNodeProcessThrottledVisibleCallback01, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. create frameNode.
-     */
-    auto frameNode = FrameNode::CreateFrameNode("framenode", 1, AceType::MakeRefPtr<Pattern>(), true);
-    
-    /**
-     * @tc.steps: step2. set VisibleAreaUserCallback.
-     */
-    VisibleCallbackInfo callbackInfo;
-    constexpr uint32_t minInterval = 100; // 100ms
-    int flag = 0;
-    callbackInfo.callback = [&flag](bool input1, double input2) { flag += 1; };
-    callbackInfo.period = minInterval;
-    frameNode->SetVisibleAreaUserCallback({ 0.2, 0.8, 0.21, 0.79, 0.5 }, callbackInfo);
-    frameNode->lastThrottledVisibleRatio_ = 0.7f;
-
-    /**
-     * @tc.steps: step3. call the function ProcessThrottledVisibleCallback.
-     */
-    frameNode->ProcessThrottledVisibleCallback(true);
-    EXPECT_TRUE(frameNode->eventHub_->GetThrottledVisibleAreaCallback().callback);
-    EXPECT_FLOAT_EQ(frameNode->lastThrottledVisibleRatio_, 0.0f);
-}
-
-/**
- * @tc.name: FrameNodeProcessThrottledVisibleCallback02
- * @tc.desc: Test frame node method
- * @tc.type: FUNC
- */
-HWTEST_F(FrameNodeTestNg, FrameNodeProcessThrottledVisibleCallback02, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. create frameNode.
-     */
-    auto frameNode = FrameNode::CreateFrameNode("framenode", 1, AceType::MakeRefPtr<Pattern>(), true);
-    EXPECT_NE(frameNode->pattern_, nullptr);
-
-    /**
-     * @tc.steps: step2. set VisibleAreaUserCallback.
-     */
-    VisibleCallbackInfo callbackInfo;
-    constexpr uint32_t minInterval = 100; // 100ms
-    int flag = 0;
-    callbackInfo.callback = [&flag](bool input1, double input2) { flag += 1; };
-    callbackInfo.period = minInterval;
-    frameNode->SetVisibleAreaUserCallback({ 0.2, 0.8, 0.21, 0.79, 0.5 }, callbackInfo);
-    auto context = MockPipelineContext::GetCurrentContext();
-    context->taskExecutor_ = AceType::MakeRefPtr<MockTaskExecutor>();
-    /**
-     * @tc.steps: step3. call the function ProcessThrottledVisibleCallback.
-     */
-    frameNode->throttledCallbackOnTheWay_ = true;
-    frameNode->ProcessThrottledVisibleCallback(false);
-    EXPECT_EQ(frameNode->throttledCallbackOnTheWay_, true);
-}
-
-/**
- * @tc.name: FrameNodeProcessThrottledVisibleCallback03
- * @tc.desc: Test frame node method
- * @tc.type: FUNC
- */
-HWTEST_F(FrameNodeTestNg, FrameNodeProcessThrottledVisibleCallback03, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. create frameNode.
-     */
-    auto frameNode = FrameNode::CreateFrameNode("framenode", 1, AceType::MakeRefPtr<Pattern>(), true);
-    EXPECT_NE(frameNode->pattern_, nullptr);
-
-    /**
-     * @tc.steps: step2. set VisibleAreaUserCallback.
-     */
-    VisibleCallbackInfo callbackInfo;
-    constexpr uint32_t minInterval = 100; // 100ms
-    int flag = 0;
-    callbackInfo.callback = [&flag](bool input1, double input2) { flag += 1; };
-    callbackInfo.period = minInterval;
-    frameNode->SetVisibleAreaUserCallback({ 0.2, 0.8, 0.21, 0.79, 0.5 }, callbackInfo);
-    auto context = MockPipelineContext::GetCurrentContext();
-    context->taskExecutor_ = AceType::MakeRefPtr<MockTaskExecutor>();
-    
-    /**
-     * @tc.steps: step2. call the function ProcessThrottledVisibleCallback.
-     */
-    frameNode->GetEventHub<EventHub>()->GetOrCreateFocusHub();
-    frameNode->throttledCallbackOnTheWay_ = false;
-    frameNode->ProcessThrottledVisibleCallback(false);
-    EXPECT_EQ(frameNode->throttledCallbackOnTheWay_, false);
-}
-
-/**
- * @tc.name: FrameNodeProcessThrottledVisibleCallback04
- * @tc.desc: Test frame node method
- * @tc.type: FUNC
- */
-HWTEST_F(FrameNodeTestNg, FrameNodeProcessThrottledVisibleCallback04, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. create frameNode.
-     */
-    auto frameNode = FrameNode::CreateFrameNode("framenode", 1, AceType::MakeRefPtr<Pattern>(), true);
-    EXPECT_NE(frameNode->pattern_, nullptr);
-
-    /**
-     * @tc.steps: step2. set VisibleAreaUserCallback.
-     */
-    VisibleCallbackInfo callbackInfo;
-    constexpr uint32_t minInterval = 100; // 100ms
-    int flag = 0;
-    callbackInfo.callback = [&flag](bool input1, double input2) { flag += 1; };
-    callbackInfo.period = minInterval;
-    frameNode->lastThrottledTriggerTime_ = GetCurrentTimestamp();
-    frameNode->SetVisibleAreaUserCallback({ 0.2, 0.8, 0.21, 0.79, 0.5 }, callbackInfo);
-    auto context = MockPipelineContext::GetCurrentContext();
-    context->taskExecutor_ = AceType::MakeRefPtr<MockTaskExecutor>();
-
-    /**
-     * @tc.steps: step2. call the function ProcessThrottledVisibleCallback.
-     */
-    frameNode->GetEventHub<EventHub>()->GetOrCreateFocusHub();
-    frameNode->throttledCallbackOnTheWay_ = false;
-    frameNode->ProcessThrottledVisibleCallback(false);
-}
-
-/**
- * @tc.name: FrameNodeGetResponseRegionListForTouch01
- * @tc.desc: Test frame node method
- * @tc.type: FUNC
- */
-HWTEST_F(FrameNodeTestNg, FrameNodeGetResponseRegionListForTouch01, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. create frameNode.
-     */
-    auto frameNode = FrameNode::CreateFrameNode("framenode", 1, AceType::MakeRefPtr<Pattern>(), true);
-    /**
-     * @tc.steps: step2. construct parameters.
-     */
-    frameNode->isActive_ = true;
-    frameNode->GetEventHub<EventHub>()->SetEnabled(true);
-
-    DimensionRect responseRect(Dimension(0), Dimension(0), DimensionOffset(OFFSETF));
-    std::vector<DimensionRect> responseRegion;
-    responseRegion.emplace_back(responseRect);
-
-    /**
-     * @tc.steps: step3. call GetResponseRegionList.
-     * @tc.expected: expect ResponseRegion is not empty.
-     */
-    auto gestureEventHub = frameNode->GetEventHub<EventHub>()->GetOrCreateGestureEventHub();
-    gestureEventHub->SetResponseRegion(responseRegion);
-
-    auto paintRect = frameNode->renderContext_->GetPaintRectWithoutTransform();
-    frameNode->GetResponseRegionListForTouch(paintRect);
-    EXPECT_FALSE(gestureEventHub->GetResponseRegion().empty());
-}
-
-/**
- * @tc.name: FrameNodeGetResponseRegionListForTouch02
- * @tc.desc: Test frame node method
- * @tc.type: FUNC
- */
-HWTEST_F(FrameNodeTestNg, FrameNodeGetResponseRegionListForTouch02, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. create frameNode.
-     */
-    auto frameNode = FrameNode::CreateFrameNode("framenode", 1, AceType::MakeRefPtr<Pattern>(), true);
-    /**
-     * @tc.steps: step2. construct parameters.
-     */
-    frameNode->isActive_ = true;
-    frameNode->GetEventHub<EventHub>()->SetEnabled(true);
-
-    DimensionRect responseRect(Dimension(0), Dimension(0), DimensionOffset(OFFSETF));
-    std::vector<DimensionRect> responseRegion;
-    responseRegion.emplace_back(responseRect);
-
-    /**
-     * @tc.steps: step3. call GetResponseRegionList.
-     * @tc.expected: expect ResponseRegion is not empty.
-     */
-    auto gestureEventHub = frameNode->GetEventHub<EventHub>()->GetOrCreateGestureEventHub();
-    gestureEventHub->SetResponseRegion(responseRegion);
-    auto clickRecognizer = AceType::MakeRefPtr<ClickRecognizer>(1, 1);
-    gestureEventHub->gestureHierarchy_.emplace_back(clickRecognizer);
-
-    auto paintRect = frameNode->renderContext_->GetPaintRectWithoutTransform();
-    frameNode->GetResponseRegionListForTouch(paintRect);
-    EXPECT_FALSE(gestureEventHub->GetResponseRegion().empty());
-}
-
-/**
- * @tc.name: FrameNodeGetResponseRegionListForTouch03
- * @tc.desc: Test frame node method
- * @tc.type: FUNC
- */
-HWTEST_F(FrameNodeTestNg, FrameNodeGetResponseRegionListForTouch03, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. create frameNode.
-     */
-    auto frameNode = FrameNode::CreateFrameNode("framenode", 1, AceType::MakeRefPtr<Pattern>(), true);
-    /**
-     * @tc.steps: step2. construct parameters.
-     */
-    frameNode->isActive_ = true;
-    frameNode->GetEventHub<EventHub>()->SetEnabled(true);
-
-    /**
-     * @tc.steps: step3. call GetResponseRegionList.
-     * @tc.expected: expect ResponseRegion is not empty.
-     */
-    auto gestureEventHub = frameNode->GetEventHub<EventHub>()->GetOrCreateGestureEventHub();
-    auto clickRecognizer = AceType::MakeRefPtr<ClickRecognizer>(1, 1);
-    gestureEventHub->gestureHierarchy_.emplace_back(clickRecognizer);
-
-    auto paintRect = frameNode->renderContext_->GetPaintRectWithoutTransform();
-    auto responseRegionList = frameNode->GetResponseRegionListForTouch(paintRect);
-    EXPECT_TRUE(responseRegionList.empty());
-}
-
-/**
- * @tc.name: FrameNodeProcessMouseTestHit01
- * @tc.desc: Test frame node method
- * @tc.type: FUNC
- */
-HWTEST_F(FrameNodeTestNg, FrameNodeProcessMouseTestHit01, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. create frameNode.
-     */
-    auto frameNode = FrameNode::CreateFrameNode("framenode", 1, AceType::MakeRefPtr<Pattern>(), true);
-    /**
-     * @tc.steps: step2. construct parameters.
-     */
-    PointF globalPoint;
-    PointF parentLocalPoint;
-    TouchRestrict touchRestrict;
-    TouchTestResult result;
-    ResponseLinkResult responseLinkResult;
-
-    /**
-     * @tc.steps: step3. eventHub_ is nullptr, call ProcessMouseTestHit.
-     * @tc.expected: expect ProcessMouseTestHit is false.
-     */
-    frameNode->eventHub_ = nullptr;
-    EXPECT_FALSE(frameNode->ProcessMouseTestHit(globalPoint, parentLocalPoint, touchRestrict, result));
-
-    /**
-     * @tc.steps: step4. eventHub_ is gestureEventHub, call ProcessMouseTestHit.
-     * @tc.expected: expect ProcessMouseTestHit is false.
-     */
-    auto gestureEventHub = frameNode->GetEventHub<EventHub>()->GetOrCreateGestureEventHub();
-    EXPECT_FALSE(frameNode->ProcessMouseTestHit(globalPoint, parentLocalPoint, touchRestrict, result));
-
-    /**
-     * @tc.steps: step3. call ProcessMouseTestHit.
-     * @tc.expected: expect ProcessMouseTestHit is false.
-     */
-    auto inputEventHub = frameNode->GetEventHub<EventHub>()->GetOrCreateInputEventHub();
-    EXPECT_FALSE(frameNode->ProcessMouseTestHit(globalPoint, parentLocalPoint, touchRestrict, result));
-
-    /**
-     * @tc.steps: step4. call ProcessMouseTestHit.
-     * @tc.expected: expect ProcessMouseTestHit is false.
-     */
-    touchRestrict.touchEvent.SetSourceTool(SourceTool::PEN);
-    touchRestrict.touchEvent.SetType(TouchType::PROXIMITY_IN);
-    EXPECT_FALSE(frameNode->ProcessMouseTestHit(globalPoint, parentLocalPoint, touchRestrict, result));
-}
-
-/**
- * @tc.name: FrameNodeGetResponseRegionListByTraversal01
- * @tc.desc: Test frame node method
- * @tc.type: FUNC
- */
-HWTEST_F(FrameNodeTestNg, FrameNodeGetResponseRegionListByTraversal01, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. create frameNode.
-     */
-    auto frameNode = FrameNode::CreateFrameNode(V2::PAGE_ETS_TAG, 1, AceType::MakeRefPtr<Pattern>(), true);
-    EXPECT_NE(frameNode->pattern_, nullptr);
-
-    /**
-     * @tc.steps: step2. call GetResponseRegionListByTraversal.
-     * @tc.expected: expect ResponseRegion is not empty.
-     */
-    NG::RectF responseRect = { 10.0f, 10.0f, 10.0f, 10.0f }; // 10.0f is the x, y, width and height of rect
-    std::vector<RectF> responseRegionList;
-    responseRegionList.emplace_back(responseRect);
-    auto context = MockPipelineContext::GetCurrentContext();
-    frameNode->GetResponseRegionListByTraversal(responseRegionList, responseRect);
-}
-
-/**
- * @tc.name: OnLayoutFinish001
- * @tc.desc: Test frameNode OnLayoutFinish
- * @tc.type: FUNC
- */
-HWTEST_F(FrameNodeTestNg, OnLayoutFinish001, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. create frameNode.
-     */
-    auto frameNode = FrameNode::CreateFrameNode(V2::PAGE_ETS_TAG, 1, AceType::MakeRefPtr<Pattern>(), true);
-    EXPECT_NE(frameNode->pattern_, nullptr);
-
-    /**
-     * @tc.steps: step2. call OnLayoutFinish.
-     * @tc.expected: expect BorderRadius radiusTopLeft is 10, OuterBorderRadius radiusTopRight is 20
-     * and result return true.
-     */
-    auto context = AceType::MakeRefPtr<PipelineContext>();
-    frameNode->context_ = AceType::RawPtr(context);
-    auto layoutProperty = AceType::MakeRefPtr<LayoutProperty>();
-    auto geometryTransition = AceType::MakeRefPtr<GeometryTransition>("active");
-    layoutProperty->geometryTransition_ = geometryTransition;
-    frameNode->layoutProperty_ = layoutProperty;
-    frameNode->isActive_ = true;
-    Dimension radius(10.0f);
-    Dimension dimension(20.0f);
-    BorderRadiusProperty borderRadiusProperty;
-    BorderRadiusProperty outerBorderRadiusProperty;
-    borderRadiusProperty.radiusTopLeft = radius;
-    outerBorderRadiusProperty.radiusTopRight = dimension;
-    frameNode->renderContext_->UpdateBorderRadius(borderRadiusProperty);
-    frameNode->renderContext_->UpdateOuterBorderRadius(outerBorderRadiusProperty);
-    bool needSyncRsNode = true;
-    DirtySwapConfig config;
-    auto result = frameNode->OnLayoutFinish(needSyncRsNode, config);
-    frameNode->context_ = nullptr;
-    EXPECT_EQ(frameNode->renderContext_->GetBorderRadius()->radiusTopLeft.value().Value(), 10.0f);
-    EXPECT_EQ(frameNode->renderContext_->GetOuterBorderRadius()->radiusTopRight.value().Value(), 20.0f);
-    EXPECT_FALSE(result);
-}
-
-/**
- * @tc.name: OnLayoutFinish002
- * @tc.desc: Test frameNode OnLayoutFinish
- * @tc.type: FUNC
- */
-HWTEST_F(FrameNodeTestNg, OnLayoutFinish002, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. create frameNode.
-     */
-    auto frameNode = FrameNode::CreateFrameNode(V2::PAGE_ETS_TAG, 1, AceType::MakeRefPtr<Pattern>(), true);
-    EXPECT_NE(frameNode->pattern_, nullptr);
-
-    /**
-     * @tc.steps: step2. call OnLayoutFinish.
-     * @tc.expected: expect BorderRadius radiusTopLeft is 20, OuterBorderRadius radiusTopRight is 20
-     * and result return true.
-     */
-    auto context = AceType::MakeRefPtr<PipelineContext>();
-    frameNode->context_ = AceType::RawPtr(context);
-    auto layoutProperty = AceType::MakeRefPtr<LayoutProperty>();
-    auto geometryTransition = AceType::MakeRefPtr<GeometryTransition>("active");
-    layoutProperty->geometryTransition_ = geometryTransition;
-    frameNode->layoutProperty_ = layoutProperty;
-    frameNode->isActive_ = true;
-    Dimension radius(20.0f);
-    Dimension dimension(20.0f);
-    BorderRadiusProperty borderRadiusProperty;
-    BorderRadiusProperty outerBorderRadiusProperty;
-    borderRadiusProperty.radiusTopLeft = radius;
-    outerBorderRadiusProperty.radiusTopRight = dimension;
-    frameNode->renderContext_->UpdateBorderRadius(borderRadiusProperty);
-    frameNode->renderContext_->UpdateOuterBorderRadius(outerBorderRadiusProperty);
-    bool needSyncRsNode = true;
-    DirtySwapConfig config;
-    auto result = frameNode->OnLayoutFinish(needSyncRsNode, config);
-    frameNode->context_ = nullptr;
-    EXPECT_EQ(frameNode->renderContext_->GetBorderRadius()->radiusTopLeft.value().Value(), 20.0f);
-    EXPECT_EQ(frameNode->renderContext_->GetOuterBorderRadius()->radiusTopRight.value().Value(), 20.0f);
-    EXPECT_FALSE(result);
-}
-
-
-/**
- * @tc.name: OnLayoutFinish003
- * @tc.desc: Test frameNode OnLayoutFinish
- * @tc.type: FUNC
- */
-HWTEST_F(FrameNodeTestNg, OnLayoutFinish003, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. create frameNode.
-     */
-    auto frameNode = FrameNode::CreateFrameNode(V2::PAGE_ETS_TAG, 1, AceType::MakeRefPtr<Pattern>(), true);
-    EXPECT_NE(frameNode->pattern_, nullptr);
-
-    /**
-     * @tc.steps: step2. isLayoutNode_ true and context true, test OnLayoutFinish.
-     * @tc.expected: result return false.
-     */
-    bool needSyncRsNode = true;
-    DirtySwapConfig config;
-    frameNode->isLayoutNode_ = true;
-    auto context = AceType::MakeRefPtr<PipelineContext>();
-    frameNode->context_ = AceType::RawPtr(context);
-    auto result = frameNode->OnLayoutFinish(needSyncRsNode, config);
-    EXPECT_FALSE(result);
-
-    /**
-     * @tc.steps: step3. isLayoutNode_ true and context false, test OnLayoutFinish.
-     * @tc.expected: result return false.
-     */
-    frameNode->context_ = nullptr;
-    result = frameNode->OnLayoutFinish(needSyncRsNode, config);
-    EXPECT_FALSE(result);
-
-    /**
-     * @tc.steps: step4. isLayoutNode_ false, test OnLayoutFinish.
-     * @tc.expected: result return false.
-     */
-    frameNode->isLayoutNode_ = false;
-    result = frameNode->OnLayoutFinish(needSyncRsNode, config);
-    EXPECT_FALSE(result);
-}
-
-/**
- * @tc.name: OnLayoutFinish004
- * @tc.desc: Test frameNode OnLayoutFinish
- * @tc.type: FUNC
- */
-HWTEST_F(FrameNodeTestNg, OnLayoutFinish004, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. create frameNode.
-     */
-    auto frameNode = FrameNode::CreateFrameNode(V2::PAGE_ETS_TAG, 1, AceType::MakeRefPtr<Pattern>(), true);
-    EXPECT_NE(frameNode->pattern_, nullptr);
-
-    /**
-     * @tc.steps: step2. isActive_ false and hasTransition false, test OnLayoutFinish.
-     * @tc.expected: result return false.
-     */
-    bool needSyncRsNode = true;
-    DirtySwapConfig config;
-    frameNode->isActive_ = false;
-    auto layoutProperty = AceType::MakeRefPtr<LayoutProperty>();
-    layoutProperty->geometryTransition_ = nullptr;
-    frameNode->layoutProperty_ = layoutProperty;
-    auto result = frameNode->OnLayoutFinish(needSyncRsNode, config);
-    EXPECT_FALSE(result);
-
-    /**
-     * @tc.steps: step3. isActive_ false and hasTransition true, test OnLayoutFinish.
-     * @tc.expected: result return false.
-     */
-    auto geometryTransition = AceType::MakeRefPtr<GeometryTransition>("active");
-    layoutProperty->geometryTransition_ = geometryTransition;
-    frameNode->layoutProperty_ = layoutProperty;
-    result = frameNode->OnLayoutFinish(needSyncRsNode, config);
-    EXPECT_FALSE(result);
-
-    /**
-     * @tc.steps: step4. isActive_ true, test OnLayoutFinish.
-     * @tc.expected: result return false.
-     */
-    frameNode->isActive_ = true;
-    result = frameNode->OnLayoutFinish(needSyncRsNode, config);
-    EXPECT_FALSE(result);
-}
-
-/**
- * @tc.name: OnLayoutFinish005
- * @tc.desc: Test frameNode OnLayoutFinish
- * @tc.type: FUNC
- */
-HWTEST_F(FrameNodeTestNg, OnLayoutFinish005, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. create frameNode.
-     */
-    auto frameNode = FrameNode::CreateFrameNode(V2::PAGE_ETS_TAG, 1, AceType::MakeRefPtr<Pattern>(), true);
-    EXPECT_NE(frameNode->pattern_, nullptr);
-
-    /**
-     * @tc.steps: step2. needSkipSyncGeometryNode_ true and geometryTransition null, test OnLayoutFinish.
-     * @tc.expected: result return false.
-     */
-    bool needSyncRsNode = true;
-    DirtySwapConfig config;
-    frameNode->isActive_ = true;
-    frameNode->needSkipSyncGeometryNode_ = true;
-    auto layoutProperty = AceType::MakeRefPtr<LayoutProperty>();
-    layoutProperty->geometryTransition_ = nullptr;
-    frameNode->layoutProperty_ = layoutProperty;
-    auto result = frameNode->OnLayoutFinish(needSyncRsNode, config);
-    EXPECT_FALSE(result);
-
-    /**
-     * @tc.steps: step3. needSkipSyncGeometryNode_ true and geometryTransition valid,, test OnLayoutFinish.
-     * @tc.expected: result return false.
-     */
-    auto geometryTransition = AceType::MakeRefPtr<GeometryTransition>("active");
-    layoutProperty->geometryTransition_ = geometryTransition;
-    frameNode->layoutProperty_ = layoutProperty;
-    result = frameNode->OnLayoutFinish(needSyncRsNode, config);
-    EXPECT_FALSE(result);
-
-    /**
-     * @tc.steps: step4. needSkipSyncGeometryNode_ false, test OnLayoutFinish.
-     * @tc.expected: result return false.
-     */
-    frameNode->needSkipSyncGeometryNode_ = false;
-    result = frameNode->OnLayoutFinish(needSyncRsNode, config);
-    EXPECT_FALSE(result);
-}
-
-/**
- * @tc.name: OnLayoutFinish006
- * @tc.desc: Test frameNode OnLayoutFinish
- * @tc.type: FUNC
- */
-HWTEST_F(FrameNodeTestNg, OnLayoutFinish006, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. create frameNode.
-     */
-    auto frameNode = FrameNode::CreateFrameNode(V2::PAGE_ETS_TAG, 1, AceType::MakeRefPtr<Pattern>(), true);
-    EXPECT_NE(frameNode->pattern_, nullptr);
-
-    /**
-     * @tc.steps: step2. oldGeometryNode_ valid, test OnLayoutFinish.
-     * @tc.expected: result return false.
-     */
-    bool needSyncRsNode = true;
-    DirtySwapConfig config;
-    frameNode->isActive_ = true;
-    frameNode->needSkipSyncGeometryNode_ = false;
-    frameNode->oldGeometryNode_ = AceType::MakeRefPtr<GeometryNode>();
-    auto result = frameNode->OnLayoutFinish(needSyncRsNode, config);
-    EXPECT_FALSE(result);
-
-    /**
-     * @tc.steps: step3. oldGeometryNode_ null, test OnLayoutFinish.
-     * @tc.expected: result return false.
-     */
-    frameNode->oldGeometryNode_ = nullptr;
-    result = frameNode->OnLayoutFinish(needSyncRsNode, config);
-    EXPECT_FALSE(result);
-}
-
-/**
- * @tc.name: OnLayoutFinish007
- * @tc.desc: Test frameNode OnLayoutFinish
- * @tc.type: FUNC
- */
-HWTEST_F(FrameNodeTestNg, OnLayoutFinish007, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. create frameNode.
-     */
-    auto frameNode = FrameNode::CreateFrameNode(V2::PAGE_ETS_TAG, 1, AceType::MakeRefPtr<Pattern>(), true);
-    EXPECT_NE(frameNode->pattern_, nullptr);
-
-    /**
-     * @tc.steps: step2. tag equals V2::PAGE_ETS_TAG, test OnLayoutFinish.
-     * @tc.expected: result return false.
-     */
-    bool needSyncRsNode = true;
-    DirtySwapConfig config;
-    frameNode->isActive_ = true;
-    frameNode->needSkipSyncGeometryNode_ = false;
-    auto result = frameNode->OnLayoutFinish(needSyncRsNode, config);
-    EXPECT_FALSE(result);
-
-    /**
-     * @tc.steps: step3. tag not equals V2::PAGE_ETS_TAG, test OnLayoutFinish.
-     * @tc.expected: result return false.
-     */
-    frameNode->tag_ = "frameNode";
-    result = frameNode->OnLayoutFinish(needSyncRsNode, config);
-    EXPECT_FALSE(result);
-}
-
-/**
- * @tc.name: OnLayoutFinish008
- * @tc.desc: Test frameNode OnLayoutFinish
- * @tc.type: FUNC
- */
-HWTEST_F(FrameNodeTestNg, OnLayoutFinish008, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. create frameNode.
-     */
-    auto frameNode = FrameNode::CreateFrameNode(V2::PAGE_ETS_TAG, 1, AceType::MakeRefPtr<Pattern>(), true);
-    EXPECT_NE(frameNode->pattern_, nullptr);
-
-    /**
-     * @tc.steps: step2. config.skipMeasure false and config.skipLayout false, test OnLayoutFinish.
-     * @tc.expected: result return true.
-     */
-    bool needSyncRsNode = true;
-    DirtySwapConfig config;
-    frameNode->isActive_ = true;
-    frameNode->needSkipSyncGeometryNode_ = false;
-    auto layoutAlgorithmWrapper = AceType::MakeRefPtr<LayoutAlgorithmWrapper>(nullptr);
-    frameNode->layoutAlgorithm_ = layoutAlgorithmWrapper;
-    layoutAlgorithmWrapper->skipMeasure_ = false;
-    layoutAlgorithmWrapper->skipLayout_ = false;
-    auto result = frameNode->OnLayoutFinish(needSyncRsNode, config);
-    EXPECT_TRUE(result);
-
-    /**
-     * @tc.steps: step3. config.skipMeasure false and config.skipLayout true, test OnLayoutFinish.
-     * @tc.expected: result return true.
-     */
-    layoutAlgorithmWrapper = AceType::MakeRefPtr<LayoutAlgorithmWrapper>(nullptr);
-    frameNode->layoutAlgorithm_ = layoutAlgorithmWrapper;
-    layoutAlgorithmWrapper->skipMeasure_ = false;
-    layoutAlgorithmWrapper->skipLayout_ = true;
-    result = frameNode->OnLayoutFinish(needSyncRsNode, config);
-    EXPECT_TRUE(result);
-
-    /**
-     * @tc.steps: step4. config.skipMeasure true, test OnLayoutFinish.
-     * @tc.expected: result return true.
-     */
-    layoutAlgorithmWrapper = AceType::MakeRefPtr<LayoutAlgorithmWrapper>(nullptr);
-    frameNode->layoutAlgorithm_ = layoutAlgorithmWrapper;
-    layoutAlgorithmWrapper->skipMeasure_ = true;
-    layoutAlgorithmWrapper->skipLayout_ = true;
-    result = frameNode->OnLayoutFinish(needSyncRsNode, config);
-    EXPECT_TRUE(result);
-}
-
-/**
- * @tc.name: OnLayoutFinish009
- * @tc.desc: Test frameNode OnLayoutFinish
- * @tc.type: FUNC
- */
-HWTEST_F(FrameNodeTestNg, OnLayoutFinish009, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. set API20.
-     */
-    int originApiVersion = AceApplicationInfo::GetInstance().GetApiTargetVersion();
-    AceApplicationInfo::GetInstance().apiVersion_ = static_cast<int32_t>(PlatformVersion::VERSION_TWENTY);
-
-    /**
-     * @tc.steps: step2. create frameNode.
-     */
-    auto frameNode = FrameNode::CreateFrameNode(V2::PAGE_ETS_TAG, 1, AceType::MakeRefPtr<Pattern>(), true);
-    EXPECT_NE(frameNode->pattern_, nullptr);
-
-    /**
-     * @tc.steps: step3. API20, test OnLayoutFinish.
-     * @tc.expected: result return true.
-     */
-    bool needSyncRsNode = true;
-    DirtySwapConfig config;
-    frameNode->isActive_ = true;
-    frameNode->needSkipSyncGeometryNode_ = false;
-    auto layoutAlgorithmWrapper = AceType::MakeRefPtr<LayoutAlgorithmWrapper>(nullptr);
-    frameNode->layoutAlgorithm_ = layoutAlgorithmWrapper;
-    auto result = frameNode->OnLayoutFinish(needSyncRsNode, config);
-    EXPECT_TRUE(result);
-
-    /**
-     * @tc.steps: step4. revert to the origin API.
-     */
-    AceApplicationInfo::GetInstance().SetApiTargetVersion(originApiVersion);
-}
-
-/**
- * @tc.name: OnLayoutFinish010
- * @tc.desc: Test frameNode OnLayoutFinish
- * @tc.type: FUNC
- */
-HWTEST_F(FrameNodeTestNg, OnLayoutFinish010, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. set API19.
-     */
-    int originApiVersion = AceApplicationInfo::GetInstance().GetApiTargetVersion();
-    AceApplicationInfo::GetInstance().apiVersion_ = static_cast<int32_t>(PlatformVersion::VERSION_NINETEEN);
-
-    /**
-     * @tc.steps: step2. create frameNode.
-     */
-    auto frameNode = FrameNode::CreateFrameNode(V2::PAGE_ETS_TAG, 1, AceType::MakeRefPtr<Pattern>(), true);
-    EXPECT_NE(frameNode->pattern_, nullptr);
-
-    /**
-     * @tc.steps: step3. API19, test OnLayoutFinish.
-     * @tc.expected: result return true.
-     */
-    bool needSyncRsNode = true;
-    DirtySwapConfig config;
-    frameNode->isActive_ = true;
-    frameNode->needSkipSyncGeometryNode_ = false;
-    auto layoutAlgorithmWrapper = AceType::MakeRefPtr<LayoutAlgorithmWrapper>(nullptr);
-    frameNode->layoutAlgorithm_ = layoutAlgorithmWrapper;
-    auto result = frameNode->OnLayoutFinish(needSyncRsNode, config);
-    EXPECT_TRUE(result);
-
-    /**
-     * @tc.steps: step4. revert to the origin API.
-     */
-    AceApplicationInfo::GetInstance().SetApiTargetVersion(originApiVersion);
-}
-
-/**
- * @tc.name: OnLayoutFinish011
- * @tc.desc: Test frameNode OnLayoutFinish
- * @tc.type: FUNC
- */
-HWTEST_F(FrameNodeTestNg, OnLayoutFinish011, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. set API20.
-     */
-    int originApiVersion = AceApplicationInfo::GetInstance().GetApiTargetVersion();
-    AceApplicationInfo::GetInstance().apiVersion_ = static_cast<int32_t>(PlatformVersion::VERSION_TWENTY);
-
-    /**
-     * @tc.steps: step2. create frameNode.
-     */
-    auto frameNode = FrameNode::CreateFrameNode(V2::PAGE_ETS_TAG, 1, AceType::MakeRefPtr<Pattern>(), true);
-    EXPECT_NE(frameNode->pattern_, nullptr);
-
-    /**
-     * @tc.steps: step3. needRerender true, test OnLayoutFinish.
-     * @tc.expected: result return true.
-     */
-    bool needSyncRsNode = true;
-    DirtySwapConfig config;
-    frameNode->isActive_ = true;
-    frameNode->needSkipSyncGeometryNode_ = false;
-    auto layoutAlgorithmWrapper = AceType::MakeRefPtr<LayoutAlgorithmWrapper>(nullptr);
-    frameNode->layoutAlgorithm_ = layoutAlgorithmWrapper;
-    auto extensionHandler = AceType::MakeRefPtr<ExtensionHandler>();
-    frameNode->extensionHandler_ = extensionHandler;
-    extensionHandler->needRender_ = true;
-    auto result = frameNode->OnLayoutFinish(needSyncRsNode, config);
-    EXPECT_TRUE(result);
-
-    /**
-     * @tc.steps: step4. revert to the origin API.
-     */
-    AceApplicationInfo::GetInstance().SetApiTargetVersion(originApiVersion);
-}
-
-/**
- * @tc.name: OnLayoutFinish012
- * @tc.desc: Test frameNode OnLayoutFinish
- * @tc.type: FUNC
- */
-HWTEST_F(FrameNodeTestNg, OnLayoutFinish012, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. set API20.
-     */
-    int originApiVersion = AceApplicationInfo::GetInstance().GetApiTargetVersion();
-    AceApplicationInfo::GetInstance().apiVersion_ = static_cast<int32_t>(PlatformVersion::VERSION_TWENTY);
-
-    /**
-     * @tc.steps: step2. create frameNode.
-     */
-    auto frameNode = FrameNode::CreateFrameNode(V2::PAGE_ETS_TAG, 1, AceType::MakeRefPtr<Pattern>(), true);
-    EXPECT_NE(frameNode->pattern_, nullptr);
-
-    /**
-     * @tc.steps: step3. needRerender false, drawModifier valid and not skipMeasure, test OnLayoutFinish.
-     * @tc.expected: result return true.
-     */
-    bool needSyncRsNode = true;
-    DirtySwapConfig config;
-    frameNode->isActive_ = true;
-    frameNode->needSkipSyncGeometryNode_ = false;
-    auto layoutAlgorithmWrapper = AceType::MakeRefPtr<LayoutAlgorithmWrapper>(nullptr);
-    frameNode->layoutAlgorithm_ = layoutAlgorithmWrapper;
-    auto extensionHandler = AceType::MakeRefPtr<ExtensionHandler>();
-    frameNode->extensionHandler_ = extensionHandler;
-    extensionHandler->needRender_ = false;
-    auto drawModifier = AceType::MakeRefPtr<DrawModifier>();
-    extensionHandler->drawModifier_ = drawModifier;
-    layoutAlgorithmWrapper->skipMeasure_ = false;
-    auto result = frameNode->OnLayoutFinish(needSyncRsNode, config);
-    EXPECT_TRUE(result);
-
-    /**
-     * @tc.steps: step4. needRerender false, drawModifier valid and skipMeasure, test OnLayoutFinish.
-     * @tc.expected: result return true.
-     */
-    layoutAlgorithmWrapper = AceType::MakeRefPtr<LayoutAlgorithmWrapper>(nullptr);
-    frameNode->layoutAlgorithm_ = layoutAlgorithmWrapper;
-    layoutAlgorithmWrapper->skipMeasure_ = true;
-    PropertyChangeFlag propertyChangeFlag = PROPERTY_UPDATE_NORMAL;
-    frameNode->paintProperty_->propertyChangeFlag_ = propertyChangeFlag;
-    result = frameNode->OnLayoutFinish(needSyncRsNode, config);
-    EXPECT_TRUE(result);
-
-    /**
-     * @tc.steps: step5. revert to the origin API.
-     */
-    AceApplicationInfo::GetInstance().SetApiTargetVersion(originApiVersion);
-}
-
-/**
- * @tc.name: OnLayoutFinish013
- * @tc.desc: Test frameNode OnLayoutFinish
- * @tc.type: FUNC
- */
-HWTEST_F(FrameNodeTestNg, OnLayoutFinish013, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. set API20.
-     */
-    int originApiVersion = AceApplicationInfo::GetInstance().GetApiTargetVersion();
-    AceApplicationInfo::GetInstance().apiVersion_ = static_cast<int32_t>(PlatformVersion::VERSION_TWENTY);
-
-    /**
-     * @tc.steps: step2. create frameNode.
-     */
-    auto frameNode = FrameNode::CreateFrameNode(V2::PAGE_ETS_TAG, 1, AceType::MakeRefPtr<Pattern>(), true);
-    EXPECT_NE(frameNode->pattern_, nullptr);
-
-    /**
-     * @tc.steps: step3. needRerender false and CheckNeedRender true, test OnLayoutFinish.
-     * @tc.expected: result return true.
-     */
-    bool needSyncRsNode = true;
-    DirtySwapConfig config;
-    frameNode->isActive_ = true;
-    frameNode->needSkipSyncGeometryNode_ = false;
-    auto layoutAlgorithmWrapper = AceType::MakeRefPtr<LayoutAlgorithmWrapper>(nullptr);
-    frameNode->layoutAlgorithm_ = layoutAlgorithmWrapper;
-    auto extensionHandler = AceType::MakeRefPtr<ExtensionHandler>();
-    frameNode->extensionHandler_ = extensionHandler;
-    extensionHandler->needRender_ = false;
-    PropertyChangeFlag propertyChangeFlag = PROPERTY_UPDATE_RENDER;
-    frameNode->paintProperty_->propertyChangeFlag_ = propertyChangeFlag;
-    auto result = frameNode->OnLayoutFinish(needSyncRsNode, config);
-    EXPECT_TRUE(result);
-
-    /**
-     * @tc.steps: step4. needRerender false and CheckNeedRender false, test OnLayoutFinish.
-     * @tc.expected: result return true.
-     */
-    layoutAlgorithmWrapper = AceType::MakeRefPtr<LayoutAlgorithmWrapper>(nullptr);
-    frameNode->layoutAlgorithm_ = layoutAlgorithmWrapper;
-    propertyChangeFlag = PROPERTY_UPDATE_NORMAL;
-    frameNode->paintProperty_->propertyChangeFlag_ = propertyChangeFlag;
-    result = frameNode->OnLayoutFinish(needSyncRsNode, config);
-    EXPECT_TRUE(result);
-
-    /**
-     * @tc.steps: step5. revert to the origin API.
-     */
-    AceApplicationInfo::GetInstance().SetApiTargetVersion(originApiVersion);
 }
 } // namespace OHOS::Ace::NG

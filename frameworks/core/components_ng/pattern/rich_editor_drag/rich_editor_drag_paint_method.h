@@ -24,11 +24,11 @@
 
 namespace OHOS::Ace::NG {
 class ACE_EXPORT RichEditorDragPaintMethod : public TextDragPaintMethod {
-    DECLARE_ACE_TYPE(RichEditorDragPaintMethod, TextDragPaintMethod);
+    DECLARE_ACE_TYPE(RichEditorDragPaintMethod, TextDragPaintMethod)
 public:
     RichEditorDragPaintMethod(const WeakPtr<Pattern>& pattern,
         const RefPtr<TextDragOverlayModifier>& overlayMod, const RefPtr<RichEditorDragContentModifier>& contentMod,
-        const TextDragInfo& info);
+        const RichEditorDragInfo& info);
 
     ~RichEditorDragPaintMethod() override = default;
 
@@ -37,7 +37,7 @@ public:
 
 private:
     RefPtr<RichEditorDragContentModifier> contentModifier_;
-    TextDragInfo info_;
+    RichEditorDragInfo info_;
     ACE_DISALLOW_COPY_AND_MOVE(RichEditorDragPaintMethod);
 };
 } // namespace OHOS::Ace::NG

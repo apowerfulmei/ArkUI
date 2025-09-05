@@ -47,11 +47,7 @@ void FfiOHOSAceFrameworkImageSetFitOriginalSize(bool isFitOriginalSize) {}
 
 void FfiOHOSAceFrameworkImageOnError(void (*callback)(CJImageError errorInfo)) {}
 
-void FfiOHOSAceFrameworkImageOnErrorV2(void (*callback)(CJImageErrorV2 errorInfo)) {}
-
 void FfiOHOSAceFrameworkImageOnFinish(void (*callback)()) {}
 
 void FfiOHOSAceFrameworkImageOnComplete(void (*callback)(CJImageComplete completeInfo)) {}
-
-void FfiOHOSAceFrameworkImageOnCompleteV2(void (*callback)(CJImageCompleteV2 completeInfo)) {}
 }

@@ -53,8 +53,6 @@ public:
 
     void CleanRecognizerState() override;
     void ForceCleanRecognizer() override;
-    void CheckAndSetRecognizerCleanFlag(const RefPtr<NGGestureRecognizer>& recognizer) override;
-    void CleanRecognizerStateVoluntarily() override;
 
 private:
     bool CheckNeedBlocked(const RefPtr<NGGestureRecognizer>& recognizer);

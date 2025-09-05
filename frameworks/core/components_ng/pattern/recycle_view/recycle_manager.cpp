@@ -15,6 +15,16 @@
 
 #include "core/components_ng/pattern/recycle_view/recycle_manager.h"
 
+#include <cstdint>
+#include <memory>
+#include <optional>
+#include <unistd.h>
+#include <utility>
+
+#include "base/memory/ace_type.h"
+#include "base/utils/utils.h"
+#include "core/components_ng/base/ui_node.h"
+#include "core/components_ng/pattern/custom/custom_node_base.h"
 #include "core/pipeline_ng/pipeline_context.h"
 
 namespace OHOS::Ace::NG {
@@ -24,13 +34,6 @@ void RecycleManager::Push(int32_t elmtId, WeakPtr<CustomNodeBase> &&node)
     auto context = PipelineContext::GetCurrentContext();
     CHECK_NULL_VOID(context);
     context->GetRecycleManager()->PushNode(elmtId, std::move(node));
-}
-
-void RecycleManager::ClearAll()
-{
-    auto context = PipelineContext::GetCurrentContext();
-    CHECK_NULL_VOID(context);
-    context->GetRecycleManager()->ClearAllNodes();
 }
 
 void RecycleManager::Pop(int32_t elmtId)
@@ -57,11 +60,6 @@ void RecycleManager::Notify(const ConfigurationChange &config)
 void RecycleManager::PushNode(int32_t elmtId, WeakPtr<CustomNodeBase>&& node)
 {
     recyclePool_.try_emplace(elmtId, std::make_unique<RecycleNodeState>(std::move(node)));
-}
-
-void RecycleManager::ClearAllNodes()
-{
-    recyclePool_.clear();
 }
 
 void RecycleManager::PopNode(int32_t elmtId)

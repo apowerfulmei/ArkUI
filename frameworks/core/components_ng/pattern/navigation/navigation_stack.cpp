@@ -15,7 +15,11 @@
 
 #include "core/components_ng/pattern/navigation/navigation_stack.h"
 
+#include <utility>
+
+#include "core/components_ng/pattern/navrouter/navdestination_group_node.h"
 #include "core/components_ng/pattern/navrouter/navrouter_group_node.h"
+#include "frameworks/bridge/declarative_frontend/view_stack_processor.h"
 
 namespace OHOS::Ace::NG {
 namespace {
@@ -319,9 +323,9 @@ void NavigationStack::Clear()
     cacheNodes_.clear();
 }
 
-bool NavigationStack::CreateNodeByIndex(int32_t index, const WeakPtr<UINode>& customNode, RefPtr<UINode>& node)
+RefPtr<UINode> NavigationStack::CreateNodeByIndex(int32_t index, const WeakPtr<UINode>& node)
 {
-    return false;
+    return nullptr;
 }
 
 RefPtr<UINode> NavigationStack::CreateNodeByRouteInfo(const RefPtr<RouteInfo>& routeInfo, const WeakPtr<UINode>& node)
@@ -439,7 +443,7 @@ RefPtr<UINode> NavigationStack::GetFromCacheNode(const std::string& name)
 std::optional<std::pair<std::string, RefPtr<UINode>>> NavigationStack::GetFromCacheNode(int32_t handle)
 {
     for (auto it = cacheNodes_.begin(); it != cacheNodes_.end(); ++it) {
-        if ((*it).second && (*it).second->GetId() == handle) {
+        if ((*it).second || (*it).second->GetId() == handle) {
             return std::make_pair((*it).first, (*it).second);
         }
     }

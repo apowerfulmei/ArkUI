@@ -20,19 +20,13 @@
 #ifdef FFRT_EXISTS
 #include "base/longframe/long_frame_report.h"
 #endif
-#include "base/perfmonitor/perf_monitor.h"
 #include "core/pipeline_ng/pipeline_context.h"
 
 namespace OHOS::Ace::NG {
 namespace {
 constexpr char LIBFFRT_LIB64_PATH[] = "/system/lib64/ndk/libffrt.z.so";
 constexpr int32_t ENDORSE_LAYOUT_COUNT = 2;
-
-#ifndef IS_RELEASE_VERSION
-constexpr int32_t SINGLE_FRAME_TIME_NANOSEC = 16600000;
-constexpr int32_t NANO_TO_MICRO = 1000;
-#endif
-} // namespace
+}
 uint64_t UITaskScheduler::frameId_ = 0;
 
 UITaskScheduler::UITaskScheduler()
@@ -53,12 +47,6 @@ void UITaskScheduler::AddDirtyLayoutNode(const RefPtr<FrameNode>& dirty)
     CHECK_RUN_ON(UI);
     CHECK_NULL_VOID(dirty);
     dirtyLayoutNodes_.emplace_back(dirty);
-}
-
-void UITaskScheduler::AddIgnoreLayoutSafeAreaBundle(IgnoreLayoutSafeAreaBundle&& bundle)
-{
-    CHECK_RUN_ON(UI);
-    ignoreLayoutSafeAreaBundles_.emplace_back(std::move(bundle));
 }
 
 void UITaskScheduler::AddLayoutNode(const RefPtr<FrameNode>& layoutNode)
@@ -125,14 +113,10 @@ void UITaskScheduler::FlushSyncGeometryNodeTasks()
 void UITaskScheduler::FlushLayoutTask(bool forceUseMainThread)
 {
     CHECK_RUN_ON(UI);
-    ACE_FUNCTION_TRACE_COMMERCIAL();
+    ACE_FUNCTION_TRACE();
     if (dirtyLayoutNodes_.empty()) {
         return;
     }
-    if (isLayouting_ && SystemProperties::GetLayoutDetectEnabled()) {
-        LOGF_ABORT("you are already in flushing layout!");
-    }
-
 #ifdef FFRT_EXISTS
     // Pause GC during long frame
     std::unique_ptr<ILongFrame> longFrame = std::make_unique<ILongFrame>();
@@ -148,9 +132,6 @@ void UITaskScheduler::FlushLayoutTask(bool forceUseMainThread)
 
     // Priority task creation
     int64_t time = 0;
-#ifndef IS_RELEASE_VERSION
-    int64_t duration = 0;
-#endif
     for (auto&& node : dirtyLayoutNodesSet) {
         // need to check the node is destroying or not before CreateLayoutTask
         if (!node || node->IsInDestroying()) {
@@ -162,15 +143,7 @@ void UITaskScheduler::FlushLayoutTask(bool forceUseMainThread)
         if (frameInfo_ != nullptr) {
             frameInfo_->AddTaskInfo(node->GetTag(), node->GetId(), time, FrameInfo::TaskType::LAYOUT);
         }
-#ifndef IS_RELEASE_VERSION
-        duration += time;
-#endif
     }
-
-    while (!ignoreLayoutSafeAreaBundles_.empty()) {
-        FlushPostponedLayoutTask(forceUseMainThread);
-    }
-
     FlushSyncGeometryNodeTasks();
 #ifdef FFRT_EXISTS
     if (is64BitSystem_) {
@@ -180,32 +153,6 @@ void UITaskScheduler::FlushLayoutTask(bool forceUseMainThread)
 #endif
 
     isLayouting_ = false;
-#ifndef IS_RELEASE_VERSION
-    if (duration > SINGLE_FRAME_TIME_NANOSEC) {
-        PerfMonitor::GetPerfMonitor()->SetSubHealthInfo("SUBHEALTH", "FlushLayoutTask", duration / NANO_TO_MICRO);
-    }
-#endif
-}
-
-void UITaskScheduler::FlushPostponedLayoutTask(bool forceUseMainThread)
-{
-    auto ignoreLayoutSafeAreaBundles = std::move(ignoreLayoutSafeAreaBundles_);
-    for (auto&& bundle = ignoreLayoutSafeAreaBundles.rbegin(); bundle != ignoreLayoutSafeAreaBundles.rend();
-        ++bundle) {
-        for (auto&& node : bundle->first) {
-            if (!node || node->IsInDestroying()) {
-                continue;
-            }
-            node->CreateLayoutTask(forceUseMainThread, LayoutType::MEASURE_FOR_IGNORE);
-        }
-        auto&& container = bundle->second;
-        if (!container || container->IsInDestroying()) {
-            continue;
-        }
-        if (!container->PostponedTaskForIgnore()) {
-            container->CreateLayoutTask(forceUseMainThread, LayoutType::LAYOUT_FOR_IGNORE);
-        }
-    }
 }
 
 void UITaskScheduler::FlushRenderTask(bool forceUseMainThread)
@@ -214,19 +161,16 @@ void UITaskScheduler::FlushRenderTask(bool forceUseMainThread)
     if (FrameReport::GetInstance().GetEnable()) {
         FrameReport::GetInstance().BeginFlushRender();
     }
-
     auto dirtyRenderNodes = std::move(dirtyRenderNodes_);
     // Priority task creation
     int64_t time = 0;
     for (auto&& pageNodes : dirtyRenderNodes) {
-        ACE_SCOPED_TRACE_COMMERCIAL("FlushRenderTask %zu", pageNodes.second.size());
+        ACE_SCOPED_TRACE("FlushRenderTask %zu", pageNodes.second.size());
         for (auto&& node : pageNodes.second) {
             if (!node) {
                 continue;
             }
             if (node->IsInDestroying()) {
-                // reset RenderDirtyMarked for recycle node
-                node->ResetRenderDirtyMarked(false);
                 continue;
             }
             time = GetSysTimestamp();
@@ -284,11 +228,11 @@ void UITaskScheduler::FlushTask()
     ACE_SCOPED_TRACE("UITaskScheduler::FlushTask");
     // update for first entry from flushVSync
     // and reset to avoid infinite add
-    int32_t layoutedCount = 0;
+    layoutedCount_ = 0;
     multiLayoutCount_ = 1;
     singleDirtyNodesToFlush_.clear();
     do {
-        if (layoutedCount >= ENDORSE_LAYOUT_COUNT && RequestFrameOnLayoutCountExceeds()) {
+        if (RequestFrameOnLayoutCountExceeds()) {
             break;
         }
         FlushLayoutTask();
@@ -298,9 +242,9 @@ void UITaskScheduler::FlushTask()
         if (!afterLayoutTasks_.empty()) {
             FlushAfterLayoutTask();
         }
-        layoutedCount++;
-        multiLayoutCount_--;
         FlushSafeAreaPaddingProcess();
+        layoutedCount_++;
+        multiLayoutCount_--;
         auto triggeredByImplicitAnimation =
             layoutWithImplicitAnimation_.empty() ? false : layoutWithImplicitAnimation_.front();
         if (!triggeredByImplicitAnimation && !afterLayoutCallbacksInImplicitAnimationTask_.empty()) {
@@ -314,6 +258,7 @@ void UITaskScheduler::FlushTask()
     layoutWithImplicitAnimation_ = std::queue<bool>();
     FlushAllSingleNodeTasks();
     multiLayoutCount_ = 0;
+    layoutedCount_ = 0;
     ElementRegister::GetInstance()->ClearPendingRemoveNodes();
     FlushRenderTask();
 }
@@ -339,11 +284,18 @@ void UITaskScheduler::FlushAllSingleNodeTasks()
 
 void UITaskScheduler::AddSingleNodeToFlush(const RefPtr<FrameNode>& dirtyNode)
 {
-    singleDirtyNodesToFlush_.insert(dirtyNode);
+    if (std::find(singleDirtyNodesToFlush_.begin(), singleDirtyNodesToFlush_.end(), dirtyNode) !=
+        singleDirtyNodesToFlush_.end()) {
+        return;
+    }
+    singleDirtyNodesToFlush_.emplace_back(dirtyNode);
 }
 
 bool UITaskScheduler::RequestFrameOnLayoutCountExceeds()
 {
+    if (layoutedCount_ < ENDORSE_LAYOUT_COUNT) {
+        return false;
+    }
     auto pipeline = PipelineContext::GetCurrentContextPtrSafelyWithCheck();
     if (pipeline) {
         pipeline->RequestFrame();
@@ -366,37 +318,28 @@ void UITaskScheduler::FlushSafeAreaPaddingProcess()
     if (safeAreaPaddingProcessTasks_.empty()) {
         return;
     }
-    auto safeAreaPaddingProcessTasks = safeAreaPaddingProcessTasks_;
-    auto iter = safeAreaPaddingProcessTasks.begin();
-    while (iter != safeAreaPaddingProcessTasks.end()) {
+    auto iter = safeAreaPaddingProcessTasks_.begin();
+    while (iter != safeAreaPaddingProcessTasks_.end()) {
         auto node = *iter;
         if (!node) {
-            iter = safeAreaPaddingProcessTasks.erase(iter);
+            iter = safeAreaPaddingProcessTasks_.erase(iter);
         } else {
             node->ProcessSafeAreaPadding();
             ++iter;
         }
     }
     // clear caches after all process tasks
-    iter = safeAreaPaddingProcessTasks.begin();
-    while (iter != safeAreaPaddingProcessTasks.end()) {
+    iter = safeAreaPaddingProcessTasks_.begin();
+    while (iter != safeAreaPaddingProcessTasks_.end()) {
         auto node = *iter;
-        if (node) {
+        if (!node) {
+            iter = safeAreaPaddingProcessTasks_.erase(iter);
+        } else {
             const auto& geometryNode = node->GetGeometryNode();
             if (geometryNode) {
                 geometryNode->ResetAccumulatedSafeAreaPadding();
             }
-        }
-        ++iter;
-    }
-
-    auto eraseIter = safeAreaPaddingProcessTasks_.begin();
-    while (eraseIter != safeAreaPaddingProcessTasks_.end()) {
-        auto node = *eraseIter;
-        if (!node) {
-            eraseIter = safeAreaPaddingProcessTasks_.erase(eraseIter);
-        } else {
-            ++eraseIter;
+            ++iter;
         }
     }
 }
@@ -459,16 +402,6 @@ void UITaskScheduler::FlushAfterLayoutTask()
     FlushPersistAfterLayoutTask();
 }
 
-void UITaskScheduler::FlushAfterModifierTask()
-{
-    decltype(afterModifierTasks_) tasks(std::move(afterModifierTasks_));
-    for (const auto& task : tasks) {
-        if (task) {
-            task();
-        }
-    }
-}
-
 void UITaskScheduler::FlushAfterLayoutCallbackInImplicitAnimationTask()
 {
     decltype(afterLayoutCallbacksInImplicitAnimationTask_) tasks(
@@ -497,11 +430,6 @@ void UITaskScheduler::FlushPersistAfterLayoutTask()
 void UITaskScheduler::AddAfterRenderTask(std::function<void()>&& task)
 {
     afterRenderTasks_.emplace_back(std::move(task));
-}
-
-void UITaskScheduler::AddAfterModifierTask(std::function<void()>&& task)
-{
-    afterModifierTasks_.emplace_back(std::move(task));
 }
 
 void UITaskScheduler::FlushAfterRenderTask()

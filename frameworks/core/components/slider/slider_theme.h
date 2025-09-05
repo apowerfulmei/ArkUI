@@ -45,15 +45,10 @@ public:
         static constexpr Dimension OUTSET_HOT_BLOCK_SHADOW_WIDTH = 4.0_vp;
         static constexpr Dimension INSET_HOT_BLOCK_SHADOW_WIDTH = 6.0_vp;
         static constexpr Dimension FOCUS_SIDE_DISTANCE = 2.0_vp;
-        static constexpr double DEFAULT_SLIDER_PPI = 775.0;
-        static constexpr int32_t SLIDER_TIP_DELAY_TIME = 2000;
-#ifdef SUPPORT_DIGITAL_CROWN
-        static constexpr double CROWN_DISPLAY_CONTROL_RATIO = 2.1;
-#endif
 
         RefPtr<SliderTheme> Build(const RefPtr<ThemeConstants>& themeConstants) const
         {
-            RefPtr<SliderTheme> theme = AceType::MakeRefPtr<SliderTheme>();
+            RefPtr<SliderTheme> theme = AceType::Claim(new SliderTheme());
             if (!themeConstants) {
                 return theme;
             }
@@ -70,7 +65,7 @@ public:
                 theme->trackBgColor_ = pattern->GetAttr<Color>("track_bg_color", Color::RED);
                 theme->trackSelectedColor_ = pattern->GetAttr<Color>("track_color_selected", Color::RED);
                 theme->markerColor_ = pattern->GetAttr<Color>("marker_color", Color::RED)
-                        .BlendOpacity(pattern->GetAttr<double>("marker_color_alpha", defaultMarkColorAplpa));
+                    .BlendOpacity(pattern->GetAttr<double>("marker_color_alpha", defaultMarkColorAplpa));
                 theme->tipTextColor_ = pattern->GetAttr<Color>("tip_text_color", Color::RED);
                 theme->tipColor_ = pattern->GetAttr<Color>("tip_color", Color::RED);
                 theme->blockHoverColor_ = pattern->GetAttr<Color>("block_color_hovered", Color::RED);
@@ -91,8 +86,6 @@ public:
                 theme->hoverAnimationDuration_ = pattern->GetAttr<double>("hover_animation_duration", 0.0);
                 theme->pressAnimationDuration_ = pattern->GetAttr<double>("press_animation_duration", 0.0);
                 theme->moveAnimationDuration_ = pattern->GetAttr<double>("move_animation_duration", 0.0);
-                theme->sliderPPI_ = pattern->GetAttr<double>("slider_pixels_per_inch", DEFAULT_SLIDER_PPI);
-                theme->disabledAlpha_ = pattern->GetAttr<double>("slider_disable_alpha", 0.0);
                 theme->outsetBlockSize_ = pattern->GetAttr<Dimension>("outset_block_size", 16.0_vp);
                 theme->outsetBlockHotSize_ = pattern->GetAttr<Dimension>("outset_block_hot_region_size", 40.0_vp);
                 theme->blockColor_ = pattern->GetAttr<Color>("block_color", Color(0xffffffff));
@@ -105,24 +98,11 @@ public:
                 theme->markerSize_ = pattern->GetAttr<Dimension>("marker_size", 4.0_vp);
                 theme->tipFontSize_ = pattern->GetAttr<Dimension>("tip_font_size", 14.0_fp);
                 theme->tipTextPadding_ = pattern->GetAttr<Dimension>("tip_text_padding_size", 8.0_vp);
-                theme->blockShadowColor_ = pattern->GetAttr<Color>("block_shadow_color", BLOCK_SHADOW_COLOR);
-                theme->showFocusFrame_ = static_cast<bool>(pattern->GetAttr<double>("show_focus_frame", 0.0));
-                theme->focusedScaleValue_ = pattern->GetAttr<double>("focused_scale_value", 1.0);
-                theme->outsetModeSelectedTrackColor_ =
-                    pattern->GetAttr<Color>("outset_mode_selected_track_color", Color(0xff007dff));
-                theme->noneModeSelectedTrackColor_ =
-                    pattern->GetAttr<Color>("none_mode_selected_track_color", Color(0xff007dff));
-                theme->measureContentOutsetWidth_ =
-                    pattern->GetAttr<Dimension>("measure_content_outset_width", MEASURE_CONTENT_DEFAULT_WIDTH);
+                theme->blockShadowColor_ = BLOCK_SHADOW_COLOR;
                 theme->selectedTxt_ = pattern->GetAttr<std::string>("slider_accessibility_selected", "");
                 theme->unselectedTxt_ = pattern->GetAttr<std::string>("slider_accessibility_unselected", "");
                 theme->unselectedDesc_ = pattern->GetAttr<std::string>("slider_accessibility_unselectedDesc", "");
-                theme->disabledDesc_ = pattern->GetAttr<std::string>("slider_accessibility_disabledDesc", "");
-                theme->tipDelayTime_ = pattern->GetAttr<int32_t>("slider_tip_delay_time", SLIDER_TIP_DELAY_TIME);
-#ifdef SUPPORT_DIGITAL_CROWN
-                theme->crownDisplayControlRatio_ =
-                    pattern->GetAttr<double>("crown_display_control_ratio", CROWN_DISPLAY_CONTROL_RATIO);
-#endif
+                theme->disabledDesc_ = pattern->GetAttr<std::string>("slider_accessibility_disabledDesc", "");        
             } else {
                 LOGW("find pattern of slider fail");
             }
@@ -279,17 +259,6 @@ public:
     {
         return moveAnimationDuration_;
     }
-
-    double GetSliderPPI() const
-    {
-        return sliderPPI_;
-    }
-
-    double GetDisabledAlpha() const
-    {
-        return disabledAlpha_;
-    }
-
     std::string GetSelectedTxt() const
     {
         return selectedTxt_;
@@ -306,50 +275,9 @@ public:
     {
         return disabledDesc_;
     }
-    int32_t GetTipDelayTime() const
-    {
-        return tipDelayTime_;
-    }
-
-#ifdef SUPPORT_DIGITAL_CROWN
-    double GetCrownDisplayControlRatio() const
-    {
-        return crownDisplayControlRatio_;
-    }
-#endif
-
-    bool ShowFocusFrame() const
-    {
-        return showFocusFrame_;
-    }
-
-    double GetFocusedScaleValue() const
-    {
-        return focusedScaleValue_;
-    }
-
-    Dimension GetMeasureContentOutsetWidth() const
-    {
-        return measureContentOutsetWidth_;
-    }
-
-    const Color& GetOutsetModeSelectedTrackColor() const
-    {
-        return outsetModeSelectedTrackColor_;
-    }
-
-    const Color& GetNoneModeSelectedTrackColor() const
-    {
-        return noneModeSelectedTrackColor_;
-    }
 
 protected:
     SliderTheme() = default;
-    Color blockColor_;
-    Color trackBgColor_;
-    Color trackSelectedColor_;
-    Color outsetModeSelectedTrackColor_;
-    Color markerColor_;
 
 private:
     // outset slider mode
@@ -364,7 +292,7 @@ private:
     Dimension insetTrackThickness_;
     Dimension insetHotBlockShadowWidth_;
 
-    // none slider mode
+    //none slider mode
     Dimension noneBlockHotSize_;
     Dimension noneTrackThickness_;
 
@@ -374,11 +302,15 @@ private:
     Dimension tipTextPadding_;
     Dimension bubbleToCircleCenterDistance_;
     Dimension measureContentDefaultWidth_;
+    Color blockColor_;
     Color blockHoverColor_;
     Color blockPressedColor_;
     Color blockOuterEdgeColor_;
     Color tipColor_;
     Color tipTextColor_;
+    Color markerColor_;
+    Color trackBgColor_;
+    Color trackSelectedColor_;
     Color blockShadowColor_;
 
     // others
@@ -387,22 +319,12 @@ private:
     double hoverAnimationDuration_ = 0.0;
     double pressAnimationDuration_ = 0.0;
     double moveAnimationDuration_ = 0.0;
-    double disabledAlpha_ = 1.0;
-    double sliderPPI_ = 0.0;
-    int32_t tipDelayTime_ = 0;
 
     // accessibility
     std::string selectedTxt_ = "";
     std::string unselectedTxt_ = "";
     std::string unselectedDesc_ = "";
     std::string disabledDesc_ = "";
-#ifdef SUPPORT_DIGITAL_CROWN
-    double crownDisplayControlRatio_ = 1.0;
-#endif
-    bool showFocusFrame_ = 0.0;
-    double focusedScaleValue_ = 1.0;
-    Dimension measureContentOutsetWidth_;
-    Color noneModeSelectedTrackColor_;
 };
 
 } // namespace OHOS::Ace

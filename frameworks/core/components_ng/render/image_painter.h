@@ -16,8 +16,6 @@
 #ifndef FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_RENDER_IMAGE_PAINT_H
 #define FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_RENDER_IMAGE_PAINT_H
 
-#include "core/components/common/properties/background_image.h"
-#include "core/components/common/properties/alignment.h"
 #include "core/components_ng/render/canvas_image.h"
 #include "core/components_ng/render/drawing.h"
 
@@ -46,7 +44,6 @@ public:
 
 private:
     RefPtr<CanvasImage> canvasImage_;
-
     static void ApplyImageAlignmentFit(
         ImageFit imageFit, const SizeF& rawPicSize, const SizeF& dstSize, RectF& srcRect, RectF& dstRect);
     static const std::unordered_map<ImageFit, std::function<Alignment(bool)>> ALIMENT_OPERATIONS;

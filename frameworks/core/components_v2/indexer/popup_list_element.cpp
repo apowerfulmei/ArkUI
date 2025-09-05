@@ -15,6 +15,7 @@
 
 #include "core/components_v2/indexer/popup_list_element.h"
 #include "core/components_v2/indexer/popup_list_component.h"
+#include "core/pipeline/base/composed_component.h"
 
 namespace OHOS::Ace::V2 {
 void PopupListElement::PerformBuild()

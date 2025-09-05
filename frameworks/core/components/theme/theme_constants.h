@@ -181,14 +181,6 @@ public:
      */
     uint32_t GetSymbolByName(const char *name) const;
 
-     /*
-     * Get int value from platform constants.
-     * NOTE: 0 will be returned if not found or value is not uint32_t.
-     * @param[in] key Target key.
-     * @return uint32_t value corresponding to the name.
-     */
-    uint32_t GetSymbolById(uint32_t resId) const;
-
     /*
      * Get int array value from platform constants.
      * NOTE: empty array will be returned if not found or value is not boolean.
@@ -362,11 +354,6 @@ public:
         }
     }
 
-    void UpdateResourceAdapter(const RefPtr<ResourceAdapter>& adapter)
-    {
-        resAdapter_ = adapter;
-    }
-
     uint32_t GetResourceLimitKeys() const
     {
         CHECK_NULL_RETURN(resAdapter_, 0);
@@ -378,7 +365,23 @@ public:
         return resAdapter_;
     }
 
-    RefPtr<ThemeStyle> GetPatternByName(const std::string& patternName);
+    RefPtr<ThemeStyle> GetPatternByName(const std::string& patternName)
+    {
+        if (!currentThemeStyle_) {
+            TAG_LOGE(AceLogTag::ACE_THEME, "Get theme by name error: currentThemeStyle_ is null");
+            return nullptr;
+        }
+        currentThemeStyle_->CheckThemeStyleLoaded(patternName);
+        auto patternStyle = currentThemeStyle_->GetAttr<RefPtr<ThemeStyle>>(patternName, nullptr);
+        if (!patternStyle && resAdapter_) {
+            patternStyle = resAdapter_->GetPatternByName(patternName);
+            ResValueWrapper value = { .type = ThemeConstantsType::PATTERN,
+                .value = patternStyle };
+            currentThemeStyle_->SetAttr(patternName, value);
+        }
+        return patternStyle;
+    }
+
 private:
     static const ResValueWrapper* GetPlatformConstants(uint32_t key);
     static const ResValueWrapper* styleMapDefault[];

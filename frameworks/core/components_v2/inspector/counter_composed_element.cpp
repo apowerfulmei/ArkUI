@@ -15,6 +15,9 @@
 
 #include "core/components_v2/inspector/counter_composed_element.h"
 
+#include "base/log/dump_log.h"
+#include "core/components/counter/render_counter.h"
+
 namespace OHOS::Ace::V2 {
 std::string CounterComposedElement::GetWidth() const
 {

@@ -46,12 +46,9 @@ public:
     static void SetTextIndent(const JSCallbackInfo& info);
     static void SetFontStyle(int32_t value);
     static void SetAlign(const JSCallbackInfo& info);
-    static void SetTextContentAlign(const JSCallbackInfo& info);
     static void SetTextAlign(int32_t value);
     static void SetLineHeight(const JSCallbackInfo& info);
     static void SetLineSpacing(const JSCallbackInfo& info);
-    static void SetOptimizeTrailingSpace(const JSCallbackInfo& info);
-    static void SetShaderStyle(const JSCallbackInfo& info);
     static void SetFontFamily(const JSCallbackInfo& info);
     static void SetMinFontSize(const JSCallbackInfo& info);
     static void SetMaxFontSize(const JSCallbackInfo& info);
@@ -69,11 +66,14 @@ public:
     static void SetCopyOption(const JSCallbackInfo& info);
     static void SetOnCopy(const JSCallbackInfo& info);
     static void SetHeightAdaptivePolicy(int32_t value);
-    static void SetContentTransition(const JSCallbackInfo& info);
     static void JsOnClick(const JSCallbackInfo& info);
     static void JsOnClickWithoutNGBUILD(const JSCallbackInfo& info);
     static void JsRemoteMessage(const JSCallbackInfo& info);
     static void JsOnDragStart(const JSCallbackInfo& info);
+    static void JsOnDragEnter(const JSCallbackInfo& info);
+    static void JsOnDragMove(const JSCallbackInfo& info);
+    static void JsOnDragLeave(const JSCallbackInfo& info);
+    static void JsOnDrop(const JSCallbackInfo& info);
     static void JsFocusable(const JSCallbackInfo& info);
     static void JsDraggable(const JSCallbackInfo& info);
     static void JsEnableDataDetector(const JSCallbackInfo& info);
@@ -82,22 +82,15 @@ public:
     static void SetOnTextSelectionChange(const JSCallbackInfo& info);
     static void ParseMenuParam(
         const JSCallbackInfo& info, const JSRef<JSObject>& menuOptions, NG::SelectMenuParam& menuParam);
-    static void ParseShaderStyle(const JSCallbackInfo& info, NG::Gradient& gradient);
     static std::function<void(int32_t, int32_t)> ParseMenuCallback(const WeakPtr<NG::FrameNode>& frameNode,
         const JSRef<JSObject>& menuOptions, const JSCallbackInfo& info, const std::string& name);
-    static NG::PreviewMenuOptions ParsePreviewMenuOptions(const JSRef<JSObject>& menuOptions);
     static void JsClip(const JSCallbackInfo& info);
     static void SetForegroundColor(const JSCallbackInfo& info);
     static void SetFontFeature(const JSCallbackInfo &info);
-    static void SetMarqueeOptions(const JSCallbackInfo& info);
-    static void SetOnMarqueeStateChange(const JSCallbackInfo& info);
-    static void ParseMarqueeParam(const JSRef<JSObject>& paramObject, NG::TextMarqueeOptions& options);
     static void EditMenuOptions(const JSCallbackInfo& info);
     static void JsResponseRegion(const JSCallbackInfo& info);
     static void SetHalfLeading(const JSCallbackInfo& info);
     static void SetEnableHapticFeedback(const JSCallbackInfo& info);
-    static void SetEnableAutoSpacing(const JSCallbackInfo& info);
-    static void SetTextVerticalAlign(const JSCallbackInfo& info);
 
 private:
     static RefPtr<TextComponentV2> GetComponent();

@@ -15,13 +15,10 @@
 
 #include "bridge/cj_frontend/interfaces/cj_ffi/cj_relative_container_ffi.h"
 
+#include "bridge/declarative_frontend/jsview/models/relative_container_model_impl.h"
 #include "core/components_ng/pattern/relative_container/relative_container_model_ng.h"
 
 using namespace OHOS::Ace;
-
-namespace {
-    constexpr int32_t LOCALIZED_BARRIER_DIRECTION_START = 4;
-}
 
 extern "C" {
     void FfiOHOSAceFrameworkRelativeContainerCreate()
@@ -68,35 +65,6 @@ extern "C" {
             CBarrierStyle barrier = barriers.barrier[i];
             barrierInfoItem.id = std::string(barrier.id);
             barrierInfoItem.direction = static_cast<BarrierDirection>(barrier.direction);
-            for (int64_t j = 0; j < barrier.referencedId.size; j++) {
-                if (barrier.referencedId.head[j] != nullptr) {
-                    barrierInfoItem.referencedId.emplace_back(std::string(barrier.referencedId.head[j]));
-                }
-            }
-            barrierInfos.emplace_back(barrierInfoItem);
-        }
-        RelativeContainerModel::GetInstance()->SetBarrier(barrierInfos);
-    }
-
-    void FfiOHOSAceFrameworkReletiveContainerLocalizedBarrier(CLocalizedBarrierInfos barriers)
-    {
-        std::vector<BarrierInfo> barrierInfos;
-        if (barriers.localizedBarrier == nullptr || barriers.size == 0) {
-            RelativeContainerModel::GetInstance()->SetBarrier(barrierInfos);
-            return;
-        }
-        for (int64_t i = 0; i < barriers.size; i++) {
-            BarrierInfo barrierInfoItem;
-            CLocalizedBarrierStyle barrier = barriers.localizedBarrier[i];
-            barrierInfoItem.id = std::string(barrier.id);
-            
-            if (barrier.localizedDirection > static_cast<int32_t>(BarrierDirection::RIGHT)) {
-                barrierInfoItem.direction = static_cast<BarrierDirection>(barrier.localizedDirection);
-            } else {
-                barrierInfoItem.direction =
-                    static_cast<BarrierDirection>(barrier.localizedDirection + LOCALIZED_BARRIER_DIRECTION_START);
-            }
-
             for (int64_t j = 0; j < barrier.referencedId.size; j++) {
                 if (barrier.referencedId.head[j] != nullptr) {
                     barrierInfoItem.referencedId.emplace_back(std::string(barrier.referencedId.head[j]));

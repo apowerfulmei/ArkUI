@@ -15,6 +15,11 @@
 
 #include "core/components_ng/pattern/remote_window/remote_window_pattern.h"
 
+#include "base/geometry/rect.h"
+#include "base/utils/utils.h"
+#include "core/pipeline_ng/pipeline_context.h"
+#include "core/pipeline_ng/ui_task_scheduler.h"
+
 namespace OHOS::Ace::NG {
 
 void RemoteWindowPattern::OnAttachToFrameNode()

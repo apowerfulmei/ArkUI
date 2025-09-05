@@ -15,8 +15,11 @@
 
 #include "cj_video_ffi.h"
 
+#include <cinttypes>
 
+#include "base/json/json_util.h"
 #include "cj_lambda.h"
+#include "bridge/cj_frontend/interfaces/cj_ffi/utils.h"
 
 using namespace OHOS::Ace;
 using namespace OHOS::FFI;
@@ -51,12 +54,6 @@ void NativeVideoController::Stop()
     }
 }
 
-void NativeVideoController::Reset()
-{
-    if (videoController_) {
-        videoController_->Reset();
-    }
-}
 void NativeVideoController::SetCurrentTime(int32_t time, int32_t seekMode)
 {
     double value = (double)time;
@@ -120,11 +117,6 @@ void FfiOHOSAceFrameworkVideoLoop(bool loop)
     VideoModel::GetInstance()->SetLoop(loop);
 }
 
-void FfiOHOSAceFrameworkVideoEnableAnalyzer(bool enable)
-{
-    VideoModel::GetInstance()->EnableAnalyzer(enable);
-}
-
 void FfiOHOSAceFrameworkVideoOnStart(void (*callback)(const char* value))
 {
     auto func = [ffiCallback = CJLambda::Create(callback)](const std::string& param) { ffiCallback(param.c_str()); };
@@ -147,12 +139,6 @@ void FfiOHOSAceFrameworkVideoOnError(void (*callback)(const char* value))
 {
     auto func = [ffiCallback = CJLambda::Create(callback)](const std::string& param) { ffiCallback(param.c_str()); };
     VideoModel::GetInstance()->SetOnError(std::move(func));
-}
-
-void FfiOHOSAceFrameworkVideoOnStop(void (*callback)(const char* value))
-{
-    auto func = [ffiCallback = CJLambda::Create(callback)](const std::string& param) { ffiCallback(param.c_str()); };
-    VideoModel::GetInstance()->SetOnStop(std::move(func));
 }
 
 void FfiOHOSAceFrameworkVideoOnPrepared(void (*callback)(int32_t value))
@@ -259,16 +245,6 @@ void FfiOHOSAceFrameworkVideoControllerStop(int64_t selfID)
     auto self = FFIData::GetData<NativeVideoController>(selfID);
     if (self) {
         self->Stop();
-    } else {
-        LOGE("invalid video controller id");
-    }
-}
-
-void FfiOHOSAceFrameworkVideoControllerReset(int64_t selfID)
-{
-    auto self = FFIData::GetData<NativeVideoController>(selfID);
-    if (self) {
-        self->Reset();
     } else {
         LOGE("invalid video controller id");
     }

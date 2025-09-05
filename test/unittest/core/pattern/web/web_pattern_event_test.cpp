@@ -19,8 +19,6 @@
 #include "core/components_ng/base/view_stack_processor.h"
 #include "core/components_ng/pattern/web/web_pattern.h"
 #include "core/components_v2/inspector/inspector_constants.h"
-#include "core/components/web/resource/web_delegate.h"
-#include "test/unittest/core/pattern/web/mock_web_delegate.h"
 
 using namespace testing;
 using namespace testing::ext;
@@ -101,12 +99,12 @@ HWTEST_F(WebPatternEventTest, WebPatternTestNg_001, TestSize.Level1)
     TimeStamp time(millisec);
     info.SetLocalLocation(localLocation);
     info.SetTimeStamp(time);
-    EXPECT_TRUE(g_webPattern->mouseClickQueue_.empty());
+    EXPECT_TRUE(g_webPattern->doubleClickQueue_.empty());
     g_webPattern->HandleDoubleClickEvent(info);
-    EXPECT_FALSE(g_webPattern->mouseClickQueue_.empty());
-    EXPECT_EQ(g_webPattern->mouseClickQueue_.size(), 1);
+    EXPECT_FALSE(g_webPattern->doubleClickQueue_.empty());
+    EXPECT_EQ(g_webPattern->doubleClickQueue_.size(), 1);
     g_webPattern->HandleDoubleClickEvent(info);
-    EXPECT_NE(g_webPattern->mouseClickQueue_.size(), 1);
+    EXPECT_NE(g_webPattern->doubleClickQueue_.size(), 1);
     g_webPattern->HandleDoubleClickEvent(info);
 #endif
 }
@@ -127,7 +125,6 @@ HWTEST_F(WebPatternEventTest, WebPatternTestNg_002, TestSize.Level1)
     g_webPattern->HandleBlurEvent(blurReason);
     KeyEvent keyEvent;
     g_webPattern->WebOnKeyEvent(keyEvent);
-    EXPECT_FALSE(g_webPattern->isTouchUpEvent_);
 #endif
 }
 
@@ -221,34 +218,13 @@ HWTEST_F(WebPatternEventTest, WebPatternTestNg_004, TestSize.Level1)
 HWTEST_F(WebPatternEventTest, WebPatternTestNg_005, TestSize.Level1)
 {
 #ifdef OHOS_STANDARD_SYSTEM
+
     ASSERT_NE(g_webPattern->delegate_, nullptr);
     g_webPattern->delegate_->SetIsFileSelectorShow(true);
     MouseInfo info;
     info.SetAction(MouseAction::HOVER_EXIT);
     g_webPattern->WebSendMouseEvent(info, 0);
     EXPECT_EQ(g_webPattern->delegate_->IsFileSelectorShow(), true);
-#endif
-}
-
-/**
- * @tc.name: GetPixelMapName_001
- * @tc.desc: Test GetPixelMapName.
- * @tc.type: FUNC
- */
-HWTEST_F(WebPatternEventTest, GetPixelMapName_001, TestSize.Level1)
-{
-#ifdef OHOS_STANDARD_SYSTEM
-    EXPECT_EQ(g_webPattern->GetPixelMapName(nullptr, "test"), "undefined_");
-    Media::InitializationOptions opt;
-    opt.size.width = 1;
-    opt.size.height = 1;
-    opt.editable = true;
-    auto pixelMap = Media::PixelMap::Create(opt);
-    std::shared_ptr<Media::PixelMap> testPixelMap(pixelMap.release());
-    auto frameNode = g_webPattern->GetHost();
-    ASSERT_NE(frameNode, nullptr);
-    EXPECT_EQ(g_webPattern->GetPixelMapName(testPixelMap, "test"),
-        "web-1x1-test-" + std::to_string(frameNode->GetId()));
 #endif
 }
 } // namespace OHOS::Ace::NG

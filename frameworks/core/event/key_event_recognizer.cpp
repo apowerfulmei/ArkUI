@@ -427,14 +427,12 @@ const char* KeyCodeToString(int32_t keyCode)
         {KeyCode::KEY_VOICE_SOURCE_SWITCH, "KEYCODE_VOICE_SOURCE_SWITCH"},
         {KeyCode::KEY_LAUNCHER_MENU, "KEYCODE_LAUNCHER_MENU"},
     };
-
     auto iter = KEYCODE_TO_STRING.find(static_cast<KeyCode>(keyCode));
     if (iter == KEYCODE_TO_STRING.end()) {
         return "KEYCODE_INVALID";
     }
     return iter->second.c_str();
 }
-
 KeyIntention keyItemsTransKeyIntention(const std::vector<KeyCode> &items)
 {
     if (items.size() < KEY_INTENTION_ITEM_MIN_COUNT || items.size() > KEY_INTENTION_ITEM_MAX_COUNT) {
@@ -445,7 +443,6 @@ KeyIntention keyItemsTransKeyIntention(const std::vector<KeyCode> &items)
     for (const auto &item : items) {
         keyCodes = (keyCodes << KEY_INTENTION_OFFSET) + static_cast<uint64_t>(item);
     }
-
     const static std::map<int64_t, KeyIntention> MAP_KEY_INTENTION = {
         {(int64_t)KeyCode::KEY_DPAD_UP, KeyIntention::INTENTION_UP},
         {(int64_t)KeyCode::KEY_DPAD_DOWN, KeyIntention::INTENTION_DOWN},
@@ -511,7 +508,6 @@ std::vector<KeyEvent> KeyEventRecognizer::GetKeyEvents(int32_t keyCode, int32_t 
     std::vector<KeyEvent> keyEvents;
     auto event = KeyEvent(static_cast<KeyCode>(keyCode), static_cast<KeyAction>(keyAction), repeatTime,
         timeStamp, deviceId, static_cast<SourceType>(keySource));
-
     if ((keyCode != static_cast<int32_t>(KeyCode::KEY_UNKNOWN)) &&
         (keyAction == static_cast<int32_t>(KeyAction::DOWN))) {
         clearPressedKey();
@@ -567,7 +563,6 @@ std::vector<KeyCode> KeyEventRecognizer::getPressedKeys() const
     }
     return result;
 }
-
 void KeyEventRecognizer::addPressedKey(const int32_t keyCode)
 {
     std::vector<KeyCode> pressedkeys = getPressedKeys();
@@ -577,7 +572,6 @@ void KeyEventRecognizer::addPressedKey(const int32_t keyCode)
         keys_.push_back(keyCode);
     }
 }
-
 void KeyEventRecognizer::removeReleasedKey(const int32_t keyCode)
 {
     for (auto it = keys_.begin(); it != keys_.end(); ++it) {
@@ -587,7 +581,6 @@ void KeyEventRecognizer::removeReleasedKey(const int32_t keyCode)
         }
     }
 }
-
 void KeyEventRecognizer::clearPressedKey()
 {
     keys_.clear();

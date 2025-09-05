@@ -43,19 +43,6 @@ struct NewLineOffset {
     }
 };
 
-struct MatchParentRowInfo {
-    float width;
-    const OffsetF& paddingOffset;
-    bool isRightToLeft;
-    float offsetYAdjust;
-};
-
-struct ChildrenRowInfo {
-    bool isMatchParent = false;
-    float maxHeight = 0;
-    int32_t newLineCount = 0;
-};
-
 using ChildrenRow = std::list<std::pair<RefPtr<LayoutWrapper>, NewLineOffset>>;
 class ACE_EXPORT GridRowLayoutAlgorithm : public LayoutAlgorithm {
     DECLARE_ACE_TYPE(GridRowLayoutAlgorithm, LayoutAlgorithm);
@@ -72,46 +59,16 @@ public:
     }
 
 private:
-    float UpdateChildPositionWidthIgnoreLayoutSafeArea(
-        bool isRtl, const RefPtr<LayoutWrapper>& childLayoutWrapper, const OffsetF& originOffset);
-    float MeasureNonMatchParentChildren(LayoutWrapper* layoutWrapper, V2::GridSizeType sizeType,
-        std::list<RefPtr<LayoutWrapper>>& children);
-    void DisableWidthLayoutPolicy(const RefPtr<LayoutWrapper>& child);
-    void InsertIntoGridRowTable(const RefPtr<LayoutWrapper> &child, V2::GridSizeType sizeType,
-        int32_t &currentPosition, NewLineOffset &newLineOffset);
-    float MeasureChild(LayoutWrapper* gridRow, RefPtr<LayoutWrapper> &child, V2::GridSizeType sizeType,
-        float totalHeight, bool isMatchParent = false);
-    void SortByGridColOrder(std::list<RefPtr<LayoutWrapper>>& children, V2::GridSizeType sizeType);
-    OffsetF GetPaddingOffset(LayoutWrapper* layoutWrapper, bool isRightToLeft);
-    void LayoutWithMatchParentInfo(LayoutWrapper* layoutWrapper);
-    OptionalSizeF MeasureSelfByLayoutPolicy(LayoutWrapper* layoutWrapper, float childHeight,
-        LayoutCalPolicy widthLayoutPolicy, LayoutCalPolicy heightLayoutPolicy);
-    void MeasureAdaptiveLayoutChildren(LayoutWrapper* layoutWrapper, V2::GridSizeType sizeType);
-    void LayoutChildrenRow(ChildrenRow& row, MatchParentRowInfo& matchParentRowInfo, float& rowHeightAdjust);
-    bool IsRightToLeft(LayoutWrapper* layoutWrapper);
-    bool GetSizeTypeAndMaxSize(LayoutWrapper* layoutWrapper, SizeF &maxSize, V2::GridSizeType& sizeType);
-    void ParseGridRowParams(LayoutWrapper *layoutWrapper, const V2::GridSizeType &sizeType,
-        const SizeF &maxSize);
     void MeasureSelf(LayoutWrapper* layoutWrapper, float childHeight, float selfHeight);
     float MeasureChildren(LayoutWrapper* layoutWrapper, double columnUnitWidth, double childHeightLimit,
         std::pair<double, double>& gutter, V2::GridSizeType sizeType, int32_t columnNum);
     void CalcCrossAxisAlignment(LayoutWrapper* layoutWrapper,
         std::list<std::pair<RefPtr<LayoutWrapper>, NewLineOffset>>& row, float currentRowHeight);
     void OnBreakPointChange(LayoutWrapper* layoutWrapper, const V2::GridSizeType& sizeType);
-    float CalcCrossAxisOffset(LayoutWrapper* gridRow, RefPtr<LayoutWrapper> &child,
-        FlexAlign alignSelf, float currentRowHeight);
-    FlexAlign GetChildAlignment(LayoutWrapper* gridRow, const RefPtr<LayoutProperty>& childLayoutProperty);
-    void UpdateFirstLineOffset(bool& childTallerThanMatchParent, const bool isGreatThanParent, float ignoreMatchOffset,
-        float& firstLineOffset);
-    void UpdateRowHeightWhenIgnoreOpts(
-        float& rowHeightAdjust, const RefPtr<LayoutWrapper>& childLayoutWrapper, float saeAdjust);
-    int32_t columnNum_ { V2::DEFAULT_COLUMN_NUMBER };
     std::pair<double, double> gutterInDouble_ { 0, 0 };
     double columnUnitWidth_ = 0;
     std::list<ChildrenRow> gridColChildrenRows_ {};
-    std::list<ChildrenRowInfo> gridColChildrenRowsInfo_ {};
     ChildrenRow gridColChildrenOfOneRow_ {};
-    std::list<RefPtr<LayoutWrapper>> layoutPolicyChildren_;
 };
 } // namespace OHOS::Ace::NG
 

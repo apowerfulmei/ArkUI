@@ -25,7 +25,7 @@ JSRef<JSObject> JsKeyFunction::createKeyEvent(KeyEventInfo& event)
     JSRef<JSObject> keyEventObj = objectTemplate->NewInstance();
     keyEventObj->SetProperty<int32_t>("type", static_cast<int32_t>(event.GetKeyType()));
     keyEventObj->SetProperty<int32_t>("keyCode", static_cast<int32_t>(event.GetKeyCode()));
-    keyEventObj->SetProperty<const char*>("keyText", event.GetKeyText().c_str());
+    keyEventObj->SetProperty<const char*>("keyText", event.GetKeyText());
     keyEventObj->SetProperty<int32_t>("keySource", static_cast<int32_t>(event.GetKeySource()));
     keyEventObj->SetProperty<int64_t>("deviceId", event.GetDeviceId());
     keyEventObj->SetProperty<int32_t>("metaKey", event.GetMetaKey());
@@ -35,9 +35,6 @@ JSRef<JSObject> JsKeyFunction::createKeyEvent(KeyEventInfo& event)
     keyEventObj->SetPropertyObject("getModifierKeyState",
         JSRef<JSFunc>::New<FunctionCallback>(NG::ArkTSUtils::JsGetModifierKeyState));
     keyEventObj->SetProperty<int32_t>("intentionCode", static_cast<int32_t>(event.GetKeyIntention()));
-    keyEventObj->SetProperty<bool>("isNumLockOn", event.GetNumLock());
-    keyEventObj->SetProperty<bool>("isCapsLockOn", event.GetCapsLock());
-    keyEventObj->SetProperty<bool>("isScrollLockOn", event.GetScrollLock());
     keyEventObj->Wrap<KeyEventInfo>(&event);
     return keyEventObj;
 }

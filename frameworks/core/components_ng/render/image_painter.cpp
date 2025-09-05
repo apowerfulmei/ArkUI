@@ -112,6 +112,7 @@ const std::unordered_map<ImageFit, std::function<Alignment(bool)>> ImagePainter:
 
 void ImagePainter::DrawObscuration(RSCanvas& canvas, const OffsetF& offset, const SizeF& contentSize) const
 {
+    CHECK_NULL_VOID(canvasImage_);
     const auto config = canvasImage_->GetPaintConfig();
     RSBrush brush;
     Color fillColor = COLOR_PRIVATE_MODE;
@@ -140,10 +141,7 @@ void ImagePainter::DrawObscuration(RSCanvas& canvas, const OffsetF& offset, cons
 
 void ImagePainter::DrawImage(RSCanvas& canvas, const OffsetF& offset, const SizeF& contentSize) const
 {
-    if (!canvasImage_) {
-        TAG_LOGD(AceLogTag::ACE_IMAGE, "canvasImage is null");
-        return;
-    }
+    CHECK_NULL_VOID(canvasImage_);
     const auto config = canvasImage_->GetPaintConfig();
     bool drawObscuration = std::any_of(config.obscuredReasons_.begin(), config.obscuredReasons_.end(),
         [](const auto& reason) { return reason == ObscuredReasons::PLACEHOLDER; });
@@ -158,6 +156,7 @@ void ImagePainter::DrawImage(RSCanvas& canvas, const OffsetF& offset, const Size
 
 void ImagePainter::DrawSVGImage(RSCanvas& canvas, const OffsetF& offset, const SizeF& svgContainerSize) const
 {
+    CHECK_NULL_VOID(canvasImage_);
     canvas.Save();
     canvas.Translate(offset.GetX(), offset.GetY());
     const auto config = canvasImage_->GetPaintConfig();
@@ -174,10 +173,7 @@ void ImagePainter::DrawSVGImage(RSCanvas& canvas, const OffsetF& offset, const S
 
 void ImagePainter::DrawStaticImage(RSCanvas& canvas, const OffsetF& offset, const SizeF& contentSize) const
 {
-    if (!canvasImage_) {
-        TAG_LOGE(AceLogTag::ACE_IMAGE, "canvasImage is null");
-        return;
-    }
+    CHECK_NULL_VOID(canvasImage_);
     const auto config = canvasImage_->GetPaintConfig();
     canvas.Save();
     canvas.Translate(offset.GetX(), offset.GetY());
@@ -228,7 +224,7 @@ void ImagePainter::DrawImageWithRepeat(RSCanvas& canvas, const RectF& contentRec
     uint32_t down = 1;
     uint32_t left = 2;
     uint32_t right = 3;
-    auto drawRepeatYTask = [this, &canvas, &dirRepeatNum, &singleImageHeight, &imageRepeatY, &contentRect](
+    auto drawRepeatYTask = [this, &canvas, &config, &dirRepeatNum, &singleImageHeight, &imageRepeatY, &contentRect](
                                OffsetF offsetTempY, uint32_t dir) {
         float downNum = (dir == 0) ? -1 : 1;
         for (size_t j = 0; j < dirRepeatNum[dir] && imageRepeatY; j++) {
@@ -338,25 +334,10 @@ OffsetF ImagePainter::CalculateBgImagePosition(const SizeF& boxPaintSize_, const
     }
 
     if (bgImgPosition.IsAlign()) {
-        if (bgImgPosition.GetIsOffsetBaseOnAlignmentNeeded()) {
-            offset.AddX(bgImgPosition.GetPercentValueX() * (boxPaintSize_.Width() - imageRenderSize_.Width()) /
-                        PERCENT_TRANSLATE);
-            offset.AddY(bgImgPosition.GetPercentValueY() * (boxPaintSize_.Height() - imageRenderSize_.Height()) /
-                        PERCENT_TRANSLATE);
-        } else {
-            offset.SetX(
-                bgImgPosition.GetSizeValueX() * (boxPaintSize_.Width() - imageRenderSize_.Width()) / PERCENT_TRANSLATE);
-            offset.SetY(bgImgPosition.GetSizeValueY() * (boxPaintSize_.Height() - imageRenderSize_.Height()) /
-                        PERCENT_TRANSLATE);
-        }
-    }
-
-    bool isRtl = AceApplicationInfo::GetInstance().IsRightToLeft();
-    if (bgImgPosition.GetDirectionType() != DirectionType::AUTO) {
-        isRtl = (bgImgPosition.GetDirectionType() == DirectionType::RTL);
-    }
-    if (isRtl) {
-        offset.SetX(boxPaintSize_.Width() - offset.GetX() - imageRenderSize_.Width());
+        offset.SetX(
+            bgImgPosition.GetSizeValueX() * (boxPaintSize_.Width() - imageRenderSize_.Width()) / PERCENT_TRANSLATE);
+        offset.SetY(
+            bgImgPosition.GetSizeValueY() * (boxPaintSize_.Height() - imageRenderSize_.Height()) / PERCENT_TRANSLATE);
     }
     return offset;
 }

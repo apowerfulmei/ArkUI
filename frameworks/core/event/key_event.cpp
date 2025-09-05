@@ -17,32 +17,6 @@
 
 namespace OHOS::Ace {
 
-uint64_t CalculateModifierKeyState(const std::vector<OHOS::Ace::KeyCode>& status)
-{
-    uint64_t modifierKeysState = 0;
-    // check ctrl
-    if ((std::find(status.begin(), status.end(), OHOS::Ace::KeyCode::KEY_CTRL_LEFT) != std::end(status)) ||
-        (std::find(status.begin(), status.end(), OHOS::Ace::KeyCode::KEY_CTRL_RIGHT) != std::end(status))) {
-        modifierKeysState |= static_cast<uint64_t>(ModifierKeyName::ModifierKeyCtrl);
-    }
-    // check alt
-    if ((std::find(status.begin(), status.end(), OHOS::Ace::KeyCode::KEY_ALT_LEFT) != std::end(status)) ||
-        (std::find(status.begin(), status.end(), OHOS::Ace::KeyCode::KEY_ALT_RIGHT) != std::end(status))) {
-        modifierKeysState |= static_cast<uint64_t>(ModifierKeyName::ModifierKeyAlt);
-    }
-    // check shift
-    if ((std::find(status.begin(), status.end(), OHOS::Ace::KeyCode::KEY_SHIFT_LEFT) != std::end(status)) ||
-        (std::find(status.begin(), status.end(), OHOS::Ace::KeyCode::KEY_SHIFT_RIGHT) != std::end(status))) {
-        modifierKeysState |= static_cast<uint64_t>(ModifierKeyName::ModifierKeyShift);
-    }
-    // check fn
-    if (std::find(status.begin(), status.end(), OHOS::Ace::KeyCode::KEY_FN) != std::end(status)) {
-        modifierKeysState |= static_cast<uint64_t>(ModifierKeyName::ModifierKeyFn);
-    }
-
-    return modifierKeysState;
-}
-
 namespace {
 
 // key : define aosp key event code, value : define ace key string
@@ -98,6 +72,7 @@ const std::unordered_map<KeyCode, char> KEYBOARD_SYMBOLS = {
     { KeyCode::KEY_NUMPAD_MULTIPLY, '*' },
     { KeyCode::KEY_NUMPAD_SUBTRACT, '-' },
     { KeyCode::KEY_NUMPAD_ADD, '+' },
+    { KeyCode::KEY_NUMPAD_DOT, '.' },
     { KeyCode::KEY_NUMPAD_COMMA, ',' },
     { KeyCode::KEY_NUMPAD_EQUALS, '=' },
 };
@@ -117,8 +92,6 @@ const std::unordered_map<KeyCode, char> SHIFT_KEYBOARD_SYMBOLS = {
 };
 
 } // namespace
-
-
 
 const char* KeyToString(int32_t code)
 {
@@ -171,12 +144,8 @@ std::string KeyEvent::ConvertCodeToString() const
         }
         return std::to_string(static_cast<int32_t>(code) - static_cast<int32_t>(KeyCode::KEY_0));
     }
-    if (numLock) {
-        if (KeyCode::KEY_NUMPAD_0 <= code && code <= KeyCode::KEY_NUMPAD_9) {
-            return std::to_string(static_cast<int32_t>(code) - static_cast<int32_t>(KeyCode::KEY_NUMPAD_0));
-        } else if (code == KeyCode::KEY_NUMPAD_DOT) {
-            return std::string(1, '.');
-        }
+    if (KeyCode::KEY_NUMPAD_0 <= code && code <= KeyCode::KEY_NUMPAD_9) {
+        return std::to_string(static_cast<int32_t>(code) - static_cast<int32_t>(KeyCode::KEY_NUMPAD_0));
     }
     if (IsLetterKey()) {
         int32_t codeValue = static_cast<int32_t>(code) - static_cast<int32_t>(KeyCode::KEY_A);
@@ -203,7 +172,7 @@ void KeyEventInfo::ParseKeyEvent(KeyEvent& keyEvent)
 {
     keyEvent.action = GetKeyType();
     keyEvent.code = GetKeyCode();
-    keyEvent.key.assign(GetKeyText().c_str());
+    keyEvent.key.assign(GetKeyText());
     keyEvent.sourceType = GetKeySource();
     keyEvent.deviceId = GetDeviceId();
     keyEvent.metaKey = GetMetaKey();
@@ -211,9 +180,6 @@ void KeyEventInfo::ParseKeyEvent(KeyEvent& keyEvent)
     keyEvent.timeStamp = GetTimeStamp();
     keyEvent.keyIntention = GetKeyIntention();
     keyEvent.pressedCodes = GetPressedKeyCodes();
-    keyEvent.numLock = GetNumLock();
-    keyEvent.scrollLock = GetScrollLock();
-    keyEvent.enableCapsLock = GetCapsLock();
 }
 
 } // namespace OHOS::Ace

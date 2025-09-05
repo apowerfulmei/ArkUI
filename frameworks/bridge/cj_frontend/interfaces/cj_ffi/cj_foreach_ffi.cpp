@@ -15,8 +15,13 @@
 
 #include "bridge/cj_frontend/interfaces/cj_ffi/cj_foreach_ffi.h"
 
+#include <cstdlib>
+#include <string>
+#include <unordered_set>
+
 #include "cj_lambda.h"
 
+#include "bridge/cj_frontend/runtime/cj_runtime_delegate.h"
 #include "core/components_ng/syntax/for_each_model.h"
 
 using namespace OHOS::Ace;
@@ -142,9 +147,7 @@ VectorToCFFIArray HandleFFIArray(const std::vector<size_t>& vec)
     for (size_t i = 0; i < vec.size(); ++i) {
         ffiArray.buffer[i] = static_cast<int64_t>(vec[i]);
     }
-    ffiArray.free = [](int64_t* ptr) {
-        delete[] ptr;
-    };
+    ffiArray.free = reinterpret_cast<void (*)(int64_t*)>(free);
     return ffiArray;
 }
 

@@ -15,41 +15,13 @@
 
 #include "image_source_ohos.h"
 
-#if defined(ACE_STATIC)
-#include "pixel_map_ohos.h"
-#endif
-
+#include "image_source.h"
+#include "image_type.h"
 #include "media_errors.h"
 
-namespace OHOS::Ace {
-namespace {
-void InitDecodeOptions(Media::DecodeOptions& options, const std::pair<int32_t, int32_t>& size,
-    AIImageQuality imageQuality, bool isHdrDecoderNeed, PixelFormat photoDecodeFormat)
-{
-    options.preferDma = true;
-    // only hdr image need to decoder in hdr mode
-    if (isHdrDecoderNeed) {
-        options.desiredDynamicRange = Media::DecodeDynamicRange::AUTO;
-    }
-    if (photoDecodeFormat == PixelFormat::NV21) {
-        options.photoDesiredPixelFormat  = Media::PixelFormat::NV21;
-    } else if (photoDecodeFormat == PixelFormat::RGBA_8888) {
-        options.photoDesiredPixelFormat  = Media::PixelFormat::RGBA_8888;
-    } else if (photoDecodeFormat == PixelFormat::RGBA_1010102) {
-        options.photoDesiredPixelFormat  = Media::PixelFormat::RGBA_1010102;
-    } else if (photoDecodeFormat == PixelFormat::YCBCR_P010) {
-        options.photoDesiredPixelFormat  = Media::PixelFormat::YCBCR_P010;
-    } else if (photoDecodeFormat == PixelFormat::YCRCB_P010) {
-        options.photoDesiredPixelFormat  = Media::PixelFormat::YCRCB_P010;
-    }
-    // Pass imageQuality to imageFramework
-    options.resolutionQuality = static_cast<Media::ResolutionQuality>(imageQuality);
-    if (size.first > 0 && size.second > 0) {
-        options.desiredSize = { size.first, size.second };
-    }
-}
-} // namespace
+#include "base/image/pixel_map.h"
 
+namespace OHOS::Ace {
 RefPtr<ImageSource> ImageSource::Create(int32_t fd)
 {
     uint32_t errorCode;
@@ -62,8 +34,9 @@ RefPtr<ImageSource> ImageSource::Create(int32_t fd)
     return MakeRefPtr<ImageSourceOhos>(std::move(src));
 }
 
-RefPtr<ImageSource> ImageSource::Create(const uint8_t* data, uint32_t size, uint32_t& errorCode)
+RefPtr<ImageSource> ImageSource::Create(const uint8_t* data, uint32_t size)
 {
+    uint32_t errorCode;
     Media::SourceOptions options;
     auto src = Media::ImageSource::CreateImageSource(data, size, options, errorCode);
     if (errorCode != Media::SUCCESS) {
@@ -108,18 +81,26 @@ std::string ImageSourceOhos::GetProperty(const std::string& key)
     return value;
 }
 
-RefPtr<PixelMap> ImageSourceOhos::CreatePixelMap(
-    const Size& size, uint32_t& errorCode, const PixelMapConfig& pixelMapConfig)
+RefPtr<PixelMap> ImageSourceOhos::CreatePixelMap(const Size& size, AIImageQuality imageQuality, bool isHdrDecoderNeed)
 {
-    return CreatePixelMap(0, size, errorCode, pixelMapConfig);
+    return CreatePixelMap(0, size, imageQuality, isHdrDecoderNeed);
 }
 
 RefPtr<PixelMap> ImageSourceOhos::CreatePixelMap(
-    uint32_t index, const Size& size, uint32_t& errorCode, const PixelMapConfig& pixelMapConfig)
+    uint32_t index, const Size& size, AIImageQuality imageQuality, bool isHdrDecoderNeed)
 {
     Media::DecodeOptions options;
-    InitDecodeOptions(
-        options, size, pixelMapConfig.imageQuality, pixelMapConfig.isHdrDecoderNeed, pixelMapConfig.photoDecodeFormat);
+    options.preferDma = true;
+    // only hdr image need to decoder in hdr mode
+    if (isHdrDecoderNeed) {
+        options.desiredDynamicRange = Media::DecodeDynamicRange::AUTO;
+    }
+    options.resolutionQuality = static_cast<Media::ResolutionQuality>(imageQuality);
+    // Pass imageQuality to imageFramework
+    if (size.first > 0 && size.second > 0) {
+        options.desiredSize = { size.first, size.second };
+    }
+    uint32_t errorCode;
     auto pixmap = imageSource_->CreatePixelMapEx(index, options, errorCode);
     if (errorCode != Media::SUCCESS) {
         TAG_LOGW(AceLogTag::ACE_IMAGE,
@@ -152,21 +133,6 @@ ImageSource::Size ImageSourceOhos::GetImageSize()
     }
     return { info.size.width, info.size.height };
 }
-
-#if defined(ACE_STATIC)
-RefPtr<PixelMap> ImageSourceOhos::CreatePixelMap(const DecodeOptions& options)
-{
-    uint32_t errorCode;
-    Media::DecodeOptions decodeOpts;
-    decodeOpts.desiredPixelFormat = PixelMapOhos::ConvertToMediaPixelFormat(options.desiredFormat);
-    auto pixelmap = imageSource_->CreatePixelMap(decodeOpts, errorCode);
-    if (errorCode != Media::SUCCESS) {
-        TAG_LOGW(AceLogTag::ACE_IMAGE, "create pixelmap failed, errorCode = %{public}u", errorCode);
-        return nullptr;
-    }
-    return PixelMap::Create(std::move(pixelmap));
-}
-#endif
 
 uint32_t ImageSourceOhos::GetFrameCount()
 {

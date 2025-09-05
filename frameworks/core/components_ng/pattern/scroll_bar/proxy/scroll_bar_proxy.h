@@ -27,10 +27,11 @@ namespace OHOS::Ace::NG {
 class ScrollablePattern;
 struct ScrollableNodeInfo {
     WeakPtr<ScrollablePattern> scrollableNode;
-    std::function<bool(double, int32_t source, bool, bool)> onPositionChanged;
+    std::function<bool(double, int32_t source, bool)> onPositionChanged;
     std::function<bool(double, int32_t source, bool)> scrollStartCallback;
     std::function<void(bool)> scrollEndCallback;
-    StartSnapAnimationCallback startSnapAnimationCallback;
+    CalePredictSnapOffsetCallback calePredictSnapOffsetCallback;
+    StartScrollSnapMotionCallback startScrollSnapMotionCallback;
     ScrollBarFRCallback scrollbarFRcallback;
     std::function<void(bool, bool smooth)> scrollPageCallback;
 
@@ -59,8 +60,7 @@ public:
      * Notify scrollable node to update state, called by scroll bar.
      * @param distance absolute distance that scroll bar has scrolled.
      */
-    void NotifyScrollableNode(float distance, int32_t source, const WeakPtr<ScrollBarPattern>& weakScrollBar,
-        bool isMouseWheelScroll = false) const;
+    void NotifyScrollableNode(float distance, int32_t source, const WeakPtr<ScrollBarPattern>& weakScrollBar) const;
 
     /*
      * Notify scrollable node to callback scrollStart, called by scroll bar.
@@ -73,8 +73,9 @@ public:
     void NotifyScrollStop() const;
     /*
      * Notify scroll bar to update state, called by scrollable node.
+     * @param distance absolute distance that scrollable node has scrolled.
      */
-    void NotifyScrollBar(int32_t scrollSource);
+    void NotifyScrollBar() const;
 
     /*
      * Start animation of ScrollBar.
@@ -91,19 +92,19 @@ public:
      */
     bool NotifySnapScroll(float delta, float velocity, float barScrollableDistance, float dragDistance) const;
 
-    bool NotifySnapScrollWithoutChild(SnapAnimationOptions snapAnimationOptions) const;
-
     float CalcPatternOffset(float controlDistance, float barScrollableDistance, float delta) const;
-
-    void NotifyScrollBarNode(float distance, int32_t source, bool isMouseWheelScroll = false) const;
+    
+    void NotifyScrollBarNode(float distance, int32_t source) const;
 
     void SetScrollSnapTrigger_(bool scrollSnapTrigger)
     {
         scrollSnapTrigger_ = scrollSnapTrigger;
     }
 
-    bool IsScrollSnapTrigger() const;
-
+    bool IsScrollSnapTrigger() const
+    {
+        return scrollSnapTrigger_;
+    }
     void SetScrollEnabled(bool scrollEnabled, const WeakPtr<ScrollablePattern>& weakScrollableNode) const;
     void ScrollPage(bool reverse, bool smooth);
 
@@ -117,18 +118,6 @@ public:
     }
 
     bool IsNestScroller() const;
-
-    void MarkScrollBarDirty() const;
-
-    void SetIsScrollableNodeScrolling(bool isScrolling)
-    {
-        isScrollableNodeScrolling_ = isScrolling;
-    }
-
-    bool IsScrollableNodeScrolling() const
-    {
-        return isScrollableNodeScrolling_;
-    }
 private:
     /*
      * Drag the built-in or external scroll bar to slide the Scroll.
@@ -138,9 +127,6 @@ private:
     ScrollableNodeInfo scorllableNode_; // Scrollable node, like list, grid, scroll, etc.
     std::list<ScrollableNodeInfo> nestScrollableNodes_; // Scrollable nodes, like scroll.
     std::list<WeakPtr<ScrollBarPattern>> scrollBars_; // ScrollBar should effect with scrollable node.
-    float lastControlDistance_ = 0.f;
-    float lastScrollableNodeOffset_ = 0.f;
-    bool isScrollableNodeScrolling_ = false;
 };
 
 } // namespace OHOS::Ace::NG

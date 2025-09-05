@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2022-2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -122,38 +122,12 @@ public:
         return textClockLayoutProperty->GetPrefixHourValue(ZeroPrefixType::AUTO);
     }
 
-    bool IsEnableMatchParent() override
-    {
-        return true;
-    }
-
-    bool OnThemeScopeUpdate(int32_t themeScopeId) override;
-
-    void ToJsonValue(std::unique_ptr<JsonValue>& json, const InspectorFilter& filter) const override;
-
-    void OnColorModeChange(uint32_t colorMode) override;
-    void UpdateTextColor(const Color& color);
-    void UpdateFontSize(const CalcDimension& fontSize);
-    void UpdateFontFamily(const std::vector<std::string>& fontFamilies);
-    void UpdateTextClockColor(const Color& color, bool isFirstLoad = false);
-    void UpdateTextClockFontSize(const CalcDimension& fontSize);
-    void UpdateTextClockFontFamily(const std::vector<std::string>& fontFamilies);
-    void UpdateTextClockFormat(const std::string& format);
-
 private:
     void OnModifyDone() override;
     void OnAttachToFrameNode() override;
     void OnDetachFromFrameNode(FrameNode* frameNode) override;
-    void OnAttachToMainTree() override;
-    void OnDetachFromMainTree() override;
-    void OnAttachToFrameNodeMultiThread() {}
-    void OnDetachFromFrameNodeMultiThread(FrameNode* frameNode) {}
-    void OnAttachToMainTreeMultiThread();
-    void OnDetachFromMainTreeMultiThread();
     void OnLanguageConfigurationUpdate() override;
     void DumpInfo() override;
-    void DumpSimplifyInfo(std::shared_ptr<JsonValue>& json) override {}
-    void OnColorConfigurationUpdate() override;
     void InitTextClockController();
 
     void InitUpdateTimeTextCallBack();
@@ -164,8 +138,8 @@ private:
     std::string ParseDateTime(const std::string& dateTimeValue, int32_t week, int32_t month, int32_t hour);
     void RegistVisibleAreaChangeCallback();
     void OnVisibleAreaChange(bool visible);
-    static void UpdateTextLayoutProperty(RefPtr<TextClockLayoutProperty>& layoutProperty,
-        RefPtr<TextLayoutProperty>& textLayoutProperty, const TextStyle& textStyleTheme);
+    static void UpdateTextLayoutProperty(
+        RefPtr<TextClockLayoutProperty>& layoutProperty, RefPtr<TextLayoutProperty>& textLayoutProperty);
     void ParseInputFormat();
     std::vector<std::string> ParseDateTimeValue(const std::string& strDateTimeValue);
     void GetDateTimeIndex(const char& element, TextClockFormatElement& tempFormatElement);

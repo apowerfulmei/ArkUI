@@ -35,20 +35,26 @@
 #include "frameworks/bridge/declarative_frontend/view_stack_processor.h"
 
 namespace OHOS::Ace {
+std::unique_ptr<ButtonModel> ButtonModel::instance_ = nullptr;
+std::mutex ButtonModel::mutex_;
+
 ButtonModel* ButtonModel::GetInstance()
 {
+    if (!instance_) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (!instance_) {
 #ifdef NG_BUILD
-    static NG::ButtonModelNG instance;
-    return &instance;
+            instance_.reset(new NG::ButtonModelNG());
 #else
-    if (Container::IsCurrentUseNewPipeline()) {
-        static NG::ButtonModelNG instance;
-        return &instance;
-    } else {
-        static Framework::ButtonModelImpl instance;
-        return &instance;
-    }
+            if (Container::IsCurrentUseNewPipeline()) {
+                instance_.reset(new NG::ButtonModelNG());
+            } else {
+                instance_.reset(new Framework::ButtonModelImpl());
+            }
 #endif
+        }
+    }
+    return instance_.get();
 }
 } // namespace OHOS::Ace
 
@@ -150,16 +156,12 @@ void JSButton::SetFontStyle(int32_t value)
 void JSButton::SetFontFamily(const JSCallbackInfo& info)
 {
     std::vector<std::string> fontFamilies;
-    RefPtr<ResourceObject> resObj;
-    if (!ParseJsFontFamilies(info[0], fontFamilies, resObj) || fontFamilies.empty()) {
+    if (!ParseJsFontFamilies(info[0], fontFamilies) || fontFamilies.empty()) {
         auto pipelineContext = PipelineBase::GetCurrentContext();
         CHECK_NULL_VOID(pipelineContext);
         auto textTheme = pipelineContext->GetTheme<TextTheme>();
         CHECK_NULL_VOID(textTheme);
         fontFamilies = textTheme->GetTextStyle().GetFontFamilies();
-    }
-    if (SystemProperties::ConfigChangePerform()) {
-        ButtonModel::GetInstance()->CreateWithFamiliesResourceObj(resObj, ButtonStringType::FONT_FAMILY);
     }
 
     ButtonModel::GetInstance()->SetFontFamily(fontFamilies);
@@ -168,23 +170,17 @@ void JSButton::SetFontFamily(const JSCallbackInfo& info)
 void JSButton::SetTextColor(const JSCallbackInfo& info)
 {
     Color textColor;
-    RefPtr<ResourceObject> resObj;
-    if (!ParseJsColor(info[0], textColor, resObj)) {
+    if (!ParseJsColor(info[0], textColor)) {
         auto buttonTheme = PipelineBase::GetCurrentContext()->GetTheme<ButtonTheme>();
         textColor = buttonTheme->GetTextStyle().GetTextColor();
     }
-    if (SystemProperties::ConfigChangePerform()) {
-        ButtonModel::GetInstance()->CreateWithColorResourceObj(resObj, ButtonColorType::FONT_COLOR);
-    }
+
     ButtonModel::GetInstance()->SetFontColor(textColor);
 }
 
 void JSButton::SetType(const JSCallbackInfo& info)
 {
     int32_t value = static_cast<int32_t>(ButtonType::CAPSULE);
-    if (Container::GreatOrEqualAPITargetVersion(PlatformVersion::VERSION_EIGHTEEN)) {
-        value = static_cast<int32_t>(ButtonType::ROUNDED_RECTANGLE);
-    }
     if (info[0]->IsNumber()) {
         value = info[0]->ToNumber<int32_t>();
     }
@@ -236,50 +232,6 @@ void JSButton::SetRole(const JSCallbackInfo& info)
     if (!JSButtonTheme::ApplyTheme(buttonRole, isLabelButton_)) {
         ButtonModel::GetInstance()->SetRole(buttonRole);
     }
-}
-
-void JSButton::SetMinFontScale(const JSCallbackInfo& info)
-{
-    double minFontScale;
-    RefPtr<ResourceObject> resObj;
-    if (info.Length() < 1 || !ParseJsDouble(info[0], minFontScale, resObj)) {
-        if (SystemProperties::ConfigChangePerform()) {
-            ButtonModel::GetInstance()->CreateWithDoubleResourceObj(resObj, ButtonDoubleType::MIN_FONT_SCALE);
-        }
-        return;
-    }
-    if (SystemProperties::ConfigChangePerform()) {
-        ButtonModel::GetInstance()->CreateWithDoubleResourceObj(resObj, ButtonDoubleType::MIN_FONT_SCALE);
-    }
-    if (LessOrEqual(minFontScale, 0.0f)) {
-        ButtonModel::GetInstance()->SetMinFontScale(0.0f);
-        return;
-    }
-    if (GreatOrEqual(minFontScale, 1.0f)) {
-        ButtonModel::GetInstance()->SetMinFontScale(1.0f);
-        return;
-    }
-    ButtonModel::GetInstance()->SetMinFontScale(static_cast<float>(minFontScale));
-}
-
-void JSButton::SetMaxFontScale(const JSCallbackInfo& info)
-{
-    double maxFontScale;
-    RefPtr<ResourceObject> resObj;
-    if (info.Length() < 1 || !ParseJsDouble(info[0], maxFontScale, resObj)) {
-        if (SystemProperties::ConfigChangePerform()) {
-            ButtonModel::GetInstance()->CreateWithDoubleResourceObj(resObj, ButtonDoubleType::MAX_FONT_SCALE);
-        }
-        return;
-    }
-    if (SystemProperties::ConfigChangePerform()) {
-        ButtonModel::GetInstance()->CreateWithDoubleResourceObj(resObj, ButtonDoubleType::MAX_FONT_SCALE);
-    }
-    if (LessOrEqual(maxFontScale, 1.0f)) {
-        ButtonModel::GetInstance()->SetMaxFontScale(1.0f);
-        return;
-    }
-    ButtonModel::GetInstance()->SetMaxFontScale(static_cast<float>(maxFontScale));
 }
 
 void JSButton::SetStateEffect(const JSCallbackInfo& info)
@@ -370,10 +322,16 @@ void JSButton::SetLableStyle(const JSCallbackInfo& info)
     }
 
     JSRef<JSVal> minFontSizeValue = obj->GetProperty("minFontSize");
-    SetMinMaxFontSize(buttonParameters, minFontSizeValue, ButtonDimensionType::MIN_FONT_SIZE);
+    CalcDimension minFontSize;
+    if (ParseJsDimensionFp(minFontSizeValue, minFontSize)) {
+        buttonParameters.minFontSize = minFontSize;
+    }
 
     JSRef<JSVal> maxFontSizeValue = obj->GetProperty("maxFontSize");
-    SetMinMaxFontSize(buttonParameters, maxFontSizeValue, ButtonDimensionType::MAX_FONT_SIZE);
+    CalcDimension maxFontSize;
+    if (ParseJsDimensionFp(maxFontSizeValue, maxFontSize)) {
+        buttonParameters.maxFontSize = maxFontSize;
+    }
 
     JSRef<JSVal> adaptHeightValue = obj->GetProperty("heightAdaptivePolicy");
     if (!adaptHeightValue->IsNull() && adaptHeightValue->IsNumber()) {
@@ -388,23 +346,6 @@ void JSButton::SetLableStyle(const JSCallbackInfo& info)
 
     CompleteParameters(buttonParameters);
     ButtonModel::GetInstance()->SetLabelStyle(buttonParameters);
-}
-
-void JSButton::SetMinMaxFontSize(ButtonParameters& buttonParameters, const JSRef<JSVal>& fontSizeValue,
-    const ButtonDimensionType type)
-{
-    CalcDimension fontSize;
-    RefPtr<ResourceObject> fontResObj;
-    if (ParseJsDimensionFpNG(fontSizeValue, fontSize, fontResObj, false)) {
-        if (type == ButtonDimensionType::MIN_FONT_SIZE) {
-            buttonParameters.minFontSize = fontSize;
-        } else if (type == ButtonDimensionType::MAX_FONT_SIZE) {
-            buttonParameters.maxFontSize = fontSize;
-        }
-    }
-    if (SystemProperties::ConfigChangePerform()) {
-        ButtonModel::GetInstance()->CreateWithDimensionFpResourceObj(fontResObj, type);
-    }
 }
 
 void JSButton::JsRemoteMessage(const JSCallbackInfo& info)
@@ -448,8 +389,6 @@ void JSButton::JSBind(BindingTarget globalObj)
     JSClass<JSButton>::StaticMethod("role", &JSButton::SetRole);
     JSClass<JSButton>::StaticMethod("createWithLabel", &JSButton::CreateWithLabel, MethodOptions::NONE);
     JSClass<JSButton>::StaticMethod("createWithChild", &JSButton::CreateWithChild, MethodOptions::NONE);
-    JSClass<JSButton>::StaticMethod("minFontScale", &JSButton::SetMinFontScale);
-    JSClass<JSButton>::StaticMethod("maxFontScale", &JSButton::SetMaxFontScale);
     JSClass<JSButton>::InheritAndBind<JSContainerBase>(globalObj);
 }
 
@@ -459,12 +398,6 @@ void JSButton::CreateWithLabel(const JSCallbackInfo& info)
     CreateWithPara para = ParseCreatePara(info, true);
     ButtonModel::GetInstance()->CreateWithLabel(para, buttonChildren);
     ButtonModel::GetInstance()->Create(para, buttonChildren);
-    if (SystemProperties::ConfigChangePerform()) {
-        RefPtr<ResourceObject> resObj;
-        std::string label;
-        ParseJsString(info[0], label, resObj);
-        ButtonModel::GetInstance()->CreateWithStringResourceObj(resObj, ButtonStringType::LABEL);
-    }
     isLabelButton_ = true;
     auto buttonRole = para.buttonRole.value_or(ButtonRole::NORMAL);
     auto buttonStyleMode = para.buttonStyleMode.value_or(ButtonStyleMode::EMPHASIZE);
@@ -520,14 +453,14 @@ Edge JSButton::GetOldPadding(const JSCallbackInfo& info)
 
 NG::PaddingProperty JSButton::GetNewPadding(const JSCallbackInfo& info)
 {
-    NG::PaddingProperty padding = { NG::CalcLength(0.0), NG::CalcLength(0.0), NG::CalcLength(0.0), NG::CalcLength(0.0),
-        std::nullopt, std::nullopt };
+    NG::PaddingProperty padding = { NG::CalcLength(0.0), NG::CalcLength(0.0), NG::CalcLength(0.0),
+        NG::CalcLength(0.0) };
     if (isLabelButton_) {
         auto buttonTheme = GetTheme<ButtonTheme>();
         CHECK_NULL_RETURN(buttonTheme, padding);
         auto defaultPadding = buttonTheme->GetPadding();
         padding = { NG::CalcLength(defaultPadding.Left()), NG::CalcLength(defaultPadding.Right()),
-            NG::CalcLength(defaultPadding.Top()), NG::CalcLength(defaultPadding.Bottom()), std::nullopt, std::nullopt };
+            NG::CalcLength(defaultPadding.Top()), NG::CalcLength(defaultPadding.Bottom()) };
     }
     if (info[0]->IsObject()) {
         CommonCalcDimension commonCalcDimension;
@@ -631,17 +564,14 @@ void JSButton::JsOnClick(const JSCallbackInfo& info)
 void JSButton::JsBackgroundColor(const JSCallbackInfo& info)
 {
     Color backgroundColor;
-    RefPtr<ResourceObject> resObj;
-    bool colorFlag = ParseJsColor(info[0], backgroundColor, resObj);
+    bool colorFlag = ParseJsColor(info[0], backgroundColor);
     if (!colorFlag) {
         auto buttonTheme = GetTheme<ButtonTheme>();
         if (buttonTheme) {
             backgroundColor = buttonTheme->GetBgColor();
         }
     }
-    if (SystemProperties::ConfigChangePerform()) {
-        ButtonModel::GetInstance()->CreateWithColorResourceObj(resObj, ButtonColorType::BACKGROUND_COLOR);
-    }
+
     ButtonModel::GetInstance()->BackgroundColor(backgroundColor, colorFlag);
     info.ReturnSelf();
 }
@@ -693,9 +623,6 @@ void JSButton::JsSize(const JSCallbackInfo& info)
 
 void JSButton::JsRadius(const JSCallbackInfo& info)
 {
-    if (!NG::ViewStackProcessor::GetInstance()->IsCurrentVisualStateProcess()) {
-        return;
-    }
     JsRadius(info[0]);
 }
 
@@ -754,7 +681,7 @@ CreateWithPara JSButton::ParseCreatePara(const JSCallbackInfo& info, bool hasLab
         para.label = label;
         return para;
     }
-    uint32_t optionIndex = 0;
+    int32_t optionIndex = 0;
     if (hasLabel) {
         para.parseSuccess = ParseJsString(info[0], label);
         if (para.parseSuccess) {

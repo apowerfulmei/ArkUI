@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -22,7 +22,6 @@
 
 #include "base/geometry/axis.h"
 #include "base/geometry/dimension.h"
-#include "core/common/resource/resource_object.h"
 #include "core/components/common/layout/constants.h"
 #include "core/components_ng/event/gesture_event_hub.h"
 #include "core/components_v2/list/list_properties.h"
@@ -34,9 +33,8 @@ public:
     static ListItemModel* GetInstance();
     virtual ~ListItemModel() = default;
 
-    virtual void Create(bool isCreateArc = false) = 0;
-    virtual void Create(
-        std::function<void(int32_t)>&& deepRenderFunc, V2::ListItemStyle listItemStyle, bool isCreateArc = false) = 0;
+    virtual void Create() = 0;
+    virtual void Create(std::function<void(int32_t)>&& deepRenderFunc, V2::ListItemStyle listItemStyle) = 0;
     virtual void OnDidPop();
     virtual void SetBorderRadius(const Dimension& borderRadius) = 0;
     virtual void SetType(const std::string& type) = 0;
@@ -48,21 +46,12 @@ public:
     virtual void SetSelectChangeEvent(std::function<void(bool)>&& changeEvent) = 0;
     // use SetDeleteArea to update builder function
     virtual void SetSwiperAction(std::function<void()>&& startAction, std::function<void()>&& endAction,
-        OnOffsetChangeFunc&& onOffsetChangeFunc, V2::SwipeEdgeEffect edgeEffect,
-        NG::FrameNode* node = nullptr) = 0;
+        OnOffsetChangeFunc&& onOffsetChangeFunc, V2::SwipeEdgeEffect edgeEffect) = 0;
     virtual void SetSelectCallback(OnSelectFunc&& selectCallback) = 0;
     virtual void SetOnDragStart(NG::OnDragStartFunc&& onDragStart) = 0;
     virtual void SetDeleteArea(std::function<void()>&& builderAction, OnDeleteEvent&& onDelete,
         OnEnterDeleteAreaEvent&& onEnterDeleteArea, OnExitDeleteAreaEvent&& onExitDeleteArea,
-        OnStateChangedEvent&& onStateChange, const Dimension& length, bool isStartArea,
-        NG::FrameNode* node = nullptr) = 0;
-    virtual void SetAutoScale(bool autoScale) {}
-    virtual void SetDeleteAreaWithFrameNode(const RefPtr<NG::UINode>& builderComponent, OnDeleteEvent&& onDelete,
-        OnEnterDeleteAreaEvent&& onEnterDeleteArea, OnExitDeleteAreaEvent&& onExitDeleteArea,
-        OnStateChangedEvent&& onStateChange, const Dimension& length, bool isStartArea,
-        NG::FrameNode* node) = 0;
-    virtual void ParseResObjStartArea(const RefPtr<ResourceObject>& resObj) {};
-    virtual void ParseResObjEndArea(const RefPtr<ResourceObject>& resObj) {};
+        OnStateChangedEvent&& onStateChange, const Dimension& length, bool isStartArea) = 0;
 
 private:
     static std::unique_ptr<ListItemModel> instance_;

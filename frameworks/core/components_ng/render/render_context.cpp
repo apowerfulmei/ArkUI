@@ -15,7 +15,6 @@
 
 #include "core/components_ng/render/render_context.h"
 
-#include "base/utils/multi_thread.h"
 #include "core/pipeline_ng/pipeline_context.h"
 
 namespace OHOS::Ace::NG {
@@ -45,24 +44,15 @@ void RenderContext::SetRequestFrame(const std::function<void()>& requestFrame)
 
 void RenderContext::RequestNextFrame() const
 {
-    auto node = GetHost();
-    // This function has a mirror function (XxxMultiThread) and needs to be modified synchronously.
-    FREE_NODE_CHECK(node, RequestNextFrame);
     if (requestFrame_) {
         requestFrame_();
+        auto node = GetHost();
         CHECK_NULL_VOID(node);
         auto eventHub = node->GetEventHub<NG::EventHub>();
         if (node->GetInspectorId().has_value() || (eventHub && eventHub->HasNDKDrawCompletedCallback())) {
             auto pipeline = AceType::DynamicCast<PipelineContext>(PipelineBase::GetCurrentContext());
             CHECK_NULL_VOID(pipeline);
             pipeline->SetNeedRenderNode(WeakPtr<FrameNode>(node));
-        }
-        if (node->IsObservedByDrawChildren()) {
-            auto pipeline = AceType::DynamicCast<PipelineContext>(PipelineBase::GetCurrentContext());
-            CHECK_NULL_VOID(pipeline);
-
-            auto frameNode = AceType::DynamicCast<FrameNode>(node->GetObserverParentForDrawChildren());
-            pipeline->SetNeedRenderForDrawChildrenNode(WeakPtr<FrameNode>(frameNode));
         }
     }
 }
@@ -75,6 +65,11 @@ void RenderContext::SetHostNode(const WeakPtr<FrameNode>& host)
 RefPtr<FrameNode> RenderContext::GetHost() const
 {
     return host_.Upgrade();
+}
+
+FrameNode* RenderContext::GetUnsafeHost() const
+{
+    return UnsafeRawPtr(host_);
 }
 
 void RenderContext::SetSharedTransitionOptions(const std::shared_ptr<SharedTransitionOption>& option)
@@ -164,8 +159,7 @@ void RenderContext::ToJsonValue(std::unique_ptr<JsonValue>& json, const Inspecto
     if (propClickEffectLevel_.has_value()) {
         auto clickEffectJsonValue = JsonUtil::Create(true);
         clickEffectJsonValue->Put("level", std::to_string((int)propClickEffectLevel_.value().level).c_str());
-        clickEffectJsonValue->Put("scale",
-            std::to_string((float)propClickEffectLevel_.value().scaleNumber).c_str());
+        clickEffectJsonValue->Put("scale", std::to_string((float)propClickEffectLevel_.value().scaleNumber).c_str());
         json->PutExtAttr("clickEffect", clickEffectJsonValue, filter);
     }
     ObscuredToJsonValue(json, filter);

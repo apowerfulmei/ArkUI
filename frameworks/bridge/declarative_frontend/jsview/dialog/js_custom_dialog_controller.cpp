@@ -15,19 +15,15 @@
 
 #include "bridge/declarative_frontend/jsview/dialog/js_custom_dialog_controller.h"
 
-#include "bridge/declarative_frontend/engine/js_converter.h"
-
 #include "base/subwindow/subwindow_manager.h"
 #include "base/utils/system_properties.h"
 #include "base/utils/utils.h"
 #include "bridge/declarative_frontend/engine/jsi/jsi_types.h"
-#include "bridge/declarative_frontend/jsview/js_view.h"
 #include "bridge/declarative_frontend/jsview/models/custom_dialog_controller_model_impl.h"
 #include "core/common/ace_engine.h"
 #include "core/common/container.h"
 #include "core/components_ng/base/view_stack_processor.h"
 #include "core/components_ng/pattern/dialog/custom_dialog_controller_model_ng.h"
-#include "core/components_ng/pattern/overlay/level_order.h"
 #include "core/pipeline_ng/pipeline_context.h"
 #include "frameworks/bridge/common/utils/engine_helper.h"
 #include "frameworks/bridge/declarative_frontend/jsview/js_view_abstract.h"
@@ -64,61 +60,21 @@ const std::vector<DialogAlignment> DIALOG_ALIGNMENT = { DialogAlignment::TOP, Di
     DialogAlignment::BOTTOM_END };
 const std::vector<KeyboardAvoidMode> KEYBOARD_AVOID_MODE = { KeyboardAvoidMode::DEFAULT, KeyboardAvoidMode::NONE };
 const std::vector<LevelMode> DIALOG_LEVEL_MODE = { LevelMode::OVERLAY, LevelMode::EMBEDDED };
-const std::vector<ImmersiveMode> DIALOG_IMMERSIVE_MODE = { ImmersiveMode::DEFAULT, ImmersiveMode::EXTEND };
+const std::vector<ImmersiveMode> DIALOG_IMMERSIVE_MODE = { ImmersiveMode::DEFAULT, ImmersiveMode::EXTEND};
 constexpr int32_t DEFAULT_ANIMATION_DURATION = 200;
 constexpr float DEFAULT_AVOID_DISTANCE = 16.0f;
 
 } // namespace
 
-void ParseCustomDialogLevelOrder(DialogProperties& properties, JSRef<JSObject> obj)
-{
-    if (properties.isShowInSubWindow) {
-        return;
-    }
-
-    auto levelOrderValue = obj->GetProperty("levelOrder");
-    if (!levelOrderValue->IsObject()) {
-        return;
-    }
-    napi_value levelOrderApi = JsConverter::ConvertJsValToNapiValue(levelOrderValue);
-    CHECK_NULL_VOID(levelOrderApi);
-
-    auto engine = EngineHelper::GetCurrentEngine();
-    CHECK_NULL_VOID(engine);
-    NativeEngine* nativeEngine = engine->GetNativeEngine();
-    CHECK_NULL_VOID(nativeEngine);
-    auto env = reinterpret_cast<napi_env>(nativeEngine);
-    NG::LevelOrder* levelOrder = nullptr;
-    napi_status status = napi_unwrap(env, levelOrderApi, reinterpret_cast<void**>(&levelOrder));
-    if (status != napi_ok || !levelOrder) {
-        LOGE("Failed to unwrap LevelOrder.");
-        return;
-    }
-
-    double order = levelOrder->GetOrder();
-    properties.levelOrder = std::make_optional(order);
-}
-
-void ParseCustomDialogFocusable(DialogProperties& properties, JSRef<JSObject> obj)
-{
-    auto focusableValue = obj->GetProperty("focusable");
-    if (!focusableValue->IsBoolean()) {
-        return;
-    }
-    properties.focusable = focusableValue->ToBoolean();
-}
-
-static std::atomic<int32_t> controllerId = 0;
-
 void JSCustomDialogController::ConstructorCallback(const JSCallbackInfo& info)
 {
-    uint32_t argc = info.Length();
+    int argc = info.Length();
     if (argc > 1 && !info[0]->IsUndefined() && info[0]->IsObject() && !info[1]->IsUndefined() && info[1]->IsObject()) {
         JSRef<JSObject> constructorArg = JSRef<JSObject>::Cast(info[0]);
         JSRef<JSObject> ownerObj = JSRef<JSObject>::Cast(info[1]);
 
         // check if owner object is set
-        auto* ownerView = JSView::GetNativeView(ownerObj);
+        JSView* ownerView = ownerObj->Unwrap<JSView>();
         auto instance = AceType::MakeRefPtr<JSCustomDialogController>(ownerView);
         if (ownerView == nullptr) {
             instance->IncRefCount();
@@ -159,11 +115,9 @@ void JSCustomDialogController::ConstructorCallback(const JSCallbackInfo& info)
             instance->dialogProperties_.onCancel = onCancel;
         }
 
-        std::function<void(const int32_t& info, const int32_t& instanceId)> onWillDismissFunc = nullptr;
+        std::function<void(const int32_t& info)> onWillDismissFunc = nullptr;
         JSViewAbstract::ParseDialogCallback(constructorArg, onWillDismissFunc);
         instance->dialogProperties_.onWillDismiss = onWillDismissFunc;
-
-        JSViewAbstract::ParseAppearDialogCallback(info, instance->dialogProperties_);
 
         // Parses autoCancel.
         JSRef<JSVal> autoCancelValue = constructorArg->GetProperty("autoCancel");
@@ -321,15 +275,8 @@ void JSCustomDialogController::ConstructorCallback(const JSCallbackInfo& info)
             instance->dialogProperties_.isModal = isModalValue->ToBoolean();
         }
 
-        // Parse levelOrder.
-        ParseCustomDialogLevelOrder(instance->dialogProperties_, constructorArg);
-        ParseCustomDialogFocusable(instance->dialogProperties_, constructorArg);
-
-        instance->dialogProperties_.controllerId = controllerId.fetch_add(1, std::memory_order_relaxed);
         JSViewAbstract::SetDialogProperties(constructorArg, instance->dialogProperties_);
         JSViewAbstract::SetDialogHoverModeProperties(constructorArg, instance->dialogProperties_);
-        JSViewAbstract::SetDialogBlurStyleOption(constructorArg, instance->dialogProperties_);
-        JSViewAbstract::SetDialogEffectOption(constructorArg, instance->dialogProperties_);
         instance->IncRefCount();
         info.SetReturnValue(AceType::RawPtr(instance));
     }
@@ -348,6 +295,7 @@ void JSCustomDialogController::JsOpenDialog(const JSCallbackInfo& info)
     if (!jsBuilderFunction_) {
         return;
     }
+
     if (this->ownerView_ == nullptr) {
         return;
     }
@@ -380,8 +328,8 @@ void JSCustomDialogController::JsOpenDialog(const JSCallbackInfo& info)
     });
 
     auto container = Container::Current();
-    if (container && container->IsSceneBoardWindow() && !dialogProperties_.windowScene.Upgrade()) {
-        dialogProperties_.isSceneBoardDialog = true;
+    if (container && container->IsScenceBoardWindow() && !dialogProperties_.windowScene.Upgrade()) {
+        dialogProperties_.isScenceBoardDialog = true;
         auto viewNode = this->ownerView_->GetViewNode();
         CHECK_NULL_VOID(viewNode);
         auto parentCustom = AceType::DynamicCast<NG::CustomNode>(viewNode);
@@ -397,12 +345,12 @@ void JSCustomDialogController::JsOpenDialog(const JSCallbackInfo& info)
     dialogProperties_.isSysBlurStyle =
         Container::GreatOrEqualAPIVersion(PlatformVersion::VERSION_TWELVE) ? true : false;
     CustomDialogControllerModel::GetInstance()->SetOpenDialog(dialogProperties_, WeakClaim(this), dialogs_, pending_,
-        isShown_, std::move(cancelTask), std::move(buildFunc), dialogComponent_, customDialog_, dialogOperation_,
-        hasBind_);
+        isShown_, std::move(cancelTask), std::move(buildFunc), dialogComponent_, customDialog_, dialogOperation_);
 }
 
 void JSCustomDialogController::JsCloseDialog(const JSCallbackInfo& info)
 {
+
     if (this->ownerView_ == nullptr) {
         return;
     }
@@ -428,12 +376,6 @@ void JSCustomDialogController::JsCloseDialog(const JSCallbackInfo& info)
 
     CustomDialogControllerModel::GetInstance()->SetCloseDialog(dialogProperties_, WeakClaim(this), dialogs_, pending_,
         isShown_, std::move(cancelTask), dialogComponent_, customDialog_, dialogOperation_);
-}
-
-void JSCustomDialogController::JsGetState(const JSCallbackInfo& info)
-{
-    PromptActionCommonState state = CustomDialogControllerModel::GetInstance()->GetState(dialogs_, hasBind_);
-    info.SetReturnValue(JSRef<JSVal>::Make(ToJSValue(static_cast<int32_t>(state))));
 }
 
 bool JSCustomDialogController::ParseAnimation(
@@ -500,7 +442,6 @@ void JSCustomDialogController::JSBind(BindingTarget object)
     JSClass<JSCustomDialogController>::Declare("NativeCustomDialogController");
     JSClass<JSCustomDialogController>::CustomMethod("open", &JSCustomDialogController::JsOpenDialog);
     JSClass<JSCustomDialogController>::CustomMethod("close", &JSCustomDialogController::JsCloseDialog);
-    JSClass<JSCustomDialogController>::CustomMethod("getState", &JSCustomDialogController::JsGetState);
     JSClass<JSCustomDialogController>::Bind(
         object, &JSCustomDialogController::ConstructorCallback, &JSCustomDialogController::DestructorCallback);
 }

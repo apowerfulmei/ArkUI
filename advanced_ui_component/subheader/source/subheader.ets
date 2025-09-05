@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2023-2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -21,19 +21,19 @@ import { BusinessError } from '@ohos.base';
 import hilog from '@ohos.hilog';
 import common from '@ohos.app.ability.common';
 import { HashMap } from '@kit.ArkTS';
-import { KeyCode } from '@kit.InputKit';
 
 const INDEX_ZERO: number = 0;
 const INDEX_ONE: number = 1;
 const INDEX_TWO: number = 2;
-// 字体字重缩放等数值
-const DEFAULT_FONT_SCALE: number = 1;
 // 行数及整体高度
 const SINGLE_LINE_NUM: number = 1;
 const DOUBLE_LINE_NUM: number = 2;
+const SINGLE_LINE_HEIGHT: number = 56;
+const DOUBLE_LINE_HEIGHT: number = 72;
 // 资源数值
 const RESOURCE_TYPE_SYMBOL: number = 40000;
 // 左边尺寸常量
+const LEFT_ICON_SIZE: ResourceStr = '16vp';
 const LEFT_ICON_SIZE_NUMBER: number = 16;
 const LEFT_TEXT_NUMBER: number = 8;
 // 右边尺寸常量
@@ -62,18 +62,13 @@ export enum OperationType {
 export declare class OperationOption {
   public value: ResourceStr;
   public action?: () => void;
-  public accessibilityLevel?: string;
-  public accessibilityText?: ResourceStr;
-  public accessibilityDescription?: ResourceStr;
-  public defaultFocus?: boolean;
 }
 
 export declare class SelectOptions {
   public options: Array<SelectOption>;
   public selected?: number;
-  public value?: ResourceStr;
+  public value?: string;
   public onSelect?: (index: number, value?: string) => void;
-  public defaultFocus?: boolean;
 }
 
 export declare class SymbolOptions {
@@ -94,10 +89,6 @@ class ContentIconOption {
   public subContent?: ResourceStr;
   public iconOptions?: IconOptions;
   public action?: () => void;
-  public accessibilityLevel?: string;
-  public accessibilityText?: ResourceStr;
-  public accessibilityDescription?: ResourceStr;
-  public defaultFocus?: boolean;
 }
 
 class FontStyle {
@@ -130,7 +121,7 @@ function secondaryTitleStyles(fontStyle: FontStyle) {
 
 @Extend(Text)
 function primaryTitleStyles(fontStyle: FontStyle) {
-  .fontSize(`${getResourceValue('sys.float.subheader_title_font_size')}fp`)
+  .fontSize(`${getResourceValue('sys.float.Subtitle_L')}fp`)
   .fontColor(fontStyle?.fontColor ?? $r('sys.color.font_primary'))
   .fontWeight(fontStyle?.fontWeight)
   .maxLines(fontStyle?.maxLines)
@@ -190,38 +181,12 @@ RESOURCE_CACHE_MAP.set('sys.float.outline_extra_larger', { resourceId: 125830951
 RESOURCE_CACHE_MAP.set('sys.float.corner_radius_level4', { resourceId: 125830909, defaultValue: 8 });
 // Subtitle_S: 125830969, 14
 RESOURCE_CACHE_MAP.set('sys.float.Subtitle_S', { resourceId: 125830969, defaultValue: 14 });
-// subheader_title_font_size: 125834265, 18
-RESOURCE_CACHE_MAP.set('sys.float.subheader_title_font_size', { resourceId: 125834265, defaultValue: 18 });
+// Subtitle_L: 125830967, 18
+RESOURCE_CACHE_MAP.set('sys.float.Subtitle_L', { resourceId: 125830967, defaultValue: 18 });
 // Body_L: 125830970, 16
 RESOURCE_CACHE_MAP.set('sys.float.Body_L', { resourceId: 125830970, defaultValue: 16 });
 // interactive_disable: 125831067, 0.4
 RESOURCE_CACHE_MAP.set('sys.float.interactive_disable', { resourceId: 125831067, defaultValue: 0.4 });
-// subheader_single_title_height: 125834252 56
-RESOURCE_CACHE_MAP.set('sys.float.subheader_single_title_height', { resourceId: 125834252, defaultValue: 56 });
-// subheader_single_subtitle_height: 125834253 56
-RESOURCE_CACHE_MAP.set('sys.float.subheader_single_subtitle_height', { resourceId: 125834253, defaultValue: 56 });
-// subheader_double_height: 125834254 72
-RESOURCE_CACHE_MAP.set('sys.float.subheader_double_height', { resourceId: 125834254, defaultValue: 72 });
-// subheader_title_font_weight: 125834255 700
-RESOURCE_CACHE_MAP.set('sys.float.subheader_title_font_weight', { resourceId: 125834255, defaultValue: 700 });
-// subheader_left_icon_size: 125835678, 16
-RESOURCE_CACHE_MAP.set('sys.float.subheader_left_icon_size', { resourceId: 125835678, defaultValue: 16 });
-// subheader_content_margin_start: 125835679, margin_left, 16
-RESOURCE_CACHE_MAP.set('sys.float.subheader_content_margin_start', { resourceId: 125835679, defaultValue: 16 });
-// subheader_content_margin_end: 125835680, margin_right, 16
-RESOURCE_CACHE_MAP.set('sys.float.subheader_content_margin_end', { resourceId: 125835680, defaultValue: 16 });
-// subheader_content_padding: 125835681, padding_level4, 8
-RESOURCE_CACHE_MAP.set('sys.float.subheader_content_padding', { resourceId: 125835681, defaultValue: 8 });
-// subheader_single_subtitle_padding: 125835682, padding_level6, 12
-RESOURCE_CACHE_MAP.set('sys.float.subheader_single_subtitle_padding', { resourceId: 125835682, defaultValue: 12 });
-// subheader_select_padding: 125835683, padding_level2, 4
-RESOURCE_CACHE_MAP.set('sys.float.subheader_select_padding', { resourceId: 125835683, defaultValue: 4 });
-// subheader_left_icon_end_margin: 125835684, padding_level4, 8
-RESOURCE_CACHE_MAP.set('sys.float.subheader_left_icon_end_margin', { resourceId: 125835684, defaultValue: 8 });
-// subheader_subtitle_font_weight: 125835685, regular , 400
-RESOURCE_CACHE_MAP.set('sys.float.subheader_subtitle_font_weight', { resourceId: 125835685, defaultValue: 400 });
-// subheader_titles_space: 125835686, padding_level1, 2
-RESOURCE_CACHE_MAP.set('sys.float.subheader_titles_space', { resourceId: 125835686, defaultValue: 2 });
 
 @Component
 export struct SubHeader {
@@ -247,8 +212,8 @@ export struct SubHeader {
   @Prop contentMargin: LocalizedMargin;
   @Prop contentPadding: LocalizedPadding;
   subHeaderMargin: LocalizedMargin = {
-    start: LengthMetrics.vp(getResourceValue('sys.float.subheader_content_margin_start')),
-    end: LengthMetrics.vp(getResourceValue('sys.float.subheader_content_margin_end')),
+    start: LengthMetrics.vp(getResourceValue('sys.float.margin_left')),
+    end: LengthMetrics.vp(getResourceValue('sys.float.margin_right')),
   };
   @Provide subHeaderTheme: SubHeaderTheme = new SubHeaderTheme();
   isFollowingSystemFontScale: boolean = false;
@@ -270,9 +235,9 @@ export struct SubHeader {
     .padding({
       end: LengthMetrics.vp(getResourceValue('sys.float.padding_level0')),
       top: this.fontSize >= MIN_FONT_SIZE ? LengthMetrics.vp(getResourceValue('sys.float.padding_level0'))
-        : LengthMetrics.vp(getResourceValue('sys.float.subheader_content_padding')),
+        : LengthMetrics.vp(getResourceValue('sys.float.padding_level4')),
       bottom: this.fontSize >= MIN_FONT_SIZE ? LengthMetrics.vp(getResourceValue('sys.float.padding_level0'))
-        : LengthMetrics.vp(getResourceValue('sys.float.subheader_content_padding')),
+        : LengthMetrics.vp(getResourceValue('sys.float.padding_level4')),
     })
   }
 
@@ -281,27 +246,14 @@ export struct SubHeader {
     .padding({
       end: LengthMetrics.vp(getResourceValue('sys.float.padding_level6')),
       top: this.fontSize >= MIN_FONT_SIZE ? LengthMetrics.vp(getResourceValue('sys.float.padding_level0'))
-        : LengthMetrics.vp(getResourceValue('sys.float.subheader_content_padding')),
+        : LengthMetrics.vp(getResourceValue('sys.float.padding_level4')),
       bottom: this.fontSize >= MIN_FONT_SIZE ? LengthMetrics.vp(getResourceValue('sys.float.padding_level0'))
-        : LengthMetrics.vp(getResourceValue('sys.float.subheader_content_padding')),
+        : LengthMetrics.vp(getResourceValue('sys.float.padding_level4')),
     })
   }
 
   @Styles
   private rightAreaClickEvent() {
-    .onKeyEvent((event: KeyEvent) => {
-      if (!event) {
-        return;
-      }
-      if ((event.keyCode === KeyCode.KEYCODE_SPACE || event.keyCode === KeyCode.KEYCODE_ENTER) &&
-        event.type === KeyType.Down) {
-        if ((this.operationType === OperationType.TEXT_ARROW || this.operationType === OperationType.BUTTON) &&
-        this.operationItem && this.operationItem.length > 0 && this.operationItem[0].action) {
-          this.operationItem[0].action();
-        }
-        event.stopPropagation();
-      }
-    })
     .onClick(() => {
       if ((this.operationType === OperationType.TEXT_ARROW || this.operationType === OperationType.BUTTON) &&
       this.operationItem && this.operationItem.length > 0 && this.operationItem[0].action) {
@@ -331,7 +283,7 @@ export struct SubHeader {
   updateFontScale(): number {
     try {
       let uiContext: UIContext = this.getUIContext();
-      let systemFontScale = (uiContext?.getHostContext() as common.UIAbilityContext)?.config?.fontSizeScale ?? 1;
+      let systemFontScale = (uiContext.getHostContext() as common.UIAbilityContext)?.config?.fontSizeScale ?? 1;
       if (!this.isFollowingSystemFontScale) {
         return 1;
       }
@@ -396,7 +348,6 @@ export struct SubHeader {
         })
         .width('100%')
         .accessibilityGroup(this.isLeftAreaAccessibilityGroup())
-        .accessibilityRole(this.select ? undefined : AccessibilityRoleType.TITLE_BAR)
 
         if (this.isRightAreaExists()) {
           this.rightAreaParentAging();
@@ -417,7 +368,6 @@ export struct SubHeader {
         .width('100%')
         .flexShrink(1)
         .accessibilityGroup(this.isLeftAreaAccessibilityGroup())
-        .accessibilityRole(this.select ? undefined : AccessibilityRoleType.TITLE_BAR)
 
         if (this.isRightAreaExists()) {
           this.rightAreaParent();
@@ -439,13 +389,6 @@ export struct SubHeader {
     return false;
   }
 
-  private getRightAreaAccessibilityLevel(): string {
-    if (this.operationItem![0].accessibilityLevel && this.operationItem![0].accessibilityLevel !== '') {
-      return this.operationItem![0].accessibilityLevel;
-    }
-    return 'yes';
-  }
-
   @Styles
   private rightAreaParentAgingStyles() {
     .margin({
@@ -460,30 +403,16 @@ export struct SubHeader {
       LengthMetrics.vp(getResourceValue('sys.float.margin_right')),
     })
     .accessibilityLevel(this.operationType === OperationType.BUTTON || this.operationType === OperationType.TEXT_ARROW ?
-    this.getRightAreaAccessibilityLevel() : 'no')
+      'yes' : 'no')
   }
 
-  private getRightAreaAccessibilityText(): string | undefined {
-    if (!this.operationItem || this.operationItem.length <= 0) {
+  private getRightAreaAccessibilityText(): string {
+    if (this.operationType !== OperationType.TEXT_ARROW || !this.operationItem || this.operationItem.length <= 0) {
       return '';
     }
-    if (this.operationItem[0].accessibilityText && this.operationItem[0].accessibilityText !== '') {
-      return this.operationItem[0].accessibilityText as string;
-    } else {
-      if (this.operationType === OperationType.TEXT_ARROW && this.operationItem[0].value.toString().length <= 0) {
-        // 播报：更多、more等, 使用的字段是：sys.string.ohos_toolbar_more
-        return Util.getStringByResource(125833704, '');
-      }
-    }
-    return '';
-  }
-
-  private getAccessibilityDescription(): string | undefined {
-    if (!this.operationItem || this.operationItem.length <= 0) {
-      return '';
-    }
-    if (this.operationItem[0].accessibilityDescription && this.operationItem[0].accessibilityDescription !== '') {
-      return this.operationItem[0].accessibilityDescription as string;
+    if (this.operationItem[0].value.toString().length <= 0) {
+      // 播报：更多、more等, 使用的字段是：sys.string.ohos_toolbar_more
+      return Util.getStringByResource(125833704, '');
     }
     return '';
   }
@@ -500,9 +429,7 @@ export struct SubHeader {
       .rightAreaParentAgingStyles()
       .backgroundColor($r('sys.color.ohos_id_color_sub_background_transparent'))
       .hoverEffect(HoverEffect.None)
-      .accessibilityGroup(true)
       .accessibilityText(this.getRightAreaAccessibilityText())
-      .accessibilityDescription(this.getAccessibilityDescription())
     } else {
       Row() {
         this.rightArea();
@@ -523,7 +450,7 @@ export struct SubHeader {
     })
     .flexShrink(0)
     .accessibilityLevel(this.operationType === OperationType.BUTTON || this.operationType === OperationType.TEXT_ARROW ?
-    this.getRightAreaAccessibilityLevel() : 'no')
+      'yes' : 'no')
   }
 
   @Builder
@@ -540,9 +467,7 @@ export struct SubHeader {
       .rightAreaParentStyles()
       .hoverEffect(HoverEffect.None)
       .backgroundColor($r('sys.color.ohos_id_color_sub_background_transparent'))
-      .accessibilityGroup(true)
       .accessibilityText(this.getRightAreaAccessibilityText())
-      .accessibilityDescription(this.getAccessibilityDescription())
     } else {
       Row() {
         this.rightArea();
@@ -557,7 +482,7 @@ export struct SubHeader {
 
   onMeasureSize(selfLayoutInfo: GeometryInfo, children: Measurable[], constraint: ConstraintSizeOptions): SizeResult {
     let result: SizeResult = { width: selfLayoutInfo.width, height: selfLayoutInfo.height };
-    let context = this.getUIContext()?.getHostContext() as common.UIAbilityContext;
+    let context = this.getUIContext().getHostContext() as common.UIAbilityContext;
     this.fontSize = this.updateFontScale();
     if (this.isSuitableAging()) {
       this.ageing = true;
@@ -568,7 +493,7 @@ export struct SubHeader {
     }
     children.forEach((child) => {
       constraint.minHeight = Math.min(Number(this.getMinHeight()), Number(constraint.maxHeight));
-      result.height = child?.measure(constraint).height;
+      result.height = child.measure(constraint).height;
       result.width = Number(constraint.maxWidth);
     })
     return result;
@@ -596,13 +521,11 @@ export struct SubHeader {
 
   private getMinHeight(): Length {
     if (this.secondaryTitle && this.icon) {
-      return getResourceValue('sys.float.subheader_single_subtitle_height');
+      return SINGLE_LINE_HEIGHT;
     } else if (this.secondaryTitle && this.primaryTitle) {
-      return getResourceValue('sys.float.subheader_double_height');
-    } else if (this.primaryTitle || this.select) {
-      return getResourceValue('sys.float.subheader_single_title_height');
+      return DOUBLE_LINE_HEIGHT;
     }
-    return getResourceValue('sys.float.subheader_single_subtitle_height');
+    return SINGLE_LINE_HEIGHT;
   }
 
   private getTextArrowPaddingLeft(): LengthMetrics {
@@ -627,13 +550,8 @@ export struct SubHeader {
     if (!this.titleBuilder && ((this.secondaryTitle && this.icon) ||
       (!this.primaryTitle && this.secondaryTitle))) {
       padding = {
-        start: LengthMetrics.vp(getResourceValue('sys.float.subheader_single_subtitle_padding')),
-        end: LengthMetrics.vp(getResourceValue('sys.float.subheader_single_subtitle_padding')),
-      }
-    } else if (this.select) {
-      padding = {
-        top: LengthMetrics.vp(getResourceValue('sys.float.subheader_select_padding')),
-        bottom: LengthMetrics.vp(getResourceValue('sys.float.subheader_select_padding')),
+        start: LengthMetrics.vp(getResourceValue('sys.float.padding_level6')),
+        end: LengthMetrics.vp(getResourceValue('sys.float.padding_level6')),
       }
     }
     return padding;
@@ -679,9 +597,6 @@ export struct SubHeader {
     if (this.operationType === OperationType.LOADING) {
       this.LoadingProcessStyle();
     }
-    if (this.operationType === undefined && (this.operationItem && this.operationItem.length > 0)) {
-      this.ButtonStyle(this.operationItem[0]);
-    }
   }
 
   @Builder
@@ -690,20 +605,19 @@ export struct SubHeader {
       if (Util.isSymbolResource($$.iconOptions?.icon)) {
         SymbolGlyph($$.iconOptions?.icon)
           .fontSize($$.iconOptions?.symbolicIconOption?.fontSize ?
-          Util.symbolFontSize($$.iconOptions?.symbolicIconOption?.fontSize) :
-            getResourceValue('sys.float.subheader_left_icon_size'))
+          Util.symbolFontSize($$.iconOptions?.symbolicIconOption?.fontSize) : LEFT_ICON_SIZE)
           .fontColor($$.iconOptions?.symbolicIconOption?.fontColor ?? [this.subHeaderTheme.leftIconColor])
           .fontWeight($$.iconOptions?.symbolicIconOption?.fontWeight)
           .renderingStrategy($$.iconOptions?.symbolicIconOption?.renderingStrategy)
           .effectStrategy($$.iconOptions?.symbolicIconOption?.effectStrategy)
-          .margin({ end: LengthMetrics.vp(getResourceValue('sys.float.subheader_left_icon_end_margin')) })
+          .margin({ end: LengthMetrics.vp(getResourceValue('sys.float.padding_level4')) })
           .flexShrink(0)
       } else {
         Image($$.iconOptions?.icon)
           .fillColor(this.subHeaderTheme.leftIconColor)
-          .width(getResourceValue('sys.float.subheader_left_icon_size'))
-          .height(getResourceValue('sys.float.subheader_left_icon_size'))
-          .margin({ end: LengthMetrics.vp(getResourceValue('sys.float.subheader_left_icon_end_margin')) })
+          .width(LEFT_ICON_SIZE)
+          .height(LEFT_ICON_SIZE)
+          .margin({ end: LengthMetrics.vp(getResourceValue('sys.float.padding_level4')) })
           .draggable(false)
           .flexShrink(0)
       }
@@ -725,7 +639,7 @@ export struct SubHeader {
     Column() {
       Text($$.content)
         .primaryTitleStyles({
-          fontWeight: getResourceValue('sys.float.subheader_title_font_weight'),
+          fontWeight: FontWeight.Bold,
           maxLines: DOUBLE_LINE_NUM,
           alignment: Alignment.Start,
           fontColor: this.subHeaderTheme.fontPrimaryColor,
@@ -734,12 +648,12 @@ export struct SubHeader {
       Text($$.subContent)
         .secondaryTitleStyles({
           maxLines: DOUBLE_LINE_NUM,
-          fontWeight: getResourceValue('sys.float.subheader_subtitle_font_weight'),
+          fontWeight: FontWeight.Regular,
           alignment: Alignment.Start,
           fontColor: this.subHeaderTheme.fontSecondaryColor,
         })
         .margin({
-          top: getResourceValue('sys.float.subheader_titles_space'),
+          top: getResourceValue('sys.float.padding_level1'),
         })
         .attributeModifier(this.secondaryTitleModifier)
     }
@@ -768,7 +682,6 @@ export struct SubHeader {
       .width('auto')
       .selected(this.selectedIndex)
       .value(this.selectValue)
-      .defaultFocus(selectParam.defaultFocus)
       .onSelect((index: number, value?: string) => {
         this.selectedIndex = index;
         if (value) {
@@ -788,7 +701,7 @@ export struct SubHeader {
   PrimaryTitleStyle($$: ContentIconOption): void {
     Text($$.content)
       .primaryTitleStyles({
-        fontWeight: getResourceValue('sys.float.subheader_title_font_weight'),
+        fontWeight: FontWeight.Bold,
         maxLines: DOUBLE_LINE_NUM,
         alignment: Alignment.Start,
         fontColor: this.subHeaderTheme.fontPrimaryColor,
@@ -807,7 +720,6 @@ export struct SubHeader {
             maxLines: DOUBLE_LINE_NUM,
             fontColor: this.subHeaderTheme.fontButtonColor,
           })
-          .defaultFocus(button.defaultFocus)
           .focusable(true)
       }
       .focusable(true)
@@ -874,8 +786,6 @@ export struct SubHeader {
             alignment: Alignment.End,
             fontColor: this.subHeaderTheme.fontSecondaryColor,
           })
-          .focusable(true)
-          .defaultFocus(textArrow.defaultFocus)
           .margin({
             end: this.getTextArrowMarginRight(),
           })
@@ -895,12 +805,13 @@ export struct SubHeader {
   @Builder
   ArrowStyle(): void {
     Row() {
-      SymbolGlyph($r('sys.symbol.chevron_right'))
-        .fontSize(RIGHT_SINGLE_ICON_SIZE)
-        .fontColor([this.subHeaderTheme.iconArrowColor])
-        .draggable(false)
+      Image($r('sys.media.ohos_ic_public_arrow_right'))
+        .fillColor(this.subHeaderTheme.iconArrowColor)
         .width(ARROW_ICON_WIDTH)
         .height(OPERATE_ITEM_LENGTH)
+        .focusable(true)
+        .draggable(false)
+        .matchTextDirection(true)
     }
     .justifyContent(FlexAlign.End)
   }
@@ -952,13 +863,13 @@ export struct SubHeader {
     } else {
       Row() {
         Button({ type: ButtonType.Normal, stateEffect: false }) {
-          SymbolGlyph($r('sys.symbol.chevron_right'))
-            .fontSize(RIGHT_SINGLE_ICON_SIZE)
-            .fontColor([this.subHeaderTheme.iconArrowColor])
-            .draggable(false)
-            .focusable(true)
+          Image($r('sys.media.ohos_ic_public_arrow_right'))
+            .fillColor(this.subHeaderTheme.iconArrowColor)
             .width(ARROW_ICON_WIDTH)
             .height(OPERATE_ITEM_LENGTH)
+            .focusable(true)
+            .draggable(false)
+            .matchTextDirection(true)
         }
         .width(ARROW_ICON_WIDTH)
         .height(OPERATE_ITEM_LENGTH)
@@ -998,28 +909,26 @@ export struct SubHeader {
   IconGroupStyle(operationItem: Array<OperationOption>): void {
     Row() {
       ForEach(operationItem, (item: OperationOption, index: number) => {
-        if (index <= INDEX_TWO) {
-          SingleIconStyle({
-            item: {
-              iconOptions: {
-                icon: item.value as Resource,
-                symbolicIconOption: this.operationSymbolOptions && this.operationSymbolOptions.length > index ?
-                this.operationSymbolOptions[index] : null,
+        if (Util.isResourceType(item.value)) {
+          if (index <= INDEX_TWO) {
+            SingleIconStyle({
+              item: {
+                iconOptions: {
+                  icon: item.value as Resource,
+                  symbolicIconOption: this.operationSymbolOptions && this.operationSymbolOptions.length > index ?
+                  this.operationSymbolOptions[index] : null,
+                },
+                action: item.action,
               },
-              action: item.action,
-              defaultFocus: item.defaultFocus,
-              accessibilityLevel: item.accessibilityLevel,
-              accessibilityText: item.accessibilityText,
-              accessibilityDescription: item.accessibilityDescription,
-            },
-            isSingleIcon: this.operationItem?.length === SINGLE_ICON_NUMBER,
-          })
-            .margin({
-              start: LengthMetrics.vp(getResourceValue('sys.float.padding_level4')),
-              bottom: LengthMetrics.vp(getResourceValue('sys.float.padding_level3')),
+              isSingleIcon: this.operationItem?.length === SINGLE_ICON_NUMBER,
             })
-        } else {
-          // 最大支持3个ICON,此场景不支持
+              .margin({
+                start: LengthMetrics.vp(getResourceValue('sys.float.padding_level4')),
+                bottom: LengthMetrics.vp(getResourceValue('sys.float.padding_level3')),
+              })
+          } else {
+            // 最大支持3个ICON,此场景不支持
+          }
         }
       })
     }
@@ -1060,42 +969,17 @@ struct SingleIconStyle {
   @Consume subHeaderTheme: SubHeaderTheme;
   isSingleIcon: boolean = true;
 
-  private getRightIconAccessibilityText(): string | undefined {
-    if (this.item?.accessibilityText) {
-      return this.item.accessibilityText as string;
-    }
-    return '';
-  }
-
-  private getRightIconAccessibilityLevel(): string {
-    if (this.item?.accessibilityLevel && this.item?.accessibilityLevel !== '') {
-      return this.item.accessibilityLevel;
-    }
-    return 'auto';
-  }
-
-  private  getRightIconAccessibilityDescription(): string | undefined {
-    if (this.item?.accessibilityDescription && this.item?.accessibilityDescription !== '') {
-      return this.item?.accessibilityDescription as string;
-    }
-    return '';
-  }
-
   build() {
     if (this.item && this.item.iconOptions) {
       Button({ type: ButtonType.Normal, stateEffect: false }) {
         this.IconZone();
       }
       .focusable(true)
-      .defaultFocus(this.item.defaultFocus)
       .width(SINGLE_ICON_ZONE_SIZE)
       .height(SINGLE_ICON_ZONE_SIZE)
       .align(Alignment.Center)
       .backgroundColor(this.bgColor)
       .borderRadius(getResourceValue('sys.float.corner_radius_level4'))
-      .accessibilityLevel(this.getRightIconAccessibilityLevel())
-      .accessibilityText(this.getRightIconAccessibilityText())
-      .accessibilityDescription(this.getRightIconAccessibilityDescription())
       .focusBox({
         margin: { value: INDEX_ZERO, unit: LengthUnit.VP },
         strokeColor: ColorMetrics.resourceColor(this.subHeaderTheme.borderFocusColor),
@@ -1185,7 +1069,7 @@ class Util {
       return false;
     }
     let resource = resourceStr as Resource;
-    return resource?.type === RESOURCE_TYPE_SYMBOL;
+    return resource.type === RESOURCE_TYPE_SYMBOL;
   }
 
   /**
@@ -1221,7 +1105,7 @@ class Util {
       let code: number = (error as BusinessError).code;
       let message: string = (error as BusinessError).message;
       hilog.error(0x3900, 'Ace', `SubHeader getNumberByResource error, code: ${code}, message: ${message}`);
-      return defaultNumber;
+      return 0;
     }
   }
 
@@ -1320,7 +1204,7 @@ struct TextArrowLayout {
       minHeight: textArrowHeight,
       maxHeight: textArrowHeight,
     };
-    arrowChild?.measure(arrowConstraint);
+    arrowChild.measure(arrowConstraint);
     return { width: textArrowWidth, height: textArrowHeight };
   }
 

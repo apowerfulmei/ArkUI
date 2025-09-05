@@ -16,17 +16,15 @@
 #include "core/components_ng/pattern/text_field/text_field_overlay_modifier.h"
 
 #include "base/utils/utils.h"
+#include "core/components_ng/base/modifier.h"
 #include "core/components_ng/pattern/text_field/text_field_model.h"
 #include "core/components_ng/pattern/text_field/text_field_pattern.h"
+#include "core/components_ng/render/adapter/pixelmap_image.h"
+#include "core/components_ng/render/drawing.h"
 #include "core/components_ng/render/drawing_prop_convertor.h"
+#include "core/components_ng/render/image_painter.h"
 
 namespace OHOS::Ace::NG {
-namespace {
-constexpr int32_t LAND_DURATION = 100;
-const RefPtr<CubicCurve> LAND_CURVE = AceType::MakeRefPtr<CubicCurve>(0.2, 0, 0.2, 1.0f);
-constexpr int32_t HALF_RECT = 2;
-} // namespace
-
 TextFieldOverlayModifier::TextFieldOverlayModifier(
     const WeakPtr<OHOS::Ace::NG::Pattern>& pattern, WeakPtr<ScrollEdgeEffect>&& edgeEffect)
     : pattern_(pattern), edgeEffect_(edgeEffect)
@@ -44,9 +42,6 @@ TextFieldOverlayModifier::TextFieldOverlayModifier(
     contentSize_ = AceType::MakeRefPtr<PropertySizeF>(SizeF());
     contentOffset_ = AceType::MakeRefPtr<PropertyOffsetF>(OffsetF());
     cursorOffset_ = AceType::MakeRefPtr<PropertyOffsetF>(textFieldPattern->GetCaretOffset());
-    floatingCursorOffset_ = AceType::MakeRefPtr<AnimatablePropertyOffsetF>(textFieldPattern->GetCaretOffset());
-    floatingCursorVisible_ = AceType::MakeRefPtr<PropertyBool>(false);
-    showOriginCursor_ = AceType::MakeRefPtr<PropertyBool>(false);
     frameSize_ = AceType::MakeRefPtr<PropertySizeF>(SizeF());
     currentOffset_ = AceType::MakeRefPtr<PropertyFloat>(0.0f);
     underlineWidth_ = AceType::MakeRefPtr<PropertyFloat>(0.0f);
@@ -59,12 +54,7 @@ TextFieldOverlayModifier::TextFieldOverlayModifier(
     previewTextDecorationColor_ = AceType::MakeRefPtr<PropertyColor>(Color());
     previewTextStyle_ = PreviewTextStyle::NORMAL;
     contentChange_ = AceType::MakeRefPtr<PropertyBool>(false);
-    hoverColor_ = AceType::MakeRefPtr<PropertyInt>(0);
-    ModifierAttachProperty();
-}
 
-void TextFieldOverlayModifier::ModifierAttachProperty()
-{
     AttachProperty(cursorColor_);
     AttachProperty(cursorWidth_);
     AttachProperty(selectedColor_);
@@ -73,9 +63,6 @@ void TextFieldOverlayModifier::ModifierAttachProperty()
     AttachProperty(contentSize_);
     AttachProperty(contentOffset_);
     AttachProperty(cursorOffset_);
-    AttachProperty(floatingCursorOffset_);
-    AttachProperty(floatingCursorVisible_);
-    AttachProperty(showOriginCursor_);
     AttachProperty(frameSize_);
     AttachProperty(currentOffset_);
     AttachProperty(underlineWidth_);
@@ -107,10 +94,6 @@ void TextFieldOverlayModifier::SetSecondHandleOffset(const OffsetF& offset)
 
 void TextFieldOverlayModifier::onDraw(DrawingContext& context)
 {
-    auto textFieldPattern = DynamicCast<TextFieldPattern>(pattern_.Upgrade());
-    CHECK_NULL_VOID(textFieldPattern);
-    auto host = textFieldPattern->GetHost();
-    CHECK_NULL_VOID(host);
     auto& canvas = context.canvas;
     if (Container::GreatOrEqualAPIVersion(PlatformVersion::VERSION_ELEVEN)) {
         canvas.Save();
@@ -120,7 +103,6 @@ void TextFieldOverlayModifier::onDraw(DrawingContext& context)
         canvas.ClipRoundRect(clipRect, clipRadius, true);
     }
     PaintCursor(context);
-    PaintFloatingCursor(context);
     PaintSelection(context);
     if (Container::GreatOrEqualAPIVersion(PlatformVersion::VERSION_ELEVEN)) {
         canvas.Restore();
@@ -129,32 +111,6 @@ void TextFieldOverlayModifier::onDraw(DrawingContext& context)
     PaintEdgeEffect(frameSize_->Get(), context.canvas);
     PaintUnderline(context.canvas);
     PaintPreviewTextDecoration(context);
-    if (host->GreatOrEqualAPITargetVersion(PlatformVersion::VERSION_EIGHTEEN)) {
-        RSBrush brush;
-        brush.SetAntiAlias(true);
-        brush.SetColor(hoverColor_->Get());
-        canvas.AttachBrush(brush);
-        for (const auto& hoverRects : hoverRects_) {
-            auto rect = hoverRects.GetRect();
-            RSRect rsRect(rect.Left(), rect.Top(), rect.Right(), rect.Bottom());
-            canvas.DrawRoundRect(RSRoundRect(rsRect, rect.Width() / HALF_RECT, rect.Height() / HALF_RECT));
-        }
-        canvas.DetachBrush();
-        canvas.Restore();
-    }
-}
-
-void TextFieldOverlayModifier::SetHoverColorAndRects(
-    const std::vector<RoundRect>& hoverRects, uint32_t hoverColor)
-{
-    CHECK_NULL_VOID(hoverColor);
-    hoverRects_ = hoverRects;
-    hoverColor_->Set(static_cast<int32_t>(hoverColor));
-}
-
-void TextFieldOverlayModifier::ClearHoverColorAndRects()
-{
-    hoverRects_.clear();
 }
 
 void TextFieldOverlayModifier::GetFrameRectClip(RSRect& clipRect, std::vector<RSPoint>& clipRadius)
@@ -202,22 +158,13 @@ void TextFieldOverlayModifier::PaintUnderline(RSCanvas& canvas) const
     responseAreaWidth += clearNodeResponseArea ? clearNodeResponseArea->GetAreaRect().Width() : 0.0f;
     auto hasResponseArea = GreatNotEqual(responseAreaWidth, 0.0f);
     auto isRTL = layoutProperty->GetNonAutoLayoutDirection() == TextDirection::RTL;
-    Point leftPoint;
-    Point rightPoint;
-    auto host = textFieldPattern->GetHost();
-    CHECK_NULL_VOID(host);
-    auto isGreatAPI18 = host->GreatOrEqualAPITargetVersion(PlatformVersion::VERSION_EIGHTEEN);
-    auto isNeedToAddPadding = isGreatAPI18 && textFieldPattern->IsUnderlineAndButtonMode();
+    Point leftPoint, rightPoint;
     if (isRTL) {
-        auto contentLeft = isNeedToAddPadding ? contentRect.Left() - textFieldPattern->GetPaddingLeft() :
-            contentRect.Left();
-        leftPoint.SetX(hasResponseArea ? 0.0 : contentLeft);
+        leftPoint.SetX(hasResponseArea ? 0.0 : contentRect.Left());
         rightPoint.SetX(contentRect.Right());
     } else {
-        auto contentRight = isNeedToAddPadding ? contentRect.Right() + textFieldPattern->GetPaddingRight() :
-            contentRect.Right();
         leftPoint.SetX(contentRect.Left());
-        rightPoint.SetX(hasResponseArea ? textFrameRect.Width() : contentRight);
+        rightPoint.SetX(hasResponseArea ? textFrameRect.Width() : contentRect.Right());
     }
 
     leftPoint.SetY(textFrameRect.Height());
@@ -254,7 +201,7 @@ void TextFieldOverlayModifier::PaintSelection(DrawingContext& context) const
     brush.SetColor(ToRSColor(selectedColor_->Get()));
     canvas.AttachBrush(brush);
     auto paintOffset = textFieldPattern->GetContentRect().GetOffset();
-    auto textBoxes = textFieldPattern->GetTextBoxesForSelect();
+    auto textBoxes = textFieldPattern->GetTextBoxes();
     auto textRect = textFieldPattern->GetTextRect();
     bool isTextArea = textFieldPattern->IsTextArea();
     float clipRectHeight = 0.0f;
@@ -279,7 +226,7 @@ void TextFieldOverlayModifier::PaintSelection(DrawingContext& context) const
             textBox.Right() + (isTextArea ? contentOffset_->Get().GetX() : textRect.GetX()),
             defaultStyle
                 ? (textBox.Bottom() + (isTextArea ? textRect.GetY() : contentOffset_->Get().GetY()))
-                         : textFieldPattern->GetFrameRect().Height()));
+                : textFieldPattern->GetFrameRect().Height()));
     }
     canvas.DetachBrush();
     canvas.Restore();
@@ -297,58 +244,7 @@ void TextFieldOverlayModifier::PaintCursor(DrawingContext& context) const
     CHECK_NULL_VOID(textFieldPattern);
     auto magnifierController = textFieldPattern->GetMagnifierController();
     CHECK_NULL_VOID(magnifierController);
-
-    auto showOriginCursor = floatingCursorVisible_->Get() && showOriginCursor_->Get();
-    auto cursorVisible = floatingCursorVisible_->Get() ? showOriginCursor_->Get() : cursorVisible_->Get();
-    if (!cursorVisible || textFieldPattern->IsSelected()) {
-        return;
-    }
-    canvas.Save();
-
-    RSPen pen;
-    pen.SetAntiAlias(true);
-    pen.SetWidth(cursorWidth);
-    pen.SetCapStyle(RSPen::CapStyle::ROUND_CAP);
-
-    if (showOriginCursor) {
-        pen.SetColor(ToRSColor(LinearColor(textFieldPattern->GetOriginCursorColor())));
-    } else {
-        pen.SetColor(ToRSColor(cursorColor_->Get()));
-    }
-    canvas.AttachPen(pen);
-    auto paintOffset = contentOffset_->Get();
-    ACE_LAYOUT_SCOPED_TRACE("PaintCursor[offset:%f, %f]", paintOffset.GetX(), paintOffset.GetY());
-    float clipRectHeight = 0.0f;
-    clipRectHeight = paintOffset.GetY() + contentSize_->Get().Height();
-    RSRect clipInnerRect(paintOffset.GetX(), paintOffset.GetY(),
-        // add extra clip space for cases such as auto width
-        paintOffset.GetX() + contentSize_->Get().Width() +
-            (LessOrEqual(contentSize_->Get().Width(), 0.0) ? cursorWidth_->Get() : 0.0f),
-        clipRectHeight);
-    canvas.ClipRect(clipInnerRect, RSClipOp::INTERSECT);
-
-    auto caretRect = textFieldPattern->GetCaretRect();
-    float midPosX = caretRect.GetX() + cursorWidth / 2;
-    float startPosY = caretRect.GetY();
-    float endPosY = caretRect.GetY() + caretRect.Height();
-    float roundCapRadius = static_cast<float>(cursorWidth_->Get()) / 2;
-    canvas.DrawLine(RSPoint(midPosX, startPosY + roundCapRadius),
-        RSPoint(midPosX, endPosY - roundCapRadius));
-    canvas.DetachPen();
-    canvas.Restore();
-}
-
-void TextFieldOverlayModifier::PaintFloatingCursor(DrawingContext& context) const
-{
-    float cursorWidth = static_cast<float>(cursorWidth_->Get());
-    if (NearZero(cursorWidth)) {
-        return; // will not draw cursor
-    }
-
-    auto& canvas = context.canvas;
-    auto textFieldPattern = DynamicCast<TextFieldPattern>(pattern_.Upgrade());
-    CHECK_NULL_VOID(textFieldPattern);
-    if (!floatingCursorVisible_->Get() || textFieldPattern->IsSelected()) {
+    if (!cursorVisible_->Get() || textFieldPattern->IsSelected()) {
         return;
     }
     canvas.Save();
@@ -370,46 +266,15 @@ void TextFieldOverlayModifier::PaintFloatingCursor(DrawingContext& context) cons
         clipRectHeight);
     canvas.ClipRect(clipInnerRect, RSClipOp::INTERSECT);
 
-    auto caretRect = textFieldPattern->GetFloatingCaretRect();
-    auto floatingOffset = floatingCursorOffset_->Get();
-    float midPosX = floatingOffset.GetX() + cursorWidth / 2;
-    float startPosY = floatingOffset.GetY();
-    float endPosY = floatingOffset.GetY() + caretRect.Height();
+    auto caretRect = textFieldPattern->GetCaretRect();
+    float midPosX = caretRect.GetX() + cursorWidth / 2;
+    float startPosY = caretRect.GetY();
+    float endPosY = caretRect.GetY() + caretRect.Height();
     float roundCapRadius = static_cast<float>(cursorWidth_->Get()) / 2;
     canvas.DrawLine(RSPoint(midPosX, startPosY + roundCapRadius),
         RSPoint(midPosX, endPosY - roundCapRadius));
     canvas.DetachPen();
     canvas.Restore();
-}
-
-void TextFieldOverlayModifier::StartFloatingCaretLand(const OffsetF& originCaretOffset)
-{
-    AnimationOption option = AnimationOption();
-    option.SetDuration(LAND_DURATION);
-    option.SetCurve(LAND_CURVE);
-    caretLanding_ = true;
-    auto pattern = pattern_.Upgrade();
-    auto host = pattern ? pattern->GetHost() : nullptr;
-    auto contextPtr = host ? host->GetContextRefPtr() : nullptr;
-    AnimationUtils::Animate(
-        option,
-        [weak = WeakClaim(this), originCaretOffset]() {
-            auto modifier = weak.Upgrade();
-            CHECK_NULL_VOID(modifier);
-            modifier->SetFloatingCursorOffset(originCaretOffset);
-        },
-        [weak = WeakClaim(this), pattern = pattern_]() {
-            auto textField = DynamicCast<TextFieldPattern>(pattern.Upgrade());
-            CHECK_NULL_VOID(textField);
-            auto modifier = weak.Upgrade();
-            CHECK_NULL_VOID(modifier);
-            modifier->SetFloatCaretLanding(false);
-            textField->ResetFloatingCursorState();
-            auto textFieldHost = textField->GetHost();
-            CHECK_NULL_VOID(textFieldHost);
-            textFieldHost->MarkDirtyNode(PROPERTY_UPDATE_RENDER);
-        },
-        nullptr, contextPtr);
 }
 
 void TextFieldOverlayModifier::PaintEdgeEffect(const SizeF& frameSize, RSCanvas& canvas)
@@ -519,22 +384,6 @@ void TextFieldOverlayModifier::SetCursorOffset(const OffsetF& value)
 {
     cursorOffset_->Set(value);
 }
-
-void TextFieldOverlayModifier::SetFloatingCursorOffset(const OffsetF& value)
-{
-    floatingCursorOffset_->Set(value);
-}
-
-void TextFieldOverlayModifier::SetFloatingCursorVisible(bool value)
-{
-    floatingCursorVisible_->Set(value);
-}
-
-void TextFieldOverlayModifier::SetShowOriginCursor(bool value)
-{
-    showOriginCursor_->Set(value);
-}
-
 
 void TextFieldOverlayModifier::SetInputStyle(InputStyle& value)
 {

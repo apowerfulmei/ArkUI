@@ -110,7 +110,6 @@ public:
 
     void ToJsonValue(std::unique_ptr<JsonValue>& json, const InspectorFilter& filter) const override
     {
-        CHECK_NULL_VOID(json);
         LayoutProperty::ToJsonValue(json, filter);
         /* no fixed attr below, just return */
         if (filter.IsFastFilter()) {
@@ -161,7 +160,6 @@ public:
 
     void FromJson(const std::unique_ptr<JsonValue>& json) override
     {
-        CHECK_NULL_VOID(json);
         static const std::unordered_map<std::string, SwiperDisplayMode> uMap {
             { "SwiperDisplayMode.AutoLinear", SwiperDisplayMode::AUTO_LINEAR },
             { "SwiperDisplayMode.Stretch", SwiperDisplayMode::STRETCH },
@@ -274,7 +272,6 @@ public:
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(DisableSwipe, bool, PROPERTY_UPDATE_MEASURE_SELF);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(SwipeByGroup, bool, PROPERTY_UPDATE_MEASURE_SELF);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(CachedIsShown, bool, PROPERTY_UPDATE_MEASURE_SELF);
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(MaintainVisibleContentPosition, bool, PROPERTY_UPDATE_NORMAL);
 
 private:
     bool ignoreItemSpace_ = false; // displayCount and prevMargin/nextMargin have higher priorities, so itemSpace might

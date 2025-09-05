@@ -15,6 +15,17 @@
 
 #include "core/components_ng/pattern/navigation/bar_item_layout_algorithm.h"
 
+#include "base/geometry/ng/offset_t.h"
+#include "base/geometry/ng/size_t.h"
+#include "base/memory/ace_type.h"
+#include "base/utils/utils.h"
+#include "core/components_ng/base/frame_node.h"
+#include "core/components_ng/pattern/image/image_layout_property.h"
+#include "core/components_ng/pattern/navigation/bar_item_node.h"
+#include "core/components_ng/pattern/navigation/navigation_declaration.h"
+#include "core/components_ng/property/layout_constraint.h"
+#include "core/components_ng/property/measure_property.h"
+#include "core/components_ng/property/measure_utils.h"
 #include "core/components_ng/pattern/text/text_layout_property.h"
 
 namespace OHOS::Ace::NG {
@@ -48,16 +59,14 @@ void BarItemLayoutAlgorithm::MeasureToolbarItemText(LayoutWrapper* layoutWrapper
 
     auto contentConstraint = textWrapper->GetLayoutProperty()->GetContentLayoutConstraint();
     textWrapper->Measure(contentConstraint);
-    auto geometryNode = textWrapper->GetGeometryNode();
-    CHECK_NULL_VOID(geometryNode);
-    auto textWidth = geometryNode->GetContentSize().Width();
+    auto textWidth = textWrapper->GetGeometryNode()->GetContentSize().Width();
     auto textLayoutProperty = DynamicCast<TextLayoutProperty>(textWrapper->GetLayoutProperty());
 
     if (GreatOrEqual(textWidth, constraint.maxSize.Width())) {
         constraint.maxSize.SetWidth(textWidth);
     }
     auto barItemConstraint = barItemLayoutProperty->GetLayoutConstraint().value();
-    auto textHeight = geometryNode->GetContentSize().Height();
+    auto textHeight = textWrapper->GetGeometryNode()->GetContentSize().Height();
     float barItemChildrenTotalHeight = textHeight + (theme->GetToolbarIconSize() + TEXT_TOP_PADDING).ConvertToPx();
     if (GreatOrEqual(barItemChildrenTotalHeight, constraint.maxSize.Height())) {
         constraint.maxSize.SetHeight(barItemChildrenTotalHeight);
@@ -88,19 +97,6 @@ void BarItemLayoutAlgorithm::MeasureText(LayoutWrapper* layoutWrapper, const Ref
     textWrapper->Measure(constraint);
 }
 
-float GetIconOffsetY(const RefPtr<BarItemNode>& hostNode)
-{
-    auto theme = NavigationGetTheme();
-    CHECK_NULL_RETURN(theme, 0.0f);
-    if (hostNode->IsHideText()) {
-        return theme->GetToolbarItemIconHideTextTopPadding().ConvertToPx();
-    }
-    if (Container::GreatOrEqualAPITargetVersion(PlatformVersion::VERSION_NINETEEN)) {
-        return theme->GetToolbarItemIconTopPadding().ConvertToPx();
-    }
-    return 0.0f;
-}
-
 float BarItemLayoutAlgorithm::LayoutIcon(LayoutWrapper* layoutWrapper, const RefPtr<BarItemNode>& hostNode,
     const RefPtr<LayoutProperty>& barItemLayoutProperty, float textHeight)
 {
@@ -110,18 +106,16 @@ float BarItemLayoutAlgorithm::LayoutIcon(LayoutWrapper* layoutWrapper, const Ref
     auto iconWrapper = layoutWrapper->GetOrCreateChildByIndex(index);
     CHECK_NULL_RETURN(iconWrapper, 0.0f);
     auto geometryNode = iconWrapper->GetGeometryNode();
-    CHECK_NULL_RETURN(geometryNode, 0.0f);
 
     const auto& constraint = barItemLayoutProperty->GetLayoutConstraint();
     CHECK_NULL_RETURN(constraint, 0.0f);
     auto offsetX = (constraint->maxSize.Width() - iconSize_.ConvertToPx()) / 2;
 
-    float offsetY = GetIconOffsetY(hostNode);
     if (!hostNode->IsBarItemUsedInToolbarConfiguration()) {
         offsetX = 0.0f;
-        offsetY = 0.0f;
     }
-    OffsetF offset = OffsetF(offsetX, offsetY);
+
+    auto offset = OffsetF(offsetX, 0.0f);
     geometryNode->SetMarginFrameOffset(offset);
     iconWrapper->Layout();
     return 0.0f;
@@ -136,7 +130,6 @@ void BarItemLayoutAlgorithm::LayoutText(LayoutWrapper* layoutWrapper, const RefP
     auto textWrapper = layoutWrapper->GetOrCreateChildByIndex(index);
     CHECK_NULL_VOID(textWrapper);
     auto geometryNode = textWrapper->GetGeometryNode();
-    CHECK_NULL_VOID(geometryNode);
     auto textOffsetY = iconSize_ + TEXT_TOP_PADDING;
 
     const auto& constraint = barItemLayoutProperty->GetLayoutConstraint();
@@ -144,21 +137,9 @@ void BarItemLayoutAlgorithm::LayoutText(LayoutWrapper* layoutWrapper, const RefP
     auto textWidth = geometryNode->GetFrameSize().Width();
     auto offsetX = (constraint->maxSize.Width() - textWidth) / 2;
 
-    if (Container::LessThanAPITargetVersion(PlatformVersion::VERSION_NINETEEN)) {
-        if (!hostNode->IsBarItemUsedInToolbarConfiguration()) {
-            offsetX = 0.0f;
-        }
-    } else {
-        auto theme = NavigationGetTheme();
-        CHECK_NULL_VOID(theme);
-        Dimension offsetY = theme->GetToolbarItemIconTopPadding();
-        if (!hostNode->IsBarItemUsedInToolbarConfiguration()) {
-            offsetX = 0.0f;
-            offsetY = 0.0_vp;
-        }
-        textOffsetY += offsetY;
+    if (!hostNode->IsBarItemUsedInToolbarConfiguration()) {
+        offsetX = 0.0f;
     }
-
     auto offset = OffsetF(offsetX, iconOffsetY + static_cast<float>(textOffsetY.ConvertToPx()));
     geometryNode->SetMarginFrameOffset(offset);
     textWrapper->Layout();
@@ -185,9 +166,7 @@ void BarItemLayoutAlgorithm::Measure(LayoutWrapper* layoutWrapper)
         CHECK_NULL_VOID(constraint);
         size = constraint->maxSize;
     }
-    auto geometryNode = layoutWrapper->GetGeometryNode();
-    CHECK_NULL_VOID(geometryNode);
-    geometryNode->SetFrameSize(size);
+    layoutWrapper->GetGeometryNode()->SetFrameSize(size);
 }
 
 void BarItemLayoutAlgorithm::Layout(LayoutWrapper* layoutWrapper)
@@ -199,12 +178,11 @@ void BarItemLayoutAlgorithm::Layout(LayoutWrapper* layoutWrapper)
 
     float textHeight = 0.0f;
     auto textNode = hostNode->GetTextNode();
-    if (textNode && !hostNode->IsHideText()) {
+    if (textNode) {
         auto index = hostNode->GetChildIndexById(textNode->GetId());
         auto textWrapper = layoutWrapper->GetOrCreateChildByIndex(index);
         CHECK_NULL_VOID(textWrapper);
         auto geometryNode = textWrapper->GetGeometryNode();
-        CHECK_NULL_VOID(geometryNode);
         textHeight = geometryNode->GetFrameSize().Height();
     }
 

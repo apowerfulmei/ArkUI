@@ -18,8 +18,8 @@
 
 #include "include/core/SkImageFilter.h"
 
-#include "core/components_ng/svg/base/svg_filter_context.h"
 #include "frameworks/core/components_ng/svg/parse/svg_attributes_parser.h"
+#include "frameworks/core/components/declaration/svg/svg_fe_declaration.h"
 #include "frameworks/core/components_ng/svg/parse/svg_node.h"
 
 namespace OHOS::Ace::NG {
@@ -47,21 +47,17 @@ public:
     void GetImageFilter(std::shared_ptr<RSImageFilter>& imageFilter, SvgColorInterpolationType& currentColor,
         std::unordered_map<std::string, std::shared_ptr<RSImageFilter>>& resultHash,
         const Rect& effectFilterArea = {});
-    void GetImageFilter(std::shared_ptr<RSImageFilter>& imageFilter, std::unordered_map<std::string,
-                        std::shared_ptr<RSImageFilter>>& resultHash);
-    Rect ResolvePrimitiveSubRegion();
+
     bool ParseAndSetSpecializedAttr(const std::string& name, const std::string& value) override;
-    void SetFilterContext(SvgFilterContext filterContext) {filterContext_ = filterContext; }
-    SvgFilterContext GetFilterContext() const {return filterContext_;}
+
 protected:
     virtual void OnAsImageFilter(std::shared_ptr<RSImageFilter>& imageFilter, const SvgColorInterpolationType& srcColor,
         SvgColorInterpolationType& currentColor,
-        std::unordered_map<std::string, std::shared_ptr<RSImageFilter>>& resultHash, bool cropRect = false) const
+        std::unordered_map<std::string, std::shared_ptr<RSImageFilter>>& resultHash) const
     {}
 
     Rect effectFilterArea_;
     SvgFeCommonAttribute feAttr_;
-    SvgFilterContext filterContext_;
 };
 
 } // namespace OHOS::Ace::NG

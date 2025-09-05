@@ -15,28 +15,17 @@
 #include "core/interfaces/native/node/rect_modifier.h"
 
 #include "core/components_ng/base/frame_node.h"
-#include "core/components_ng/pattern/pattern.h"
 #include "core/components_ng/pattern/shape/rect_model_ng.h"
 
 namespace OHOS::Ace::NG {
 namespace {
 constexpr uint32_t VALID_RADIUS_PAIR_FLAG = 1;
-const std::vector<std::string> RADIUS_TYPES = { "TopLeft", "TopRight", "BottomRight", "BottomLeft" };
 } // namespace
-void SetRectRadiusWidth(
-    ArkUINodeHandle node, ArkUI_Float32 radiusWidthValue, ArkUI_Int32 radiusWidthUnit, void* resObjPtr)
+void SetRectRadiusWidth(ArkUINodeHandle node, ArkUI_Float32 radiusWidthValue, ArkUI_Int32 radiusWidthUnit)
 {
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
-    auto radiusWidth = CalcDimension(radiusWidthValue, (DimensionUnit)radiusWidthUnit);
-    RectModelNG::SetRadiusWidth(frameNode, radiusWidth);
-    auto pattern = frameNode->GetPattern();
-    CHECK_NULL_VOID(pattern);
-    pattern->UnRegisterResource("RectRadiusWidth");
-    if (SystemProperties::ConfigChangePerform() && resObjPtr) {
-        auto resObj = AceType::Claim(reinterpret_cast<ResourceObject*>(resObjPtr));
-        pattern->RegisterResource<CalcDimension>("RectRadiusWidth", resObj, radiusWidth);
-    }
+    RectModelNG::SetRadiusWidth(frameNode, CalcDimension(radiusWidthValue, (DimensionUnit)radiusWidthUnit));
 }
 
 void ResetRectRadiusWidth(ArkUINodeHandle node)
@@ -46,26 +35,14 @@ void ResetRectRadiusWidth(ArkUINodeHandle node)
     CalcDimension defaultDimension;
     defaultDimension.Reset();
     RectModelNG::SetRadiusWidth(frameNode, defaultDimension);
-    auto pattern = frameNode->GetPattern();
-    CHECK_NULL_VOID(pattern);
-    pattern->UnRegisterResource("RectRadiusWidth");
     return;
 }
 
-void SetRectRadiusHeight(
-    ArkUINodeHandle node, ArkUI_Float32 radiusHeightValue, ArkUI_Int32 radiusHeightUnit, void* resObjPtr)
+void SetRectRadiusHeight(ArkUINodeHandle node, ArkUI_Float32 radiusHeightValue, ArkUI_Int32 radiusHeightUnit)
 {
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
-    auto radiusHeight = CalcDimension(radiusHeightValue, (DimensionUnit)radiusHeightUnit);
-    RectModelNG::SetRadiusHeight(frameNode, radiusHeight);
-    auto pattern = frameNode->GetPattern();
-    CHECK_NULL_VOID(pattern);
-    pattern->UnRegisterResource("RectRadiusHeight");
-    if (SystemProperties::ConfigChangePerform() && resObjPtr) {
-        auto resObj = AceType::Claim(reinterpret_cast<ResourceObject*>(resObjPtr));
-        pattern->RegisterResource<CalcDimension>("RectRadiusHeight", resObj, radiusHeight);
-    }
+    RectModelNG::SetRadiusHeight(frameNode, CalcDimension(radiusHeightValue, (DimensionUnit)radiusHeightUnit));
 }
 
 void ResetRectRadiusHeight(ArkUINodeHandle node)
@@ -75,14 +52,10 @@ void ResetRectRadiusHeight(ArkUINodeHandle node)
     CalcDimension defaultDimension;
     defaultDimension.Reset();
     RectModelNG::SetRadiusHeight(frameNode, defaultDimension);
-    auto pattern = frameNode->GetPattern();
-    CHECK_NULL_VOID(pattern);
-    pattern->UnRegisterResource("RectRadiusHeight");
 }
 
 void SetRectRadiusWithArray(ArkUINodeHandle node, ArkUI_Float32* radiusValues, ArkUI_Int32* radiusUnits,
-    ArkUI_Uint32* radiusValidPairs, ArkUI_Uint32 radiusValidPairsSize, void* radiusXResObjArray,
-    void* radiusYResObjArray)
+    ArkUI_Uint32* radiusValidPairs, ArkUI_Uint32 radiusValidPairsSize)
 {
     NG::ResetRectRadiusHeight(node);
     NG::ResetRectRadiusWidth(node);
@@ -91,88 +64,46 @@ void SetRectRadiusWithArray(ArkUINodeHandle node, ArkUI_Float32* radiusValues, A
     CHECK_NULL_VOID(radiusValues);
     CHECK_NULL_VOID(radiusUnits);
     CHECK_NULL_VOID(radiusValidPairs);
-    auto pattern = frameNode->GetPattern();
-    CHECK_NULL_VOID(pattern);
-    RefPtr<ResourceObject>* radiusXResObjPtr = static_cast<RefPtr<ResourceObject>*>(radiusXResObjArray);
-    RefPtr<ResourceObject>* radiusYResObjPtr = static_cast<RefPtr<ResourceObject>*>(radiusYResObjArray);
     for (size_t index = 0; index < radiusValidPairsSize; index++) {
         if (radiusValidPairs[index] == VALID_RADIUS_PAIR_FLAG) {
-            std::string radiusType = RADIUS_TYPES[index];
-            std::string key = std::string("RectRadius") + radiusType;
-            pattern->UnRegisterResource(key);
             uint32_t xIndex = index * 2;
             uint32_t yIndex = xIndex + 1;
             auto radiusX = CalcDimension(radiusValues[xIndex], (DimensionUnit)radiusUnits[xIndex]);
             auto radiusY = CalcDimension(radiusValues[yIndex], (DimensionUnit)radiusUnits[yIndex]);
-            if (SystemProperties::ConfigChangePerform() && (radiusXResObjPtr[index] || radiusYResObjPtr[index])) {
-                RectModelNG::SetRadiusValue(
-                    frameNode, radiusX, radiusY, radiusXResObjPtr[index], radiusYResObjPtr[index], index);
-            }
             RectModelNG::SetRadiusValue(frameNode, radiusX, radiusY, index);
         }
     }
 }
 
-void SetRectRadiusWithValue(ArkUINodeHandle node, ArkUI_Float32 radiusValue, ArkUI_Int32 radiusUnit, void* resObjPtr)
+void SetRectRadiusWithValue(ArkUINodeHandle node, ArkUI_Float32 radiusValue, ArkUI_Int32 radiusUnit)
 {
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
     NG::ResetRectRadiusWidth(node);
     NG::ResetRectRadiusHeight(node);
-    auto radius = CalcDimension(radiusValue, (DimensionUnit)radiusUnit);
-    RectModelNG::SetRadiusWidth(frameNode, radius);
-    RectModelNG::SetRadiusHeight(frameNode, radius);
-    auto pattern = frameNode->GetPattern();
-    CHECK_NULL_VOID(pattern);
-    pattern->UnRegisterResource("RectRadius");
-    if (SystemProperties::ConfigChangePerform() && resObjPtr) {
-        auto resObj = AceType::Claim(reinterpret_cast<ResourceObject*>(resObjPtr));
-        pattern->RegisterResource<CalcDimension>("RectRadius", resObj, radius);
-    }
+    RectModelNG::SetRadiusWidth(frameNode, CalcDimension(radiusValue, (DimensionUnit)radiusUnit));
+    RectModelNG::SetRadiusHeight(frameNode, CalcDimension(radiusValue, (DimensionUnit)radiusUnit));
 }
 
 void ResetRectRadius(ArkUINodeHandle node)
 {
     NG::ResetRectRadiusHeight(node);
     NG::ResetRectRadiusWidth(node);
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    auto pattern = frameNode->GetPattern();
-    CHECK_NULL_VOID(pattern);
-    pattern->UnRegisterResource("RectRadius");
 }
 
 namespace NodeModifier {
 const ArkUIRectModifier* GetRectModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
-    static const ArkUIRectModifier modifier = {
-        .setRectRadiusWidth = SetRectRadiusWidth,
-        .resetRectRadiusWidth = ResetRectRadiusWidth,
-        .setRectRadiusHeight = SetRectRadiusHeight,
-        .resetRectRadiusHeight = ResetRectRadiusHeight,
-        .setRectRadiusWithArray = SetRectRadiusWithArray,
-        .setRectRadiusWithValue = SetRectRadiusWithValue,
-        .resetRectRadius = ResetRectRadius,
-    };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
+    static const ArkUIRectModifier modifier = { SetRectRadiusWidth, ResetRectRadiusWidth, SetRectRadiusHeight,
+        ResetRectRadiusHeight, SetRectRadiusWithArray, SetRectRadiusWithValue, ResetRectRadius };
 
     return &modifier;
 }
 
 const CJUIRectModifier* GetCJUIRectModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
-    static const CJUIRectModifier modifier = {
-        .setRectRadiusWidth = SetRectRadiusWidth,
-        .resetRectRadiusWidth = ResetRectRadiusWidth,
-        .setRectRadiusHeight = SetRectRadiusHeight,
-        .resetRectRadiusHeight = ResetRectRadiusHeight,
-        .setRectRadiusWithArray = SetRectRadiusWithArray,
-        .setRectRadiusWithValue = SetRectRadiusWithValue,
-        .resetRectRadius = ResetRectRadius,
-    };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
+    static const CJUIRectModifier modifier = { SetRectRadiusWidth, ResetRectRadiusWidth, SetRectRadiusHeight,
+        ResetRectRadiusHeight, SetRectRadiusWithArray, SetRectRadiusWithValue, ResetRectRadius };
 
     return &modifier;
 }

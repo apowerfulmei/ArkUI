@@ -34,8 +34,6 @@ public:
 
     void PerformMeasureSelf(LayoutWrapper* layoutWrapper) const;
 
-    void SetSwipeActionNode(LayoutWrapper* layoutWrapper, const SizeF& size, const OffsetF& paddingOffset);
-
     void SetAxis(Axis axis)
     {
         axis_ = axis;

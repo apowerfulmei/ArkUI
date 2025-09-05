@@ -22,8 +22,9 @@
 #include "core/pipeline/base/render_element.h"
 
 #ifdef OHOS_STANDARD_SYSTEM
-#include "surface/window.h"
-#include "wm/window.h"
+#include "display_type.h"
+#include "foundation/graphic/graphic_surface/interfaces/inner_api/surface/window.h"
+#include "foundation/window/window_manager/interfaces/innerkits/wm/window.h"
 #include "render_service_client/core/ui/rs_node.h"
 #include "render_service_client/core/ui/rs_surface_node.h"
 #include "surface_delegate.h"

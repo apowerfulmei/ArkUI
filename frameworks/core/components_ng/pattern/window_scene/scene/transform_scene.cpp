@@ -17,6 +17,7 @@
 
 #include "core/components_ng/pattern/window_scene/helper/window_scene_helper.h"
 #include "core/components_ng/render/adapter/rosen_render_context.h"
+#include "ui/rs_canvas_node.h"
 
 namespace OHOS::Ace::NG {
 void TransformScene::OnAttachToFrameNode()
@@ -25,11 +26,8 @@ void TransformScene::OnAttachToFrameNode()
     CHECK_NULL_VOID(host);
     auto context = AceType::DynamicCast<NG::RosenRenderContext>(host->GetRenderContext());
     CHECK_NULL_VOID(context);
-    auto rsNode = Rosen::RSCanvasNode::Create(false, false, WindowSceneHelper::GetRSUIContext(host));
-    TAG_LOGD(AceLogTag::ACE_WINDOW, "Create RSCanvasNode: %{public}s",
-             WindowSceneHelper::RSNodeToStr(rsNode).c_str());
+    auto rsNode = Rosen::RSCanvasNode::Create();
     CHECK_NULL_VOID(rsNode);
-    rsNode->SetSkipCheckInMultiInstance(true);
     context->SetRSNode(rsNode);
 }
 

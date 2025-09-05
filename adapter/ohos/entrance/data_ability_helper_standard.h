@@ -23,7 +23,6 @@
 #endif
 
 #include "pixel_map.h"
-#include "datashare_result_set.h"
 
 namespace OHOS::AppExecFwk {
 class DataAbilityHelper;
@@ -45,7 +44,7 @@ class Uri;
 namespace OHOS::Ace {
 
 class ACE_FORCE_EXPORT DataAbilityHelperStandard : public DataAbilityHelper {
-    DECLARE_ACE_TYPE(DataAbilityHelperStandard, DataAbilityHelper);
+    DECLARE_ACE_TYPE(DataAbilityHelperStandard, DataAbilityHelper)
 
 public:
     DataAbilityHelperStandard(const std::shared_ptr<OHOS::AppExecFwk::Context>& context,
@@ -57,9 +56,6 @@ public:
     int32_t ReadMovingPhotoVideo(const std::string &uri) override;
     std::string GetMovingPhotoImageUri(const std::string& uri) override;
     int64_t GetMovingPhotoDateModified(const std::string& uri) override;
-    int64_t GetMovingPhotoCoverPosition(const std::string& columnName, const std::string& value,
-        std::vector<std::string>& columns) override;
-    std::string GetMovingPhotoImagePath(const std::string& uri) override;
 
 private:
     int32_t OpenFileWithDataAbility(const std::string& uriStr, const std::string& mode);
@@ -70,7 +66,6 @@ private:
     std::shared_ptr<AppExecFwk::DataAbilityHelper> dataAbilityHelper_;
     std::weak_ptr<OHOS::AbilityRuntime::Context> runtimeContext_;
     std::weak_ptr<OHOS::AppExecFwk::Context> context_;
-    mutable std::shared_mutex dataShareHelperLock_;
 #ifdef MEDIA_LIBRARY_EXISTS
     OHOS::Media::MediaLibraryManager mgr_;
 #endif

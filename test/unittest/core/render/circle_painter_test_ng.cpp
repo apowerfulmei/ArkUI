@@ -38,6 +38,7 @@ Dimension test { 0, DimensionUnit::PX };
 
 float radius = 1;
 
+Testing::MockCanvas testingCanvas;
 Testing::TestingPen pen;
 
 const NG::OffsetF& DRAWOFFSET { 1, 1 };
@@ -65,8 +66,6 @@ void CirclePainterTestNg::CallBack(Testing::MockCanvas& rSCanvas)
  */
 HWTEST_F(CirclePainterTestNg, CirclePainterTestNg_DrawCircle001, TestSize.Level1)
 {
-    Testing::MockCanvas* testingCanvasPtr = new Testing::MockCanvas();
-    Testing::MockCanvas& testingCanvas = *testingCanvasPtr;
     /**
      * @tc.steps1: callback DrawCircle.push shapePaintProperty is null.
      * @tc.expected: expect SetPen return true.
@@ -86,6 +85,5 @@ HWTEST_F(CirclePainterTestNg, CirclePainterTestNg_DrawCircle001, TestSize.Level1
     NG::CirclePainter::DrawCircle(testingCanvas, radius, DRAWOFFSET, shapePaintProperty);
     bool result1 = NG::ShapePainter::SetPen(pen, shapePaintProperty);
     EXPECT_FALSE(result1);
-    Mock::AllowLeak(testingCanvasPtr);
 }
 } // namespace OHOS::Ace

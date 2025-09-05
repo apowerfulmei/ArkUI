@@ -21,8 +21,6 @@
 #define private public
 #define protected public
 
-#include "test/mock/base/mock_pixel_map.h"
-#include "test/mock/core/common/mock_container.h"
 #include "test/mock/core/common/mock_theme_manager.h"
 #include "test/mock/core/pipeline/mock_pipeline_context.h"
 #include "test/mock/core/render/mock_render_context.h"
@@ -33,16 +31,12 @@
 #include "core/components/theme/shadow_theme.h"
 #include "core/components_ng/event/drag_event.h"
 #include "core/components_ng/event/event_hub.h"
-#include "core/components_ng/manager/drag_drop/drag_drop_func_wrapper.h"
-#include "core/components_ng/manager/drag_drop/drag_drop_global_controller.h"
-#include "core/components_ng/manager/drag_drop/utils/drag_animation_helper.h"
 #include "core/components_ng/pattern/text/text_pattern.h"
 #include "core/components_ng/pattern/stack/stack_pattern.h"
 #include "core/components_ng/pattern/grid/grid_item_pattern.h"
 #include "core/components_ng/pattern/list/list_item_pattern.h"
 #include "core/components_ng/pattern/grid/grid_pattern.h"
 #include "core/components_ng/pattern/list/list_pattern.h"
-#include "core/components_ng/pattern/text_drag/text_drag_pattern.h"
 #include "core/event/touch_event.h"
 
 namespace OHOS::Ace::NG {
@@ -61,12 +55,9 @@ constexpr int32_t TOUCH_TEST_RESULT_SIZE = 1;
 constexpr int32_t TOUCH_TEST_RESULT_SIZE_2 = 2;
 constexpr int32_t NUMBER_BADGE_SIZE_3 = 3;
 constexpr int32_t NUMBER_BADGE_SIZE_100 = 100;
-constexpr int32_t POINTER_ID = 1;
 constexpr float DISTANCE = 10.5f;
 constexpr float WIDTH = 400.0f;
 constexpr float HEIGHT = 400.0f;
-constexpr float POINT_X = 100.0f;
-constexpr float POINT_Y = 200.0f;
 const OffsetF COORDINATE_OFFSET(WIDTH, HEIGHT);
 constexpr int32_t FINGERS_NUMBER_GREATER_THAN_DEFAULT = 2;
 constexpr float DISTANCE_GREATER_THAN_DEFAULT = 6.0f;

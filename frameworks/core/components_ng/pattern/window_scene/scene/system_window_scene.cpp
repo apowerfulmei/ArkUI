@@ -13,9 +13,9 @@
  * limitations under the License.
  */
 
-#include <unordered_map>
 #include "core/components_ng/pattern/window_scene/scene/system_window_scene.h"
 
+#include "ui/rs_canvas_node.h"
 #include "ui/rs_surface_node.h"
 
 #include "adapter/ohos/entrance/mmi_event_convertor.h"
@@ -27,7 +27,6 @@
 namespace OHOS::Ace::NG {
 namespace {
 constexpr uint32_t DELAY_TIME = 3000;
-std::unordered_map<uint64_t, int> surfaceNodeCountMap_;
 } // namespace
 
 SystemWindowScene::SystemWindowScene(const sptr<Rosen::Session>& session) : session_(session)
@@ -101,7 +100,6 @@ void SystemWindowScene::OnAttachToFrameNode()
     session_->SetUINodeId(host->GetAccessibilityId());
     auto surfaceNode = session_->GetSurfaceNode();
     CHECK_NULL_VOID(surfaceNode);
-    InsertSurfaceNodeId(surfaceNode->GetId());
     auto context = AceType::DynamicCast<NG::RosenRenderContext>(host->GetRenderContext());
     CHECK_NULL_VOID(context);
     context->SetRSNode(surfaceNode);
@@ -136,27 +134,6 @@ void SystemWindowScene::OnAttachToFrameNode()
     SetWindowScenePosition();
 }
 
-void SystemWindowScene::InsertSurfaceNodeId(uint64_t nodeId)
-{
-    auto iter = surfaceNodeCountMap_.find(nodeId);
-    if (iter == surfaceNodeCountMap_.end()) {
-        surfaceNodeCountMap_[nodeId] = 1;
-    } else {
-        surfaceNodeCountMap_[nodeId] = iter->second + 1;
-        TAG_LOGE(AceLogTag::ACE_WINDOW_SCENE,
-            "OnAttachToFrameNode id: %{public}d, duplicate surfaceNodeId:%{public}s, count:%{public}d",
-            session_->GetPersistentId(), std::to_string(nodeId).c_str(), iter->second);
-    }
-}
-
-void SystemWindowScene::ClearSurfaceNodeId(uint64_t nodeId)
-{
-    auto iter = surfaceNodeCountMap_.find(nodeId);
-    if (iter != surfaceNodeCountMap_.end()) {
-        iter->second == 1 ? surfaceNodeCountMap_.erase(nodeId) : surfaceNodeCountMap_[iter->first] = iter->second - 1;
-    }
-}
-
 void SystemWindowScene::SetWindowScenePosition()
 {
     // set window scene position (x, y) and scale data, jsAccessibilityManager will use it
@@ -179,7 +156,6 @@ void SystemWindowScene::SetWindowScenePosition()
         windowSceneInfo.top = windowRect.posY_ * transform.scaleY + transform.posY;
         windowSceneInfo.scaleX = session->GetScaleX() * transform.scaleX;
         windowSceneInfo.scaleY = session->GetScaleY() * transform.scaleY;
-
         windowSceneInfo.innerWindowId = session->GetPersistentId();
     });
 }
@@ -188,10 +164,6 @@ void SystemWindowScene::OnDetachFromFrameNode(FrameNode* frameNode)
 {
     CHECK_NULL_VOID(session_);
     CHECK_NULL_VOID(frameNode);
-    auto surfaceNode = session_->GetSurfaceNode();
-    if (surfaceNode) {
-        ClearSurfaceNodeId(surfaceNode->GetId());
-    }
     ACE_SCOPED_TRACE("OnDetachFromFrameNode[id:%d][self:%d][type:%d][name:%s]",
         session_->GetPersistentId(), frameNode->GetId(), session_->GetWindowType(), session_->GetWindowName().c_str());
     TAG_LOGI(AceLogTag::ACE_WINDOW_SCENE,
@@ -200,7 +172,6 @@ void SystemWindowScene::OnDetachFromFrameNode(FrameNode* frameNode)
     if (session_->NeedCheckContextTransparent()) {
         checkContextTransparentTask_.Cancel();
     }
-    session_->SetNotifySystemSessionKeyEventFunc(nullptr);
 }
 
 void SystemWindowScene::OnAttachToMainTree()
@@ -242,33 +213,29 @@ void SystemWindowScene::RegisterEventCallback()
             }
             taskExecutor->PostTask([weakThis, PointerEvent]() {
                 auto self = weakThis.Upgrade();
-            if (!self) {
-                TAG_LOGE(AceLogTag::ACE_INPUTTRACKING,
-                    "weakThis Upgrade null,id:%{public}d", PointerEvent->GetId());
-                PointerEvent->SetPointerAction(MMI::PointerEvent::POINTER_ACTION_CANCEL);
-                WindowSceneHelper::InjectPointerEventForActionCancel(PointerEvent);
-                return;
-            }
+                if (!self) {
+                    TAG_LOGE(AceLogTag::ACE_INPUTTRACKING,
+                        "weakThis Upgrade null,id:%{public}d", PointerEvent->GetId());
+                    PointerEvent->MarkProcessed();
+                    return;
+                }
                 auto host = self->GetHost();
-            if (!host) {
-                TAG_LOGE(AceLogTag::ACE_INPUTTRACKING,
-                    "GetHost null,id:%{public}d", PointerEvent->GetId());
-                PointerEvent->SetPointerAction(MMI::PointerEvent::POINTER_ACTION_CANCEL);
-                WindowSceneHelper::InjectPointerEventForActionCancel(PointerEvent);
-                return;
-            }
+                if (!host) {
+                    TAG_LOGE(AceLogTag::ACE_INPUTTRACKING,
+                        "GetHost null,id:%{public}d", PointerEvent->GetId());
+                    PointerEvent->MarkProcessed();
+                    return;
+                }
                 WindowSceneHelper::InjectPointerEvent(host, PointerEvent);
             },
                 TaskExecutor::TaskType::UI, "ArkUIWindowInjectPointerEvent", PriorityType::VIP);
     };
     session_->SetNotifySystemSessionPointerEventFunc(std::move(pointerEventCallback));
-    auto keyEventCallback = [weakThis = WeakClaim(this), instanceId = instanceId_](
-        std::shared_ptr<MMI::KeyEvent> keyEvent, bool isPreImeEvent) -> bool {
-        CHECK_NULL_RETURN(keyEvent, false);
-        auto self = weakThis.Upgrade();
-        CHECK_NULL_RETURN(self, false);
+
+    auto keyEventCallback = [instanceId = instanceId_](std::shared_ptr<MMI::KeyEvent> KeyEvent,
+        bool isPreImeEvent) -> bool {
         ContainerScope Scope(instanceId);
-        return WindowSceneHelper::InjectKeyEvent(keyEvent, isPreImeEvent);
+        return WindowSceneHelper::InjectKeyEvent(KeyEvent, isPreImeEvent);
     };
     session_->SetNotifySystemSessionKeyEventFunc(std::move(keyEventCallback));
 }
@@ -363,8 +330,7 @@ void SystemWindowScene::RegisterFocusCallback()
             auto self = weakThis.Upgrade();
             CHECK_NULL_VOID(self);
             CHECK_NULL_VOID(self->GetSession());
-            pipeline->RestoreDefault(self->GetSession()->GetPersistentId(),
-                MouseStyleChangeReason::WINDOW_SCENE_LOST_FOCUS_RESET_MOUSESTYLE);
+            pipeline->RestoreDefault(self->GetSession()->GetPersistentId());
         }, "ArkUIWindowLostFocus", TaskExecutor::TaskType::UI);
     };
     session_->SetNotifyUILostFocusFunc(lostFocusCallback);
@@ -388,7 +354,7 @@ void SystemWindowScene::LostViewFocus()
 }
 
 void SystemWindowScene::RegisterVisibleChangeCallback(
-    int32_t nodeId, const std::function<void(bool)>& callback)
+    int32_t nodeId, std::function<void(bool)> callback)
 {
     CHECK_NULL_VOID(callback);
     CHECK_NULL_VOID(session_);

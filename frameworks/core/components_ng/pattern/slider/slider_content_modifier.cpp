@@ -15,17 +15,21 @@
 
 #include "core/components_ng/pattern/slider/slider_content_modifier.h"
 
-#include "core/components_ng/pattern/slider/slider_pattern.h"
+#include "base/geometry/ng/offset_t.h"
+#include "base/utils/utils.h"
+#include "core/animation/curves.h"
+#include "core/components/common/properties/color.h"
+#include "core/components/slider/slider_theme.h"
+#include "core/components_ng/render/drawing.h"
 #include "core/components_ng/render/drawing_prop_convertor.h"
 #include "core/components_ng/render/path_painter.h"
+#include "core/pipeline/pipeline_base.h"
 
 namespace OHOS::Ace::NG {
 namespace {
 constexpr float HALF = 0.5f;
 constexpr float SPRING_MOTION_RESPONSE = 0.314f;
 constexpr float SPRING_MOTION_DAMPING_FRACTION = 0.95f;
-constexpr double DEFAULT_SCALE_VALUE = 1.0;
-constexpr int32_t STEPS_MIN_NUMBER = 2;
 } // namespace
 SliderContentModifier::SliderContentModifier(const Parameters& parameters,
     std::function<void(float)> updateImageCenterX, std::function<void(float)> updateImageCenterY)
@@ -42,8 +46,7 @@ SliderContentModifier::SliderContentModifier(const Parameters& parameters,
     trackThickness_ = AceType::MakeRefPtr<AnimatablePropertyFloat>(parameters.trackThickness);
     trackBackgroundColor_ =
         AceType::MakeRefPtr<AnimatablePropertyVectorColor>(GradientArithmetic(parameters.trackBackgroundColor));
-    selectGradientColor_ =
-        AceType::MakeRefPtr<AnimatablePropertyVectorColor>(GradientArithmetic(parameters.selectGradientColor));
+    selectColor_ = AceType::MakeRefPtr<AnimatablePropertyColor>(LinearColor(parameters.selectColor));
     blockColor_ = AceType::MakeRefPtr<AnimatablePropertyColor>(LinearColor(parameters.blockColor));
     trackBorderRadius_ = AceType::MakeRefPtr<AnimatablePropertyFloat>(parameters.trackThickness * HALF);
     selectedBorderRadius_ = AceType::MakeRefPtr<AnimatablePropertyFloat>(trackBorderRadius_->Get());
@@ -62,9 +65,6 @@ SliderContentModifier::SliderContentModifier(const Parameters& parameters,
     minResponse_ = AceType::MakeRefPtr<PropertyFloat>(0.0f);
     blockType_ = AceType::MakeRefPtr<PropertyInt>(static_cast<int>(SliderModelNG::BlockStyleType::DEFAULT));
     useContentModifier_ = AceType::MakeRefPtr<PropertyBool>(false);
-    isHovered_ = AceType::MakeRefPtr<PropertyBool>(false);
-    isPressed_ = AceType::MakeRefPtr<PropertyBool>(false);
-    isFocused_ = AceType::MakeRefPtr<PropertyBool>(false);
     // others
     UpdateData(parameters);
     UpdateThemeColor();
@@ -77,7 +77,7 @@ SliderContentModifier::SliderContentModifier(const Parameters& parameters,
     AttachProperty(blockCenterY_);
     AttachProperty(trackThickness_);
     AttachProperty(trackBackgroundColor_);
-    AttachProperty(selectGradientColor_);
+    AttachProperty(selectColor_);
     AttachProperty(blockColor_);
     AttachProperty(boardColor_);
     AttachProperty(trackBorderRadius_);
@@ -94,9 +94,6 @@ SliderContentModifier::SliderContentModifier(const Parameters& parameters,
     AttachProperty(sliderInteractionMode_);
     AttachProperty(minResponse_);
     AttachProperty(blockType_);
-    AttachProperty(isHovered_);
-    AttachProperty(isPressed_);
-    AttachProperty(isFocused_);
 
     InitializeShapeProperty();
 }
@@ -142,14 +139,6 @@ void SliderContentModifier::onDraw(DrawingContext& context)
     DrawShadow(context);
     DrawBlock(context);
     DrawHoverOrPress(context);
-    UpdateSliderEndsPosition();
-}
-
-void SliderContentModifier::UpdateSliderEndsPosition()
-{
-    if (StepPointCallback_) {
-        StepPointCallback_();
-    }
 }
 
 void SetStartEndPointLocation(Axis& direction, RSRect& trackRect, RSPoint& startPoint, RSPoint& endPoint)
@@ -171,20 +160,12 @@ void SliderContentModifier::DrawBackground(DrawingContext& context)
 {
     auto& canvas = context.canvas;
     auto trackBorderRadius = trackBorderRadius_->Get();
-    auto pipeline = PipelineBase::GetCurrentContextSafelyWithCheck();
-    CHECK_NULL_VOID(pipeline);
-    auto theme = pipeline->GetTheme<SliderTheme>();
-    CHECK_NULL_VOID(theme);
-    scaleValue_ = theme->GetFocusedScaleValue();
     std::vector<GradientColor> gradientColors = GetTrackBackgroundColor();
     std::vector<RSColorQuad> colors;
     std::vector<float> pos;
     for (size_t i = 0; i < gradientColors.size(); i++) {
         colors.emplace_back(gradientColors[i].GetLinearColor().GetValue());
         pos.emplace_back(gradientColors[i].GetDimension().Value());
-    }
-    if (sliderMode_->Get() != static_cast<int32_t>(SliderModel::SliderMode::INSET)) {
-        isEnlarge_ = isPressed_->Get() || isHovered_->Get() || isFocused_->Get();
     }
     RSRect trackRect = GetTrackRect();
     auto direction = static_cast<Axis>(directionAxis_->Get());
@@ -211,100 +192,11 @@ void SliderContentModifier::DrawBackground(DrawingContext& context)
 #endif
     }
     canvas.AttachBrush(brush);
-    auto trackRadius = isEnlarge_ ? trackBorderRadius * scaleValue_ : trackBorderRadius;
-    RSRoundRect roundRect(trackRect, trackRadius, trackRadius);
+    RSRoundRect roundRect(trackRect, trackBorderRadius, trackBorderRadius);
     canvas.DrawRoundRect(roundRect);
     canvas.DetachBrush();
     canvas.Save();
     canvas.ClipRoundRect(roundRect, RSClipOp::INTERSECT, true);
-}
-
-void SliderContentModifier::AddStepPoint(float startX, float startY, float endX, float endY, RSCanvas& canvas)
-{
-    auto stepRatio = stepRatio_->Get();
-    if (NearEqual(stepRatio, .0f)) {
-        return;
-    }
-
-    auto stepsLengthX = (endX - startX) * stepRatio;
-    auto stepsLengthY = (endY - startY) * stepRatio;
-    int numberOfSteps = std::max(static_cast<int>(std::round((endX - startX) / stepsLengthX) + 1),
-        static_cast<int>(std::round((endY - startY) / stepsLengthY) + 1));
-    if (numberOfSteps <= STEPS_MIN_NUMBER && hasPrefix_ && hasSuffix_) {
-        // If there are less than or equal to 2 steps, skip drawing
-        canvas.DetachBrush();
-        return;
-     }
-
-    if (reverse_) {
-        int32_t stepIndex = 0;
-        while (GreatOrEqual(endX, startX) && GreatOrEqual(endY, startY)) {
-        DrawStepPoint(endX, endY, stepIndex, canvas, numberOfSteps);
-            if (NearEqual(endX, startX) && NearEqual(endY, startY)) {
-                    return;
-            }
-            endX -= stepsLengthX;
-            endY -= stepsLengthY;
-            stepIndex++;
-        }
-        endX += stepsLengthX;
-        endY += stepsLengthY;
-        if (!NearEqual(endX, startX) || !NearEqual(endY, startY)) {
-            stepPointVec_.emplace_back(PointF(startX, startY));
-        }
-    } else {
-        int32_t stepIndex = 0;
-        while (LessOrEqual(startX, endX) && LessOrEqual(startY, endY)) {
-        DrawStepPoint(startX, startY, stepIndex, canvas, numberOfSteps);
-            if (NearEqual(startX, endX) && NearEqual(startY, endY)) {
-                return;
-            }
-            startX += stepsLengthX;
-            startY += stepsLengthY;
-            stepIndex++;
-        }
-        startX -= stepsLengthX;
-        startY -= stepsLengthY;
-        if (!NearEqual(startX, endX) || !NearEqual(startY, endY)) {
-            stepPointVec_.emplace_back(PointF(endX, endY));
-        }
-    }
-}
-
-void SliderContentModifier::DrawStepPoint(float x, float y, int32_t index, RSCanvas& canvas, int32_t numberOfSteps)
-{
-    int32_t noneModeNum = 2;
-    int32_t insetModeNum = 1;
-    auto stepSize = stepSize_->Get();
-    auto trackThickness = trackThickness_->Get();
-    if (GreatNotEqual(stepSize, trackThickness)) {
-        stepSize = trackThickness;
-    }
-    int noneModeSteps = numberOfSteps - noneModeNum;
-    int insetModeSteps = numberOfSteps - insetModeNum;
-    auto model = static_cast<SliderModel::SliderMode>(sliderMode_->Get());
-    if (model == SliderModel::SliderMode::NONE) {
-        if (index == 1 && hasPrefix_) {
-            stepPointVec_.emplace_back(PointF(x, y));
-            return;
-        }
-        if (index == noneModeSteps && hasSuffix_) {
-            stepPointVec_.emplace_back(PointF(x, y));
-            return;
-        }
-    }
-    if (model == SliderModel::SliderMode::INSET) {
-        if (index == 0 && hasPrefix_) {
-            stepPointVec_.emplace_back(PointF(x, y));
-            return;
-        }
-        if (index == insetModeSteps && hasSuffix_) {
-            stepPointVec_.emplace_back(PointF(x, y));
-            return;
-        }
-    }
-    canvas.DrawCircle(RSPoint(x, y), isEnlarge_ ? stepSize * HALF * scaleValue_ : stepSize * HALF);
-    stepPointVec_.emplace_back(PointF(x, y));
 }
 
 void SliderContentModifier::DrawStep(DrawingContext& context)
@@ -313,6 +205,7 @@ void SliderContentModifier::DrawStep(DrawingContext& context)
         return;
     }
     auto& canvas = context.canvas;
+    auto stepSize = stepSize_->Get();
     auto stepColor = stepColor_->Get();
     auto backStart = backStart_->Get();
     auto backEnd = backEnd_->Get();
@@ -327,17 +220,36 @@ void SliderContentModifier::DrawStep(DrawingContext& context)
     if (NearEqual(startX, endX) && NearEqual(startY, endY)) {
         return;
     }
+    auto stepsLengthX = (endX - startX) * stepRatio;
+    auto stepsLengthY = (endY - startY) * stepRatio;
+    auto trackThickness = trackThickness_->Get();
+    if (GreatNotEqual(stepSize, trackThickness)) {
+        stepSize = trackThickness;
+    }
 
     RSBrush brush;
     brush.SetAntiAlias(true);
     brush.SetColor(ToRSColor(stepColor));
     canvas.AttachBrush(brush);
     stepPointVec_.clear();
-    AddStepPoint(startX, startY, endX, endY, canvas);
-    canvas.DetachBrush();
-    if (updateAccessibilityVirtualNode_) {
-        updateAccessibilityVirtualNode_();
+
+    if (reverse_) {
+        while (GreatOrEqual(endX, startX) && GreatOrEqual(endY, startY)) {
+            canvas.DrawCircle(RSPoint(endX, endY), stepSize * HALF);
+            stepPointVec_.emplace_back(PointF(endX, endY));
+            endX -= stepsLengthX;
+            endY -= stepsLengthY;
+        }
+    } else {
+        while (LessOrEqual(startX, endX) && LessOrEqual(startY, endY)) {
+            canvas.DrawCircle(RSPoint(startX, startY), stepSize * HALF);
+            stepPointVec_.emplace_back(PointF(startX, startY));
+            startX += stepsLengthX;
+            startY += stepsLengthY;
+        }
     }
+
+    canvas.DetachBrush();
 }
 
 void SliderContentModifier::DrawSelect(DrawingContext& context)
@@ -370,7 +282,9 @@ void SliderContentModifier::DrawSelect(DrawingContext& context)
         }
 
         RSBrush brush;
-        DrawSelectColor(brush, rect);
+        brush.SetAntiAlias(true);
+        brush.SetColor(ToRSColor(selectColor_->Get()));
+
         canvas.AttachBrush(brush);
         canvas.DrawRoundRect(RSRoundRect(rect, selectedBorderRadius, selectedBorderRadius));
         canvas.DetachBrush();
@@ -402,8 +316,7 @@ void SliderContentModifier::DrawDefaultBlock(DrawingContext& context)
         pen.SetColor(ToRSColor(blockBorderColor_->Get()));
         canvas.AttachPen(pen);
     }
-    canvas.DrawCircle(
-        ToRSPoint(PointF(blockCenter.GetX(), blockCenter.GetY())), isEnlarge_ ? radius * scaleValue_ : radius);
+    canvas.DrawCircle(ToRSPoint(PointF(blockCenter.GetX(), blockCenter.GetY())), radius);
     canvas.DetachBrush();
     if (!NearEqual(borderWidth, .0f) && LessNotEqual(borderWidth * HALF, blockRadius)) {
         canvas.DetachPen();
@@ -423,13 +336,13 @@ void SliderContentModifier::DrawHoverOrPress(DrawingContext& context)
     circleStatePen.SetAntiAlias(true);
     // add animate color
     circleStatePen.SetColor(ToRSColor(boardColor_->Get()));
-    circleStatePen.SetWidth(isEnlarge_ ? hotCircleShadowWidth_ * scaleValue_ : hotCircleShadowWidth_);
+    circleStatePen.SetWidth(hotCircleShadowWidth_);
     canvas.AttachPen(circleStatePen);
     auto blockSize = blockSize_->Get();
     float diameter = std::min(blockSize.Width(), blockSize.Height());
     auto penRadius = (diameter + hotCircleShadowWidth_) * HALF;
     auto blockCenter = GetBlockCenter();
-    canvas.DrawCircle(ToRSPoint(blockCenter), isEnlarge_ ? penRadius * scaleValue_ : penRadius);
+    canvas.DrawCircle(ToRSPoint(blockCenter), penRadius);
     canvas.DetachPen();
 }
 
@@ -464,9 +377,8 @@ void SliderContentModifier::DrawShadow(DrawingContext& context)
     }
 }
 
-void SliderContentModifier::SetBoardColor(const RefPtr<FrameNode>& host)
+void SliderContentModifier::SetBoardColor()
 {
-    CHECK_NULL_VOID(host);
     CHECK_NULL_VOID(boardColor_);
     auto pipeline = PipelineBase::GetCurrentContext();
     CHECK_NULL_VOID(pipeline);
@@ -481,8 +393,7 @@ void SliderContentModifier::SetBoardColor(const RefPtr<FrameNode>& host)
     AnimationOption option = AnimationOption();
     option.SetDuration(duration);
     option.SetCurve(curve);
-    AnimationUtils::Animate(
-        option, [&]() { boardColor_->Set(LinearColor(shadowColor)); }, nullptr, nullptr, host->GetContextRefPtr());
+    AnimationUtils::Animate(option, [&]() { boardColor_->Set(LinearColor(shadowColor)); });
 }
 
 void SliderContentModifier::UpdateData(const Parameters& parameters)
@@ -490,7 +401,6 @@ void SliderContentModifier::UpdateData(const Parameters& parameters)
     mouseHoverFlag_ = parameters.mouseHoverFlag_;
     mousePressedFlag_ = parameters.mousePressedFlag_;
     hotCircleShadowWidth_ = parameters.hotCircleShadowWidth;
-    SetIsHovered(mouseHoverFlag_);
 }
 
 void SliderContentModifier::JudgeNeedAnimate(bool reverse)
@@ -502,9 +412,8 @@ void SliderContentModifier::JudgeNeedAnimate(bool reverse)
     }
 }
 
-void SliderContentModifier::StopSelectAnimation(const RefPtr<FrameNode>& host)
+void SliderContentModifier::StopSelectAnimation()
 {
-    CHECK_NULL_VOID(host);
     AnimationOption option = AnimationOption();
     option.SetCurve(Curves::LINEAR);
     AnimationUtils::Animate(option, [this]() {
@@ -512,12 +421,11 @@ void SliderContentModifier::StopSelectAnimation(const RefPtr<FrameNode>& host)
         if (animatorStatus_ == SliderStatus::MOVE) {
             selectEnd_->Set(targetSelectEnd_);
         }
-    }, nullptr, nullptr, host->GetContextRefPtr());
+    });
 }
 
-void SliderContentModifier::SetSelectSize(const PointF& start, const PointF& end, const RefPtr<FrameNode>& host)
+void SliderContentModifier::SetSelectSize(const PointF& start, const PointF& end)
 {
-    CHECK_NULL_VOID(host);
     if (selectStart_) {
         selectStart_->Set(start - PointF());
     }
@@ -527,22 +435,20 @@ void SliderContentModifier::SetSelectSize(const PointF& start, const PointF& end
         return;
     }
     if (animatorStatus_ != SliderStatus::DEFAULT && isVisible_) {
-        StopSelectAnimation(host);
+        StopSelectAnimation();
         AnimationOption option = AnimationOption();
         auto motion =
             AceType::MakeRefPtr<ResponsiveSpringMotion>(SPRING_MOTION_RESPONSE, SPRING_MOTION_DAMPING_FRACTION);
         option.SetCurve(motion);
-        AnimationUtils::Animate(
-            option, [&]() { selectEnd_->Set(end - PointF()); }, nullptr, nullptr, host->GetContextRefPtr());
+        AnimationUtils::Animate(option, [&]() { selectEnd_->Set(end - PointF()); });
     } else {
         selectEnd_->Set(end - PointF());
     }
     targetSelectEnd_ = end - PointF();
 }
 
-void SliderContentModifier::StopCircleCenterAnimation(const RefPtr<FrameNode>& host)
+void SliderContentModifier::StopCircleCenterAnimation()
 {
-    CHECK_NULL_VOID(host);
     AnimationOption option = AnimationOption();
     option.SetCurve(Curves::LINEAR);
     AnimationUtils::Animate(option, [this]() {
@@ -558,12 +464,11 @@ void SliderContentModifier::StopCircleCenterAnimation(const RefPtr<FrameNode>& h
                 blockCenterY_->Set(targetCenter_.GetY());
             }
         }
-    }, nullptr, nullptr, host->GetContextRefPtr());
+    });
 }
 
-void SliderContentModifier::SetCircleCenter(const PointF& center, const RefPtr<FrameNode>& host)
+void SliderContentModifier::SetCircleCenter(const PointF& center)
 {
-    CHECK_NULL_VOID(host);
     if (center == targetCenter_) {
         return;
     }
@@ -571,7 +476,7 @@ void SliderContentModifier::SetCircleCenter(const PointF& center, const RefPtr<F
     CHECK_NULL_VOID(blockCenterX_);
     CHECK_NULL_VOID(blockCenterY_);
     if (animatorStatus_ != SliderStatus::DEFAULT && isVisible_) {
-        StopCircleCenterAnimation(host);
+        StopCircleCenterAnimation();
         AnimationOption option = AnimationOption();
         auto motion =
             AceType::MakeRefPtr<ResponsiveSpringMotion>(SPRING_MOTION_RESPONSE, SPRING_MOTION_DAMPING_FRACTION);
@@ -582,7 +487,7 @@ void SliderContentModifier::SetCircleCenter(const PointF& center, const RefPtr<F
             } else {
                 blockCenterY_->Set(center.GetY());
             }
-        }, nullptr, nullptr, host->GetContextRefPtr());
+        });
         if (static_cast<Axis>(directionAxis_->Get()) == Axis::HORIZONTAL) {
             blockCenterY_->Set(center.GetY());
         } else {
@@ -606,7 +511,6 @@ RSRect SliderContentModifier::GetTrackRect()
         stepSize = trackThickness;
     }
     RSRect rect;
-    auto calculatedThickness = isEnlarge_ ? trackThickness * HALF * scaleValue_ : trackThickness * HALF;
     if (direction == Axis::HORIZONTAL) {
         if (sliderMode_->Get() == static_cast<int32_t>(SliderModel::SliderMode::OUTSET)) {
             rect.SetLeft(backStart.GetX() - stepSize * HALF);
@@ -618,11 +522,11 @@ RSRect SliderContentModifier::GetTrackRect()
             rect.SetLeft(backStart.GetX());
             rect.SetRight(backEnd.GetX());
         }
-        rect.SetTop(backStart.GetY() - calculatedThickness);
-        rect.SetBottom(backEnd.GetY() + calculatedThickness);
+        rect.SetTop(backStart.GetY() - trackThickness * HALF);
+        rect.SetBottom(backEnd.GetY() + trackThickness * HALF);
     } else {
-        rect.SetLeft(backStart.GetX() - calculatedThickness);
-        rect.SetRight(backEnd.GetX() + calculatedThickness);
+        rect.SetLeft(backStart.GetX() - trackThickness * HALF);
+        rect.SetRight(backEnd.GetX() + trackThickness * HALF);
         if (sliderMode_->Get() == static_cast<int32_t>(SliderModel::SliderMode::OUTSET)) {
             rect.SetTop(backStart.GetY() - stepSize * HALF);
             rect.SetBottom(backEnd.GetY() + stepSize * HALF);
@@ -942,9 +846,6 @@ void SliderContentModifier::UpdateContentDirtyRect(const SizeF& frameSize)
                               : theme->GetInsetHotBlockShadowWidth().ConvertToPx();
     auto circleSize =
         SizeF(blockSize_->Get().Width() + hotShadowWidth / HALF, blockSize_->Get().Height() + hotShadowWidth / HALF);
-    if (GreatNotEqual(scaleValue_, DEFAULT_SCALE_VALUE)) {
-        circleSize = circleSize * scaleValue_;
-    }
     RectF rect;
     if (directionAxis_->Get() == static_cast<int32_t>(Axis::HORIZONTAL)) {
         auto maxWidth = std::max(circleSize.Height(), frameSize.Height()) * HALF;
@@ -976,11 +877,9 @@ std::vector<GradientColor> SliderContentModifier::GetTrackBackgroundColor() cons
     // Fault protection processing, if gradientColors is empty, set to default colors.
 
     if (gradientColors.empty()) {
-        auto host = host_.Upgrade();
-        CHECK_NULL_RETURN(host, gradientColors);
-        auto pipeline = host->GetContext();
+        auto pipeline = PipelineBase::GetCurrentContext();
         CHECK_NULL_RETURN(pipeline, gradientColors);
-        auto theme = pipeline->GetTheme<SliderTheme>(host->GetThemeScopeId());
+        auto theme = pipeline->GetTheme<SliderTheme>();
         CHECK_NULL_RETURN(theme, gradientColors);
         gradientColors = SliderModelNG::CreateSolidGradient(theme->GetTrackBgColor()).GetColors();
     }
@@ -1001,49 +900,5 @@ Gradient SliderContentModifier::SortGradientColorsByOffset(const Gradient& gradi
     }
 
     return sortedGradient;
-}
-
-void SliderContentModifier::DrawSelectColor(RSBrush& brush, RSRect& rect)
-{
-    Gradient gradient = SortGradientColorsByOffset(selectGradientColor_->Get().GetGradient());
-    std::vector<GradientColor> gradientColors = gradient.GetColors();
-
-    if (gradientColors.empty()) {
-        auto pipeline = PipelineBase::GetCurrentContextSafely();
-        CHECK_NULL_VOID(pipeline);
-        auto theme = pipeline->GetTheme<SliderTheme>();
-        CHECK_NULL_VOID(theme);
-        gradientColors = SliderModelNG::CreateSolidGradient(theme->GetTrackSelectedColor()).GetColors();
-    }
-
-    std::vector<RSColorQuad> colors;
-    std::vector<float> pos;
-    for (size_t i = 0; i < gradientColors.size(); i++) {
-        colors.emplace_back(gradientColors[i].GetLinearColor().GetValue());
-        pos.emplace_back(gradientColors[i].GetDimension().Value());
-    }
-    RSPoint startPoint;
-    RSPoint endPoint;
-    auto direction = static_cast<Axis>(directionAxis_->Get());
-    SetStartEndPointLocation(direction, rect, startPoint, endPoint);
-
-    brush.SetAntiAlias(true);
-    if (reverse_) {
-#ifndef USE_ROSEN_DRAWING
-        brush.SetShaderEffect(
-            RSShaderEffect::CreateLinearGradient(endPoint, startPoint, colors, pos, RSTileMode::CLAMP));
-#else
-        brush.SetShaderEffect(
-            RSRecordingShaderEffect::CreateLinearGradient(endPoint, startPoint, colors, pos, RSTileMode::CLAMP));
-#endif
-    } else {
-#ifndef USE_ROSEN_DRAWING
-        brush.SetShaderEffect(
-            RSShaderEffect::CreateLinearGradient(startPoint, endPoint, colors, pos, RSTileMode::CLAMP));
-#else
-        brush.SetShaderEffect(
-            RSRecordingShaderEffect::CreateLinearGradient(startPoint, endPoint, colors, pos, RSTileMode::CLAMP));
-#endif
-    }
 }
 } // namespace OHOS::Ace::NG

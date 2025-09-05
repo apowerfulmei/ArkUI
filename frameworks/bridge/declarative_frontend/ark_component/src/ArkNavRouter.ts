@@ -19,8 +19,7 @@ class ArkNavRouterComponent extends ArkComponent implements NavRouterAttribute {
     super(nativePtr, classType);
   }
   onStateChange(callback: (isActivated: boolean) => void): NavRouterAttribute {
-    modifierWithKey(this._modifiersWithKeys, OnStateChangeModifier.identity, OnStateChangeModifier, callback);
-    return this;
+    throw new Error('Method not implemented.');
   }
   mode(mode: NavRouteMode): NavRouterAttribute {
     modifierWithKey(this._modifiersWithKeys, NavRouterModeModifier.identity, NavRouterModeModifier, mode);
@@ -28,24 +27,7 @@ class ArkNavRouterComponent extends ArkComponent implements NavRouterAttribute {
   }
 }
 
-class OnStateChangeModifier extends ModifierWithKey<((isActivated: boolean) => void)> {
-  constructor(value: (isActivated: boolean) => void) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('onStateChange');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().navRouter.resetOnStateChange(node);
-    } else {
-      getUINativeModule().navRouter.setOnStateChange(node, this.value);
-    }
-  }
-}
-
 class NavRouterModeModifier extends ModifierWithKey<number> {
-  constructor(value: number) {
-    super(value);
-  }
   static identity: Symbol = Symbol('mode');
   applyPeer(node: KNode, reset: boolean): void {
     if (reset) {

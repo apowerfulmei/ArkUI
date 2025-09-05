@@ -23,7 +23,7 @@
 namespace OHOS::Ace::NG {
 
 class ACE_FORCE_EXPORT CanvasRenderingContext2DModelNG : public OHOS::Ace::CanvasRenderingContext2DModel {
-    DECLARE_ACE_TYPE(CanvasRenderingContext2DModelNG, CanvasRenderingContext2DModel);
+    DECLARE_ACE_TYPE(CanvasRenderingContext2DModelNG, CanvasRenderingContext2DModel)
 
 public:
     CanvasRenderingContext2DModelNG() = default;
@@ -40,7 +40,6 @@ public:
     void SetFontStyle(const Ace::FontStyle& fontStyle) override;
     void SetFontFamilies(const std::vector<std::string>& families) override;
     void SetFontSize(const Dimension& size) override;
-    void SetLetterSpacing(const Dimension& letterSpacing) override;
     std::vector<double> GetLineDash() override;
     void SetFillGradient(const std::shared_ptr<Ace::Gradient>& gradient) override;
     void SetFillPattern(const std::shared_ptr<Ace::Pattern>& pattern) override;
@@ -85,7 +84,6 @@ public:
     void SetClipRuleForPath(const CanvasFillRule& fillRule) override;
     void SetClipRuleForPath2D(const CanvasFillRule& fillRule, const RefPtr<CanvasPath2D>& path) override;
     void AddRect(const Rect& rect) override;
-    void AddRoundRect(const Rect& rect, const std::vector<double>& radii) override;
     void BeginPath() override;
     void ClosePath() override;
     void Restore() override;
@@ -110,7 +108,6 @@ public:
     void Reset() override;
     TextMetrics GetMeasureTextMetrics(const PaintState& state, const std::string& text) override;
     void SetDensity(double density) override;
-    void SetTransform(std::shared_ptr<Ace::Pattern> pattern, const TransformParam& transform) override;
 
     // All interfaces that only the 'CanvasRenderingContext2D' has.
     void GetWidth(double& width) override;

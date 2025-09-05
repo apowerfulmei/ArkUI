@@ -117,16 +117,6 @@ public:
 
     void OnFontChanged() override;
 
-    void SetTextMenuOptions(const TextMenuOptions& textMenuOptions)
-    {
-        textMenuOptions_ = textMenuOptions;
-    }
-
-    TextMenuShowMode GetMenuShowMode() const
-    {
-        return textMenuOptions_.showMode.value_or(TextMenuShowMode::DEFAULT);
-    }
-
 private:
     void DestroyHelper(const RefPtr<FrameNode>& overlay, bool animation = false);
 
@@ -155,7 +145,6 @@ private:
     std::map<int32_t, std::map<int32_t, ScrollableParentCallback>> parentScrollCallbacks_;
 
     RefPtr<SelectContentOverlayManager> selectContentManager_;
-    TextMenuOptions textMenuOptions_;
 
     ACE_DISALLOW_COPY_AND_MOVE(SelectOverlayManager);
 };

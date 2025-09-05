@@ -34,13 +34,6 @@ public:
         ViewStackProcessor::GetInstance()->Push(uiNode, isCustomView);
     }
 
-#ifdef ACE_STATIC
-    void PushPtr(int64_t pointer) override
-    {
-        ViewStackProcessor::GetInstance()->PushPtr(pointer);
-    }
-#endif
-
     void Pop() override
     {
         ViewStackProcessor::GetInstance()->Pop();
@@ -133,28 +126,8 @@ public:
         return ViewStackProcessor::GetInstance()->IsEmpty();
     }
 
-    void PushPrebuildCompCmd() override
-    {
-        ViewStackProcessor::GetInstance()->PushPrebuildCompCmd();
-    }
-
-    void PushPrebuildCompCmd(const char* commandName, PrebuildFunc prebuildFunc) override
-    {
-        ViewStackProcessor::GetInstance()->PushPrebuildCompCmd(commandName, prebuildFunc);
-    }
-
-    bool CheckIsPrebuildTimeout() override
-    {
-        return ViewStackProcessor::GetInstance()->CheckIsPrebuildTimeout();
-    }
-
-    bool IsPrebuilding() override
-    {
-        return ViewStackProcessor::GetInstance()->IsPrebuilding();
-    }
-
 private:
-    static thread_local std::unique_ptr<ScopedViewStackProcessor> scopeStack_;
+    std::unique_ptr<ScopedViewStackProcessor> scopeStack_;
 };
 
 } // namespace OHOS::Ace::NG

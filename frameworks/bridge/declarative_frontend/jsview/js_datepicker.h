@@ -33,7 +33,6 @@ public:
 
     static void JSBind(BindingTarget globalObj);
     static void SetLunar(bool isLunar);
-    static void SetCanLoop(const JSCallbackInfo& info);
     static void OnChange(const JSCallbackInfo& info);
     static void OnDateChange(const JSCallbackInfo& info);
     static void PickerBackgroundColor(const JSCallbackInfo& info);
@@ -41,19 +40,14 @@ public:
     static void SetTextStyle(const JSCallbackInfo& info);
     static void SetSelectedTextStyle(const JSCallbackInfo& info);
     static void ParseTextStyle(const JSRef<JSObject>& paramObj, NG::PickerTextStyle& textStyle, const std::string& pos);
-    static void ParseTextStyleFontSize(const JSRef<JSVal>& fontSize, NG::PickerTextStyle& textStyle);
     static void ParseTextProperties(const JSRef<JSObject>& paramObj, NG::PickerTextProperties& result);
     // keep compatible, need remove after
     static void UseMilitaryTime(bool isUseMilitaryTime);
     static void IsUserDefinedFontFamily(const std::string& pos);
     static void JsOpacity(const JSCallbackInfo& info);
-    static void SetEnableHapticFeedback(const JSCallbackInfo& info);
-    static void SetDigitalCrownSensitivity(const JSCallbackInfo& info);
 
 private:
     static void CreateDatePicker(const JSCallbackInfo& info, const JSRef<JSObject>& paramObj);
-    static void ParseStartEndDate(JSRef<JSVal> startDate, JSRef<JSVal> endDate);
-    static void ParseDatePickerMode(JSRef<JSVal> mode);
     // keep compatible, need remove after
     static void CreateTimePicker(const JSCallbackInfo& info, const JSRef<JSObject>& paramObj);
     static PickerDate ParseDate(const JSRef<JSVal>& dateVal);
@@ -104,7 +98,6 @@ public:
 
     static void JSBind(BindingTarget globalObj);
     static void OnChange(const JSCallbackInfo& info);
-    static void OnEnterSelectedArea(const JSCallbackInfo& info);
     static void Loop(const JSCallbackInfo& info);
     static void UseMilitaryTime(bool isUseMilitaryTime);
     static void EnableHapticFeedback(const JSCallbackInfo& info);
@@ -115,17 +108,14 @@ public:
     static void SetSelectedTextStyle(const JSCallbackInfo& info);
     static void DateTimeOptions(const JSCallbackInfo& info);
     static void JsOpacity(const JSCallbackInfo& info);
-    static void EnableCascade(const JSCallbackInfo& info);
 
-    static void SetDigitalCrownSensitivity(const JSCallbackInfo& info);
 private:
     static void CreateTimePicker(const JSCallbackInfo& info, const JSRef<JSObject>& paramObj);
     static void SetDefaultAttributes();
-    static PickerTime ParseTime(
-        const JSRef<JSVal>& timeVal, PickerTime defaultTime = PickerTime(), bool useDefaultTime = false);
+    static PickerTime ParseTime(const JSRef<JSVal>& timeVal);
 };
 
-class JSTimePickerDialog : public JSViewAbstract {
+class JSTimePickerDialog {
 public:
     static void JSBind(BindingTarget globalObj);
     static void Show(const JSCallbackInfo& info);
@@ -135,8 +125,7 @@ public:
 
 private:
     static void CreateTimePicker(RefPtr<Component>& component, const JSRef<JSObject>& paramObj);
-    static PickerTime ParseTime(
-        const JSRef<JSVal>& timeVal, PickerTime defaultTime = PickerTime(), bool useDefaultTime = false);
+    static PickerTime ParseTime(const JSRef<JSVal>& timeVal);
     static PickerDate ParseDate(const JSRef<JSVal>& dateVal);
 };
 } // namespace OHOS::Ace::Framework

@@ -53,11 +53,7 @@ RefPtr<WindowNode> WindowNode::GetOrCreateWindowNode(const std::string& tag,
         if (windowNode->GetTag() == tag) {
             return windowNode;
         }
-        bool removed = ElementRegister::GetInstance()->RemoveItemSilently(nodeId);
-        if (!removed) {
-            TAG_LOGW(AceLogTag::ACE_WINDOW_SCENE,
-                "Remove item silently failed, node id: %{public}d", nodeId);
-        }
+        ElementRegister::GetInstance()->RemoveItemSilently(nodeId);
         auto parent = windowNode->GetParent();
         if (parent) {
             parent->RemoveChild(windowNode);
@@ -77,7 +73,7 @@ RefPtr<WindowNode> WindowNode::GetOrCreateWindowNode(const std::string& tag,
         if (iter != sessionMap.end()) {
             auto node = iter->second.Upgrade();
             if (node) {
-                TAG_LOGW(AceLogTag::ACE_WINDOW_SCENE,
+                TAG_LOGI(AceLogTag::ACE_WINDOW_SCENE,
                     "screenId: %{public}d, node id: %{public}d, sessionId: %{public}d",
                     screenId, node->GetId(), sessionId);
                 return node;
@@ -97,7 +93,7 @@ RefPtr<WindowNode> WindowNode::GetOrCreateWindowNode(const std::string& tag,
     return windowNode;
 }
 
-void WindowNode::SetParent(const WeakPtr<UINode>& parent, bool needDetect)
+void WindowNode::SetParent(const WeakPtr<UINode>& parent)
 {
     auto prevParent = GetParent();
     if (prevParent && prevParent != parent.Upgrade()) {
@@ -106,14 +102,19 @@ void WindowNode::SetParent(const WeakPtr<UINode>& parent, bool needDetect)
     UINode::SetParent(parent);
 }
 
-bool WindowNode::IsOutOfTouchTestRegion(const PointF& parentLocalPoint, const TouchEvent& touchEvent,
-    std::vector<RectF>* regionList)
+bool WindowNode::IsOutOfTouchTestRegion(const PointF& parentLocalPoint, const TouchEvent& touchEvent)
 {
     auto pattern = GetPattern<WindowPattern>();
     if (pattern != nullptr) {
         auto hotAreas = pattern->GetHotAreas();
         if (!hotAreas.empty()) {
-            return IsOutOfHotAreas(hotAreas, parentLocalPoint);
+            auto hotRects = ConvertHotRects(hotAreas);
+            for (auto& hotRect : hotRects) {
+                if (hotRect.IsInRegion(parentLocalPoint)) {
+                    return false;
+                }
+            }
+            return true;
         }
     }
     const auto& rect = GetPaintRectWithTransform();
@@ -150,17 +151,6 @@ std::vector<RectF> WindowNode::ConvertHotRects(const std::vector<Rosen::Rect>& h
         responseRegionList.emplace_back(rectHot);
     }
     return responseRegionList;
-}
-
-bool WindowNode::IsOutOfHotAreas(const std::vector<Rosen::Rect>& hotAreas, const PointF& parentLocalPoint)
-{
-    auto hotRects = ConvertHotRects(hotAreas);
-    for (auto& hotRect : hotRects) {
-        if (hotRect.IsInRegion(parentLocalPoint)) {
-            return false;
-        }
-    }
-    return true;
 }
 
 RectF WindowNode::ConvertHotRect(const RectF& rect, int32_t sourceType)

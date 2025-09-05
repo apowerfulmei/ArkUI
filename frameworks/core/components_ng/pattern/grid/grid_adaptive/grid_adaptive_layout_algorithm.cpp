@@ -15,12 +15,24 @@
 
 #include "core/components_ng/pattern/grid/grid_adaptive/grid_adaptive_layout_algorithm.h"
 
+#include <algorithm>
+#include <cmath>
+#include <optional>
+#include <type_traits>
+
+#include "base/geometry/dimension.h"
+#include "base/utils/utils.h"
+#include "core/components/common/layout/constants.h"
+#include "core/components_ng/pattern/grid/grid_item_layout_property.h"
+#include "core/components_ng/pattern/grid/grid_layout_property.h"
+#include "core/components_ng/pattern/image/image_layout_property.h"
 #include "core/components_ng/property/measure_utils.h"
+
 namespace OHOS::Ace::NG {
 
 void GridAdaptiveLayoutAlgorithm::Measure(LayoutWrapper* layoutWrapper)
 {
-    info_.gridMatrix_.clear();
+    gridLayoutInfo_.gridMatrix_.clear();
     auto gridLayoutProperty = AceType::DynamicCast<GridLayoutProperty>(layoutWrapper->GetLayoutProperty());
     CHECK_NULL_VOID(gridLayoutProperty);
     auto layoutDirection = gridLayoutProperty->GetGridDirection().value_or(FlexDirection::ROW);
@@ -76,11 +88,13 @@ void GridAdaptiveLayoutAlgorithm::Measure(LayoutWrapper* layoutWrapper)
     displayCount_ = std::min(childrenCount, mainCount_ * crossCount_);
 
     // Update frame size.
-    rowCount_ = axis == Axis::HORIZONTAL ? crossCount_ : mainCount_;
-    columnCount_ = axis == Axis::HORIZONTAL ? mainCount_ : crossCount_;
+    auto rowCount = axis == Axis::HORIZONTAL ? crossCount_ : mainCount_;
+    auto columnCount = axis == Axis::HORIZONTAL ? mainCount_ : crossCount_;
+    rowCount_ = rowCount;
+    columnCount_ = columnCount;
     idealSize.UpdateIllegalSizeWithCheck(
-        OptionalSizeF(columnCount_ * gridCellSize_.Width() + (columnCount_ - 1) * columnsGap,
-            rowCount_ * gridCellSize_.Height() + (rowCount_ - 1) * rowsGap));
+        OptionalSizeF(columnCount * gridCellSize_.Width() + (columnCount - 1) * columnsGap,
+            rowCount * gridCellSize_.Height() + (rowCount - 1) * rowsGap));
     AddPaddingToSize(padding, idealSize);
     layoutWrapper->GetGeometryNode()->SetFrameSize(idealSize.ConvertToSizeT());
 
@@ -128,7 +142,7 @@ void GridAdaptiveLayoutAlgorithm::Layout(LayoutWrapper* layoutWrapper)
         }
     }
 
-    for (const auto& mainLine : info_.gridMatrix_) {
+    for (const auto& mainLine : gridLayoutInfo_.gridMatrix_) {
         int32_t itemIdex = -1;
         for (const auto& crossLine : mainLine.second) {
             // If item index is the same, must be the same GridItem, need't layout again.
@@ -144,15 +158,14 @@ void GridAdaptiveLayoutAlgorithm::Layout(LayoutWrapper* layoutWrapper)
             CHECK_NULL_VOID(layoutProperty);
             auto gridItemLayoutProperty = AceType::DynamicCast<GridItemLayoutProperty>(layoutProperty);
             CHECK_NULL_VOID(gridItemLayoutProperty);
-            gridItemLayoutProperty->UpdateIndex(itemIdex);
             gridItemLayoutProperty->UpdateMainIndex(mainLine.first);
             gridItemLayoutProperty->UpdateCrossIndex(crossLine.first);
         }
     }
-    info_.crossCount_ = std::min(displayCount_, columnCount_);
-    info_.endIndex_ = displayCount_ - 1;
-    info_.startMainLineIndex_ = 0;
-    info_.endMainLineIndex_ = rowCount_ - 1;
+    gridLayoutInfo_.crossCount_ = columnCount_;
+    gridLayoutInfo_.endIndex_ = displayCount_ - 1;
+    gridLayoutInfo_.startMainLineIndex_ = 0;
+    gridLayoutInfo_.endMainLineIndex_ = rowCount_ - 1;
 }
 
 OffsetF GridAdaptiveLayoutAlgorithm::CalculateChildOffset(int32_t index, LayoutWrapper* layoutWrapper)
@@ -190,7 +203,7 @@ OffsetF GridAdaptiveLayoutAlgorithm::CalculateChildOffset(int32_t index, LayoutW
             TAG_LOGI(AceLogTag::ACE_GRID, "%{public}d is not support", layoutDirection);
             break;
     }
-    info_.gridMatrix_[rowIndex][columnIndex] = index;
+    gridLayoutInfo_.gridMatrix_[rowIndex][columnIndex] = index;
 
     auto positionX = columnIndex * (gridCellSize_.Width() + columnsGap);
     auto positionY = rowIndex * (gridCellSize_.Height() + rowsGap);

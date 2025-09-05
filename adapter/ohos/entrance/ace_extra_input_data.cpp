@@ -15,6 +15,8 @@
 
 #include "ace_extra_input_data.h"
 
+#include <memory>
+
 #include "pointer_event.h"
 
 #define CHECK_FALSE_RETURN CHECK_NULL_RETURN

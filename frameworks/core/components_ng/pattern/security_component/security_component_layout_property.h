@@ -18,12 +18,9 @@
 
 #include "base/geometry/dimension.h"
 #include "core/components_ng/layout/layout_property.h"
-#include "core/components_ng/pattern/security_component/save_button/save_button_common.h"
 #include "core/components_ng/pattern/security_component/security_component_common.h"
 #include "core/components_ng/property/property.h"
 #include "core/components/common/properties/text_style.h"
-#include "core/event/mouse_event.h"
-#include "core/image/image_source_info.h"
 
 namespace OHOS::Ace::NG {
 class ACE_EXPORT SecurityComponentLayoutProperty : public LayoutProperty {
@@ -45,38 +42,19 @@ public:
         value->propTextIconSpace_ = CloneTextIconSpace();
         value->propSecurityComponentDescription_ = CloneSecurityComponentDescription();
         value->propIconStyle_ = CloneIconStyle();
-        value->propSymbolIconStyle_ = CloneSymbolIconStyle();
         value->propIconSize_ = CloneIconSize();
-        value->propIconCalcSize_ = CloneIconCalcSize();
-        value->propIconBorderRadius_ = CloneIconBorderRadius();
-        value->propTextContent_ = CloneTextContent();
-        value->propImageSourceInfo_ = CloneImageSourceInfo();
         value->propFontSize_ = CloneFontSize();
-        value->propSymbolIconSize_ = CloneSymbolIconSize();
-        value->propStateEffect_ = CloneStateEffect();
-        value->propTipPosition_ = CloneTipPosition();
-        value->propHoverEffect_ = CloneHoverEffect();
         value->propFontStyle_ = CloneFontStyle();
         value->propFontWeight_ = CloneFontWeight();
         value->propFontFamily_ = CloneFontFamily();
         value->propBackgroundBorderWidth_ = CloneBackgroundBorderWidth();
         value->propBackgroundBorderRadius_ = CloneBackgroundBorderRadius();
         value->propBackgroundType_ = CloneBackgroundType();
-        value->propTextStyle_ = CloneTextStyle();
         value->propAlignment_ = CloneAlignment();
         value->propIsArkuiComponent_ = CloneIsArkuiComponent();
         value->propIsFontColorSet_ = CloneIsFontColorSet();
         value->propIsTextLimitExceeded_ = CloneIsTextLimitExceeded();
         value->propTextIconLayoutDirection_ = CloneTextIconLayoutDirection();
-        value->propMaxFontScale_ = CloneMaxFontScale();
-        value->propMinFontScale_ = CloneMinFontScale();
-        value->propMaxLines_ = CloneMaxLines();
-        value->propAdaptMaxFontSize_ = CloneAdaptMaxFontSize();
-        value->propAdaptMinFontSize_ = CloneAdaptMinFontSize();
-        value->propHeightAdaptivePolicy_ = CloneHeightAdaptivePolicy();
-        value->propIsMaxLineLimitExceeded_ = CloneIsMaxLineLimitExceeded();
-        value->propIsIconExceeded_ = CloneIsIconExceeded();
-        value->propHasCustomPermissionForSecComp_ = CloneHasCustomPermissionForSecComp();
         return value;
     }
 
@@ -90,38 +68,19 @@ public:
         ResetTextIconSpace();
         ResetSecurityComponentDescription();
         ResetIconStyle();
-        ResetSymbolIconStyle();
         ResetIconSize();
-        ResetIconCalcSize();
-        ResetIconBorderRadius();
-        ResetTextContent();
-        ResetImageSourceInfo();
-        ResetSymbolIconSize();
         ResetFontSize();
-        ResetStateEffect();
-        ResetTipPosition();
-        ResetHoverEffect();
         ResetFontStyle();
         ResetFontWeight();
         ResetFontFamily();
         ResetBackgroundBorderWidth();
         ResetBackgroundBorderRadius();
         ResetBackgroundType();
-        ResetTextStyle();
         ResetAlignment();
         ResetIsArkuiComponent();
         ResetIsFontColorSet();
         ResetIsTextLimitExceeded();
         ResetTextIconLayoutDirection();
-        ResetMaxFontScale();
-        ResetMinFontScale();
-        ResetMaxLines();
-        ResetAdaptMaxFontSize();
-        ResetAdaptMinFontSize();
-        ResetHeightAdaptivePolicy();
-        ResetIsMaxLineLimitExceeded();
-        ResetIsIconExceeded();
-        ResetHasCustomPermissionForSecComp();
     }
 
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(BackgroundLeftPadding, Dimension, PROPERTY_UPDATE_MEASURE);
@@ -132,39 +91,20 @@ public:
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(LeftSpace, Dimension, PROPERTY_UPDATE_MEASURE_SELF);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(SecurityComponentDescription, int32_t, PROPERTY_UPDATE_NORMAL);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(IconStyle, int32_t, PROPERTY_UPDATE_NORMAL);
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(SymbolIconStyle, uint32_t, PROPERTY_UPDATE_MEASURE);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(IconSize, Dimension, PROPERTY_UPDATE_MEASURE);
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(IconCalcSize, NG::CalcSize, PROPERTY_UPDATE_MEASURE);
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(IconBorderRadius, NG::BorderRadiusProperty, PROPERTY_UPDATE_MEASURE);
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(TextContent, std::string, PROPERTY_UPDATE_MEASURE);
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(ImageSourceInfo, ImageSourceInfo, PROPERTY_UPDATE_NORMAL);
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(SymbolIconSize, Dimension, PROPERTY_UPDATE_MEASURE);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(FontSize, Dimension, PROPERTY_UPDATE_MEASURE);
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(StateEffect, bool, PROPERTY_UPDATE_NORMAL);
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(TipPosition, TipPosition, PROPERTY_UPDATE_NORMAL);
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(HoverEffect, HoverEffectType, PROPERTY_UPDATE_NORMAL);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(FontStyle, Ace::FontStyle, PROPERTY_UPDATE_MEASURE);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(FontWeight, FontWeight, PROPERTY_UPDATE_MEASURE);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(FontFamily, std::vector<std::string>, PROPERTY_UPDATE_MEASURE);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(BackgroundBorderWidth, Dimension, PROPERTY_UPDATE_MEASURE);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(BackgroundBorderRadius, NG::BorderRadiusProperty, PROPERTY_UPDATE_MEASURE);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(BackgroundType, int32_t, PROPERTY_UPDATE_NORMAL);
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(TextStyle, int32_t, PROPERTY_UPDATE_NORMAL);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(Alignment, Alignment, PROPERTY_UPDATE_NORMAL);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(IsArkuiComponent, bool, PROPERTY_UPDATE_NORMAL);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(IsFontColorSet, bool, PROPERTY_UPDATE_NORMAL);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(IsTextLimitExceeded, bool, PROPERTY_UPDATE_NORMAL);
     ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(TextIconLayoutDirection,
         SecurityComponentLayoutDirection, PROPERTY_UPDATE_MEASURE);
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(MaxFontScale, float, PROPERTY_UPDATE_MEASURE);
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(MinFontScale, float, PROPERTY_UPDATE_MEASURE);
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(MaxLines, int32_t, PROPERTY_UPDATE_MEASURE);
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(AdaptMaxFontSize, Dimension, PROPERTY_UPDATE_MEASURE);
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(AdaptMinFontSize, Dimension, PROPERTY_UPDATE_MEASURE);
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(HeightAdaptivePolicy, TextHeightAdaptivePolicy, PROPERTY_UPDATE_MEASURE);
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(IsMaxLineLimitExceeded, bool, PROPERTY_UPDATE_NORMAL);
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(IsIconExceeded, bool, PROPERTY_UPDATE_NORMAL);
-    ACE_DEFINE_PROPERTY_ITEM_WITHOUT_GROUP(HasCustomPermissionForSecComp, bool, PROPERTY_UPDATE_NORMAL);
     ACE_DISALLOW_COPY_AND_MOVE(SecurityComponentLayoutProperty);
 };
 } // namespace OHOS::Ace::NG

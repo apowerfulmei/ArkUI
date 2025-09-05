@@ -15,6 +15,14 @@
 
 #include "core/components_ng/pattern/overlay/sheet_drag_bar_pattern.h"
 
+#include "base/geometry/axis.h"
+#include "base/geometry/dimension.h"
+#include "base/geometry/ng/offset_t.h"
+#include "base/memory/ace_type.h"
+#include "base/utils/utils.h"
+#include "core/common/container.h"
+#include "core/components/common/layout/constants.h"
+#include "core/components_ng/property/property.h"
 #include "core/pipeline_ng/pipeline_context.h"
 
 namespace OHOS::Ace::NG {
@@ -140,15 +148,13 @@ void SheetDragBarPattern::ScaleAnimation(bool isDown)
     auto context = host->GetRenderContext();
     CHECK_NULL_VOID(context);
     context->AttachNodeAnimatableProperty(property_);
-    auto pipeline = host->GetContextRefPtr();
     AnimationUtils::Animate(
         option,
         [weak]() {
             auto ref = weak.Upgrade();
             CHECK_NULL_VOID(ref);
             ref->property_->Set(1.0f);
-        },
-        nullptr, nullptr, pipeline);
+        });
 }
 
 void SheetDragBarPattern::StopAnimation()
@@ -158,17 +164,11 @@ void SheetDragBarPattern::StopAnimation()
     option.SetCurve(Curves::LINEAR);
     option.SetDuration(0);
     option.SetDelay(0);
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    auto pipeline = host->GetContextRefPtr();
-    AnimationUtils::Animate(
-        option,
-        [weak]() {
-            auto ref = weak.Upgrade();
-            CHECK_NULL_VOID(ref);
-            ref->property_->Set(0.0);
-        },
-        nullptr, nullptr, pipeline);
+    AnimationUtils::Animate(option, [weak]() {
+        auto ref = weak.Upgrade();
+        CHECK_NULL_VOID(ref);
+        ref->property_->Set(0.0);
+    });
 }
 
 void SheetDragBarPattern::HandleTouchEvent(const TouchEventInfo& info)

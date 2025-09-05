@@ -15,6 +15,7 @@
 
 #include "core/components_ng/pattern/swiper/swiper_accessibility_property.h"
 
+#include "base/utils/utils.h"
 #include "core/components_ng/pattern/swiper/swiper_pattern.h"
 
 namespace OHOS::Ace::NG {

@@ -14,60 +14,18 @@
  */
 
 /// <reference path='./import.ts' />
-interface PathOptionsParam {
-  width?: Length;
-  height?: Length;
-  commands?: ResourceStr;
-}
 class ArkPathComponent extends ArkCommonShapeComponent implements PathAttribute {
   constructor(nativePtr: KNode, classType?: ModifierType) {
     super(nativePtr, classType);
   }
-  commands(value: ResourceStr): this {
+  commands(value: string): this {
     modifierWithKey(this._modifiersWithKeys, CommandsModifier.identity, CommandsModifier, value);
-    return this;
-  }
-  resetPathOptions(): void {
-    modifierWithKey(this._modifiersWithKeys, CommonShapeWidthModifier.identity,
-      CommonShapeWidthModifier, undefined);
-    modifierWithKey(this._modifiersWithKeys, CommonShapeHeightModifier.identity,
-      CommonShapeHeightModifier, undefined);
-    modifierWithKey(this._modifiersWithKeys, CommandsModifier.identity,
-      CommandsModifier, undefined);
-  }
-  initialize(value: Object[]): this {
-    if (isUndefined(value[0]) || isNull(value[0])) {
-      this.resetPathOptions();
-      return this;
-    }
-    const value_casted = value[0] as PathOptionsParam;
-    if (!isUndefined(value_casted.width) && !isNull(value_casted.width)) {
-      modifierWithKey(this._modifiersWithKeys, CommonShapeWidthModifier.identity,
-        CommonShapeWidthModifier, value_casted.width);
-    } else {
-      modifierWithKey(this._modifiersWithKeys, CommonShapeWidthModifier.identity,
-        CommonShapeWidthModifier, undefined);
-    }
-    if (!isUndefined(value_casted.height) && !isNull(value_casted.height)) {
-      modifierWithKey(this._modifiersWithKeys, CommonShapeHeightModifier.identity,
-        CommonShapeHeightModifier, value_casted.height);
-    } else {
-      modifierWithKey(this._modifiersWithKeys, CommonShapeHeightModifier.identity,
-        CommonShapeHeightModifier, undefined);
-    }
-    if (!isUndefined(value_casted.commands) && !isNull(value_casted.commands)) {
-      modifierWithKey(this._modifiersWithKeys, CommandsModifier.identity,
-        CommandsModifier, value_casted.commands);
-    } else {
-      modifierWithKey(this._modifiersWithKeys, CommandsModifier.identity,
-        CommandsModifier, undefined);
-    }
     return this;
   }
 }
 
-class CommandsModifier extends ModifierWithKey<ResourceStr> {
-  constructor(value: ResourceStr) {
+class CommandsModifier extends ModifierWithKey<string> {
+  constructor(value: string) {
     super(value);
   }
   static identity: Symbol = Symbol('commands');
@@ -80,7 +38,11 @@ class CommandsModifier extends ModifierWithKey<ResourceStr> {
   }
 
   checkObjectDiff(): boolean {
-    return !isBaseOrResourceEqual(this.stageValue, this.value);
+    if (isString(this.stageValue) && isString(this.value)) {
+      return this.stageValue !== this.value;
+    } else {
+      return true;
+    }
   }
 }
 

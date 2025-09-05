@@ -25,7 +25,6 @@ class ACE_EXPORT VideoModelNG : public OHOS::Ace::VideoModel {
 public:
     void Create(const RefPtr<VideoControllerV2>& videoController) override;
     void SetSrc(const std::string& src, const std::string& bundleName, const std::string& moduleName) override;
-    void SetShowFirstFrame(bool showFirstFrame) override;
     void SetProgressRate(double progressRate) override;
     void SetPosterSourceInfo(const std::string& posterUrl, const std::string &bundleName,
         const std::string &moduleName) override;
@@ -58,18 +57,7 @@ public:
     static void SetMuted(FrameNode* frameNode, bool muted);
     static void SetSurfaceBackgroundColor(FrameNode* frameNode, Color color);
     static void SetShortcutKeyEnabled(FrameNode* frameNode, bool isEnableShortcutKey);
-    static void SetOnStart(FrameNode* frameNode, VideoEventFunc&& onStart);
-    static void SetOnPause(FrameNode* frameNode, VideoEventFunc&& onPause);
-    static void SetOnFinish(FrameNode* frameNode, VideoEventFunc&& onFinish);
-    static void SetOnError(FrameNode* frameNode, VideoEventFunc&& onError);
-    static void SetOnPrepared(FrameNode* frameNode, VideoEventFunc&& onPrepared);
-    static void SetOnSeeking(FrameNode* frameNode, VideoEventFunc&& onSeeking);
-    static void SetOnSeeked(FrameNode* frameNode, VideoEventFunc&& onSeeked);
-    static void SetOnUpdate(FrameNode* frameNode, VideoEventFunc&& onUpdate);
-    static void SetOnFullScreenChange(FrameNode* frameNode, VideoEventFunc&& onFullScreenChange);
-    static void SetOnStop(FrameNode* frameNode, VideoEventFunc&& onStop);
-    static void EnableAnalyzer(FrameNode* frameNode, bool enable);
-    static void SetImageAnalyzerConfig(FrameNode* frameNode, void* config);
 };
+
 } // namespace OHOS::Ace::NG
 #endif // FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_PATTERN_VIDEO_VIDEO_MODEL_NG_H

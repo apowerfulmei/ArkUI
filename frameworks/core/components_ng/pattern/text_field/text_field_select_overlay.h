@@ -20,8 +20,10 @@
 #include "base/geometry/ng/rect_t.h"
 #include "base/memory/ace_type.h"
 #include "base/memory/referenced.h"
+#include "core/components_ng/pattern/select_overlay/select_overlay_property.h"
 #include "core/components_ng/pattern/text/base_text_select_overlay.h"
-
+#include "core/components_ng/pattern/text/text_base.h"
+#include "core/event/ace_events.h"
 namespace OHOS::Ace::NG {
 
 class TextFieldSelectOverlay : public BaseTextSelectOverlay {
@@ -42,11 +44,9 @@ public:
 
     void OnResetTextSelection() override;
     void AfterCloseOverlay() override;
-    RectF GetHandleLocalPaintRect(DragHandleIndex dragHandleIndex) override;
+    RectF GetFirstHandleLocalPaintRect() override;
+    RectF GetSecondHandleLocalPaintRect() override;
     void OnAncestorNodeChanged(FrameNodeChangeInfoFlag flag) override;
-    void UpdateAllHandlesOffset() override;
-    void UpdateFirstHandleOffset() override;
-    void UpdateSecondHandleOffset() override;
 
     // override SelectOverlayHolder
     std::optional<SelectHandleInfo> GetFirstHandleInfo() override;
@@ -93,12 +93,9 @@ public:
         return !HasRenderTransform();
     }
     std::optional<Color> GetHandleColor() override;
-    void BeforeOnPrepareMenu() override;
 
 protected:
     bool AllowTranslate() override;
-    bool AllowSearch() override;
-    bool AllowShare() override;
     RectF GetSelectAreaFromRects(SelectRectsType pos) override;
 
 private:
@@ -107,8 +104,6 @@ private:
     int32_t GetTextAreaCaretPosition(const OffsetF& localOffset);
     int32_t GetTextInputCaretPosition(const OffsetF& localOffset, bool isFirst);
     void CloseMagnifier();
-    void TriggerContentToScroll(const OffsetF& localOffset, bool isEnd);
-    void UpdateMagnifier(const OffsetF& offset, bool updateOnScroll);
     SourceType lastSourceType_ = SourceType::NONE;
     std::vector<std::string> pasteMimeTypes_ = { "text/plain", "text/html" };
 };

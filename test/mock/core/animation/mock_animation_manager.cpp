@@ -18,8 +18,7 @@
 namespace OHOS::Ace::NG {
 void MockAnimationManager::CancelAnimations()
 {
-    const auto props = std::move(activeProps_);
-    for (const auto& prop : props) {
+    for (auto&& prop : activeProps_) {
         auto it = propToAnimation_.find(prop);
         if (it == propToAnimation_.end()) {
             continue;
@@ -43,13 +42,9 @@ std::vector<RefPtr<MockImplicitAnimation>> MockAnimationManager::CloseAnimation(
     }
     // capture active props in animation
     std::vector<RefPtr<MockImplicitAnimation>> res;
-    auto props = std::move(activeProps_);
-    for (const auto& prop : props) {
+    for (auto&& prop : activeProps_) {
         auto anim = propToAnimation_[prop].Upgrade();
         if (anim) {
-            if (runningVersion_ > Version::V0 && !anim->Finished()) {
-                anim->End(); // call previous animation's end callback
-            }
             // update existing animation instead
             anim->Update(params_.callbacks, ticks_);
             continue;
@@ -58,67 +53,31 @@ std::vector<RefPtr<MockImplicitAnimation>> MockAnimationManager::CloseAnimation(
         propToAnimation_[prop] = res.back();
         animations_.emplace_back(res.back());
     }
+    activeProps_.clear();
     return res;
 }
 
-namespace {
-void PruneAnimation(std::list<RefPtr<MockImplicitAnimation>>& animations)
+void MockAnimationManager::Tick()
 {
-    for (auto it = animations.begin(); it != animations.end();) {
+    for (auto it = animations_.begin(); it != animations_.end();) {
         auto&& anim = *it;
         if (!anim || anim->Finished()) {
-            it = animations.erase(it);
+            it = animations_.erase(it);
         } else {
+            anim->Next();
             ++it;
         }
     }
 }
-} // namespace
-
-void MockAnimationManager::Tick()
-{
-    PruneAnimation(animations_);
-    const auto anims = animations_;
-    for (const auto& anim : anims) {
-        anim->Next();
-    }
-}
-
-template<typename T>
-void MockAnimationManager::TickByVelocity(const T& delta)
-{
-    PruneAnimation(animations_);
-    const auto anims = animations_;
-    for (const auto& anim : anims) {
-        anim->ForceUpdate(delta);
-    }
-}
-template void MockAnimationManager::TickByVelocity<float>(const float& delta);
-template void MockAnimationManager::TickByVelocity<OffsetF>(const OffsetF& delta);
 
 void MockAnimationManager::Reset()
 {
     propToAnimation_.clear();
     activeProps_.clear();
     animations_.clear();
-    params_.Reset();
+    params_.callbacks.finishCb = nullptr;
+    params_.callbacks.repeatCb = nullptr;
     ticks_ = 1;
     inScope_ = false;
-}
-
-bool MockAnimationManager::AllFinished()
-{
-    PruneAnimation(animations_);
-    return animations_.empty();
-}
-
-void MockAnimationManager::SetParams(const AnimationOption& option, AnimationCallbacks&& cbs)
-{
-    params_.callbacks = std::move(cbs);
-    if (AceType::InstanceOf<InterpolatingSpring>(option.GetCurve()) || option.GetDuration() > 0) {
-        params_.type = AnimationOperation::PLAY;
-    } else {
-        params_.type = AnimationOperation::CANCEL;
-    }
 }
 } // namespace OHOS::Ace::NG

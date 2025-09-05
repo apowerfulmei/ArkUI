@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_PATTERN_SELECT_OVERLAY_PAINT_METHOD_H
-#define FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_PATTERN_SELECT_OVERLAY_PAINT_METHOD_H
+#ifndef FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_PATTERN_CIRCLE_PAINT_METHOD_H
+#define FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_PATTERN_CIRCLE_PAINT_METHOD_H
 
 #include "base/geometry/ng/size_t.h"
 #include "core/components_ng/base/geometry_node.h"
@@ -28,17 +28,16 @@
 namespace OHOS::Ace::NG {
 
 class ACE_EXPORT SelectOverlayPaintMethod : public NodePaintMethod {
-    DECLARE_ACE_TYPE(SelectOverlayPaintMethod, NodePaintMethod);
+    DECLARE_ACE_TYPE(SelectOverlayPaintMethod, NodePaintMethod)
 public:
     SelectOverlayPaintMethod(const RefPtr<SelectOverlayModifier>& selectOverlayModifier,
         const RefPtr<SelectOverlayContentModifier>& selectOverlayContentModifier, SelectOverlayInfo info,
         const OffsetF& endOffset, float selectMenuHeight, bool hasExtensionMenu, bool hasShowAnimation, bool isCreated,
-        bool isHiddenHandle, const OffsetF& startOffset, bool isReverse, const WeakPtr<Pattern>& pattern)
+        bool isHiddenHandle, const OffsetF& startOffset, bool isReverse)
         : selectOverlayModifier_(selectOverlayModifier), selectOverlayContentModifier_(selectOverlayContentModifier),
           info_(std::move(info)), defaultMenuEndOffset_(endOffset), selectMenuHeight_(selectMenuHeight),
           hasExtensionMenu_(hasExtensionMenu), hasShowAnimation_(hasShowAnimation), isCreated_(isCreated),
-          isHiddenHandle_(isHiddenHandle), defaultMenuStartOffset_(startOffset), isReversePaint_(isReverse),
-          pattern_(pattern)
+          isHiddenHandle_(isHiddenHandle), defaultMenuStartOffset_(startOffset), isReversePaint_(isReverse)
     {}
     ~SelectOverlayPaintMethod() override = default;
 
@@ -69,8 +68,6 @@ private:
 
     void CheckHandleIsShown();
 
-    bool IsModeSwitchComplete() const;
-
     RefPtr<SelectOverlayModifier> selectOverlayModifier_;
 
     RefPtr<SelectOverlayContentModifier> selectOverlayContentModifier_;
@@ -95,11 +92,10 @@ private:
     OffsetF defaultMenuStartOffset_;
 
     bool isReversePaint_ = false;
-    WeakPtr<Pattern> pattern_;
 
     ACE_DISALLOW_COPY_AND_MOVE(SelectOverlayPaintMethod);
 };
 
 } // namespace OHOS::Ace::NG
 
-#endif // FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_PATTERN_SELECT_OVERLAY_PAINT_METHOD_H
+#endif // FOUNDATION_ACE_FRAMEWORKS_CORE_COMPONENTS_NG_PATTERN_CIRCLE_PAINT_METHOD_H

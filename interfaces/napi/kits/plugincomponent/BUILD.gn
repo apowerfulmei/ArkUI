@@ -13,14 +13,11 @@
 
 import("//build/ohos.gni")
 import("//foundation/arkui/ace_engine/ace_config.gni")
-import(
-    "//foundation/arkui/ace_engine/adapter/ohos/services/uiservice/uiservicems.gni")
 
 ohos_shared_library("plugincomponent") {
   include_dirs = [
     "$ace_root",
     "$ace_root/frameworks",
-    "$ace_root/interfaces/inner_api/ace_kit/include",
     "$ace_root/interfaces/inner_api/ui_service_manager/include",
     "$root_out_dir/arkui/framework",
   ]
@@ -41,15 +38,10 @@ ohos_shared_library("plugincomponent") {
 
   deps = [ "$ace_root/build:libace_compatible" ]
 
-  if (ace_engine_enable_uiservice_idl) {
-    public_deps = [ "$ace_root/interfaces/inner_api/ui_service_manager:uiservice_manager_interface_set" ]
-  }
-
   external_deps = [
     "ability_base:base",
     "ability_base:want",
     "ability_runtime:abilitykit_native",
-    "ability_runtime:extensionkit_native",
     "access_token:libtokenid_sdk",
     "bundle_framework:appexecfwk_core",
     "c_utils:utils",

@@ -33,7 +33,7 @@ class EventNode(BaseBean):
     type = ''
     depth = ''
     address = ''  # id
-    parentId = '0x0'
+    parentId = ''
 
     # optional info
     custom_info = None
@@ -51,7 +51,7 @@ class EventNode(BaseBean):
     # updated after parsing done
     tag = ''
 
-    def __init__(self, input_str, isNeedParentId):
+    def __init__(self, input_str):
         super().__init__()
         texts = input_str.split('\n')
         if len(texts) < 2:
@@ -69,10 +69,7 @@ class EventNode(BaseBean):
                                       get_sample_separator_count(event_procedure_keyword, 'depth'))
         self.address = get_value_as_str(frame_node_str, get_sample_key(event_procedure_keyword, 'id'),
                                         get_sample_separator_count(event_procedure_keyword, 'id'))
-        if isNeedParentId:
-            self.parentId = '0x0'
-        else:
-            self.parentId = get_value_as_str(frame_node_str, get_sample_key(event_procedure_keyword, 'parentId'),
+        self.parentId = get_value_as_str(frame_node_str, get_sample_key(event_procedure_keyword, 'parentId'),
                                          get_sample_separator_count(event_procedure_keyword, 'parentId'))
         self.duration = get_value_as_int(frame_node_str, get_sample_key(event_procedure_keyword, 'duration'),
                                          get_sample_separator_count(event_procedure_keyword, 'duration'))

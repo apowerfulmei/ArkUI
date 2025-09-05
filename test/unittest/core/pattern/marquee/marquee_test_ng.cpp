@@ -23,6 +23,7 @@
 #define protected public
 #include "test/mock/core/common/mock_theme_manager.h"
 #include "test/mock/core/pipeline/mock_pipeline_context.h"
+#include "test/unittest/core/pattern/test_ng.h"
 #include "test/mock/base/mock_task_executor.h"
 #include "test/mock/core/common/mock_container.h"
 
@@ -33,7 +34,6 @@
 #include "core/components/theme/theme_manager_impl.h"
 #include "core/components_ng/base/view_stack_processor.h"
 #include "core/components_ng/layout/layout_wrapper.h"
-#include "core/components_ng/pattern/marquee/marquee_layout_algorithm.h"
 #include "core/components_ng/pattern/marquee/marquee_layout_property.h"
 #include "core/components_ng/pattern/marquee/marquee_model_ng.h"
 #include "core/components_ng/pattern/marquee/marquee_paint_property.h"
@@ -42,6 +42,7 @@
 #include "core/components_ng/pattern/text/text_pattern.h"
 #include "core/components_ng/render/animation_utils.h"
 #include "core/components_v2/inspector/inspector_constants.h"
+#include "core/pipeline_ng/ui_task_scheduler.h"
 
 using namespace testing;
 using namespace testing::ext;
@@ -90,13 +91,11 @@ protected:
 
 void MarqueeTestNg::SetUpTestSuite()
 {
-    MockContainer::SetUp();
-    MockContainer::Current()->taskExecutor_ = AceType::MakeRefPtr<MockTaskExecutor>();
-    MockPipelineContext::SetUp();
+    TestNG::SetUpTestSuite();
 }
 void MarqueeTestNg::TearDownTestSuite()
 {
-    MockPipelineContext::TearDown();
+    TestNG::TearDownTestSuite();
 }
 
 RefPtr<FrameNode> MarqueeTestNg::CreateMarqueeParagraph(const TestProperty& testProperty)
@@ -1251,7 +1250,6 @@ HWTEST_F(MarqueeTestNg, MarqueeTest017, TestSize.Level1)
     pattern->OnModifyDone();
     EXPECT_NE(pattern->animation_, nullptr);
     EXPECT_TRUE(marqueePaintProperty->GetPlayerStatusValue());
-    EXPECT_TRUE(pattern->playStatus_);
 
     /**
      * @tc.steps: step6. Create themeManager with marqueeLayoutProperty values and call OnModifyDone.
@@ -1264,7 +1262,7 @@ HWTEST_F(MarqueeTestNg, MarqueeTest017, TestSize.Level1)
     marqueeLayoutProperty->UpdateFontColor(Color(2));
     frameNode->SetLayoutProperty(marqueeLayoutProperty);
     pattern->OnModifyDone();
-    EXPECT_EQ(textLayoutProperty->GetContentValue(), u"test");
+    EXPECT_EQ(textLayoutProperty->GetContentValue(), "test");
     EXPECT_EQ(textLayoutProperty->GetFontSize().value(), Dimension(2.0));
     EXPECT_EQ(textLayoutProperty->GetFontWeight().value(), Ace::FontWeight::W200);
     EXPECT_EQ(textLayoutProperty->GetFontFamily().value(), fontFamily);
@@ -1403,8 +1401,9 @@ HWTEST_F(MarqueeTestNg, MarqueeTest019, TestSize.Level1)
      */
     pattern->StartMarqueeAnimation();
     auto renderContext = frameChild1->GetRenderContext();
-    auto temp = renderContext->GetShowingTranslateProperty().GetX();
-    EXPECT_EQ(temp, 0.0f);
+    TranslateOptions temp = renderContext->GetTransformTranslate().value();
+    TranslateOptions result { 3.5f, 0.0f, 0.0f };
+    EXPECT_EQ(temp.x.calcvalue_, result.x.calcvalue_);
 
     /**
      * @tc.steps: step4. Call StartMarqueeAnimation again with isFormRender_ is true.
@@ -1412,8 +1411,8 @@ HWTEST_F(MarqueeTestNg, MarqueeTest019, TestSize.Level1)
      */
     MockPipelineContext::GetCurrent()->SetIsFormRender(true);
     pattern->StartMarqueeAnimation();
-    temp = renderContext->GetShowingTranslateProperty().GetX();
-    EXPECT_EQ(temp, 0.0f);
+    temp = renderContext->GetTransformTranslate().value();
+    EXPECT_EQ(temp.x.calcvalue_, result.x.calcvalue_);
 }
 
 /**
@@ -1655,504 +1654,5 @@ HWTEST_F(MarqueeTestNg, MarqueeTest024, TestSize.Level1)
     EXPECT_EQ(marqueeLayoutProperty->GetFontWeight(), FONT_WEIGHT_VALUE);
     EXPECT_EQ(marqueeLayoutProperty->GetFontWeight(), FONT_WEIGHT_VALUE);
     EXPECT_EQ(marqueeLayoutProperty->GetNonAutoLayoutDirection(), TextDirection::RTL);
-}
-
-/**
- * @tc.name: MarqueeTest025
- * @tc.desc: Test marquee SetFrameRate
- * @tc.type: FUNC
- */
-HWTEST_F(MarqueeTestNg, MarqueeTest025, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. Create frameNode and marquee.
-     */
-    RefPtr<Pattern> pattern = AceType::MakeRefPtr<MarqueePattern>();
-    FrameNode frameNode = FrameNode(V2::MARQUEE_ETS_TAG, 1, pattern);
-    MarqueeModelNG marqueeModel;
-    marqueeModel.Create();
-    /**
-     * @tc.steps: step2. set frame rate range.
-     * @tc.expected: step2. check if the expected rate is set correctly.
-     */
-    int32_t expectedRate = 60;
-    auto frameRateRange = AceType::MakeRefPtr<FrameRateRange>(0, 120, expectedRate);
-    marqueeModel.SetMarqueeFrameRateRange(&frameNode, frameRateRange, MarqueeDynamicSyncSceneType::ANIMATE);
-    auto frameRateManager = MockPipelineContext::GetCurrentContext()->GetFrameRateManager();
-    int32_t nodeId = frameNode.GetId();
-    frameRateManager->isRateChanged_ = false;
-    frameRateManager->AddNodeRate(nodeId, expectedRate);
-    auto iter = frameRateManager->nodeRateMap_.find(nodeId);
-    EXPECT_NE(iter, frameRateManager->nodeRateMap_.end());
-    if (iter != frameRateManager->nodeRateMap_.end()) {
-        EXPECT_EQ(iter->second, expectedRate);
-        EXPECT_TRUE(frameRateManager->isRateChanged_);
-    }
-}
-
-/**
- * @tc.name: OnWindowHide_001
- * @tc.desc: Test marquee OnWindowHide
- * @tc.type: FUNC
- */
-HWTEST_F(MarqueeTestNg, OnWindowHide_001, TestSize.Level1)
-{
-    TestProperty testProperty;
-    testProperty.src = std::make_optional(MARQUEE_SRC);
-    testProperty.playerStatus = std::make_optional(false);
-    auto frameNode = CreateMarqueeParagraph(testProperty);
-    ASSERT_NE(frameNode, nullptr);
-    auto pattern = frameNode->GetPattern<MarqueePattern>();
-    ASSERT_NE(pattern, nullptr);
-    float start = 0.0f;
-    int32_t playCount = 0;
-    bool needSecondPlay = false;
-    pattern->PlayMarqueeAnimation(start, playCount, needSecondPlay);
-    pattern->OnModifyDone();
-    ASSERT_NE(pattern->animation_, nullptr);
-    pattern->playStatus_ = false;
-    pattern->OnWindowHide();
-    EXPECT_EQ(pattern->playStatus_, false);
-}
-
-/**
- * @tc.name: OnWindowHide_002
- * @tc.desc: Test marquee OnWindowHide
- * @tc.type: FUNC
- */
-HWTEST_F(MarqueeTestNg, OnWindowHide_002, TestSize.Level1)
-{
-    TestProperty testProperty;
-    testProperty.src = std::make_optional(MARQUEE_SRC);
-    testProperty.playerStatus = std::make_optional(false);
-    auto frameNode = CreateMarqueeParagraph(testProperty);
-    ASSERT_NE(frameNode, nullptr);
-    auto pattern = frameNode->GetPattern<MarqueePattern>();
-    ASSERT_NE(pattern, nullptr);
-    float start = 0.0f;
-    int32_t playCount = 0;
-    bool needSecondPlay = false;
-    pattern->PlayMarqueeAnimation(start, playCount, needSecondPlay);
-    pattern->OnModifyDone();
-    ASSERT_NE(pattern->animation_, nullptr);
-    pattern->playStatus_ = true;
-    pattern->OnWindowHide();
-    EXPECT_EQ(pattern->playStatus_, false);
-}
-
-/**
- * @tc.name: OnWindowShow_001
- * @tc.desc: Test marquee OnWindowShow
- * @tc.type: FUNC
- */
-HWTEST_F(MarqueeTestNg, OnWindowShow_001, TestSize.Level1)
-{
-    TestProperty testProperty;
-    testProperty.src = std::make_optional(MARQUEE_SRC);
-    testProperty.playerStatus = std::make_optional(false);
-    auto frameNode = CreateMarqueeParagraph(testProperty);
-    ASSERT_NE(frameNode, nullptr);
-    auto pattern = frameNode->GetPattern<MarqueePattern>();
-    ASSERT_NE(pattern, nullptr);
-    float start = 0.0f;
-    int32_t playCount = 0;
-    bool needSecondPlay = false;
-    pattern->PlayMarqueeAnimation(start, playCount, needSecondPlay);
-    pattern->OnModifyDone();
-    ASSERT_NE(pattern->animation_, nullptr);
-    pattern->playStatus_ = true;
-    pattern->OnWindowShow();
-    EXPECT_EQ(pattern->playStatus_, true);
-}
-
-/**
- * @tc.name: OnWindowShow_002
- * @tc.desc: Test marquee OnWindowShow
- * @tc.type: FUNC
- */
-HWTEST_F(MarqueeTestNg, OnWindowShow_002, TestSize.Level1)
-{
-    TestProperty testProperty;
-    testProperty.src = std::make_optional(MARQUEE_SRC);
-    testProperty.playerStatus = std::make_optional(false);
-    auto frameNode = CreateMarqueeParagraph(testProperty);
-    ASSERT_NE(frameNode, nullptr);
-    auto pattern = frameNode->GetPattern<MarqueePattern>();
-    ASSERT_NE(pattern, nullptr);
-    float start = 0.0f;
-    int32_t playCount = 0;
-    bool needSecondPlay = false;
-    pattern->PlayMarqueeAnimation(start, playCount, needSecondPlay);
-    pattern->OnModifyDone();
-    ASSERT_NE(pattern->animation_, nullptr);
-    pattern->playStatus_ = false;
-    pattern->OnWindowShow();
-    EXPECT_EQ(pattern->playStatus_, true);
-}
-
-/**
- * @tc.name: OnWindowSizeChanged_001
- * @tc.desc: Test marquee OnWindowSizeChanged
- * @tc.type: FUNC
- */
-HWTEST_F(MarqueeTestNg, OnWindowSizeChanged_001, TestSize.Level1)
-{
-    MarqueePattern marqueeModel;
-    int32_t width = 10;
-    int32_t height = 20;
-    marqueeModel.lastWindowWidth_ = width;
-    marqueeModel.lastWindowHeight_ = height;
-    marqueeModel.OnWindowSizeChanged(width, height, WindowSizeChangeReason::RESIZE);
-    EXPECT_EQ(marqueeModel.measureChanged_, false);
-}
-
-/**
- * @tc.name: OnWindowSizeChanged_002
- * @tc.desc: Test marquee OnWindowSizeChanged
- * @tc.type: FUNC
- */
-HWTEST_F(MarqueeTestNg, OnWindowSizeChanged_002, TestSize.Level1)
-{
-    MarqueePattern marqueeModel;
-    int32_t width = 10;
-    int32_t height = 20;
-    marqueeModel.lastWindowWidth_ = 8;
-    marqueeModel.lastWindowHeight_ = height;
-    marqueeModel.OnWindowSizeChanged(width, height, WindowSizeChangeReason::RESIZE);
-    EXPECT_EQ(marqueeModel.measureChanged_, true);
-}
-
-/**
- * @tc.name: OnWindowSizeChanged_003
- * @tc.desc: Test marquee OnWindowSizeChanged
- * @tc.type: FUNC
- */
-HWTEST_F(MarqueeTestNg, OnWindowSizeChanged_003, TestSize.Level1)
-{
-    MarqueePattern marqueeModel;
-    int32_t width = 10;
-    int32_t height = 20;
-    marqueeModel.lastWindowWidth_ = width;
-    marqueeModel.lastWindowHeight_ = 18;
-    marqueeModel.OnWindowSizeChanged(width, height, WindowSizeChangeReason::RESIZE);
-    EXPECT_EQ(marqueeModel.measureChanged_, true);
-}
-
-/**
- * @tc.name: OnWindowSizeChanged_004
- * @tc.desc: Test marquee OnWindowSizeChanged
- * @tc.type: FUNC
- */
-HWTEST_F(MarqueeTestNg, OnWindowSizeChanged_004, TestSize.Level1)
-{
-    MarqueePattern marqueeModel;
-    int32_t width = 10;
-    int32_t height = 20;
-    marqueeModel.lastWindowWidth_ = 8;
-    marqueeModel.lastWindowHeight_ = 18;
-    marqueeModel.OnWindowSizeChanged(width, height, WindowSizeChangeReason::RESIZE);
-    EXPECT_EQ(marqueeModel.measureChanged_, true);
-}
-
-/**
- * @tc.name: GetTextDirection_001
- * @tc.desc: Test marquee GetTextDirection
- * @tc.type: FUNC
- */
-HWTEST_F(MarqueeTestNg, GetTextDirection_001, TestSize.Level1)
-{
-    MarqueePattern marqueeModel;
-    std::string content = "HelloWorld";
-    auto res = marqueeModel.GetTextDirection(content, TextDirection::RTL);
-    EXPECT_EQ(res, TextDirection::RTL);
-}
-
-/**
- * @tc.name: GetTextDirection_002
- * @tc.desc: Test marquee GetTextDirection
- * @tc.type: FUNC
- */
-HWTEST_F(MarqueeTestNg, GetTextDirection_002, TestSize.Level1)
-{
-    MarqueePattern marqueeModel;
-    std::string content = "HelloWorld";
-    auto res = marqueeModel.GetTextDirection(content, TextDirection::AUTO);
-    EXPECT_EQ(res, TextDirection::LTR);
-}
-
-/**
- * @tc.name: CheckTextDirectionChange_001
- * @tc.desc: Test marquee CheckTextDirectionChange
- * @tc.type: FUNC
- */
-HWTEST_F(MarqueeTestNg, CheckTextDirectionChange_001, TestSize.Level1)
-{
-    MarqueePattern marqueeModel;
-    marqueeModel.currentTextDirection_ = TextDirection::LTR;
-    marqueeModel.CheckTextDirectionChange(TextDirection::RTL);
-    EXPECT_EQ(marqueeModel.lastAnimationOffset_, std::nullopt);
-}
-
-/**
- * @tc.name: OnFontScaleConfigurationUpdate_001
- * @tc.desc: Test marquee OnFontScaleConfigurationUpdate
- * @tc.type: FUNC
- */
-HWTEST_F(MarqueeTestNg, OnFontScaleConfigurationUpdate_001, TestSize.Level1)
-{
-    MarqueePattern marqueeModel;
-    marqueeModel.OnFontScaleConfigurationUpdate();
-    EXPECT_FALSE(AnimationUtils::IsImplicitAnimationOpen());
-}
-
-/**
- * @tc.name: MeasureWithLayoutPolicy
- * @tc.desc: When marquee's width and height set layout policy, check the child's position and self framesize.
- * @tc.type: FUNC
- */
-HWTEST_F(MarqueeTestNg, MeasureWithLayoutPolicy, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. create and get marquee frameNode.
-     */
-    auto frameNode =
-        FrameNode::GetOrCreateFrameNode(V2::MARQUEE_ETS_TAG, 1, []() { return AceType::MakeRefPtr<MarqueePattern>(); });
-    frameNode->MarkDirtyNode();
-
-    /**
-     * @tc.steps: step2. create marquee layoutWrapper and set marquee layoutAlgorithm.
-     * @tc.expected: step2. related function is called.
-     */
-    RefPtr<GeometryNode> geometryNode = AceType::MakeRefPtr<GeometryNode>();
-    ASSERT_NE(geometryNode, nullptr);
-    LayoutWrapperNode layoutWrapper = LayoutWrapperNode(frameNode, geometryNode, frameNode->GetLayoutProperty());
-    auto pattern = frameNode->GetPattern<MarqueePattern>();
-    ASSERT_NE(pattern, nullptr);
-    auto marqueeLayoutAlgorithm = AceType::DynamicCast<MarqueeLayoutAlgorithm>(pattern->CreateLayoutAlgorithm());
-    ASSERT_NE(marqueeLayoutAlgorithm, nullptr);
-    layoutWrapper.SetLayoutAlgorithm(AceType::MakeRefPtr<LayoutAlgorithmWrapper>(marqueeLayoutAlgorithm));
-
-    /**
-     * @tc.steps: step3. create and get marquee children frameNode.
-     */
-    auto textFrameNode = FrameNode::CreateFrameNode(V2::TEXT_ETS_TAG, -1, AceType::MakeRefPtr<Pattern>());
-    ASSERT_NE(textFrameNode, nullptr);
-
-    /**
-     * @tc.steps: step4. create marquee layoutWrapper.
-     * @tc.expected: step4. related function is called.
-     */
-    RefPtr<GeometryNode> textGeometryNode = AceType::MakeRefPtr<GeometryNode>();
-    ASSERT_NE(textGeometryNode, nullptr);
-    RefPtr<LayoutWrapperNode> const textLayoutWrapper =
-        AceType::MakeRefPtr<LayoutWrapperNode>(textFrameNode, textGeometryNode, textFrameNode->GetLayoutProperty());
-    ASSERT_NE(textLayoutWrapper, nullptr);
-    textGeometryNode->SetFrameWidth(200.0f);
-    textGeometryNode->SetFrameHeight(200.0f);
-    /**
-     * @tc.steps: step5. marquee frameNode and layoutWrapper need to add child.
-     */
-    frameNode->AddChild(textFrameNode);
-    layoutWrapper.AppendChild(textLayoutWrapper);
-
-    /**
-     * @tc.steps: step6. call the MeasureWithLayoutPolicy.
-     */
-    OptionalSizeF optionalSize;
-    marqueeLayoutAlgorithm->MeasureWithLayoutPolicy(&layoutWrapper, textLayoutWrapper, optionalSize);
-    EXPECT_FALSE(optionalSize.IsValid());
-    frameNode->GetLayoutProperty()->layoutConstraint_ = LayoutConstraintF();
-    frameNode->GetLayoutProperty()->UpdateLayoutPolicyProperty(LayoutCalPolicy::WRAP_CONTENT, true);
-    marqueeLayoutAlgorithm->MeasureWithLayoutPolicy(&layoutWrapper, textLayoutWrapper, optionalSize);
-    ASSERT_NE(optionalSize.Width(), std::nullopt);
-    EXPECT_EQ(optionalSize.Width().value(), 200.0f);
-    frameNode->GetLayoutProperty()->UpdateLayoutPolicyProperty(LayoutCalPolicy::WRAP_CONTENT, false);
-    marqueeLayoutAlgorithm->MeasureWithLayoutPolicy(&layoutWrapper, textLayoutWrapper, optionalSize);
-    ASSERT_NE(optionalSize.Height(), std::nullopt);
-    EXPECT_EQ(optionalSize.Height().value(), 200.0f);
-}
-
-/**
- * @tc.name: HandleWidthConstraint
- * @tc.desc: HandleWidthConstraint.
- * @tc.type: FUNC
- */
-HWTEST_F(MarqueeTestNg, HandleWidthConstraint, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. create and get marquee frameNode.
-     */
-    auto frameNode =
-        FrameNode::GetOrCreateFrameNode(V2::MARQUEE_ETS_TAG, 1, []() { return AceType::MakeRefPtr<MarqueePattern>(); });
-    frameNode->MarkDirtyNode();
-
-    /**
-     * @tc.steps: step2. create marquee layoutWrapper and set marquee layoutAlgorithm.
-     * @tc.expected: step2. related function is called.
-     */
-    RefPtr<GeometryNode> geometryNode = AceType::MakeRefPtr<GeometryNode>();
-    ASSERT_NE(geometryNode, nullptr);
-    LayoutWrapperNode layoutWrapper = LayoutWrapperNode(frameNode, geometryNode, frameNode->GetLayoutProperty());
-    auto pattern = frameNode->GetPattern<MarqueePattern>();
-    ASSERT_NE(pattern, nullptr);
-    auto marqueeLayoutAlgorithm = AceType::DynamicCast<MarqueeLayoutAlgorithm>(pattern->CreateLayoutAlgorithm());
-    ASSERT_NE(marqueeLayoutAlgorithm, nullptr);
-    layoutWrapper.SetLayoutAlgorithm(AceType::MakeRefPtr<LayoutAlgorithmWrapper>(marqueeLayoutAlgorithm));
-
-    /**
-     * @tc.steps: step3. create and get marquee children frameNode.
-     */
-    auto textFrameNode = FrameNode::CreateFrameNode(V2::TEXT_ETS_TAG, -1, AceType::MakeRefPtr<Pattern>());
-    ASSERT_NE(textFrameNode, nullptr);
-
-    /**
-     * @tc.steps: step4. create marquee layoutWrapper.
-     * @tc.expected: step4. related function is called.
-     */
-    RefPtr<GeometryNode> textGeometryNode = AceType::MakeRefPtr<GeometryNode>();
-    ASSERT_NE(textGeometryNode, nullptr);
-    RefPtr<LayoutWrapperNode> const textLayoutWrapper =
-        AceType::MakeRefPtr<LayoutWrapperNode>(textFrameNode, textGeometryNode, textFrameNode->GetLayoutProperty());
-    ASSERT_NE(textLayoutWrapper, nullptr);
-    /**
-     * @tc.steps: step5. marquee frameNode and layoutWrapper need to add child.
-     */
-    frameNode->AddChild(textFrameNode);
-    layoutWrapper.AppendChild(textLayoutWrapper);
-
-    /**
-     * @tc.steps: step6. call the HandleWidthConstraint.
-     */
-    MeasureCalculationContext calcContext { .layoutProperty = frameNode->GetLayoutProperty(),
-        .layoutConstraint = LayoutConstraintF(),
-        .optionalSize = OptionalSizeF() };
-    calcContext.layoutConstraint.selfIdealSize.SetWidth(50.0f);
-    marqueeLayoutAlgorithm->HandleWidthConstraint(LayoutCalPolicy::WRAP_CONTENT, 100.0f, calcContext);
-    EXPECT_FALSE(calcContext.optionalSize.Width());
-
-    calcContext.layoutConstraint.selfIdealSize.Reset();
-    marqueeLayoutAlgorithm->HandleWidthConstraint(LayoutCalPolicy::WRAP_CONTENT, 100.0f, calcContext);
-    ASSERT_NE(calcContext.optionalSize.Width(), std::nullopt);
-    EXPECT_EQ(calcContext.optionalSize.Width().value(), 100.0f);
-
-    calcContext.optionalSize.Reset();
-    marqueeLayoutAlgorithm->HandleWidthConstraint(LayoutCalPolicy::FIX_AT_IDEAL_SIZE, 100.0f, calcContext);
-    ASSERT_NE(calcContext.optionalSize.Width(), std::nullopt);
-    EXPECT_EQ(calcContext.optionalSize.Width().value(), 100.0f);
-    EXPECT_EQ(calcContext.layoutConstraint.maxSize.Width(), Infinity<float>());
-
-    calcContext.optionalSize.Reset();
-    CalcSize calcSize;
-    calcSize.SetWidth(CalcLength(200.0f, DimensionUnit::VP));
-    calcContext.layoutProperty->UpdateCalcMaxSize(calcSize);
-    calcContext.layoutConstraint.maxSize.SetWidth(500.0f);
-    marqueeLayoutAlgorithm->HandleWidthConstraint(LayoutCalPolicy::FIX_AT_IDEAL_SIZE, 100.0f, calcContext);
-    ASSERT_NE(calcContext.optionalSize.Width(), std::nullopt);
-    EXPECT_EQ(calcContext.optionalSize.Width().value(), 100.0f);
-    EXPECT_EQ(calcContext.layoutConstraint.maxSize.Width(), 200.0f);
-
-    calcContext.optionalSize.Reset();
-    calcContext.layoutConstraint.parentIdealSize.SetWidth(1000.0f);
-    marqueeLayoutAlgorithm->HandleWidthConstraint(LayoutCalPolicy::MATCH_PARENT, 100.0f, calcContext);
-    ASSERT_NE(calcContext.optionalSize.Width(), std::nullopt);
-    EXPECT_EQ(calcContext.optionalSize.Width().value(), 1000.0f);
-
-    calcContext.optionalSize.Reset();
-    calcContext.layoutConstraint.parentIdealSize.Reset();
-    calcContext.layoutConstraint.maxSize.SetWidth(1080);
-    marqueeLayoutAlgorithm->HandleWidthConstraint(LayoutCalPolicy::MATCH_PARENT, 100.0f, calcContext);
-    EXPECT_EQ(calcContext.optionalSize.Width(), std::nullopt);
-}
-
-/**
- * @tc.name: HandleHeightConstraint
- * @tc.desc: HandleHeightConstraint.
- * @tc.type: FUNC
- */
-HWTEST_F(MarqueeTestNg, HandleHeightConstraint, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. create and get marquee frameNode.
-     */
-    auto frameNode =
-        FrameNode::GetOrCreateFrameNode(V2::MARQUEE_ETS_TAG, 1, []() { return AceType::MakeRefPtr<MarqueePattern>(); });
-    frameNode->MarkDirtyNode();
-
-    /**
-     * @tc.steps: step2. create marquee layoutWrapper and set marquee layoutAlgorithm.
-     * @tc.expected: step2. related function is called.
-     */
-    RefPtr<GeometryNode> geometryNode = AceType::MakeRefPtr<GeometryNode>();
-    ASSERT_NE(geometryNode, nullptr);
-    LayoutWrapperNode layoutWrapper = LayoutWrapperNode(frameNode, geometryNode, frameNode->GetLayoutProperty());
-    auto pattern = frameNode->GetPattern<MarqueePattern>();
-    ASSERT_NE(pattern, nullptr);
-    auto marqueeLayoutAlgorithm = AceType::DynamicCast<MarqueeLayoutAlgorithm>(pattern->CreateLayoutAlgorithm());
-    ASSERT_NE(marqueeLayoutAlgorithm, nullptr);
-    layoutWrapper.SetLayoutAlgorithm(AceType::MakeRefPtr<LayoutAlgorithmWrapper>(marqueeLayoutAlgorithm));
-
-    /**
-     * @tc.steps: step3. create and get marquee children frameNode.
-     */
-    auto textFrameNode = FrameNode::CreateFrameNode(V2::TEXT_ETS_TAG, -1, AceType::MakeRefPtr<Pattern>());
-    ASSERT_NE(textFrameNode, nullptr);
-
-    /**
-     * @tc.steps: step4. create marquee layoutWrapper.
-     * @tc.expected: step4. related function is called.
-     */
-    RefPtr<GeometryNode> textGeometryNode = AceType::MakeRefPtr<GeometryNode>();
-    ASSERT_NE(textGeometryNode, nullptr);
-    RefPtr<LayoutWrapperNode> const textLayoutWrapper =
-        AceType::MakeRefPtr<LayoutWrapperNode>(textFrameNode, textGeometryNode, textFrameNode->GetLayoutProperty());
-    ASSERT_NE(textLayoutWrapper, nullptr);
-    /**
-     * @tc.steps: step5. marquee frameNode and layoutWrapper need to add child.
-     */
-    frameNode->AddChild(textFrameNode);
-    layoutWrapper.AppendChild(textLayoutWrapper);
-
-    /**
-     * @tc.steps: step6. call the HandleHeightConstraint.
-     */
-    MeasureCalculationContext calcContext { .layoutProperty = frameNode->GetLayoutProperty(),
-        .layoutConstraint = LayoutConstraintF(),
-        .optionalSize = OptionalSizeF() };
-    calcContext.layoutConstraint.selfIdealSize.SetHeight(50.0f);
-    marqueeLayoutAlgorithm->HandleHeightConstraint(LayoutCalPolicy::WRAP_CONTENT, 100.0f, calcContext);
-    EXPECT_FALSE(calcContext.optionalSize.Height());
-
-    calcContext.layoutConstraint.selfIdealSize.Reset();
-    marqueeLayoutAlgorithm->HandleHeightConstraint(LayoutCalPolicy::WRAP_CONTENT, 100.0f, calcContext);
-    ASSERT_NE(calcContext.optionalSize.Height(), std::nullopt);
-    EXPECT_EQ(calcContext.optionalSize.Height().value(), 100.0f);
-
-    calcContext.optionalSize.Reset();
-    marqueeLayoutAlgorithm->HandleHeightConstraint(LayoutCalPolicy::FIX_AT_IDEAL_SIZE, 100.0f, calcContext);
-    ASSERT_NE(calcContext.optionalSize.Height(), std::nullopt);
-    EXPECT_EQ(calcContext.optionalSize.Height().value(), 100.0f);
-    EXPECT_EQ(calcContext.layoutConstraint.maxSize.Height(), Infinity<float>());
-
-    calcContext.optionalSize.Reset();
-    CalcSize calcSize;
-    calcSize.SetHeight(CalcLength(200.0f, DimensionUnit::VP));
-    calcContext.layoutProperty->UpdateCalcMaxSize(calcSize);
-    calcContext.layoutConstraint.maxSize.SetHeight(500.0f);
-    marqueeLayoutAlgorithm->HandleHeightConstraint(LayoutCalPolicy::FIX_AT_IDEAL_SIZE, 100.0f, calcContext);
-    ASSERT_NE(calcContext.optionalSize.Height(), std::nullopt);
-    EXPECT_EQ(calcContext.optionalSize.Height().value(), 100.0f);
-    EXPECT_EQ(calcContext.layoutConstraint.maxSize.Height(), 200.0f);
-
-    calcContext.optionalSize.Reset();
-    calcContext.layoutConstraint.parentIdealSize.SetHeight(1000.0f);
-    marqueeLayoutAlgorithm->HandleHeightConstraint(LayoutCalPolicy::MATCH_PARENT, 100.0f, calcContext);
-    ASSERT_NE(calcContext.optionalSize.Height(), std::nullopt);
-    EXPECT_EQ(calcContext.optionalSize.Height().value(), 1000.0f);
-
-    calcContext.optionalSize.Reset();
-    calcContext.layoutConstraint.parentIdealSize.Reset();
-    calcContext.layoutConstraint.maxSize.SetHeight(1080);
-    marqueeLayoutAlgorithm->HandleHeightConstraint(LayoutCalPolicy::MATCH_PARENT, 100.0f, calcContext);
-    EXPECT_EQ(calcContext.optionalSize.Height(), std::nullopt);
 }
 } // namespace OHOS::Ace::NG

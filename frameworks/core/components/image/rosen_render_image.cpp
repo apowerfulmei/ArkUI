@@ -29,7 +29,7 @@
 #ifndef USE_ROSEN_DRAWING
 #include "core/components_ng/render/adapter/skia_image.h"
 #else
-#include "core/components_ng/render/adapter/drawing_image.h"
+#include "core/components_ng/render/adapter/rosen/drawing_image.h"
 #endif
 #include "core/image/image_object.h"
 #include "core/pipeline/base/rosen_render_context.h"
@@ -110,6 +110,15 @@ void RosenRenderImage::InitializeCallbacks()
             return;
         }
         if (info != renderImage->sourceInfo_) {
+            return;
+        }
+        auto context = renderImage->GetContext().Upgrade();
+        if (!context) {
+            return;
+        }
+        auto isDeclarative = context->GetIsDeclarative();
+        if (!isDeclarative && !renderImage->syncMode_ && renderImage->RetryLoading()) {
+            LOGI("retry loading. sourceInfo: %{private}s", renderImage->sourceInfo_.ToString().c_str());
             return;
         }
         renderImage->ImageObjFailed(errorMsg);
@@ -1121,9 +1130,7 @@ void RosenRenderImage::UpdateData(const std::string& uri, const std::vector<uint
 #ifndef USE_ROSEN_DRAWING
     auto codec = SkCodec::MakeFromData(skData);
 #else
-    RSDataWrapper* wrapper = new RSDataWrapper{rsData};
-    auto skData =
-        SkData::MakeWithProc(rsData->GetData(), rsData->GetSize(), RSDataWrapperReleaseProc, wrapper);
+    auto skData = SkData::MakeWithoutCopy(rsData->GetData(), rsData->GetSize());
     auto codec = SkCodec::MakeFromData(skData);
 #endif
     if (!codec) {

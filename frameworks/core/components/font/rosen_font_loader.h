@@ -29,12 +29,11 @@ class RosenFontLoader : public FontLoader {
 
 public:
     RosenFontLoader(const std::string& familyName, const std::string& familySrc);
-    RosenFontLoader(const std::string& familyName, const std::vector<std::string>& familySrcArray);
     ~RosenFontLoader() override = default;
 
     void AddFont(const RefPtr<PipelineBase>& context, const std::string& bundleName = "",
         const std::string& moduleName = "") override;
-    void SetDefaultFontFamily(const char* fontFamily, const std::vector<std::string>& familySrcArray) override;
+    void SetDefaultFontFamily(const char* fontFamily, const char* familySrc) override;
 
 private:
     void LoadFromNetwork(const RefPtr<PipelineBase>& context);

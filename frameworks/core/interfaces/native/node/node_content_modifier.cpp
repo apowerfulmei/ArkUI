@@ -15,7 +15,10 @@
 #include "core/interfaces/native/node/node_content_modifier.h"
 
 #include "base/error/error_code.h"
+#include "base/utils/utils.h"
+#include "core/components_ng/base/ui_node.h"
 #include "core/components_ng/syntax/node_content.h"
+#include "core/interfaces/arkoala/arkoala_api.h"
 
 namespace OHOS::Ace::NG {
 namespace {
@@ -88,31 +91,15 @@ void* GetUserData(ArkUINodeContentHandle content)
 namespace NodeModifier {
 const ArkUINodeContentModifier* GetNodeContentModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
-    static const ArkUINodeContentModifier modifier = {
-        .addChild = AddChild,
-        .insertChild = InsertChild,
-        .removeChild = RemoveChild,
-        .registerEvent = RegisterEvent,
-        .setUserData = SetUserData,
-        .getUserData = GetUserData,
-    };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
+    static const ArkUINodeContentModifier modifier = { AddChild, InsertChild, RemoveChild, RegisterEvent, SetUserData,
+        GetUserData };
     return &modifier;
 }
 
 const CJUINodeContentModifier* GetCJUINodeContentModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
-    static const CJUINodeContentModifier modifier = {
-        .addChild = AddChild,
-        .insertChild = InsertChild,
-        .removeChild = RemoveChild,
-        .registerEvent = RegisterEvent,
-        .setUserData = SetUserData,
-        .getUserData = GetUserData,
-    };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
+    static const CJUINodeContentModifier modifier = { AddChild, InsertChild, RemoveChild, RegisterEvent, SetUserData,
+        GetUserData };
     return &modifier;
 }
 } // namespace NodeModifier

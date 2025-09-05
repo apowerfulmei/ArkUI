@@ -19,7 +19,6 @@
 #include "core/components_ng/base/ui_node.h"
 #include "core/components_ng/layout/box_layout_algorithm.h"
 #include "core/components_ng/layout/layout_wrapper.h"
-#include "core/components_ng/property/layout_policy_property.h"
 
 namespace OHOS::Ace::NG {
 class ACE_EXPORT SwitchLayoutAlgorithm : public BoxLayoutAlgorithm {
@@ -35,6 +34,8 @@ public:
 
     void Measure(LayoutWrapper* layoutWrapper) override;
 
+    void CalcHeightAndWidth(float& height, float& width, float frameHeight, float frameWidth);
+
     void OnReset() override {}
 
     float GetHeight() const
@@ -47,13 +48,7 @@ public:
         return width_;
     }
 
-    void LayoutPolicyIsMatchParent(const LayoutConstraintF& contentConstraint,
-        std::optional<NG::LayoutPolicyProperty> layoutPolicy, float& frameWidth, float& frameHeight);
-
 private:
-    void CalcHeightAndWidth(
-        const RefPtr<FrameNode>& host, float& height, float& width, float frameHeight, float frameWidth);
-
     ACE_DISALLOW_COPY_AND_MOVE(SwitchLayoutAlgorithm);
     float width_ = 0.0f;
     float height_ = 0.0f;

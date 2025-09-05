@@ -13,36 +13,20 @@
  * limitations under the License.
  */
 
-#include "base/utils/macros.h"
-#include "interfaces/napi/kits/utils/napi_utils.h"
 #include "napi/native_node_api.h"
 
 extern const char _binary_dialog_abc_start[];
 extern const char _binary_dialog_abc_end[];
 
-extern const char _binary_dialog_v18_abc_start[];
-extern const char _binary_dialog_v18_abc_end[];
-
-namespace OHOS::Ace::Napi {
-
 // Napi get abc code function
-extern "C" ACE_FORCE_EXPORT void NAPI_arkui_advanced_Dialog_GetABCCode(
+extern "C" __attribute__((visibility("default"))) void NAPI_arkui_advanced_Dialog_GetABCCode(
     const char** buf, int* buflen)
 {
-    if (Container::GreatOrEqualAPITargetVersion(PlatformVersion::VERSION_EIGHTEEN)) {
-        if (buf != nullptr) {
-            *buf = _binary_dialog_v18_abc_start;
-        }
-        if (buflen != nullptr) {
-            *buflen = _binary_dialog_v18_abc_end - _binary_dialog_v18_abc_start;
-        }
-    } else {
-        if (buf != nullptr) {
-            *buf = _binary_dialog_abc_start;
-        }
-        if (buflen != nullptr) {
-            *buflen = _binary_dialog_abc_end - _binary_dialog_abc_start;
-        }
+    if (buf != nullptr) {
+        *buf = _binary_dialog_abc_start;
+    }
+    if (buflen != nullptr) {
+        *buflen = _binary_dialog_abc_end - _binary_dialog_abc_start;
     }
 }
 
@@ -65,5 +49,3 @@ extern "C" __attribute__((constructor)) void DialogRegisterModule(void)
 {
     napi_module_register(&DialogModule);
 }
-
-} // namespace OHOS::Ace::Napi

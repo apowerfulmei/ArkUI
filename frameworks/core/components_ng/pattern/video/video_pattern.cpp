@@ -27,19 +27,37 @@
 #include "base/utils/system_properties.h"
 #include "base/utils/utils.h"
 #include "core/common/ace_engine.h"
+#include "core/common/ace_view.h"
 #include "core/common/ai/image_analyzer_manager.h"
+#include "core/common/container.h"
 #include "core/common/udmf/udmf_client.h"
+#include "core/components/common/layout/constants.h"
+#include "core/components/common/properties/color.h"
+#include "core/components/declaration/button/button_declaration.h"
 #include "core/components/video/video_theme.h"
+#include "core/components/video/video_utils.h"
+#include "core/components_ng/pattern/button/button_event_hub.h"
+#include "core/components_ng/pattern/button/button_layout_property.h"
+#include "core/components_ng/pattern/button/button_pattern.h"
+#include "core/components_ng/pattern/image/image_layout_property.h"
+#include "core/components_ng/pattern/image/image_pattern.h"
+#include "core/components_ng/pattern/linear_layout/linear_layout_pattern.h"
+#include "core/components_ng/pattern/linear_layout/linear_layout_property.h"
+#include "core/components_ng/pattern/slider/slider_event_hub.h"
+#include "core/components_ng/pattern/slider/slider_layout_property.h"
+#include "core/components_ng/pattern/slider/slider_paint_property.h"
 #include "core/components_ng/pattern/slider/slider_pattern.h"
+#include "core/components_ng/pattern/text/text_layout_property.h"
 #include "core/components_ng/pattern/text/text_pattern.h"
+#include "core/components_ng/pattern/video/video_event_hub.h"
 #include "core/components_ng/pattern/video/video_full_screen_node.h"
 #include "core/components_ng/pattern/video/video_full_screen_pattern.h"
+#include "core/components_ng/pattern/video/video_layout_property.h"
+#include "core/components_ng/pattern/video/video_node.h"
 #include "core/components_ng/property/gradient_property.h"
-
-#ifdef RENDER_EXTRACT_SUPPORTED
-#include "core/common/ace_view.h"
-#endif
-
+#include "core/components_ng/property/property.h"
+#include "core/components_v2/inspector/inspector_constants.h"
+#include "core/pipeline_ng/pipeline_context.h"
 namespace OHOS::Ace::NG {
 namespace {
 using HiddenChangeEvent = std::function<void(bool)>;
@@ -59,23 +77,9 @@ const Dimension LIFT_HEIGHT = 28.0_vp;
 const std::string PNG_FILE_EXTENSION = "png";
 constexpr int32_t MEDIA_TYPE_AUD = 0;
 constexpr float VOLUME_STEP = 0.05f;
-const std::unordered_set<ImageFit> EXPORT_IMAGEFIT_SUPPORT_TYPES = {
-    ImageFit::FILL,
-    ImageFit::CONTAIN,
-    ImageFit::COVER,
-    ImageFit::FITWIDTH, //FITWIDTH is used instead of AUTO
-    ImageFit::NONE,
-    ImageFit::SCALE_DOWN,
-    ImageFit::TOP_LEFT,
-    ImageFit::TOP,
-    ImageFit::TOP_END,
-    ImageFit::START,
-    ImageFit::CENTER,
-    ImageFit::END,
-    ImageFit::BOTTOM_START,
-    ImageFit::BOTTOM,
-    ImageFit::BOTTOM_END
-};
+
+// Default error, empty string.
+const std::string ERROR = "";
 
 enum SliderChangeMode {
     BEGIN = 0,
@@ -140,88 +144,37 @@ SizeF CalculateFitScaleDown(const SizeF& videoSize, const SizeF& layoutSize)
     return CalculateFitContain(videoSize, layoutSize);
 }
 
-RectF MeasureVideoContentLayout(const SizeF& layoutSize, const RefPtr<VideoLayoutProperty>& layoutProperty)
+SizeF MeasureVideoContentLayout(const SizeF& layoutSize, const RefPtr<VideoLayoutProperty>& layoutProperty)
 {
     if (!layoutProperty || !layoutProperty->HasVideoSize()) {
-        return {0.0f, 0.0f, layoutSize.Width(), layoutSize.Height()};
+        return layoutSize;
     }
 
     auto videoSize = layoutProperty->GetVideoSizeValue(SizeF(0, 0));
-    auto videoFrameSize = videoSize;
     auto imageFit = layoutProperty->GetObjectFitValue(ImageFit::COVER);
-    auto rect = RectF();
+    SizeF contentSize = { 0.0, 0.0 };
     switch (imageFit) {
-        case ImageFit::CONTAIN: case ImageFit::FITWIDTH: //FITWIDTH is used instead of AUTO
-            videoFrameSize = CalculateFitContain(videoSize, layoutSize);
-            rect = RectF{(layoutSize.Width() - videoFrameSize.Width()) / AVERAGE_VALUE,
-                (layoutSize.Height() - videoFrameSize.Height()) / AVERAGE_VALUE,
-                videoFrameSize.Width(), videoFrameSize.Height()};
+        case ImageFit::CONTAIN:
+            contentSize = CalculateFitContain(videoSize, layoutSize);
             break;
         case ImageFit::FILL:
-            videoFrameSize = CalculateFitFill(layoutSize);
-            rect = RectF{(layoutSize.Width() - videoFrameSize.Width()) / AVERAGE_VALUE,
-                (layoutSize.Height() - videoFrameSize.Height()) / AVERAGE_VALUE,
-                videoFrameSize.Width(), videoFrameSize.Height()};
+            contentSize = CalculateFitFill(layoutSize);
             break;
         case ImageFit::COVER:
-            videoFrameSize = CalculateFitCover(videoSize, layoutSize);
-            rect = RectF{(layoutSize.Width() - videoFrameSize.Width()) / AVERAGE_VALUE,
-                (layoutSize.Height() - videoFrameSize.Height()) / AVERAGE_VALUE,
-                videoFrameSize.Width(), videoFrameSize.Height()};
+            contentSize = CalculateFitCover(videoSize, layoutSize);
             break;
         case ImageFit::NONE:
-            videoFrameSize = CalculateFitNone(videoSize);
-            rect = RectF{(layoutSize.Width() - videoFrameSize.Width()) / AVERAGE_VALUE,
-                (layoutSize.Height() - videoFrameSize.Height()) / AVERAGE_VALUE,
-                videoFrameSize.Width(), videoFrameSize.Height()};
+            contentSize = CalculateFitNone(videoSize);
             break;
         case ImageFit::SCALE_DOWN:
-            videoFrameSize = CalculateFitScaleDown(videoSize, layoutSize);
-            rect = RectF{(layoutSize.Width() - videoFrameSize.Width()) / AVERAGE_VALUE,
-                (layoutSize.Height() - videoFrameSize.Height()) / AVERAGE_VALUE,
-                videoFrameSize.Width(), videoFrameSize.Height()};
-            break;
-        case ImageFit::TOP_LEFT:
-            rect = RectF{0.0f, 0.0f, videoSize.Width(), videoSize.Height()};
-            break;
-        case ImageFit::TOP:
-            rect = RectF{(layoutSize.Width() - videoFrameSize.Width()) / AVERAGE_VALUE, 0.0f,
-                videoSize.Width(), videoSize.Height()};
-            break;
-        case ImageFit::TOP_END:
-            rect = RectF{layoutSize.Width() - videoFrameSize.Width(), 0.0f, videoSize.Width(), videoSize.Height()};
-            break;
-        case ImageFit::START:
-            rect = RectF{0.0f, (layoutSize.Height() - videoFrameSize.Height()) / AVERAGE_VALUE,
-                videoSize.Width(), videoSize.Height()};
-            break;
-        case ImageFit::CENTER:
-            rect = RectF{(layoutSize.Width() - videoFrameSize.Width()) / AVERAGE_VALUE,
-                (layoutSize.Height() - videoFrameSize.Height()) / AVERAGE_VALUE, videoSize.Width(), videoSize.Height()};
-            break;
-        case ImageFit::END:
-            rect = RectF{layoutSize.Width() - videoFrameSize.Width(),
-                (layoutSize.Height() - videoFrameSize.Height()) / AVERAGE_VALUE, videoSize.Width(), videoSize.Height()};
-            break;
-        case ImageFit::BOTTOM_START:
-            rect = RectF{0.0f, layoutSize.Height() - videoFrameSize.Height(), videoSize.Width(), videoSize.Height()};
-            break;
-        case ImageFit::BOTTOM:
-            rect = RectF{(layoutSize.Width() - videoFrameSize.Width()) / AVERAGE_VALUE,
-                layoutSize.Height() - videoFrameSize.Height(), videoSize.Width(), videoSize.Height()};
-            break;
-        case ImageFit::BOTTOM_END:
-            rect = RectF{layoutSize.Width() - videoFrameSize.Width(), layoutSize.Height() - videoFrameSize.Height(),
-                videoSize.Width(), videoSize.Height()};
+            contentSize = CalculateFitScaleDown(videoSize, layoutSize);
             break;
         default:
-            videoFrameSize = CalculateFitCover(videoSize, layoutSize);
-            rect = RectF{(layoutSize.Width() - videoFrameSize.Width()) / AVERAGE_VALUE,
-                (layoutSize.Height() - videoFrameSize.Height()) / AVERAGE_VALUE,
-                videoFrameSize.Width(), videoFrameSize.Height()};
-            break;
+            contentSize = CalculateFitContain(videoSize, layoutSize);
     }
-    return rect;
+
+    // Just return contentSize as the video frame area.
+    return contentSize;
 }
 
 float RoundValueToPixelGrid(float value, bool isRound, bool forceCeil, bool forceFloor)
@@ -299,7 +252,6 @@ RectF AdjustPaintRect(float positionX, float positionY, float width, float heigh
     rect.SetHeight(nodeHeightI);
     return rect;
 }
-
 Gradient ConvertToGradient(Color color)
 {
     Gradient gradient;
@@ -314,145 +266,11 @@ Gradient ConvertToGradient(Color color)
 
     return gradient;
 }
-
-void RegisterMediaPlayerEventImpl(const WeakPtr<VideoPattern>& weak, const RefPtr<MediaPlayer>& mediaPlayer,
-    int32_t instanceId, const SingleTaskExecutor& uiTaskExecutor)
-{
-    auto&& positionUpdatedEvent = [weak, uiTaskExecutor, instanceId](uint32_t currentPos) {
-        uiTaskExecutor.PostSyncTask([weak, currentPos, instanceId] {
-            auto video = weak.Upgrade();
-            CHECK_NULL_VOID(video);
-            ContainerScope scope(instanceId);
-            video->OnCurrentTimeChange(currentPos);
-            video->StartUpdateImageAnalyzer();
-            }, "ArkUIVideoCurrentTimeChange");
-    };
-
-    auto&& stateChangedEvent = [weak, uiTaskExecutor, instanceId](PlaybackStatus status) {
-        uiTaskExecutor.PostTask([weak, status, instanceId] {
-            auto video = weak.Upgrade();
-            CHECK_NULL_VOID(video);
-            ContainerScope scope(instanceId);
-            video->OnPlayerStatus(status);
-            }, "ArkUIVideoPlayerStatusChange");
-    };
-
-    auto&& errorEvent = [weak, uiTaskExecutor, instanceId]() {
-        uiTaskExecutor.PostTask([weak, instanceId] {
-            auto video = weak.Upgrade();
-            CHECK_NULL_VOID(video);
-            ContainerScope scope(instanceId);
-            video->OnError("");
-            }, "ArkUIVideoError");
-    };
-
-    auto&& videoErrorEvent = [weak, uiTaskExecutor, instanceId](int32_t code, const std::string& message) {
-        uiTaskExecutor.PostTask([weak, instanceId, code, message] {
-            auto video = weak.Upgrade();
-            CHECK_NULL_VOID(video);
-            ContainerScope scope(instanceId);
-            video->OnError(code, message);
-            }, "ArkUIVideoErrorWithParam");
-    };
-
-    auto&& resolutionChangeEvent = [weak, uiTaskExecutor, instanceId]() {
-        uiTaskExecutor.PostSyncTask([weak, instanceId] {
-            auto video = weak.Upgrade();
-            CHECK_NULL_VOID(video);
-            ContainerScope scope(instanceId);
-            video->OnResolutionChange();
-            }, "ArkUIVideoResolutionChange");
-    };
-
-    auto&& startRenderFrameEvent = [weak, uiTaskExecutor, instanceId]() {
-        uiTaskExecutor.PostSyncTask([weak, instanceId] {
-            auto video = weak.Upgrade();
-            CHECK_NULL_VOID(video);
-            ContainerScope scope(instanceId);
-            video->OnStartRenderFrameCb();
-            }, "ArkUIVideoStartRenderFrame");
-    };
-
-    mediaPlayer->RegisterMediaPlayerEvent(
-        positionUpdatedEvent, stateChangedEvent, errorEvent, resolutionChangeEvent, startRenderFrameEvent);
-    mediaPlayer->RegisterMediaPlayerVideoErrorEvent(videoErrorEvent);
-}
-
-std::string StatusToString(PlaybackStatus status)
-{
-    switch (status) {
-        case PlaybackStatus::ERROR:
-            return "ERROR";
-        case PlaybackStatus::IDLE:
-            return "IDLE";
-        case PlaybackStatus::INITIALIZED:
-            return "INITIALIZED";
-        case PlaybackStatus::PREPARED:
-            return "PREPARED";
-        case PlaybackStatus::STARTED:
-            return "STARTED";
-        case PlaybackStatus::PAUSED:
-            return "PAUSED";
-        case PlaybackStatus::STOPPED:
-            return "STOPPED";
-        case PlaybackStatus::PLAYBACK_COMPLETE:
-            return "PLAYBACK_COMPLETE";
-        case PlaybackStatus::NONE:
-            return "NONE";
-        default:
-            return "Invalid";
-    }
-}
 } // namespace
 
 VideoPattern::VideoPattern(const RefPtr<VideoControllerV2>& videoController)
     : instanceId_(Container::CurrentId()), videoControllerV2_(videoController)
 {}
-
-void VideoPattern::ResetMediaPlayerOnBg()
-{
-    CHECK_NULL_VOID(mediaPlayer_);
-    SetIsPrepared(false);
-    ContainerScope scope(instanceId_);
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    auto context = host->GetContext();
-    CHECK_NULL_VOID(context);
-    VideoSourceInfo videoSrc = {videoSrcInfo_.src_, videoSrcInfo_.bundleName_, videoSrcInfo_.moduleName_};
-
-    auto uiTaskExecutor = SingleTaskExecutor::Make(context->GetTaskExecutor(), TaskExecutor::TaskType::UI);
-    auto bgTaskExecutor = SingleTaskExecutor::Make(context->GetTaskExecutor(), TaskExecutor::TaskType::BACKGROUND);
-    bgTaskExecutor.PostTask(
-        [weak = WeakClaim(this), mediaPlayerWeak = WeakClaim(AceType::RawPtr(mediaPlayer_)),
-        videoSrc, id = instanceId_, showFirstFrame = showFirstFrame_, uiTaskExecutor] {
-        auto mediaPlayer = mediaPlayerWeak.Upgrade();
-        CHECK_NULL_VOID(mediaPlayer);
-        mediaPlayer->ResetMediaPlayer();
-
-        RegisterMediaPlayerEvent(weak, mediaPlayer, videoSrc.src_, id);
-
-        if (!mediaPlayer->SetSource(videoSrc.src_, videoSrc.bundleName_, videoSrc.moduleName_)) {
-            uiTaskExecutor.PostTask([weak]() {
-                auto videoPattern = weak.Upgrade();
-                CHECK_NULL_VOID(videoPattern);
-                videoPattern->FireError(ERROR_CODE_VIDEO_SOURCE_INVALID, "Not a valid source");
-                }, "ArkUIVideoFireError");
-            return;
-        }
-
-        uiTaskExecutor.PostSyncTask([weak, id] {
-            auto videoPattern = weak.Upgrade();
-            CHECK_NULL_VOID(videoPattern);
-            ContainerScope scope(id);
-            videoPattern->PrepareSurface();
-            }, "ArkUIVideoPrepareSurface");
-
-        mediaPlayer->SetRenderFirstFrame(showFirstFrame);
-        if (mediaPlayer->PrepareAsync() != 0) {
-            TAG_LOGE(AceLogTag::ACE_VIDEO, "Player prepare failed");
-        }
-        }, "ArkUIVideoMediaPlayerReset");
-}
 
 void VideoPattern::ResetStatus()
 {
@@ -472,12 +290,11 @@ void VideoPattern::ResetMediaPlayer()
         TAG_LOGW(AceLogTag::ACE_VIDEO, "Video set source for mediaPlayer failed.");
 
         // It need post on ui thread.
-        FireError(ERROR_CODE_VIDEO_SOURCE_INVALID, "Not a valid source");
+        FireError();
         return;
     }
 
-    mediaPlayer_->SetRenderFirstFrame(showFirstFrame_);
-    RegisterMediaPlayerEvent(WeakClaim(this), mediaPlayer_, videoSrcInfo_.src_, instanceId_);
+    RegisterMediaPlayerEvent();
     PrepareSurface();
     if (mediaPlayer_ && mediaPlayer_->PrepareAsync() != 0) {
         TAG_LOGE(AceLogTag::ACE_VIDEO, "Player prepare failed");
@@ -502,64 +319,124 @@ void VideoPattern::PrepareMediaPlayer()
     CHECK_NULL_VOID(videoLayoutProperty);
     // src has not set/changed
     if (!videoLayoutProperty->HasVideoSource() || videoLayoutProperty->GetVideoSource() == videoSrcInfo_) {
-        TAG_LOGI(AceLogTag::ACE_VIDEO, "Video[%{public}d] source is null or the source has not changed.", hostId_);
+        TAG_LOGI(AceLogTag::ACE_VIDEO, "Video source is null or the source has not changed.");
         return;
     }
     auto videoSrcInfo = videoLayoutProperty->GetVideoSourceValue(VideoSourceInfo());
-    videoSrcInfo_.src_ = videoSrcInfo.src_;
-    videoSrcInfo_.bundleName_ = videoSrcInfo.bundleName_;
-    videoSrcInfo_.moduleName_ = videoSrcInfo.moduleName_;
+    videoSrcInfo_.src = videoSrcInfo.GetSrc();
+    videoSrcInfo_.bundleName = videoSrcInfo.GetBundleName();
+    videoSrcInfo_.moduleName = videoSrcInfo.GetModuleName();
     if (mediaPlayer_ && !mediaPlayer_->IsMediaPlayerValid()) {
-        TAG_LOGI(AceLogTag::ACE_VIDEO, "Video[%{public}d] create MediaPlayer.", hostId_);
         mediaPlayer_->CreateMediaPlayer();
     }
 
     if (mediaPlayer_ && !mediaPlayer_->IsMediaPlayerValid()) {
         // It need post on ui thread.
-        FireError(ERROR_CODE_VIDEO_CREATE_PLAYER_FAILED, "Failed to create the media player");
+        FireError();
         return;
     }
 
     ResetStatus();
-    ResetMediaPlayerOnBg();
+    ContainerScope scope(instanceId_);
+    auto host = GetHost();
+    CHECK_NULL_VOID(host);
+    auto context = host->GetContext();
+    CHECK_NULL_VOID(context);
+    auto platformTask = SingleTaskExecutor::Make(context->GetTaskExecutor(), TaskExecutor::TaskType::BACKGROUND);
+    platformTask.PostTask([weak = WeakClaim(this)] {
+        auto video = weak.Upgrade();
+        CHECK_NULL_VOID(video);
+        auto targetPattern = video->GetTargetVideoPattern();
+        CHECK_NULL_VOID(targetPattern);
+        targetPattern->ResetMediaPlayer();
+        }, "ArkUIVideoMediaPlayerReset");
 }
 
 bool VideoPattern::SetSourceForMediaPlayer()
 {
     CHECK_NULL_RETURN(mediaPlayer_, false);
-    return mediaPlayer_->SetSource(videoSrcInfo_.src_, videoSrcInfo_.bundleName_, videoSrcInfo_.moduleName_);
+    return mediaPlayer_->SetSource(videoSrcInfo_.GetSrc(), videoSrcInfo_.GetBundleName(),
+        videoSrcInfo_.GetModuleName());
 }
 
-void VideoPattern::RegisterMediaPlayerEvent(const WeakPtr<VideoPattern>& weak, const RefPtr<MediaPlayer>& mediaPlayer,
-    const std::string& videoSrc, int32_t instanceId)
+void VideoPattern::RegisterMediaPlayerEvent()
 {
-    if (videoSrc.empty() || !mediaPlayer) {
+    if (videoSrcInfo_.GetSrc().empty() || !mediaPlayer_) {
         TAG_LOGW(AceLogTag::ACE_VIDEO, "Video src is empty or mediaPlayer is null, register mediaPlayerEvent fail");
         return;
     }
-
+    ContainerScope scope(instanceId_);
     auto context = PipelineContext::GetCurrentContext();
     CHECK_NULL_VOID(context);
-    auto uiTaskExecutor = SingleTaskExecutor::Make(context->GetTaskExecutor(), TaskExecutor::TaskType::UI);
-    RegisterMediaPlayerEventImpl(weak, mediaPlayer, instanceId, uiTaskExecutor);
 
-    auto&& seekDoneEvent = [weak, uiTaskExecutor, instanceId](uint32_t currentPos) {
+    auto uiTaskExecutor = SingleTaskExecutor::Make(context->GetTaskExecutor(), TaskExecutor::TaskType::UI);
+    auto videoPattern = WeakClaim(this);
+
+    auto&& positionUpdatedEvent = [videoPattern, uiTaskExecutor](uint32_t currentPos) {
+        uiTaskExecutor.PostSyncTask([&videoPattern, currentPos] {
+            auto video = videoPattern.Upgrade();
+            CHECK_NULL_VOID(video);
+            ContainerScope scope(video->instanceId_);
+            video->OnCurrentTimeChange(currentPos);
+            video->StartUpdateImageAnalyzer();
+            }, "ArkUIVideoCurrentTimeChange");
+    };
+
+    auto&& stateChangedEvent = [videoPattern, uiTaskExecutor](PlaybackStatus status) {
+        uiTaskExecutor.PostTask([videoPattern, status] {
+            auto video = videoPattern.Upgrade();
+            CHECK_NULL_VOID(video);
+            ContainerScope scope(video->instanceId_);
+            video->OnPlayerStatus(status);
+            }, "ArkUIVideoPlayerStatusChange");
+    };
+
+    auto&& errorEvent = [videoPattern, uiTaskExecutor]() {
+        uiTaskExecutor.PostTask([videoPattern] {
+            auto video = videoPattern.Upgrade();
+            CHECK_NULL_VOID(video);
+            ContainerScope scope(video->instanceId_);
+            video->OnError("");
+            }, "ArkUIVideoError");
+    };
+
+    auto&& resolutionChangeEvent = [videoPattern, uiTaskExecutor]() {
+        uiTaskExecutor.PostSyncTask([&videoPattern] {
+            auto video = videoPattern.Upgrade();
+            CHECK_NULL_VOID(video);
+            ContainerScope scope(video->instanceId_);
+            video->OnResolutionChange();
+            }, "ArkUIVideoResolutionChange");
+    };
+
+    auto&& startRenderFrameEvent = [videoPattern, uiTaskExecutor]() {
+        uiTaskExecutor.PostSyncTask([&videoPattern] {
+            auto video = videoPattern.Upgrade();
+            CHECK_NULL_VOID(video);
+            ContainerScope scope(video->instanceId_);
+            video->OnStartRenderFrameCb();
+            }, "ArkUIVideoStartRenderFrame");
+    };
+
+    mediaPlayer_->RegisterMediaPlayerEvent(
+        positionUpdatedEvent, stateChangedEvent, errorEvent, resolutionChangeEvent, startRenderFrameEvent);
+
+    auto&& seekDoneEvent = [videoPattern, uiTaskExecutor](uint32_t currentPos) {
         uiTaskExecutor.PostSyncTask(
-            [&weak, currentPos, instanceId] {
-                auto video = weak.Upgrade();
+            [&videoPattern, currentPos] {
+                auto video = videoPattern.Upgrade();
                 CHECK_NULL_VOID(video);
-                ContainerScope scope(instanceId);
+                ContainerScope scope(video->instanceId_);
                 video->SetIsSeeking(false);
                 video->OnCurrentTimeChange(currentPos);
-            }, "ArkUIVideoSeekDone");
+                }, "ArkUIVideoSeekDone");
     };
-    mediaPlayer->RegisterMediaPlayerSeekDoneEvent(std::move(seekDoneEvent));
+    mediaPlayer_->RegisterMediaPlayerSeekDoneEvent(std::move(seekDoneEvent));
 
 #ifdef RENDER_EXTRACT_SUPPORTED
-    auto&& textureRefreshEvent = [weak, uiTaskExecutor](int32_t instanceId, int64_t textureId) {
-        uiTaskExecutor.PostSyncTask(
-            [&weak, instanceId, textureId] {
-            auto video = weak.Upgrade();
+    auto&& textureRefreshEvent = [videoPattern, uiTaskExecutor](int32_t instanceId, int64_t textureId) {
+        uiTaskExecutor.PostSyncTask([&videoPattern, instanceId, textureId] {
+            auto video = videoPattern.Upgrade();
             CHECK_NULL_VOID(video);
             void* nativeWindow = video->GetNativeWindow(instanceId, textureId);
             if (!nativeWindow) {
@@ -567,9 +444,9 @@ void VideoPattern::RegisterMediaPlayerEvent(const WeakPtr<VideoPattern>& weak, c
                 return;
             }
             video->OnTextureRefresh(nativeWindow);
-            }, "ArkUIVideoTextureRefresh");
+        }, "ArkUIVideoTextureRefresh");
     };
-    mediaPlayer->RegisterTextureEvent(textureRefreshEvent);
+    mediaPlayer_->RegisterTextureEvent(textureRefreshEvent);
 #endif
 }
 
@@ -592,11 +469,42 @@ void VideoPattern::OnTextureRefresh(void* surface)
 }
 #endif
 
+void VideoPattern::PrintPlayerStatus(PlaybackStatus status)
+{
+    switch (status) {
+        case PlaybackStatus::ERROR:
+            TAG_LOGI(AceLogTag::ACE_VIDEO, "Player current status is ERROR.");
+            break;
+        case PlaybackStatus::IDLE:
+            TAG_LOGI(AceLogTag::ACE_VIDEO, "Player current status is IDLE.");
+            break;
+        case PlaybackStatus::PREPARED:
+            TAG_LOGI(AceLogTag::ACE_VIDEO, "Player current status is PREPARED.");
+            break;
+        case PlaybackStatus::STARTED:
+            TAG_LOGI(AceLogTag::ACE_VIDEO, "Player current status is STARTED.");
+            break;
+        case PlaybackStatus::PAUSED:
+            TAG_LOGI(AceLogTag::ACE_VIDEO, "Player current status is PAUSED.");
+            break;
+        case PlaybackStatus::STOPPED:
+            TAG_LOGI(AceLogTag::ACE_VIDEO, "Player current status is STOPPED.");
+            break;
+        case PlaybackStatus::PLAYBACK_COMPLETE:
+            TAG_LOGI(AceLogTag::ACE_VIDEO, "Player current status is PLAYBACK_COMPLETE.");
+            break;
+        case PlaybackStatus::NONE:
+            TAG_LOGI(AceLogTag::ACE_VIDEO, "Player current status is NONE.");
+            break;
+        default:
+            TAG_LOGW(AceLogTag::ACE_VIDEO, "Invalid player status.");
+            break;
+    }
+}
+
 void VideoPattern::OnCurrentTimeChange(uint32_t currentPos)
 {
-    if (isPrepared_) {
-        isInitialState_ = isInitialState_ ? currentPos == 0 : false;
-    }
+    isInitialState_ = isInitialState_ ? currentPos == 0 : false;
     if (currentPos == currentPos_ || isStop_) {
         return;
     }
@@ -613,47 +521,65 @@ void VideoPattern::OnCurrentTimeChange(uint32_t currentPos)
     currentPos_ = isSeeking_ ? currentPos_ : currentPos;
     auto eventHub = GetEventHub<VideoEventHub>();
     CHECK_NULL_VOID(eventHub);
-    eventHub->FireUpdateEvent(static_cast<double>(currentPos));
+    auto json = JsonUtil::Create(true);
+    json->Put("time", static_cast<double>(currentPos));
+    auto param = json->ToString();
+    eventHub->FireUpdateEvent(param);
 }
 
-void VideoPattern::ChangePlayerStatus(const PlaybackStatus& status)
+void VideoPattern::ChangePlayerStatus(bool isPlaying, const PlaybackStatus& status)
 {
-    auto eventHub = GetEventHub<VideoEventHub>();
-    switch (status) {
-        case PlaybackStatus::STARTED:
-            CHECK_NULL_VOID(eventHub);
-            eventHub->FireStartEvent();
-            break;
-        case PlaybackStatus::PAUSED:
-            CHECK_NULL_VOID(eventHub);
-            eventHub->FirePauseEvent();
-            break;
-        case PlaybackStatus::STOPPED:
-            CHECK_NULL_VOID(eventHub);
-            eventHub->FireStopEvent();
-            break;
-        case PlaybackStatus::PREPARED: {
-            ContainerScope scope(instanceId_);
-            if (!mediaPlayer_ || !mediaPlayer_->IsMediaPlayerValid()) {
-                return;
-            }
-            int32_t milliSecondDuration = 0;
-            mediaPlayer_->GetDuration(milliSecondDuration);
-            OnPrepared(milliSecondDuration / MILLISECONDS_TO_SECONDS, 0, true);
-            break;
+    if (isPlaying) {
+        auto json = JsonUtil::Create(true);
+        json->Put("start", "");
+        auto param = json->ToString();
+        auto eventHub = GetEventHub<VideoEventHub>();
+        CHECK_NULL_VOID(eventHub);
+        eventHub->FireStartEvent(param);
+    }
+
+    if (status == PlaybackStatus::PAUSED) {
+        auto json = JsonUtil::Create(true);
+        json->Put("pause", "");
+        auto param = json->ToString();
+        auto eventHub = GetEventHub<VideoEventHub>();
+        CHECK_NULL_VOID(eventHub);
+        eventHub->FirePauseEvent(param);
+    }
+
+    if (status == PlaybackStatus::STOPPED) {
+        auto json = JsonUtil::Create(true);
+        json->Put("stop", "");
+        auto param = json->ToString();
+        auto eventHub = GetEventHub<VideoEventHub>();
+        CHECK_NULL_VOID(eventHub);
+        eventHub->FireStopEvent(param);
+    }
+
+    if (status == PlaybackStatus::PREPARED) {
+        ContainerScope scope(instanceId_);
+        auto host = GetHost();
+        CHECK_NULL_VOID(host);
+        auto context = host->GetContext();
+        CHECK_NULL_VOID(context);
+        if (!mediaPlayer_ || !mediaPlayer_->IsMediaPlayerValid()) {
+            return;
         }
-        case PlaybackStatus::PLAYBACK_COMPLETE:
-            OnCompletion();
-            break;
-        default:
-            break;
+        auto uiTaskExecutor = SingleTaskExecutor::Make(context->GetTaskExecutor(), TaskExecutor::TaskType::UI);
+        int32_t milliSecondDuration = 0;
+        mediaPlayer_->GetDuration(milliSecondDuration);
+        OnPrepared(milliSecondDuration / MILLISECONDS_TO_SECONDS, 0, true);
+        return;
+    }
+
+    if (status == PlaybackStatus::PLAYBACK_COMPLETE) {
+        OnCompletion();
     }
 }
 
 void VideoPattern::OnPlayerStatus(PlaybackStatus status)
 {
-    TAG_LOGI(AceLogTag::ACE_VIDEO, "Video[%{public}d] Player current status is %{public}s.", hostId_,
-        StatusToString(status).c_str());
+    PrintPlayerStatus(status);
     bool isPlaying = (status == PlaybackStatus::STARTED);
     if (isPlaying_ != isPlaying) {
         isPlaying_ = isPlaying;
@@ -664,35 +590,18 @@ void VideoPattern::OnPlayerStatus(PlaybackStatus status)
         isInitialState_ = !isPlaying;
     }
 
-    ChangePlayerStatus(status);
+    ChangePlayerStatus(isPlaying, status);
 }
 
 void VideoPattern::OnError(const std::string& errorId)
 {
-    AddChild();
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    auto pipeline = host->GetContext();
-    CHECK_NULL_VOID(pipeline);
-    pipeline->RequestFrame();
-
+    std::string errorcode = Localization::GetInstance()->GetErrorDescription(errorId);
+    auto json = JsonUtil::Create(true);
+    json->Put("error", "");
+    auto param = json->ToString();
     auto eventHub = GetEventHub<VideoEventHub>();
     CHECK_NULL_VOID(eventHub);
-    eventHub->FireErrorEvent();
-}
-
-void VideoPattern::OnError(int32_t code, const std::string& message)
-{
-    AddChild();
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    auto pipeline = host->GetContext();
-    CHECK_NULL_VOID(pipeline);
-    pipeline->RequestFrame();
-
-    auto eventHub = GetEventHub<VideoEventHub>();
-    CHECK_NULL_VOID(eventHub);
-    eventHub->FireErrorEvent(code, message);
+    eventHub->FireErrorEvent(param);
 }
 
 void VideoPattern::OnResolutionChange() const
@@ -714,9 +623,8 @@ void VideoPattern::OnResolutionChange() const
     }
 }
 
-void VideoPattern::OnStartRenderFrameCb()
+void VideoPattern::OnStartRenderFrameCb() const
 {
-    isInitialState_ = false;
     auto host = GetHost();
     CHECK_NULL_VOID(host);
     auto video = AceType::DynamicCast<VideoNode>(host);
@@ -724,7 +632,6 @@ void VideoPattern::OnStartRenderFrameCb()
     auto image = AceType::DynamicCast<FrameNode>(video->GetPreviewImage());
     CHECK_NULL_VOID(image);
     auto posterLayoutProperty = image->GetLayoutProperty<ImageLayoutProperty>();
-    CHECK_NULL_VOID(posterLayoutProperty);
     posterLayoutProperty->UpdateVisibility(VisibleType::INVISIBLE);
     image->MarkModifyDone();
     if (!mediaPlayer_ || !mediaPlayer_->IsMediaPlayerValid()) {
@@ -734,8 +641,7 @@ void VideoPattern::OnStartRenderFrameCb()
     CHECK_NULL_VOID(videoLayoutProperty);
     SizeF videoSize =
         SizeF(static_cast<float>(mediaPlayer_->GetVideoWidth()), static_cast<float>(mediaPlayer_->GetVideoHeight()));
-    TAG_LOGI(AceLogTag::ACE_VIDEO, "Video[%{public}d] start render frame size:%{public}s", hostId_,
-        videoSize.ToString().c_str());
+    TAG_LOGI(AceLogTag::ACE_VIDEO, "start render frame size:%{public}s", videoSize.ToString().c_str());
     videoLayoutProperty->UpdateVideoSize(videoSize);
     host->MarkDirtyNode(PROPERTY_UPDATE_MEASURE);
 }
@@ -774,13 +680,13 @@ void VideoPattern::OnPrepared(uint32_t duration, uint32_t currentPos, bool needF
     ChangePlayButtonTag(playBtn);
 
     if (needFireEvent) {
+        auto json = JsonUtil::Create(true);
+        json->Put("duration", static_cast<double>(duration_));
+        auto param = json->ToString();
         auto eventHub = GetEventHub<VideoEventHub>();
         CHECK_NULL_VOID(eventHub);
-        eventHub->FirePreparedEvent(static_cast<double>(duration_));
+        eventHub->FirePreparedEvent(param);
     }
-    TAG_LOGI(AceLogTag::ACE_VIDEO,
-        "Video[%{public}d] duration: %{public}u, loop: %{public}d, muted: %{public}d, Speed: %{public}f", hostId_,
-        duration_, loop_, muted_, progressRate_);
     UpdateLooping();
     UpdateSpeed();
     UpdateMuted();
@@ -803,9 +709,12 @@ void VideoPattern::OnCompletion()
     isPlaying_ = false;
     currentPos_ = duration_;
     OnUpdateTime(currentPos_, CURRENT_POS);
+    auto json = JsonUtil::Create(true);
+    json->Put("finish", "");
+    auto param = json->ToString();
     auto eventHub = GetEventHub<VideoEventHub>();
     CHECK_NULL_VOID(eventHub);
-    eventHub->FireFinishEvent();
+    eventHub->FireFinishEvent(param);
 }
 
 bool VideoPattern::HasPlayer() const
@@ -842,8 +751,8 @@ void VideoPattern::UpdateLooping()
         CHECK_NULL_VOID(host);
         auto context = host->GetContext();
         CHECK_NULL_VOID(context);
-        auto bgTaskExecutor = SingleTaskExecutor::Make(context->GetTaskExecutor(), TaskExecutor::TaskType::BACKGROUND);
-        bgTaskExecutor.PostTask([weak = WeakClaim(RawPtr(mediaPlayer_)), loop = loop_] {
+        auto platformTask = SingleTaskExecutor::Make(context->GetTaskExecutor(), TaskExecutor::TaskType::BACKGROUND);
+        platformTask.PostTask([weak = WeakClaim(RawPtr(mediaPlayer_)), loop = loop_] {
             auto mediaPlayer = weak.Upgrade();
             CHECK_NULL_VOID(mediaPlayer);
             mediaPlayer->SetLooping(loop);
@@ -865,8 +774,8 @@ void VideoPattern::UpdateSpeed()
         CHECK_NULL_VOID(host);
         auto context = host->GetContext();
         CHECK_NULL_VOID(context);
-        auto bgTaskExecutor = SingleTaskExecutor::Make(context->GetTaskExecutor(), TaskExecutor::TaskType::BACKGROUND);
-        bgTaskExecutor.PostTask([weak = WeakClaim(RawPtr(mediaPlayer_)), progress = progressRate_] {
+        auto platformTask = SingleTaskExecutor::Make(context->GetTaskExecutor(), TaskExecutor::TaskType::BACKGROUND);
+        platformTask.PostTask([weak = WeakClaim(RawPtr(mediaPlayer_)), progress = progressRate_] {
             auto mediaPlayer = weak.Upgrade();
             CHECK_NULL_VOID(mediaPlayer);
             mediaPlayer->SetPlaybackSpeed(static_cast<float>(progress));
@@ -882,8 +791,8 @@ void VideoPattern::UpdateMuted()
         CHECK_NULL_VOID(host);
         auto context = host->GetContext();
         CHECK_NULL_VOID(context);
-        auto bgTaskExecutor = SingleTaskExecutor::Make(context->GetTaskExecutor(), TaskExecutor::TaskType::BACKGROUND);
-        bgTaskExecutor.PostTask(
+        auto platformTask = SingleTaskExecutor::Make(context->GetTaskExecutor(), TaskExecutor::TaskType::BACKGROUND);
+        platformTask.PostTask(
             [weak = WeakClaim(RawPtr(mediaPlayer_)), isMuted = muted_, currentVolume = currentVolume_] {
                 auto mediaPlayer = weak.Upgrade();
                 CHECK_NULL_VOID(mediaPlayer);
@@ -906,7 +815,9 @@ void VideoPattern::OnUpdateTime(uint32_t time, int pos) const
     auto layoutProperty = host->GetLayoutProperty<VideoLayoutProperty>();
     CHECK_NULL_VOID(layoutProperty);
     bool needControlBar = layoutProperty->GetControlsValue(true);
-    CHECK_NULL_VOID(needControlBar);
+    if (!needControlBar) {
+        return;
+    }
 
     RefPtr<UINode> controlBar = nullptr;
     auto children = host->GetChildren();
@@ -960,13 +871,12 @@ void VideoPattern::OnAttachToFrameNode()
     }
     auto host = GetHost();
     CHECK_NULL_VOID(host);
-    hostId_ = host->GetId();
     auto pipeline = host->GetContext();
     CHECK_NULL_VOID(pipeline);
     pipeline->AddWindowStateChangedCallback(host->GetId());
     auto renderContext = host->GetRenderContext();
     CHECK_NULL_VOID(renderContext);
-
+ 
 #ifdef RENDER_EXTRACT_SUPPORTED
     CHECK_NULL_VOID(renderSurface_);
     auto contextType = renderSurface_->IsTexture() ?
@@ -1077,6 +987,8 @@ void VideoPattern::OnModifyDone()
     }
     auto eventHub = GetEventHub<VideoEventHub>();
     if (!AceType::InstanceOf<VideoFullScreenPattern>(this)) {
+        auto host = GetHost();
+        CHECK_NULL_VOID(host);
         eventHub->SetInspectorId(host->GetInspectorIdValue(""));
     }
     if (!IsSupportImageAnalyzer()) {
@@ -1199,18 +1111,8 @@ void VideoPattern::UpdatePreviewImage()
     CHECK_NULL_VOID(video);
     auto image = AceType::DynamicCast<FrameNode>(video->GetPreviewImage());
     CHECK_NULL_VOID(image);
-
-    if (showFirstFrame_) {
-        auto posterLayoutProperty = image->GetLayoutProperty<ImageLayoutProperty>();
-        CHECK_NULL_VOID(posterLayoutProperty);
-        posterLayoutProperty->UpdateVisibility(VisibleType::INVISIBLE);
-        image->MarkModifyDone();
-        return;
-    }
-
     if (!isInitialState_) {
         auto posterLayoutProperty = image->GetLayoutProperty<ImageLayoutProperty>();
-        CHECK_NULL_VOID(posterLayoutProperty);
         posterLayoutProperty->UpdateVisibility(VisibleType::INVISIBLE);
         image->MarkModifyDone();
         return;
@@ -1218,7 +1120,6 @@ void VideoPattern::UpdatePreviewImage()
 
     if (!posterSourceInfo.IsValid()) {
         auto posterLayoutProperty = image->GetLayoutProperty<ImageLayoutProperty>();
-        CHECK_NULL_VOID(posterLayoutProperty);
         posterLayoutProperty->UpdateVisibility(VisibleType::INVISIBLE);
         image->MarkModifyDone();
         TAG_LOGI(AceLogTag::ACE_VIDEO, "Src image is not valid.");
@@ -1228,12 +1129,8 @@ void VideoPattern::UpdatePreviewImage()
     if (image) {
         image->SetDraggable(false);
         auto posterLayoutProperty = image->GetLayoutProperty<ImageLayoutProperty>();
-        CHECK_NULL_VOID(posterLayoutProperty);
         posterLayoutProperty->UpdateVisibility(VisibleType::VISIBLE);
         posterLayoutProperty->UpdateImageSourceInfo(posterSourceInfo);
-        if (EXPORT_IMAGEFIT_SUPPORT_TYPES.find(imageFit) == EXPORT_IMAGEFIT_SUPPORT_TYPES.end()) {
-            imageFit = ImageFit::COVER;
-        }
         posterLayoutProperty->UpdateImageFit(imageFit);
         image->MarkModifyDone();
     }
@@ -1280,10 +1177,12 @@ void VideoPattern::UpdateControllerBar()
         durationNode->MarkDirtyNode(PROPERTY_UPDATE_MEASURE_SELF);
         durationNode->MarkModifyDone();
         auto controllerLayoutProperty = controller->GetLayoutProperty<LinearLayoutProperty>();
+        CHECK_NULL_VOID(controllerLayoutProperty);
         controllerLayoutProperty->UpdateVisibility(VisibleType::VISIBLE);
         controller->MarkModifyDone();
     } else {
         auto controllerLayoutProperty = controller->GetLayoutProperty<LinearLayoutProperty>();
+        CHECK_NULL_VOID(controllerLayoutProperty);
         controllerLayoutProperty->UpdateVisibility(VisibleType::INVISIBLE);
         controller->MarkModifyDone();
     }
@@ -1300,8 +1199,12 @@ void VideoPattern::UpdateVideoProperty()
     UpdateMuted();
 }
 
-void VideoPattern::AddChild()
+void VideoPattern::OnRebuildFrame()
 {
+    if (!renderSurface_ || !renderSurface_->IsSurfaceValid()) {
+        TAG_LOGW(AceLogTag::ACE_VIDEO, "MediaPlayer surface is not valid");
+        return;
+    }
     auto host = GetHost();
     CHECK_NULL_VOID(host);
     auto video = AceType::DynamicCast<VideoNode>(host);
@@ -1311,15 +1214,6 @@ void VideoPattern::AddChild()
     auto renderContext = column->GetRenderContext();
     CHECK_NULL_VOID(renderContext);
     renderContext->AddChild(renderContextForMediaPlayer_, 0);
-}
-
-void VideoPattern::OnRebuildFrame()
-{
-    if (!renderSurface_ || !renderSurface_->IsSurfaceValid()) {
-        TAG_LOGW(AceLogTag::ACE_VIDEO, "MediaPlayer surface is not valid");
-        return;
-    }
-    AddChild();
 }
 
 void VideoPattern::RemoveMediaPlayerSurfaceNode()
@@ -1345,17 +1239,18 @@ bool VideoPattern::OnDirtyLayoutWrapperSwap(const RefPtr<LayoutWrapper>& dirty, 
     auto videoNodeSize = geometryNode->GetContentSize();
     auto layoutProperty = GetLayoutProperty<VideoLayoutProperty>();
     CHECK_NULL_RETURN(layoutProperty, false);
-    auto videoFrameRect = MeasureVideoContentLayout(videoNodeSize, layoutProperty);
-    auto videoFrameSize = SizeF(videoFrameRect.Width(), videoFrameRect.Height());
+    auto videoFrameSize = MeasureVideoContentLayout(videoNodeSize, layoutProperty);
     // Change the surface layout for drawing video frames
     if (renderContextForMediaPlayer_) {
         if (Container::GreatOrEqualAPITargetVersion(PlatformVersion::VERSION_TWELVE)) {
-            auto rect = AdjustPaintRect(videoFrameRect.GetX(), videoFrameRect.GetY(),
-                videoFrameRect.Width(), videoFrameRect.Height(), true);
+            auto rect = AdjustPaintRect((videoNodeSize.Width() - videoFrameSize.Width()) / AVERAGE_VALUE,
+                (videoNodeSize.Height() - videoFrameSize.Height()) / AVERAGE_VALUE, videoFrameSize.Width(),
+                videoFrameSize.Height(), true);
             renderContextForMediaPlayer_->SetBounds(rect.GetX(), rect.GetY(), rect.Width(), rect.Height());
         } else {
-            renderContextForMediaPlayer_->SetBounds(videoFrameRect.GetX(), videoFrameRect.GetY(),
-                videoFrameRect.Width(), videoFrameRect.Height());
+            renderContextForMediaPlayer_->SetBounds((videoNodeSize.Width() - videoFrameSize.Width()) / AVERAGE_VALUE,
+                (videoNodeSize.Height() - videoFrameSize.Height()) / AVERAGE_VALUE, videoFrameSize.Width(),
+                videoFrameSize.Height());
         }
     }
 
@@ -1399,8 +1294,7 @@ void VideoPattern::OnAreaChangedInner()
         auto videoNodeSize = geometryNode->GetContentSize();
         auto layoutProperty = GetLayoutProperty<VideoLayoutProperty>();
         CHECK_NULL_VOID(layoutProperty);
-        auto videoFrameRect = MeasureVideoContentLayout(videoNodeSize, layoutProperty);
-        auto videoFrameSize = SizeF(videoFrameRect.Width(), videoFrameRect.Height());
+        auto videoFrameSize = MeasureVideoContentLayout(videoNodeSize, layoutProperty);
         auto transformRelativeOffset = host->GetTransformRelativeOffset();
 
         Rect rect =
@@ -1474,7 +1368,7 @@ RefPtr<FrameNode> VideoPattern::CreateControlBar(int32_t nodeId)
     controlBar->AddChild(currentPosText);
 
     auto slider = CreateSlider();
-    CHECK_NULL_RETURN(slider, nullptr);
+    CHECK_NULL_RETURN(currentPosText, nullptr);
     controlBar->AddChild(slider);
 
     auto durationText = CreateText(duration_);
@@ -1543,8 +1437,7 @@ RefPtr<FrameNode> VideoPattern::CreateSlider()
     auto sliderPaintProperty = sliderNode->GetPaintProperty<SliderPaintProperty>();
     CHECK_NULL_RETURN(sliderPaintProperty, nullptr);
     sliderPaintProperty->UpdateMax(static_cast<float>(duration_));
-    sliderPaintProperty->UpdateSelectGradientColor(ConvertToGradient(videoTheme->GetSelectColor()));
-    sliderPaintProperty->UpdateSelectIsResourceColor(true);
+    sliderPaintProperty->UpdateSelectColor(videoTheme->GetSelectColor());
     sliderPaintProperty->UpdateTrackBackgroundColor(ConvertToGradient(videoTheme->GetTrackBgColor()));
     sliderPaintProperty->UpdateTrackBackgroundIsResourceColor(true);
     sliderPaintProperty->UpdateValue(static_cast<float>(currentPos_));
@@ -1786,15 +1679,13 @@ void VideoPattern::Start()
     DestroyAnalyzerOverlay();
     isPaused_ = false;
 
-    auto bgTaskExecutor = SingleTaskExecutor::Make(context->GetTaskExecutor(), TaskExecutor::TaskType::BACKGROUND);
-    bgTaskExecutor.PostTask(
-        [weak = WeakClaim(RawPtr(mediaPlayer_)), hostId = hostId_] {
-            auto mediaPlayer = weak.Upgrade();
-            CHECK_NULL_VOID(mediaPlayer);
-            TAG_LOGI(AceLogTag::ACE_VIDEO, "Video[%{public}d] trigger mediaPlayer play", hostId);
-            mediaPlayer->Play();
-        },
-        "ArkUIVideoPlay");
+    auto platformTask = SingleTaskExecutor::Make(context->GetTaskExecutor(), TaskExecutor::TaskType::BACKGROUND);
+    platformTask.PostTask([weak = WeakClaim(RawPtr(mediaPlayer_))] {
+        auto mediaPlayer = weak.Upgrade();
+        CHECK_NULL_VOID(mediaPlayer);
+        TAG_LOGI(AceLogTag::ACE_VIDEO, "trigger mediaPlayer play");
+        mediaPlayer->Play();
+        }, "ArkUIVideoPlay");
 }
 
 void VideoPattern::Pause()
@@ -1802,7 +1693,6 @@ void VideoPattern::Pause()
     if (!mediaPlayer_ || !mediaPlayer_->IsMediaPlayerValid()) {
         return;
     }
-    TAG_LOGI(AceLogTag::ACE_VIDEO, "Video[%{public}d] trigger mediaPlayer pause", hostId_);
     auto ret = mediaPlayer_->Pause();
     if (ret != -1 && !isPaused_) {
         isPaused_ = true;
@@ -1815,14 +1705,14 @@ void VideoPattern::Stop()
     if (!mediaPlayer_ || !mediaPlayer_->IsMediaPlayerValid()) {
         return;
     }
-    TAG_LOGI(AceLogTag::ACE_VIDEO, "Video[%{public}d] trigger mediaPlayer stop", hostId_);
+
     OnCurrentTimeChange(0);
     mediaPlayer_->Stop();
     isStop_ = true;
     SetIsSeeking(false);
 }
 
-void VideoPattern::FireError(int32_t code, const std::string& message)
+void VideoPattern::FireError()
 {
     ContainerScope scope(instanceId_);
     auto host = GetHost();
@@ -1831,18 +1721,13 @@ void VideoPattern::FireError(int32_t code, const std::string& message)
     CHECK_NULL_VOID(context);
 
     // OnError function must be excuted on ui, so get the uiTaskExecutor.
-    auto task = [weak = WeakClaim(this), code, message] {
+    auto uiTaskExecutor = SingleTaskExecutor::Make(context->GetTaskExecutor(), TaskExecutor::TaskType::UI);
+    uiTaskExecutor.PostTask([weak = WeakClaim(this)] {
         auto videoPattern = weak.Upgrade();
         CHECK_NULL_VOID(videoPattern);
         ContainerScope scope(videoPattern->instanceId_);
-        videoPattern->OnError(code, message);
-    };
-    auto uiTaskExecutor = SingleTaskExecutor::Make(context->GetTaskExecutor(), TaskExecutor::TaskType::UI);
-    if (uiTaskExecutor.IsRunOnCurrentThread()) {
-        task();
-    } else {
-        uiTaskExecutor.PostTask(task, "ArkUIVideoError");
-    }
+        videoPattern->OnError("");
+        }, "ArkUIVideoError");
 }
 
 void VideoPattern::ChangePlayButtonTag()
@@ -1933,18 +1818,25 @@ void VideoPattern::OnSliderChange(float posTime, int32_t mode)
     SetCurrentTime(posTime, OHOS::Ace::SeekMode::SEEK_CLOSEST);
     auto eventHub = GetEventHub<VideoEventHub>();
     CHECK_NULL_VOID(eventHub);
+    auto json = JsonUtil::Create(true);
+    json->Put("time", static_cast<double>(posTime));
+    auto param = json->ToString();
+    CHECK_NULL_VOID(eventHub);
     if (mode == SliderChangeMode::BEGIN || mode == SliderChangeMode::MOVING) {
-        eventHub->FireSeekingEvent(static_cast<double>(posTime));
+        eventHub->FireSeekingEvent(param);
     } else if (mode == SliderChangeMode::END) {
-        eventHub->FireSeekedEvent(static_cast<double>(posTime));
+        eventHub->FireSeekedEvent(param);
     }
 }
 
 void VideoPattern::OnFullScreenChange(bool isFullScreen)
 {
+    auto json = JsonUtil::Create(true);
+    json->Put("fullscreen", isFullScreen);
+    auto param = json->ToString();
     auto eventHub = GetEventHub<VideoEventHub>();
     CHECK_NULL_VOID(eventHub);
-    eventHub->FireFullScreenChangeEvent(isFullScreen);
+    eventHub->FireFullScreenChangeEvent(param);
     auto host = GetHost();
     CHECK_NULL_VOID(host);
     const auto& children = host->GetChildren();
@@ -1955,17 +1847,6 @@ void VideoPattern::OnFullScreenChange(bool isFullScreen)
             break;
         }
     }
-
-    if (!isFullScreen && mediaPlayer_ && mediaPlayer_->IsMediaPlayerValid()) {
-        auto videoLayoutProperty = host->GetLayoutProperty<VideoLayoutProperty>();
-        CHECK_NULL_VOID(videoLayoutProperty);
-        SizeF videoSize = SizeF(
-            static_cast<float>(mediaPlayer_->GetVideoWidth()),
-            static_cast<float>(mediaPlayer_->GetVideoHeight()));
-        videoLayoutProperty->UpdateVideoSize(videoSize);
-        host->MarkDirtyNode(PROPERTY_UPDATE_MEASURE);
-    }
-
     if (isEnableAnalyzer_) {
         if (!imageAnalyzerManager_) {
             EnableAnalyzer(isEnableAnalyzer_);
@@ -2042,9 +1923,9 @@ void VideoPattern::RecoverState(const RefPtr<VideoPattern>& videoPattern)
     auto layoutProperty = videoPattern->GetLayoutProperty<VideoLayoutProperty>();
     CHECK_NULL_VOID(layoutProperty);
     auto videoSrcInfo = layoutProperty->GetVideoSourceValue(VideoSourceInfo());
-    videoSrcInfo_.src_ = videoSrcInfo.src_;
-    videoSrcInfo_.bundleName_ = videoSrcInfo.bundleName_;
-    videoSrcInfo_.moduleName_ = videoSrcInfo.moduleName_;
+    videoSrcInfo_.src = videoSrcInfo.GetSrc();
+    videoSrcInfo_.bundleName = videoSrcInfo.GetBundleName();
+    videoSrcInfo_.moduleName = videoSrcInfo.GetModuleName();
     isPrepared_ = videoPattern->GetIsPrepared();
     isSeeking_ = videoPattern->GetIsSeeking();
     isStop_ = videoPattern->GetIsStop();
@@ -2052,7 +1933,6 @@ void VideoPattern::RecoverState(const RefPtr<VideoPattern>& videoPattern)
     autoPlay_ = videoPattern->GetAutoPlay();
     loop_ = videoPattern->GetLoop();
     duration_ = videoPattern->GetDuration();
-    showFirstFrame_ = videoPattern->showFirstFrame_;
     progressRate_ = videoPattern->GetProgressRate();
     isAnalyzerCreated_ = videoPattern->GetAnalyzerState();
     isEnableAnalyzer_ = videoPattern->isEnableAnalyzer_;
@@ -2060,7 +1940,7 @@ void VideoPattern::RecoverState(const RefPtr<VideoPattern>& videoPattern)
     SetCurrentVolume(videoPattern->GetCurrentVolume());
 
     fullScreenNodeId_.reset();
-    RegisterMediaPlayerEvent(WeakClaim(this), mediaPlayer_, videoSrcInfo_.src_, instanceId_);
+    RegisterMediaPlayerEvent();
     auto videoNode = GetHost();
     CHECK_NULL_VOID(videoNode);
     // change event hub to the origin video node
@@ -2284,8 +2164,7 @@ void VideoPattern::UpdateAnalyzerUIConfig(const RefPtr<NG::GeometryNode>& geomet
         auto padding  = layoutProperty->CreatePaddingAndBorder();
         OffsetF contentOffset = { contentRect_.Left() - padding.left.value_or(0),
                                   contentRect_.Top() - padding.top.value_or(0) };
-        PixelMapInfo info = { contentRect_.GetSize().Width(), contentRect_.GetSize().Height(),
-            { contentOffset.GetX(), contentOffset.GetY() } };
+        PixelMapInfo info = { contentRect_.GetSize().Width(), contentRect_.GetSize().Height(), contentOffset };
         CHECK_NULL_VOID(imageAnalyzerManager_);
         imageAnalyzerManager_->UpdateAnalyzerUIConfig(geometryNode, info);
     }
@@ -2341,51 +2220,5 @@ void VideoPattern::ToJsonValue(std::unique_ptr<JsonValue>& json, const Inspector
             : "",
         filter);
     json->PutExtAttr("enableShortcutKey", isEnableShortcutKey_ ? "true" : "false", filter);
-}
-
-bool VideoPattern::ParseCommand(const std::string& command)
-{
-    auto json = JsonUtil::ParseJsonString(command);
-    if (!json || json->IsNull()) {
-        return false;
-    }
-    std::string value = json->GetString("cmd");
-    return value == "play";
-}
-
-int32_t VideoPattern::OnInjectionEvent(const std::string& command)
-{
-    TAG_LOGD(AceLogTag::ACE_VIDEO, "OnInjectionEvent command : %{public}s", command.c_str());
-    auto host = GetHost();
-    CHECK_NULL_RETURN(host, RET_FAILED);
-    auto pattern = host->GetPattern<VideoPattern>();
-    CHECK_NULL_RETURN(pattern, RET_FAILED);
-    if (!ParseCommand(command)) {
-        return RET_FAILED;
-    }
-    pattern->Start();
-    return RET_SUCCESS;
-}
-
-void VideoPattern::SetVideoController(const RefPtr<VideoControllerV2>& videoController)
-{
-    if (videoControllerV2_) {
-        // Video Controller is already attached
-        return;
-    }
-    videoControllerV2_ = videoController;
-
-    // if pattern is attached to frame node
-    auto frameNode = frameNode_.Upgrade();
-    CHECK_NULL_VOID(frameNode);
-    // full screen node is not supposed to register js controller event
-    if (!InstanceOf<VideoFullScreenPattern>(this)) {
-        SetMethodCall();
-    }
-}
-
-RefPtr<VideoControllerV2> VideoPattern::GetVideoController()
-{
-    return videoControllerV2_;
 }
 } // namespace OHOS::Ace::NG

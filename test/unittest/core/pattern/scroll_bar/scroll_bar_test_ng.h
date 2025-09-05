@@ -20,8 +20,6 @@
 
 #define private public
 #define protected public
-#include "test/mock/core/animation/mock_animation_manager.h"
-
 #include "core/components_ng/pattern/scroll/scroll_pattern.h"
 #include "core/components_ng/pattern/scroll_bar/scroll_bar_pattern.h"
 
@@ -33,8 +31,6 @@ constexpr float SCROLL_HEIGHT = 800.f;
 constexpr float CONTENT_MAIN_SIZE = 1000.f;
 constexpr float SCROLL_BAR_CHILD_WIDTH = 20.f;
 constexpr float SCROLL_BAR_CHILD_HEIGHT = 160.f;
-constexpr char SCROLLBAR_COLOR_BLUE[] = "#FF0000FF";
-constexpr char SCROLLBAR_COLOR_RED[] = "#FF0000";
 
 class ScrollBarTestNg : public TestNG {
 public:

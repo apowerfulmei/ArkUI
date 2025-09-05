@@ -27,7 +27,7 @@ if (use_mac) {
       "//base/global/resource_management/frameworks/resmgr:global_resmgr_win"
   label_hilog =
       "//base/hiviewdfx/hilog/interfaces/native/innerkits:libhilog_windows"
-} else if (use_linux || host_cpu == "arm64") {
+} else if (use_linux) {
   dylib_suffix = ".so"
   label_res =
       "//base/global/resource_management/frameworks/resmgr:global_resmgr_linux"
@@ -105,10 +105,19 @@ common_bin = [
     part_name = "glfw"
   },
   {
-    label = "//foundation/graphic/graphics_effect:graphics_effect_core"
+    label = "//foundation/graphic/graphic_2d/rosen/modules/texgine:libtexgine"
     subsystem_name = "graphic"
-    part_name = "graphics_effect"
-    lib_names = [ "graphics_effect" ]
+    part_name = "graphic_2d"
+  },
+  {
+    label = "//foundation/graphic/graphic_2d/rosen/modules/texgine/texgine_drawing:libtexgine_drawing"
+    subsystem_name = "graphic"
+    part_name = "graphic_2d"
+  },
+  {
+    label = "//foundation/graphic/graphic_2d/rosen/modules/graphics_effect:libgraphics_effect"
+    subsystem_name = "graphic"
+    part_name = "graphic_2d"
   },
   {
     label = "//third_party/jsoncpp:jsoncpp"
@@ -155,11 +164,6 @@ common_bin = [
     part_name = "resource_management"
   },
   {
-    label = "//base/global/resource_management/interfaces/js/innerkits/core:resmgr_napi_core_preview"
-    subsystem_name = "global"
-    part_name = "resource_management"
-  },
-  {
     label = label_hilog
     subsystem_name = "hiviewdfx"
     part_name = "hilog"
@@ -187,15 +191,25 @@ common_bin = [
   },
 ]
 
-if (defined(use_rosen_drawing) && use_rosen_drawing) {
+if (enable_graphic_text_gine) {
   common_bin += [
     {
-      label = "//foundation/graphic/graphic_2d/rosen/modules/2d_graphics:2d_graphics"
+      label = "//foundation/graphic/graphic_2d/rosen/modules/2d_graphics:2d_graphics_new"
       subsystem_name = "graphic"
       part_name = "graphic_2d"
     },
     {
-      label = "//foundation/graphic/graphic_2d/frameworks/text:rosen_text"
+      label = "//foundation/graphic/graphic_2d/rosen/modules/2d_engine/rosen_text:rosen_text"
+      subsystem_name = "graphic"
+      part_name = "graphic_2d"
+    },
+  ]
+}
+
+if (defined(use_rosen_drawing) && use_rosen_drawing) {
+  common_bin += [
+    {
+      label = "//foundation/graphic/graphic_2d/rosen/modules/2d_graphics:2d_graphics"
       subsystem_name = "graphic"
       part_name = "graphic_2d"
     },
@@ -208,72 +222,27 @@ if (defined(use_rosen_drawing) && use_rosen_drawing) {
       part_name = "graphic_2d"
     },
   ]
-}
 
-_arkui_shared_libs = [
-  {
-    label = "//foundation/arkui/ace_engine/interfaces/napi/kits/drawabledescriptor:drawabledescriptor"
-    subsystem_name = "arkui"
-    part_name = "ace_engine"
-    lib_names = [ "drawabledescriptor" ]
-  },
-  {
-    label = "//foundation/arkui/ace_engine/interfaces/napi/kits:napi_group"
-    subsystem_name = "arkui"
-    part_name = "ace_engine"
-    lib_names = [ "focuscontroller" ]
-  },
-  {
-    label = "//foundation/arkui/ace_engine/interfaces/napi/kits:napi_group"
-    subsystem_name = "arkui"
-    part_name = "ace_engine"
-    lib_names = [ "containerutils" ]
-  },
-  {
-    label = "//foundation/arkui/ace_engine/component_ext/arc_alphabet_indexer:arcalphabetindexer"
-    subsystem_name = "arkui"
-    part_name = "ace_engine"
-    lib_names = [ "arcalphabetindexer" ]
-  },
-  {
-    label = "//foundation/arkui/ace_engine/component_ext/arc_list:arclist"
-    subsystem_name = "arkui"
-    part_name = "ace_engine"
-    lib_names = [ "arclist" ]
-  },
-  {
-    label = "//foundation/arkui/ace_engine/component_ext/arc_scroll_bar:arcscrollbar"
-    subsystem_name = "arkui"
-    part_name = "ace_engine"
-    lib_names = [ "arcscrollbar" ]
-  },
-  {
-    label = "//foundation/arkui/ace_engine/component_ext/arc_swiper:arcswiper"
-    subsystem_name = "arkui"
-    part_name = "ace_engine"
-    lib_names = [ "arcswiper" ]
-  },
-]
-
-if (defined(current_platform.config)) {
-  platform_config = current_platform.config
-  if (defined(platform_config.enable_component_test) &&
-      platform_config.enable_component_test && use_mingw_win) {
-    _arkui_shared_libs += [
-      {
-        label = "//foundation/arkui/ace_engine/interfaces/napi/kits/component_test:componenttest"
-        subsystem_name = "arkui"
-        part_name = "ace_engine"
-        lib_names = [ "componenttest" ]
-      },
-    ]
-  }
+  common_bin -= [
+    {
+      label = "//foundation/graphic/graphic_2d/rosen/modules/texgine/texgine_drawing:libtexgine_drawing"
+      subsystem_name = "graphic"
+      part_name = "graphic_2d"
+    },
+  ]
 }
 
 napi_modules = [
   {
     prefix = "arkui"
-    shard_libs = _arkui_shared_libs
+    shard_libs = [
+      {
+        label = "//foundation/arkui/ace_engine/interfaces/napi/kits/drawabledescriptor:drawabledescriptor"
+        subsystem_name = "arkui"
+        part_name = "ace_engine"
+        lib_names = [ "drawabledescriptor" ]
+      },
+    ]
   },
   {
     prefix = "multimedia"
@@ -309,18 +278,6 @@ napi_modules = [
         lib_names = [ "previewer_window_napi" ]
       },
       {
-        label = "//base/global/resource_management/interfaces/js/kits:resourcemanager_preview"
-        subsystem_name = "global"
-        part_name = "resource_management"
-        lib_names = [ "resourcemanager" ]
-      },
-      {
-        label = "//base/global/resource_management/interfaces/js/kits:sendableresourcemanager_preview"
-        subsystem_name = "global"
-        part_name = "resource_management"
-        lib_names = [ "sendableresourcemanager" ]
-      },
-      {
         label = "//foundation/arkui/ace_engine/interfaces/napi/kits:napi_group"
         subsystem_name = "arkui"
         part_name = "ace_engine"
@@ -335,7 +292,6 @@ napi_modules = [
           "promptaction",
           "router",
           "animator",
-          "overlay",
         ]
       },
     ]
@@ -371,13 +327,7 @@ napi_modules = [
     prefix = "arkui/advanced"
     shard_libs = [
       {
-        label = "//foundation/arkui/ace_engine/advanced_ui_component/arcslider/interfaces:arcslider"
-        subsystem_name = "arkui"
-        part_name = "ace_engine"
-        lib_names = [ "arcslider" ]
-      },
-      {
-        label = "//foundation/arkui/ace_engine/advanced_ui_component:chip"
+        label = "//foundation/arkui/ace_engine/advanced_ui_component/chip/interfaces:chip"
         subsystem_name = "arkui"
         part_name = "ace_engine"
         lib_names = [ "chip" ]
@@ -401,12 +351,6 @@ napi_modules = [
         lib_names = [ "segmentbutton" ]
       },
       {
-        label = "//foundation/arkui/ace_engine/advanced_ui_component:segmentbuttonv2"
-        subsystem_name = "arkui"
-        part_name = "ace_engine"
-        lib_names = [ "segmentbuttonv2" ]
-      },
-      {
         label = "//foundation/arkui/ace_engine/advanced_ui_component/composelistitem/interfaces:composelistitem"
         subsystem_name = "arkui"
         part_name = "ace_engine"
@@ -419,16 +363,10 @@ napi_modules = [
         lib_names = [ "composetitlebar" ]
       },
       {
-        label = "//foundation/arkui/ace_engine/advanced_ui_component:dialog"
+        label = "//foundation/arkui/ace_engine/advanced_ui_component/dialog/interfaces:dialog"
         subsystem_name = "arkui"
         part_name = "ace_engine"
         lib_names = [ "dialog" ]
-      },
-      {
-        label = "//foundation/arkui/ace_engine/advanced_ui_component/dialogv2/interfaces:dialogv2"
-        subsystem_name = "arkui"
-        part_name = "ace_engine"
-        lib_names = [ "dialogv2" ]
       },
       {
         label = "//foundation/arkui/ace_engine/advanced_ui_component/editabletitlebar/interfaces:editabletitlebar"
@@ -449,12 +387,6 @@ napi_modules = [
         lib_names = [ "progressbutton" ]
       },
       {
-        label = "//foundation/arkui/ace_engine/advanced_ui_component/progressbuttonv2/interfaces:progressbuttonv2"
-        subsystem_name = "arkui"
-        part_name = "ace_engine"
-        lib_names = [ "progressbuttonv2" ]
-      },
-      {
         label = "//foundation/arkui/ace_engine/advanced_ui_component/selecttitlebar/interfaces:selecttitlebar"
         subsystem_name = "arkui"
         part_name = "ace_engine"
@@ -473,12 +405,6 @@ napi_modules = [
         lib_names = [ "subheader" ]
       },
       {
-        label = "//foundation/arkui/ace_engine/advanced_ui_component/subheaderv2/interfaces:subheaderv2"
-        subsystem_name = "arkui"
-        part_name = "ace_engine"
-        lib_names = [ "subheaderv2" ]
-      },
-      {
         label = "//foundation/arkui/ace_engine/advanced_ui_component/swiperefresher/interfaces:swiperefresher"
         subsystem_name = "arkui"
         part_name = "ace_engine"
@@ -495,12 +421,6 @@ napi_modules = [
         subsystem_name = "arkui"
         part_name = "ace_engine"
         lib_names = [ "toolbar" ]
-      },
-      {
-        label = "//foundation/arkui/ace_engine/advanced_ui_component/toolbarv2/interfaces:toolbarv2"
-        subsystem_name = "arkui"
-        part_name = "ace_engine"
-        lib_names = [ "toolbarv2" ]
       },
       {
         label = "//foundation/arkui/ace_engine/advanced_ui_component/treeview/interfaces:treeview"
@@ -539,9 +459,9 @@ napi_modules = [
         lib_names = [ "fullscreenlaunchcomponent" ]
       },
       {
-        label = "//foundation/arkui/advanced_ui_component/innerfullscreenlaunchcomponent/interfaces:innerfullscreenlaunchcomponent"
+        label = "//foundation/arkui/ace_engine/advanced_ui_component/innerfullscreenlaunchcomponent/interfaces:innerfullscreenlaunchcomponent"
         subsystem_name = "arkui"
-        part_name = "advanced_ui_component"
+        part_name = "ace_engine"
         lib_names = [ "innerfullscreenlaunchcomponent" ]
       },
       {
@@ -557,22 +477,10 @@ napi_modules = [
         lib_names = [ "foldsplitcontainer" ]
       },
       {
-        label = "//foundation/arkui/ace_engine/advanced_ui_component/arcbutton/interfaces:arcbutton"
-        subsystem_name = "arkui"
-        part_name = "ace_engine"
-        lib_names = [ "arcbutton" ]
-      },
-      {
         label = "//foundation/arkui/ace_engine/advanced_ui_component/downloadfilebutton/interfaces:downloadfilebutton"
         subsystem_name = "arkui"
         part_name = "ace_engine"
         lib_names = [ "downloadfilebutton" ]
-      },
-      {
-        label = "//foundation/arkui/ace_engine/advanced_ui_component/multinavigation/interfaces:multinavigation"
-        subsystem_name = "arkui"
-        part_name = "ace_engine"
-        lib_names = [ "multinavigation" ]
       },
     ]
   },
@@ -580,27 +488,27 @@ napi_modules = [
     prefix = "atomicservice"
     shard_libs = [
       {
-        label = "//foundation/arkui/advanced_ui_component/atomicservicenavigation/interfaces:atomicservicenavigation"
+        label = "//foundation/arkui/ace_engine/advanced_ui_component/atomicservicenavigation/interfaces:atomicservicenavigation"
         subsystem_name = "arkui"
-        part_name = "advanced_ui_component"
+        part_name = "ace_engine"
         lib_names = [ "atomicservicenavigation" ]
       },
       {
-        label = "//foundation/arkui/advanced_ui_component/atomicservicetabs/interfaces:atomicservicetabs"
+        label = "//foundation/arkui/ace_engine/advanced_ui_component/atomicservicetabs/interfaces:atomicservicetabs"
         subsystem_name = "arkui"
-        part_name = "advanced_ui_component"
+        part_name = "ace_engine"
         lib_names = [ "atomicservicetabs" ]
       },
       {
-        label = "//foundation/arkui/advanced_ui_component/atomicserviceweb/interfaces:atomicserviceweb"
+        label = "//foundation/arkui/ace_engine/advanced_ui_component/atomicserviceweb/interfaces:atomicserviceweb"
         subsystem_name = "arkui"
-        part_name = "advanced_ui_component"
+        part_name = "ace_engine"
         lib_names = [ "atomicserviceweb" ]
       },
       {
-        label = "//foundation/arkui/advanced_ui_component/interstitialdialogaction/interfaces:interstitialdialogaction"
+        label = "//foundation/arkui/ace_engine/advanced_ui_component/interstitialdialogaction/interfaces:interstitialdialogaction"
         subsystem_name = "arkui"
-        part_name = "advanced_ui_component"
+        part_name = "ace_engine"
         lib_names = [ "interstitialdialogaction" ]
       },
     ]
@@ -617,12 +525,6 @@ if (defined(use_rosen_drawing) && use_rosen_drawing) {
           subsystem_name = "graphic"
           part_name = "graphic_2d"
           lib_names = [ "drawing_napi" ]
-        },
-        {
-          label = "//foundation/graphic/graphic_2d/interfaces/kits/napi/graphic/ui_effect:uieffect_napi"
-          subsystem_name = "graphic"
-          part_name = "graphic_2d"
-          lib_names = [ "uieffect_napi" ]
         },
       ]
     },

@@ -13,6 +13,7 @@
 
 import("//build/ohos.gni")
 import("//foundation/arkui/ace_engine/ace_config.gni")
+import("//foundation/arkui/ace_engine/build/ace_controller.gni")
 import("napi_lib.gni")
 
 config("ace_napi_config") {
@@ -20,7 +21,6 @@ config("ace_napi_config") {
     "$ace_root",
     "$arkui_root",
     "$ace_root/frameworks",
-    "$ace_root/interfaces/inner_api/ace_kit/include",
     "$root_out_dir/arkui",
     "$root_out_dir/arkui/framework",
     "//third_party/zlib",
@@ -29,10 +29,12 @@ config("ace_napi_config") {
   defines = []
   if (use_mingw_win) {
     cflags_cc += [ "-std=c++17" ]
+    defines += [ "_USE_MATH_DEFINES" ]
   }
 
   if (use_linux) {
     cflags_cc += [ "-std=c++17" ]
+    defines += [ "_USE_MATH_DEFINES" ]
   }
 
   if (use_hilog) {
@@ -62,7 +64,7 @@ foreach(module, common_napi_libs) {
   } else if (!is_arkui_x) {
     ace_napi_lib(module) {
       # napi libs remain isolate in libace.z.so and asan version
-      if (is_asan) {
+      if (is_asan || !ace_engine_feature_enable_libace) {
         platform = "ohos"
       } else {
         platform = "ohos_ng"

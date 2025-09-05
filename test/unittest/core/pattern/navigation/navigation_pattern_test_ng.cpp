@@ -21,9 +21,6 @@
 
 #define protected public
 #define private public
-#include "base/utils/system_properties.h"
-#include "base/ressched/ressched_report.h"
-#include "base/perfmonitor/perf_monitor.h"
 #include "test/mock/base/mock_task_executor.h"
 #include "core/components/button/button_theme.h"
 #include "core/components_ng/base/frame_node.h"
@@ -64,16 +61,6 @@ constexpr Dimension TOOL_BAR_HEIGHT = 56.0_vp;
 constexpr Dimension TOOL_BAR_ITEM_SAFE_INTERVAL = 8.0_vp;
 constexpr Dimension TOOL_BAR_ITEM_VERTICAL_PADDING = 12.0_vp;
 constexpr Dimension ICON_SIZE = 24.0_vp;
-
-RefPtr<NavigationBarTheme> CreateAndBindNavigationBarTheme()
-{
-    auto themeManager = AceType::MakeRefPtr<MockThemeManager>();
-    MockPipelineContext::GetCurrent()->SetThemeManager(themeManager);
-    auto navigationTheme = AceType::MakeRefPtr<NavigationBarTheme>();
-    EXPECT_CALL(*themeManager, GetTheme(_)).WillRepeatedly(Return(navigationTheme));
-    EXPECT_CALL(*themeManager, GetTheme(_, _)).WillRepeatedly(Return(navigationTheme));
-    return navigationTheme;
-}
 } // namespace
 
 class NavigationPatternTestNg : public testing::Test {
@@ -112,7 +99,9 @@ void NavigationPatternTestNg::RunMeasureAndLayout(RefPtr<LayoutWrapperNode>& lay
 
 void NavigationPatternTestNg::MockPipelineContextGetTheme()
 {
-    CreateAndBindNavigationBarTheme();
+    auto themeManager = AceType::MakeRefPtr<MockThemeManager>();
+    MockPipelineContext::GetCurrent()->SetThemeManager(themeManager);
+    EXPECT_CALL(*themeManager, GetTheme(_)).WillRepeatedly(Return(AceType::MakeRefPtr<NavigationBarTheme>()));
 }
 
 /**
@@ -1227,7 +1216,10 @@ HWTEST_F(NavigationPatternTestNg, NavigationToolbarTest001, TestSize.Level1)
     /**
      * @tc.steps: step1. create navigation theme to set toolbar specifications.
      */
-    auto navigationTheme = CreateAndBindNavigationBarTheme();
+    auto themeManager = AceType::MakeRefPtr<MockThemeManager>();
+    MockPipelineContext::GetCurrent()->SetThemeManager(themeManager);
+    auto navigationTheme = AceType::MakeRefPtr<NavigationBarTheme>();
+    EXPECT_CALL(*themeManager, GetTheme(_)).WillRepeatedly(Return(navigationTheme));
     navigationTheme->toolbarIconSize_ = ICON_SIZE;
     navigationTheme->menuIconSize_ = ICON_SIZE;
 
@@ -1545,7 +1537,10 @@ HWTEST_F(NavigationPatternTestNg, NavigationToolbarConfigurationTest005, TestSiz
     /**
      * @tc.steps: step1. create navigation theme to set toolbar specifications.
      */
-    auto navigationTheme = CreateAndBindNavigationBarTheme();
+    auto themeManager = AceType::MakeRefPtr<MockThemeManager>();
+    MockPipelineContext::GetCurrent()->SetThemeManager(themeManager);
+    auto navigationTheme = AceType::MakeRefPtr<NavigationBarTheme>();
+    EXPECT_CALL(*themeManager, GetTheme(_)).WillRepeatedly(Return(navigationTheme));
     navigationTheme->height_ = TOOL_BAR_HEIGHT;
     navigationTheme->toolbarItemSafeInterval_ = TOOL_BAR_ITEM_SAFE_INTERVAL;
     navigationTheme->toolbarItemHorizontalPadding_ = TOOL_BAR_ITEM_SAFE_INTERVAL;
@@ -1879,7 +1874,7 @@ HWTEST_F(NavigationPatternTestNg, NavDestinationDialogTest002, TestSize.Level1)
     config.skipMeasure = true;
     config.skipLayout = true;
     navigationPattern->OnDirtyLayoutWrapperSwap(layoutWrapper, config);
-    navigationPattern->NotifyDialogChange(NavDestinationLifecycle::ON_SHOW, true);
+    navigationPattern->NotifyDialogChange(NavDestinationLifecycle::ON_SHOW, true, true);
     auto navDestinationPatternA = AceType::DynamicCast<NavDestinationPattern>(navDestinationA->GetPattern());
     EXPECT_NE(navDestinationPatternA, nullptr);
     auto navDestinationPatternB = AceType::DynamicCast<NavDestinationPattern>(navDestinationB->GetPattern());
@@ -1900,7 +1895,9 @@ HWTEST_F(NavigationPatternTestNg, NavigationInterceptionTest005, TestSize.Level1
      */
     NavigationModelNG navigationModel;
     navigationModel.Create();
-    auto stackCreator = []() -> RefPtr<MockNavigationStack> { return AceType::MakeRefPtr<MockNavigationStack>(); };
+    auto stackCreator = []() -> RefPtr<MockNavigationStack> {
+        return AceType::MakeRefPtr<MockNavigationStack>();
+    };
     auto stackUpdater = [&navigationModel](RefPtr<NG::NavigationStack> stack) {
         navigationModel.SetNavigationStackProvided(false);
         auto mockStack = AceType::DynamicCast<MockNavigationStack>(stack);
@@ -2017,63 +2014,5 @@ HWTEST_F(NavigationPatternTestNg, NavigationPatternTest_017, TestSize.Level1)
     AceApplicationInfo::GetInstance().isRightToLeft_ = false;
     navigationPattern->OnLanguageConfigurationUpdate();
     EXPECT_EQ(navigationPattern->isRightToLeft_, false);
-}
-
-/**
- * @tc.name: NavigationPatternTest_018
- * @tc.desc: Test Ability_or_page_switch and report to RSS
- * @tc.type: FUNC
- */
-HWTEST_F(NavigationPatternTestNg, NavigationPatternTest_018, TestSize.Level1)
-{
-    EXPECT_NE(ResSchedReport::GetInstance().keyEventCountMS, 156);
-    PerfMonitor::GetPerfMonitor()->Start("ABILITY_OR_PAGE_SWITCH", PerfActionType::UNKNOWN_ACTION, "");
-    ResSchedReport::GetInstance().ResSchedDataReport("ability_or_page_switch_start");
-    EXPECT_EQ(ResSchedReport::GetInstance().keyEventCountMS, 156);
-
-    ResSchedReport::GetInstance().keyEventCountMS = -1;
-    EXPECT_NE(ResSchedReport::GetInstance().keyEventCountMS, 156);
-    PerfMonitor::GetPerfMonitor()->End("ABILITY_OR_PAGE_SWITCH", PerfActionType::UNKNOWN_ACTION);
-    ResSchedReport::GetInstance().ResSchedDataReport("ability_or_page_switch_end");
-    EXPECT_EQ(ResSchedReport::GetInstance().keyEventCountMS, 156);
-    EXPECT_NE(ResSchedReport::GetInstance().loadPageOn_, true);
-    ResSchedReport::GetInstance().TriggerModuleSerializer();
-    EXPECT_EQ(ResSchedReport::GetInstance().loadPageOn_, true);
-}
-
-
-/**
- * @tc.name: NavigationPatternTest_019
- * @tc.desc: Test Navigation HandleDrag
- * @tc.type: FUNC
- */
-HWTEST_F(NavigationPatternTestNg, NavigationPatternTest_019, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. create Navigation ,then get pattern.
-     */
-    auto pattern = AceType::MakeRefPtr<NavigationPattern>();
-    ASSERT_NE(pattern, nullptr);
-    auto frameNode = AceType::DynamicCast<FrameNode>(ViewStackProcessor::GetInstance()->Finish());
-    ASSERT_NE(frameNode, nullptr);
-    pattern->frameNode_ = frameNode;
-    auto layoutProperty = pattern->GetLayoutProperty<NavigationLayoutProperty>();
-    ASSERT_NE(layoutProperty, nullptr);
-    LayoutConstraintF layoutConstraint;
-    layoutConstraint.selfIdealSize.width_ = 10.0;
-    layoutConstraint.selfIdealSize.height_ = 10.0;
-    layoutProperty->UpdateLayoutConstraint(layoutConstraint);
-    pattern->HandleDragStart();
-    pattern->HandleDragEnd();
-    /**
-     * @tc.steps: step2. check pattern->preNavBarWidth_.
-     * @tc.expected: preNavBarWidth_ is correct.
-     */
-    EXPECT_EQ(pattern->preNavBarWidth_, static_cast<float>(DEFAULT_NAVBAR_WIDTH.ConvertToPx()));
-    pattern->preNavBarWidth_ = 0;
-    pattern->userSetMinContentFlag_ = true;
-    pattern->userSetNavBarRangeFlag_ = false;
-    pattern->HandleDragUpdate(FLOAT_260);
-    EXPECT_EQ(pattern->realNavBarWidth_, 0.0);
 }
 } // namespace OHOS::Ace::NG

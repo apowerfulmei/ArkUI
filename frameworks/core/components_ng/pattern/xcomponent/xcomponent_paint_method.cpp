@@ -33,8 +33,9 @@ CanvasDrawFunction XComponentPaintMethod::GetContentDrawFunction(PaintWrapper* p
         auto painter = weak.Upgrade();
         CHECK_NULL_VOID(painter);
         auto surface = painter->renderSuface_;
-        CHECK_NULL_VOID(surface);
-        surface->DrawBufferForXComponent(canvas, width, height, offsetX, offsetY);
+        if (surface) {
+            surface->DrawBufferForXComponent(canvas, width, height, offsetX, offsetY);
+        }
     };
 }
 } // namespace OHOS::Ace::NG

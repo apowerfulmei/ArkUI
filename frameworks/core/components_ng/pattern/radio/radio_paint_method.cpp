@@ -12,13 +12,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-#include "core/components_ng/pattern/radio/radio_paint_method.h"
-
+#include "base/geometry/ng/offset_t.h"
+#include "base/utils/utils.h"
+#include "core/common/container.h"
 #include "core/components/checkable/checkable_theme.h"
+#include "core/components/common/properties/color.h"
 #include "core/components_ng/pattern/radio/radio_modifier.h"
+#include "core/components_ng/render/animation_utils.h"
+#include "core/components_ng/render/drawing.h"
 #include "core/components_ng/render/drawing_prop_convertor.h"
-#include "core/pipeline_ng/pipeline_context.h"
+#include "core/pipeline/pipeline_base.h"
 
 namespace OHOS::Ace::NG {
 namespace {
@@ -44,7 +47,7 @@ RadioModifier::RadioModifier()
     auto pipeline = PipelineBase::GetCurrentContext();
     CHECK_NULL_VOID(pipeline);
     auto radioTheme = pipeline->GetTheme<RadioTheme>();
-    CHECK_NULL_VOID(radioTheme);
+
     pointColor_ = AceType::MakeRefPtr<AnimatablePropertyColor>(LinearColor(radioTheme->GetPointColor()));
     AttachProperty(pointColor_);
 
@@ -56,7 +59,6 @@ RadioModifier::RadioModifier()
     isOnAnimationFlag_ = AceType::MakeRefPtr<PropertyBool>(false);
     enabled_ = AceType::MakeRefPtr<PropertyBool>(true);
     isCheck_ = AceType::MakeRefPtr<PropertyBool>(false);
-    isFocused_ = AceType::MakeRefPtr<PropertyBool>(false);
     uiStatus_ = AceType::MakeRefPtr<PropertyInt>(static_cast<int32_t>(UIStatus::UNSELECTED));
     offset_ = AceType::MakeRefPtr<AnimatablePropertyOffsetF>(OffsetF());
     size_ = AceType::MakeRefPtr<AnimatablePropertySizeF>(SizeF());
@@ -67,11 +69,9 @@ RadioModifier::RadioModifier()
     ringPointScale_ = AceType::MakeRefPtr<AnimatablePropertyFloat>(0.0f);
     animateTouchHoverColor_ = AceType::MakeRefPtr<AnimatablePropertyColor>(LinearColor(Color::TRANSPARENT));
     useContentModifier_ = AceType::MakeRefPtr<PropertyBool>(false);
-    isUserSetUncheckedBorderColor_ = AceType::MakeRefPtr<PropertyBool>(false);
 
     AttachProperty(enabled_);
     AttachProperty(isCheck_);
-    AttachProperty(isFocused_);
     AttachProperty(uiStatus_);
     AttachProperty(offset_);
     AttachProperty(size_);
@@ -100,52 +100,41 @@ void RadioModifier::InitializeParam()
     hoverDuration_ = radioTheme->GetHoverDuration();
     hoverToTouchDuration_ = radioTheme->GetHoverToTouchDuration();
     touchDuration_ = radioTheme->GetTouchDuration();
-    focusedBgUnchecked_ = radioTheme->GetFocusedBgUnchecked();
-    focusedRingUnchecked_ = radioTheme->GetFocusedRingUnchecked();
-    focusedBgColor_ = radioTheme->GetFocusedBgColor();
-    sizeFocused_ = radioTheme->GetSizeFocusBg();
-    sizeHover_ = radioTheme->GetSizeHoverBg();
 }
 
-void RadioModifier::UpdateAnimatableProperty(const RefPtr<FrameNode>& host)
+void RadioModifier::UpdateAnimatableProperty()
 {
-    CHECK_NULL_VOID(host);
     switch (touchHoverType_) {
         case TouchHoverAnimationType::HOVER:
-            SetBoardColor(LinearColor(hoverColor_), hoverDuration_, Curves::FRICTION, host);
+            SetBoardColor(LinearColor(hoverColor_), hoverDuration_, Curves::FRICTION);
             break;
         case TouchHoverAnimationType::PRESS_TO_HOVER:
-            SetBoardColor(LinearColor(hoverColor_), hoverToTouchDuration_, Curves::SHARP, host);
+            SetBoardColor(LinearColor(hoverColor_), hoverToTouchDuration_, Curves::SHARP);
             break;
         case TouchHoverAnimationType::NONE:
-            SetBoardColor(LinearColor(hoverColor_.BlendOpacity(0)), hoverDuration_, Curves::FRICTION, host);
+            SetBoardColor(LinearColor(hoverColor_.BlendOpacity(0)), hoverDuration_, Curves::FRICTION);
             break;
         case TouchHoverAnimationType::HOVER_TO_PRESS:
-            SetBoardColor(LinearColor(clickEffectColor_), hoverToTouchDuration_, Curves::SHARP, host);
+            SetBoardColor(LinearColor(clickEffectColor_), hoverToTouchDuration_, Curves::SHARP);
             break;
         case TouchHoverAnimationType::PRESS:
-            SetBoardColor(LinearColor(clickEffectColor_), hoverDuration_, Curves::FRICTION, host);
+            SetBoardColor(LinearColor(clickEffectColor_), hoverDuration_, Curves::FRICTION);
             break;
         default:
             break;
     }
 }
-void RadioModifier::UpdateTotalScaleOnAnimatable(bool isCheck, const AnimationOption& delayOption,
-    const AnimationOption& halfDurationOption, const RefPtr<FrameNode>& host)
+void RadioModifier::UpdateTotalScaleOnAnimatable(
+    bool isCheck, const AnimationOption& delayOption, const AnimationOption& halfDurationOption)
 {
-    CHECK_NULL_VOID(host);
     totalScale_->Set(DEFAULT_TOTAL_SCALE);
-    AnimationUtils::Animate(
-        halfDurationOption, [&]() { totalScale_->Set(DEFAULT_SHRINK_SCALE_VER_TWELVE); }, nullptr, nullptr,
-        host->GetContextRefPtr());
+    AnimationUtils::Animate(halfDurationOption, [&]() { totalScale_->Set(DEFAULT_SHRINK_SCALE_VER_TWELVE); });
     totalScale_->Set(DEFAULT_SHRINK_SCALE_VER_TWELVE);
-    AnimationUtils::Animate(
-        delayOption, [&]() { totalScale_->Set(DEFAULT_TOTAL_SCALE); }, nullptr, nullptr, host->GetContextRefPtr());
+    AnimationUtils::Animate(delayOption, [&]() { totalScale_->Set(DEFAULT_TOTAL_SCALE); });
 }
 
-void RadioModifier::UpdateIsOnAnimatableProperty(bool isCheck, const RefPtr<FrameNode>& host)
+void RadioModifier::UpdateIsOnAnimatableProperty(bool isCheck)
 {
-    CHECK_NULL_VOID(host);
     AnimationOption delayOption;
     delayOption.SetDelay(DEFAULT_RADIO_ANIMATION_DURATION / 2);
     delayOption.SetDuration(DEFAULT_RADIO_ANIMATION_DURATION / 2);
@@ -157,24 +146,18 @@ void RadioModifier::UpdateIsOnAnimatableProperty(bool isCheck, const RefPtr<Fram
 
     if (isOnAnimationFlag_->Get()) {
         pointScale_->Set(0);
-        AnimationUtils::Animate(
-            delayOption, [&]() { pointScale_->Set(DEFAULT_POINT_SCALE); }, nullptr, nullptr, host->GetContextRefPtr());
+        AnimationUtils::Animate(delayOption, [&]() { pointScale_->Set(DEFAULT_POINT_SCALE); });
         ringPointScale_->Set(1);
-        AnimationUtils::Animate(
-            halfDurationOption, [&]() { ringPointScale_->Set(0); }, nullptr, nullptr, host->GetContextRefPtr());
+        AnimationUtils::Animate(halfDurationOption, [&]() { ringPointScale_->Set(0); });
     } else {
         pointScale_->Set(DEFAULT_POINT_SCALE);
-        AnimationUtils::Animate(
-            halfDurationOption, [&]() { pointScale_->Set(0); }, nullptr, nullptr, host->GetContextRefPtr());
+        AnimationUtils::Animate(halfDurationOption, [&]() { pointScale_->Set(0); });
         ringPointScale_->Set(0);
-        AnimationUtils::Animate(
-            delayOption, [&]() { ringPointScale_->Set(1); }, nullptr, nullptr, host->GetContextRefPtr());
+        AnimationUtils::Animate(delayOption, [&]() { ringPointScale_->Set(1); });
     }
 
     totalScale_->Set(DEFAULT_TOTAL_SCALE);
-    AnimationUtils::Animate(
-        halfDurationOption, [&]() { totalScale_->Set(DEFAULT_SHRINK_SCALE); }, nullptr, nullptr,
-        host->GetContextRefPtr());
+    AnimationUtils::Animate(halfDurationOption, [&]() { totalScale_->Set(DEFAULT_SHRINK_SCALE); });
     totalScale_->Set(DEFAULT_SHRINK_SCALE);
     AnimationUtils::Animate(
         delayOption, [&]() { totalScale_->Set(1); },
@@ -187,12 +170,11 @@ void RadioModifier::UpdateIsOnAnimatableProperty(bool isCheck, const RefPtr<Fram
             if (context) {
                 context->RequestFrame();
             }
-        }, nullptr, host->GetContextRefPtr());
+        });
 }
 
-void RadioModifier::UpdateIndicatorAnimation(bool isCheck, const RefPtr<FrameNode>& host)
+void RadioModifier::UpdateIndicatorAnimation(bool isCheck)
 {
-    CHECK_NULL_VOID(host);
     auto springCurve = AceType::MakeRefPtr<InterpolatingSpring>(DEFAULT_INTERPOLATINGSPRING_VELOCITY,
         DEFAULT_INTERPOLATINGSPRING_MASS, DEFAULT_INTERPOLATINGSPRING_STIFFNESS, DEFAULT_INTERPOLATINGSPRING_DAMPING);
     AnimationOption halfDurationOption;
@@ -209,7 +191,7 @@ void RadioModifier::UpdateIndicatorAnimation(bool isCheck, const RefPtr<FrameNod
                 opacityScale_->Set(1);
                 borderOpacityScale_->Set(0);
             },
-            nullptr, nullptr, host->GetContextRefPtr());
+            nullptr);
     } else {
         AnimationUtils::Animate(
             halfDurationOption,
@@ -217,28 +199,24 @@ void RadioModifier::UpdateIndicatorAnimation(bool isCheck, const RefPtr<FrameNod
                 opacityScale_->Set(0);
                 borderOpacityScale_->Set(1);
             },
-            nullptr, nullptr, host->GetContextRefPtr());
+            nullptr);
     }
-    UpdateTotalScaleOnAnimatable(isCheck, delayOption, halfDurationOption, host);
+    UpdateTotalScaleOnAnimatable(isCheck, delayOption, halfDurationOption);
 }
 
-void RadioModifier::SetBoardColor(
-    LinearColor color, int32_t duration, const RefPtr<CubicCurve>& curve, const RefPtr<FrameNode>& host)
+void RadioModifier::SetBoardColor(LinearColor color, int32_t duratuion, const RefPtr<CubicCurve>& curve)
 {
-    CHECK_NULL_VOID(host);
     if (animateTouchHoverColor_) {
         AnimationOption option = AnimationOption();
-        option.SetDuration(duration);
+        option.SetDuration(duratuion);
         option.SetCurve(curve);
-        AnimationUtils::Animate(
-            option, [&]() { animateTouchHoverColor_->Set(color); }, nullptr, nullptr, host->GetContextRefPtr());
+        AnimationUtils::Animate(option, [&]() { animateTouchHoverColor_->Set(color); });
     }
 }
 
 void RadioModifier::PaintRadio(
     RSCanvas& canvas, bool /* checked */, const SizeF& contentSize, const OffsetF& contentOffset) const
 {
-    DrawFocusBoard(canvas, contentSize, contentOffset);
     DrawTouchAndHoverBoard(canvas, contentSize, contentOffset);
     float outCircleRadius = contentSize.Width() / CALC_RADIUS;
     float centerX = contentOffset.GetX() + outCircleRadius;
@@ -300,21 +278,11 @@ void RadioModifier::PaintRadio(
     } else if (uiStatus_->Get() == static_cast<int32_t>(UIStatus::UNSELECTED)) {
         auto alphaCalculate = static_cast<float>(DISABLED_ALPHA) / ENABLED_ALPHA;
         if (!enabled_->Get()) {
-            if (isFocused_->Get()) {
-                brush.SetColor(ToRSColor(focusedBgUnchecked_.BlendOpacity(alphaCalculate)));
-                pen.SetColor(ToRSColor(focusedRingUnchecked_.BlendOpacity(alphaCalculate)));
-            } else {
-                brush.SetColor(ToRSColor(inactivePointColor_.BlendOpacity(alphaCalculate)));
-                pen.SetColor(ToRSColor(inactiveColor_->Get().BlendOpacity(alphaCalculate)));
-            }
+            brush.SetColor(ToRSColor(inactivePointColor_.BlendOpacity(alphaCalculate)));
+            pen.SetColor(ToRSColor(inactiveColor_->Get().BlendOpacity(alphaCalculate)));
         } else {
-            if (isFocused_->Get()) {
-                brush.SetColor(ToRSColor(focusedBgUnchecked_));
-                pen.SetColor(ToRSColor(focusedRingUnchecked_));
-            } else {
-                brush.SetColor(ToRSColor(inactivePointColor_));
-                pen.SetColor(ToRSColor(inactiveColor_->Get()));
-            }
+            brush.SetColor(ToRSColor(inactivePointColor_));
+            pen.SetColor(ToRSColor(inactiveColor_->Get()));
         }
         canvas.AttachBrush(brush);
         canvas.DrawCircle(RSPoint(centerX, centerY), outCircleRadius - borderWidth_);
@@ -335,10 +303,6 @@ void RadioModifier::PaintUnselectedIndicator(
     pen.SetWidth(borderWidth_);
     brush.SetAntiAlias(true);
     auto alphaCalculate = static_cast<float>(DISABLED_ALPHA) / ENABLED_ALPHA;
-    auto pipeline = PipelineBase::GetCurrentContext();
-    CHECK_NULL_VOID(pipeline);
-    auto radioTheme = pipeline->GetTheme<RadioTheme>();
-    CHECK_NULL_VOID(radioTheme);
     if (!enabled_->Get()) {
         brush.SetColor(ToRSColor(inactivePointColor_.BlendOpacity(alphaCalculate)));
         pen.SetColor(ToRSColor(inactiveColor_->Get().BlendOpacity(alphaCalculate)));
@@ -358,7 +322,6 @@ void RadioModifier::PaintUnselectedIndicator(
 void RadioModifier::PaintIndicator(
     RSCanvas& canvas, bool /* checked */, const SizeF& contentSize, const OffsetF& contentOffset) const
 {
-    DrawFocusBoard(canvas, contentSize, contentOffset);
     DrawTouchAndHoverBoard(canvas, contentSize, contentOffset);
     float outCircleRadius = contentSize.Width() / CALC_RADIUS;
     float centerX = contentOffset.GetX() + outCircleRadius;
@@ -367,25 +330,15 @@ void RadioModifier::PaintIndicator(
     RSPen outPen;
     RSBrush brush;
     pen.SetAntiAlias(true);
-    auto borderOpacityScale = borderOpacityScale_->Get();
-    pen.SetWidth(borderWidth_ * borderOpacityScale);
+    pen.SetWidth(borderWidth_ * borderOpacityScale_->Get());
     outPen.SetAntiAlias(true);
     brush.SetAntiAlias(true);
     auto alphaCalculate = static_cast<float>(enabled_->Get() ? ENABLED_ALPHA : DISABLED_ALPHA) / ENABLED_ALPHA;
     outPen.SetColor(ToRSColor(activeColor_->Get().BlendOpacity(opacityScale_->Get()).BlendOpacity(alphaCalculate)));
-    if (isFocused_->Get()) {
-        brush.SetColor(ToRSColor(focusedBgUnchecked_.BlendOpacity(borderOpacityScale).BlendOpacity(alphaCalculate)));
-        if (isUserSetUncheckedBorderColor_->Get()) {
-            pen.SetColor(ToRSColor(inactiveColor_->Get().BlendOpacity(borderOpacityScale)
-                .BlendOpacity(alphaCalculate)));
-        } else {
-            pen.SetColor(ToRSColor(focusedRingUnchecked_.BlendOpacity(borderOpacityScale)
-                .BlendOpacity(alphaCalculate)));
-        }
-    } else {
-        pen.SetColor(ToRSColor(inactiveColor_->Get().BlendOpacity(borderOpacityScale).BlendOpacity(alphaCalculate)));
-        brush.SetColor(ToRSColor(inactivePointColor_.BlendOpacity(borderOpacityScale).BlendOpacity(alphaCalculate)));
-    }
+    pen.SetColor(
+        ToRSColor(inactiveColor_->Get().BlendOpacity(borderOpacityScale_->Get()).BlendOpacity(alphaCalculate)));
+    brush.SetColor(
+        ToRSColor(inactivePointColor_.BlendOpacity(borderOpacityScale_->Get()).BlendOpacity(alphaCalculate)));
     auto outWidth = outCircleRadius * totalScale_->Get();
     if (outWidth < borderWidth_) {
         outWidth = borderWidth_;
@@ -411,7 +364,7 @@ void RadioModifier::DrawTouchAndHoverBoard(RSCanvas& canvas, const SizeF& conten
     float centerX = outCircleRadius + offset.GetX();
     float centerY = outCircleRadius + offset.GetY();
     if (Container::GreatOrEqualAPITargetVersion(PlatformVersion::VERSION_TWELVE)) {
-        outCircleRadius += sizeHover_.ConvertToPx();
+        outCircleRadius += defaultPadding_.ConvertToPx();
     } else {
         outCircleRadius += hotZoneHorizontalPadding_.ConvertToPx();
     }
@@ -423,92 +376,4 @@ void RadioModifier::DrawTouchAndHoverBoard(RSCanvas& canvas, const SizeF& conten
     canvas.DetachBrush();
 }
 
-void RadioModifier::DrawFocusBoard(RSCanvas& canvas, const SizeF& contentSize, const OffsetF& offset) const
-{
-    float outCircleRadius = contentSize.Width() / CALC_RADIUS;
-    float centerX = outCircleRadius + offset.GetX();
-    float centerY = outCircleRadius + offset.GetY();
-    RSBrush brush;
-    if (isFocused_->Get()) {
-        brush.SetColor(ToRSColor(focusedBgColor_));
-    } else {
-        brush.SetColor(ToRSColor(Color::TRANSPARENT));
-    }
-    brush.SetAntiAlias(true);
-    outCircleRadius += sizeFocused_.ConvertToPx();
-    canvas.AttachBrush(brush);
-    canvas.DrawCircle(RSPoint(centerX, centerY), outCircleRadius);
-    canvas.DetachBrush();
-}
-
-void RadioPaintMethod::UpdateUIStatus(bool checked, const RefPtr<FrameNode>& host)
-{
-    if (checked != radioModifier_->GetIsCheck()) {
-        if (!enabled_ && !checked && Container::GreatOrEqualAPITargetVersion(PlatformVersion::VERSION_TWELVE)) {
-            radioModifier_->SetUIStatus(UIStatus::UNSELECTED);
-        } else {
-            radioModifier_->SetUIStatus(UIStatus::SELECTED);
-        }
-        if (!isFirstCreated_) {
-            if (Container::GreatOrEqualAPITargetVersion(PlatformVersion::VERSION_TWELVE)) {
-                radioModifier_->UpdateIndicatorAnimation(checked, host);
-            } else {
-                radioModifier_->UpdateIsOnAnimatableProperty(checked, host);
-            }
-        }
-    } else if (!checked && isFirstCreated_) {
-        radioModifier_->InitOpacityScale(checked);
-    }
-}
-
-void RadioPaintMethod::UpdateContentModifier(PaintWrapper* paintWrapper)
-{
-    CHECK_NULL_VOID(radioModifier_);
-    auto paintProperty = DynamicCast<RadioPaintProperty>(paintWrapper->GetPaintProperty());
-    CHECK_NULL_VOID(paintProperty);
-    bool checked = false;
-    if (paintProperty->HasRadioCheck()) {
-        checked = paintProperty->GetRadioCheckValue();
-    } else {
-        paintProperty->UpdateRadioCheck(false);
-    }
-    auto renderContext = paintWrapper->GetRenderContext();
-    CHECK_NULL_VOID(renderContext);
-    auto host = renderContext->GetHost();
-    CHECK_NULL_VOID(host);
-    auto pipeline = host->GetContextRefPtr();
-    CHECK_NULL_VOID(pipeline);
-    auto radioTheme = pipeline->GetTheme<RadioTheme>();
-    activeColor_ = paintProperty->GetRadioCheckedBackgroundColor().value_or(Color(radioTheme->GetActiveColor()));
-    inactiveColor_ = paintProperty->GetRadioUncheckedBorderColor().value_or(Color(radioTheme->GetInactiveColor()));
-    pointColor_ = paintProperty->GetRadioIndicatorColor().value_or(Color(radioTheme->GetPointColor()));
-
-    auto size = paintWrapper->GetContentSize();
-    auto offset = paintWrapper->GetContentOffset();
-    radioModifier_->InitializeParam();
-    radioModifier_->SetPointColor(pointColor_);
-    radioModifier_->SetactiveColor(activeColor_);
-    radioModifier_->SetinactiveColor(inactiveColor_);
-    radioModifier_->SetSize(size);
-    radioModifier_->SetOffset(offset);
-    radioModifier_->SetIsOnAnimationFlag(isOnAnimationFlag_);
-    radioModifier_->SetEnabled(enabled_);
-    radioModifier_->SetTotalScale(totalScale_);
-    radioModifier_->SetPointScale(pointScale_);
-    radioModifier_->SetRingPointScale(ringPointScale_);
-    UpdateUIStatus(checked, host);
-    radioModifier_->SetShowHoverEffect(showHoverEffect_);
-    radioModifier_->SetIsCheck(checked);
-    radioModifier_->SetTouchHoverAnimationType(touchHoverType_);
-    radioModifier_->UpdateAnimatableProperty(host);
-    auto horizontalPadding = radioTheme->GetHotZoneHorizontalPadding().ConvertToPx();
-    auto verticalPadding = radioTheme->GetHotZoneVerticalPadding().ConvertToPx();
-    float boundsRectOriginX = offset.GetX() - horizontalPadding;
-    float boundsRectOriginY = offset.GetY() - verticalPadding;
-    float boundsRectWidth = size.Width() + 2 * horizontalPadding;
-    float boundsRectHeight = size.Height() + 2 * verticalPadding;
-    RectF boundsRect(boundsRectOriginX, boundsRectOriginY, boundsRectWidth, boundsRectHeight);
-    radioModifier_->SetBoundsRect(boundsRect);
-    radioModifier_->SetIsUserSetUncheckBorderColor(isUserSetUncheckBorderColor_);
-}
 } // namespace OHOS::Ace::NG

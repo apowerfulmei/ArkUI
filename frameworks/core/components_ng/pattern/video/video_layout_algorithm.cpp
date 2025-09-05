@@ -15,9 +15,16 @@
 
 #include "core/components_ng/pattern/video/video_layout_algorithm.h"
 
+#include "base/geometry/ng/offset_t.h"
+#include "base/geometry/ng/size_t.h"
+#include "base/utils/utils.h"
 #include "core/components/video/video_theme.h"
-#include "core/components_ng/layout/drawing_layout_utils.h"
+#include "core/components_ng/base/frame_node.h"
+#include "core/components_ng/pattern/video/video_layout_property.h"
 #include "core/components_ng/pattern/video/video_pattern.h"
+#include "core/components_ng/property/measure_utils.h"
+#include "core/components_v2/inspector/inspector_constants.h"
+#include "core/pipeline_ng/pipeline_context.h"
 
 namespace OHOS::Ace::NG {
 namespace {
@@ -65,10 +72,9 @@ void VideoLayoutAlgorithm::Layout(LayoutWrapper* layoutWrapper)
 
 void VideoLayoutAlgorithm::Measure(LayoutWrapper* layoutWrapper)
 {
-    auto layoutProperty = DynamicCast<VideoLayoutProperty>(layoutWrapper->GetLayoutProperty());
-    CHECK_NULL_VOID(layoutProperty);
-    auto layoutConstraint = layoutProperty->CreateChildConstraint();
+    auto layoutConstraint = layoutWrapper->GetLayoutProperty()->CreateChildConstraint();
     auto contentSize = layoutWrapper->GetGeometryNode()->GetContentSize();
+    auto layoutProperty = DynamicCast<VideoLayoutProperty>(layoutWrapper->GetLayoutProperty());
     auto host = layoutWrapper->GetHostNode();
     CHECK_NULL_VOID(host);
     auto pattern = DynamicCast<VideoPattern>(host->GetPattern());
@@ -118,7 +124,6 @@ std::optional<SizeF> VideoLayoutAlgorithm::MeasureContent(
     }
     auto layoutSize = contentConstraint.selfIdealSize.IsValid() ? contentConstraint.selfIdealSize.ConvertToSizeT()
                                                                 : contentConstraint.maxSize;
-    MeasureLayoutPolicySize(contentConstraint, layoutWrapper, layoutSize);
     return layoutSize;
 }
 

@@ -15,9 +15,9 @@
 
 #include "frameworks/core/components_ng/pattern/stack/stack_layout_algorithm.h"
 
+#include "core/common/ace_application_info.h"
 #include "core/components_ng/layout/layout_wrapper.h"
 #include "core/components_ng/pattern/stack/stack_layout_property.h"
-#include "core/components_ng/property/measure_utils.h"
 
 namespace OHOS::Ace::NG {
 
@@ -36,10 +36,8 @@ void StackLayoutAlgorithm::PerformLayout(LayoutWrapper* layoutWrapper)
 {
     // update child position.
     auto frameSize = layoutWrapper->GetGeometryNode()->GetFrameSize();
-    const auto& stackLayoutProperty = layoutWrapper->GetLayoutProperty();
-    CHECK_NULL_VOID(stackLayoutProperty);
-    const auto& padding = stackLayoutProperty->CreatePaddingAndBorder();
-    auto layoutDirection = stackLayoutProperty->GetLayoutDirection();
+    const auto& padding = layoutWrapper->GetLayoutProperty()->CreatePaddingAndBorder();
+    auto layoutDirection = layoutWrapper->GetLayoutProperty()->GetLayoutDirection();
     if (layoutDirection == TextDirection::AUTO) {
         layoutDirection = AceApplicationInfo::GetInstance().IsRightToLeft() ? TextDirection::RTL : TextDirection::LTR;
     }
@@ -57,32 +55,9 @@ void StackLayoutAlgorithm::PerformLayout(LayoutWrapper* layoutWrapper)
     }
     // Update child position.
     for (const auto& child : layoutWrapper->GetAllChildrenWithBuild()) {
-        auto childAlign = align;
-        auto childLayoutProperty = child->GetLayoutProperty();
-        if (childLayoutProperty && childLayoutProperty->GetPositionProperty() &&
-            childLayoutProperty->GetPositionProperty()->HasLayoutGravity()) {
-            auto rawChildAlign =
-                childLayoutProperty->GetPositionProperty()->GetLayoutGravity().value_or(Alignment::CENTER);
-            childAlign = Alignment::GetAlignment(layoutDirection, rawChildAlign.GetAlignmentStr(TextDirection::AUTO));
-        }
-        auto childNode = child->GetHostNode();
-        auto host = layoutWrapper->GetHostNode();
-        if (host && childNode && childNode->GetLayoutProperty() &&
-            childNode->GetLayoutProperty()->IsIgnoreOptsValid()) {
-            IgnoreLayoutSafeAreaOpts& opts = *(childNode->GetLayoutProperty()->GetIgnoreLayoutSafeAreaOpts());
-            auto sae = host->GetAccumulatedSafeAreaExpand(true, opts);
-            auto adjustContentSize = contentSize + sae.Size();
-            auto translate =
-                CalculateStackAlignment(adjustContentSize, child->GetGeometryNode()->GetMarginFrameSize(), childAlign) +
-                paddingOffset;
-            translate -= sae.Offset();
-            child->GetGeometryNode()->SetMarginFrameOffset(translate);
-        } else {
-            auto translate =
-                CalculateStackAlignment(contentSize, child->GetGeometryNode()->GetMarginFrameSize(), childAlign) +
-                paddingOffset;
-            child->GetGeometryNode()->SetMarginFrameOffset(translate);
-        }
+        auto translate =
+            CalculateStackAlignment(contentSize, child->GetGeometryNode()->GetMarginFrameSize(), align) + paddingOffset;
+        child->GetGeometryNode()->SetMarginFrameOffset(translate);
     }
     // Update content position.
     const auto& content = layoutWrapper->GetGeometryNode()->GetContent();

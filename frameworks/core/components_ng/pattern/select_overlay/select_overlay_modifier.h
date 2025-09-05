@@ -22,15 +22,14 @@
 #include "base/memory/ace_type.h"
 #include "core/components/common/properties/color.h"
 #include "core/components_ng/base/modifier.h"
-#include "core/components_ng/pattern/pattern.h"
 #include "core/components_ng/render/node_paint_method.h"
 
 namespace OHOS::Ace::NG {
 class SelectOverlayModifier : public OverlayModifier {
-    DECLARE_ACE_TYPE(SelectOverlayModifier, OverlayModifier);
+    DECLARE_ACE_TYPE(SelectOverlayModifier, OverlayModifier)
 
 public:
-    SelectOverlayModifier(const OffsetF& menuOptionOffset, bool isReverse, const WeakPtr<Pattern>& pattern);
+    SelectOverlayModifier(const OffsetF& menuOptionOffset, bool isReverse);
 
     ~SelectOverlayModifier() override = default;
 
@@ -112,7 +111,6 @@ private:
     Color iconColor_ = Color::BLACK;
     bool isNewAvoid_ = false;
     bool isReverse_ = false;
-    WeakPtr<Pattern> pattern_;
 
     ACE_DISALLOW_COPY_AND_MOVE(SelectOverlayModifier);
 };

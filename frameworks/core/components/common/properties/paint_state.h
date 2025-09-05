@@ -238,11 +238,6 @@ public:
         textStyle_.SetFontSize(size);
     }
 
-    void SetLetterSpacing(const Dimension& letterSpacing)
-    {
-        textStyle_.SetLetterSpacing(letterSpacing);
-    }
-
     void SetFontStyle(FontStyle style)
     {
         textStyle_.SetFontStyle(style);

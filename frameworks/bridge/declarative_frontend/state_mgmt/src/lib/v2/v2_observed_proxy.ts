@@ -18,7 +18,7 @@
  */
 class ObjectProxyHandler {
 
-    public static readonly OB_DATE = '__date__';
+    private static readonly OB_DATE = '__date__';
 
     private isMakeObserved_: boolean;
 
@@ -65,7 +65,7 @@ class ObjectProxyHandler {
         // for some common function attributes, e.g. toString etc.
         if (typeof (ret) !== 'function') {
             ObserveV2.getObserve().addRef(conditionalTarget, key);
-            return (typeof (ret) === 'object' && this.isMakeObserved_) ? RefInfo.get(ret)[RefInfo.MAKE_OBSERVED_PROXY] : ret;
+            return (typeof (ret) === 'object' && this.isMakeObserved_) ? RefInfo.get(ret).proxy : ret;
         }
 
         if (target instanceof Date) {
@@ -124,31 +124,10 @@ class ArrayProxyHandler {
         return this.isMakeObserved_ ? RefInfo.get(obj) : obj;
     }
 
-    // return the set of elmtIds that are eligible and scheduled for fast re-layout,
-    // or undefined if none
-    public static tryFastRelayout(target: Array<unknown>, key: string, args?: Array<unknown>): Set<number> | undefined {
-        if (target[__RepeatVirtualScroll2Impl.REF_META] === undefined) {
-            return undefined;
-        }
-
-        const elmtIdSet = new Set<number>();
-        target[__RepeatVirtualScroll2Impl.REF_META]?.forEach(weakRef => {
-            const repeat = weakRef?.deref();
-            const elmtId = repeat?.repeatElmtId_;
-            repeat?.tryFastRelayout(key, args ?? []) && elmtIdSet.add(elmtId);
-        });
-
-        stateMgmtConsole.debug(`EXCLUDE Repeat elmtIds:`, ...elmtIdSet);
-        return elmtIdSet.size ? elmtIdSet : undefined;
-    }
-
     // shrinkTo and extendTo is collection.Array api.
-    public static readonly arrayLengthChangingFunctions = new Set(['push', 'pop', 'shift', 'splice', 'unshift', 'shrinkTo', 'extendTo']);
-    public static readonly arrayMutatingFunctions = new Set(['copyWithin', 'fill', 'reverse', 'sort']);
+    private static readonly arrayLengthChangingFunctions = new Set(['push', 'pop', 'shift', 'splice', 'unshift', 'shrinkTo', 'extendTo']);
+    private static readonly arrayMutatingFunctions = new Set(['copyWithin', 'fill', 'reverse', 'sort']);
 
-    // Note: The code of this function is duplicated with adaptation for enableV2Compatibility
-    // when making changes here, review of these changes are also needed in
-    // SubscribableArrayHandler.getV2Compatible function
     get(target: Array<any>, key: string | symbol, receiver: Array<any>): any {
 
         if (typeof key === 'symbol') {
@@ -178,7 +157,7 @@ class ArrayProxyHandler {
         let ret = this.isMakeObserved_ ? target[key] : ObserveV2.autoProxyObject(target, key);
         if (typeof (ret) !== 'function') {
             ObserveV2.getObserve().addRef(conditionalTarget, key);
-            return (typeof (ret) === 'object' && this.isMakeObserved_) ? RefInfo.get(ret)[RefInfo.MAKE_OBSERVED_PROXY] : ret;
+            return (typeof (ret) === 'object' && this.isMakeObserved_) ? RefInfo.get(ret).proxy : ret;
         }
 
         if (ArrayProxyHandler.arrayMutatingFunctions.has(key)) {
@@ -191,15 +170,8 @@ class ArrayProxyHandler {
             };
         } else if (ArrayProxyHandler.arrayLengthChangingFunctions.has(key)) {
             return function (...args): any {
-                // To detect actual changed range, Repeat needs original length before changes
-                // Also copy the args in case they are changed in 'ret' execution
-                const repeatArgs = (key === 'splice') ? [target.length, ...args] : [...args];
-
                 const result = ret.call(target, ...args);
-
-                const excludeSet: Set<number> | undefined = ArrayProxyHandler.tryFastRelayout(conditionalTarget,
-                    key, repeatArgs);
-                ObserveV2.getObserve().fireChange(conditionalTarget, ObserveV2.OB_LENGTH, excludeSet);
+                ObserveV2.getObserve().fireChange(conditionalTarget, ObserveV2.OB_LENGTH);
                 return result;
             };
         } else if (!SendableType.isArray(target)) {
@@ -214,7 +186,7 @@ class ArrayProxyHandler {
                     // so we must call "target" here to deal with the collections situations.
                     // But we also need to addref for each index.
                     ObserveV2.getObserve().addRef(conditionalTarget, index.toString());
-                    callbackFn(typeof value === 'object' ? RefInfo.get(value)[RefInfo.MAKE_OBSERVED_PROXY] : value, index, receiver);
+                    callbackFn(typeof value === 'object' ? RefInfo.get(value).proxy : value, index, receiver);
                 });
                 return result;
             };
@@ -238,10 +210,7 @@ class ArrayProxyHandler {
         const originalLength = target.length;
         target[key] = value;
         const arrayLenChanged = target.length !== originalLength;
-
-        let excludeSet: Set<number> | undefined = ArrayProxyHandler.tryFastRelayout(target, 'set', [key]);
-        ObserveV2.getObserve().fireChange(this.getTarget(target), 
-                arrayLenChanged ? ObserveV2.OB_LENGTH : key.toString(), excludeSet);
+        ObserveV2.getObserve().fireChange(this.getTarget(target), arrayLenChanged ? ObserveV2.OB_LENGTH : key.toString());
         return true;
     }
 };
@@ -251,7 +220,7 @@ class ArrayProxyHandler {
  */
 class SetMapProxyHandler {
 
-    public static readonly OB_MAP_SET_ANY_PROPERTY = '___ob_map_set';
+    private static readonly OB_MAP_SET_ANY_PROPERTY = '___ob_map_set';
 
     private isMakeObserved_: boolean;
 
@@ -268,14 +237,11 @@ class SetMapProxyHandler {
         return this.isMakeObserved_ ? RefInfo.get(obj) : obj;
     }
 
-    // Note: The code of this function is duplicated with adaptation for enableV2Compatibility
-    // when making changes here, review of these changes are also needed in
-    // SubscribableMapSetHandler.getV2Compatible function
     get(target: any, key: string | symbol, receiver: any): any {
         if (typeof key === 'symbol') {
             if (key === Symbol.iterator) {
                 const conditionalTarget = this.getTarget(target);
-                ObserveV2.getObserve().addRef(conditionalTarget, SetMapProxyHandler.OB_MAP_SET_ANY_PROPERTY);
+                ObserveV2.getObserve().fireChange(conditionalTarget, SetMapProxyHandler.OB_MAP_SET_ANY_PROPERTY);
                 ObserveV2.getObserve().addRef(conditionalTarget, ObserveV2.OB_LENGTH);
                 return (...args): any => target[key](...args);
             }
@@ -300,7 +266,7 @@ class SetMapProxyHandler {
         let ret = this.isMakeObserved_ ? target[key] : ObserveV2.autoProxyObject(target, key);
         if (typeof (ret) !== 'function') {
             ObserveV2.getObserve().addRef(conditionalTarget, key);
-            return (typeof (ret) === 'object' && this.isMakeObserved_) ? RefInfo.get(ret)[RefInfo.MAKE_OBSERVED_PROXY] : ret;
+            return (typeof (ret) === 'object' && this.isMakeObserved_) ? RefInfo.get(ret).proxy : ret;
         }
 
         if (key === 'has') {
@@ -317,10 +283,9 @@ class SetMapProxyHandler {
         if (key === 'delete') {
             return (prop): boolean => {
                 if (target.has(prop)) {
-                    const res: boolean = target.delete(prop);
                     ObserveV2.getObserve().fireChange(conditionalTarget, prop);
                     ObserveV2.getObserve().fireChange(conditionalTarget, ObserveV2.OB_LENGTH);
-                    return res;
+                    return target.delete(prop);
                 } else {
                     return false;
                 }
@@ -330,11 +295,11 @@ class SetMapProxyHandler {
             return (): void => {
                 if (target.size > 0) {
                     target.forEach((_, prop) => {
-                        ObserveV2.getObserve().fireChange(conditionalTarget, prop.toString(), undefined, true);
+                        ObserveV2.getObserve().fireChange(conditionalTarget, prop.toString());
                     });
-                    target.clear();
                     ObserveV2.getObserve().fireChange(conditionalTarget, ObserveV2.OB_LENGTH);
-                    ObserveV2.getObserve().fireChange(conditionalTarget, SetMapProxyHandler.OB_MAP_SET_ANY_PROPERTY);
+                    ObserveV2.getObserve().addRef(conditionalTarget, SetMapProxyHandler.OB_MAP_SET_ANY_PROPERTY);
+                    target.clear();
                 }
             };
         }
@@ -349,13 +314,12 @@ class SetMapProxyHandler {
         if (target instanceof Set || (this.isMakeObserved_ && SendableType.isSet(target))) {
             if (key === 'add') {
                 return (val): any => {
-                    if (target.has(val)) {
-                        return receiver;
-                    }
-                    target.add(val);
-                    ObserveV2.getObserve().fireChange(conditionalTarget, val);
+                    ObserveV2.getObserve().fireChange(conditionalTarget, val.toString());
                     ObserveV2.getObserve().fireChange(conditionalTarget, SetMapProxyHandler.OB_MAP_SET_ANY_PROPERTY);
-                    ObserveV2.getObserve().fireChange(conditionalTarget, ObserveV2.OB_LENGTH);
+                    if (!target.has(val)) {
+                        ObserveV2.getObserve().fireChange(conditionalTarget, ObserveV2.OB_LENGTH);
+                        target.add(val);
+                    }
                     return receiver;
                 };
             }
@@ -383,19 +347,18 @@ class SetMapProxyHandler {
                         ObserveV2.getObserve().addRef(conditionalTarget, ObserveV2.OB_LENGTH);
                     }
                     let item = target.get(prop);
-                    return (typeof item === 'object' && this.isMakeObserved_) ? RefInfo.get(item)[RefInfo.MAKE_OBSERVED_PROXY] : item;
+                    return (typeof item === 'object' && this.isMakeObserved_) ? RefInfo.get(item).proxy : item;
                 };
             }
             if (key === 'set') {
                 return (prop, val): any => {
                     if (!target.has(prop)) {
-                        target.set(prop, val);
                         ObserveV2.getObserve().fireChange(conditionalTarget, ObserveV2.OB_LENGTH);
                     } else if (target.get(prop) !== val) {
-                        target.set(prop, val);
                         ObserveV2.getObserve().fireChange(conditionalTarget, prop);
                     }
                     ObserveV2.getObserve().fireChange(conditionalTarget, SetMapProxyHandler.OB_MAP_SET_ANY_PROPERTY);
+                    target.set(prop, val);
                     return receiver;
                 };
             }

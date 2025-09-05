@@ -61,20 +61,6 @@ class ArkBorderStyle {
   }
 }
 
-class ArkOnVisibleAreaChange {
-  ratios: Array<number>;
-  event: (isVisible: boolean, currentRatio: number) => void;
-
-  constructor(ratios: Array<number> | undefined, event: (isVisible: boolean, currentRatio: number) => void | undefined) {
-    this.ratios = ratios;
-    this.event = event;
-  }
-
-  isEqual(another: ArkOnVisibleAreaChange): boolean {
-    return this.ratios === another.ratios && this.event === another.event;
-  }
-}
-
 class ArkBorderColor {
   startColor: LocalizedEdgeColors;
   endColor: LocalizedEdgeColors;
@@ -155,12 +141,6 @@ class ArkBorderRadius {
   }
 
   isEqual(another: ArkBorderRadius): boolean {
-    if (this == undefined && another == undefined) {
-      return true;
-    }
-    if ((this == undefined && another != undefined) || (this != undefined && another == undefined)) {
-      return false
-    }
     return (
       (this.topLeft === another.topLeft &&
         this.topRight === another.topRight &&
@@ -243,7 +223,6 @@ class ArkSweepGradient {
   end: number | string | undefined;
   rotation: number | string | undefined;
   colors: Array<any>;
-  metricsColors: Array<any>;
   repeating: boolean | undefined;
 
   constructor(center: Array<any>,
@@ -251,14 +230,12 @@ class ArkSweepGradient {
     end: number | string | undefined,
     rotation: number | string | undefined,
     colors: Array<any>,
-    metricsColors: Array<any>,
     repeating: boolean | undefined) {
     this.center = center;
     this.start = start;
     this.end = end;
     this.rotation = rotation;
     this.colors = colors;
-    this.metricsColors = metricsColors;
     this.repeating = repeating;
   }
 
@@ -269,7 +246,6 @@ class ArkSweepGradient {
       this.end === another.end &&
       this.rotation === another.rotation &&
       deepCompareArrays(this.colors, another.colors) &&
-      deepCompareArrays(this.metricsColors, another.metricsColors) &&
       this.repeating === another.repeating
     );
   }
@@ -385,18 +361,6 @@ class ArkSharedTransition {
   }
 }
 
-class ArkBindTipsOptions {
-  message: ResourceStr | StyledString | undefined;
-  options: TipsOptions | undefined;
-  constructor() {
-    this.message = undefined;
-    this.options = undefined;
-  }
-  isEqual(another: ArkBindTipsOptions): boolean {
-    return (this.options === another.options) && (this.options === another.options);
-  }
-}
-
 class ArkChainMode {
   direction: Axis | undefined;
   style: ChainStyle | undefined;
@@ -409,14 +373,14 @@ class ArkChainMode {
   }
 }
 
-class ArkEdgeEffect {
+class ArkListEdgeEffect {
   value: EdgeEffect;
   options?: EdgeEffectOptions | undefined;
   constructor() {
     this.value = undefined;
     this.options = undefined;
   }
-  isEqual(another: ArkEdgeEffect): boolean {
+  isEqual(another: ArkListEdgeEffect): boolean {
     return (this.value === another.value) &&
       (this.options === another.options);
   }
@@ -430,6 +394,19 @@ class ArkFadingEdge {
     this.options = undefined;
   }
   isEqual(another: ArkFadingEdge): boolean {
+    return (this.value === another.value) &&
+      (this.options === another.options);
+  }
+}
+
+class ArkScrollEdgeEffect {
+  value: EdgeEffect;
+  options?: EdgeEffectOptions | undefined;
+  constructor() {
+    this.value = undefined;
+    this.options = undefined;
+  }
+  isEqual(another: ArkScrollEdgeEffect): boolean {
     return (this.value === another.value) &&
       (this.options === another.options);
   }
@@ -475,51 +452,6 @@ class ArkMenuAlignType {
   }
 }
 
-class ArkPrefixOrSuffix {
-  value: CustomBuilder;
-  options: SliderCustomContentOptions;
-
-  constructor(value: CustomBuilder, options?:SliderCustomContentOptions) {
-    this.value = value;
-    this.options = options;
-  }
-
-  isEqual(another: ArkPrefixOrSuffix): boolean {
-    return this.value === another.value && this.options === another.options;
-  }
-}
-
-class ArkSliderStepOptions {
-  showSteps: boolean;
-  stepOptions?: SliderShowStepOptions;
-
-  constructor(value: boolean, options?: SliderShowStepOptions) {
-    this.showSteps = value;
-    this.stepOptions = options;
-  }
-
-  isEqual(another: ArkSliderStepOptions): boolean {
-    let isShowStepsEqual = this.showSteps === another.showSteps;
-    let isStepOptionsEqual = true;
-    if ((this.stepOptions === null) || (this.stepOptions === undefined)) {
-      isStepOptionsEqual = (another.stepOptions === null) || (another.stepOptions === undefined);
-    } else if ((another.stepOptions === null) || (another.stepOptions === undefined)) {
-      isStepOptionsEqual = false;
-    } else if (this.stepOptions.stepsAccessibility.size !== another.stepOptions.stepsAccessibility.size) {
-      isStepOptionsEqual = false;
-    } else {
-      for (const [key, val] of this.stepOptions.stepsAccessibility) {
-        if (!another.stepOptions.stepsAccessibility.has(key)) {
-          isStepOptionsEqual = false;
-        } else if (!isBaseOrResourceEqual(another.stepOptions.stepsAccessibility.get(key), val)) {
-          isStepOptionsEqual = false;
-        }
-      }
-    }
-    return isShowStepsEqual && isStepOptionsEqual;
-  }
-}
-
 class ArkSliderTips {
   showTip: boolean;
   tipText: string | ResourceStr;
@@ -550,40 +482,6 @@ class ArkStarStyle {
       this.backgroundUri === another.backgroundUri &&
       this.foregroundUri === another.foregroundUri &&
       this.secondaryUri === another.secondaryUri
-    );
-  }
-}
-
-class ArkRegisterNativeEmbedRule {
-  tag: string | undefined;
-  type: string | undefined;
-
-  constructor() {
-    this.tag = undefined;
-    this.type = undefined;
-  }
-
-  isEqual(another: ArkRegisterNativeEmbedRule): boolean {
-    return (this.tag === another.tag && this.type === another.type);
-  }
-}
-
-class ArkBackground {
-  content: ResourceColor | undefined;
-  align?: Alignment | undefined;
-  ignoresLayoutSafeAreaEdges?: Array<LayoutSafeAreaEdge> | undefined;
-
-  constructor() {
-    this.content = undefined;
-    this.align = undefined;
-    this.ignoresLayoutSafeAreaEdges = undefined;
-  }
-
-  isEqual(another: ArkBackground): boolean {
-    return (
-      this.content === another.content &&
-      this.align === another.align &&
-      deepCompareArrays(this.ignoresLayoutSafeAreaEdges, another.ignoresLayoutSafeAreaEdges)
     );
   }
 }
@@ -729,7 +627,7 @@ class ArkBackgroundImageSize {
 
 class ArkBackgroundImage {
   src: string | undefined | Resource | PixelMap;
-  repeat: number | undefined | object;
+  repeat: number | undefined;
   constructor() {
     this.src = undefined;
     this.repeat = undefined;
@@ -819,15 +717,6 @@ class ArkScrollableBarModeOptions {
   }
 }
 
-class ArkTabsCachedMaxCount {
-  count: number;
-  mode: TabsCacheMode;
-
-  isEqual(another: ArkTabsCachedMaxCount): boolean {
-    return (this.count === another.count && this.mode === another.mode);
-  }
-}
-
 class ArkAlignRules {
   left: string | undefined;
   middle: string | undefined;
@@ -860,20 +749,6 @@ class ArkSafeAreaExpandOpts {
   edges: string | number | undefined = undefined;
   isEqual(another: ArkSafeAreaExpandOpts): boolean {
     return (this.type === another.type) && (this.edges === another.edges);
-  }
-}
-
-class ArkEnableStatusBar {
-  enable: boolean | undefined = undefined;
-  animated?: boolean | undefined = undefined;
-
-  constructor() {
-    this.enable = undefined;
-    this.animated = undefined;
-  }
-
-  isEqual(another: ArkEnableStatusBar): boolean {
-    return (this.enable === another.enable) && (this.animated === another.animated);
   }
 }
 
@@ -977,24 +852,32 @@ class ArkShadowInfoToArray {
     if (!value || !stageValue || !value.radius || !stageValue.radius) {
       return true;
     }
-    if (!(isNumber(stageValue.radius) && isNumber(value.radius) &&
-      stageValue.radius === value.radius)) {
+    if (!((isResource(stageValue.radius) && isResource(value.radius) &&
+      isResourceEqual(stageValue.radius, value.radius)) ||
+      (isNumber(stageValue.radius) && isNumber(value.radius) &&
+        stageValue.radius === value.radius))) {
       return true;
     }
     if (!(isNumber(stageValue.type) && isNumber(value.type) &&
       stageValue.type === value.type)) {
       return true;
     }
-    if (!(!isResource(stageValue.color) && !isResource(value.color) &&
-      stageValue.color === value.color)) {
+    if (!((isResource(stageValue.color) && isResource(value.color) &&
+      isResourceEqual(stageValue.color, value.color)) ||
+      (!isResource(stageValue.color) && !isResource(value.color) &&
+        stageValue.color === value.color))) {
       return true;
     }
-    if (!(isNumber(stageValue.offsetX) && isNumber(value.offsetX) &&
-      stageValue.offsetX === value.offsetX)) {
+    if (!((isResource(stageValue.offsetX) && isResource(value.offsetX) &&
+      isResourceEqual(stageValue.offsetX, value.offsetX)) ||
+      (isNumber(stageValue.offsetX) && isNumber(value.offsetX) &&
+        stageValue.offsetX === value.offsetX))) {
       return true;
     }
-    if (!(isNumber(stageValue.offsetY) && isNumber(value.offsetY) &&
-      stageValue.offsetY === value.offsetY)) {
+    if (!((isResource(stageValue.offsetY) && isResource(value.offsetY) &&
+      isResourceEqual(stageValue.offsetY, value.offsetY)) ||
+      (isNumber(stageValue.offsetY) && isNumber(value.offsetY) &&
+        stageValue.offsetY === value.offsetY))) {
       return true;
     }
     if (!(isBoolean(stageValue.fill) && isBoolean(value.fill) &&
@@ -1009,18 +892,15 @@ class ArkSearchButton {
   value: string | undefined;
   fontSize: Length | undefined;
   fontColor: ResourceColor | undefined;
-  autoDisable: boolean | undefined;
   constructor() {
     this.value = undefined;
     this.fontSize = undefined;
     this.fontColor = undefined;
-    this.autoDisable = undefined;
   }
   isEqual(another: ArkSearchButton): boolean {
     return (this.value === another.value) &&
       (this.fontSize === another.fontSize) &&
-      (this.fontColor === another.fontColor) &&
-      (this.autoDisable === another.autoDisable);
+      (this.fontColor === another.fontColor);
   }
 }
 
@@ -1151,44 +1031,6 @@ class ArkNestedScrollOptions {
   }
 }
 
-class ArkNestedScrollOptionsExt {
-  scrollUp: NestedScrollMode | undefined;
-  scrollDown: NestedScrollMode | undefined;
-  scrollLeft: NestedScrollMode | undefined;
-  scrollRight: NestedScrollMode | undefined;
-  constructor() {
-      this.scrollUp = undefined;
-      this.scrollDown = undefined;
-      this.scrollLeft = undefined;
-      this.scrollRight = undefined;
-  }
-  isEqual(another: ArkNestedScrollOptionsExt): boolean {
-    return (
-      (this.scrollUp === another.scrollUp) &&
-      (this.scrollDown === another.scrollDown) &&
-      (this.scrollLeft === another.scrollLeft) &&
-      (this.scrollRight === another.scrollRight)
-      );
-  }
-}
-
-class ArkWebScriptItem {
-  scripts: Array<string> | undefined;
-  scriptRules: Array<Array<string>> | undefined;
-
-  constructor() {
-    this.scripts = undefined;
-    this.scriptRules = undefined;
-  }
-
-  isEqual(another: ArkWebScriptItem): boolean {
-    return (
-      this.scripts === another.scripts &&
-      this.scriptRules === another.scriptRules
-    );
-  }
-}
-
 class ArkConstraintSizeOptions {
   minWidth?: Length | undefined;
   maxWidth?: Length | undefined;
@@ -1228,19 +1070,6 @@ class ArkTextFieldShowCounter {
   }
 }
 
-class ArkTextFieldMaxLines {
-  value: number | undefined;
-  overflowMode?: MaxLinesMode;
-  constructor() {
-    this.value = undefined;
-    this.overflowMode = undefined;
-  }
-  isEqual(another: ArkTextFieldMaxLines): boolean {
-    return (this.value === another.value) &&
-      (this.overflowMode === another.overflowMode);
-  }
-}
-
 class ArkTextInputFilter {
   value: ResourceStr | undefined;
   error?: (value: string) => void;
@@ -1258,7 +1087,7 @@ class ArkDotIndicator extends DotIndicator {
   leftValue: Length | undefined;
   topValue: Length | undefined;
   rightValue: Length | undefined;
-  bottomValue: Length | LengthMetrics | undefined;
+  bottomValue: Length | undefined;
   itemWidthValue: Length | undefined;
   itemHeightValue: Length | undefined;
   selectedItemWidthValue: Length | undefined;
@@ -1267,9 +1096,6 @@ class ArkDotIndicator extends DotIndicator {
   colorValue: ResourceColor | undefined;
   selectedColorValue: ResourceColor | undefined;
   maxDisplayCountValue: ResourceColor | undefined;
-  spaceValue: LengthMetrics | undefined;
-  ignoreSizeValue: boolean | undefined;
-  setIgnoreSizeValue : boolean;
 
   constructor() {
     super();
@@ -1286,9 +1112,6 @@ class ArkDotIndicator extends DotIndicator {
     this.colorValue = undefined;
     this.selectedColorValue = undefined;
     this.maxDisplayCountValue = undefined;
-    this.spaceValue = undefined;
-    this.ignoreSizeValue = undefined;
-    this.setIgnoreSizeValue = undefined;
   }
 
   isEqual(another: ArkDotIndicator): boolean {
@@ -1305,10 +1128,7 @@ class ArkDotIndicator extends DotIndicator {
       this.maskValue === another.maskValue &&
       this.colorValue === another.colorValue &&
       this.selectedColorValue === another.selectedColorValue &&
-      this.maxDisplayCountValue === another.maxDisplayCountValue &&
-      this.spaceValue === another.spaceValue &&
-      this.ignoreSizeValue === another.ignoreSizeValue &&
-      this.setIgnoreSizeValue === another.setIgnoreSizeValue
+      this.maxDisplayCountValue === another.maxDisplayCountValue
     );
   }
 }
@@ -1318,13 +1138,11 @@ class ArkDigitIndicator extends DigitIndicator {
   leftValue: Length | undefined;
   topValue: Length | undefined;
   rightValue: Length | undefined;
-  bottomValue: Length | LengthMetrics | undefined;
+  bottomValue: Length | undefined;
   fontColorValue: ResourceColor | undefined;
   selectedFontColorValue: ResourceColor | undefined;
   digitFontValue: ArkDigitFont | undefined;
   selectedDigitFontValue: ArkDigitFont | undefined;
-  ignoreSizeValue: boolean | undefined;
-  setIgnoreSizeValue : boolean;
 
   constructor() {
     super();
@@ -1337,8 +1155,6 @@ class ArkDigitIndicator extends DigitIndicator {
     this.selectedFontColorValue = undefined;
     this.digitFontValue = undefined;
     this.selectedDigitFontValue = undefined;
-    this.ignoreSizeValue = undefined;
-    this.setIgnoreSizeValue = undefined;
   }
 
   isEqual(another: ArkDigitIndicator): boolean {
@@ -1349,9 +1165,7 @@ class ArkDigitIndicator extends DigitIndicator {
       this.rightValue === another.rightValue &&
       this.bottomValue === another.bottomValue &&
       this.digitFontValue === another.digitFontValue &&
-      this.selectedDigitFontValue === another.selectedDigitFontValue &&
-      this.ignoreSizeValue === another.ignoreSizeValue &&
-      this.setIgnoreSizeValue === another.setIgnoreSizeValue
+      this.selectedDigitFontValue === another.selectedDigitFontValue
     );
   }
 }
@@ -1431,16 +1245,16 @@ class ArkSwiperCachedCount {
   }
 }
 
-class ArkPlaceholder {
-  value: ResourceStr | undefined;
-  style?: PlaceholderStyle | undefined;
+class ArkGridEdgeEffect {
+  value: EdgeEffect;
+  options?: EdgeEffectOptions | undefined;
   constructor() {
     this.value = undefined;
-    this.style = undefined;
+    this.options = undefined;
   }
-  isEqual(another: ArkPlaceholder): boolean {
+  isEqual(another: ArkGridEdgeEffect): boolean {
     return (this.value === another.value) &&
-      (this.style === another.style);
+      (this.options === another.options);
   }
 }
 
@@ -1527,53 +1341,6 @@ class ArkSymbolEffect {
   }
 }
 
-class ArkBindMenu{
-  content: Array<MenuElement> | CustomBuilder | undefined;
-  options: MenuOptions | undefined;
-
-  constructor() {
-    this.content = undefined;
-    this.options = undefined;
-  }
-
-  isEqual(another: ArkBindMenu): boolean {
-    return (this.content === another.content && this.options === another.options);
-  }
-}
-
-class ArkSearchAutoCapitalization{
-  autoCapitalizationMode: AutoCapitalizationMode;
-  constructor() {
-    this.autoCapitalizationMode = undefined;
-  }
-
-  isEqual(another: ArkSearchAutoCapitalization): boolean {
-    return (this.autoCapitalizationMode === another.autoCapitalizationMode);
-  }
-}
-
-class ArkTextAreaAutoCapitalization{
-  autoCapitalizationMode: AutoCapitalizationMode;
-  constructor() {
-    this.autoCapitalizationMode = undefined;
-  }
-
-  isEqual(another: ArkTextAreaAutoCapitalization): boolean {
-    return (this.autoCapitalizationMode === another.autoCapitalizationMode);
-  }
-}
-
-class ArkTextInputAutoCapitalization{
-  autoCapitalizationMode: AutoCapitalizationMode;
-  constructor() {
-    this.autoCapitalizationMode = undefined;
-  }
-
-  isEqual(another: ArkTextAreaAutoCapitalization): boolean {
-    return (this.autoCapitalizationMode === another.autoCapitalizationMode);
-  }
-}
-
 class ArkTextBackGroundStyle {
   color: ResourceColor;
   radius: Dimension | BorderRadiuses;
@@ -1628,6 +1395,19 @@ class ArkScrollOffsetOptions {
   }
 }
 
+class ArkWaterFlowEdgeEffect {
+  value: EdgeEffect;
+  options?: EdgeEffectOptions | undefined;
+  constructor() {
+    this.value = undefined;
+    this.options = undefined;
+  }
+  isEqual(another: ArkWaterFlowEdgeEffect): boolean {
+    return (this.value === another.value) &&
+      (this.options === another.options);
+  }
+}
+
 class ArkScrollableCacheOptions {
   count: number;
   show: boolean;
@@ -1669,22 +1449,16 @@ class TextDataDetectorConfig {
 
 class ArkDragPreviewOptions {
   mode: DragPreviewMode | Array<DragPreviewMode> | undefined;
-  sizeChangeEffect: DraggingSizeChangeEffect | undefined;
   numberBadge: boolean | number | undefined;
   isMultiSelectionEnabled: boolean | undefined;
   defaultAnimationBeforeLifting: boolean | undefined;
-  enableEdgeAutoScroll: boolean | undefined;
-  enableHapticFeedback: boolean | undefined;
   isLiftingDisabled: boolean | undefined;
 
   constructor() {
     this.mode = undefined;
     this.numberBadge = undefined;
-    this.sizeChangeEffect = undefined;
     this.isMultiSelectionEnabled = undefined;
     this.defaultAnimationBeforeLifting = undefined;
-    this.enableEdgeAutoScroll = undefined;
-    this.enableHapticFeedback = undefined;
     this.isLiftingDisabled = undefined;
   }
 
@@ -1692,11 +1466,8 @@ class ArkDragPreviewOptions {
     return (
       this.mode === another.mode &&
       this.numberBadge === another.numberBadge &&
-      this.sizeChangeEffect === another.sizeChangeEffect &&
       this.isMultiSelectionEnabled === another.isMultiSelectionEnabled &&
       this.defaultAnimationBeforeLifting === another.defaultAnimationBeforeLifting && 
-      this.enableEdgeAutoScroll === another.enableEdgeAutoScroll &&
-      this.enableHapticFeedback === another.enableHapticFeedback &&
       this.isLiftingDisabled === another.isLiftingDisabled
     );
   }
@@ -1720,95 +1491,6 @@ class ArkDragPreview {
       this.onlyForLifting === another.onlyForLifting && 
       this.pixelMap === another.pixelMap &&
       this.extraInfo === another.extraInfo
-    );
-  }
-}
-
-class ArkShadowStyle {
-  shadowStyle: number;
-  constructor() {
-    this.shadowStyle = undefined;
-  }
-}
-
-class ArkOnDrop {
-  event: (event?: DragEvent, extraParams?: string) => void;
-  disableDataPrefetch: boolean | undefined;
-  constructor() {
-    this.event = undefined;
-    this.disableDataPrefetch = false;
-  }
-
-  isEqual(another: ArkOnDrop): boolean {
-    return (
-      this.event === another.event &&
-      this.disableDataPrefetch === another.disableDataPrefetch
-    );
-  }
-}
-
-class ArkDragSpringLoading {
-  callback: (context: ArkSpringLoadingContext) => void;
-  configuration: ArkDragSpringLoadingConfiguration | undefined;
-  constructor() {
-    this.configuration = undefined;
-    this.callback = undefined;
-  }
-
-  isEqual(another: ArkDragSpringLoading): boolean {
-    return (
-      this.callback === another.callback &&
-      this.configuration.isEqual(another.configuration)
-    );
-  }
-}
-
-class ArkSpringLoadingContext {
-  state: DragSpringLoadingState | undefined;
-  currentNotifySequence: number | undefined;
-  dragInfos: SpringLoadingDragInfos | undefined;
-  currentConfig: ArkDragSpringLoadingConfiguration | undefined;
-  abort: () => void;
-  updateConfiguration: (config: ArkDragSpringLoadingConfiguration) => void;
-  constructor() {
-    this.state = undefined;
-    this.currentNotifySequence = undefined;
-    this.dragInfos = undefined;
-    this.currentConfig = undefined;
-    this.abort = undefined;
-    this.updateConfiguration = undefined;
-  }
-
-  isEqual(another: ArkSpringLoadingContext): boolean {
-    return (
-      this.state === another.state &&
-      this.currentNotifySequence === another.currentNotifySequence &&
-      this.dragInfos === another.dragInfos &&
-      this.currentConfig.isEqual(another.currentConfig) &&
-      this.abort === another.abort &&
-      this.updateConfiguration === another.updateConfiguration
-    );
-  }
-}
-
-class ArkDragSpringLoadingConfiguration {
-  stillTimeLimit: number | undefined;
-  updateInterval: number | undefined;
-  updateNotifyCount: number | undefined;
-  updateToFinishInterval: number | undefined;
-  constructor() {
-    this.stillTimeLimit = undefined;
-    this.updateInterval = undefined;
-    this.updateNotifyCount = undefined;
-    this.updateToFinishInterval = undefined;
-  }
-
-  isEqual(another: ArkDragSpringLoadingConfiguration): boolean {
-    return (
-      this.stillTimeLimit === another.stillTimeLimit &&
-      this.updateInterval === another.updateInterval &&
-      this.updateNotifyCount === another.updateNotifyCount &&
-      this.updateToFinishInterval === another.updateToFinishInterval
     );
   }
 }
@@ -1898,19 +1580,6 @@ class ArkTextFont {
   }
 }
 
-class ArkLineSpacing {
-  value: LengthMetrics;
-  onlyBetweenLines: boolean;
-  constructor() {
-    this.value = undefined;
-    this.onlyBetweenLines = undefined;
-  }
-  isEqual(another: ArkLineSpacing): boolean {
-    return this.value === another.value &&
-      this.onlyBetweenLines === another.onlyBetweenLines;
-  }
-}
-
 class ArkFontWeight {
   value: number | FontWeight | string;
   enableVariableFontWeight: boolean;
@@ -1942,20 +1611,6 @@ class ArkNavigationTitle {
   }
 }
 
-class ArkNavigationToolBarConfiguration {
-  value: Array<ToolbarItem> | undefined;
-  options?: NavigationToolbarOptions | undefined;
-
-  constructor() {
-    this.value = undefined;
-    this.options = undefined;
-  }
-  isEqual(another: ArkNavigationToolBarConfiguration): boolean {
-    return (this.value === another.value) && (this.options.backgroundColor === another.options.backgroundColor) &&
-      (this.options.backgroundBlurStyle === another.options.backgroundBlurStyle) &&
-      (this.options.barStyle === another.options.barStyle);
-  }
-}
 class ArkNavHideTitleBarOrToolBar {
   isHide: boolean;
   animated: boolean;
@@ -1966,92 +1621,5 @@ class ArkNavHideTitleBarOrToolBar {
   }
   isEqual(another: ArkNavHideTitleBarOrToolBar): boolean {
     return (this.isHide === another.isHide) && (this.animated === another.animated);
-  }
-}
-
-class ArkEmitterPropertyOptions {
-  index: number | undefined;
-  isSetEmitRate: number;
-  emitRate: number | undefined;
-  isSetPosition: number;
-  positionX: number | undefined;
-  positionY: number | undefined;
-  isSetSize: number;
-  sizeWidth: number | undefined;
-  sizeHeight: number | undefined;
-  isSetAnnulusRegion: number;
-  isSetCenter: number;
-  centerXValue: number | undefined;
-  centerXUnit: number | undefined;
-  centerYValue: number | undefined;
-  centerYUnit: number | undefined;
-  isSetInnerRadius: number;
-  innerRadiusValue: number | undefined;
-  innerRadiusUnit: number | undefined;
-  isSetOuterRadius: number;
-  outerRadiusValue: number | undefined;
-  outerRadiusUnit: number | undefined;
-  isSetStartAngle: number;
-  startAngle: number | undefined;
-  isSetEndAngle: number;
-  endAngle: number | undefined;
-
-  constructor() {
-    this.index = undefined;
-    this.isSetEmitRate = 0;
-    this.emitRate = undefined;
-    this.isSetPosition = 0;
-    this.positionX = undefined;
-    this.positionY = undefined;
-    this.isSetSize = 0;
-    this.sizeWidth = undefined;
-    this.sizeHeight = undefined;
-    this.isSetAnnulusRegion = 0;
-    this.isSetCenter = 0;
-    this.centerXValue = undefined;
-    this.centerXUnit = undefined;
-    this.centerYValue = undefined;
-    this.centerYUnit = undefined;
-    this.isSetInnerRadius = 0;
-    this.innerRadiusValue = undefined;
-    this.innerRadiusUnit = undefined;
-    this.isSetOuterRadius = 0;
-    this.outerRadiusValue = undefined;
-    this.outerRadiusUnit = undefined;
-    this.isSetStartAngle = 0;
-    this.startAngle = undefined;
-    this.isSetEndAngle = 0;
-    this.endAngle = undefined;
-  }
-}
-
-class ArkAutoPlay {
-  autoPlay: boolean;
-  needStopWhenTouched: boolean;
-
-  constructor() {
-    this.autoPlay = undefined;
-    this.needStopWhenTouched = undefined;
-  }
-
-  isEqual(another: ArkAutoPlay): boolean {
-    return this.autoPlay === another.autoPlay && this.needStopWhenTouched === another.needStopWhenTouched;
-  }
-}
-
-class ArkWebScriptItem {
-  scripts: Array<string> | undefined;
-  scriptRules: Array<Array<string>> | undefined;
-
-  constructor() {
-    this.scripts = undefined;
-    this.scriptRules = undefined;
-  }
-
-  isEqual(another: ArkWebScriptItem): boolean {
-    return (
-      this.scripts === another.scripts &&
-      this.scriptRules === another.scriptRules
-    );
   }
 }

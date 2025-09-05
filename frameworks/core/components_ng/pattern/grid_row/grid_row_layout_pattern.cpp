@@ -15,15 +15,18 @@
 
 #include "core/components_ng/pattern/grid_row/grid_row_layout_pattern.h"
 
+#include <optional>
+
+#include "core/components_ng/pattern/pattern.h"
+#include "core/pipeline_ng/pipeline_context.h"
+
 namespace OHOS::Ace::NG {
 namespace {} // namespace
 
 void GridRowLayoutPattern::OnAttachToFrameNode()
 {
     Pattern::OnAttachToFrameNode();
-    auto host = GetHost();
-    CHECK_NULL_VOID(host);
-    auto pipeline = host->GetContext();
+    auto pipeline = PipelineContext::GetCurrentContext();
     CHECK_NULL_VOID(pipeline);
     if (pipeline && !callbackId_.has_value()) {
         callbackId_ = pipeline->RegisterSurfaceChangedCallback(
@@ -39,8 +42,7 @@ void GridRowLayoutPattern::OnAttachToFrameNode()
 
 void GridRowLayoutPattern::OnDetachFromFrameNode(FrameNode* node)
 {
-    CHECK_NULL_VOID(node);
-    auto pipeline = node->GetContext();
+    auto pipeline = PipelineContext::GetCurrentContext();
     CHECK_NULL_VOID(pipeline);
     if (callbackId_.has_value()) {
         pipeline->UnregisterSurfaceChangedCallback(callbackId_.value_or(-1));

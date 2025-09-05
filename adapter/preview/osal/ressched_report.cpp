@@ -20,24 +20,4 @@ ReportDataFunc LoadReportDataFunc()
 {
     return nullptr;
 }
-
-ReportSyncEventFunc LoadReportSyncEventFunc()
-{
-    return nullptr;
-}
-
-int64_t ResSchedReport::GetTid()
-{
-    return 0;
-}
-
-int64_t ResSchedReport::GetPid()
-{
-    return 0;
-}
-
-pthread_t ResSchedReport::GetPthreadSelf()
-{
-    return 0;
-}
 } // namespace OHOS::Ace

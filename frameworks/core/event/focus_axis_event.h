@@ -160,7 +160,6 @@ public:
         deviceType_ = event.sourceType;
         deviceId_ = event.deviceId;
         pressedKeyCodes_ = event.pressedCodes;
-        targetDisplayId_ = event.targetDisplayId;
     };
     ~FocusAxisEventInfo() override = default;
 

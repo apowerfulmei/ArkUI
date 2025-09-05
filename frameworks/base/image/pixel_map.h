@@ -20,16 +20,15 @@
 #include <fstream>
 #include <string>
 #include <vector>
-#include <memory>
 
 #include "base/geometry/dimension.h"
-#include "base/geometry/rect.h"
-#include "base/geometry/ng/size_t.h"
 #include "base/memory/ace_type.h"
-#include "core/common/resource/resource_object.h"
 
 namespace OHOS {
 
+namespace Ace {
+class Rect;
+}
 namespace Media {
 class PixelMap;
 }
@@ -60,15 +59,6 @@ enum class AlphaType : int32_t {
     IMAGE_ALPHA_TYPE_UNPREMUL = 3, // image have alpha component, and all pixels stored without premultiply alpha value.
 };
 
-enum class AllocatorType : int32_t {
-    // keep same with java AllocatorType
-    DEFAULT = 0,
-    HEAP_ALLOC = 1,
-    SHARE_MEM_ALLOC = 2,
-    CUSTOM_ALLOC = 3,  // external
-    DMA_ALLOC = 4, // SurfaceBuffer
-};
-
 enum class ResizableOption {
     LEFT,
     RIGHT,
@@ -81,11 +71,6 @@ struct ImageResizableSlice {
     Dimension right;
     Dimension top;
     Dimension bottom;
-    struct ResourceUpdater {
-        RefPtr<ResourceObject> obj;
-        std::function<void(const RefPtr<ResourceObject>&, ImageResizableSlice&)> updateFunc;
-    };
-    std::unordered_map<std::string, ResourceUpdater> resMap_;
     std::string ToString() const
     {
         std::string result;
@@ -144,31 +129,6 @@ struct ImageResizableSlice {
                 break;
         }
     }
-
-    void AddResource(
-        const std::string& key,
-        const RefPtr<ResourceObject>& resObj,
-        std::function<void(const RefPtr<ResourceObject>&, ImageResizableSlice&)>&& updateFunc)
-    {
-        if (resObj && updateFunc) {
-            resMap_[key] = { resObj, std::move(updateFunc) };
-        }
-    }
-
-    void RemoveResource(const std::string& key)
-    {
-        auto iter = resMap_.find(key);
-        if (iter != resMap_.end()) {
-            resMap_.erase(iter);
-        }
-    }
-
-    void ReloadResources()
-    {
-        for (const auto& [key, resourceUpdater] : resMap_) {
-            resourceUpdater.updateFunc(resourceUpdater.obj, *this);
-        }
-    }
 };
 
 enum class AceAntiAliasingOption : int32_t {
@@ -178,50 +138,15 @@ enum class AceAntiAliasingOption : int32_t {
     HIGH = 3,
 };
 
-enum class ScaleMode : int32_t {
-    FIT_TARGET_SIZE = 0,
-    CENTER_CROP = 1,
-};
-
-struct InitializationOptions {
-    NG::SizeT<int32_t> size;
-    PixelFormat srcPixelFormat = PixelFormat::BGRA_8888;
-    PixelFormat pixelFormat = PixelFormat::UNKNOWN;
-    AlphaType alphaType = AlphaType::IMAGE_ALPHA_TYPE_UNKNOWN;
-    ScaleMode scaleMode = ScaleMode::FIT_TARGET_SIZE;
-    int32_t srcRowStride = 0;
-    bool editable = false;
-    bool useSourceIfMatch = false;
-    bool useDMA = false;
-};
-
-struct WritePixelsOptions {
-    const uint8_t* source = nullptr;
-    uint64_t bufferSize = 0;
-    uint32_t offset = 0;
-    uint32_t stride = 0;
-    Rect region;
-    PixelFormat srcPixelFormat = PixelFormat::BGRA_8888;
-};
-
 class ACE_FORCE_EXPORT PixelMap : public AceType {
-    DECLARE_ACE_TYPE(PixelMap, AceType);
+    DECLARE_ACE_TYPE(PixelMap, AceType)
 
 public:
-#if defined(ACE_STATIC)
-    /**
-     * @description: only for 1.2
-     * @param opts initialize options
-     * @return refptr pixelmap
-     */
-    static RefPtr<PixelMap> Create(const std::shared_ptr<Media::PixelMap>& pixmap);
-#endif
     static RefPtr<PixelMap> Create(std::unique_ptr<Media::PixelMap>&& pixmap);
-    static RefPtr<PixelMap> Create(const InitializationOptions& opts);
     static RefPtr<PixelMap> CreatePixelMap(void* sptrAddr);
     static RefPtr<PixelMap> CopyPixelMap(const RefPtr<PixelMap>& pixelMap);
     static RefPtr<PixelMap> DecodeTlv(std::vector<uint8_t>& buff);
-
+    
     /**
      * @param ptr: drawable pointer of type Napi::DrawableDescriptor&
      */
@@ -240,8 +165,6 @@ public:
     virtual int32_t GetRowStride() const = 0;
     virtual int32_t GetRowBytes() const = 0;
     virtual int32_t GetByteCount() const = 0;
-    virtual AllocatorType GetAllocatorType() const = 0;
-    virtual bool IsHdr() const = 0;
     virtual void* GetPixelManager() const = 0;
     virtual void* GetRawPixelMapPtr() const = 0;
     virtual std::string GetId() = 0;
@@ -257,9 +180,6 @@ public:
     virtual void SavePixelMapToFile(const std::string& dst) const = 0;
     virtual RefPtr<PixelMap> GetCropPixelMap(const Rect& srcRect) = 0;
     virtual bool EncodeTlv(std::vector<uint8_t>& buff) = 0;
-    virtual uint32_t WritePixels(const WritePixelsOptions& opts) = 0;
-    virtual uint32_t GetInnerColorGamut() const = 0;
-    virtual void SetMemoryName(std::string pixelMapName) const = 0;
 };
 
 } // namespace Ace

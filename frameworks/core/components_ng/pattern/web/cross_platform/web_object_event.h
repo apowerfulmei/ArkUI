@@ -26,7 +26,6 @@
 #include "base/utils/macros.h"
 #include "base/utils/noncopyable.h"
 #include "base/utils/singleton.h"
-#include "core/components/web/web_event.h"
 
 namespace OHOS::Ace {
 class WebResourceRequestObject : public Referenced {
@@ -126,27 +125,6 @@ public:
     virtual std::string GetUserAgent(void* object) = 0;
 };
 
-class WebRefreshAccessedHistoryObject : public Referenced {
-public:
-    virtual std::string GetUrl(void* object) = 0;
-    virtual bool GetIsRefreshed(void* object) = 0;
-};
-
-class WebFullScreenEnterObject : public Referenced {
-public:
-    virtual int GetWidths(void* object) = 0;
-    virtual int GetHeights(void* object) = 0;
-    virtual void ExitFullScreen(void* object, int index) {};
-    virtual int AddObject(void* object)
-    {
-        return 0;
-    };
-    virtual void DelObject(int index) {};
-};
-
-class WebFullScreenExitObject : public Referenced {
-};
-
 class WebFileChooserObject : public Referenced {
 public:
     virtual std::string GetTitle(void* object) = 0;
@@ -183,7 +161,6 @@ class WebObjectEventManager : public Singleton<WebObjectEventManager> {
 public:
     using EventObJectCallback = std::function<void(const std::string&, void *object)>;
     using EventObjectWithBoolReturnCallback = std::function<bool(const std::string&, void *object)>;
-    using EventObjectWithResponseReturnCallback = std::function<RefPtr<WebResponse>(const std::string&, void *object)>;
 
     void RegisterObjectEvent(const std::string& eventId, const EventObJectCallback&& eventCallback)
     {
@@ -197,12 +174,6 @@ public:
         eventObjectWithBoolReturnMap_[eventId] = std::move(eventCallback);
     }
 
-    void RegisterObjectEventWithResponseReturn(
-        const std::string& eventId, const EventObjectWithResponseReturnCallback&& eventCallback)
-    {
-        eventObjectWithResponseReturnMap_[eventId] = std::move(eventCallback);
-    }
-
     void UnRegisterObjectEvent(const std::string& eventId)
     {
         eventObjectMap_.erase(eventId);
@@ -211,11 +182,6 @@ public:
     void UnRegisterObjectEventWithBoolReturn(const std::string& eventId)
     {
         eventObjectWithBoolReturnMap_.erase(eventId);
-    }
-
-    void UnRegisterObjectEventWithResponseReturn(const std::string& eventId)
-    {
-        eventObjectWithResponseReturnMap_.erase(eventId);
     }
 
     void OnObjectEvent(const std::string& eventId, const std::string& param, void *jObject)
@@ -238,24 +204,6 @@ public:
             LOGW("failed to find object eventIdWithBoolReturn = %{public}s", eventId.c_str());
         }
         return false;
-    }
-
-    RefPtr<WebResponse> OnObjectEventWithResponseReturn(
-        const std::string& eventId, const std::string& param, void* jObject)
-    {
-        auto event = eventObjectWithResponseReturnMap_.find(eventId);
-        if (event != eventObjectWithResponseReturnMap_.end() && event->second) {
-            return event->second(param, jObject);
-        } else {
-            LOGW("failed to find object eventIdWithResponseReturn = %{public}s", eventId.c_str());
-        }
-        return nullptr;
-    }
-
-    bool IsRegisteredObjectEvent(const std::string& eventId)
-    {
-        auto event = eventObjectWithResponseReturnMap_.find(eventId);
-        return event != eventObjectWithResponseReturnMap_.end() && event->second;
     }
 
     const RefPtr<WebResourceRequestObject>& GetResourceRequestObject()
@@ -301,36 +249,6 @@ public:
     const RefPtr<WebResourceResponseObject>& GetResourceResponseObject()
     {
         return resourceResponseObject_;
-    }
-	
-    const RefPtr<WebRefreshAccessedHistoryObject>& GetRefreshAccessedHistoryObject()
-    {
-        return refreshAccessedHistoryObject_;
-    }
-
-    void SetRefreshAccessedHistoryObject(const RefPtr<WebRefreshAccessedHistoryObject>& object)
-    {
-        refreshAccessedHistoryObject_ = object;
-    }
-
-    const RefPtr<WebFullScreenEnterObject>& GetFullScreenEnterObject()
-    {
-        return fullScreenEnterObject_;
-    }
-
-    void SetFullScreenEnterObject(const RefPtr<WebFullScreenEnterObject>& object)
-    {
-        fullScreenEnterObject_ = object;
-    }
-
-    const RefPtr<WebFullScreenExitObject>& GetFullScreenExitObject()
-    {
-        return fullScreenExitObject_;
-    }
-
-    void SetFullScreenExitObject(const RefPtr<WebFullScreenExitObject>& object)
-    {
-        fullScreenExitObject_ = object;
     }
 
     void SetResourceResponseObject(const RefPtr<WebResourceResponseObject>& object)
@@ -422,11 +340,7 @@ private:
     RefPtr<WebFileChooserObject> fileChooserObject_;
     RefPtr<WebGeolocationObject> GeolocationObject_;
     std::unordered_map<std::string, EventObJectCallback> eventObjectMap_;
-    RefPtr<WebRefreshAccessedHistoryObject> refreshAccessedHistoryObject_;
-    RefPtr<WebFullScreenEnterObject> fullScreenEnterObject_;
-    RefPtr<WebFullScreenExitObject> fullScreenExitObject_;
     std::unordered_map<std::string, EventObjectWithBoolReturnCallback> eventObjectWithBoolReturnMap_;
-    std::unordered_map<std::string, EventObjectWithResponseReturnCallback> eventObjectWithResponseReturnMap_;
 };
 inline WebObjectEventManager::WebObjectEventManager() = default;
 inline WebObjectEventManager::~WebObjectEventManager() = default;

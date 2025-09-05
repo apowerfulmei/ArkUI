@@ -15,6 +15,9 @@
 
 #include "core/components_v2/grid_layout/grid_row_component.h"
 
+#include "core/components_v2/grid_layout/grid_row_element.h"
+#include "core/components_v2/grid_layout/render_grid_row.h"
+
 namespace OHOS::Ace::V2 {
 RefPtr<RenderNode> GridRowComponent::CreateRenderNode()
 {

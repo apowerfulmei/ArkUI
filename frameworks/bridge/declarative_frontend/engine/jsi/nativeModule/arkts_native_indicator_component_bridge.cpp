@@ -48,19 +48,6 @@ constexpr int32_t DOT_INDICATOR_TOP = 10;
 constexpr int32_t DOT_INDICATOR_RIGHT = 11;
 constexpr int32_t DOT_INDICATOR_BOTTOM = 12;
 constexpr int32_t DOT_INDICATOR_MAX_DISPLAY_COUNT = 13;
-constexpr int32_t DOT_INDICATOR_SPACE = 14;
-constexpr int32_t DEFAULT_INDICATOR_COUNT = 2;
-constexpr int32_t DOT_INDICATOR_RESOURCE_ITEM_WIDTH = 0;
-constexpr int32_t DOT_INDICATOR_RESOURCE_ITEM_HEIGHT = 1;
-constexpr int32_t DOT_INDICATOR_RESOURCE_SELECTED_ITEM_WIDTH = 2;
-constexpr int32_t DOT_INDICATOR_RESOURCE_SELECTED_ITEM_HEIGHT = 3;
-constexpr int32_t DOT_INDICATOR_RESOURCE_COLOR = 4;
-constexpr int32_t DOT_INDICATOR_RESOURCE_SELECTED_COLOR = 5;
-constexpr int32_t INDICATOR_RESOURCE_VECTOR_LENGTH = 6;
-constexpr int32_t DIGIT_INDICATOR_RESOURCE_FONT_COLOR = 0;
-constexpr int32_t DIGIT_INDICATOR_RESOURCE_FONT_SELECTED_COLOR = 1;
-constexpr int32_t DIGIT_INDICATOR_RESOURCE_FONT_SIZE = 2;
-constexpr int32_t DIGIT_INDICATOR_RESOURCE_SELECTED_FONT_SIZE = 3;
 constexpr double DEFAULT_PERCENT_VALUE = 100.0;
 
 std::string GetDimensionUnitString(DimensionUnit unit)
@@ -105,21 +92,7 @@ std::string GetIntStringByValueRef(const EcmaVM* vm, const Local<JSValueRef>& js
     return result;
 }
 
-std::string ParseSpace(const EcmaVM* vm, const Local<JSValueRef>& jsValue)
-{
-    std::string result = "-";
-    if (jsValue->IsUndefined()) {
-        return result;
-    }
-    CalcDimension calc;
-    bool parseOK =  ArkTSUtils::ParseJsLengthMetrics(vm, jsValue, calc);
-    calc = (parseOK && !(calc < 0.0_vp) && calc.Unit() != DimensionUnit::PERCENT) ?
-        calc : 8.0_vp;
-    return calc.ToString();
-}
-
-std::string GetDotIndicator(ArkUIRuntimeCallInfo* runtimeCallInfo, EcmaVM* vm,
-    std::vector<RefPtr<ResourceObject>>& resObjs, const NodeInfo& nodeInfo)
+std::string GetDotIndicator(ArkUIRuntimeCallInfo* runtimeCallInfo, EcmaVM* vm)
 {
     Local<JSValueRef> itemWidthArg = runtimeCallInfo->GetCallArgRef(DOT_INDICATOR_ITEM_WIDTH);
     Local<JSValueRef> itemHeightArg = runtimeCallInfo->GetCallArgRef(DOT_INDICATOR_ITEM_HEIGHT);
@@ -132,45 +105,43 @@ std::string GetDotIndicator(ArkUIRuntimeCallInfo* runtimeCallInfo, EcmaVM* vm,
     Local<JSValueRef> topArg = runtimeCallInfo->GetCallArgRef(DOT_INDICATOR_TOP);
     Local<JSValueRef> rightArg = runtimeCallInfo->GetCallArgRef(DOT_INDICATOR_RIGHT);
     Local<JSValueRef> bottomArg = runtimeCallInfo->GetCallArgRef(DOT_INDICATOR_BOTTOM);
-    Local<JSValueRef> spaceArg = runtimeCallInfo->GetCallArgRef(DOT_INDICATOR_SPACE);
     CalcDimension calc;
 
-    std::string itemWidth = ArkTSUtils::ParseJsDimension(vm, itemWidthArg, calc, DimensionUnit::VP,
-        resObjs.at(DOT_INDICATOR_RESOURCE_ITEM_WIDTH), false)
-        ? std::to_string(calc.Value()) + GetDimensionUnitString(calc.Unit()) : "-";
-    std::string itemHeight = ArkTSUtils::ParseJsDimension(vm, itemHeightArg, calc, DimensionUnit::VP,
-        resObjs.at(DOT_INDICATOR_RESOURCE_ITEM_HEIGHT), false)
-        ? std::to_string(calc.Value()) + GetDimensionUnitString(calc.Unit()) : "-";
-    std::string selectedItemWidth = ArkTSUtils::ParseJsDimension(vm, selectedItemWidthArg, calc, DimensionUnit::VP,
-        resObjs.at(DOT_INDICATOR_RESOURCE_SELECTED_ITEM_WIDTH), false)
-        ? std::to_string(calc.Value()) + GetDimensionUnitString(calc.Unit()) : "-";
-    std::string selectedItemHeight = ArkTSUtils::ParseJsDimension(vm, selectedItemHeightArg, calc, DimensionUnit::VP,
-        resObjs.at(DOT_INDICATOR_RESOURCE_SELECTED_ITEM_HEIGHT), false)
-        ? std::to_string(calc.Value()) + GetDimensionUnitString(calc.Unit()) : "-";
+    std::string itemWidth = ArkTSUtils::ParseJsDimension(vm, itemWidthArg, calc, DimensionUnit::VP, false)
+                                ? std::to_string(calc.Value()) + GetDimensionUnitString(calc.Unit())
+                                : "-";
+    std::string itemHeight = ArkTSUtils::ParseJsDimension(vm, itemHeightArg, calc, DimensionUnit::VP, false)
+                                 ? std::to_string(calc.Value()) + GetDimensionUnitString(calc.Unit())
+                                 : "-";
+    std::string selectedItemWidth =
+        ArkTSUtils::ParseJsDimension(vm, selectedItemWidthArg, calc, DimensionUnit::VP, false)
+            ? std::to_string(calc.Value()) + GetDimensionUnitString(calc.Unit())
+            : "-";
+    std::string selectedItemHeight =
+        ArkTSUtils::ParseJsDimension(vm, selectedItemHeightArg, calc, DimensionUnit::VP, false)
+            ? std::to_string(calc.Value()) + GetDimensionUnitString(calc.Unit())
+            : "-";
     std::string mask = "2";
     if (!maskArg->IsUndefined()) {
         mask = maskArg->ToBoolean(vm)->Value() ? "1" : "0";
     }
     Color color;
-    std::string colorStr = ArkTSUtils::ParseJsColorAlpha(vm, colorArg, color,
-        resObjs.at(DOT_INDICATOR_RESOURCE_COLOR), nodeInfo) ? std::to_string(color.GetValue()) : "-";
-    std::string selectedColor = ArkTSUtils::ParseJsColorAlpha(vm, selectedColorArg, color,
-        resObjs.at(DOT_INDICATOR_RESOURCE_SELECTED_COLOR), nodeInfo) ? std::to_string(color.GetValue()) : "-";
+    std::string colorStr = ArkTSUtils::ParseJsColorAlpha(vm, colorArg, color) ? std::to_string(color.GetValue()) : "-";
+    std::string selectedColor =
+        ArkTSUtils::ParseJsColorAlpha(vm, selectedColorArg, color) ? std::to_string(color.GetValue()) : "-";
     std::string left = GetStringByValueRef(vm, leftArg);
     std::string top = GetStringByValueRef(vm, topArg);
     std::string right = GetStringByValueRef(vm, rightArg);
     std::string bottom = GetStringByValueRef(vm, bottomArg);
-    std::string space = ParseSpace(vm, spaceArg);
     Local<JSValueRef> maxDisplayCountArg = runtimeCallInfo->GetCallArgRef(DOT_INDICATOR_MAX_DISPLAY_COUNT);
     auto maxDisplayCount = GetIntStringByValueRef(vm, maxDisplayCountArg);
     std::string indicatorStr = itemWidth + "|" + itemHeight + "|" + selectedItemWidth + "|" + selectedItemHeight + "|" +
                                mask + "|" + colorStr + "|" + selectedColor + "|" + left + "|" + top + "|" + right +
-                               "|" + bottom + "|" + maxDisplayCount + "|" + space;
+                               "|" + bottom + "|" + maxDisplayCount;
     return indicatorStr;
 }
 
-std::string GetDigitIndicator(ArkUIRuntimeCallInfo* runtimeCallInfo, EcmaVM* vm,
-    std::vector<RefPtr<ResourceObject>>& resObjs, const NodeInfo& nodeInfo)
+std::string GetDigitIndicator(ArkUIRuntimeCallInfo* runtimeCallInfo, EcmaVM* vm)
 {
     Local<JSValueRef> fontColorArg = runtimeCallInfo->GetCallArgRef(DIGIT_INDICATOR_FONT_COLOR);
     Local<JSValueRef> selectedFontColorArg = runtimeCallInfo->GetCallArgRef(DIGIT_INDICATOR_SELECTED_FONT_COLOR);
@@ -186,18 +157,18 @@ std::string GetDigitIndicator(ArkUIRuntimeCallInfo* runtimeCallInfo, EcmaVM* vm,
     Local<JSValueRef> bottomArg = runtimeCallInfo->GetCallArgRef(DIGIT_INDICATOR_BOTTOM);
     Color color;
     CalcDimension calc;
-    std::string fontColor = ArkTSUtils::ParseJsColorAlpha(vm, fontColorArg, color,
-        resObjs.at(DIGIT_INDICATOR_RESOURCE_FONT_COLOR), nodeInfo) ? std::to_string(color.GetValue()) : "-";
-    std::string selectedFontColor = ArkTSUtils::ParseJsColorAlpha(vm, selectedFontColorArg, color,
-        resObjs.at(DIGIT_INDICATOR_RESOURCE_FONT_SELECTED_COLOR), nodeInfo) ? std::to_string(color.GetValue()) : "-";
-    std::string digitFontSize = ArkTSUtils::ParseJsDimension(vm, digitFontSizeArg, calc, DimensionUnit::FP,
-        resObjs.at(DIGIT_INDICATOR_RESOURCE_FONT_SIZE), false)
-        ? std::to_string(calc.Value()) + GetDimensionUnitString(calc.Unit()) : "-";
+    std::string fontColor =
+        ArkTSUtils::ParseJsColorAlpha(vm, fontColorArg, color) ? std::to_string(color.GetValue()) : "-";
+    std::string selectedFontColor =
+        ArkTSUtils::ParseJsColorAlpha(vm, selectedFontColorArg, color) ? std::to_string(color.GetValue()) : "-";
+    std::string digitFontSize = ArkTSUtils::ParseJsDimension(vm, digitFontSizeArg, calc, DimensionUnit::FP, false)
+                                    ? std::to_string(calc.Value()) + GetDimensionUnitString(calc.Unit())
+                                    : "-";
     std::string digitFontWeight = digitFontWeightArg->ToString(vm)->ToString(vm);
-    std::string selectedDigitFontSize = ArkTSUtils::ParseJsDimension(vm, selectedDigitFontSizeArg, calc,
-        DimensionUnit::FP, resObjs.at(DIGIT_INDICATOR_RESOURCE_SELECTED_FONT_SIZE), false)
-        ? std::to_string(calc.Value()) + GetDimensionUnitString(calc.Unit()) : "-";
-
+    std::string selectedDigitFontSize =
+        ArkTSUtils::ParseJsDimension(vm, selectedDigitFontSizeArg, calc, DimensionUnit::FP, false)
+            ? std::to_string(calc.Value()) + GetDimensionUnitString(calc.Unit())
+            : "-";
     std::string selectedDigitFontWeight = selectedDigitFontWeightArg->ToString(vm)->ToString(vm);
     std::string left = GetStringByValueRef(vm, leftArg);
     std::string top = GetStringByValueRef(vm, topArg);
@@ -244,7 +215,7 @@ ArkUINativeModuleValue IndicatorComponentBridge::SetCount(ArkUIRuntimeCallInfo* 
     auto nativeNode = nodePtr(nodeArg->ToNativePointer(vm)->Value());
     Local<JSValueRef> valueArg = runtimeCallInfo->GetCallArgRef(CALL_ARG_VALUE_INDEX);
     if (valueArg->IsNumber()) {
-        int32_t count = std::max(DEFAULT_INDICATOR_COUNT, valueArg->Int32Value(vm));
+        int32_t count = valueArg->Int32Value(vm);
         GetArkUINodeModifiers()->getIndicatorComponentModifier()->setCount(nativeNode, count);
     } else {
         GetArkUINodeModifiers()->getIndicatorComponentModifier()->resetCount(nativeNode);
@@ -312,18 +283,15 @@ ArkUINativeModuleValue IndicatorComponentBridge::SetStyle(ArkUIRuntimeCallInfo* 
     Local<JSValueRef> nodeArg = runtimeCallInfo->GetCallArgRef(CALL_ARG_NODE_INDEX);
     auto nativeNode = nodePtr(nodeArg->ToNativePointer(vm)->Value());
     Local<JSValueRef> valueArg = runtimeCallInfo->GetCallArgRef(CALL_ARG_VALUE_INDEX);
-    std::vector<RefPtr<ResourceObject>> resObjs;
+
     std::string type = valueArg->ToString(vm)->ToString(vm);
-    resObjs.resize(INDICATOR_RESOURCE_VECTOR_LENGTH);
     std::string indicatorStr = "";
-    auto nodeInfo = ArkTSUtils::MakeNativeNodeInfo(nativeNode);
     if (type == "ArkDigitIndicator") {
-        indicatorStr = type + "|" + GetDigitIndicator(runtimeCallInfo, vm, resObjs, nodeInfo);
+        indicatorStr = type + "|" + GetDigitIndicator(runtimeCallInfo, vm);
     } else {
-        indicatorStr = type + "|" + GetDotIndicator(runtimeCallInfo, vm, resObjs, nodeInfo);
+        indicatorStr = type + "|" + GetDotIndicator(runtimeCallInfo, vm);
     }
-    GetArkUINodeModifiers()->getIndicatorComponentModifier()->setStyle(nativeNode, indicatorStr.c_str(),
-        static_cast<void*>(&resObjs));
+    GetArkUINodeModifiers()->getIndicatorComponentModifier()->setStyle(nativeNode, indicatorStr.c_str());
     return panda::JSValueRef::Undefined(vm);
 }
 

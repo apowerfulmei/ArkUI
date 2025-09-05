@@ -17,6 +17,14 @@
 
 namespace OHOS::Ace {
 
+#ifndef USE_ROSEN_DRAWING
+void RosenRenderSvgFeColorMatrix::OnAsImageFilter(sk_sp<SkImageFilter>& imageFilter) const
+{
+    auto colorFilter = SkColorFilters::Matrix(matrix_);
+
+    imageFilter = SkImageFilters::ColorFilter(colorFilter, imageFilter);
+}
+#else
 void RosenRenderSvgFeColorMatrix::OnAsImageFilter(std::shared_ptr<RSImageFilter>& imageFilter) const
 {
     RSColorMatrix colorMatrix;
@@ -26,5 +34,6 @@ void RosenRenderSvgFeColorMatrix::OnAsImageFilter(std::shared_ptr<RSImageFilter>
         imageFilter = RSRecordingImageFilter::CreateColorFilterImageFilter(*colorFilter, imageFilter);
     }
 }
+#endif
 
 } // namespace OHOS::Ace

@@ -206,6 +206,7 @@ public:
         } else {
             key = keyGenFunc_(params[paramType::Data], index);
         }
+
         auto expiringIter = expiringItems.find(key);
         if (expiringIter != expiringItems.end()) {
             info.first = key;

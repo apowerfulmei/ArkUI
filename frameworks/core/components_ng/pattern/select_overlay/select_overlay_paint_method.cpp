@@ -15,8 +15,13 @@
 
 #include "core/components_ng/pattern/select_overlay/select_overlay_paint_method.h"
 
+#include "base/geometry/ng/offset_t.h"
+#include "base/utils/utils.h"
 #include "core/components/text_overlay/text_overlay_theme.h"
 #include "core/components_ng/pattern/select_overlay/select_overlay_layout_algorithm.h"
+#include "core/components_ng/pattern/select_overlay/select_overlay_property.h"
+#include "core/components_ng/render/drawing.h"
+#include "core/pipeline_ng/pipeline_context.h"
 
 namespace OHOS::Ace::NG {
 constexpr float AGING_MIN_SCALE = 1.75f;
@@ -24,7 +29,7 @@ constexpr float HALF = 2.0f;
 void SelectOverlayPaintMethod::UpdateOverlayModifier(PaintWrapper* paintWrapper)
 {
     CHECK_NULL_VOID(paintWrapper);
-    auto pipeline = PipelineContext::GetCurrentContextSafelyWithCheck();
+    auto pipeline = PipelineContext::GetCurrentContextSafely();
     CHECK_NULL_VOID(pipeline);
     auto textOverlayTheme = pipeline->GetTheme<TextOverlayTheme>();
     CHECK_NULL_VOID(textOverlayTheme);
@@ -54,13 +59,10 @@ void SelectOverlayPaintMethod::UpdateOverlayModifier(PaintWrapper* paintWrapper)
 void SelectOverlayPaintMethod::UpdateContentModifier(PaintWrapper* paintWrapper)
 {
     CHECK_NULL_VOID(paintWrapper);
-    auto pipeline = PipelineContext::GetCurrentContextSafelyWithCheck();
+    auto pipeline = PipelineContext::GetCurrentContextSafely();
     CHECK_NULL_VOID(pipeline);
     auto textOverlayTheme = pipeline->GetTheme<TextOverlayTheme>();
     CHECK_NULL_VOID(textOverlayTheme);
-    if (!IsModeSwitchComplete()) {
-        return;
-    }
 
     auto offset = paintWrapper->GetGeometryNode()->GetFrameOffset();
     auto viewPort = paintWrapper->GetGeometryNode()->GetFrameRect() - offset;
@@ -83,8 +85,8 @@ void SelectOverlayPaintMethod::UpdateContentModifier(PaintWrapper* paintWrapper)
     selectOverlayContentModifier_->SetInShowArea(SelectOverlayLayoutAlgorithm::CheckInShowArea(info_));
     selectOverlayContentModifier_->SetHandleReverse(info_.handleReverse);
     selectOverlayContentModifier_->SetIsSingleHandle(info_.isSingleHandle);
-    selectOverlayContentModifier_->SetFirstHandleIsShow(info_.firstHandle.isShow || info_.firstHandle.forceDraw);
-    selectOverlayContentModifier_->SetSecondHandleIsShow(info_.secondHandle.isShow || info_.firstHandle.forceDraw);
+    selectOverlayContentModifier_->SetFirstHandleIsShow(info_.firstHandle.isShow);
+    selectOverlayContentModifier_->SetSecondHandleIsShow(info_.secondHandle.isShow);
     selectOverlayContentModifier_->SetIsHandleLineShow(info_.isHandleLineShow);
     selectOverlayContentModifier_->SetIsHiddenHandle(isHiddenHandle_);
 
@@ -115,15 +117,12 @@ void SelectOverlayPaintMethod::CheckCirclesAndBackArrowIsShown()
                 AnimationOption option;
                 option.SetDuration(MENU_SHOW_ANIMATION_DURATION);
                 option.SetCurve(Curves::SHARP);
-                auto pattern = pattern_.Upgrade();
-                auto host = pattern ? pattern->GetHost() : nullptr;
-                auto contextPtr = host ? host->GetContextRefPtr() : nullptr;
 
                 AnimationUtils::Animate(option, [weak = WeakClaim(this)]() {
                     auto paintMethod = weak.Upgrade();
                     CHECK_NULL_VOID(paintMethod);
                     paintMethod->selectOverlayModifier_->SetCirclesAndBackArrowOpacity(1.0);
-                }, nullptr, nullptr, contextPtr);
+                });
             } else {
                 selectOverlayModifier_->SetCirclesAndBackArrowOpacity(1.0);
             }
@@ -136,9 +135,6 @@ void SelectOverlayPaintMethod::CheckCirclesAndBackArrowIsShown()
 void SelectOverlayPaintMethod::CheckHasExtensionMenu()
 {
     if (selectOverlayModifier_->GetHasExtensionMenu() != hasExtensionMenu_) {
-        auto pattern = pattern_.Upgrade();
-        auto host = pattern ? pattern->GetHost() : nullptr;
-        auto contextPtr = host ? host->GetContextRefPtr() : nullptr;
         if (hasExtensionMenu_) {
             AnimationOption option;
             option.SetDuration(MENU_SHOW_ANIMATION_DURATION);
@@ -148,7 +144,7 @@ void SelectOverlayPaintMethod::CheckHasExtensionMenu()
                 auto paintMethod = weak.Upgrade();
                 CHECK_NULL_VOID(paintMethod);
                 paintMethod->selectOverlayModifier_->SetCirclesAndBackArrowOpacity(1.0);
-            }, nullptr, nullptr, contextPtr);
+            });
         } else {
             AnimationOption option;
             option.SetDuration(MENU_HIDE_ANIMATION_DURATION);
@@ -158,7 +154,7 @@ void SelectOverlayPaintMethod::CheckHasExtensionMenu()
                 auto paintMethod = weak.Upgrade();
                 CHECK_NULL_VOID(paintMethod);
                 paintMethod->selectOverlayModifier_->SetCirclesAndBackArrowOpacity(0.0);
-            }, nullptr, nullptr, contextPtr);
+            });
         }
         selectOverlayModifier_->SetHasExtensionMenu(hasExtensionMenu_);
     }
@@ -175,15 +171,12 @@ void SelectOverlayPaintMethod::CheckHandleIsShown()
             AnimationOption option;
             option.SetDuration(HANDLE_ANIMATION_DURATION);
             option.SetCurve(Curves::SHARP);
-            auto pattern = pattern_.Upgrade();
-            auto host = pattern ? pattern->GetHost() : nullptr;
-            auto contextPtr = host ? host->GetContextRefPtr() : nullptr;
 
             AnimationUtils::Animate(option, [weak = WeakClaim(this)]() {
                 auto paintMethod = weak.Upgrade();
                 CHECK_NULL_VOID(paintMethod);
                 paintMethod->selectOverlayContentModifier_->SetHandleOpacity(1.0);
-            }, nullptr, nullptr, contextPtr);
+            });
         } else {
             selectOverlayContentModifier_->SetHandleOpacity(1.0);
         }
@@ -191,20 +184,4 @@ void SelectOverlayPaintMethod::CheckHandleIsShown()
     }
 }
 
-bool SelectOverlayPaintMethod::IsModeSwitchComplete() const
-{
-    if (info_.enableHandleLevel && info_.handleLevelMode == HandleLevelMode::EMBED) {
-        CHECK_NULL_RETURN(selectOverlayContentModifier_, false);
-        auto pattern = selectOverlayContentModifier_->GetSelectOverlayPattern();
-        CHECK_NULL_RETURN(pattern, false);
-        auto host = pattern->GetHost();
-        CHECK_NULL_RETURN(host, false);
-        auto parentNode = host->GetAncestorNodeOfFrame(true);
-        CHECK_NULL_RETURN(parentNode, false);
-        auto callerNode = info_.callerFrameNode.Upgrade();
-        CHECK_NULL_RETURN(callerNode, false);
-        return parentNode == info_.callerFrameNode.Upgrade();
-    }
-    return true;
-}
 } // namespace OHOS::Ace::NG

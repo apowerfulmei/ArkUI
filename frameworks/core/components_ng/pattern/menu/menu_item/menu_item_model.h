@@ -20,66 +20,9 @@
 #include <optional>
 
 #include "core/components_ng/base/frame_node.h"
-#include "core/components/common/properties/text_style.h"
 
 namespace OHOS::Ace {
-enum class MenuItemFontColorType {
-    FONT_COLOR,
-    LABEL_FONT_COLOR
-};
-enum class MenuItemFontSizeType {
-    FONT_SIZE,
-    LABEL_FONT_SIZE
-};
-enum class MenuItemStringType {
-    SELECT_ICON,
-    CONTENT,
-    LABEL_INFO
-};
-enum class MenuItemFontFamilyType {
-    FONT_FAMILY,
-    LABEL_FONT_FAMILY
-};
-enum class MenuItemIconType {
-    START_ICON,
-    END_ICON
-};
-template<typename T>
-class ResourceHolder {
-public:
-    virtual ~ResourceHolder() = default;
-    struct ResourceUpdater {
-        RefPtr<ResourceObject> resObj;
-        std::function<void(const RefPtr<ResourceObject>&, T&)> updateFunc;
-    };
-    using ResourceMap = std::unordered_map<std::string, ResourceUpdater>;
-    void AddResource(const std::string& key, const RefPtr<ResourceObject>& resObj,
-        std::function<void(const RefPtr<ResourceObject>&, T&)>&& updateFunc)
-    {
-        if (resObj == nullptr || !updateFunc) {
-            return;
-        }
-        resources_[key] = {resObj, std::move(updateFunc)};
-    }
-    const RefPtr<ResourceObject> GetResource(const std::string& key) const
-    {
-        auto it = resources_.find(key);
-        return (it != resources_.end()) ? it->second.resObj : nullptr;
-    }
-    bool HasResources() const
-    {
-        return !resources_.empty();
-    }
-    void ReloadResources(T& context)
-    {
-        for (const auto& [key, updater] : resources_) {
-            updater.updateFunc(updater.resObj, context);
-        }
-    }
-protected:
-    ResourceMap resources_;
-};
-struct MenuItemProperties : public ResourceHolder<MenuItemProperties> {
+struct MenuItemProperties {
     std::string content;
     std::optional<ImageSourceInfo> startIcon;
     std::optional<ImageSourceInfo> endIcon;
@@ -112,11 +55,6 @@ public:
     virtual void SetLabelFontColor(const std::optional<Color>& color);
     virtual void SetLabelFontFamily(const std::vector<std::string>& families);
     virtual void SetSelectedChangeEvent(std::function<void(bool)>&& selectedChangeEvent);
-    virtual void CreateWithColorResourceObj(const RefPtr<ResourceObject>& resObj, MenuItemFontColorType type);
-    virtual void CreateWithDimensionFpResourceObj(const RefPtr<ResourceObject>& resObj, MenuItemFontSizeType type);
-    virtual void CreateWithFontFamilyResourceObj(const RefPtr<ResourceObject>& resObj, MenuItemFontFamilyType type);
-    virtual void CreateWithStringResourceObj(const RefPtr<ResourceObject>& resObj, MenuItemStringType type);
-    virtual void CreateWithMediaResourceObj(const RefPtr<ResourceObject>& resObj, const MenuItemIconType type);
 
 private:
     static std::unique_ptr<MenuItemModel> instance_;

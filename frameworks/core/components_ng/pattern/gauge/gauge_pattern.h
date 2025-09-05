@@ -46,9 +46,7 @@ public:
             gaugeModifier_ = AceType::MakeRefPtr<GaugeModifier>(WeakClaim(this));
         }
         gaugeModifier_->SetUseContentModifier(UseContentModifier());
-        auto paintMethod = MakeRefPtr<GaugePaintMethod>(WeakClaim(this), gaugeModifier_);
-        paintMethod->SetBoundsRect();
-        return paintMethod;
+        return MakeRefPtr<GaugePaintMethod>(WeakClaim(this), gaugeModifier_);
     }
 
     RefPtr<GaugeModifier> GetContentModifier(PaintWrapper* paintWrapper)
@@ -169,22 +167,6 @@ public:
         return contentModifierNode_ != nullptr;
     }
 
-    bool IsEnableMatchParent() override
-    {
-        return true;
-    }
-
-    bool IsEnableFix() override
-    {
-        return true;
-    }
-
-    void UpdateStrokeWidth(const CalcDimension& strokeWidth, bool isFirstLoad = false);
-    void UpdateIndicatorIconPath(const std::string& iconPath, const std::string& bundleName,
-        const std::string& moduleName, bool isFirstLoad = false);
-    void UpdateIndicatorSpace(const CalcDimension& space, bool isFirstLoad = false);
-    void OnColorModeChange(uint32_t colorMode) override;
-    void OnColorConfigurationUpdate() override;
 
 private:
     bool OnDirtyLayoutWrapperSwap(const RefPtr<LayoutWrapper>& dirty, bool skipMeasure, bool skipLayout) override;
@@ -208,11 +190,6 @@ private:
     void OnImageLoadFail();
 
     Color GetMaxValueColor(const RefPtr<GaugePaintProperty>& gaugePaintProperty) const;
-    bool CheckDarkResource(uint32_t resId);
-    bool ProcessGradientColors(std::vector<std::vector<std::pair<Color, Dimension>>>& gradientColors,
-        std::function<uint32_t(uint32_t)>& invertFunc);
-    bool ProcessSingleColorStop(Color& color, std::function<uint32_t(uint32_t)>& invertFunc);
-
     std::optional<int32_t> descriptionNodeId_;
     std::optional<int32_t> minValueTextId_;
     std::optional<int32_t> maxValueTextId_;

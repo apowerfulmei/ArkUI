@@ -26,12 +26,11 @@
 #include "base/utils/device_config.h"
 #include "core/components/common/layout/constants.h"
 #include "core/components/common/properties/color.h"
-#include "core/components_ng/pattern/image/image_dfx.h"
 
 namespace OHOS::Ace {
 namespace NG {
 class FrameNode;
-} // namespace NG
+}
 
 class ACE_FORCE_EXPORT ImageSourceInfo {
 public:
@@ -41,7 +40,7 @@ public:
         InternalResource::ResourceId resourceId = InternalResource::ResourceId::NO_ID,
         const RefPtr<PixelMap>& pixmap = nullptr);
 
-    ImageSourceInfo(const std::shared_ptr<std::string>& imageSrc, std::string bundleName, std::string moduleName,
+    ImageSourceInfo(const std::shared_ptr<std::string> &imageSrc, std::string bundleName, std::string moduleName,
         Dimension width = Dimension(-1), Dimension height = Dimension(-1),
         InternalResource::ResourceId resourceId = InternalResource::ResourceId::NO_ID,
         const RefPtr<PixelMap>& pixmap = nullptr);
@@ -60,6 +59,7 @@ public:
 
     // static functions
     static bool IsSVGSource(const std::string& imageSrc, SrcType srcType, InternalResource::ResourceId resourceId);
+    static bool IsPngSource(const std::string& src, InternalResource::ResourceId resourceId);
     static SrcType ResolveURIType(const std::string& uri);
     static bool IsValidBase64Head(const std::string& uri, const std::string& pattern);
     static bool IsUriOfDataAbilityEncoded(const std::string& uri, const std::string& pattern);
@@ -75,8 +75,8 @@ public:
     void SetPixMap(const RefPtr<PixelMap>& pixmap, std::optional<Color> fillColor = std::nullopt);
     void SetDimension(Dimension width, Dimension Height);
 
-    [[deprecated("use ImageRenderProperty::SetFillColor or SvgCanvasImage::SetFillColor")]] void SetFillColor(
-        const Color& color);
+    [[deprecated("use ImageRenderProperty::SetFillColor or SvgCanvasImage::SetFillColor")]]
+    void SetFillColor(const Color& color);
     void SetBundleName(const std::string& bundleName);
     void SetModuleName(const std::string& moduleName);
     void SetIsUriPureNumber(bool isUriPureNumber = false)
@@ -89,12 +89,13 @@ public:
     void GenerateCacheKey();
     bool IsInternalResource() const;
     bool IsValid() const;
+    bool IsPng() const;
     bool IsSvg() const;
     bool IsPixmap() const;
     bool IsSourceDimensionValid() const;
     const std::string& GetBundleName() const;
     const std::string& GetModuleName() const;
-    std::string ToString(bool isNeedTruncated = true) const;
+    std::string ToString() const;
     InternalResource::ResourceId GetResourceId() const;
     SrcType GetSrcType() const;
     Size GetSourceSize() const;
@@ -102,10 +103,6 @@ public:
     const std::optional<Color>& GetFillColor() const;
     const RefPtr<PixelMap>& GetPixmap() const;
     std::string GetKey() const;
-    // Generates a task key that includes the current running container ID.
-    std::string GetTaskKey() const;
-    void SetContainerId(int32_t containerId);
-    int32_t GetContainerId() const;
     bool GetIsUriPureNumber() const
     {
         return isUriPureNumber_;
@@ -129,30 +126,12 @@ public:
         isFromReset_ = isFromReset;
     }
 
-    void SetImageDfxConfig(const NG::ImageDfxConfig& imageDfxConfig)
-    {
-        imageDfxConfig_ = imageDfxConfig;
-    }
-
-    void SetImageHdr(bool isHdr);
-    bool IsImageHdr() const;
-    NG::ImageDfxConfig GetImageDfxConfig() const
-    {
-        return imageDfxConfig_;
-    }
-
-    bool IsSurportCachePixelmap() const
-    {
-        return srcType_ == SrcType::NETWORK || srcType_ == SrcType::RESOURCE;
-    }
-
 private:
     SrcType ResolveSrcType() const;
 
     std::string src_;
     std::shared_ptr<std::string> srcRef_ = nullptr;
     std::string cacheKey_;
-    int32_t containerId_ = 0;
     // Interim programme
     std::string bundleName_;
     std::string moduleName_;
@@ -161,13 +140,13 @@ private:
     InternalResource::ResourceId resourceId_ = InternalResource::ResourceId::NO_ID;
     RefPtr<PixelMap> pixmap_;
     bool isSvg_ = false;
+    bool isPng_ = false;
     bool needCache_ = true;
     bool isUriPureNumber_ = false;
     bool isFromReset_ = false;
-    [[deprecated("in NG")]] std::optional<Color> fillColor_;
+    [[deprecated("in NG")]]
+    std::optional<Color> fillColor_;
     const uint8_t* pixmapBuffer_ = nullptr;
-    NG::ImageDfxConfig imageDfxConfig_;
-    bool isHdr_ = false;
 
     // image source type for example:FILE, ASSET, NETWORK, MEMORY, BASE64, INTERNAL, RESOURCE or DATA_ABILITY,
     SrcType srcType_ = SrcType::UNSUPPORTED;

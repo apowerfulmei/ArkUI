@@ -29,44 +29,6 @@ class ClipContentModifier extends ModifierWithKey<ContentClipMode | RectShape> {
     }
 }
 
-class EdgeEffectModifier extends ModifierWithKey<ArkEdgeEffect> {
-  constructor(value: ArkEdgeEffect) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('edgeEffect');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().scrollable.resetEdgeEffect(node);
-    } else {
-      getUINativeModule().scrollable.setEdgeEffect(node, this.value?.value, this.value.options?.alwaysEnabled,
-        this.value.options?.effectEdge);
-    }
-  }
-
-  checkObjectDiff(): boolean {
-    return !((this.stageValue.value === this.value.value) &&
-      (this.stageValue.options === this.value.options));
-  }
-}
-
-class ScrollableFadingEdgeModifier extends ModifierWithKey<ArkFadingEdge> {
-  constructor(value: ArkFadingEdge) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('scrollableFadingEdge');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().scrollable.resetFadingEdge(node);
-    } else {
-      getUINativeModule().scrollable.setFadingEdge(node, this.value.value!, this.value.options?.fadingEdgeLength);
-    }
-  }
-  checkObjectDiff(): boolean {
-    return !((this.stageValue.value === this.value.value) &&
-      (this.stageValue.options === this.value.options));
-  }
-}
-
 class OnReachStartModifier extends ModifierWithKey<() => void> {
     constructor(value: () => void) {
         super(value);
@@ -91,34 +53,6 @@ class BackToTopModifier extends ModifierWithKey<boolean> {
       getUINativeModule().scrollable.resetBackToTop(node);
     } else {
       getUINativeModule().scrollable.setBackToTop(node, this.value);
-    }
-  }
-}
-
-class ScrollBarMarginModifier extends ModifierWithKey<ScrollBarMargin> {
-  constructor(value: ScrollBarMargin) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('scrollBarMargin');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().scrollable.resetScrollBarMargin(node);
-    } else {
-      getUINativeModule().scrollable.setScrollBarMargin(node, this.value.start, this.value.end);
-    }
-  }
-}
-
-class OnWillStopDraggingModifier extends ModifierWithKey<(velocity: number) => void> {
-  constructor(value: (velocity: number) => void) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('onWillStopDragging');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().scrollable.resetOnWillStopDragging(node);
-    } else {
-      getUINativeModule().scrollable.setOnWillStopDragging(node, this.value);
     }
   }
 }
@@ -148,20 +82,6 @@ export class ArkScrollable<T> extends ArkComponent implements ScrollableCommonMe
         modifierWithKey(this._modifiersWithKeys, ClipContentModifier.identity, ClipContentModifier, clip);
         return this;
     }
-    edgeEffect(value: EdgeEffect, options?: EdgeEffectOptions | undefined): T {
-      let effect: ArkEdgeEffect = new ArkEdgeEffect();
-      effect.value = value;
-      effect.options = options;
-      modifierWithKey(this._modifiersWithKeys, EdgeEffectModifier.identity, EdgeEffectModifier, effect);
-      return this;
-    }
-    fadingEdge(value: boolean, options?: FadingEdgeOptions | undefined): T {
-      let fadingEdge: ArkFadingEdge = new ArkFadingEdge();
-      fadingEdge.value = value;
-      fadingEdge.options = options;
-      modifierWithKey(this._modifiersWithKeys, ScrollableFadingEdgeModifier.identity, ScrollableFadingEdgeModifier, fadingEdge);
-      return this;
-    }
     onReachStart(event: () => void): this {
         modifierWithKey(this._modifiersWithKeys, OnReachStartModifier.identity, OnReachStartModifier, event);
         return this;
@@ -173,14 +93,6 @@ export class ArkScrollable<T> extends ArkComponent implements ScrollableCommonMe
     }
     backToTop(value: boolean): this {
       modifierWithKey(this._modifiersWithKeys, BackToTopModifier.identity, BackToTopModifier, value);
-      return this;
-    }
-    scrollBarMargin(margin: ScrollBarMargin): T {
-      modifierWithKey(this._modifiersWithKeys, ScrollBarMarginModifier.identity, ScrollBarMarginModifier, margin);
-      return this;
-    }
-    onWillStopDragging(callback: (velocity: number) => void) : this {
-      modifierWithKey(this._modifiersWithKeys, OnWillStopDraggingModifier.identity, OnWillStopDraggingModifier, callback);
       return this;
     }
 }

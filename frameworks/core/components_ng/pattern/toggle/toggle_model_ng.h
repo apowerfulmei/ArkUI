@@ -17,7 +17,6 @@
 
 #include "core/components_ng/base/common_configuration.h"
 #include "core/components_ng/base/frame_node.h"
-#include "core/interfaces/arkoala/arkoala_api.h"
 #include "core/components_ng/pattern/toggle/toggle_model.h"
 
 namespace OHOS::Ace::NG {
@@ -29,24 +28,18 @@ class ToggleConfiguration : public CommonConfiguration {
         {}
         bool isOn_;
 };
-class ArkUI_Toggle_Params final : public ArkUI_Params {
-public:
-    ToggleType toggleType;
-    bool isOn;
-};
 using SwitchMakeCallback = std::function<RefPtr<FrameNode>(const ToggleConfiguration& toggleConfiguration)>;
 class ACE_EXPORT ToggleModelNG : public OHOS::Ace::ToggleModel {
 public:
     void Create(ToggleType toggleType, bool isOn) override;
     void SetSelectedColor(const std::optional<Color>& selectedColor) override;
-    void SetSwitchPointColor(const std::optional<Color>& switchPointColor) override;
+    void SetSwitchPointColor(const Color& switchPointColor) override;
     void OnChange(ChangeEvent&& onChange) override;
     void SetWidth(const Dimension& width) override;
     void SetHeight(const Dimension& height) override;
     void SetBackgroundColor(const Color& color, bool flag) override;
     bool IsToggle() override;
     void SetPadding(const NG::PaddingPropertyF& args, const NG::PaddingProperty& newArgs) override;
-    void SetIsUserSetMargin(bool isUserSet) override;
     void OnChangeEvent(ChangeEvent&& onChangeEvent) override;
     void SetResponseRegion(const std::vector<DimensionRect>& responseRegion) override;
     void SetHoverEffect(HoverEffectType hoverEffect) override;
@@ -56,15 +49,6 @@ public:
     void SetUnselectedColor(const Color& unselectedColor) override;
     void SetTrackBorderRadius(const Dimension& borderRadius) override;
     void ResetTrackBorderRadius() override;
-    void CreateWithColorResourceObj(const RefPtr<ResourceObject>& resObj,
-        const ToggleColorType toggleColorType) override;
-    void CreateWithDimensionVpResourceObj(const RefPtr<ResourceObject>& resObj,
-        const ToggleDimensionType toggleDimensionType) override;
-    void SetSwitchPointColorSetByUser(const bool flag) override;
-    void SetUnselectedColorSetByUser(const bool flag) override;
-
-    static void SetUnselectedColorSetByUser(FrameNode* frameNode, const bool flag);
-    static void SetSwitchPointColorSetByUser(FrameNode* frameNode, const bool flag);
     static void SetPointRadius(FrameNode* frameNode, const Dimension& switchPointRadius);
     static void ResetPointRadius(FrameNode* frameNode);
     static void SetUnselectedColor(FrameNode* frameNode, const Color& unselectedColor);
@@ -72,37 +56,21 @@ public:
     static void ResetTrackBorderRadius(FrameNode* frameNode);
     static RefPtr<FrameNode> CreateFrameNode(int32_t nodeId, ToggleType toggleType, bool isOn);
     static void SetSelectedColor(FrameNode* frameNode, const std::optional<Color>& selectedColor);
-    static void SetSwitchPointColor(FrameNode* frameNode, const std::optional<Color>& switchPointColor);
+    static void SetSwitchPointColor(FrameNode* frameNode, const Color& switchPointColor);
     static void SetBackgroundColor(FrameNode* frameNode, const Color& color);
     static void OnChange(FrameNode* frameNode, ChangeEvent&& onChange);
     static void SetHeight(FrameNode* frameNode, const Dimension& height);
     static void SetResponseRegion(FrameNode* frameNode, const std::vector<DimensionRect>& responseRegion);
     static void SetPadding(FrameNode* frameNode, const NG::PaddingPropertyF& args, const NG::PaddingProperty& newArgs);
-    static void SetIsUserSetMargin(FrameNode* frameNode, bool isUserSet);
     static void SetHoverEffect(FrameNode* frameNode, HoverEffectType hoverEffect);
     static void SetSwitchIsOn(FrameNode* frameNode, bool isOn);
     static void SetBuilderFunc(FrameNode* frameNode, NG::SwitchMakeCallback&& jsMake);
     static void SetChangeValue(FrameNode* frameNode, bool value);
-    static void SetToggleState(FrameNode* frameNode, bool isOn = false);
 
     static Color GetSelectedColor(FrameNode* frameNode);
     static Color GetSwitchPointColor(FrameNode* frameNode);
     static bool GetSwitchIsOn(FrameNode* frameNode);
     static Color GetUnselectedColor(FrameNode* frameNode);
-
-    static void SetSwitchDefaultColor(FrameNode* frameNode, const ToggleColorType type);
-    static void SetCheckboxDefaultColor(FrameNode* frameNode, const ToggleColorType type);
-    static void SetButtonDefaultColor(FrameNode* frameNode, const ToggleColorType type);
-    static void CreateWithSwitchResourceObj(FrameNode* node, const ToggleColorType toggleColorType,
-        const RefPtr<ResourceObject>& resObj, const std::string& key);
-    static void CreateWithCheckBoxResourceObj(FrameNode* node, const ToggleColorType toggleColorType,
-        const RefPtr<ResourceObject>& resObj, const std::string& key);
-    static void CreateWithButtonResourceObj(FrameNode* node, const ToggleColorType toggleColorType,
-        const RefPtr<ResourceObject>& resObj, const std::string& key);
-    static void CreateWithResourceObj(
-        FrameNode* node, const ToggleDimensionType toggleDimensionType, const RefPtr<ResourceObject>& resObj);
-    static void CreateWithResourceObj(
-        const FrameNode* node, const ToggleColorType toggleColorType, const RefPtr<ResourceObject>& resObj);
 
 private:
     static void ReCreateFrameNode(
@@ -110,14 +78,12 @@ private:
     static RefPtr<FrameNode> CreateCheckboxFrameNode(int32_t nodeId, bool isOn);
     static RefPtr<FrameNode> CreateSwitchFrameNode(int32_t nodeId, bool isOn);
     static RefPtr<FrameNode> CreateButtonFrameNode(int32_t nodeId, bool isOn);
-    static void AddNewChild(const RefPtr<UINode>& parentFrame, int32_t nodeId, int32_t index, ToggleType toggleType);
+    static void AddNewChild(const RefPtr<UINode>& parentFrame, int32_t nodeId, int32_t index);
     static int32_t RemoveNode(const RefPtr<FrameNode>& childFrameNode, int32_t nodeId);
     static void UpdateSwitchIsOn(const RefPtr<FrameNode>& frameNode, bool isOn);
     static void UpdateCheckboxIsOn(const RefPtr<FrameNode>& frameNode, bool isOn);
     static void UpdateToggleButtonIsOn(const RefPtr<FrameNode>& frameNode, bool isOn);
     static void ReplaceAllChild(const RefPtr<FrameNode>& oldFrameNode);
-    static std::string ColorTypeToString(const ToggleColorType toggleColorType);
-    static std::string DimensionTypeToString(const ToggleDimensionType toggleDimensionType);
 };
 
 } // namespace OHOS::Ace::NG

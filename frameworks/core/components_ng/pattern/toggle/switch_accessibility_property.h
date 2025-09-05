@@ -20,7 +20,6 @@
 #include "core/components_ng/property/accessibility_property.h"
 
 namespace OHOS::Ace::NG {
-const std::string SWITCH = "1";
 class SwitchAccessibilityProperty : public AccessibilityProperty {
     DECLARE_ACE_TYPE(SwitchAccessibilityProperty, AccessibilityProperty);
 
@@ -33,7 +32,7 @@ public:
 
     bool IsChecked() const override;
 
-    void GetExtraElementInfo(Accessibility::ExtraElementInfo& extraElementInfo) override;
+    std::string GetHintText() const override;
 
 private:
     ACE_DISALLOW_COPY_AND_MOVE(SwitchAccessibilityProperty);

@@ -58,13 +58,14 @@ function makeBuilderParameterProxy(builderName: string, source: Object): Object 
                 return value;
             }
             const funcRet = value();
-            if (funcRet && (typeof funcRet === 'object') && ('get' in funcRet)) {
+            if ((typeof funcRet === 'object') && ('get' in funcRet)) {
                 if (prop1 !== prop) {
                     stateMgmtConsole.debug(`      - func - is ObservedPropertybstract - ret ObservedPropertyObject`);
                     return funcRet;
                 } else {
                     stateMgmtConsole.debug(`      - func - is ObservedPropertybstract - ret get()`);
                     const result = funcRet.get();
+                    stateMgmtConsole.debug(`                                          - returns ${result}`);
                     return result;
                 }
             }

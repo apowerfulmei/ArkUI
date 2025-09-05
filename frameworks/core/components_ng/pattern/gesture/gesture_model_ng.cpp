@@ -16,10 +16,14 @@
 #include "core/components_ng/pattern/gesture/gesture_model_ng.h"
 
 #include "core/components_ng/base/view_stack_processor.h"
+#include "core/components_ng/gestures/gesture_group.h"
 #include "core/components_ng/gestures/long_press_gesture.h"
 #include "core/components_ng/gestures/rotation_gesture.h"
+#include "core/components_ng/gestures/pan_gesture.h"
 #include "core/components_ng/gestures/pinch_gesture.h"
 #include "core/components_ng/gestures/swipe_gesture.h"
+#include "core/components_ng/gestures/tap_gesture.h"
+#include "core/gestures/gesture_processor.h"
 
 namespace OHOS::Ace::NG {
 namespace {
@@ -28,7 +32,6 @@ bool IsTapClick(const RefPtr<NG::Gesture>& gesture)
     auto tap = AceType::DynamicCast<NG::TapGesture>(gesture);
     return tap && (tap->GetTapCount() == 1) && (tap->GetFingers() == 1);
 }
-} // namespace
 
 GestureEventFunc GetTapGestureEventFunc(const RefPtr<NG::Gesture>& gesture)
 {
@@ -51,6 +54,7 @@ GestureEventFunc GetTapGestureEventFunc(const RefPtr<NG::Gesture>& gesture)
     }
     return nullptr;
 }
+} // namespace
 
 void GestureModelNG::Create(int32_t priorityNum, int32_t gestureMaskNum)
 {
@@ -88,7 +92,7 @@ void GestureModelNG::Finish()
     CHECK_NULL_VOID(gestureEventHub);
     gestureEventHub->AddGesture(gesture);
 
-    GestureEventFunc clickEvent = NG::GetTapGestureEventFunc(gesture);
+    GestureEventFunc clickEvent = GetTapGestureEventFunc(gesture);
     if (clickEvent) {
         auto focusHub = NG::ViewStackProcessor::GetInstance()->GetOrCreateMainFrameNodeFocusHub();
         CHECK_NULL_VOID(focusHub);
@@ -152,16 +156,6 @@ void PanGestureModelNG::Create(
     gestureProcessor->PushGestureNG(gesture);
 }
 
-void PanGestureModelNG::Create(int32_t fingersNum, const PanDirection& panDirection,
-    const PanDistanceMapDimension& distanceMap, bool isLimitFingerCount)
-{
-    RefPtr<GestureProcessor> gestureProcessor;
-    gestureProcessor = NG::ViewStackProcessor::GetInstance()->GetOrCreateGestureProcessor();
-    auto gesture = AceType::MakeRefPtr<NG::PanGesture>(
-        fingersNum, panDirection, distanceMap, isLimitFingerCount);
-    gestureProcessor->PushGestureNG(gesture);
-}
-
 void PanGestureModelNG::SetPanGestureOption(const RefPtr<PanGestureOption>& panGestureOption)
 {
     RefPtr<GestureProcessor> gestureProcessor;
@@ -211,13 +205,13 @@ RefPtr<GestureProcessor> TimeoutGestureModelNG::GetGestureProcessor()
     return gestureProcessor;
 }
 
-void GestureModelNG::SetOnGestureEvent(const GestureEventFunc& gestureEventFunc)
+void GestureModelNG::SetOnGestureEvent(const GestureEventNoParameter& gestureEventNoParameter)
 {
     RefPtr<GestureProcessor> gestureProcessor;
     gestureProcessor = NG::ViewStackProcessor::GetInstance()->GetOrCreateGestureProcessor();
     auto gesture = gestureProcessor->TopGestureNG();
     CHECK_NULL_VOID(gesture);
-    gesture->SetOnActionCancelId(gestureEventFunc);
+    gesture->SetOnActionCancelId(gestureEventNoParameter);
 }
 
 void GestureModelNG::SetOnActionFunc(const GestureEventFunc& gestureEventFunc, const Ace::GestureEventAction& action)

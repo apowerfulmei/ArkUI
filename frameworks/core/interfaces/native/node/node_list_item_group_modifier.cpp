@@ -15,9 +15,14 @@
 #include "core/interfaces/native/node/node_list_item_group_modifier.h"
 
 #include "interfaces/native/node/list_option.h"
+
 #include "bridge/common/utils/utils.h"
+#include "core/components/common/layout/constants.h"
+#include "core/components/common/properties/color.h"
+#include "core/components_ng/base/frame_node.h"
 #include "core/components_ng/pattern/list/list_item_group_model_ng.h"
 #include "core/interfaces/native/node/node_adapter_impl.h"
+#include "core/pipeline/base/element_register.h"
 
 namespace OHOS::Ace::NG {
 constexpr int CALL_ARG_0 = 0;
@@ -48,15 +53,8 @@ void ListItemGroupResetDivider(ArkUINodeHandle node)
 {
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
     CHECK_NULL_VOID(frameNode);
-    if (SystemProperties::ConfigChangePerform()) {
-        ListItemGroupModelNG::ParseResObjDividerColor(frameNode, nullptr);
-        ListItemGroupModelNG::ParseResObjDividerStartMargin(frameNode, nullptr);
-        ListItemGroupModelNG::ParseResObjDividerStrokeWidth(frameNode, nullptr);
-        ListItemGroupModelNG::ParseResObjDividerEndMargin(frameNode, nullptr);
-    }
     const V2::ItemDivider divider;
     ListItemGroupModelNG::SetDivider(frameNode, divider);
-    ListItemGroupModelNG::SetDividerColorByUser(frameNode, false);
 }
 
 void ListItemGroupSetHeader(ArkUINodeHandle node, ArkUINodeHandle header)
@@ -182,81 +180,22 @@ ArkUINodeAdapterHandle GetListItemGroupNodeAdapter(ArkUINodeHandle node)
     return NodeAdapter::GetNodeAdapterAPI()->getNodeAdapter(node);
 }
 
-void ParseResObjDividerStrokeWidth(ArkUINodeHandle node, void* resObj)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    auto* resourceObj = reinterpret_cast<ResourceObject*>(resObj);
-    ListItemGroupModelNG::ParseResObjDividerStrokeWidth(frameNode, AceType::Claim(resourceObj));
-}
-
-void ParseResObjDividerColor(ArkUINodeHandle node, void* resObj)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    auto* resourceObj = reinterpret_cast<ResourceObject*>(resObj);
-    ListItemGroupModelNG::ParseResObjDividerColor(frameNode, AceType::Claim(resourceObj));
-}
-
-void ParseResObjDividerStartMargin(ArkUINodeHandle node, void* resObj)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    auto* resourceObj = reinterpret_cast<ResourceObject*>(resObj);
-    ListItemGroupModelNG::ParseResObjDividerStartMargin(frameNode, AceType::Claim(resourceObj));
-}
-
-void ParseResObjDividerEndMargin(ArkUINodeHandle node, void* resObj)
-{
-    auto* frameNode = reinterpret_cast<FrameNode*>(node);
-    CHECK_NULL_VOID(frameNode);
-    auto* resourceObj = reinterpret_cast<ResourceObject*>(resObj);
-    ListItemGroupModelNG::ParseResObjDividerEndMargin(frameNode, AceType::Claim(resourceObj));
-}
-
 namespace NodeModifier {
 const ArkUIListItemGroupModifier* GetListItemGroupModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
-    static const ArkUIListItemGroupModifier modifier = {
-        .listItemGroupSetDivider = ListItemGroupSetDivider,
-        .listItemGroupResetDivider = ListItemGroupResetDivider,
-        .listItemGroupSetHeader = ListItemGroupSetHeader,
-        .listItemGroupResetHeader = ListItemGroupResetHeader,
-        .listItemGroupSetFooter = ListItemGroupSetFooter,
-        .listItemGroupResetFooter = ListItemGroupResetFooter,
-        .setListItemGroupChildrenMainSize = SetListItemGroupChildrenMainSize,
-        .resetListItemGroupChildrenMainSize = ResetListItemGroupChildrenMainSize,
-        .getlistItemGroupDivider = GetlistDivider,
-        .setListItemGroupSpace = SetListItemGroupSpace,
-        .resetListItemGroupSpace = ResetListItemGroupSpace,
-        .setListItemGroupStyle = SetListItemGroupStyle,
-        .resetListItemGroupStyle = ResetListItemGroupStyle,
-        .setListItemGroupNodeAdapter = SetListItemGroupNodeAdapter,
-        .resetListItemGroupNodeAdapter = ResetListItemGroupNodeAdapter,
-        .getListItemGroupNodeAdapter = GetListItemGroupNodeAdapter,
-        .parseResObjDividerStrokeWidth = ParseResObjDividerStrokeWidth,
-        .parseResObjDividerColor = ParseResObjDividerColor,
-        .parseResObjDividerStartMargin = ParseResObjDividerStartMargin,
-        .parseResObjDividerEndMargin = ParseResObjDividerEndMargin,
-    };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
+    static const ArkUIListItemGroupModifier modifier = { ListItemGroupSetDivider, ListItemGroupResetDivider,
+        ListItemGroupSetHeader, ListItemGroupResetHeader, ListItemGroupSetFooter, ListItemGroupResetFooter,
+        SetListItemGroupChildrenMainSize, ResetListItemGroupChildrenMainSize, GetlistDivider, SetListItemGroupSpace,
+        ResetListItemGroupSpace, SetListItemGroupStyle, ResetListItemGroupStyle, SetListItemGroupNodeAdapter,
+        ResetListItemGroupNodeAdapter, GetListItemGroupNodeAdapter };
     return &modifier;
 }
 
 const CJUIListItemGroupModifier* GetCJUIListItemGroupModifier()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
-    static const CJUIListItemGroupModifier modifier = {
-        .listItemGroupSetDivider = ListItemGroupSetDivider,
-        .listItemGroupResetDivider = ListItemGroupResetDivider,
-        .listItemGroupSetHeader = ListItemGroupSetHeader,
-        .listItemGroupSetFooter = ListItemGroupSetFooter,
-        .setListItemGroupChildrenMainSize = SetListItemGroupChildrenMainSize,
-        .resetListItemGroupChildrenMainSize = ResetListItemGroupChildrenMainSize,
-        .getlistItemGroupDivider = nullptr,
-    };
-    CHECK_INITIALIZED_FIELDS_END(modifier, 0, 0, 0); // don't move this line
+    static const CJUIListItemGroupModifier modifier = { ListItemGroupSetDivider, ListItemGroupResetDivider,
+        ListItemGroupSetHeader, ListItemGroupSetFooter, SetListItemGroupChildrenMainSize,
+        ResetListItemGroupChildrenMainSize };
     return &modifier;
 }
 } // namespace NodeModifier

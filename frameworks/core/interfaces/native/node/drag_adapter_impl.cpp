@@ -14,9 +14,19 @@
  */
 #include "core/interfaces/native/node/drag_adapter_impl.h"
 
+#include "native_type.h"
+
+#include "base/image/pixel_map.h"
+#include "base/utils/utils.h"
+#include "core/common/ace_engine.h"
 #include "core/common/udmf/udmf_client.h"
+#include "core/components_ng/base/frame_node.h"
 #include "core/components_ng/base/view_abstract.h"
+#include "core/components_ng/event/gesture_event_hub.h"
 #include "core/components_ng/manager/drag_drop/drag_drop_func_wrapper.h"
+#include "core/components_ng/manager/drag_drop/utils/internal_drag_action.h"
+#include "core/interfaces/arkoala/arkoala_api.h"
+#include "core/pipeline_ng/pipeline_context.h"
 
 namespace OHOS::Ace::DragAdapter {
 namespace {
@@ -39,23 +49,15 @@ static void DragActionConvert(
     }
     internalDragAction->previewOption.defaultAnimationBeforeLifting =
         dragAction->dragPreviewOption.defaultAnimationBeforeLifting;
-    internalDragAction->previewOption.enableHapticFeedback = dragAction->dragPreviewOption.enableHapticFeedback;
     internalDragAction->previewOption.isMultiSelectionEnabled = dragAction->dragPreviewOption.isMultiSelectionEnabled;
-    internalDragAction->previewOption.enableEdgeAutoScroll = dragAction->dragPreviewOption.enableEdgeAutoScroll;
     internalDragAction->previewOption.isNumber = dragAction->dragPreviewOption.isNumberBadgeEnabled;
     if (dragAction->dragPreviewOption.badgeNumber > 1) {
         internalDragAction->previewOption.badgeNumber = dragAction->dragPreviewOption.badgeNumber;
     } else {
         internalDragAction->previewOption.isShowBadge = dragAction->dragPreviewOption.isShowBadge;
     }
-    if (!dragAction->useDataLoadParams) {
-        RefPtr<UnifiedData> udData = UdmfClient::GetInstance()->TransformUnifiedDataForNative(dragAction->unifiedData);
-        internalDragAction->unifiedData = udData;
-    } else {
-        RefPtr<DataLoadParams> udDataLoadParams =
-            UdmfClient::GetInstance()->TransformDataLoadParamsForNative(dragAction->dataLoadParams);
-        internalDragAction->dataLoadParams = udDataLoadParams;
-    }
+    RefPtr<UnifiedData> udData = UdmfClient::GetInstance()->TransformUnifiedDataForNative(dragAction->unifiedData);
+    internalDragAction->unifiedData = udData;
     internalDragAction->instanceId = dragAction->instanceId;
     internalDragAction->touchPointX = dragAction->touchPointX;
     internalDragAction->touchPointY = dragAction->touchPointY;
@@ -90,13 +92,7 @@ ArkUI_Int32 StartDrag(ArkUIDragAction* dragAction)
     };
     internalDragAction->callback = callbacks;
     DragActionConvert(dragAction, internalDragAction);
-    auto ret = OHOS::Ace::NG::DragDropFuncWrapper::StartDragAction(internalDragAction);
-    if (ret == -1) {
-        DragNotifyMsg dragNotifyMsg;
-        dragNotifyMsg.result = DragRet::DRAG_CANCEL;
-        OHOS::Ace::NG::DragDropFuncWrapper::HandleCallback(internalDragAction,
-            dragNotifyMsg, NG::DragAdapterStatus::ENDED);
-    }
+    OHOS::Ace::NG::DragDropFuncWrapper::StartDragAction(internalDragAction);
     return 0;
 }
 
@@ -155,45 +151,12 @@ void SetDragEventStrictReportingEnabledWithContext(ArkUI_Int32 instanceId, bool 
     NG::ViewAbstract::SetDragEventStrictReportingEnabled(instanceId, enabled);
 }
 
-void EnableDropDisallowedBadge(bool enabled)
-{
-    NG::ViewAbstract::EnableDropDisallowedBadge(enabled);
-}
-
-ArkUI_Int32 RequestDragEndPending()
-{
-    return NG::DragDropFuncWrapper::RequestDragEndPending();
-}
-
-ArkUI_Int32 NotifyDragResult(ArkUI_Int32 requestId, ArkUI_Int32 result)
-{
-    return NG::DragDropFuncWrapper::NotifyDragResult(requestId, result);
-}
-
-ArkUI_Int32 NotifyDragEndPendingDone(ArkUI_Int32 requestId)
-{
-    return NG::DragDropFuncWrapper::NotifyDragEndPendingDone(requestId);
-}
-
 } // namespace
 const ArkUIDragAdapterAPI* GetDragAdapterAPI()
 {
-    CHECK_INITIALIZED_FIELDS_BEGIN(); // don't move this line
-    static const ArkUIDragAdapterAPI impl {
-        .startDrag = StartDrag,
-        .registerStatusListener = RegisterStatusListener,
-        .unregisterStatusListener = UnRegisterStatusListener,
-        .createDragActionWithNode = CreateDragActionWithNode,
-        .createDragActionWithContext = CreateDragActionWithContext,
-        .setDragPreview = SetDragPreview,
-        .setDragEventStrictReportingEnabledWithNode = SetDragEventStrictReportingEnabledWithNode,
-        .setDragEventStrictReportingEnabledWithContext = SetDragEventStrictReportingEnabledWithContext,
-        .requestDragEndPending = RequestDragEndPending,
-        .notifyDragResult = NotifyDragResult,
-        .notifyDragEndPendingDone = NotifyDragEndPendingDone,
-        .enableDropDisallowedBadge = EnableDropDisallowedBadge,
-    };
-    CHECK_INITIALIZED_FIELDS_END(impl, 0, 0, 0); // don't move this line
+    static const ArkUIDragAdapterAPI impl { StartDrag, RegisterStatusListener, UnRegisterStatusListener,
+        CreateDragActionWithNode, CreateDragActionWithContext, SetDragPreview,
+        SetDragEventStrictReportingEnabledWithNode, SetDragEventStrictReportingEnabledWithContext };
     return &impl;
 }
 } // namespace OHOS::Ace::DragAdapter

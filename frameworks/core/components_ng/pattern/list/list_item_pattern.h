@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022-2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -39,25 +39,15 @@ enum class ListItemSwipeIndex {
     SWIPER_ACTION = 2,
 };
 
-using PendingSwipeFunc = std::function<void()>;
-
 class ACE_EXPORT ListItemPattern : public Pattern {
     DECLARE_ACE_TYPE(ListItemPattern, Pattern);
 
 public:
-    void SwipeCommon(ListItemSwipeIndex targetState);
-
-    void SwipeForward();
-
-    void SwipeBackward();
-
     explicit ListItemPattern(const RefPtr<ShallowBuilder>& shallowBuilder) : shallowBuilder_(shallowBuilder) {}
     explicit ListItemPattern(const RefPtr<ShallowBuilder>& shallowBuilder, V2::ListItemStyle listItemStyle)
-        : listItemStyle_(listItemStyle), shallowBuilder_(shallowBuilder)
+        : shallowBuilder_(shallowBuilder), listItemStyle_(listItemStyle)
     {}
     ~ListItemPattern() override = default;
-
-    void OnRecycle() override;
 
     bool IsAtomicNode() const override
     {
@@ -70,11 +60,6 @@ public:
             shallowBuilder_->ExecuteDeepRender();
             shallowBuilder_.Reset();
         }
-    }
-
-    void OnCollectRemoved() override
-    {
-        shallowBuilder_.Reset();
     }
 
     bool RenderCustomChild(int64_t deadline) override;
@@ -123,7 +108,6 @@ public:
     void MarkDirtyNode();
     void UpdatePostion(float delta);
     void DumpAdvanceInfo() override;
-    void DumpAdvanceInfo(std::unique_ptr<JsonValue>& json) override;
 
     bool HasStartNode() const
     {
@@ -211,13 +195,11 @@ public:
         return listItemStyle_;
     }
 
-    void SetListItemStyle(V2::ListItemStyle style);
-
     void SetOffsetChangeCallBack(OnOffsetChangeFunc&& offsetChangeCallback);
 
     void CloseSwipeAction(OnFinishFunc&& onFinishCallback);
 
-    void FireOnFinishEvent() const
+    void FireOnFinshEvent() const
     {
         if (onFinishEvent_) {
             onFinishEvent_();
@@ -243,39 +225,13 @@ public:
         }
     }
 
-    SwipeActionState GetSwipeActionState();
-
-    bool FindHeadOrTailChild(const RefPtr<FocusHub>& childFocus, FocusStep step, WeakPtr<FocusHub>& target);
-
-    bool IsEnableChildrenMatchParent() override
-    {
-        return true;
-    }
-
-    bool IsEnableFix() override
-    {
-        return true;
-    }
-
-    bool IsEnableMatchParent() override
-    {
-        return true;
-    }
-
 protected:
     void OnModifyDone() override;
-    virtual void SetListItemDefaultAttributes(const RefPtr<FrameNode>& listItemNode);
-    virtual Color GetBlendGgColor();
-    virtual void HandleHoverEvent(bool isHover, const RefPtr<NG::FrameNode>& itemNode);
-    virtual void HandlePressEvent(bool isPressed, const RefPtr<NG::FrameNode>& itemNode);
-    virtual void InitDisableEvent();
-    virtual void SetAccessibilityAction();
 
-    V2::ListItemStyle listItemStyle_ = V2::ListItemStyle::NONE;
-
-    bool isHover_ = false;
-    bool isPressed_ = false;
-    std::optional<double> enableOpacity_;
+    bool IsNeedInitClickEventRecorder() const override
+    {
+        return true;
+    }
 
 private:
     void InitSwiperAction(bool axisChanged);
@@ -283,21 +239,22 @@ private:
     void ChangeDeleteAreaStage();
     void StartSpringMotion(float start, float end, float velocity, bool isCloseAllSwipeActions = false);
     void OnAttachToFrameNode() override;
-    void OnAttachToFrameNodeMultiThread();
-    void OnAttachToMainTree() override;
-    void OnAttachToMainTreeMultiThread();
+    void SetListItemDefaultAttributes(const RefPtr<FrameNode>& listItemNode);
     void OnColorConfigurationUpdate() override;
     void InitListItemCardStyleForList();
     void UpdateListItemAlignToCenter();
+    Color GetBlendGgColor();
     void InitHoverEvent();
+    void HandleHoverEvent(bool isHover, const RefPtr<NG::FrameNode>& itemNode);
     void InitPressEvent();
+    void HandlePressEvent(bool isPressed, const RefPtr<NG::FrameNode>& itemNode);
+    void InitDisableEvent();
+    void SetAccessibilityAction();
     void DoDeleteAnimation(bool isRightDelete);
     void FireSwipeActionOffsetChange(float oldOffset, float newOffset);
     void FireSwipeActionStateChange(ListItemSwipeIndex newSwiperIndex);
     void UpdateClickJudgeCallback();
     bool ClickJudgeVertical(const SizeF& size, double xOffset, double yOffset);
-    void InitOnFocusEvent();
-    void HandleFocusEvent();
     void ResetNodeSize()
     {
         startNodeSize_ = 0.0f;
@@ -305,8 +262,9 @@ private:
     }
     bool IsRTLAndVertical() const;
     void OnDetachFromMainTree() override;
-    void BuildItemPositionInfo(std::unique_ptr<JsonValue>& json);
+
     RefPtr<ShallowBuilder> shallowBuilder_;
+    V2::ListItemStyle listItemStyle_ = V2::ListItemStyle::NONE;
 
     int32_t indexInList_ = 0;
     int32_t indexInListItemGroup_ = -1;
@@ -342,12 +300,13 @@ private:
 
     RefPtr<InputEvent> hoverEvent_;
     RefPtr<TouchEventImpl> touchListener_;
+    bool isHover_ = false;
+    bool isPressed_ = false;
+    std::optional<double> enableOpacity_;
     OnFinishFunc onFinishEvent_;
     bool isLayouted_ = false;
     bool isSpringMotionRunning_ = false;
     bool isDragging_ = false;
-    
-    PendingSwipeFunc pendingSwipeFunc_ = nullptr;
 
     ACE_DISALLOW_COPY_AND_MOVE(ListItemPattern);
 };

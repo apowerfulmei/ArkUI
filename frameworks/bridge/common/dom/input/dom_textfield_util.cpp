@@ -35,7 +35,6 @@ void DOMTextFieldUtil::InitDefaultValue(const RefPtr<BoxComponent>& boxComponent
     const RefPtr<TextFieldComponent>& component, const RefPtr<TextFieldTheme>& theme)
 {
     if (!boxComponent || !component || !theme) {
-        LOGW("RefPtr of InitDefaultValue is null");
         return;
     }
 

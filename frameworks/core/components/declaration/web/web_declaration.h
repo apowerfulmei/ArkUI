@@ -46,7 +46,6 @@ struct WebEvent : Event {
     EventMarker searchResultReceiveEventId;
     EventMarker scrollId;
     EventMarker fullScreenExitEventId;
-    EventMarker activateContentId;
     EventMarker windowExitId;
     EventMarker overScrollId;
     EventMarker nativeEmbedLifecycleChangeId;
@@ -56,8 +55,6 @@ struct WebEvent : Event {
     EventMarker renderProcessRespondingId;
     EventMarker viewportFitChangedId;
     EventMarker adsBlockedEventId;
-    EventMarker onLoadStartedEventId;
-    EventMarker onLoadFinishedEventId;
 };
 
 struct WebMethod : Method {
@@ -121,30 +118,6 @@ public:
     {
         auto& event = static_cast<WebEvent&>(GetEvent(EventTag::SPECIALIZED_EVENT));
         return event.pageFinishEventId;
-    }
-
-    void SetOnLoadStartedEventId(const EventMarker& onLoadStartedEventId)
-    {
-        auto& event = MaybeResetEvent<WebEvent>(EventTag::SPECIALIZED_EVENT);
-        event.onLoadStartedEventId = onLoadStartedEventId;
-    }
-
-    const EventMarker& GetOnLoadStartedEventId() const
-    {
-        auto& event = static_cast<WebEvent&>(GetEvent(EventTag::SPECIALIZED_EVENT));
-        return event.onLoadStartedEventId;
-    }
-
-    void SetOnLoadFinishedEventId(const EventMarker& onLoadFinishedEventId)
-    {
-        auto& event = MaybeResetEvent<WebEvent>(EventTag::SPECIALIZED_EVENT);
-        event.onLoadFinishedEventId = onLoadFinishedEventId;
-    }
-
-    const EventMarker& GetOnLoadFinishedEventId() const
-    {
-        auto& event = static_cast<WebEvent&>(GetEvent(EventTag::SPECIALIZED_EVENT));
-        return event.onLoadFinishedEventId;
     }
 
     void SetTitleReceiveEventId(const EventMarker& titleReceiveEventId)
@@ -337,18 +310,6 @@ public:
     {
         auto& event = static_cast<WebEvent&>(GetEvent(EventTag::SPECIALIZED_EVENT));
         return event.searchResultReceiveEventId;
-    }
-
-    void SetActivateContentEventId(const EventMarker& activateContentId)
-    {
-        auto& event = MaybeResetEvent<WebEvent>(EventTag::SPECIALIZED_EVENT);
-        event.activateContentId = activateContentId;
-    }
-
-    const EventMarker& GetActivateContentEventId() const
-    {
-        auto& event = static_cast<WebEvent&>(GetEvent(EventTag::SPECIALIZED_EVENT));
-        return event.activateContentId;
     }
 
     void SetWindowExitEventId(const EventMarker& windowExitId)

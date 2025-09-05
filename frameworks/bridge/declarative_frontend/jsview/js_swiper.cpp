@@ -20,19 +20,13 @@
 #include <iterator>
 
 #include "base/log/ace_scoring_log.h"
-#include "base/log/event_report.h"
 #include "base/utils/utils.h"
-#include "bridge/common/utils/engine_helper.h"
 #include "bridge/common/utils/utils.h"
 #include "bridge/declarative_frontend/ark_theme/theme_apply/js_swiper_theme.h"
 #include "bridge/declarative_frontend/ark_theme/theme_apply/js_theme_utils.h"
 #include "bridge/declarative_frontend/engine/functions/js_click_function.h"
-#include "bridge/declarative_frontend/engine/functions/js_event_function.h"
 #include "bridge/declarative_frontend/engine/functions/js_swiper_function.h"
-#include "bridge/declarative_frontend/engine/js_converter.h"
 #include "bridge/declarative_frontend/engine/jsi/js_ui_index.h"
-#include "bridge/declarative_frontend/jsview/js_indicator.h"
-#include "bridge/declarative_frontend/jsview/js_utils.h"
 #include "bridge/declarative_frontend/jsview/js_view_abstract.h"
 #include "bridge/declarative_frontend/jsview/models/swiper_model_impl.h"
 #include "bridge/declarative_frontend/view_stack_processor.h"
@@ -53,7 +47,6 @@ namespace {
 constexpr float ARROW_SIZE_COEFFICIENT = 0.75f;
 constexpr int32_t DEFAULT_CUSTOM_ANIMATION_TIMEOUT = 0;
 const auto DEFAULT_CURVE = AceType::MakeRefPtr<InterpolatingSpring>(-1, 1, 328, 34);
-constexpr int32_t LENGTH_TWO = 2;
 } // namespace
 std::unique_ptr<SwiperModel> SwiperModel::instance_ = nullptr;
 std::mutex SwiperModel::mutex_;
@@ -79,6 +72,7 @@ SwiperModel* SwiperModel::GetInstance()
 
 } // namespace OHOS::Ace
 namespace OHOS::Ace::Framework {
+WeakPtr<JSIndicatorController> JSSwiper::jSIndicatorController_;
 namespace {
 
 const std::vector<EdgeEffect> EDGE_EFFECT = { EdgeEffect::SPRING, EdgeEffect::FADE, EdgeEffect::NONE };
@@ -96,57 +90,6 @@ JSRef<JSVal> SwiperChangeEventToJSValue(const SwiperChangeEvent& eventInfo)
     return JSRef<JSVal>::Make(ToJSValue(eventInfo.GetIndex()));
 }
 
-struct SwiperControllerAsyncContext {
-    napi_env env = nullptr;
-    napi_deferred deferred = nullptr;
-};
-
-napi_value CreateErrorValue(napi_env env, int32_t errCode, const std::string& errMsg = "")
-{
-    napi_value code = nullptr;
-    std::string codeStr = std::to_string(errCode);
-    napi_create_string_utf8(env, codeStr.c_str(), codeStr.length(), &code);
-    napi_value msg = nullptr;
-    napi_create_string_utf8(env, errMsg.c_str(), errMsg.length(), &msg);
-    napi_value error = nullptr;
-    napi_create_error(env, code, msg, &error);
-    return error;
-}
-
-void HandleDeferred(
-    const shared_ptr<SwiperControllerAsyncContext>& asyncContext, int32_t errorCode, std::string message)
-{
-    auto env = asyncContext->env;
-    CHECK_NULL_VOID(env);
-    auto deferred = asyncContext->deferred;
-    CHECK_NULL_VOID(deferred);
-
-    napi_handle_scope scope = nullptr;
-    auto status = napi_open_handle_scope(env, &scope);
-    if (status != napi_ok) {
-        return;
-    }
-
-    napi_value result = nullptr;
-    if (errorCode == ERROR_CODE_NO_ERROR) {
-        napi_get_null(env, &result);
-        napi_resolve_deferred(env, deferred, result);
-    } else {
-        result = CreateErrorValue(env, errorCode, message);
-        napi_reject_deferred(env, deferred, result);
-    }
-    napi_close_handle_scope(env, scope);
-}
-
-void ReturnPromise(const JSCallbackInfo& info, napi_value result)
-{
-    CHECK_NULL_VOID(result);
-    auto jsPromise = JsConverter::ConvertNapiValueToJsVal(result);
-    if (!jsPromise->IsObject()) {
-        return;
-    }
-    info.SetReturnValue(JSRef<JSObject>::Cast(jsPromise));
-}
 } // namespace
 
 void JSSwiper::Create(const JSCallbackInfo& info)
@@ -195,7 +138,6 @@ void JSSwiper::JSBind(BindingTarget globalObj)
     JSClass<JSSwiper>::StaticMethod("cachedCount", &JSSwiper::SetCachedCount);
     JSClass<JSSwiper>::StaticMethod("curve", &JSSwiper::SetCurve);
     JSClass<JSSwiper>::StaticMethod("onChange", &JSSwiper::SetOnChange);
-    JSClass<JSSwiper>::StaticMethod("onUnselected", &JSSwiper::SetOnUnselected);
     JSClass<JSSwiper>::StaticMethod("onAnimationStart", &JSSwiper::SetOnAnimationStart);
     JSClass<JSSwiper>::StaticMethod("onAnimationEnd", &JSSwiper::SetOnAnimationEnd);
     JSClass<JSSwiper>::StaticMethod("onGestureSwipe", &JSSwiper::SetOnGestureSwipe);
@@ -221,9 +163,6 @@ void JSSwiper::JSBind(BindingTarget globalObj)
     JSClass<JSSwiper>::StaticMethod("onContentDidScroll", &JSSwiper::SetOnContentDidScroll);
     JSClass<JSSwiper>::StaticMethod("pageFlipMode", &JSSwiper::SetPageFlipMode);
     JSClass<JSSwiper>::StaticMethod("onContentWillScroll", &JSSwiper::SetOnContentWillScroll);
-    JSClass<JSSwiper>::StaticMethod("onSelected", &JSSwiper::SetOnSelected);
-    JSClass<JSSwiper>::StaticMethod("maintainVisibleContentPosition", &JSSwiper::SetMaintainVisibleContentPosition);
-    JSClass<JSSwiper>::StaticMethod("onScrollStateChanged", &JSSwiper::SetOnScrollStateChanged);
     JSClass<JSSwiper>::InheritAndBind<JSContainerBase>(globalObj);
 }
 
@@ -240,23 +179,9 @@ void JSSwiper::SetIndicatorInteractive(const JSCallbackInfo& info)
     }
 }
 
-void JSSwiper::SetAutoPlay(const JSCallbackInfo& info)
+void JSSwiper::SetAutoPlay(bool autoPlay)
 {
-    if (info.Length() < 1) {
-        return;
-    }
-    bool autoPlay = false;
-    if (info[0]->IsBoolean()) {
-        autoPlay = info[0]->ToBoolean();
-    }
     SwiperModel::GetInstance()->SetAutoPlay(autoPlay);
-    SwiperAutoPlayOptions swiperAutoPlayOptions;
-    if (info.Length() > 1 && info[1]->IsObject()) {
-        auto obj = JSRef<JSObject>::Cast(info[1]);
-        GetAutoPlayOptionsInfo(obj, swiperAutoPlayOptions);
-    }
-
-    SwiperModel::GetInstance()->SetAutoPlayOptions(swiperAutoPlayOptions);
 }
 
 void JSSwiper::SetEnabled(const JSCallbackInfo& info)
@@ -314,7 +239,6 @@ void JSSwiper::SetDisplayCount(const JSCallbackInfo& info)
         if (info[0]->IsString() && info[0]->ToString() == "auto") {
             SwiperModel::GetInstance()->SetDisplayMode(SwiperDisplayMode::AUTO_LINEAR);
             SwiperModel::GetInstance()->ResetDisplayCount();
-            SwiperModel::GetInstance()->ResetMinSize();
         } else if (info[0]->IsNumber() && info[0]->ToNumber<int32_t>() > 0) {
             SwiperModel::GetInstance()->SetDisplayCount(info[0]->ToNumber<int32_t>());
         } else if (info[0]->IsObject()) {
@@ -329,8 +253,6 @@ void JSSwiper::SetDisplayCount(const JSCallbackInfo& info)
                 return;
             }
             SwiperModel::GetInstance()->SetMinSize(minSizeValue);
-            SwiperModel::GetInstance()->ResetDisplayCount();
-            SwiperModel::GetInstance()->ResetDisplayMode();
         } else {
             SwiperModel::GetInstance()->SetDisplayCount(DEFAULT_DISPLAY_COUNT);
         }
@@ -392,15 +314,9 @@ void JSSwiper::SetIndex(const JSCallbackInfo& info)
     if (length < 1 || length > 2) {
         return;
     }
+
     int32_t index = 0;
     auto jsIndex = info[0];
-    if (jsIndex->IsObject()) {
-        JSRef<JSObject> obj = JSRef<JSObject>::Cast(jsIndex);
-        jsIndex = obj->GetProperty("value");
-        auto changeEventVal = obj->GetProperty("$value");
-        ParseSwiperIndexObject(info, changeEventVal);
-    }
-
     if (length > 0 && jsIndex->IsNumber()) {
         index = jsIndex->ToNumber<int32_t>();
     }
@@ -471,21 +387,13 @@ void JSSwiper::GetFontContent(const JSRef<JSVal>& font, bool isSelected, SwiperD
     CHECK_NULL_VOID(swiperIndicatorTheme);
     // set font size, unit FP
     CalcDimension fontSize;
-    RefPtr<ResourceObject> resObj;
-    if (!size->IsUndefined() && !size->IsNull() && ParseJsDimensionFp(size, fontSize, resObj)) {
+    if (!size->IsUndefined() && !size->IsNull() && ParseJsDimensionFp(size, fontSize)) {
         if (LessOrEqual(fontSize.Value(), 0.0) || LessOrEqual(size->ToNumber<double>(), 0.0) ||
             fontSize.Unit() == DimensionUnit::PERCENT) {
             fontSize = swiperIndicatorTheme->GetDigitalIndicatorTextStyle().GetFontSize();
         }
     } else {
         fontSize = swiperIndicatorTheme->GetDigitalIndicatorTextStyle().GetFontSize();
-    }
-    if (SystemProperties::ConfigChangePerform()) {
-        if (isSelected) {
-            digitalParameters.resourceSelectedFontSizeValueObject = resObj;
-        } else {
-            digitalParameters.resourceFontSizeValueObject = resObj;
-        }
     }
     if (isSelected) {
         digitalParameters.selectedFontSize = fontSize;
@@ -535,40 +443,6 @@ std::optional<Dimension> JSSwiper::ParseIndicatorDimension(const JSRef<JSVal>& v
     return indicatorDimension;
 }
 
-std::optional<Dimension> JSSwiper::ParseIndicatorDimension(const JSRef<JSVal>& value, RefPtr<ResourceObject>& resObj)
-{
-    std::optional<Dimension> indicatorDimension;
-    if (value->IsUndefined()) {
-        return indicatorDimension;
-    }
-    CalcDimension dimPosition;
-    auto parseOk = ParseJsDimensionVp(value, dimPosition, resObj);
-    indicatorDimension = parseOk && dimPosition.ConvertToPx() >= 0.0f ? dimPosition : 0.0_vp;
-    return indicatorDimension;
-}
-
-std::optional<Dimension> JSSwiper::ParseIndicatorBottom(const JSRef<JSVal>& bottomValue, bool hasIgnoreSize,
-    RefPtr<ResourceObject>& resObj)
-{
-    std::optional<Dimension> bottom;
-    if (bottomValue->IsUndefined()) {
-        return bottom;
-    }
-    if (!hasIgnoreSize) {
-        bottom = ParseIndicatorDimension(bottomValue, resObj);
-        return bottom;
-    } else {
-        CalcDimension dimBottom;
-        bool parseOk = ParseLengthMetricsToDimension(bottomValue, dimBottom, resObj);
-        if (!parseOk) {
-            bottom = ParseIndicatorDimension(bottomValue, resObj);
-            return bottom;
-        }
-        dimBottom = parseOk && dimBottom.ConvertToPx() >= 0.0f ? dimBottom : 0.0_vp;
-        return dimBottom;
-    }
-}
-
 SwiperParameters JSSwiper::GetDotIndicatorInfo(const JSRef<JSObject>& obj)
 {
     JSRef<JSVal> leftValue = obj->GetProperty(static_cast<int32_t>(ArkUIIndex::LEFT_VALUE));
@@ -582,114 +456,59 @@ SwiperParameters JSSwiper::GetDotIndicatorInfo(const JSRef<JSObject>& obj)
     JSRef<JSVal> selectedItemWidthValue = obj->GetProperty(static_cast<int32_t>(ArkUIIndex::SELECTED_ITEM_WIDTH_VALUE));
     JSRef<JSVal> selectedItemHeightValue =
         obj->GetProperty(static_cast<int32_t>(ArkUIIndex::SELECTED_ITEM_HEIGHT_VALUE));
-    JSRef<JSVal> spaceValue = obj->GetProperty(static_cast<int32_t>(ArkUIIndex::SPACE_VALUE));
-    JSRef<JSVal> ignoreSizeValue = obj->GetProperty(static_cast<int32_t>(ArkUIIndex::IGNORE_SIZE_VALUE));
-    JSRef<JSVal> setIgnoreSizeValue = obj->GetProperty(static_cast<int32_t>(ArkUIIndex::SET_IGNORE_SIZE_VALUE));
-    
+    JSRef<JSVal> maskValue = obj->GetProperty(static_cast<int32_t>(ArkUIIndex::MASK_VALUE));
+    JSRef<JSVal> colorValue = obj->GetProperty(static_cast<int32_t>(ArkUIIndex::COLOR_VALUE));
+    JSRef<JSVal> selectedColorValue = obj->GetProperty(static_cast<int32_t>(ArkUIIndex::SELECTED_COLOR_VALUE));
     auto pipelineContext = PipelineBase::GetCurrentContext();
     CHECK_NULL_RETURN(pipelineContext, SwiperParameters());
     auto swiperIndicatorTheme = pipelineContext->GetTheme<SwiperIndicatorTheme>();
     CHECK_NULL_RETURN(swiperIndicatorTheme, SwiperParameters());
     SwiperParameters swiperParameters;
-    RefPtr<ResourceObject> resLeftObj;
-    RefPtr<ResourceObject> resTopObj;
-    RefPtr<ResourceObject> resRightObj;
-    RefPtr<ResourceObject> resBottomObj;
-    swiperParameters.dimLeft = ParseIndicatorDimension(leftValue, resLeftObj);
-    swiperParameters.dimTop = ParseIndicatorDimension(topValue, resTopObj);
-    swiperParameters.dimRight = ParseIndicatorDimension(rightValue, resRightObj);
-    auto hasIgnoreSizeValue = false;
-    
-    if (setIgnoreSizeValue->IsBoolean()) {
-        hasIgnoreSizeValue = setIgnoreSizeValue->ToBoolean();
-        swiperParameters.setIgnoreSizeValue = hasIgnoreSizeValue;
-    }
-
-    if (ignoreSizeValue->IsBoolean()) {
-        auto ignoreSize = ignoreSizeValue->ToBoolean();
-        swiperParameters.ignoreSizeValue = ignoreSize;
-    }
-    swiperParameters.dimBottom = ParseIndicatorBottom(bottomValue, hasIgnoreSizeValue, resBottomObj);
+    swiperParameters.dimLeft = ParseIndicatorDimension(leftValue);
+    swiperParameters.dimTop = ParseIndicatorDimension(topValue);
+    swiperParameters.dimRight = ParseIndicatorDimension(rightValue);
+    swiperParameters.dimBottom = ParseIndicatorDimension(bottomValue);
     CalcDimension dimStart;
     CalcDimension dimEnd;
-    CalcDimension dimSpace;
-
     std::optional<Dimension> indicatorDimension;
     swiperParameters.dimStart =  ParseLengthMetricsToDimension(startValue, dimStart) ? dimStart : indicatorDimension;
     swiperParameters.dimEnd =  ParseLengthMetricsToDimension(endValue, dimEnd) ? dimEnd : indicatorDimension;
- 
-    auto parseSpaceOk = ParseSpace(spaceValue, dimSpace) &&
-        (dimSpace.Unit() !=  DimensionUnit::PERCENT) ;
-    auto defalutSpace = swiperIndicatorTheme->GetIndicatorDotItemSpace();
-    swiperParameters.dimSpace =  (parseSpaceOk && !(dimSpace < 0.0_vp)) ? dimSpace : defalutSpace;
-    bool ignoreSize = ignoreSizeValue->IsBoolean() ? ignoreSizeValue->ToBoolean() : false;
-    swiperParameters.ignoreSizeValue = ignoreSize;
 
     CalcDimension dimPosition;
-    RefPtr<ResourceObject> resItemWidthObj;
-    RefPtr<ResourceObject> resItemHeightObj;
-    RefPtr<ResourceObject> resSelectedItemWidthObj;
-    RefPtr<ResourceObject> resSelectedItemHeightObj;
-    bool parseItemWOk = ParseJsDimensionVp(itemWidthValue, dimPosition, resItemWidthObj) &&
-        (dimPosition.Unit() != DimensionUnit::PERCENT);
+    bool parseItemWOk =
+        ParseJsDimensionVp(itemWidthValue, dimPosition) && (dimPosition.Unit() != DimensionUnit::PERCENT);
     auto defaultSize = swiperIndicatorTheme->GetSize();
     swiperParameters.itemWidth = parseItemWOk && dimPosition > 0.0_vp ? dimPosition : defaultSize;
-    bool parseItemHOk = ParseJsDimensionVp(itemHeightValue, dimPosition, resItemHeightObj) &&
-        (dimPosition.Unit() != DimensionUnit::PERCENT);
+    bool parseItemHOk =
+        ParseJsDimensionVp(itemHeightValue, dimPosition) && (dimPosition.Unit() != DimensionUnit::PERCENT);
     swiperParameters.itemHeight = parseItemHOk && dimPosition > 0.0_vp ? dimPosition : defaultSize;
-    bool parseSelectedItemWOk = ParseJsDimensionVp(selectedItemWidthValue, dimPosition, resSelectedItemWidthObj) &&
-        (dimPosition.Unit() != DimensionUnit::PERCENT);
+    bool parseSelectedItemWOk =
+        ParseJsDimensionVp(selectedItemWidthValue, dimPosition) && (dimPosition.Unit() != DimensionUnit::PERCENT);
     swiperParameters.selectedItemWidth = parseSelectedItemWOk && dimPosition > 0.0_vp ? dimPosition : defaultSize;
-    bool parseSelectedItemHOk = ParseJsDimensionVp(selectedItemHeightValue, dimPosition, resSelectedItemHeightObj) &&
-        (dimPosition.Unit() != DimensionUnit::PERCENT);
+    bool parseSelectedItemHOk =
+        ParseJsDimensionVp(selectedItemHeightValue, dimPosition) && (dimPosition.Unit() != DimensionUnit::PERCENT);
     swiperParameters.selectedItemHeight = parseSelectedItemHOk && dimPosition > 0.0_vp ? dimPosition : defaultSize;
-    if (SystemProperties::ConfigChangePerform()) {
-        swiperParameters.resourceDimLeftValueObject = resLeftObj;
-        swiperParameters.resourceDimTopValueObject = resTopObj;
-        swiperParameters.resourceDimRightValueObject = resRightObj;
-        swiperParameters.resourceDimBottomValueObject = resBottomObj;
-        swiperParameters.resourceItemWidthValueObject = resItemWidthObj;
-        swiperParameters.resourceItemHeightValueObject = resItemHeightObj;
-        swiperParameters.resourceSelectedItemWidthValueObject = resSelectedItemWidthObj;
-        swiperParameters.resourceSelectedItemHeightValueObject = resSelectedItemHeightObj;
-    }
     SwiperModel::GetInstance()->SetIsIndicatorCustomSize(
         parseSelectedItemWOk || parseSelectedItemHOk || parseItemWOk || parseItemHOk);
-    SetDotIndicatorInfo(obj, swiperParameters, swiperIndicatorTheme);
-    return swiperParameters;
-}
-void JSSwiper::SetDotIndicatorInfo(const JSRef<JSObject>& obj, SwiperParameters& swiperParameters,
-    const RefPtr<SwiperIndicatorTheme>& swiperIndicatorTheme)
-{
-    JSRef<JSVal> maskValue = obj->GetProperty(static_cast<int32_t>(ArkUIIndex::MASK_VALUE));
-    JSRef<JSVal> colorValue = obj->GetProperty(static_cast<int32_t>(ArkUIIndex::COLOR_VALUE));
-    JSRef<JSVal> selectedColorValue = obj->GetProperty(static_cast<int32_t>(ArkUIIndex::SELECTED_COLOR_VALUE));
-    JSRef<JSVal> maxDisplayCountVal = obj->GetProperty(static_cast<int32_t>(ArkUIIndex::MAX_DISPLAY_COUNT_VALUE));
     if (maskValue->IsBoolean()) {
         auto mask = maskValue->ToBoolean();
         swiperParameters.maskValue = mask;
     }
     Color colorVal;
-    RefPtr<ResourceObject> resColorObj;
-    RefPtr<ResourceObject> resSelectedColorObj;
-    auto parseOk = ParseJsColor(colorValue, colorVal, resColorObj);
-    swiperParameters.colorVal = parseOk ? (swiperParameters.parametersByUser.insert("colorVal"), colorVal)
-        : swiperIndicatorTheme->GetColor();
-    parseOk = ParseJsColor(selectedColorValue, colorVal, resSelectedColorObj);
-    swiperParameters.selectedColorVal = parseOk
-        ? (swiperParameters.parametersByUser.insert("selectedColorVal"), colorVal)
-        : swiperIndicatorTheme->GetSelectedColor();
-    if (SystemProperties::ConfigChangePerform()) {
-        swiperParameters.resourceColorValueObject = resColorObj;
-        swiperParameters.resourceSelectedColorValueObject = resSelectedColorObj;
+    auto parseOk = ParseJsColor(colorValue, colorVal);
+    swiperParameters.colorVal = parseOk ? colorVal : swiperIndicatorTheme->GetColor();
+    parseOk = ParseJsColor(selectedColorValue, colorVal);
+    swiperParameters.selectedColorVal = parseOk ? colorVal : swiperIndicatorTheme->GetSelectedColor();
+
+    JSRef<JSVal> maxDisplayCountVal = obj->GetProperty(static_cast<int32_t>(ArkUIIndex::MAX_DISPLAY_COUNT_VALUE));
+    if (!maxDisplayCountVal->IsUndefined()) {
+        uint32_t result = 0;
+        auto setMaxDisplayCountVal = ParseJsInteger(maxDisplayCountVal, result);
+        swiperParameters.maxDisplayCountVal = setMaxDisplayCountVal && result > 0 ? result : 0;
     }
-    if (maxDisplayCountVal->IsUndefined()) {
-        return;
-    }
-    uint32_t result = 0;
-    auto setMaxDisplayCountVal = ParseJsInteger(maxDisplayCountVal, result);
-    swiperParameters.maxDisplayCountVal = setMaxDisplayCountVal && result > 0 ? result : 0;
+    return swiperParameters;
 }
+
 bool JSSwiper::ParseLengthMetricsToDimension(const JSRef<JSVal>& jsValue, CalcDimension& result)
 {
     if (jsValue->IsNumber()) {
@@ -716,66 +535,6 @@ bool JSSwiper::ParseLengthMetricsToDimension(const JSRef<JSVal>& jsValue, CalcDi
     return false;
 }
 
-bool JSSwiper::ParseLengthMetricsToDimension(const JSRef<JSVal>& jsValue, CalcDimension& result,
-    RefPtr<ResourceObject>& resourceObj)
-{
-    if (jsValue->IsNumber()) {
-        result = CalcDimension(jsValue->ToNumber<double>(), DimensionUnit::VP);
-        return true;
-    }
-    if (jsValue->IsString()) {
-        auto value = jsValue->ToString();
-        StringUtils::StringToCalcDimensionNG(value, result, false, DimensionUnit::VP);
-        return true;
-    }
-    if (jsValue->IsObject()) {
-        JSRef<JSObject> jsObj = JSRef<JSObject>::Cast(jsValue);
-        auto valObj = jsObj->GetProperty("value");
-        if (valObj->IsUndefined() || valObj->IsNull()) {
-            return false;
-        }
-        double value = valObj->ToNumber<double>();
-        auto unit = static_cast<DimensionUnit>(jsObj->GetProperty("unit")->ToNumber<int32_t>());
-        result = CalcDimension(value, unit);
-        auto jsRes = jsObj->GetProperty("res");
-        if (SystemProperties::ConfigChangePerform() && !jsRes->IsUndefined() &&
-            !jsRes->IsNull() && jsRes->IsObject()) {
-            JSRef<JSObject> resObj = JSRef<JSObject>::Cast(jsRes);
-            JSViewAbstract::CompleteResourceObject(resObj);
-            resourceObj = JSViewAbstract::GetResourceObject(resObj);
-        }
-        return true;
-    }
-    if (jsValue->IsNull()) {
-        result = CalcDimension(0.0f, DimensionUnit::VP);
-        return true;
-    }
-
-    return false;
-}
-
-bool JSSwiper::ParseSpace(const JSRef<JSVal>& jsValue, CalcDimension& result)
-{
-    if (jsValue->IsNumber()) {
-        result = CalcDimension(jsValue->ToNumber<double>(), DimensionUnit::VP);
-        return true;
-    }
-    if (jsValue->IsString()) {
-        auto value = jsValue->ToString();
-        StringUtils::StringToCalcDimensionNG(value, result, false, DimensionUnit::VP);
-        return true;
-    }
-    if (jsValue->IsObject()) {
-        JSRef<JSObject> jsObj = JSRef<JSObject>::Cast(jsValue);
-        double value = jsObj->GetProperty("value")->ToNumber<double>();
-        auto unit = static_cast<DimensionUnit>(jsObj->GetProperty("unit")->ToNumber<int32_t>());
-        result = CalcDimension(value, unit);
-        return true;
-    }
-
-    return false;
-}
-
 SwiperDigitalParameters JSSwiper::GetDigitIndicatorInfo(const JSRef<JSObject>& obj)
 {
     JSRef<JSVal> dotLeftValue = obj->GetProperty("leftValue");
@@ -788,55 +547,28 @@ SwiperDigitalParameters JSSwiper::GetDigitIndicatorInfo(const JSRef<JSObject>& o
     JSRef<JSVal> selectedFontColorValue = obj->GetProperty("selectedFontColorValue");
     JSRef<JSVal> digitFontValue = obj->GetProperty("digitFontValue");
     JSRef<JSVal> selectedDigitFontValue = obj->GetProperty("selectedDigitFontValue");
-    JSRef<JSVal> ignoreSizeValue = obj->GetProperty("ignoreSizeValue");
-    JSRef<JSVal> setIgnoreSizeValue = obj->GetProperty("setIgnoreSizeValue");
     auto pipelineContext = PipelineBase::GetCurrentContext();
     CHECK_NULL_RETURN(pipelineContext, SwiperDigitalParameters());
     auto swiperIndicatorTheme = pipelineContext->GetTheme<SwiperIndicatorTheme>();
     CHECK_NULL_RETURN(swiperIndicatorTheme, SwiperDigitalParameters());
     SwiperDigitalParameters digitalParameters;
-    RefPtr<ResourceObject> resLeftObj;
-    RefPtr<ResourceObject> resTopObj;
-    RefPtr<ResourceObject> resRightObj;
-    RefPtr<ResourceObject> resBottomObj;
-    digitalParameters.dimLeft = ParseIndicatorDimension(dotLeftValue, resLeftObj);
-    digitalParameters.dimTop = ParseIndicatorDimension(dotTopValue, resTopObj);
-    digitalParameters.dimRight = ParseIndicatorDimension(dotRightValue, resRightObj);
-    bool hasIgnoreSizeValue = setIgnoreSizeValue->IsBoolean() ? setIgnoreSizeValue->ToBoolean() : false;
-    auto bottom = ParseIndicatorBottom(dotBottomValue, hasIgnoreSizeValue, resBottomObj);
-    digitalParameters.dimBottom = bottom;
+    digitalParameters.dimLeft = ParseIndicatorDimension(dotLeftValue);
+    digitalParameters.dimTop = ParseIndicatorDimension(dotTopValue);
+    digitalParameters.dimRight = ParseIndicatorDimension(dotRightValue);
+    digitalParameters.dimBottom = ParseIndicatorDimension(dotBottomValue);
     std::optional<Dimension> indicatorDimension;
     CalcDimension dimStart;
     CalcDimension dimEnd;
     digitalParameters.dimStart =  ParseLengthMetricsToDimension(startValue, dimStart) ? dimStart : indicatorDimension;
     digitalParameters.dimEnd =  ParseLengthMetricsToDimension(endValue, dimEnd) ? dimEnd : indicatorDimension;
 
-    if (ignoreSizeValue->IsBoolean()) {
-        auto ignoreSize = ignoreSizeValue->ToBoolean();
-        digitalParameters.ignoreSizeValue = ignoreSize;
-    } else {
-        digitalParameters.ignoreSizeValue = false;
-    }
-
     Color fontColor;
-    RefPtr<ResourceObject> resFontColorObj;
-    RefPtr<ResourceObject> resSelectedFontColorObj;
-    auto parseOk = JSViewAbstract::ParseJsColor(fontColorValue, fontColor, resFontColorObj);
+    auto parseOk = JSViewAbstract::ParseJsColor(fontColorValue, fontColor);
     digitalParameters.fontColor =
-        parseOk ? (digitalParameters.parametersByUser.insert("fontColor"), fontColor)
-        : swiperIndicatorTheme->GetDigitalIndicatorTextStyle().GetTextColor();
-    parseOk = JSViewAbstract::ParseJsColor(selectedFontColorValue, fontColor, resSelectedFontColorObj);
+        parseOk ? fontColor : swiperIndicatorTheme->GetDigitalIndicatorTextStyle().GetTextColor();
+    parseOk = JSViewAbstract::ParseJsColor(selectedFontColorValue, fontColor);
     digitalParameters.selectedFontColor =
-        parseOk ? (digitalParameters.parametersByUser.insert("selectedFontColor"), fontColor)
-        : swiperIndicatorTheme->GetDigitalIndicatorTextStyle().GetTextColor();
-    if (SystemProperties::ConfigChangePerform()) {
-        digitalParameters.resourceDimLeftValueObject = resLeftObj;
-        digitalParameters.resourceDimTopValueObject = resTopObj;
-        digitalParameters.resourceDimRightValueObject = resRightObj;
-        digitalParameters.resourceDimBottomValueObject = resBottomObj;
-        digitalParameters.resourceFontColorValueObject = resFontColorObj;
-        digitalParameters.resourceSelectedFontColorValueObject = resSelectedFontColorObj;
-    }
+        parseOk ? fontColor : swiperIndicatorTheme->GetDigitalIndicatorTextStyle().GetTextColor();
     if (!digitFontValue->IsNull() && digitFontValue->IsObject()) {
         GetFontContent(digitFontValue, false, digitalParameters);
     }
@@ -867,64 +599,46 @@ bool JSSwiper::GetArrowInfo(const JSRef<JSObject>& obj, SwiperArrowParameters& s
     bool parseOk = false;
     CalcDimension dimension;
     Color color;
-    RefPtr<ResourceObject> resBackgroundSizeObj;
-    RefPtr<ResourceObject> resBackgroundColorObj;
-    RefPtr<ResourceObject> resArrowSizeObj;
-    RefPtr<ResourceObject> resArrowColorObj;
     if (swiperArrowParameters.isSidebarMiddle.value()) {
-        parseOk = ParseJsDimensionVp(backgroundSizeValue, dimension, resBackgroundSizeObj);
+        parseOk = ParseJsDimensionVp(backgroundSizeValue, dimension);
         swiperArrowParameters.backgroundSize =
             parseOk && GreatNotEqual(dimension.ConvertToVp(), 0.0) && !(dimension.Unit() == DimensionUnit::PERCENT)
                 ? dimension
                 : swiperIndicatorTheme->GetBigArrowBackgroundSize();
-        parseOk = ParseJsColor(backgroundColorValue, color, resBackgroundColorObj);
-        swiperArrowParameters.backgroundColor = parseOk
-            ? (swiperArrowParameters.parametersByUser.insert("backgroundColor"), color)
-            : swiperIndicatorTheme->GetBigArrowBackgroundColor();
+        parseOk = ParseJsColor(backgroundColorValue, color);
+        swiperArrowParameters.backgroundColor = parseOk ? color : swiperIndicatorTheme->GetBigArrowBackgroundColor();
         if (swiperArrowParameters.isShowBackground.value()) {
             swiperArrowParameters.arrowSize = swiperArrowParameters.backgroundSize.value() * ARROW_SIZE_COEFFICIENT;
         } else {
-            parseOk = ParseJsDimensionVpNG(arrowSizeValue, dimension, resArrowSizeObj);
+            parseOk = ParseJsDimensionVpNG(arrowSizeValue, dimension);
             swiperArrowParameters.arrowSize =
                 parseOk && GreatNotEqual(dimension.ConvertToVp(), 0.0) && !(dimension.Unit() == DimensionUnit::PERCENT)
                     ? dimension
                     : swiperIndicatorTheme->GetBigArrowSize();
             swiperArrowParameters.backgroundSize = swiperArrowParameters.arrowSize;
         }
-        parseOk = ParseJsColor(arrowColorValue, color, resArrowColorObj);
-        swiperArrowParameters.arrowColor = parseOk
-            ? (swiperArrowParameters.parametersByUser.insert("arrowColor"), color)
-            : swiperIndicatorTheme->GetBigArrowColor();
+        parseOk = ParseJsColor(arrowColorValue, color);
+        swiperArrowParameters.arrowColor = parseOk ? color : swiperIndicatorTheme->GetBigArrowColor();
     } else {
-        parseOk = ParseJsDimensionVp(backgroundSizeValue, dimension, resBackgroundSizeObj);
+        parseOk = ParseJsDimensionVp(backgroundSizeValue, dimension);
         swiperArrowParameters.backgroundSize =
             parseOk && GreatNotEqual(dimension.ConvertToVp(), 0.0) && !(dimension.Unit() == DimensionUnit::PERCENT)
                 ? dimension
                 : swiperIndicatorTheme->GetSmallArrowBackgroundSize();
-        parseOk = ParseJsColor(backgroundColorValue, color, resBackgroundColorObj);
-        swiperArrowParameters.backgroundColor = parseOk
-            ? (swiperArrowParameters.parametersByUser.insert("backgroundColor"), color)
-            : swiperIndicatorTheme->GetSmallArrowBackgroundColor();
+        parseOk = ParseJsColor(backgroundColorValue, color);
+        swiperArrowParameters.backgroundColor = parseOk ? color : swiperIndicatorTheme->GetSmallArrowBackgroundColor();
         if (swiperArrowParameters.isShowBackground.value()) {
             swiperArrowParameters.arrowSize = swiperArrowParameters.backgroundSize.value() * ARROW_SIZE_COEFFICIENT;
         } else {
-            parseOk = ParseJsDimensionVpNG(arrowSizeValue, dimension, resArrowSizeObj);
+            parseOk = ParseJsDimensionVpNG(arrowSizeValue, dimension);
             swiperArrowParameters.arrowSize =
                 parseOk && GreatNotEqual(dimension.ConvertToVp(), 0.0) && !(dimension.Unit() == DimensionUnit::PERCENT)
                     ? dimension
                     : swiperIndicatorTheme->GetSmallArrowSize();
             swiperArrowParameters.backgroundSize = swiperArrowParameters.arrowSize;
         }
-        parseOk = ParseJsColor(arrowColorValue, color, resArrowColorObj);
-        swiperArrowParameters.arrowColor = parseOk
-           ? (swiperArrowParameters.parametersByUser.insert("arrowColor"), color)
-           : swiperIndicatorTheme->GetSmallArrowColor();
-    }
-    if (SystemProperties::ConfigChangePerform()) {
-        swiperArrowParameters.resourceBackgroundSizeValueObject = resBackgroundSizeObj;
-        swiperArrowParameters.resourceBackgroundColorValueObject = resBackgroundColorObj;
-        swiperArrowParameters.resourceArrowSizeValueObject = resArrowSizeObj;
-        swiperArrowParameters.resourceArrowColorValueObject = resArrowColorObj;
+        parseOk = ParseJsColor(arrowColorValue, color);
+        swiperArrowParameters.arrowColor = parseOk ? color : swiperIndicatorTheme->GetSmallArrowColor();
     }
     return true;
 }
@@ -986,30 +700,21 @@ void JSSwiper::SetIndicatorController(const JSCallbackInfo& info)
     if (!jsIndicatorController) {
         return;
     }
+    jSIndicatorController_ = jsIndicatorController;
     SwiperModel::GetInstance()->SetBindIndicator(true);
-    auto targetNode = AceType::Claim(NG::ViewStackProcessor::GetInstance()->GetMainFrameNode());
-    auto resetFunc = jsIndicatorController->SetSwiperNodeBySwiper(targetNode);
-    SwiperModel::GetInstance()->SetIndicatorController(jsIndicatorController);
-    if (resetFunc) {
-        SwiperModel::GetInstance()->SetJSIndicatorController(resetFunc);
-    }
+    WeakPtr<NG::UINode> targetNode = AceType::WeakClaim(NG::ViewStackProcessor::GetInstance()->GetMainFrameNode());
+    jsIndicatorController->SetSwiperNode(targetNode);
 }
 
-void JSSwiper::ResetSwiperNode(const JSCallbackInfo& info)
+void JSSwiper::ResetSwiperNode()
 {
-    JSIndicatorController* jsIndicatorController = SwiperModel::GetInstance()->GetIndicatorController();
-    JSIndicatorController* controller = nullptr;
-    if (info.Length() >= 1 && info[0]->IsObject()) {
-        controller = JSRef<JSObject>::Cast(info[0])->Unwrap<JSIndicatorController>();
-    }
-    if (jsIndicatorController && jsIndicatorController != controller) {
-        jsIndicatorController->ResetSwiperNode();
+    if (jSIndicatorController_.Upgrade()) {
+        jSIndicatorController_.Upgrade()->ResetSwiperNode();
     }
 }
 
 void JSSwiper::SetIndicator(const JSCallbackInfo& info)
 {
-    ResetSwiperNode(info);
     if (info.Length() < 1) {
         return;
     }
@@ -1022,6 +727,7 @@ void JSSwiper::SetIndicator(const JSCallbackInfo& info)
     if (info[0]->IsObject()) {
         auto obj = JSRef<JSObject>::Cast(info[0]);
         SwiperModel::GetInstance()->SetIndicatorIsBoolean(false);
+        ResetSwiperNode();
 
         JSRef<JSVal> typeParam = obj->GetProperty("type");
         if (typeParam->IsString()) {
@@ -1073,24 +779,16 @@ void JSSwiper::SetIndicatorStyle(const JSCallbackInfo& info)
         JSRef<JSVal> maskValue = obj->GetProperty("mask");
         JSRef<JSVal> colorValue = obj->GetProperty("color");
         JSRef<JSVal> selectedColorValue = obj->GetProperty("selectedColor");
-        JSRef<JSVal> ignoreSizeValue = obj->GetProperty("ignoreSize");
         auto pipelineContext = PipelineBase::GetCurrentContext();
         CHECK_NULL_VOID(pipelineContext);
         auto swiperIndicatorTheme = pipelineContext->GetTheme<SwiperIndicatorTheme>();
         CHECK_NULL_VOID(swiperIndicatorTheme);
-        RefPtr<ResourceObject> resLeftObj;
-        RefPtr<ResourceObject> resTopObj;
-        RefPtr<ResourceObject> resRightObj;
-        RefPtr<ResourceObject> resBottomObj;
-        swiperParameters.dimLeft = ParseIndicatorDimension(leftValue, resLeftObj);
-        swiperParameters.dimTop = ParseIndicatorDimension(topValue, resTopObj);
-        swiperParameters.dimRight = ParseIndicatorDimension(rightValue, resRightObj);
-        swiperParameters.dimBottom = ParseIndicatorDimension(bottomValue, resBottomObj);
-
+        swiperParameters.dimLeft = ParseIndicatorDimension(leftValue);
+        swiperParameters.dimTop = ParseIndicatorDimension(topValue);
+        swiperParameters.dimRight = ParseIndicatorDimension(rightValue);
+        swiperParameters.dimBottom = ParseIndicatorDimension(bottomValue);
         CalcDimension dimPosition;
-        RefPtr<ResourceObject> resItemSizeObj;
-        auto parseOk = ParseJsDimensionVp(sizeValue, dimPosition, resItemSizeObj) &&
-            (dimPosition.Unit() != DimensionUnit::PERCENT);
+        auto parseOk = ParseJsDimensionVp(sizeValue, dimPosition) && (dimPosition.Unit() != DimensionUnit::PERCENT);
         SetIsIndicatorCustomSize(dimPosition, parseOk);
         swiperParameters.itemWidth = parseOk && dimPosition > 0.0_vp ? dimPosition : swiperIndicatorTheme->GetSize();
         swiperParameters.itemHeight = parseOk && dimPosition > 0.0_vp ? dimPosition : swiperIndicatorTheme->GetSize();
@@ -1102,31 +800,11 @@ void JSSwiper::SetIndicatorStyle(const JSCallbackInfo& info)
             auto mask = maskValue->ToBoolean();
             swiperParameters.maskValue = mask;
         }
-        if (ignoreSizeValue->IsBoolean()) {
-            auto ignoreSize = ignoreSizeValue->ToBoolean();
-            swiperParameters.ignoreSizeValue = ignoreSize;
-        } else {
-            swiperParameters.ignoreSizeValue = false;
-        }
         Color colorVal;
-        RefPtr<ResourceObject> resColorObj;
-        RefPtr<ResourceObject> resSelectedColorObj;
-        parseOk = ParseJsColor(colorValue, colorVal, resColorObj);
-        swiperParameters.colorVal = parseOk ?  (swiperParameters.parametersByUser.insert("colorVal"), colorVal)
-            : swiperIndicatorTheme->GetColor();
-        parseOk = ParseJsColor(selectedColorValue, colorVal, resSelectedColorObj);
-        swiperParameters.selectedColorVal = parseOk
-            ? (swiperParameters.parametersByUser.insert("selectedColorVal"), colorVal)
-            : swiperIndicatorTheme->GetSelectedColor();
-        if (SystemProperties::ConfigChangePerform()) {
-            swiperParameters.resourceDimLeftValueObject = resLeftObj;
-            swiperParameters.resourceDimTopValueObject = resTopObj;
-            swiperParameters.resourceDimRightValueObject = resRightObj;
-            swiperParameters.resourceDimBottomValueObject = resBottomObj;
-            swiperParameters.resourceColorValueObject = resColorObj;
-            swiperParameters.resourceSelectedColorValueObject = resSelectedColorObj;
-            swiperParameters.resourceItemSizeValueObject = resItemSizeObj;
-        }
+        parseOk = ParseJsColor(colorValue, colorVal);
+        swiperParameters.colorVal = parseOk ? colorVal : swiperIndicatorTheme->GetColor();
+        parseOk = ParseJsColor(selectedColorValue, colorVal);
+        swiperParameters.selectedColorVal = parseOk ? colorVal : swiperIndicatorTheme->GetSelectedColor();
     }
     SwiperModel::GetInstance()->SetDotIndicatorStyle(swiperParameters);
     info.ReturnSelf();
@@ -1154,8 +832,7 @@ void JSSwiper::SetPreviousMargin(const JSCallbackInfo& info)
 
     CalcDimension value;
     bool ignoreBlank = false;
-    RefPtr<ResourceObject> resObj;
-    if (!ParseJsDimensionVp(info[0], value, resObj) || info[0]->IsNull() || info[0]->IsUndefined() ||
+    if (!ParseJsDimensionVp(info[0], value) || info[0]->IsNull() || info[0]->IsUndefined() ||
         LessNotEqual(value.Value(), 0.0)) {
         value.SetValue(0.0);
     }
@@ -1163,9 +840,6 @@ void JSSwiper::SetPreviousMargin(const JSCallbackInfo& info)
         ignoreBlank = info[1]->ToBoolean();
     }
     SwiperModel::GetInstance()->SetPreviousMargin(value, ignoreBlank);
-    if (SystemProperties::ConfigChangePerform()) {
-        SwiperModel::GetInstance()->ProcessPreviousMarginWithResourceObj(resObj);
-    }
 }
 
 void JSSwiper::SetNextMargin(const JSCallbackInfo& info)
@@ -1176,8 +850,7 @@ void JSSwiper::SetNextMargin(const JSCallbackInfo& info)
 
     CalcDimension value;
     bool ignoreBlank = false;
-    RefPtr<ResourceObject> resObj;
-    if (!ParseJsDimensionVp(info[0], value, resObj) || info[0]->IsNull() || info[0]->IsUndefined() ||
+    if (!ParseJsDimensionVp(info[0], value) || info[0]->IsNull() || info[0]->IsUndefined() ||
         LessNotEqual(value.Value(), 0.0)) {
         value.SetValue(0.0);
     }
@@ -1185,9 +858,6 @@ void JSSwiper::SetNextMargin(const JSCallbackInfo& info)
         ignoreBlank = info[1]->ToBoolean();
     }
     SwiperModel::GetInstance()->SetNextMargin(value, ignoreBlank);
-    if (SystemProperties::ConfigChangePerform()) {
-        SwiperModel::GetInstance()->ProcessNextMarginWithResourceObj(resObj);
-    }
 }
 
 void JSSwiper::SetDisplayMode(int32_t index)
@@ -1278,30 +948,6 @@ void JSSwiper::SetOnChange(const JSCallbackInfo& info)
     };
 
     SwiperModel::GetInstance()->SetOnChange(std::move(onChange));
-}
-
-void JSSwiper::SetOnUnselected(const JSCallbackInfo& info)
-{
-    if (!info[0]->IsFunction()) {
-        return;
-    }
-    auto unselectedHandler = AceType::MakeRefPtr<JsEventFunction<SwiperChangeEvent, 1>>(
-        JSRef<JSFunc>::Cast(info[0]), SwiperChangeEventToJSValue);
-    WeakPtr<NG::FrameNode> targetNode = AceType::WeakClaim(NG::ViewStackProcessor::GetInstance()->GetMainFrameNode());
-    auto onUnselected = [executionContext = info.GetExecutionContext(), func = std::move(unselectedHandler),
-                          node = targetNode](const BaseEventInfo* info) {
-        JAVASCRIPT_EXECUTION_SCOPE_WITH_CHECK(executionContext);
-        const auto* swiperInfo = TypeInfoHelper::DynamicCast<SwiperChangeEvent>(info);
-        if (!swiperInfo) {
-            TAG_LOGW(AceLogTag::ACE_SWIPER, "Swiper onUnselected callback execute failed.");
-            return;
-        }
-        ACE_SCORING_EVENT("Swiper.onUnselected");
-        ACE_SCOPED_TRACE("Swiper.onUnselected index %d", swiperInfo->GetIndex());
-        PipelineContext::SetCallBackNode(node);
-        func->Execute(*swiperInfo);
-    };
-    SwiperModel::GetInstance()->SetOnUnselected(std::move(onUnselected));
 }
 
 void JSSwiper::SetOnAnimationStart(const JSCallbackInfo& info)
@@ -1421,10 +1067,6 @@ void JSSwiper::SetOnClick(const JSCallbackInfo& info)
                        const BaseEventInfo* info, const RefPtr<V2::InspectorFunctionImpl>& impl) {
         JAVASCRIPT_EXECUTION_SCOPE_WITH_CHECK(execCtx);
         const auto* clickInfo = TypeInfoHelper::DynamicCast<ClickInfo>(info);
-        if (!clickInfo) {
-            TAG_LOGW(AceLogTag::ACE_SWIPER, "Swiper onClick callback execute failed.");
-            return;
-        }
         auto newInfo = *clickInfo;
         if (impl) {
             impl->UpdateEventInfo(newInfo);
@@ -1518,48 +1160,9 @@ void JSSwiperController::Destructor(JSSwiperController* scroller)
     }
 }
 
-void JSSwiperController::SwipeTo(const JSCallbackInfo& args)
-{
-    ContainerScope scope(instanceId_);
-    if (args.Length() < 1 || !args[0]->IsNumber()) {
-        LOGE("Param is not valid");
-        return;
-    }
-    if (controller_) {
-        controller_->SwipeTo(args[0]->ToNumber<int32_t>());
-    } else {
-        EventReport::ReportScrollableErrorEvent(
-            "Swiper", ScrollableErrorType::CONTROLLER_NOT_BIND, "swipeTo: Swiper controller not bind.");
-    }
-}
-
-void JSSwiperController::ShowNext(const JSCallbackInfo& args)
-{
-    ContainerScope scope(instanceId_);
-    if (controller_) {
-        controller_->ShowNext();
-    } else {
-        EventReport::ReportScrollableErrorEvent(
-            "Swiper", ScrollableErrorType::CONTROLLER_NOT_BIND, "showNext: Swiper controller not bind.");
-    }
-}
-
-void JSSwiperController::ShowPrevious(const JSCallbackInfo& args)
-{
-    ContainerScope scope(instanceId_);
-    if (controller_) {
-        controller_->ShowPrevious();
-    } else {
-        EventReport::ReportScrollableErrorEvent(
-            "Swiper", ScrollableErrorType::CONTROLLER_NOT_BIND, "showPrevious: Swiper controller not bind.");
-    }
-}
-
 void JSSwiperController::ChangeIndex(const JSCallbackInfo& args)
 {
     if (!controller_) {
-        EventReport::ReportScrollableErrorEvent(
-            "Swiper", ScrollableErrorType::CONTROLLER_NOT_BIND, "changeIndex: Swiper controller not bind.");
         return;
     }
     if (args.Length() < 1 || !args[0]->IsNumber()) {
@@ -1585,8 +1188,6 @@ void JSSwiperController::FinishAnimation(const JSCallbackInfo& args)
 {
     ContainerScope scope(instanceId_);
     if (!controller_) {
-        EventReport::ReportScrollableErrorEvent(
-            "Swiper", ScrollableErrorType::CONTROLLER_NOT_BIND, "finishAnimation: Swiper controller not bind.");
         return;
     }
 
@@ -1597,7 +1198,6 @@ void JSSwiperController::FinishAnimation(const JSCallbackInfo& args)
             JAVASCRIPT_EXECUTION_SCOPE_WITH_CHECK(execCtx);
             ACE_SCORING_EVENT("Swiper.finishAnimation");
             PipelineContext::SetCallBackNode(node);
-            TAG_LOGD(AceLogTag::ACE_SWIPER, "SwiperController finishAnimation callback execute.");
             func->Execute();
         };
 
@@ -1609,16 +1209,14 @@ void JSSwiperController::FinishAnimation(const JSCallbackInfo& args)
     controller_->FinishAnimation();
 }
 
-void JSSwiperController::OldPreloadItems(const JSCallbackInfo& args)
+void JSSwiperController::PreloadItems(const JSCallbackInfo& args)
 {
     ContainerScope scope(instanceId_);
     if (!controller_) {
-        EventReport::ReportScrollableErrorEvent(
-            "Swiper", ScrollableErrorType::CONTROLLER_NOT_BIND, "preloadItems: Swiper controller not bind.");
         return;
     }
 
-    if (args.Length() != LENGTH_TWO || !args[0]->IsArray() || !args[1]->IsFunction()) {
+    if (args.Length() != 2 || !args[0]->IsArray() || !args[1]->IsFunction()) {
         return;
     }
 
@@ -1636,61 +1234,12 @@ void JSSwiperController::OldPreloadItems(const JSCallbackInfo& args)
         [execCtx = args.GetExecutionContext(), func = std::move(jsFunc)](int32_t errorCode, std::string message) {
             JAVASCRIPT_EXECUTION_SCOPE_WITH_CHECK(execCtx);
             ACE_SCORING_EVENT("Swiper.preloadItems");
-            TAG_LOGI(AceLogTag::ACE_SWIPER, "SwiperController preloadItems callback execute.");
+            TAG_LOGD(AceLogTag::ACE_SWIPER, "SwiperController preloadItems callback execute.");
             func->Execute(errorCode);
         };
 
     controller_->SetPreloadFinishCallback(onPreloadFinish);
     controller_->PreloadItems(indexSet);
-}
-
-void JSSwiperController::NewPreloadItems(const JSCallbackInfo& args)
-{
-    if (!controller_) {
-        EventReport::ReportScrollableErrorEvent(
-            "Swiper", ScrollableErrorType::CONTROLLER_NOT_BIND, "preloadItems: Swiper controller not bind.");
-        JSException::Throw(ERROR_CODE_NAMED_ROUTE_ERROR, "%s", "Controller not bound to component.");
-        return;
-    }
-
-    ContainerScope scope(instanceId_);
-    auto engine = EngineHelper::GetCurrentEngine();
-    CHECK_NULL_VOID(engine);
-    NativeEngine* nativeEngine = engine->GetNativeEngine();
-    auto env = reinterpret_cast<napi_env>(nativeEngine);
-    auto asyncContext = std::make_shared<SwiperControllerAsyncContext>();
-    asyncContext->env = env;
-    napi_value promise = nullptr;
-    napi_create_promise(env, &asyncContext->deferred, &promise);
-    ScopeRAII scopeRaii(env);
-    std::set<int32_t> indexSet;
-    if (args.Length() > 0 && args[0]->IsArray()) {
-        auto indexArray = JSRef<JSArray>::Cast(args[0]);
-        size_t size = indexArray->Length();
-        for (size_t i = 0; i < size; i++) {
-            int32_t index = -1;
-            JSViewAbstract::ParseJsInt32(indexArray->GetValueAt(i), index);
-            indexSet.emplace(index);
-        }
-    }
-
-    auto onPreloadFinish = [asyncContext](int32_t errorCode, std::string message) {
-        CHECK_NULL_VOID(asyncContext);
-        HandleDeferred(asyncContext, errorCode, message);
-    };
-    controller_->SetPreloadFinishCallback(onPreloadFinish);
-    controller_->PreloadItems(indexSet);
-    ReturnPromise(args, promise);
-}
-
-void JSSwiperController::PreloadItems(const JSCallbackInfo& args)
-{
-    if (Container::GreatOrEqualAPITargetVersion(PlatformVersion::VERSION_EIGHTEEN) && args.Length() == 1) {
-        NewPreloadItems(args);
-        return;
-    }
-
-    OldPreloadItems(args);
 }
 
 void JSSwiper::SetNestedScroll(const JSCallbackInfo& args)
@@ -1764,6 +1313,18 @@ void JSSwiper::SetOnContentDidScroll(const JSCallbackInfo& info)
     SwiperModel::GetInstance()->SetOnContentDidScroll(std::move(onContentDidScroll));
 }
 
+void JSSwiper::SetPageFlipMode(const JSCallbackInfo& info)
+{
+    // default value
+    int32_t value = 0;
+    if (info.Length() < 1 || !info[0]->IsNumber()) {
+        SwiperModel::GetInstance()->SetPageFlipMode(value);
+        return;
+    }
+    JSViewAbstract::ParseJsInt32(info[0], value);
+    SwiperModel::GetInstance()->SetPageFlipMode(value);
+}
+
 void JSSwiper::SetOnContentWillScroll(const JSCallbackInfo& info)
 {
     if (info.Length() < 1) {
@@ -1791,80 +1352,5 @@ void JSSwiper::SetOnContentWillScroll(const JSCallbackInfo& info)
         return ret->ToBoolean();
     };
     SwiperModel::GetInstance()->SetOnContentWillScroll(std::move(callback));
-}
-
-void JSSwiper::SetPageFlipMode(const JSCallbackInfo& info)
-{
-    // default value
-    int32_t value = 0;
-    if (info.Length() < 1 || !info[0]->IsNumber()) {
-        SwiperModel::GetInstance()->SetPageFlipMode(value);
-        return;
-    }
-    JSViewAbstract::ParseJsInt32(info[0], value);
-    SwiperModel::GetInstance()->SetPageFlipMode(value);
-}
-
-void JSSwiper::GetAutoPlayOptionsInfo(const JSRef<JSObject>& obj, SwiperAutoPlayOptions& swiperAutoPlayOptions)
-{
-    auto stopWhenTouched = obj->GetProperty("stopWhenTouched");
-    if (stopWhenTouched->IsBoolean()) {
-        swiperAutoPlayOptions.stopWhenTouched = stopWhenTouched->ToBoolean();
-    }
-}
-
-void JSSwiper::SetOnSelected(const JSCallbackInfo& info)
-{
-    if (!info[0]->IsFunction()) {
-        return;
-    }
-    auto selectedHandler = AceType::MakeRefPtr<JsEventFunction<SwiperChangeEvent, 1>>(
-        JSRef<JSFunc>::Cast(info[0]), SwiperChangeEventToJSValue);
-    WeakPtr<NG::FrameNode> targetNode = AceType::WeakClaim(NG::ViewStackProcessor::GetInstance()->GetMainFrameNode());
-    auto onSelected = [executionContext = info.GetExecutionContext(), func = std::move(selectedHandler),
-                          node = targetNode](const BaseEventInfo* info) {
-        JAVASCRIPT_EXECUTION_SCOPE_WITH_CHECK(executionContext);
-        const auto* swiperInfo = TypeInfoHelper::DynamicCast<SwiperChangeEvent>(info);
-        if (!swiperInfo) {
-            TAG_LOGW(AceLogTag::ACE_SWIPER, "Swiper onSelected callback execute failed.");
-            return;
-        }
-        ACE_SCORING_EVENT("Swiper.onSelected");
-        ACE_SCOPED_TRACE("Swiper.onSelected index %d", swiperInfo->GetIndex());
-        PipelineContext::SetCallBackNode(node);
-        func->Execute(*swiperInfo);
-    };
-    SwiperModel::GetInstance()->SetOnSelected(std::move(onSelected));
-}
-
-void JSSwiper::SetMaintainVisibleContentPosition(const JSCallbackInfo& info)
-{
-    if (!info[0]->IsBoolean()) {
-        SwiperModel::GetInstance()->SetMaintainVisibleContentPosition(false);
-        return;
-    }
-
-    SwiperModel::GetInstance()->SetMaintainVisibleContentPosition(info[0]->ToBoolean());
-}
-void JSSwiper::SetOnScrollStateChanged(const JSCallbackInfo& info)
-{
-    if (!info[0]->IsFunction()) {
-        return;
-    }
-    auto scrollStateHandler = AceType::MakeRefPtr<JsEventFunction<SwiperChangeEvent, 1>>(
-        JSRef<JSFunc>::Cast(info[0]), SwiperChangeEventToJSValue);
-    WeakPtr<NG::FrameNode> targetNode = AceType::WeakClaim(NG::ViewStackProcessor::GetInstance()->GetMainFrameNode());
-    auto onScrollStateChanged = [executionContext = info.GetExecutionContext(), func = std::move(scrollStateHandler),
-                          node = targetNode](const BaseEventInfo* info) {
-        JAVASCRIPT_EXECUTION_SCOPE_WITH_CHECK(executionContext);
-        const auto* scrollStateInfo = TypeInfoHelper::DynamicCast<SwiperChangeEvent>(info);
-        if (!scrollStateInfo) {
-            TAG_LOGW(AceLogTag::ACE_SWIPER, "scrollStateInfo invalid, OnScrollStateChanged failed.");
-            return;
-        }
-        PipelineContext::SetCallBackNode(node);
-        func->Execute(*scrollStateInfo);
-    };
-    SwiperModel::GetInstance()->SetOnScrollStateChanged(std::move(onScrollStateChanged));
 }
 } // namespace OHOS::Ace::Framework

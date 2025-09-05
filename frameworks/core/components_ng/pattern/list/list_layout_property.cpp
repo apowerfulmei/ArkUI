@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022-2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -14,6 +14,10 @@
  */
 
 #include "core/components_ng/pattern/list/list_layout_property.h"
+
+#include "base/utils/string_utils.h"
+#include "core/components_ng/base/inspector_filter.h"
+#include "core/components_v2/list/list_properties.h"
 
 namespace OHOS::Ace::NG {
 namespace {
@@ -78,7 +82,6 @@ void ListLayoutProperty::ToJsonValue(std::unique_ptr<JsonValue>& json, const Ins
         json->PutExtAttr("sticky", "StickyStyle.None", filter);
     }
     ScrollSnapPropToJsonValue(json, filter);
-    json->PutExtAttr("syncLoad", propSyncLoad_.value_or(true), filter);
 }
 
 void ListLayoutProperty::ScrollSnapPropToJsonValue(
@@ -88,12 +91,12 @@ void ListLayoutProperty::ScrollSnapPropToJsonValue(
     if (filter.IsFastFilter()) {
         return;
     }
-    auto scrollSnapAlign = propScrollSnapAlign_.value_or(ScrollSnapAlign::NONE);
-    if (scrollSnapAlign == ScrollSnapAlign::START) {
+    auto scrollSnapAlign = propScrollSnapAlign_.value_or(V2::ScrollSnapAlign::NONE);
+    if (scrollSnapAlign == V2::ScrollSnapAlign::START) {
         json->PutExtAttr("scrollSnapAlign", "ScrollSnapAlign.START", filter);
-    } else if (scrollSnapAlign == ScrollSnapAlign::CENTER) {
+    } else if (scrollSnapAlign == V2::ScrollSnapAlign::CENTER) {
         json->PutExtAttr("scrollSnapAlign", "ScrollSnapAlign.CENTER", filter);
-    } else if (scrollSnapAlign == ScrollSnapAlign::END) {
+    } else if (scrollSnapAlign == V2::ScrollSnapAlign::END) {
         json->PutExtAttr("scrollSnapAlign", "ScrollSnapAlign.END", filter);
     } else {
         json->PutExtAttr("scrollSnapAlign", "ScrollSnapAlign.NONE", filter);
@@ -110,26 +113,5 @@ void ListLayoutProperty::FromJson(const std::unique_ptr<JsonValue>& json)
         UpdateDivider(ItemDividerFromJson(dividerJson));
     }
     LayoutProperty::FromJson(json);
-}
-
-void ListLayoutProperty::UpdateLayoutProperty(const ListLayoutProperty* layoutProperty)
-{
-    CHECK_NULL_VOID(layoutProperty);
-    propSpace_ = layoutProperty->CloneSpace();
-    propInitialIndex_ = layoutProperty->CloneInitialIndex();
-    propListDirection_ = layoutProperty->CloneListDirection();
-    propDivider_ = layoutProperty->CloneDivider();
-    propLanes_ = layoutProperty->CloneLanes();
-    propLaneMinLength_ = layoutProperty->CloneLaneMinLength();
-    propLaneMaxLength_ = layoutProperty->CloneLaneMaxLength();
-    propLaneGutter_ = layoutProperty->CloneLaneGutter();
-    propListItemAlign_ = layoutProperty->CloneListItemAlign();
-    propCachedCount_ = layoutProperty->CloneCachedCount();
-    propStickyStyle_ = layoutProperty->CloneStickyStyle();
-    propContentStartOffset_ = layoutProperty->CloneContentStartOffset();
-    propContentEndOffset_ = layoutProperty->CloneContentEndOffset();
-    propScrollSnapAlign_ = layoutProperty->CloneScrollSnapAlign();
-    propEditMode_ = layoutProperty->CloneEditMode();
-    propScrollEnabled_ = layoutProperty->CloneScrollEnabled();
 }
 }

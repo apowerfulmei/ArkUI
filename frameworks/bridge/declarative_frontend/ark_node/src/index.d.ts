@@ -15,27 +15,30 @@
 
 declare class UIContext {
   instanceId_: number;
-  isAvailable(): boolean;
 }
 
 declare interface TouchEvent {
 }
 
-declare interface MouseEvent {
-}
-
-declare interface AxisEvent {
-}
-
 declare interface Position { x?: number; y?: number; }
 
-declare type InputEventType = TouchEvent | MouseEvent | AxisEvent;
+declare type UpdateFunc = (elmtId: number, isFirstRender: boolean, param?: Object) => void;
 
 interface UpdateFuncRecord {
   updateFunc: UpdateFunc;
   componentName: string;
   node?: object;
-  getUpdateFunc(): UpdateFunc | undefined;
+}
+
+declare class ObserveV2 {
+  static getObserve(): ObserveV2;
+  public stopRecordDependencies(): void;
+  public startRecordDependencies(cmp: BaseNode, id: number, doClearBinding: boolean): void;
+}
+
+declare class ConfigureStateMgmt {
+  public static get instance(): ConfigureStateMgmt;
+  public needsV2Observe(): boolean;
 }
 
 declare function wrapBuilder<Args extends Object[]>(
@@ -67,9 +70,40 @@ declare interface XComponentController { }
 declare interface BuildOptions {
   nestingBuilderSupported?: boolean;
   lazyBuildSupported?: boolean;
-  bindedViewOfBuilderNode?:ViewPU;
-  localStorage?:LocalStorage;
-  enableProvideConsumeCrossing?:boolean;
+}
+declare abstract class ViewPU {
+  id__(): number;
+  aboutToUpdate?: (updateParams: Object) => void;
+  updateStateVars(params: {}): void;
+  aboutToReuseInternal(param?: Object): void;
+  aboutToRecycleInternal(): void;
+  updateDirtyElements(): void;
+  forceCompleteRerender(deep?: boolean): void;
+}
+
+/**
+ * WeakRef
+ * ref to an Object that does not prevent the Object from getting GC'ed
+ * current version of tsc does not know about WeakRef
+ * but Ark runtime supports it
+ *
+ */
+declare class WeakRef<T extends Object> {
+  constructor(o: T);
+  deref(): T;
+}
+
+type RemovedElementInfo = { elmtId: number, tag: string };
+
+declare class UINodeRegisterProxy {
+  public static instance_: UINodeRegisterProxy;
+  public removeElementsInfo_: Array<number>;
+  public static ElementIdToOwningViewPU_: Map<number, WeakRef<JSBuilderNode>>;
+  public unregisterElmtIdsFromIViews(): void;
+  private obtainDeletedElmtIds(): void;
+  public static unregisterElmtIdsFromIViews(): void;
+  public static obtainDeletedElmtIds(): void;
+  public static unregisterRemovedElmtsFromViewPUs(removedElements: Array<number>): void;
 }
 
 declare interface RegisterParams {
@@ -155,6 +189,10 @@ declare class ArkFlowItemComponent extends ArkComponent {}
 
 declare class ArkSymbolGlyphComponent extends ArkComponent {}
 
+declare class ArkMarqueeComponent extends ArkComponent {}
+
+declare class ArkTextAreaComponent extends ArkComponent {}
+
 declare class ArkQRCodeComponent extends ArkComponent {}
 
 declare class ArkBadgeComponent extends ArkComponent {}
@@ -167,35 +205,7 @@ declare class ArkTextClockComponent extends ArkComponent {}
 
 declare class ArkTextTimerComponent extends ArkComponent {}
 
-declare class ArkMarqueeComponent extends ArkComponent {}
-
-declare class ArkTextAreaComponent extends ArkComponent {}
-
-declare class ArkCheckboxComponent extends ArkComponent {}
-
-declare class ArkCheckboxGroupComponent extends ArkComponent {}
-
-declare class ArkRadioComponent extends ArkComponent {}
-
-declare class ArkRatingComponent extends ArkComponent {}
-
-declare class ArkSliderComponent extends ArkComponent {}
-
-declare class ArkSelectComponent extends ArkComponent {}
-
-declare class ArkToggleComponent extends ArkComponent {}
-
-declare class ArkLazyVGridLayoutComponent extends ArkComponent {}
-
-declare class SwiperController {}
-
 declare class Scroller {}
-
-declare class TextController {}
-
-declare class TextInputController {}
-
-declare class TextAreaController {}
 
 declare class UICommonEvent {
   private _nodePtr: NodePtr;
@@ -204,16 +214,6 @@ declare class UICommonEvent {
   setInstanceId(instanceId: number): void;
   setNodePtr(nodePtr: NodePtr): void;
 }
-
-declare class UIScrollableCommonEvent extends UICommonEvent {}
-
-declare class UIListEvent extends UIScrollableCommonEvent {}
-
-declare class UIScrollEvent extends UIScrollableCommonEvent {}
-
-declare class UIGridEvent extends UIScrollableCommonEvent {}
-
-declare class UIWaterFlowEvent extends UIScrollableCommonEvent {}
 
 declare class UIGestureEvent {
   private _nodePtr: NodePtr;
@@ -252,13 +252,3 @@ declare class NativeUtils {
 
 declare function __getCustomProperty__(nodeId: number, key: string): Object | undefined;
 declare function __getCustomPropertyString__(nodeId: number, key: string): string | undefined;
-
-declare enum AnimationPropertyType {
-  ROTATION = 0,
-  TRANSLATION = 1,
-  SCALE = 2,
-  OPACITY = 3,
-}
-
-declare interface AnimateParam {
-}

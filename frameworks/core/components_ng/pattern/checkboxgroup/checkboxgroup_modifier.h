@@ -1,5 +1,5 @@
  /*
- * Copyright (c) 2023-2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -24,7 +24,6 @@
 #include "core/components_ng/property/property.h"
 #include "core/components_ng/render/animation_utils.h"
 #include "core/components_ng/render/drawing_forward.h"
-#include "core/pipeline_ng/pipeline_context.h"
 
 namespace OHOS::Ace::NG {
 class CheckBoxGroupModifier : public ContentModifier {
@@ -51,8 +50,6 @@ public:
         Dimension shadowWidth;
         UIStatus uiStatus;
         Dimension defaultPaddingSize;
-        Dimension hoverPaddingSize;
-        bool showCircleDial;
         CheckBoxGroupPaintProperty::SelectStatus status;
     };
 
@@ -60,45 +57,39 @@ public:
     ~CheckBoxGroupModifier() override = default;
     void onDraw(DrawingContext& context) override
     {
-        if (useContentModifier_->Get()) {
-            return;
-        }
         PaintCheckBox(context, offset_->Get(), size_->Get());
     }
 
-    void UpdateAnimatableProperty(const RefPtr<FrameNode>& host)
+    void UpdateAnimatableProperty()
     {
         switch (touchHoverType_) {
             case TouchHoverAnimationType::HOVER:
-                SetBoardColor(LinearColor(hoverColor_), hoverDuration_, Curves::FRICTION, host);
+                SetBoardColor(LinearColor(hoverColor_), hoverDuration_, Curves::FRICTION);
                 break;
             case TouchHoverAnimationType::PRESS_TO_HOVER:
-                SetBoardColor(LinearColor(hoverColor_), hoverToTouchDuration_, Curves::SHARP, host);
+                SetBoardColor(LinearColor(hoverColor_), hoverToTouchDuration_, Curves::SHARP);
                 break;
             case TouchHoverAnimationType::NONE:
-                SetBoardColor(LinearColor(hoverColor_.BlendOpacity(0)), hoverDuration_, Curves::FRICTION, host);
+                SetBoardColor(LinearColor(hoverColor_.BlendOpacity(0)), hoverDuration_, Curves::FRICTION);
                 break;
             case TouchHoverAnimationType::HOVER_TO_PRESS:
-                SetBoardColor(LinearColor(clickEffectColor_), hoverToTouchDuration_, Curves::SHARP, host);
+                SetBoardColor(LinearColor(clickEffectColor_), hoverToTouchDuration_, Curves::SHARP);
                 break;
             case TouchHoverAnimationType::PRESS:
-                SetBoardColor(LinearColor(clickEffectColor_), hoverDuration_, Curves::FRICTION, host);
+                SetBoardColor(LinearColor(clickEffectColor_), hoverDuration_, Curves::FRICTION);
                 break;
             default:
                 break;
         }
     }
 
-    void SetBoardColor(
-        LinearColor color, int32_t duration, const RefPtr<CubicCurve>& curve, const RefPtr<FrameNode>& host)
+    void SetBoardColor(LinearColor color, int32_t duratuion, const RefPtr<CubicCurve>& curve)
     {
-        CHECK_NULL_VOID(host);
         if (animateTouchHoverColor_) {
             AnimationOption option = AnimationOption();
-            option.SetDuration(duration);
+            option.SetDuration(duratuion);
             option.SetCurve(curve);
-            AnimationUtils::Animate(
-                option, [&]() { animateTouchHoverColor_->Set(color); }, nullptr, nullptr, host->GetContextRefPtr());
+            AnimationUtils::Animate(option, [&]() { animateTouchHoverColor_->Set(color); });
         }
     }
 
@@ -166,9 +157,7 @@ public:
 
     void SetInactivePointColor(Color inactivePointColor)
     {
-        if (inactivePointColor_) {
-            inactivePointColor_->Set(inactivePointColor);
-        }
+        inactivePointColor_ = inactivePointColor;
     }
 
     void SetHoverRadius(Dimension hoverRadius)
@@ -227,13 +216,6 @@ public:
         }
     }
 
-    void SetUseContentModifier(bool useContentModifier)
-    {
-        if (useContentModifier_) {
-            useContentModifier_->Set(useContentModifier);
-        }
-    }
-
     void SetSize(SizeF& size)
     {
         if (size_) {
@@ -263,7 +245,6 @@ private:
     TouchHoverAnimationType touchHoverType_ = TouchHoverAnimationType::NONE;
     HoverEffectType hoverEffectType_ = HoverEffectType::AUTO;
     RefPtr<PropertyBool> enabled_;
-    RefPtr<PropertyBool> useContentModifier_;
     RefPtr<PropertyInt> uiStatus_;
     RefPtr<PropertyInt> status_;
     RefPtr<PropertyOffsetF> offset_;
@@ -275,7 +256,7 @@ private:
     Color shadowColor_;
     Color clickEffectColor_;
     Color hoverColor_;
-    RefPtr<PropertyColor> inactivePointColor_;
+    Color inactivePointColor_;
     Dimension hoverRadius_;
     Dimension hotZoneHorizontalPadding_;
     Dimension hotZoneVerticalPadding_;
@@ -283,8 +264,6 @@ private:
     float hoverDuration_ = 0.0f;
     float hoverToTouchDuration_ = 0.0f;
     Dimension defaultPaddingSize_;
-    Dimension hoverPaddingSize_;
-    bool showCircleDial_;
     ACE_DISALLOW_COPY_AND_MOVE(CheckBoxGroupModifier);
 };
 } // namespace OHOS::Ace::NG

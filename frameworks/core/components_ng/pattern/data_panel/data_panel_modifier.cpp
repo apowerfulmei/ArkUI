@@ -15,10 +15,23 @@
 
 #include "core/components_ng/pattern/data_panel/data_panel_modifier.h"
 
+#include <cmath>
+
+#include "base/geometry/ng/offset_t.h"
+#include "base/geometry/ng/point_t.h"
+#include "base/geometry/ng/rect_t.h"
+#include "base/geometry/rect.h"
+#include "base/geometry/rrect.h"
+#include "base/utils/utils.h"
+#include "core/components/common/properties/alignment.h"
+#include "core/components/common/properties/color.h"
+#include "core/components/data_panel/data_panel_theme.h"
+#include "core/components/theme/theme_manager.h"
 #include "core/components_ng/pattern/data_panel/data_panel_paint_property.h"
+#include "core/components_ng/render/canvas_image.h"
+#include "core/components_ng/render/drawing.h"
 #include "core/components_ng/render/drawing_prop_convertor.h"
-#include "core/pipeline/base/constants.h"
-#include "core/pipeline_ng/pipeline_context.h"
+#include "core/pipeline/pipeline_base.h"
 
 namespace OHOS::Ace::NG {
 namespace {
@@ -33,7 +46,7 @@ constexpr uint32_t SHADOW_ALPHA = 0.4 * 255;
 constexpr float ZERO_CORNER_RADIUS = 0.0f;
 } // namespace
 
-DataPanelModifier::DataPanelModifier(const WeakPtr<Pattern>& pattern) : pattern_(pattern)
+DataPanelModifier::DataPanelModifier()
 {
     auto pipelineContext = PipelineBase::GetCurrentContext();
     CHECK_NULL_VOID(pipelineContext);
@@ -47,14 +60,12 @@ DataPanelModifier::DataPanelModifier(const WeakPtr<Pattern>& pattern) : pattern_
         values_.emplace_back(value);
     }
     max_ = AceType::MakeRefPtr<AnimatablePropertyFloat>(DEFAULT_MAX_VALUE);
-    count_ = AceType::MakeRefPtr<AnimatablePropertyFloat>(DEFAULT_VALUE_COUNT);
     trackBackgroundColor_ = AceType::MakeRefPtr<AnimatablePropertyColor>(LinearColor(theme->GetBackgroundColor()));
     strokeWidth_ = AceType::MakeRefPtr<AnimatablePropertyFloat>(theme->GetThickness().ConvertToPx());
     isEffect_ = AceType::MakeRefPtr<PropertyBool>(true);
     useContentModifier_ = AceType::MakeRefPtr<PropertyBool>(false);
     AttachProperty(date_);
     AttachProperty(max_);
-    AttachProperty(count_);
     AttachProperty(trackBackgroundColor_);
     AttachProperty(strokeWidth_);
     AttachProperty(isEffect_);
@@ -111,10 +122,7 @@ void DataPanelModifier::UpdateDate()
         option.SetDelay(ANIMATION_DELAY);
         option.SetCurve(curve);
         option.SetIteration(ANIMATION_TIMES);
-        auto pattern = pattern_.Upgrade();
-        auto host = pattern? pattern->GetHost(): nullptr;
-        auto context = host? host->GetContextRefPtr(): nullptr;
-        AnimationUtils::Animate(option, [&]() { date_->Set(ANIMATION_END); }, nullptr, nullptr, context);
+        AnimationUtils::Animate(option, [&]() { date_->Set(ANIMATION_END); });
     } else {
         date_->Set(ANIMATION_END);
     }
@@ -233,7 +241,7 @@ void DataPanelModifier::GetPaintPath(ArcData& arcData, RSPath& path, RSPath& end
     float sine = thickness * PERCENT_HALF / (radius - (thickness * PERCENT_HALF));
     float radian = asin(sine);
     // the angle of center of start half circle to center and tangent of start half circle to center
-    arcData.circleAngle = radian * HALF_CIRCLE / ACE_PI;
+    arcData.circleAngle = radian * HALF_CIRCLE / M_PI;
     float circleAngle = arcData.circleAngle;
 
     float startAngle = 0.0f;
@@ -255,11 +263,11 @@ void DataPanelModifier::GetPaintPath(ArcData& arcData, RSPath& path, RSPath& end
      * tagAngle: the angle of line of center of start half circle and center of end half circle and
                  line of intersection of start half circle and intersection of end half circle
     */
-    float lastRadian = ACE_PI * lastAngle / HALF_CIRCLE;
-    float drawRadian = ACE_PI * drawAngle / HALF_CIRCLE;
-    float totalDrawRadian = ACE_PI * totalDrawAngle / HALF_CIRCLE;
-    float startRadian = ACE_PI * startAngle / HALF_CIRCLE;
-    float originDrawRadian = ACE_PI * arcData.totalDrawAngle / HALF_CIRCLE;
+    float lastRadian = M_PI * lastAngle / HALF_CIRCLE;
+    float drawRadian = M_PI * drawAngle / HALF_CIRCLE;
+    float totalDrawRadian = M_PI * totalDrawAngle / HALF_CIRCLE;
+    float startRadian = M_PI * startAngle / HALF_CIRCLE;
+    float originDrawRadian = M_PI * arcData.totalDrawAngle / HALF_CIRCLE;
     float d = std::sqrt(
         std::pow(
             (radius - thickness * PERCENT_HALF) - (radius - thickness * PERCENT_HALF) * std::cos(originDrawRadian), 2) +
@@ -270,8 +278,8 @@ void DataPanelModifier::GetPaintPath(ArcData& arcData, RSPath& path, RSPath& end
         midAngle = std::acos(std::abs((radius - thickness * PERCENT_HALF) -
                                       (radius - thickness * PERCENT_HALF) * std::cos(originDrawRadian)) /
                              d) *
-                   HALF_CIRCLE / ACE_PI;
-        tagAngle = std::acos((d / thickness)) * HALF_CIRCLE / ACE_PI;
+                   HALF_CIRCLE / M_PI;
+        tagAngle = std::acos((d / thickness)) * HALF_CIRCLE / M_PI;
     }
     /*
      * path of start half circle:

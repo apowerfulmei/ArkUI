@@ -47,8 +47,6 @@ public:
         const std::vector<NG::RangeContent>& value);
     static void SetDialogChange(const RefPtr<FrameNode>& frameNode, DialogTextEvent&& onChange);
     static void SetDialogScrollStop(const RefPtr<FrameNode>& frameNode, DialogTextEvent&& onScrollStop);
-    static void SetDialogEnterSelectedArea(
-        const RefPtr<FrameNode>& frameNode, DialogTextEvent&& onEnterSelectedArea);
     static void SetDefaultPickerItemHeight(const Dimension& value);
     static void SetDialogAcceptEvent(const RefPtr<FrameNode>& frameNode, DialogTextEvent&& onChange);
     static RefPtr<FrameNode> CreateButtonNode(const RefPtr<FrameNode>& frameNode,
@@ -149,13 +147,7 @@ private:
     static bool NeedAdaptForAging();
     static void SetTextDisappearProperties(const RefPtr<PickerTheme>& pickerTheme,
         const PickerTextProperties& properties);
-    static void SetTextNormalProperties(const RefPtr<PickerTheme>& pickerTheme,
-        const PickerTextProperties& properties);
     static void SetDefaultTextStyle(const NG::PickerTextStyle& value);
-    static std::string GetDialogAgingButtonText(bool isNext);
-    static std::string GetDialogNormalButtonText(bool isConfirm);
-    static void SetSelectedBackgroundStyle(const RefPtr<PickerTheme>& pickerTheme,
-        const PickerBackgroundStyle& pickerBgStyle);
 
     static WeakPtr<FrameNode> dialogNode_;
     static uint32_t dialogNodePage_;

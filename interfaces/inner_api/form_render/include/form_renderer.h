@@ -25,7 +25,6 @@
 #include "ui_content.h"
 #include "event_handler.h"
 #include "form_constants.h"
-#include "core/accessibility/accessibility_manager.h"
 
 namespace OHOS {
 namespace AppExecFwk {
@@ -43,9 +42,9 @@ public:
         std::weak_ptr<OHOS::AppExecFwk::EventHandler> eventHandler);
     ~FormRenderer();
 
-    int32_t AddForm(const OHOS::AAFwk::Want& want, const OHOS::AppExecFwk::FormJsInfo& formJsInfo);
+    void AddForm(const OHOS::AAFwk::Want& want, const OHOS::AppExecFwk::FormJsInfo& formJsInfo);
     void PreInitAddForm(const OHOS::AAFwk::Want& want, const OHOS::AppExecFwk::FormJsInfo& formJsInfo);
-    int32_t RunFormPage(const OHOS::AAFwk::Want& want, const OHOS::AppExecFwk::FormJsInfo& formJsInfo);
+    void RunFormPage(const OHOS::AAFwk::Want& want, const OHOS::AppExecFwk::FormJsInfo& formJsInfo);
     void UpdateForm(const OHOS::AppExecFwk::FormJsInfo& formJsInfo);
     void ReloadForm(const std::string& url);
     void Destroy();
@@ -53,21 +52,20 @@ public:
     void SetAllowUpdate(bool allowUpdate);
     bool IsAllowUpdate();
 
-    int32_t OnSurfaceCreate(const OHOS::AppExecFwk::FormJsInfo& formJsInfo, bool isRecoverFormToHandleClickEvent);
-    int32_t OnSurfaceReuse(const OHOS::AppExecFwk::FormJsInfo& formJsInfo);
+    void OnSurfaceCreate(const OHOS::AppExecFwk::FormJsInfo& formJsInfo, bool isRecoverFormToHandleClickEvent);
+    void OnSurfaceReuse(const OHOS::AppExecFwk::FormJsInfo& formJsInfo);
     void OnSurfaceDetach();
     void OnActionEvent(const std::string& action);
     void OnError(const std::string& code, const std::string& msg);
     void OnSurfaceChange(float width, float height, float borderWidth = 0.0);
     void OnFormLinkInfoUpdate(const std::vector<std::string>& formLinkInfos);
     void UpdateConfiguration(const std::shared_ptr<OHOS::AppExecFwk::Configuration>& config);
-    int32_t AttachForm(const OHOS::AAFwk::Want& want, const OHOS::AppExecFwk::FormJsInfo& formJsInfo);
+    void AttachForm(const OHOS::AAFwk::Want& want, const OHOS::AppExecFwk::FormJsInfo& formJsInfo);
     void RecycleForm(std::string& statusData);
     void RecoverForm(const std::string& statusData);
-    void GetRectRelativeToWindow(AccessibilityParentRectInfo& parentRectInfo) const;
+    void GetRectRelativeToWindow(int32_t &top, int32_t &left) const;
     void SetVisibleChange(bool isVisible);
     void UpdateFormSize(float width, float height, float borderWidth);
-    bool IsManagerDelegateValid(const OHOS::AAFwk::Want& want);
 
 private:
     void InitUIContent(const OHOS::AAFwk::Want& want, const OHOS::AppExecFwk::FormJsInfo& formJsInfo);
@@ -76,8 +74,6 @@ private:
     void AttachUIContent(const OHOS::AAFwk::Want& want, const OHOS::AppExecFwk::FormJsInfo& formJsInfo);
     void PreInitUIContent(const OHOS::AAFwk::Want& want, const OHOS::AppExecFwk::FormJsInfo& formJsInfo);
     void RunFormPageInner(const OHOS::AAFwk::Want& want, const OHOS::AppExecFwk::FormJsInfo& formJsInfo);
-    void RemoveFormDeathRecipient();
-    std::shared_ptr<Rosen::RSSurfaceNode> GetSurfaceNode();
 
     bool allowUpdate_ = true;
     bool obscurationMode_ = false;
@@ -88,7 +84,6 @@ private:
     bool fontScaleFollowSystem_ = true;
     std::string backgroundColor_;
     AppExecFwk::Constants::RenderingMode renderingMode_ = AppExecFwk::Constants::RenderingMode::FULL_COLOR;
-    bool enableBlurBackground_ = false;
     std::vector<std::string> cachedInfos_;
     std::shared_ptr<OHOS::AbilityRuntime::Context> context_;
     std::shared_ptr<OHOS::AbilityRuntime::Runtime> runtime_;

@@ -15,9 +15,6 @@
 
 /// <reference path='./import.ts' />
 class ImageAnimatorImagesModifier extends ModifierWithKey<Array<ImageFrameInfo>> {
-  constructor(value: Array<ImageFrameInfo>) {
-    super(value);
-  }
   static identity: Symbol = Symbol('imageAnimatorImages');
   applyPeer(node: KNode, reset: boolean): void {
     if (reset) {
@@ -94,9 +91,6 @@ class ImageAnimatorImagesModifier extends ModifierWithKey<Array<ImageFrameInfo>>
 }
 
 class ImageAnimatorDurationModifier extends ModifierWithKey<number> {
-  constructor(value: number) {
-    super(value);
-  }
   static identity: Symbol = Symbol('imageAnimatorDuration');
   applyPeer(node: KNode, reset: boolean): void {
     if (reset) {
@@ -111,9 +105,6 @@ class ImageAnimatorDurationModifier extends ModifierWithKey<number> {
 }
 
 class ImageAnimatorReverseModifier extends ModifierWithKey<boolean> {
-  constructor(value: boolean) {
-    super(value);
-  }
   static identity: Symbol = Symbol('imageAnimatorReverse');
   applyPeer(node: KNode, reset: boolean): void {
     if (reset) {
@@ -128,9 +119,6 @@ class ImageAnimatorReverseModifier extends ModifierWithKey<boolean> {
 }
 
 class ImageAnimatorStateModifier extends ModifierWithKey<AnimationStatus> {
-  constructor(value: AnimationStatus) {
-    super(value);
-  }
   static identity: Symbol = Symbol('imageAnimatorState');
   applyPeer(node: KNode, reset: boolean): void {
     if (reset) {
@@ -145,9 +133,6 @@ class ImageAnimatorStateModifier extends ModifierWithKey<AnimationStatus> {
 }
 
 class ImageAnimatorFixedSizeModifier extends ModifierWithKey<boolean> {
-  constructor(value: boolean) {
-    super(value);
-  }
   static identity: Symbol = Symbol('imageAnimatorFixedSize');
   applyPeer(node: KNode, reset: boolean): void {
     if (reset) {
@@ -162,9 +147,6 @@ class ImageAnimatorFixedSizeModifier extends ModifierWithKey<boolean> {
 }
 
 class ImageAnimatorFillModeModifier extends ModifierWithKey<FillMode> {
-  constructor(value: FillMode) {
-    super(value);
-  }
   static identity: Symbol = Symbol('imageAnimatorFillMode');
   applyPeer(node: KNode, reset: boolean): void {
     if (reset) {
@@ -179,9 +161,6 @@ class ImageAnimatorFillModeModifier extends ModifierWithKey<FillMode> {
 }
 
 class ImageAnimatorIterationsModeModifier extends ModifierWithKey<number> {
-  constructor(value: number) {
-    super(value);
-  }
   static identity: Symbol = Symbol('imageAnimatorIterationsMode');
   applyPeer(node: KNode, reset: boolean): void {
     if (reset) {
@@ -192,98 +171,6 @@ class ImageAnimatorIterationsModeModifier extends ModifierWithKey<number> {
   }
   checkObjectDiff(): boolean {
     return this.stageValue !== this.value;
-  }
-}
-
-class ImageAnimatorAutoMonitorInvisibleAreaModeModifier extends ModifierWithKey<boolean> {
-  constructor(value: boolean) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('autoMonitorInvisibleAreaMode');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().imageAnimator.setAutoMonitorInvisibleAreaMode(node, false);
-    } else {
-      getUINativeModule().imageAnimator.setAutoMonitorInvisibleAreaMode(node, this.value);
-    }
-  }
-  checkObjectDiff(): boolean {
-    return this.stageValue !== this.value;
-  }
-}
-
-declare type OnStart = () => void;
-class ImageAnimatorOnStartModifier extends ModifierWithKey<OnStart> {
-  constructor(value: OnStart) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('imageAnimatorOnStart');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().imageAnimator.resetImageAnimatorOnStart(node);
-    } else {
-      getUINativeModule().imageAnimator.setImageAnimatorOnStart(node, this.value);
-    }
-  }
-}
-
-declare type OnPause = () => void;
-class ImageAnimatorOnPauseModifier extends ModifierWithKey<OnPause> {
-  constructor(value: OnPause) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('imageAnimatorOnPause');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().imageAnimator.resetImageAnimatorOnPause(node);
-    } else {
-      getUINativeModule().imageAnimator.setImageAnimatorOnPause(node, this.value);
-    }
-  }
-}
-
-declare type OnRepeat = () => void;
-class ImageAnimatorOnRepeatModifier extends ModifierWithKey<OnRepeat> {
-  constructor(value: OnRepeat) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('imageAnimatorOnRepeat');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().imageAnimator.resetImageAnimatorOnRepeat(node);
-    } else {
-      getUINativeModule().imageAnimator.setImageAnimatorOnRepeat(node, this.value);
-    }
-  }
-}
-
-declare type OnCancel = () => void;
-class ImageAnimatorOnCancelModifier extends ModifierWithKey<OnCancel> {
-  constructor(value: OnCancel) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('imageAnimatorOnCancel');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().imageAnimator.resetImageAnimatorOnCancel(node);
-    } else {
-      getUINativeModule().imageAnimator.setImageAnimatorOnCancel(node, this.value);
-    }
-  }
-}
-
-declare type OnFinish = () => void;
-class ImageAnimatorOnFinishModifier extends ModifierWithKey<OnFinish> {
-  constructor(value: OnFinish) {
-    super(value);
-  }
-  static identity: Symbol = Symbol('imageAnimatorOnFinish');
-  applyPeer(node: KNode, reset: boolean): void {
-    if (reset) {
-      getUINativeModule().imageAnimator.resetImageAnimatorOnFinish(node);
-    } else {
-      getUINativeModule().imageAnimator.setImageAnimatorOnFinish(node, this.value);
-    }
   }
 }
 
@@ -329,30 +216,20 @@ class ArkImageAnimatorComponent extends ArkComponent implements CommonMethod<Ima
       ImageAnimatorIterationsModeModifier, value);
     return this;
   }
-  monitorInvisibleAreaMode(value: boolean): ImageAnimatorAttribute {
-    modifierWithKey(this._modifiersWithKeys, ImageAnimatorAutoMonitorInvisibleAreaModeModifier.identity,
-      ImageAnimatorAutoMonitorInvisibleAreaModeModifier, value);
-    return this;
-  }
   onStart(event: () => void): ImageAnimatorAttribute {
-    modifierWithKey(this._modifiersWithKeys, ImageAnimatorOnStartModifier.identity, ImageAnimatorOnIncModifier, event);
-    return this;
+    throw new Error('Method not implemented.');
   }
   onPause(event: () => void): ImageAnimatorAttribute {
-    modifierWithKey(this._modifiersWithKeys, ImageAnimatorOnPauseModifier.identity, ImageAnimatorOnPauseModifier, event);
-    return this;
+    throw new Error('Method not implemented.');
   }
   onRepeat(event: () => void): ImageAnimatorAttribute {
-    modifierWithKey(this._modifiersWithKeys, ImageAnimatorOnRepeatModifier.identity, ImageAnimatorOnRepeatModifier, event);
-    return this;
+    throw new Error('Method not implemented.');
   }
   onCancel(event: () => void): ImageAnimatorAttribute {
-    modifierWithKey(this._modifiersWithKeys, ImageAnimatorOnCancelModifier.identity, ImageAnimatorOnCancelModifier, event);
-    return this;
+    throw new Error('Method not implemented.');
   }
   onFinish(event: () => void): ImageAnimatorAttribute {
-    modifierWithKey(this._modifiersWithKeys, ImageAnimatorOnFinishModifier.identity, ImageAnimatorOnFinishModifier, event);
-    return this;
+    throw new Error('Method not implemented.');
   }
 }
 // @ts-ignore

@@ -15,16 +15,17 @@
 
 #include "core/components_ng/pattern/list/list_item_layout_algorithm.h"
 
-#include "core/components_ng/layout/layout_property.h"
-#include "core/components_ng/property/position_property.h"
+#include "base/geometry/ng/offset_t.h"
+#include "base/utils/utils.h"
+#include "core/components_ng/layout/box_layout_algorithm.h"
+#include "core/components_ng/pattern/list/list_item_layout_property.h"
 #include "core/components_ng/property/measure_utils.h"
+
 namespace OHOS::Ace::NG {
 
 bool ListItemLayoutAlgorithm::IsRTLAndVertical(LayoutWrapper* layoutWrapper) const
 {
-    auto layoutProperty = layoutWrapper->GetLayoutProperty();
-    CHECK_NULL_RETURN(layoutProperty, false);
-    auto layoutDirection = layoutProperty->GetNonAutoLayoutDirection();
+    auto layoutDirection = layoutWrapper->GetLayoutProperty()->GetNonAutoLayoutDirection();
     if (layoutDirection == TextDirection::RTL && axis_ == Axis::VERTICAL) {
         return true;
     } else {
@@ -68,10 +69,8 @@ void ListItemLayoutAlgorithm::CheckAndUpdateCurOffset(LayoutWrapper* layoutWrapp
 
 void ListItemLayoutAlgorithm::MeasureItemChild(LayoutWrapper* layoutWrapper)
 {
-    auto layoutProperty = layoutWrapper->GetLayoutProperty();
-    CHECK_NULL_VOID(layoutProperty);
     std::list<RefPtr<LayoutWrapper>> childList;
-    auto layoutConstraint = layoutProperty->CreateChildConstraint();
+    auto layoutConstraint = layoutWrapper->GetLayoutProperty()->CreateChildConstraint();
     auto child = layoutWrapper->GetOrCreateChildByIndex(childNodeIndex_);
     if (child) {
         child->Measure(layoutConstraint);
@@ -131,37 +130,13 @@ void ListItemLayoutAlgorithm::Layout(LayoutWrapper* layoutWrapper)
 {
     // update child position.
     auto size = layoutWrapper->GetGeometryNode()->GetFrameSize();
-    auto layoutProperty = layoutWrapper->GetLayoutProperty();
-    CHECK_NULL_VOID(layoutProperty);
-    const auto& padding = layoutProperty->CreatePaddingAndBorder();
+    const auto& padding = layoutWrapper->GetLayoutProperty()->CreatePaddingAndBorder();
     MinusPaddingToSize(padding, size);
     auto paddingOffset = padding.Offset();
     auto align = Alignment::CENTER;
-    if (layoutProperty->GetPositionProperty()) {
-        align = layoutProperty->GetPositionProperty()->GetAlignment().value_or(align);
+    if (layoutWrapper->GetLayoutProperty()->GetPositionProperty()) {
+        align = layoutWrapper->GetLayoutProperty()->GetPositionProperty()->GetAlignment().value_or(align);
     }
-
-    SetSwipeActionNode(layoutWrapper, size, paddingOffset);
-    auto child = layoutWrapper->GetOrCreateChildByIndex(childNodeIndex_);
-    if (child) {
-        auto translate =
-            Alignment::GetAlignPosition(size, child->GetGeometryNode()->GetMarginFrameSize(), align) + paddingOffset;
-        OffsetF offset = axis_ == Axis::VERTICAL ? OffsetF(SetReverseValue(layoutWrapper, curOffset_), 0.0f) :
-            OffsetF(0.0f, curOffset_);
-        child->GetGeometryNode()->SetMarginFrameOffset(translate + offset);
-        child->Layout();
-    }
-    // Update content position.
-    const auto& content = layoutWrapper->GetGeometryNode()->GetContent();
-    if (content) {
-        auto translate = Alignment::GetAlignPosition(size, content->GetRect().GetSize(), align) + paddingOffset;
-        content->SetOffset(translate);
-    }
-}
-
-void ListItemLayoutAlgorithm::SetSwipeActionNode(
-    LayoutWrapper* layoutWrapper, const SizeF& size, const OffsetF& paddingOffset)
-{
     // Update child position.
     if (Positive(curOffset_) && startNodeIndex_ >= 0) {
         auto child = layoutWrapper->GetOrCreateChildByIndex(startNodeIndex_);
@@ -183,6 +158,21 @@ void ListItemLayoutAlgorithm::SetSwipeActionNode(
         OffsetF offset = axis_ == Axis::VERTICAL ? OffsetF(crossOffset, mainOffset) : OffsetF(mainOffset, crossOffset);
         child->GetGeometryNode()->SetMarginFrameOffset(paddingOffset + offset);
         child->Layout();
+    }
+    auto child = layoutWrapper->GetOrCreateChildByIndex(childNodeIndex_);
+    if (child) {
+        auto translate =
+            Alignment::GetAlignPosition(size, child->GetGeometryNode()->GetMarginFrameSize(), align) + paddingOffset;
+        OffsetF offset = axis_ == Axis::VERTICAL ? OffsetF(SetReverseValue(layoutWrapper, curOffset_), 0.0f) :
+            OffsetF(0.0f, curOffset_);
+        child->GetGeometryNode()->SetMarginFrameOffset(translate + offset);
+        child->Layout();
+    }
+    // Update content position.
+    const auto& content = layoutWrapper->GetGeometryNode()->GetContent();
+    if (content) {
+        auto translate = Alignment::GetAlignPosition(size, content->GetRect().GetSize(), align) + paddingOffset;
+        content->SetOffset(translate);
     }
 }
 } // namespace OHOS::Ace::NG

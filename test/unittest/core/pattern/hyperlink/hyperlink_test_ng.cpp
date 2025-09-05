@@ -31,7 +31,6 @@
 #include "core/components_v2/inspector/inspector_constants.h"
 #include "core/event/key_event.h"
 #include "core/event/touch_event.h"
-#include "test/mock/core/common/mock_font_manager.h"
 #include "test/mock/core/pipeline/mock_pipeline_context.h"
 #undef private
 #undef protected
@@ -45,7 +44,6 @@ constexpr double RADIUS_DEFAULT = 300.0;
 const std::string HYPERLINK_ADDRESS = "https://www.baidu.com";
 const std::string HYPERLINK_CONTENT = "baidu";
 const std::string HYPERLINK_EXTRAINFO = "{\"url\":\"https://www.baidu.com\",\"title\":\"baidu\"}";
-const std::string HYPERLINK_NULL = "";
 } // namespace
 
 class HyperlinkTestNg : public testing::Test {
@@ -115,46 +113,6 @@ HWTEST_F(HyperlinkTestNg, HyperlinkDrag001, TestSize.Level1)
 }
 
 /**
- * @tc.name: HyperlinkPatternTest001
- * @tc.desc: Test HyperlinkPattern InitInputEvent.
- * @tc.type: FUNC
- */
-HWTEST_F(HyperlinkTestNg, HyperlinkPatternTest001, TestSize.Level1)
-{
-    auto frameNode = FrameNode::GetOrCreateFrameNode(V2::HYPERLINK_ETS_TAG,
-        ElementRegister::GetInstance()->MakeUniqueId(), []() { return AceType::MakeRefPtr<HyperlinkPattern>(); });
-    ASSERT_NE(frameNode, nullptr);
-    auto textLayoutProperty = frameNode->GetLayoutProperty<HyperlinkLayoutProperty>();
-    ASSERT_NE(textLayoutProperty, nullptr);
-    textLayoutProperty->UpdateAddress(HYPERLINK_ADDRESS);
-    auto hyperlinkPattern = frameNode->GetPattern<HyperlinkPattern>();
-    ASSERT_NE(hyperlinkPattern, nullptr);
-    auto eventHub = frameNode->GetEventHub<EventHub>();
-    auto inputHub = AceType::MakeRefPtr<InputEventHub>(eventHub);
-
-    hyperlinkPattern->InitInputEvent(inputHub);
-    auto onHoverEvent = hyperlinkPattern->onHoverEvent_->onHoverCallback_;
-    auto onMouseEvent = hyperlinkPattern->onMouseEvent_->onMouseCallback_;
-
-    auto pipeline = PipelineContext::GetCurrentContext();
-    auto mouseStyleManager = pipeline->eventManager_->GetMouseStyleManager();
-    onHoverEvent(true);
-    EXPECT_EQ(mouseStyleManager->mouseStyleNodeId_.value(), frameNode->GetId());
-
-    onHoverEvent(false);
-    EXPECT_FALSE(mouseStyleManager->mouseStyleNodeId_.has_value());
-
-    auto renderContext = frameNode->GetRenderContext();
-    ASSERT_NE(renderContext, nullptr);
-    RectF paintRect = { 0.0f, 0.0f, 1.0f, 1.0f };
-    renderContext->UpdatePaintRect(paintRect);
-
-    MouseInfo mouseInfo;
-    onMouseEvent(mouseInfo);
-    EXPECT_FALSE(mouseStyleManager->mouseStyleNodeId_.has_value());
-}
-
-/**
  * @tc.name: HyperlinkModelNGTest001
  * @tc.desc: Test HyperlinkModelNG SetDraggable.
  * @tc.type: FUNC
@@ -183,18 +141,11 @@ HWTEST_F(HyperlinkTestNg, HyperlinkModelNGTest003, TestSize.Level1)
     auto frameNode = ViewStackProcessor::GetInstance()->GetMainFrameNode();
     HyperlinkModelNG hyperlinkModelNG;
     auto gestureHub = ViewStackProcessor::GetInstance()->GetMainFrameNodeGestureEventHub();
-
     hyperlinkModelNG.SetDraggable(true);
-    EXPECT_TRUE(frameNode->draggable_);
-
     hyperlinkModelNG.SetDraggable(false);
-    EXPECT_FALSE(frameNode->draggable_);
-
     hyperlinkModelNG.SetDraggable(frameNode, false);
-    EXPECT_FALSE(frameNode->draggable_);
-
+    frameNode->draggable_ = false;
     hyperlinkModelNG.SetDraggable(frameNode, true);
-    EXPECT_TRUE(frameNode->draggable_);
 }
 
 /**
@@ -355,7 +306,7 @@ HWTEST_F(HyperlinkTestNg, HyperlinkPatternTest006, TestSize.Level1)
     touchEventInfo.changedTouches_.clear();
     touchEventInfo.changedTouches_.emplace_back(touchInfo);
     hyperlinkPattern->OnTouchEvent(touchEventInfo);
-    EXPECT_EQ(hyperlinkLayoutProperty->GetTextDecorationFirst(), TextDecoration::NONE);
+    EXPECT_EQ(hyperlinkLayoutProperty->GetTextDecoration().value(), TextDecoration::NONE);
     touchInfo.SetTouchType(TouchType::CANCEL);
     touchEventInfo.changedTouches_.clear();
     touchEventInfo.changedTouches_.emplace_back(touchInfo);
@@ -444,266 +395,6 @@ HWTEST_F(HyperlinkTestNg, HyperlinkPatternTest008, TestSize.Level1)
     hyperlinkPattern->OnHoverEvent(true);
     EXPECT_EQ(hyperlinkLayoutProperty->GetTextDecorationColor().value(), Color::BLACK);
     hyperlinkPattern->OnHoverEvent(false);
-    EXPECT_EQ(hyperlinkLayoutProperty->GetTextDecorationFirst(), TextDecoration::NONE);
+    EXPECT_EQ(hyperlinkLayoutProperty->GetTextDecoration().value(), TextDecoration::NONE);
 }
-
-/**
- * @tc.name: EnableDrag001
- * @tc.desc: Test EnableDrag().
- * @tc.type: FUNC
- */
-HWTEST_F(HyperlinkTestNg, EnableDrag001, TestSize.Level1)
-{
-    auto frameNode = FrameNode::GetOrCreateFrameNode(V2::HYPERLINK_ETS_TAG,
-        ElementRegister::GetInstance()->MakeUniqueId(), []() { return AceType::MakeRefPtr<HyperlinkPattern>(); });
-    ASSERT_NE(frameNode, nullptr);
-    EXPECT_EQ(frameNode->GetTag(), V2::HYPERLINK_ETS_TAG);
-    auto textLayoutProperty = frameNode->GetLayoutProperty<HyperlinkLayoutProperty>();
-    ASSERT_NE(textLayoutProperty, nullptr);
-    textLayoutProperty->UpdateContent(HYPERLINK_NULL);
-    textLayoutProperty->UpdateAddress(HYPERLINK_ADDRESS);
-    frameNode->SetDraggable(true);
-    frameNode->MarkModifyDone();
-    auto hyperlinkPattern = frameNode->GetPattern<HyperlinkPattern>();
-    ASSERT_NE(hyperlinkPattern, nullptr);
-    hyperlinkPattern->EnableDrag();
-}
-
-/**
- * @tc.name: PreventDefault001
- * @tc.desc: test InitTouchEvent and InitClickEvent
- * @tc.type: FUNC
- */
-HWTEST_F(HyperlinkTestNg, PreventDefault001, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. Init Hyperlink node
-     */
-    HyperlinkModelNG hyperlinkModelNG;
-    hyperlinkModelNG.Create(HYPERLINK_ADDRESS, HYPERLINK_CONTENT);
-    auto frameNode = ViewStackProcessor::GetInstance()->GetMainFrameNode();
-    ASSERT_NE(frameNode, nullptr);
-    auto pattern = frameNode->GetPattern<HyperlinkPattern>();
-    ASSERT_NE(pattern, nullptr);
-    auto gestureHub = frameNode->GetOrCreateGestureEventHub();
-    ASSERT_NE(gestureHub, nullptr);
-
-    /**
-     * @tc.steps: step2. Mock TouchEventInfo info and set preventDefault to true
-     * @tc.expected: Check the param value
-     */
-    pattern->InitTouchEvent(gestureHub);
-    TouchEventInfo touchInfo("onTouch");
-    TouchLocationInfo touchDownInfo(1);
-    touchDownInfo.SetTouchType(TouchType::DOWN);
-    touchInfo.SetPreventDefault(true);
-    touchInfo.SetSourceDevice(SourceType::TOUCH);
-    touchInfo.AddTouchLocationInfo(std::move(touchDownInfo));
-    pattern->onTouchEvent_->callback_(touchInfo);
-    EXPECT_TRUE(pattern->isTouchPreventDefault_);
-    /**
-     * @tc.steps: step3.Mock GestureEvent info and set preventDefault to true
-     * @tc.expected: Check the param value
-     */
-    pattern->InitClickEvent(gestureHub);
-    GestureEvent clickInfo;
-    clickInfo.SetPreventDefault(true);
-    clickInfo.SetSourceDevice(SourceType::TOUCH);
-    pattern->clickListener_->operator()(clickInfo);
-    EXPECT_FALSE(pattern->isTouchPreventDefault_);
-}
-
-/**
- * @tc.name: PreventDefault002
- * @tc.desc: test InitTouchEvent and InitClickEvent
- * @tc.type: FUNC
- */
-HWTEST_F(HyperlinkTestNg, PreventDefault002, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. Init Hyperlink node
-     */
-    HyperlinkModelNG hyperlinkModelNG;
-    hyperlinkModelNG.Create(HYPERLINK_ADDRESS, HYPERLINK_CONTENT);
-    auto frameNode = ViewStackProcessor::GetInstance()->GetMainFrameNode();
-    ASSERT_NE(frameNode, nullptr);
-    auto pattern = frameNode->GetPattern<HyperlinkPattern>();
-    ASSERT_NE(pattern, nullptr);
-    auto gestureHub = frameNode->GetOrCreateGestureEventHub();
-    ASSERT_NE(gestureHub, nullptr);
-
-    /**
-     * @tc.steps: step2. Mock TouchEvent info and set preventDefault to false
-     * @tc.expected: Check the param value
-     */
-    pattern->InitTouchEvent(gestureHub);
-    TouchEventInfo touchInfo("onTouch");
-    TouchLocationInfo touchDownInfo(1);
-    touchDownInfo.SetTouchType(TouchType::DOWN);
-    touchInfo.SetPreventDefault(false);
-    touchInfo.SetSourceDevice(SourceType::TOUCH);
-    touchInfo.AddTouchLocationInfo(std::move(touchDownInfo));
-    pattern->onTouchEvent_->callback_(touchInfo);
-    EXPECT_FALSE(pattern->isTouchPreventDefault_);
-    /**
-     * @tc.steps: step3. Mock GestureEvent info and set preventDefault to false
-     * @tc.expected: Check the param value
-     */
-    pattern->InitClickEvent(gestureHub);
-    GestureEvent clickInfo;
-    clickInfo.SetPreventDefault(false);
-    clickInfo.SetSourceDevice(SourceType::TOUCH);
-    pattern->clickListener_->operator()(clickInfo);
-    EXPECT_FALSE(pattern->isTouchPreventDefault_);
-}
-
-/**
- * @tc.name: SetColor001
- * @tc.desc: Test SetColor.
- * @tc.type: FUNC
- */
-HWTEST_F(HyperlinkTestNg, SetColor001, TestSize.Level1)
-{
-    HyperlinkModelNG hyperlinkModelNG;
-    hyperlinkModelNG.SetResponseRegion(true);
-    hyperlinkModelNG.SetColor(Color::BLACK);
-    auto frameNode = ViewStackProcessor::GetInstance()->GetMainFrameNode();
-    ASSERT_NE(frameNode, nullptr);
-    auto LayoutProperty = frameNode->GetLayoutProperty<HyperlinkLayoutProperty>();
-    ASSERT_NE(LayoutProperty, nullptr);
-    EXPECT_EQ(LayoutProperty->GetTextColor().value(), Color::BLACK);
-}
-
-/**
- * @tc.name: SetColor002
- * @tc.desc: Test SetColor.
- * @tc.type: FUNC
- */
-HWTEST_F(HyperlinkTestNg, SetColor002, TestSize.Level1)
-{
-    auto frameNode = ViewStackProcessor::GetInstance()->GetMainFrameNode();
-    HyperlinkModelNG hyperlinkModelNG;
-    auto LayoutProperty = frameNode->GetLayoutProperty<HyperlinkLayoutProperty>();
-    ASSERT_NE(LayoutProperty, nullptr);
-    auto gestureHub = ViewStackProcessor::GetInstance()->GetMainFrameNodeGestureEventHub();
-    hyperlinkModelNG.SetColor(frameNode, Color::RED);
-    EXPECT_EQ(LayoutProperty->GetTextColor().value(), Color::RED);
-}
-
-/**
- * @tc.name: OnAttachToFrameNode001
- * @tc.desc: Test OnAttachToFrameNode.
- * @tc.type: FUNC
- */
-HWTEST_F(HyperlinkTestNg, OnAttachToFrameNode001, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. Create Hyperlink and get HyperlinkPattern.
-     */
-    auto hyperlinkNode = FrameNode::GetOrCreateFrameNode(V2::HYPERLINK_ETS_TAG,
-        ElementRegister::GetInstance()->MakeUniqueId(), []() { return AceType::MakeRefPtr<HyperlinkPattern>(); });
-    ASSERT_NE(hyperlinkNode, nullptr);
-    auto textLayoutProperty = hyperlinkNode->GetLayoutProperty<HyperlinkLayoutProperty>();
-    ASSERT_NE(textLayoutProperty, nullptr);
-    textLayoutProperty->UpdateAddress(HYPERLINK_ADDRESS);
-    auto hyperlinkPattern = hyperlinkNode->GetPattern<HyperlinkPattern>();
-    ASSERT_NE(hyperlinkPattern, nullptr);
-
-    /**
-     * @tc.steps: step2. Call OnAttachToFrameNode.
-     */
-    auto pipeline = PipelineBase::GetCurrentContext();
-    ASSERT_NE(pipeline, nullptr);
-    auto theme = pipeline->GetTheme<HyperlinkTheme>();
-    ASSERT_NE(theme, nullptr);
-    theme->textColor_ = Color::RED;
-    theme->textLinkedColor_ = Color::GREEN;
-    theme->textUnSelectedDecoration_ = TextDecoration::UNDERLINE;
-    auto hyperlinkLayoutProperty = hyperlinkNode->GetLayoutProperty<HyperlinkLayoutProperty>();
-    ASSERT_NE(hyperlinkLayoutProperty, nullptr);
-    hyperlinkLayoutProperty->UpdateTextDecorationColor(Color::BLACK);
-    hyperlinkPattern->isLinked_ = true;
-
-    MockPipelineContext::GetCurrent()->fontManager_ = AceType::MakeRefPtr<MockFontManager>();
-    hyperlinkPattern->OnAttachToFrameNode(); // Exam branch
-    EXPECT_TRUE(MockPipelineContext::GetCurrent()->fontManager_);
-}
-
-
-/**
- * @tc.name: HyperlinkDrag002
- * @tc.desc: Test HyperlinkPattern::EnableDrag.
- * @tc.type: FUNC
- */
-HWTEST_F(HyperlinkTestNg, HyperlinkDrag002, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. Create Hyperlink and get HyperlinkPattern.
-     */
-    auto frameNode = FrameNode::GetOrCreateFrameNode(V2::HYPERLINK_ETS_TAG,
-        ElementRegister::GetInstance()->MakeUniqueId(), []() { return AceType::MakeRefPtr<HyperlinkPattern>(); });
-    ASSERT_NE(frameNode, nullptr);
-    EXPECT_EQ(frameNode->GetTag(), V2::HYPERLINK_ETS_TAG);
-    auto textLayoutProperty = frameNode->GetLayoutProperty<HyperlinkLayoutProperty>();
-    ASSERT_NE(textLayoutProperty, nullptr);
-    textLayoutProperty->UpdateContent(HYPERLINK_CONTENT);
-    textLayoutProperty->UpdateAddress(HYPERLINK_ADDRESS);
-    frameNode->SetDraggable(true);
-    frameNode->MarkModifyDone();
-    auto hyperlinkPattern = frameNode->GetPattern<HyperlinkPattern>();
-    ASSERT_NE(hyperlinkPattern, nullptr);
-    hyperlinkPattern->EnableDrag();
-    // emulate drag event
-    auto eventHub = frameNode->GetEventHub<EventHub>();
-    ASSERT_NE(eventHub->GetDefaultOnDragStart(), nullptr);
-    auto extraParams =
-        eventHub->GetDragExtraParams(std::string(), Point(RADIUS_DEFAULT, RADIUS_DEFAULT), DragEventType::START);
-    RefPtr<OHOS::Ace::DragEvent> dragEvent = AceType::MakeRefPtr<OHOS::Ace::DragEvent>();
-    ASSERT_NE(dragEvent, nullptr);
-    auto dragDropInfo = (eventHub->GetDefaultOnDragStart())(dragEvent, extraParams);
-
-    /**
-     * @tc.steps: step2. Call getDefaultOnDragStart.
-     */
-    hyperlinkPattern->textForDisplay_ = u"";
-    auto getDefaultOnDragStart = eventHub->GetDefaultOnDragStart();
-    EXPECT_TRUE(getDefaultOnDragStart);
-    getDefaultOnDragStart(dragEvent, "123");
-    EXPECT_TRUE(getDefaultOnDragStart);
-}
-
-/**
- * @tc.name: UpdatePropertyImpl001
- * @tc.desc: Test UpdatePropertyImpl.
- * @tc.type: FUNC
- */
-HWTEST_F(HyperlinkTestNg, UpdatePropertyImpl001, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. Create Hyperlink and get HyperlinkPattern.
-     */
-    auto frameNode = FrameNode::GetOrCreateFrameNode(V2::HYPERLINK_ETS_TAG,
-        ElementRegister::GetInstance()->MakeUniqueId(), []() { return AceType::MakeRefPtr<HyperlinkPattern>(); });
-    ASSERT_NE(frameNode, nullptr);
-    EXPECT_EQ(frameNode->GetTag(), V2::HYPERLINK_ETS_TAG);
-    auto textLayoutProperty = frameNode->GetLayoutProperty<HyperlinkLayoutProperty>();
-    ASSERT_NE(textLayoutProperty, nullptr);
-    textLayoutProperty->UpdateContent(HYPERLINK_CONTENT);
-    textLayoutProperty->UpdateAddress(HYPERLINK_ADDRESS);
-    frameNode->SetDraggable(true);
-    frameNode->MarkModifyDone();
-    auto hyperlinkPattern = frameNode->GetPattern<HyperlinkPattern>();
-    ASSERT_NE(hyperlinkPattern, nullptr);
-    /**
-     * @tc.steps: step2. Call UpdatePropertyImpl with different key.
-     */
-    auto value = AceType::MakeRefPtr<PropertyValueBase>();
-    hyperlinkPattern->UpdatePropertyImpl("key", value);
-    hyperlinkPattern->UpdatePropertyImpl("Address", value);
-    hyperlinkPattern->UpdatePropertyImpl("Content", value);
-    frameNode->shouldRerender_ = true;
-    hyperlinkPattern->UpdatePropertyImpl("Color", value);
-    EXPECT_TRUE(MockPipelineContext::GetCurrent()->fontManager_);
-}
-
 } // namespace OHOS::Ace::NG

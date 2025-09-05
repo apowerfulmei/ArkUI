@@ -22,8 +22,8 @@ const util = requireNapi('util');
 
 const tag = 'AddFormMenuItem::js::';
 
-async function querySnapshotAsync(want, componentId, uiContext) {
-  let compInfo = uiContext.getComponentUtils().getRectangleById(componentId); 
+async function querySnapshotAsync(want, componentId) {
+  let compInfo = componentUtils.getRectangleById(componentId);
   let imagePackageApi = null;
   try {
     imagePackageApi = image.createImagePacker();
@@ -31,24 +31,28 @@ async function querySnapshotAsync(want, componentId, uiContext) {
       format: 'image/webp',
       quality: 50,
     };
-    hilog.info(0x3900, tag, 'componentId:' + componentId);
-    let packPixmap = await uiContext.getComponentSnapshot().get(componentId);
+    let packPixmap = await componentSnapshot.get(componentId);
     let arrayBuffer = await imagePackageApi.packing(packPixmap, packOpts);
     let base64Helper = new util.Base64Helper();
     let uint8Arr = new Uint8Array(arrayBuffer);
     let pixelStr = base64Helper.encodeToStringSync(uint8Arr);
-
     !want.parameters && (want.parameters = {});
     want.parameters['ohos.extra.param.key.add_form_to_host_width'] = compInfo.size.width.toFixed(2);
     want.parameters['ohos.extra.param.key.add_form_to_host_height'] = compInfo.size.height.toFixed(2);
     want.parameters['ohos.extra.param.key.add_form_to_host_screenx'] = compInfo.screenOffset.x.toFixed(2);
     want.parameters['ohos.extra.param.key.add_form_to_host_screeny'] = compInfo.screenOffset.y.toFixed(2);
     want.parameters['ohos.extra.param.key.add_form_to_host_snapshot'] = pixelStr;
+    hilog.info(0x3900, tag, 'pixelStr length:' + pixelStr.length);
   } catch (err) {
     hilog.error(0x3900, tag, 'get pixelmap string error:' + err);
   } finally {
     imagePackageApi?.release();
   }
+}
+
+function querySnapshot(want, componentId) {
+  querySnapshotAsync(want, componentId);
+  return true;
 }
 
 /**
@@ -61,7 +65,18 @@ async function querySnapshotAsync(want, componentId, uiContext) {
  * @since 12
  */
 export function AddFormMenuItem(want, componentId, options, parent = null) {
-  hilog.info(0x0000, tag, 'Add form menu item.');
+  this.observeComponentCreation2((elmtId, isInitialRender) => {
+    If.create();
+    if (querySnapshot(want, componentId)) {
+      this.ifElseBranchUpdateFunction(0, () => {
+      });
+    }
+    else {
+      this.ifElseBranchUpdateFunction(1, () => {
+      });
+    }
+  }, If);
+  If.pop();
   this.observeComponentCreation2((elmtId, isInitialRender) => {
     FormMenuItem.create(options?.style?.options ? options.style.options : {
       startIcon: {
@@ -79,14 +94,7 @@ export function AddFormMenuItem(want, componentId, options, parent = null) {
         'moduleName': ''
       }
     });
-
-    let uiContext = this.getUIContext();
-    FormMenuItem.onClick(async () => {
-      await querySnapshotAsync(want, componentId, uiContext);
-      uiContext.runScopedTask(() => {
-        FormMenuItem.onRequestPublishFormWithSnapshot(want, options?.formBindingData?.data, options?.callback);
-      });
-    });
+    FormMenuItem.onRegClick(want, componentId, options?.formBindingData?.data, options?.callback);
   }, FormMenuItem);
   FormMenuItem.pop();
 }

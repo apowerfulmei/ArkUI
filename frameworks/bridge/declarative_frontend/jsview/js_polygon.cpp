@@ -21,21 +21,29 @@
 #include "core/components_ng/pattern/shape/polygon_model_ng.h"
 
 namespace OHOS::Ace {
+
+std::unique_ptr<PolygonModel> PolygonModel::instance_ = nullptr;
+std::mutex PolygonModel::mutex_;
+
 PolygonModel* PolygonModel::GetInstance()
 {
+    if (!instance_) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (!instance_) {
 #ifdef NG_BUILD
-    static NG::PolygonModelNG instance;
-    return &instance;
+            instance_.reset(new NG::PolygonModelNG());
 #else
-    if (Container::IsCurrentUseNewPipeline()) {
-        static NG::PolygonModelNG instance;
-        return &instance;
-    } else {
-        static Framework::PolygonModelImpl instance;
-        return &instance;
-    }
+            if (Container::IsCurrentUseNewPipeline()) {
+                instance_.reset(new NG::PolygonModelNG());
+            } else {
+                instance_.reset(new Framework::PolygonModelImpl());
+            }
 #endif
+        }
+    }
+    return instance_.get();
 }
+
 } // namespace OHOS::Ace
 
 namespace OHOS::Ace::Framework {

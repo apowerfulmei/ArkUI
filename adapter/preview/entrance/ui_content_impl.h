@@ -18,13 +18,14 @@
 
 #include "interfaces/inner_api/ace/ui_content.h"
 #include "interfaces/inner_api/ace/viewport_config.h"
+#include "native_engine/native_engine.h"
+#include "native_engine/native_value.h"
 #include "previewer/include/window.h"
 
 #include "adapter/preview/entrance/ace_run_args.h"
 #include "adapter/preview/external/ability/context.h"
 #include "adapter/preview/external/ability/fa/fa_context.h"
 #include "adapter/preview/external/ability/stage/stage_context.h"
-#include "frameworks/core/common/window_animation_config.h"
 
 namespace OHOS::Ace {
 class ACE_FORCE_EXPORT UIContentImpl : public UIContent {
@@ -45,8 +46,11 @@ public:
         return UIContentErrorCode::NO_ERRORS;
     }
     UIContentErrorCode InitializeByName(OHOS::Rosen::Window *window, const std::string &name,
-        napi_value storage) override;
-    void InitializeDynamic(const DynamicInitialConfig& config) override {}
+        napi_value storage) override {
+        return UIContentErrorCode::NO_ERRORS;
+    }
+    void InitializeDynamic(const std::string& hapPath, const std::string& abcPath, const std::string& entryPoint,
+        const std::vector<std::string>& registerComponents) override {}
     void Initialize(
         OHOS::Rosen::Window* window, const std::string& url, napi_value storage, uint32_t focusWindowId) override {}
     void Foreground() override {}
@@ -64,14 +68,6 @@ public:
     std::string GetContentInfo(ContentInfoType type) const override;
     void DestroyUIDirector() override;
 
-    void OnConfigurationChanged(const DeviceConfig& newConfig);
-    void SurfaceChanged(
-        const DeviceOrientation& orientation, const double& resolution, int32_t& width, int32_t& height,
-        WindowSizeChangeReason type = WindowSizeChangeReason::UNDEFINED);
-    void LoadDocument(const std::string& url, const std::string& componentName,
-        Platform::SystemParams& systemParams) override;
-    std::string GetJSONTree() override;
-    bool OperateComponent(const std::string& attrsJson) override;
     // UI content event process
     bool ProcessBackPressed() override;
     bool ProcessPointerEvent(const std::shared_ptr<OHOS::MMI::PointerEvent>& pointerEvent) override;
@@ -82,12 +78,9 @@ public:
     bool ProcessVsyncEvent(uint64_t timeStampNanos) override;
     void SetIsFocusActive(bool isFocusActive) override {}
     void UpdateConfiguration(const std::shared_ptr<OHOS::AppExecFwk::Configuration>& config) override;
-    void UpdateConfiguration(const std::shared_ptr<OHOS::AppExecFwk::Configuration>& config,
-        const std::shared_ptr<Global::Resource::ResourceManager>& resourceManager) override;
     void UpdateViewportConfig(const ViewportConfig& config, OHOS::Rosen::WindowSizeChangeReason reason,
         const std::shared_ptr<OHOS::Rosen::RSTransaction>& rsTransaction = nullptr,
-        const std::map<OHOS::Rosen::AvoidAreaType, OHOS::Rosen::AvoidArea>& avoidAreas = {},
-        const sptr<OHOS::Rosen::OccupiedAreaChangeInfo>& info = nullptr) override;
+        const std::map<OHOS::Rosen::AvoidAreaType, OHOS::Rosen::AvoidArea>& avoidAreas = {}) override;
     void UpdateWindowMode(OHOS::Rosen::WindowMode mode, bool hasDeco = true) override {}
     void UpdateDecorVisible(bool visible, bool hasDeco = true) override {};
     void HideWindowTitleButton(bool hideSplit, bool hideMaximize, bool hideMinimize, bool hideClose) override {}
@@ -97,7 +90,6 @@ public:
     // Window color
     uint32_t GetBackgroundColor() override;
     void SetBackgroundColor(uint32_t color) override;
-    void SetWindowContainerColor(uint32_t activeColor, uint32_t inactiveColor) override;
 
     void DumpInfo(const std::vector<std::string>& params, std::vector<std::string>& info) override;
 
@@ -160,8 +152,7 @@ public:
 
     void SetStatusBarItemColor(uint32_t color) override;
 
-    void SetForceSplitEnable(bool isForceSplit, const std::string& homePage,
-        bool isRouter = true, bool ignoreOrientation = false) override {}
+    void SetForceSplitEnable(bool isForceSplit, const std::string& homePage) override {};
 
     void EnableContainerModalGesture(bool isEnable) override {};
 
@@ -182,8 +173,6 @@ public:
 
     void UpdateSingleHandTransform(const OHOS::Rosen::SingleHandTransform& transform) override {};
 private:
-    UIContentErrorCode InitializeInner(
-        OHOS::Rosen::Window* window, const std::string& contentInfo, napi_value storage, bool isNamedRouter);
     UIContentErrorCode CommonInitialize(OHOS::Rosen::Window* window, const std::string& contentInfo,
         napi_value storage);
     void DestroyCallback() const;
@@ -192,7 +181,6 @@ private:
     int32_t instanceId_ = -1;
     void* runtime_ = nullptr;
     // All parameters that need to be passed.
-    std::string startUrl_;
     std::string assetPath_;
     std::string systemResourcesPath_;
     std::string appResourcesPath_;
@@ -206,8 +194,6 @@ private:
     bool isRound_ = false;
     Platform::SendCurrentRouterCallback onRouterChange_;
     DeviceConfig deviceConfig_;
-    Platform::AceRunArgs runArgs_;
-    Platform::ConfigChanges configChanges_;
 
     std::string bundleName_;
     std::string moduleName_;
@@ -216,10 +202,8 @@ private:
     int32_t compatibleVersion_ = 0;
     int32_t targetVersion_ = 0;
     bool installationFree_ = false;
-    bool isComponentMode_ = false;
     uint32_t labelId_ = 0;
     bool useNewPipeline_ = true;
-    std::weak_ptr<OHOS::AbilityRuntime::Context> context_;
 
     sptr<OHOS::Rosen::Window> rsWindow_;
     // ITouchOutsideListener is used for touching out of hot areas of window.

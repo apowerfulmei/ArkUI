@@ -22,13 +22,8 @@
 #include "core/common/recorder/event_config.h"
 
 namespace OHOS::Ace::Recorder {
-constexpr char ORIGIN_PARAM[] = "$origin";
-constexpr char EXPOSURE_CONFIG_PARAM[] = "$exposureCfg";
-constexpr char EXPOSURE_CONFIG_RATIO[] = "ratio";
-constexpr char EXPOSURE_CONFIG_DURATION[] = "duration";
-
 class ExposureProcessor : public AceType {
-    DECLARE_ACE_TYPE(ExposureProcessor, AceType);
+    DECLARE_ACE_TYPE(ExposureProcessor, AceType)
 
 public:
     ExposureProcessor(const std::string& pageUrl, const std::string& inspectorId);

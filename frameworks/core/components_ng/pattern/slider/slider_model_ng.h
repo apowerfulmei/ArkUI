@@ -20,7 +20,6 @@
 #include "core/components_ng/base/frame_node.h"
 #include "core/components_ng/pattern/slider/slider_event_hub.h"
 #include "core/components_ng/pattern/slider/slider_model.h"
-#include "core/components_ng/pattern/slider/slider_custom_content_options.h"
 
 namespace OHOS::Ace::NG {
 class SliderConfiguration : public CommonConfiguration {
@@ -45,10 +44,9 @@ public:
     void SetTrackBackgroundColor(const Color& value) override {};
     void SetTrackBackgroundColor(const Gradient& value, bool isResourceColor = false) override;
     void SetSelectColor(const Color& value) override;
-    void SetSelectColor(const Gradient& value, bool isResourceColor = false) override;
     void SetMinLabel(float value) override;
     void SetMaxLabel(float value) override;
-    void SetShowSteps(bool value, const std::optional<SliderShowStepOptions>& options = std::nullopt) override;
+    void SetShowSteps(bool value) override;
     void SetShowTips(bool value, const std::optional<std::string>& content) override;
     void SetThickness(const Dimension& value) override;
     void SetBlockBorderColor(const Color& value) override;
@@ -64,16 +62,7 @@ public:
     void SetSliderInteractionMode(SliderInteraction mode) override;
     void SetMinResponsiveDistance(float value) override;
     void SetValidSlideRange(float fromValue, float toValue) override;
-    void SetPrefix(const RefPtr<UINode>& content, const NG::SliderPrefixOptions& options) override;
-    void SetSuffix(const RefPtr<UINode>& content, const NG::SliderSuffixOptions& options) override;
-    void CreateWithColorResourceObj(const RefPtr<ResourceObject>& resObj,
-        const SliderColorType sliderColorType) override;
-    void CreateWithMediaResourceObj(const RefPtr<ResourceObject>& resObj,
-        const std::string& bundleName, const std::string& moduleName) override;
-    void CreateWithStringResourceObj(const RefPtr<ResourceObject>& resObj, const bool isShowTips) override;
-#ifdef SUPPORT_DIGITAL_CROWN
-    void SetDigitalCrownSensitivity(CrownSensitivity sensitivity) override;
-#endif
+
     void SetOnChange(SliderOnChangeEvent&& eventOnChange) override;
     void SetOnChangeEvent(SliderOnValueChangeEvent&& onChangeEvent) override;
 
@@ -90,20 +79,7 @@ public:
     void ResetSliderInteractionMode() override;
     void ResetMinResponsiveDistance() override;
     void ResetValidSlideRange() override;
-    void ResetBlockColor() override;
-    void ResetTrackColor() override;
-    void ResetSelectColor() override;
-    void SetEnableHapticFeedback(bool isEnableHapticFeedback) override;
-#ifdef SUPPORT_DIGITAL_CROWN
-    void ResetDigitalCrownSensitivity() override;
-#endif
-    static void UpdateComponentColor(FrameNode* frameNode, const SliderColorType sliderColorType);
-    static void CreateWithColorResourceObj(FrameNode* frameNode, const RefPtr<ResourceObject>& resObj,
-        const SliderColorType sliderColorType);
-    static void CreateWithStringResourceObj(FrameNode* frameNode, const RefPtr<ResourceObject>& resObj,
-        const bool isShowTips);
-    static void CreateWithMediaResourceObj(FrameNode* frameNode, const RefPtr<ResourceObject>& resObj,
-        const std::string& bundleName, const std::string& moduleName);
+
     static void SetShowTips(FrameNode* frameNode, bool value, const std::optional<std::string>& content);
     static void SetThickness(FrameNode* frameNode, const Dimension& value);
     static void SetStepSize(FrameNode* frameNode, const Dimension& value);
@@ -116,20 +92,14 @@ public:
     static void SetBlockBorderWidth(FrameNode* frameNode, const Dimension& value);
     static void SetBlockColor(FrameNode* frameNode, const Color& value);
     static void SetTrackBackgroundColor(FrameNode* frameNode, const Gradient& value, bool isResourceColor = false);
-    static void SetSelectColor(FrameNode* frameNode, const Gradient& value, bool isResourceColor = false);
-    static void SetShowSteps(
-        FrameNode* frameNode, bool value, const std::optional<SliderShowStepOptions>& options = std::nullopt);
+    static void SetSelectColor(FrameNode* frameNode, const Color& value);
+    static void SetShowSteps(FrameNode* frameNode, bool value);
     static void SetSliderInteractionMode(FrameNode* frameNode, SliderInteraction mode);
     static void SetMinResponsiveDistance(FrameNode* frameNode, float value);
     static void SetValidSlideRange(FrameNode* frameNode, float fromValue, float toValue);
-    static void SetPrefix(FrameNode* frameNode, const RefPtr<UINode>& content, const NG::SliderPrefixOptions& options);
-    static void SetSuffix(FrameNode* frameNode, const RefPtr<UINode>& content, const NG::SliderSuffixOptions& options);
     static void SetBlockImage(
         FrameNode* frameNode, const std::string& value, const std::string& bundleName, const std::string& moduleName);
     static void SetSelectedBorderRadius(FrameNode* frameNode, const Dimension& value);
-#ifdef SUPPORT_DIGITAL_CROWN
-    static void SetDigitalCrownSensitivity(FrameNode* frameNode, CrownSensitivity sensitivity);
-#endif
 
     static void ResetBlockBorderColor(FrameNode* frameNode);
     static void ResetBlockBorderWidth(FrameNode* frameNode);
@@ -141,17 +111,10 @@ public:
     static void ResetBlockShape(FrameNode* frameNode);
     static void ResetStepSize(FrameNode* frameNode);
     static void ResetBlockColor(FrameNode* frameNode);
-    static void ResetTrackColor(FrameNode* frameNode);
-    static void ResetSelectColor(FrameNode* frameNode);
     static void ResetValidSlideRange(FrameNode* frameNode);
     static void ResetSelectedBorderRadius(FrameNode* frameNode);
     static void ResetSliderInteractionMode(FrameNode* frameNode);
     static void ResetMinResponsiveDistance(FrameNode* frameNode);
-    static void ResetPrefix(FrameNode* frameNode);
-    static void ResetSuffix(FrameNode* frameNode);
-#ifdef SUPPORT_DIGITAL_CROWN
-    static void ResetDigitalCrownSensitivity(FrameNode* frameNode);
-#endif
 
     static RefPtr<FrameNode> CreateFrameNode(int32_t nodeId);
     static void SetOnChange(FrameNode* frameNode, SliderOnChangeEvent&& eventOnChange);
@@ -165,7 +128,7 @@ public:
 
     static Color GetBlockColor(FrameNode* frameNode);
     static Gradient GetTrackBackgroundColor(FrameNode* frameNode);
-    static Gradient GetSelectColor(FrameNode* frameNode);
+    static Color GetSelectColor(FrameNode* frameNode);
     static bool GetShowSteps(FrameNode* frameNode);
     static BlockStyleType GetBlockType(FrameNode* frameNode);
     static float GetSliderValue(FrameNode* frameNode);
@@ -182,15 +145,9 @@ public:
     static void SetChangeValue(FrameNode* frameNode, double value, int32_t mode);
     static Dimension GetThickness(FrameNode* frameNode);
     static RefPtr<SliderModel::SliderValidRange> GetValidSlideRange(FrameNode* frameNode);
-    static bool GetEnableHapticFeedback(FrameNode* frameNode);
-    static void SetEnableHapticFeedback(FrameNode* frameNode, bool isEnableHapticFeedback);
-#ifdef SUPPORT_DIGITAL_CROWN
-    static CrownSensitivity GetDigitalCrownSensitivity(FrameNode* frameNode);
-#endif
 
 private:
     void SetSliderValue(float value);
-    static std::string ColorTypeToString(const SliderColorType sliderColorType);
 };
 
 } // namespace OHOS::Ace::NG

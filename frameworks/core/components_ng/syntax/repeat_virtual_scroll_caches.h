@@ -30,19 +30,30 @@
 
 namespace OHOS::Ace::NG {
 
-class RepeatVirtualScrollCaches {
-public:
-    struct CacheItem {
-        bool isValid = false;
-        RefPtr<UINode> item;
-    };
+// custom sorting for std::set only works with struct
+// with operator() inside
+class RepeatVirtualScrollCaches;
+struct KeySorterClass {
+    const RepeatVirtualScrollCaches* virtualScroll_;
 
+    explicit KeySorterClass(const RepeatVirtualScrollCaches* virtualScroll) : virtualScroll_(virtualScroll) {}
+    bool operator()(const std::string& left, const std::string& right) const;
+};
+
+struct CacheItem {
+    bool isValid = false;
+    RefPtr<UINode> item;
+};
+
+class RepeatVirtualScrollCaches {
+    friend struct KeySorterClass;
+
+public:
     RepeatVirtualScrollCaches(const std::map<std::string, std::pair<bool, uint32_t>>& cacheCountL24ttype,
         const std::function<void(uint32_t)>& onCreateNode,
         const std::function<void(const std::string&, uint32_t)>& onUpdateNode,
         const std::function<std::list<std::string>(uint32_t, uint32_t)>& onGetKeys4Range,
-        const std::function<std::list<std::string>(uint32_t, uint32_t)>& onGetTypes4Range,
-        bool reusable = true);
+        const std::function<std::list<std::string>(uint32_t, uint32_t)>& onGetTypes4Range);
 
     /** scenario:
      *         Repeat gets updated due to data change.
@@ -73,7 +84,7 @@ public:
     RefPtr<UINode> CreateNewNode(uint32_t forIndex);
 
     // iterate over L1 keys, not allowed to modify L1
-    void ForEachL1IndexUINode(std::map<int32_t, RefPtr<UINode>>& children);
+    void ForEachL1IndexUINode(const std::function<void(uint32_t index, const RefPtr<UINode>& node)>& cbFunc);
 
     /**
      * for given index get key
@@ -240,7 +251,7 @@ private:
      */
     bool CompareKeyByIndexDistance(const std::string& key1, const std::string& key2) const;
 
-    std::set<std::string> GetL2KeysForTType(
+    std::set<std::string, KeySorterClass> GetSortedL2KeysForTType(
         const std::unordered_map<std::string, RefPtr<UINode>>& uiNode4Key) const;
 
     /**
@@ -302,12 +313,6 @@ private:
 
     // for tracking reused/recycled nodes
     std::unordered_set<int32_t> reusedNodeIds_;
-
-    // used to record whether a PostIdleTask is requeired after RebuildL1WithKey
-    bool isModified_ = false;
-
-    // reuse node in L2 cache or not
-    bool reusable_ = true;
 }; // class NodeCache
 
 } // namespace OHOS::Ace::NG
